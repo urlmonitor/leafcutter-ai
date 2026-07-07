@@ -74,11 +74,6 @@ _AGENT_CONTRACTS_H2_RE = re.compile(r"^##\s+Agent Contracts\s*$", re.MULTILINE)
 # Detects any h2 section start (to find the end of Agent Contracts)
 _H2_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 
-# Fenced code block pattern — used by _strip_fenced_code to remove ``` ... ```
-# blocks from ticket content before counting AC lines on the v1-flat path and
-# the flat-override path, preventing example ACs inside code blocks from being
-# counted as real acceptance criteria.
-_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
 # ---------------------------------------------------------------------------
@@ -230,15 +225,62 @@ def _strip_fenced_code(text: str) -> str:
     "Example" section of a ticket). Stripping them before counting prevents
     false-positives in the 20-total-cap check on the v1-flat path.
 
+    Uses a two-pass line-by-line approach so that only *properly terminated*
+    fence blocks are stripped. An unterminated opening fence (one followed by
+    a second fence opener before any bare closing `` ``` `` line appears) is
+    treated as literal text — real AC lines between an unterminated opener and
+    the next fence block are preserved and counted normally.
+
     Pure function — no I/O, no side effects. May be called on any substring.
 
     Args:
         text: Input text, possibly containing ``` ... ``` fenced code blocks.
 
     Returns:
-        Text with all fenced code blocks (triple-backtick delimited) removed.
+        Text with all properly terminated fenced code blocks removed.
     """
-    return _FENCED_BLOCK_RE.sub("", text)
+    lines = text.split("\n")
+
+    # Pass 1 — identify properly terminated fence regions as (start, end) pairs.
+    # Rules for fence state transitions:
+    #   • Any line whose stripped form starts with ``` opens a fence when none is
+    #     currently open (fence_start = current index).
+    #   • A bare ``` line (stripped form == "```") while inside a fence is the
+    #     proper closing fence — the pair is recorded and the fence is closed.
+    #   • A ``` + language-specifier line (e.g. ```python) while inside a fence
+    #     signals the previous opener was unterminated; the unterminated region is
+    #     discarded and the language-specifier line starts a new fence instead.
+    fence_regions: list[tuple[int, int]] = []
+    fence_start: int | None = None
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if fence_start is None:
+                # Beginning of a potential fence block.
+                fence_start = i
+            elif stripped == "```":
+                # Bare closing backticks — properly terminates the open fence.
+                fence_regions.append((fence_start, i))
+                fence_start = None
+            else:
+                # ``` + language specifier encountered while inside a fence.
+                # The previous opener had no bare closing line — it was
+                # unterminated. Start fresh from this language-specifier line.
+                fence_start = i
+
+    # fence_start non-None here means the last fence was unterminated — not stripped.
+
+    if not fence_regions:
+        return text
+
+    # Pass 2 — exclude lines that fall within any identified fence region.
+    excluded: set[int] = set()
+    for start, end in fence_regions:
+        for j in range(start, end + 1):
+            excluded.add(j)
+
+    return "\n".join(line for i, line in enumerate(lines) if i not in excluded)
 
 
 def _count_acs_in_block(block: str) -> int:
@@ -379,6 +421,15 @@ def _analyse_ticket(path: str, project_root: Path) -> TicketResult:
 
     result.per_agent = _count_acs_per_agent(contracts_block)
     result.total_ac_count = _count_total_acs(contracts_block)
+
+    # Gap 1 fix: when the Agent Contracts block is present but yields zero ACs
+    # (e.g. an empty "decoy" ## Agent Contracts heading followed by real AC lines
+    # elsewhere in the body), fall back to the fence-stripped full-body count for
+    # the total cap check. Per-agent counts from the (empty) contracts block are
+    # preserved for the per-agent cap. This prevents a ticket from evading the
+    # 20-total cap by placing an empty ## Agent Contracts heading at the top.
+    if result.total_ac_count == 0:
+        result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
 
     # Check per-agent limits
     for agent_name, count in result.per_agent.items():
@@ -571,5 +622,16 @@ DECISION HISTORY
     real ACs. The v2 Agent Contracts path is unaffected — it counts only within
     the extracted contracts_block which is already a sub-section of the ticket
     body and does not undergo fence-stripping at the total-count level.
+- 2026-07-07 [GE-114 H-2]: Fixed two residual hardening gaps.
+    Gap 1 (decoy/empty heading evades cap): _analyse_ticket now falls back to
+    the fence-stripped full-body AC count when the extracted Agent Contracts block
+    yields zero ACs. This prevents a ticket with an empty ## Agent Contracts
+    heading from evading the 20-total cap. Per-agent counts from the contracts
+    block are unaffected. Gap 2 (cross-boundary fence strip): _strip_fenced_code
+    was rewritten as a line-by-line two-pass algorithm that only strips properly
+    terminated fence blocks. An unterminated opening fence (one followed by a
+    second fence opener before any bare ``` closing line) is treated as literal
+    text; real AC lines in the gap are preserved and counted correctly.
+    _FENCED_BLOCK_RE was removed (no longer referenced).
 ====================================================================
 """

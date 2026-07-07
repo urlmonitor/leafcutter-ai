@@ -1,0 +1,50 @@
+id: BP-100m-2
+title: "Any set of two or more sources mapping to one target is detected, with every colliding source named"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m.yaml"
+criteria: |
+  Given a build in which three distinct source templates all resolve to the same
+    deployed target output path,
+  When build.py runs,
+  Then the build exits with a non-zero status,
+  And the failure message names the shared target path and ALL THREE colliding
+    source templates (not only the first two discovered),
+  And the guardrail treats this generally — any target reached by N >= 2 distinct
+    sources is a collision, not only the known commands-vs-workflows case.
+depends_on:
+  - BP-100m
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The collision verdict per target must carry the FULL set of contributing sources so the message can name all of them; a two-source-only representation is insufficient when three or more sources collide."
+  - "Detection spans all artifact phases that write into the deployed tree, not just build_commands and build_workflows — any two phases writing the same path collide."
+delivers_to: null
+expects_from:
+  ac_id: BP-100m-1
+  contract: "The path-keyed collision verdict from BP-100m-1, extended so each entry lists the complete set of colliding sources for messages that name all of them."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100m-2-i
+implemented_by: []

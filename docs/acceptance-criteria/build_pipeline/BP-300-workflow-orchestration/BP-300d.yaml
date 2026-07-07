@@ -1,0 +1,33 @@
+id: BP-300d
+title: "Primary delivery commands run their deterministic workflow, not stale prose"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Your everyday commands do the reliable thing by default — every time.
+
+  On a supported runtime, /build-feature (and the other primary delivery
+  commands, create-ticket and finalize-feature) run their deterministic
+  workflow script rather than an ad-hoc prose flow. The prose skill is a
+  fallback reserved for older runtimes that cannot execute the script, and it
+  is never the deployed default on a supported runtime.
+depends_on:
+  - BP-300
+doc_links: []
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300d-1
+  - BP-300d-2
+  - BP-300d-3
+  - BP-300d-4
+  - BP-300d-5
+implemented_by: []

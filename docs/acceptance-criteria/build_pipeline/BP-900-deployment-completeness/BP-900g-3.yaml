@@ -1,0 +1,56 @@
+id: BP-900g-3
+title: "Handoff targets resolve in the actual consumer install tree — copy-tier presence is insufficient"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given a consumer install produced by running build.py --target-dir against a
+    fresh project root,
+  When each deployed command's Workflow(...) / Skill(...) handoff target is
+    resolved against the deployed consumer tree (not against the templates/ source
+    tree),
+  Then every target resolves to an artifact that actually exists in the consumer
+    install (by registry name or by a path present under the consumer root),
+  And a target that is present only in templates/ but absent from the deployed
+    consumer tree is treated as UNRESOLVABLE and fails the build,
+  Because reachability must be asserted at the consumer surface, not merely at the
+    copy tier.
+depends_on:
+  - BP-900g
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Resolution is against the deployed consumer layout, honoring the self-hosting boundary (ADR-001): templates/ presence alone does not satisfy reachability. Assert the entry point resolves post-deploy in the target root."
+  - "This follows the ticket-authoring convention that copy-tier presence is insufficient — the check must exercise the actual deployed artifact location a consumer would reach."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-2
+  contract: "The aggregated reachability resolver, applied against the deployed consumer tree rather than the source template tree."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900g-3-i
+implemented_by: []

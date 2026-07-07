@@ -307,7 +307,8 @@
                 "sql-view-creator",
                 "test-writer",
                 "frontend-coder",
-                "llm-expert"
+                "llm-expert",
+                "pr-reviewer"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -876,7 +877,9 @@
             "role": "review",
             "portable": true,
             "domain": null,
-            "spawn_allowlist": [],
+            "spawn_allowlist": [
+                "research-agent"
+            ],
             "spawned_by": [
                 "ticket-supervisor"
             ],

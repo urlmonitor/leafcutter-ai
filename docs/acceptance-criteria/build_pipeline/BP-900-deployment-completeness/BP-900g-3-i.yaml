@@ -1,0 +1,49 @@
+id: BP-900g-3-i
+title: "Command-side reachability is coordinated with, and distinct from, the BP-811 workflow-.js shim reachability"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-3.yaml"
+criteria: |
+  Given the command-side reachability check (this BP-900g tree) and the existing
+    BP-811 check (workflow .js files reachable via the .claude/workflows shim),
+  When both run over the same consumer install,
+  Then a deployed command's unresolvable HANDOFF TARGET is reported by the
+    BP-900g check,
+  And a deployed workflow .js file that is orphaned because no shim points at it
+    is reported by BP-811,
+  And a single underlying gap that surfaces on both axes is reported once per
+    surface with its origin stated, never merged into one ambiguous finding,
+  And this AC does not modify or re-parent BP-811 — the two checks are coordinated
+    complements at distinct surfaces.
+depends_on:
+  - BP-900g-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-811.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Keep the boundary explicit: BP-900g resolves the command's reference to its target; BP-811 verifies the deployed workflow .js files are reachable via the shim. Do not fold one into the other and do not edit BP-811's behavior."
+  - "When both surfaces implicate the same root cause, emit distinctly-labelled findings (command-reference vs shim) so a reader can tell them apart, mirroring the BP-900e-1 / BP-900b coordination convention."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-3
+  contract: "The consumer-tree reachability verdict, reported alongside BP-811's shim verdict as a distinct, coordinated finding class."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
