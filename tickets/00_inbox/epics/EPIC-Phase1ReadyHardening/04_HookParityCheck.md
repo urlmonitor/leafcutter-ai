@@ -1,6 +1,6 @@
 ---
 title: "check_hook_parity.py — enforce commit-guardian hook parity across all template directories"
-status: todo
+status: in_progress
 components:
   - build_pipeline
 created: 2026-07-07
@@ -32,12 +32,12 @@ files_touched:
   - unit_tests/commit_guardian/test_check_hook_parity.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -152,11 +152,47 @@ Then it skips the deployed-output comparison, still performs runtime-vs-canonica
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-07-07 16:54
+- [x] python-coder — 2026-07-07 18:00
+- [x] test-runner — 2026-07-07 18:15
+- [x] pr-reviewer — 2026-07-07 18:45
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-07 16:54 — ticket-supervisor (status: ok)
+test_requirements empty — test-writer phase skipped (docs-only or config-only ticket). Note: unit_tests/commit_guardian/test_check_hook_parity.py is listed in files_touched; python-coder must write the tests as part of its implementation.
+
+### 2026-07-07 18:15 — test-runner (status: ok)
+feedback-id: fb_2026-07-07_d3674596
+completion_manifest:
+  tests_run: 25
+  tests_passed: 25
+  tests_failed: 0
+  pre_existing_failures_baseline: 13 (unrelated to this ticket)
+All 25 `test_check_hook_parity.py` tests passed green (pytest 9.0.3, Python 3.12.3). The 13 pre-existing failures in other test files are unrelated to this ticket and were present before this implementation. No regressions detected.
+
+### 2026-07-07 18:00 — python-coder (status: ok)
+feedback-id: fb_2026-07-07_0174a0c3
+completion_manifest:
+  check_hook_parity_py_created: true
+  deployed_to_all_3_locations: true
+  hook_parity_config_added_to_3_jsons: true
+  hook_registered_in_3_jsons: true
+  templates_commit_guardian_dir_created: true
+  unit_tests_written: true
+  25_tests_green: true
+  no_new_regressions: true
+Implemented `check_hook_parity.py` with three-check design (script parity runtime→canonical, manifest parity legacy→canonical, deployed output parity canonical→deployed). Created the file identically in all three locations (scripts/commit_guardian/, templates/scripts/commit_guardian/, templates/commit-guardian/). Added `hook_parity` config section and `check-hook-parity` hook entry to all three commit_guardian.json files. Created templates/commit-guardian/ directory plus its commit_guardian.json (legacy manifest). Wrote 25 unit tests covering all 9 ACs (BP-100i-1 through BP-100i-3-i); all 25 pass green. The 13 pre-existing broad-suite failures are unrelated to this ticket and were present before this implementation.
+
+### 2026-07-07 18:45 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  correctness: true
+  error_handling: true
+  config_driven: true
+  three_dir_parity: true
+  test_coverage: true
+  registration: true
+All 9 ACs verified correct: check_script_parity (BP-100i-1, -1-i, -1-ii), check_manifest_parity (BP-100i-2, -2-i), check_deployed_parity (BP-100i-3, -3-i), silent pass (BP-100i-5), pre-commit registration (BP-100i-4). All I/O wrapped in try/except OSError or JSONDecodeError; no bare excepts; fail-open on errors; exit 1 only on detected parity violations. All paths read from hook_parity config section — none hardcoded. All three copies of check_hook_parity.py are byte-for-byte identical. 25 tests cover all ACs and are green. check-hook-parity registered in all three commit_guardian.json files with correct files pattern and stages: [pre-commit].
