@@ -1,0 +1,42 @@
+id: BO-1800c-2
+readiness: approved
+priority: medium
+title: "The number of independent features in flight is not capped by a fixed limit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800c.yaml"
+criteria: |
+  Given multiple independent features are ready to be built in parallel,
+  When they are dispatched as concurrent drives (each in its own isolated clone),
+  Then the system does not reject or queue a drive because of a fixed maximum count
+    of concurrent features/drives,
+  And the count of independent features that may run at once is limited only by host
+    resources (per BO-1800c-3), not by an arbitrary configured cap.
+depends_on: [BO-1800c, BO-1800a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Dispatch MUST NOT reject or queue a drive because of a fixed maximum count of concurrent features/drives; features-in-flight is uncapped by design (ADR-018 Decision §3)."
+  - "Any legacy fixed concurrency/feature-count cap in the dispatch path MUST be removed or confirmed absent; the only ceiling is host resources (BO-1800c-3)."
+  - "This is safe only because of per-drive isolation (BO-1800a-1) — the expects_from dependency."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800a-1
+  contract: "The per-drive isolation that makes uncapped concurrent features safe."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

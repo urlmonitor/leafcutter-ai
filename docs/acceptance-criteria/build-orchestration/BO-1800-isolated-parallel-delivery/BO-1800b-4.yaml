@@ -1,0 +1,46 @@
+id: BO-1800b-4
+readiness: approved
+priority: medium
+title: "Sequence diagram of the gated PR-to-merge-queue landing flow"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800b.yaml"
+criteria: |
+  Given the server-side main-gating from ADR-018 is implemented,
+  When a reader opens the build-orchestration architecture documentation,
+  Then a sequence diagram shows the flow: agent opens a PR from its drive clone ->
+    required checks run (ruff, full tests, schema-diff) -> merge queue serializes
+    and builds against latest main -> queue performs the merge when green,
+  And it shows the rejection paths: direct push, force-push, branch deletion, and
+    admin/privileged bypass are all refused by the hub,
+  And it shows that the agent's authority ends at "open PR" (no agent step performs
+    the merge).
+depends_on: [BO-1800b, BO-1800b-1, BO-1800b-2, BO-1800b-3]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Satisfies the sequence-diagram documentation_trigger on BO-1800b, grounded in ADR-018 Decision §4."
+  - "MUST show the gated flow (agent opens PR from its drive clone -> required checks run: ruff, full tests, schema-diff -> merge queue serializes and builds against latest main -> queue performs the merge when green) and the rejection paths (direct push, force-push, branch deletion, admin/privileged bypass)."
+  - "MUST show that the agent's authority ends at 'open PR' (no agent step performs the merge)."
+  - "Diagram source MUST live under docs/architecture/ per write-c4-diagram routing."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800b-2
+  contract: "The gated PR + merge-queue flow this diagram documents."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

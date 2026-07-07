@@ -1,0 +1,46 @@
+id: BO-1800b-3
+readiness: approved
+priority: medium
+title: "No privileged bypass exists, and agents authenticate as a least-privilege identity with no direct-push right"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800b.yaml"
+criteria: |
+  Given the hub `main` branch protection is configured,
+  When a client with elevated privileges (an admin, an owner, or a privileged token)
+    attempts to land on `main` outside the gate,
+  Then the change is still rejected -- branch protection allows no bypass, so even an
+    admin merge or a privileged token cannot land on `main` outside required
+    checks + the merge queue,
+  And the machine identity that autonomous agents authenticate as is least-privilege:
+    it holds no bypass permission and no direct-push right to `main`, so the
+    capability to mutate `main` directly does not exist for agents.
+depends_on: [BO-1800b, BO-1800b-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "Hub CONFIGURATION + credentials policy, NOT code: the deliverable is a runbook recording (1) branch protection with bypass disabled (no admin/owner/privileged-token override) and (2) the least-privilege machine identity scope (no bypass, no direct-push right) (ADR-018 Decision §4)."
+  - "The recorded config MUST make direct mutation of hub main structurally impossible even for a privileged actor — this is the setting that converts convention into impossibility."
+  - "The runbook MUST live on a portable docs surface (docs/) — never repo-root CLAUDE.md."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800b-1
+  contract: "The base branch protection that the no-bypass setting hardens against privileged actors."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800b-3-i
+implemented_by: []

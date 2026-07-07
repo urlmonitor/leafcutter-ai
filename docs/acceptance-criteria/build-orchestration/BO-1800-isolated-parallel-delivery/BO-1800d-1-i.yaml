@@ -1,0 +1,39 @@
+id: BO-1800d-1-i
+readiness: approved
+priority: medium
+title: "No background auto-gc fires mid-drive even after the loose-object threshold is passed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml"
+criteria: |
+  Given a drive clone with `gc.auto` set to 0 and a drive that produces enough loose
+    objects to exceed git's normal auto-gc threshold (~6700 loose objects),
+  When the drive keeps committing past that threshold,
+  Then no automatic (background/detached) gc or repack runs against the clone during
+    the drive,
+  And the drive's commits continue without a concurrent repack touching its object
+    store.
+depends_on: [BO-1800d-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "With gc.auto=0, no automatic (background/detached) gc or repack MUST run against the clone even after the drive exceeds git's normal auto-gc threshold (~6700 loose objects with gc.autoDetach=true) (ADR-018 Context)."
+  - "Verifiable by driving the clone past the threshold and asserting no gc/repack ran and commits continued."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800d-1
+  contract: "The gc.auto=0 setting whose effectiveness past the threshold this case verifies."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

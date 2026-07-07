@@ -1,0 +1,43 @@
+id: BO-1800e-2
+readiness: approved
+priority: medium
+title: "Scaffold and finalize bookkeeping lands via a branch and pull request, never a direct local-main commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800e.yaml"
+criteria: |
+  Given scaffold or finalize bookkeeping (for example creating epic scaffold files
+    or recording ticket/AC status changes) needs to reach the hub,
+  When that bookkeeping is produced,
+  Then it is committed on a branch and lands on the hub `main` through a pull request
+    (subject to the BO-1800b gate),
+  And it is never written by a direct commit to a local `main` and pushed straight
+    to the hub.
+depends_on: [BO-1800e, BO-1800b-2]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Scaffold and finalize bookkeeping MUST be committed on a branch and land on hub main through a pull request subject to the BO-1800b gate; it MUST NEVER be a direct commit to a local main pushed straight to the hub (ADR-018 Migration §4)."
+  - "The change MUST align with the existing scaffold-via-PR convention on the portable finalize + create-epic workflow surfaces (templates/skills/ + scripts/workflows/) deployed by build.py — never repo-root CLAUDE.md."
+  - "This covers the Migration §5 finalize-flow change (merge is a queue-eligible PR action, not an agent-issued gh pr merge), consuming the BO-1800b-2 gate contract."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800b-2
+  contract: "The gated PR + merge-queue path that scaffold/finalize bookkeeping travels through."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

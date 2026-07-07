@@ -1,0 +1,39 @@
+id: BO-1800c-4
+readiness: approved
+priority: medium
+title: "Reference doc for the two parallelism axes and the resource-aware scheduler"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800c.yaml"
+criteria: |
+  Given the two-axis parallelism model from ADR-018 is implemented,
+  When an operator needs to understand or tune parallelism,
+  Then a reference document distinguishes the two axes: agents-PER-feature (capped,
+    ~3-4) versus features-in-flight (uncapped, host-resource-bounded),
+  And it documents the host-resource-aware scheduler's shed-idle-under-pressure
+    behaviour and the signals it uses,
+  And it states there is no fixed feature-count cap to configure.
+depends_on: [BO-1800c, BO-1800c-1, BO-1800c-2, BO-1800c-3]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Satisfies the reference-doc documentation_trigger on BO-1800c, grounded in ADR-018 Decision §3, routed via the documentation Diataxis reference surface (docs/)."
+  - "MUST distinguish the two axes: agents-PER-feature (capped ~3-4) vs features-in-flight (uncapped, host-resource-bounded), document the resource-aware scheduler's shed-idle-under-pressure behaviour and the signals it uses, and state there is no fixed feature-count cap to configure."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800c-3
+  contract: "The two-axis model + scheduler behaviour this reference documents."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

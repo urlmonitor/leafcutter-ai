@@ -1,0 +1,43 @@
+id: BO-1800b-1
+readiness: approved
+priority: medium
+title: "The hub's main accepts changes only through a pull request; direct push, force-push, and branch deletion are rejected server-side"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800b.yaml"
+criteria: |
+  Given branch protection is configured on the hub (authoritative `origin`) `main`,
+  When any client attempts to update `main` other than by merging a pull request,
+  Then a direct `git push` to `main` is rejected by the hub,
+  And a force-push to `main` is rejected by the hub,
+  And deletion of the `main` branch is rejected by the hub,
+  And the rejection happens at the source of truth (server-side), independently of
+    whatever local hooks or tooling the client is running.
+depends_on: [BO-1800b]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "This is a hub (GitHub) branch-protection CONFIGURATION / process requirement, NOT application code: there is no coder deliverable for the server-side rule itself. The deliverable is a how-to/runbook that records the exact settings and how to verify them (ADR-018 Decision §4, Migration §1)."
+  - "The recorded configuration MUST require a pull request for hub main and MUST reject direct push, force-push, and branch deletion server-side, independently of any local hook."
+  - "The advisory local pre-push/pre-commit main-guard is out of scope here (covered by BO-1800e-1-i) and MUST NOT be presented as the guarantee — the guarantee is server-side."
+  - "The runbook/how-to MUST live on a portable docs surface (docs/) — never in repo-root CLAUDE.md."
+delivers_to: null
+expects_from: null
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800b-1-i
+implemented_by: []

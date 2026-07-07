@@ -1,0 +1,48 @@
+id: BO-1800b-2
+readiness: approved
+priority: medium
+title: "Merges to main are performed by the merge queue only after required checks pass"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800b.yaml"
+criteria: |
+  Given a pull request targeting the hub `main`,
+  When the change is landed on `main`,
+  Then it is landed by the merge queue, not by an agent-issued merge command,
+  And the merge queue lands it only after the required status checks all pass:
+    ruff lint, the full test suite, and the schema-diff check (each configured as a
+    REQUIRED check, not advisory),
+  And the merge is built against the latest `main` and serialized with other queued
+    merges,
+  And a pull request whose required checks are failing or missing is not landed.
+depends_on: [BO-1800b]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "Primary deliverable is hub CONFIGURATION recorded in a runbook/how-to: enable the merge queue and mark ruff + full test suite + schema-diff as REQUIRED checks (not advisory); merges are performed by the queue, built against latest main, serialized (ADR-018 Decision §4, Migration §1 + §5)."
+  - "The load-bearing behavior is 'the queue merges, and only when required checks are green'; a PR with failing or missing required checks MUST NOT land."
+  - "COMPANION CODE (not owned by this documentation AC — see caveat): the finalize flow MUST stop issuing an agent-side gh pr merge and instead make the merge a queue-eligible PR action (Migration §5). That code change belongs to the finalize surface (delivered to python-coder via the contract below / aligned with BO-1800e-2)."
+  - "The runbook MUST live on a portable docs surface (docs/) — never repo-root CLAUDE.md."
+delivers_to:
+  agent: python-coder
+  contract: "The configured merge-queue + required-checks gate on hub main, through which the finalize/scaffold landing flow (BO-1800e-2) must route every merge instead of an agent-issued gh pr merge."
+expects_from:
+  ac_id: BO-1800b-1
+  contract: "The PR-only-to-main constraint that makes the queue the sole merge path."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
