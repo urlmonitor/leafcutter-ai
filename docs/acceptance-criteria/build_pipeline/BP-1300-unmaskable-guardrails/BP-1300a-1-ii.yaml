@@ -1,0 +1,45 @@
+id: BP-1300a-1-ii
+title: "A stale deployed artifact that would resolve the pointer is not consulted"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a skill_id that does not exist in the canonical source but a matching stale artifact
+    is present in the deployed .claude/skills tree,
+  When the build's skill-pointer check runs,
+  Then the check ignores the deployed .claude/skills artifact and still reports the skill_id
+    as unresolved,
+  And the build fails,
+  And removing or adding the deployed artifact does not change the verdict.
+depends_on:
+  - BP-1300a-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The check must not read the deployed .claude/skills tree when resolving skill pointers."
+  - "The verdict must be invariant to the presence or absence of deployed artifacts."
+delivers_to:
+  agent: python-coder
+  contract: "Resolution that is invariant to the deployed .claude/skills tree"
+expects_from:
+  ac_id: BP-1300a-1
+  contract: "The skill-pointer check whose deployed-artifact-independence this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,46 @@
+id: BO-1900b-1-ii
+title: "A reproduction command that errors or times out fails closed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose captured reproduction command cannot be evaluated at dispatch
+    time because it errors out or exceeds the re-check time budget,
+  When the preflight premise re-check runs before spawn,
+  Then the re-check returns an unfit verdict rather than assuming the premise still holds,
+  And the dispatch is held back with a reason stating the reproduction could not be
+    evaluated (errored or timed out), distinct from a stale-premise reason,
+  And no phase agent is spawned.
+depends_on:
+  - BO-1900b-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An errored or timed-out reproduction must fail closed (unfit), never fall through to a fit verdict."
+  - "The re-check must enforce a bounded time budget on each reproduction command."
+  - "The held-back reason for an evaluation failure must be distinct from the stale-premise reason."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "Fail-closed behavior for reproduction commands that error or time out"
+expects_from:
+  ac_id: BO-1900b-1
+  contract: "The premise re-check whose evaluation-failure path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,44 @@
+id: TKT-200e-1-i
+title: "A ticket with no factual claims is not falsely flagged"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket that motivates its work purely by design intent (for example a pure
+    refactor or a new capability) and states no factual claim about a current failure,
+  When the premise-capture check runs before the ticket may leave the inbox,
+  Then the check finds no factual claim requiring capture,
+  And it does not flag the ticket,
+  And the ticket is cleared to leave the inbox on the capture axis.
+depends_on:
+  - TKT-200e-1
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The check must not require a reproduction command when the ticket asserts no motivating factual claim."
+  - "The no-claim case must pass, not fail, to avoid blocking legitimate refactor/new-capability tickets."
+delivers_to:
+  agent: create-ticket
+  contract: "No-false-positive behavior when a ticket has no factual claims to capture"
+expects_from:
+  ac_id: TKT-200e-1
+  contract: "The premise-capture check whose no-claim path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

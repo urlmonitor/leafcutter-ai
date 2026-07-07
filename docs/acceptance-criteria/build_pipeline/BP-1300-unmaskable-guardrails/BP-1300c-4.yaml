@@ -1,0 +1,47 @@
+id: BP-1300c-4
+title: "Reference doc lists the warn-to-fail checks and the drive-context rule"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given certain warn-only checks escalate to failures during automated drives,
+  When the documentation step runs for this feature,
+  Then a reference document is produced that lists each check that escalates
+    (self-description enforcement; ticket sign-off parity outside the done state), states
+    that escalation is gated on an active drive context, and specifies the warn-only
+    behavior outside a drive,
+  And it defines how the drive context is detected,
+  And a reader can determine, for a given check and context, whether a violation warns or fails.
+depends_on:
+  - BP-1300c
+  - BP-1300c-1
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: reference-author
+estimated_complexity: S
+it_requirements:
+  - "Must enumerate the escalating checks and the drive-context gating rule."
+  - "Must specify warn-only behavior outside a drive and how the drive context is detected."
+delivers_to:
+  agent: reference-author
+  contract: "A reference document listing the warn-to-fail checks and the drive-context rule"
+expects_from:
+  ac_id: BP-1300c-1
+  contract: "The implemented drive-context-gated escalation behavior to document"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

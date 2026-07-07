@@ -1,0 +1,43 @@
+id: TKT-200e-2
+title: "A claim paired with a command and an observed result passes the capture check"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose motivating claim "these tests are red" is captured together with
+    the exact command that reproduces it and the observed failing result,
+  When the premise-capture check runs before the ticket may leave the inbox,
+  Then the check passes for that claim,
+  And the captured command and result are preserved on the ticket in a structured form a
+    later stage can re-run,
+  And the ticket is not flagged on the capture axis.
+depends_on:
+  - TKT-200e
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A claim with both a reproduction command and an observed result must pass the check."
+  - "The captured command and result must be stored in a structured form that a downstream stage (TKT-200f verification, BO-1900b re-check) can consume."
+delivers_to:
+  agent: create-ticket
+  contract: "Structured captured premises (claim + command + observed result) that downstream stages can re-run"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,45 @@
+id: TKT-200e-1-ii
+title: "A claim with a command but an empty or placeholder result is flagged"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose motivating claim carries a reproduction command but whose observed
+    result is empty or a placeholder (for example "TODO" or "see above"),
+  When the premise-capture check runs before the ticket may leave the inbox,
+  Then the check flags the ticket because the observed result is not a concrete captured
+    output,
+  And the violation states that the result is empty or a placeholder,
+  And the ticket is not cleared to leave the inbox until a concrete result is captured.
+depends_on:
+  - TKT-200e-1
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An empty or placeholder observed result must be treated as missing, not as satisfied capture."
+  - "The violation must distinguish 'placeholder result' from 'no result field at all'."
+delivers_to:
+  agent: create-ticket
+  contract: "Rejection of partial captures whose observed result is empty or a placeholder"
+expects_from:
+  ac_id: TKT-200e-1
+  contract: "The premise-capture check whose placeholder-result path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []
