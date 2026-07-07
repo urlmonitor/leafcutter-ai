@@ -92,6 +92,8 @@ def _read_registry_json() -> str:
                 check=False,
             ).stdout.strip()
             return Path(repo_root, _REGISTRY_PATH).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            raise  # Propagate as-is so main() advisory branch fires (not an error)
         except OSError as exc:
             raise OSError(f"Cannot read {_REGISTRY_PATH}: {exc}") from exc  # noqa: TRY003
     return result.stdout
@@ -315,6 +317,14 @@ def _check_card_registry_mirror(
     """
     errors: list[str] = []
 
+    # Expand __ticket_phase_agents__ macro to the concrete set of ticket-phase agent IDs.
+    # A card-spawn edge to any agent in this set is suppressed when the registry uses the
+    # macro — it is covered implicitly. Genuine extra edges (agents NOT in the set) are
+    # still flagged, avoiding the previous blanket-suppression that silently missed them.
+    ticket_phase_ids: frozenset[str] = frozenset(
+        a["id"] for a in agents if a.get("is_ticket_phase", False) and "id" in a
+    )
+
     for entry in agents:
         agent_id = entry.get("id")
         if not agent_id:
@@ -343,11 +353,16 @@ def _check_card_registry_mirror(
         reg_spawn: set[str] = set(entry.get("spawn_allowlist", []))
         reg_spawned_by: set[str] = set(entry.get("spawned_by", []))
 
-        # Direction 1a: card shows spawn edge not in registry spawn_allowlist
+        # Direction 1a: card shows spawn edge not in registry spawn_allowlist.
+        # When the registry uses the __ticket_phase_agents__ macro, card edges to any
+        # ticket-phase agent are covered by the macro and are suppressed.  Edges to
+        # agents NOT in the ticket-phase set are still flagged (no blanket suppression).
         for child in sorted(card_spawn):
             if child == _SPECIAL_TOKEN:
                 continue
-            if child not in reg_spawn and _SPECIAL_TOKEN not in reg_spawn:
+            if _SPECIAL_TOKEN in reg_spawn and child in ticket_phase_ids:
+                continue  # Covered by __ticket_phase_agents__ macro
+            if child not in reg_spawn:
                 errors.append(
                     f"{agent_id} card shows spawn edge to {child}, "
                     f"but the registry has no such edge"
@@ -545,4 +560,18 @@ if __name__ == "__main__":
 #   the resolved cards directory does not exist on disk, main() emits an ADVISORY and
 #   skips the mirror check (project does not use the leafcutter agent subsystem).
 #   (#EPIC-RegistryCardMirror/04)
+#
+# - 2026-07-07 [python-coder/EPIC-RegistryCardMirror/remediation]: Four defect fixes.
+#   DEFECT 1: _read_registry_json() disk-fallback now catches FileNotFoundError
+#   before the generic OSError clause and re-raises it unchanged, so main()'s
+#   FileNotFoundError advisory branch fires correctly on the real path (previously
+#   the subtype was collapsed into a base OSError → exit 1 instead of exit 0).
+#   DEFECT 3: _check_card_registry_mirror() Direction 1a no longer blanket-suppresses
+#   ALL card→registry extra-edge reporting when __ticket_phase_agents__ appears in the
+#   registry. Instead, the macro is expanded to the concrete set of ticket-phase agent
+#   IDs; only edges to agents in that set are suppressed — genuine extra edges (to
+#   non-phase agents) are still flagged. The suppression is now symmetric: both
+#   directions use the same expansion logic. ticket_phase_ids is pre-computed once
+#   before the agent loop.
+#   (#EPIC-RegistryCardMirror/remediation)
 # ====================================================================

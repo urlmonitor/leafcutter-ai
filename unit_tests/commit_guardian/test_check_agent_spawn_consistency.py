@@ -22,6 +22,8 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import os
+import subprocess
 import types
 import unittest
 from pathlib import Path
@@ -195,7 +197,15 @@ class TestCheckAgentSpawnConsistency(unittest.TestCase):
     # -- AC-4 ----------------------------------------------------------------
 
     def test_skips_special_token(self) -> None:
-        """AC-4: __ticket_phase_agents__ in spawn_allowlist is silently skipped."""
+        """AC-4: __ticket_phase_agents__ in spawn_allowlist is silently skipped.
+
+        The card mirror check must also be isolated from real cards on disk — the
+        newer mirror-check logic reads docs/agents/cards/<id>.card.md when _get_repo_root
+        returns a real path. Patching _get_repo_root to a temp dir ensures no real
+        card file is consulted, so the test remains self-contained.
+        """
+        import tempfile
+
         registry = _build_registry([
             _make_agent(
                 "ticket-supervisor",
@@ -206,9 +216,11 @@ class TestCheckAgentSpawnConsistency(unittest.TestCase):
         registry_json = json.dumps(registry)
 
         staged = [REGISTRY_PATH_IN_REPO]
-        with patch.object(self.module, "_get_staged_files", return_value=staged):
-            with patch.object(self.module, "_read_registry_json", return_value=registry_json):
-                result = self.module.main()
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(self.module, "_get_repo_root", return_value=Path(tmp)):
+                        result = self.module.main()
 
         self.assertEqual(
             result, 0,
@@ -628,6 +640,110 @@ class TestCheckCardRegistryMirror(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Tests for __ticket_phase_agents__ macro expansion (DEFECT 3 — symmetric suppression)
+# ---------------------------------------------------------------------------
+
+class TestSpecialTokenExpansion(unittest.TestCase):
+    """Tests for the __ticket_phase_agents__ macro expansion in _check_card_registry_mirror.
+
+    DEFECT 3 (asymmetric suppression): the previous Direction 1a used
+    `_SPECIAL_TOKEN not in reg_spawn` as a blanket gate — if __ticket_phase_agents__
+    appeared in the registry at all, ALL card spawn edges were silently suppressed,
+    hiding genuine extra edges to non-phase agents.
+
+    The fix expands the macro to the concrete set of ticket-phase agent IDs and
+    only suppresses edges to agents IN that set.  Edges to non-phase agents are
+    still flagged, making both directions symmetric.
+    """
+
+    def setUp(self) -> None:
+        self.module = _load_hook_module()
+
+    def test_card_edge_to_ticket_phase_agent_not_flagged_when_macro_present(self) -> None:
+        """A card spawn edge to a ticket-phase agent is NOT flagged when the registry
+        uses the __ticket_phase_agents__ macro — the edge is covered by the macro.
+
+        Scenario: ticket-supervisor card shows it spawning python-coder (a
+        ticket-phase agent), but the registry only records the macro.  This is
+        correct — python-coder is implicitly covered — so no mismatch should be
+        reported.
+        """
+        agents = [
+            {
+                "id": "ticket-supervisor",
+                "spawn_allowlist": ["__ticket_phase_agents__"],
+                "spawned_by": ["user"],
+                "is_ticket_phase": False,
+            },
+            {
+                "id": "python-coder",
+                "spawn_allowlist": [],
+                "spawned_by": ["ticket-supervisor"],
+                "is_ticket_phase": True,  # ticket-phase agent — covered by macro
+            },
+        ]
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            card_text = _make_card_text(
+                "ticket-supervisor",
+                spawns=["python-coder"],  # python-coder is a ticket-phase agent
+                dispatched_by=[],
+            )
+            (cards_dir / "ticket-supervisor.card.md").write_text(card_text, encoding="utf-8")
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertFalse(
+            any("python-coder" in e for e in errors),
+            f"python-coder is covered by __ticket_phase_agents__ macro — "
+            f"must not be flagged; got: {errors}",
+        )
+
+    def test_card_edge_to_non_phase_agent_flagged_when_macro_present(self) -> None:
+        """A card spawn edge to a NON-ticket-phase agent IS flagged even when the
+        registry uses the __ticket_phase_agents__ macro.
+
+        Scenario: ticket-supervisor card shows it spawning rogue-agent (which is
+        NOT a ticket-phase agent and NOT in the registry spawn_allowlist).  This
+        is a genuine extra edge and must be reported regardless of the macro.
+        """
+        agents = [
+            {
+                "id": "ticket-supervisor",
+                "spawn_allowlist": ["__ticket_phase_agents__"],
+                "spawned_by": ["user"],
+                "is_ticket_phase": False,
+            },
+            {
+                "id": "rogue-agent",
+                "spawn_allowlist": [],
+                "spawned_by": [],
+                "is_ticket_phase": False,  # NOT a ticket-phase agent
+            },
+        ]
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            card_text = _make_card_text(
+                "ticket-supervisor",
+                spawns=["rogue-agent"],  # rogue-agent is not a ticket-phase agent
+                dispatched_by=[],
+            )
+            (cards_dir / "ticket-supervisor.card.md").write_text(card_text, encoding="utf-8")
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertTrue(
+            any("rogue-agent" in e for e in errors),
+            f"rogue-agent is NOT covered by __ticket_phase_agents__ macro — "
+            f"must be flagged as a mismatch; got: {errors}",
+        )
+        self.assertTrue(
+            any("registry has no such edge" in e for e in errors),
+            f"Expected 'registry has no such edge' in errors, got: {errors}",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Tests for main() with card-file trigger
 # ---------------------------------------------------------------------------
 
@@ -880,6 +996,37 @@ class TestAbsentCardAdvisoryNote(unittest.TestCase):
 # Tests for AC INF-600l-1-ii: registry absent entirely → no-op + advisory
 # ---------------------------------------------------------------------------
 
+def _make_temp_absent_registry_git_repo() -> Path:
+    """Create a temporary git repo with a staged card file but NO registry.
+
+    Returns the Path to the temp directory (which is the git repo root).
+    The caller is responsible for cleanup (use tempfile.TemporaryDirectory).
+
+    The repo has docs/agents/cards/python-coder.card.md staged, but
+    config/agent_registry.json does not exist — simulating a project without
+    the agent subsystem.  Used by TestRegistryAbsentNoOp tests to exercise the
+    REAL _read_registry_json() against a genuinely absent registry file.
+    """
+    import tempfile
+    tmp_dir = tempfile.mkdtemp(prefix="leafcutter_test_")
+    tmp_path = Path(tmp_dir)
+    subprocess.run(["git", "init", tmp_dir], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", tmp_dir, "config", "user.email", "test@leafcutter.test"],
+        check=True, capture_output=True,
+    )
+    subprocess.run(
+        ["git", "-C", tmp_dir, "config", "user.name", "LeafcutterTest"],
+        check=True, capture_output=True,
+    )
+    cards_dir = tmp_path / "docs" / "agents" / "cards"
+    cards_dir.mkdir(parents=True)
+    (cards_dir / "python-coder.card.md").write_text("# python-coder\n", encoding="utf-8")
+    subprocess.run(["git", "-C", tmp_dir, "add", "docs/"], check=True, capture_output=True)
+    # Deliberately NOT creating config/agent_registry.json
+    return tmp_path
+
+
 class TestRegistryAbsentNoOp(unittest.TestCase):
     """Tests for AC INF-600l-1-ii: when the agent registry file is entirely absent
     (the project has no agent subsystem at all), the hook must:
@@ -887,10 +1034,15 @@ class TestRegistryAbsentNoOp(unittest.TestCase):
       - emit an ADVISORY note to stderr (not an ERROR), naming the skipped check
       - not report any mismatch
 
-    These tests are RED until python-coder modifies main() to treat a
-    FileNotFoundError from _read_registry_json() as a no-op rather than an error.
-    The current implementation catches all OSError subclasses (including
-    FileNotFoundError) and returns 1 with an "ERROR:" message.
+    These tests exercise the REAL _read_registry_json() against a genuinely absent
+    registry file (no mock on _read_registry_json itself).  They create a temp git
+    repo with a staged card but no config/agent_registry.json, then temporarily set
+    the process CWD so git subprocess calls hit the temp repo instead of the real
+    working tree.
+
+    Before the fix: _read_registry_json()'s disk-fallback wraps FileNotFoundError in
+    a base OSError, so main() sees OSError → exit 1.
+    After the fix: FileNotFoundError propagates unchanged → main() → exit 0 + advisory.
     """
 
     def setUp(self) -> None:
@@ -901,21 +1053,25 @@ class TestRegistryAbsentNoOp(unittest.TestCase):
         """AC INF-600l-1-ii: when a card file is staged but the agent registry does
         not exist on disk or in the git index, the hook must exit 0 (no-op).
 
-        Current behavior: _read_registry_json() raises FileNotFoundError (a subclass
-        of OSError), main() catches it as OSError and returns 1 with an "ERROR:" line.
-        After the fix, FileNotFoundError must produce exit 0 + advisory note.
+        Exercises the REAL _read_registry_json() — no mock on that function.
+        A temp git repo is created with a staged card but no registry file.
+        The process CWD is temporarily set to the temp repo so git subprocess
+        calls use it.  _get_staged_files is patched to return the expected card path.
         """
         # covers: INF-600l-1-ii
-        staged = ["docs/agents/cards/python-coder.card.md"]
-        with patch.object(self.module, "_get_staged_files", return_value=staged):
-            with patch.object(
-                self.module,
-                "_read_registry_json",
-                side_effect=FileNotFoundError(
-                    "config/agent_registry.json: No such file or directory"
-                ),
-            ):
-                result = self.module.main()
+        import shutil
+        tmp_path = _make_temp_absent_registry_git_repo()
+        try:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(str(tmp_path))
+                staged = ["docs/agents/cards/python-coder.card.md"]
+                with patch.object(self.module, "_get_staged_files", return_value=staged):
+                    result = self.module.main()
+            finally:
+                os.chdir(orig_cwd)
+        finally:
+            shutil.rmtree(str(tmp_path), ignore_errors=True)
 
         self.assertEqual(
             result,
@@ -927,25 +1083,28 @@ class TestRegistryAbsentNoOp(unittest.TestCase):
         """AC INF-600l-1-ii: the hook must emit an ADVISORY message (not an ERROR)
         to stderr explaining that the check was skipped because no registry was found.
 
-        Current behavior: emits "[check-agent-spawn-consistency] ERROR: Cannot read
-        config/agent_registry.json: ..." and returns 1.
-        After the fix, stderr must contain "ADVISORY" (not just "ERROR").
+        Exercises the REAL _read_registry_json() — no mock on that function.
+        Before the fix: emits ERROR and returns 1.
+        After the fix: stderr must contain 'ADVISORY' (not just 'ERROR').
         """
         # covers: INF-600l-1-ii
         import io
+        import shutil
 
-        staged = ["docs/agents/cards/python-coder.card.md"]
-        with patch.object(self.module, "_get_staged_files", return_value=staged):
-            with patch.object(
-                self.module,
-                "_read_registry_json",
-                side_effect=FileNotFoundError(
-                    "config/agent_registry.json: No such file or directory"
-                ),
-            ):
+        tmp_path = _make_temp_absent_registry_git_repo()
+        try:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(str(tmp_path))
+                staged = ["docs/agents/cards/python-coder.card.md"]
                 err_buf = io.StringIO()
-                with patch("sys.stderr", err_buf):
-                    self.module.main()
+                with patch.object(self.module, "_get_staged_files", return_value=staged):
+                    with patch("sys.stderr", err_buf):
+                        self.module.main()
+            finally:
+                os.chdir(orig_cwd)
+        finally:
+            shutil.rmtree(str(tmp_path), ignore_errors=True)
 
         err_output = err_buf.getvalue()
         self.assertGreater(
@@ -962,25 +1121,30 @@ class TestRegistryAbsentNoOp(unittest.TestCase):
 
     def test_no_mismatch_reported_when_registry_absent(self) -> None:
         """AC INF-600l-1-ii: when the registry is absent, the hook must not report
-        any mismatch or asymmetric spawn error — the absent registry is treated as
-        'nothing to compare against', not as a mismatch condition.
+        any mismatch or asymmetric spawn error.
 
+        Exercises the REAL _read_registry_json() — no mock on that function.
         Both exit code (must be 0) and stderr content (must not contain mismatch
         language) are asserted.
         """
         # covers: INF-600l-1-ii
         import io
+        import shutil
 
-        staged = ["docs/agents/cards/some-agent.card.md"]
-        with patch.object(self.module, "_get_staged_files", return_value=staged):
-            with patch.object(
-                self.module,
-                "_read_registry_json",
-                side_effect=FileNotFoundError("No registry file"),
-            ):
+        tmp_path = _make_temp_absent_registry_git_repo()
+        try:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(str(tmp_path))
+                staged = ["docs/agents/cards/python-coder.card.md"]
                 err_buf = io.StringIO()
-                with patch("sys.stderr", err_buf):
-                    result = self.module.main()
+                with patch.object(self.module, "_get_staged_files", return_value=staged):
+                    with patch("sys.stderr", err_buf):
+                        result = self.module.main()
+            finally:
+                os.chdir(orig_cwd)
+        finally:
+            shutil.rmtree(str(tmp_path), ignore_errors=True)
 
         err_output = err_buf.getvalue()
         self.assertEqual(
