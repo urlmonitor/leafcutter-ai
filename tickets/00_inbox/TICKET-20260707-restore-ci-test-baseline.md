@@ -12,7 +12,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architect-review: not_needed
   adr: not_needed
   diagram: not_needed
@@ -377,6 +377,11 @@ completion_manifest:
   no_new_failures: true
 All 6 named tests now PASSED (commit_guardian suite: 549 passed, 27 skipped, 1 pre-existing failure in test_ensure_precommit_config.py). build.py exited 0 with "Self-description validation: all agents pass" confirming the build-guard is cleared. No new failures introduced beyond the pre-existing ensure_precommit_config behavioral issue documented by python-coder.
 
+### 2026-07-07 17:10 — pull-request (status: ok)
+feedback-id: (submit-failed — deployed feedback script not present in worktree)
+PR #217 opened against main: https://github.com/urlmonitor/leafcutter-ai/pull/217
+Pushed feature/restore-ci-test-baseline to origin under the urlmonitor account (gh auth switch verified active before push). `gh pr create` succeeded on the CLI path — no EMU REST fallback needed. Branch HEAD f404e825 (implementation commit 0a1ec630 + commit-phase sign-off f404e825). Full suite re-verified after a clean build.py: 1499 passed, 6 pre-existing out-of-scope failures (5 JS-workflow parity + 1 ensure_precommit_config behavioral). Build-guard cleared (build.py exit 0, 0 self-description errors).
+
 ## Sign-offs
 
 - [x] test-writer — 2026-07-07 12:00
@@ -384,7 +389,7 @@ All 6 named tests now PASSED (commit_guardian suite: 549 passed, 27 skipped, 1 p
 - [x] test-runner — 2026-07-07 10:43
 - [x] pr-reviewer — 2026-07-07 15:45
 - [x] commit — 2026-07-07 16:30
-- [ ] pull-request
+- [x] pull-request — 2026-07-07 17:10
 
 ## AC Coverage
 
