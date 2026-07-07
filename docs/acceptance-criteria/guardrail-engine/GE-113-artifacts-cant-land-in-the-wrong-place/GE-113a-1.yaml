@@ -46,6 +46,11 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: surface=new commit_guardian hook + manifest (python-coder per the ac-store deprecation-hook precedent); always-block + fail-open-on-internal-error + ADR-001 parity it_requirements added. Criteria unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-113a-1-i
+  - GE-113a-1-ii
+  - GE-113a-1-iii
 implemented_by: []
 notes: "Core of GE-113a. Reproduces the incident class: test_*.py committed under unit_tests/ instead of the configured tests/."
+change_target: code
+risk_surface: contract_boundary

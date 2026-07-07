@@ -29,3 +29,5 @@ covered_by:
   - BO-610-4
   - BO-610-5
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

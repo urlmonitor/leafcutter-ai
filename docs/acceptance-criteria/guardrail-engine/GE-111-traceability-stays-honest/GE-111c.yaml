@@ -42,3 +42,5 @@ notes: |
   commit is out of scope for THIS commit (it should be surfaced by a separate
   store-wide scan, not the pre-commit gate — note for IT-PO, do not conflate the
   two). Pairs with the fail-open precedent in GE-107 / GE-100.
+change_target: code
+risk_surface: contract_boundary

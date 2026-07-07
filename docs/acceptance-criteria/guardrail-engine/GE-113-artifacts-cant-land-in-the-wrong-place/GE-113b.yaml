@@ -29,3 +29,5 @@ implemented_by: []
 documentation_triggers:
   - how-to
 notes: "User-authored intent: BrainCandy. Root-cause miss: the structural-change guard fired but was bypassed as a 'test-only package', letting the misplaced test package through."
+change_target: code
+risk_surface: contract_boundary

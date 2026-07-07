@@ -51,3 +51,5 @@ notes: |
   IT-PO enrichment (2026-06-22): architecture-diagram-author retained.
   it_requirements pin the mermaid/diagram commit-guardian conventions and that
   the confirm branch reflect the GE-111d-2 fingerprint re-check.
+change_target: docs
+risk_surface: internal

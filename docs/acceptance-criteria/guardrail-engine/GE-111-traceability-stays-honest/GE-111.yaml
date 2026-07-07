@@ -39,3 +39,5 @@ covered_by:
   - GE-111d
   - GE-111e
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

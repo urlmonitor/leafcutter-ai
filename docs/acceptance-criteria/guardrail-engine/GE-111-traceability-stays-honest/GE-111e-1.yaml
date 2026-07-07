@@ -69,3 +69,5 @@ notes: |
   applicable-routes content (GE-111d-3). Since expects_from is single-valued, the
   routes-content dependency is captured in it_requirements (per the IT-PO
   expects_from-is-single-valued convention). Renderer-only; no recomputation.
+change_target: code
+risk_surface: internal

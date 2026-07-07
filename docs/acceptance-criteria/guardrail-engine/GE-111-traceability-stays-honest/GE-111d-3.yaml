@@ -59,3 +59,5 @@ notes: |
   IT-PO enrichment (2026-06-22): pinned the route-applicability rule (confirm not
   offered on a deleted-file verdict, aligning with the GE-111d-2 boundary) and
   the structured {update, confirm} content shape consumed by GE-111e.
+change_target: code
+risk_surface: contract_boundary

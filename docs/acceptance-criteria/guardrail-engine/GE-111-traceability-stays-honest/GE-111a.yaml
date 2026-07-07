@@ -46,3 +46,5 @@ notes: |
   documentation_triggers [how-to, sequence-diagram] because this introduces a
   new commit-time guardrail behavior the user must understand and a multi-actor
   commit-time interaction (developer -> hook -> AC store -> commit decision).
+change_target: code
+risk_surface: contract_boundary

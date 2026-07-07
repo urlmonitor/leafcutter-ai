@@ -79,3 +79,5 @@ notes: |
       still applies. OPEN QUESTION surfaced for the IT-PO.
     - GE-111b-3 (L2) — TIER 3 suggest-new-location when a moved symbol is found.
     - GE-111b-4 (L2) — reference-doc satisfying documentation_triggers.
+change_target: code
+risk_surface: contract_boundary

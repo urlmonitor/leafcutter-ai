@@ -77,3 +77,5 @@ notes: |
     - BOUNDARY: a confirmation can clear a symbol-tier moved/renamed drift on a
       SURVIVING file only; it can NEVER clear a file-path-floor 'deleted' verdict.
   This is the field/format choice the BA explicitly deferred to the IT-PO.
+change_target: code
+risk_surface: internal

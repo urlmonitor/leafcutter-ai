@@ -52,3 +52,5 @@ notes: |
   IT-PO enrichment (2026-06-22): confirmed the exclusion is structural (scope set
   membership), not post-hoc suppression, and re-flagged the store-wide-scan
   surface as out of scope for GE-111 (caveat).
+change_target: code
+risk_surface: internal

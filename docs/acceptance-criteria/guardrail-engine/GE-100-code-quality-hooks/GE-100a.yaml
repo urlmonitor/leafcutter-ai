@@ -43,3 +43,5 @@ covered_by:
   - GE-100a-2
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100a.md
+change_target: code
+risk_surface: internal

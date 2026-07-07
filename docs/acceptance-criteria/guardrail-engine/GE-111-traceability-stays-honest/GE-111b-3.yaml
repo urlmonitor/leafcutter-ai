@@ -65,3 +65,5 @@ notes: |
   suggest a location ONLY on a single unambiguous match; null on zero (removed)
   or multiple (ambiguous). Pinned the 'path#symbol' output format so the update
   route consumes it verbatim, and mandated reuse of the GE-111b-2 resolver.
+change_target: code
+risk_surface: contract_boundary

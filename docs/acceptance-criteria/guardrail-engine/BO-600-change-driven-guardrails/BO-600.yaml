@@ -31,3 +31,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-610, BO-620, BO-630, BO-640, BO-650, BO-660]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

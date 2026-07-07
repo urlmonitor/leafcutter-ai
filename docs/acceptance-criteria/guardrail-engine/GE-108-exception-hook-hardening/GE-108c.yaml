@@ -57,3 +57,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-Exceptionhandlingguardenforcestheerror/03_TICKET-20260617-GE-108c.md
+change_target: code
+risk_surface: internal

@@ -64,3 +64,5 @@ covered_by:
   - GE-100h-1
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100h.md
+change_target: config
+risk_surface: contract_boundary
