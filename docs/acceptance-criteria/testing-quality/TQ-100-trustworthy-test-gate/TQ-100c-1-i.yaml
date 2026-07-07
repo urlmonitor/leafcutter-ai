@@ -46,3 +46,5 @@ implemented_by: []
 notes: |
   The asymmetry is the point: a not-done link can soften a test, but removing the
   link can only ever harden it. There is no link-edit that silences a test.
+change_target: code
+risk_surface: internal

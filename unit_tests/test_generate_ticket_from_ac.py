@@ -19,7 +19,10 @@ sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from generate_ticket_from_ac import (  # noqa: E402
     _build_agents_map,
+    _build_frontmatter as _build_frontmatter_top,
     _build_ticket_body,
+    _find_ac_by_id,
+    _normalize_change_target,
     _parse_test_constraints,
     _infer_complexity,
     _complexity_to_model_tier,
@@ -1380,4 +1383,186 @@ class TestFlowChangeGatesBlastRadiusVocabulary:
             "The following entries use legacy labels not in ALLOWED_RISK_SURFACES:\n"
             + "\n".join(invalid_entries)
             + "\n\nFix: migrate each entry to use the correct blast-radius label."
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestRealStoreComputedMapE2E
+# Ticket 10 AC-3: Anti-phantom-done gate — real store, real backfilled AC.
+# ---------------------------------------------------------------------------
+# This test loads TQ-100d-1.yaml from the REAL on-disk AC store (not a synthetic
+# dict) and asserts that the generator's computed output for that record:
+#   (a) emits change_target and risk_surface in the frontmatter, and
+#   (b) includes architect-review in the agents: map.
+#
+# WHY A SYNTHETIC AC WOULD DEFEAT THIS TEST'S PURPOSE:
+#   The phantom-done failure pattern for EPIC-ComputedQualityGates was that
+#   real AC YAML files in the store were NOT backfilled with change_target /
+#   risk_surface, so the generator always fell through to the legacy (no-axes)
+#   path and emitted agents maps without architect-review.  A test using a
+#   hard-coded dict {'change_target': 'code', 'risk_surface': 'contract_boundary'}
+#   would pass regardless of whether the real store was correctly backfilled —
+#   it only proves the generator *can* compute a map, not that the real store
+#   *contains* the right data to drive it.
+#
+#   Loading via _find_ac_by_id against the REAL ac_root proves both at once:
+#   - The backfilled YAML is present and readable.
+#   - The generator, fed data that actually lives on disk, computes the expected map.
+# ---------------------------------------------------------------------------
+
+# Real AC store root — the directory that exists in this worktree on disk.
+_REAL_AC_ROOT = _REPO_ROOT / "docs" / "acceptance-criteria"
+
+
+class TestRealStoreComputedMapE2E:
+    """Anti-phantom-done gate: real-store end-to-end test for computed agents map.
+
+    This class exercises the generator against the REAL backfilled TQ-100d-1 AC
+    record from the on-disk store (not a synthetic hard-coded dict).
+
+    The test proves that:
+      (a) the backfilled TQ-100d-1.yaml carries change_target and risk_surface
+          — confirming the backfill action (ticket 10) actually wrote to disk, and
+      (b) the generator, fed data that lives on disk, emits an agents: frontmatter
+          block containing architect-review — the unambiguous signal that the
+          computed contract_boundary path fired, not the legacy map.
+
+    A synthetic AC dict would defeat this gate because it would pass even if
+    the real store files were never backfilled (phantom-done).  Loading from
+    _find_ac_by_id against the real ac_root is the only way to prove both
+    the store state and the generator wiring simultaneously.
+    """
+
+    def test_real_backfilled_ac_gets_architect_review(self) -> None:
+        # covers: UNKNOWN
+        """Real-store anti-phantom-done gate for TQ-100d-1.
+
+        Loads TQ-100d-1 from the real AC store via _find_ac_by_id (NOT a
+        synthetic dict), runs the generator's computed-map path, and asserts:
+
+        (a) The loaded record carries change_target and risk_surface
+            (confirms the backfill wrote to disk).
+        (b) _build_agents_map driven by those real axes returns a map where
+            architect-review == 'needed' (confirms the computed path fired).
+        (c) _build_frontmatter driven by the real record emits both
+            change_target and risk_surface in the YAML block (confirms
+            the axes pass through to the ticket frontmatter).
+
+        If TQ-100d-1.yaml is missing from the real store, the test fails
+        immediately with a clear message — it never falls back to a synthetic
+        path.
+        """
+        import yaml as _yaml
+
+        # ---- Step 1: Load the real AC record from disk ----
+        assert _REAL_AC_ROOT.is_dir(), (
+            f"Real AC store root does not exist: {_REAL_AC_ROOT}\n"
+            "This test requires the worktree to contain the docs/acceptance-criteria/ "
+            "directory populated by the ticket-10 backfill."
+        )
+
+        result = _find_ac_by_id(_REAL_AC_ROOT, "TQ-100d-1")
+
+        assert result is not None, (
+            f"_find_ac_by_id could not locate 'TQ-100d-1' under {_REAL_AC_ROOT}.\n"
+            "Verify that the backfill (ticket 10) has written TQ-100d-1.yaml to the store."
+        )
+
+        _ac_path, ac = result
+
+        # ---- Step 2: Assert the backfill wrote the axes to disk ----
+        assert "change_target" in ac, (
+            f"TQ-100d-1.yaml (loaded from {_ac_path}) is missing the 'change_target' field.\n"
+            "The ticket-10 backfill must add change_target: [config, code] to this record.\n"
+            f"Current record keys: {sorted(ac.keys())}"
+        )
+
+        assert "risk_surface" in ac, (
+            f"TQ-100d-1.yaml (loaded from {_ac_path}) is missing the 'risk_surface' field.\n"
+            "The ticket-10 backfill must add risk_surface: contract_boundary to this record.\n"
+            f"Current record keys: {sorted(ac.keys())}"
+        )
+
+        # ---- Step 3: Drive _build_agents_map with the real record's axes ----
+        assigned_agent = ac.get("assigned_agent", "python-coder")
+        change_targets = _normalize_change_target(ac)
+        risk_surface = ac.get("risk_surface") or None
+
+        # Both axes must be non-None for the computed path to fire
+        assert change_targets is not None, (
+            f"_normalize_change_target returned None for the real AC record — "
+            f"change_target value in YAML: {ac.get('change_target')!r}"
+        )
+        assert risk_surface is not None, (
+            f"risk_surface is None after reading the real AC record — "
+            f"risk_surface value in YAML: {ac.get('risk_surface')!r}"
+        )
+
+        agents = _build_agents_map(
+            assigned_agent,
+            change_targets=change_targets,
+            risk_surface=risk_surface,
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+        )
+
+        assert "architect-review" in agents, (
+            f"Expected 'architect-review' in the computed agents map for the real "
+            f"TQ-100d-1 record (change_target={change_targets!r}, "
+            f"risk_surface={risk_surface!r}), but it was absent.\n\n"
+            f"This is the anti-phantom-done signal: architect-review is present only "
+            f"when the computed (change_target, risk_surface) path fires, NOT the "
+            f"legacy fallback path.\n\n"
+            f"Computed agents map: {agents}\n\n"
+            f"AC loaded from: {_ac_path}"
+        )
+
+        assert agents.get("architect-review") == "needed", (
+            f"architect-review must be 'needed' in the computed map for "
+            f"change_target={change_targets!r} / risk_surface={risk_surface!r}; "
+            f"got {agents.get('architect-review')!r}.\n"
+            f"Full agents map: {agents}"
+        )
+
+        # ---- Step 4: Assert _build_frontmatter emits the axes ----
+        files_touched: list[str] = []  # no doc_links required for this assertion
+        fm_str = _build_frontmatter_top(ac, "TQ-100d-1", files_touched, agents)
+
+        assert fm_str.startswith("---"), (
+            "Generated frontmatter must start with '---'."
+        )
+        parts = fm_str.split("---", 2)
+        assert len(parts) >= 3, (
+            "Generated frontmatter must have opening and closing '---' delimiters."
+        )
+        fm = _yaml.safe_load(parts[1])
+
+        assert "change_target" in fm, (
+            "Expected 'change_target' in the generated ticket frontmatter when "
+            "the real TQ-100d-1 record carries that field.\n"
+            f"Frontmatter keys present: {sorted(fm.keys())}\n"
+            f"change_target value in AC record: {ac.get('change_target')!r}"
+        )
+
+        assert "risk_surface" in fm, (
+            "Expected 'risk_surface' in the generated ticket frontmatter when "
+            "the real TQ-100d-1 record carries that field.\n"
+            f"Frontmatter keys present: {sorted(fm.keys())}\n"
+            f"risk_surface value in AC record: {ac.get('risk_surface')!r}"
+        )
+
+        # ---- Step 5: Assert the agents block in the frontmatter has architect-review ----
+        agents_fm = fm.get("agents", {})
+
+        assert "architect-review" in agents_fm, (
+            f"Expected 'architect-review' in the 'agents:' block of the generated "
+            f"frontmatter for TQ-100d-1.\n\n"
+            f"agents block: {agents_fm}\n\n"
+            "This is the real-store phantom-done gate: the axes from the on-disk "
+            "YAML must flow through _build_frontmatter into the emitted ticket."
+        )
+
+        assert agents_fm.get("architect-review") == "needed", (
+            f"architect-review must be 'needed' in the frontmatter agents block; "
+            f"got {agents_fm.get('architect-review')!r}.\n"
+            f"Full agents block: {agents_fm}"
         )

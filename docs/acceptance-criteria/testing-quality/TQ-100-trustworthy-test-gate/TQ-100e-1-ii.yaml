@@ -48,3 +48,5 @@ notes: |
   most conservative of the two non-blocking options, guaranteeing a fresh
   consumer install is never blocked nor has any test silently excluded until the
   project opts in.
+change_target: config
+risk_surface: internal

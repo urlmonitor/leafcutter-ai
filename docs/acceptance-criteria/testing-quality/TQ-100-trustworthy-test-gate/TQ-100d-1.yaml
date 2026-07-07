@@ -60,3 +60,7 @@ notes: |
   this allowlist also resolves that specific collection error.
   RESOLVED (IT-PO): YAML config home + module under scripts/; required fields per
   entry = test id/path, ticket_ref, expiry (ISO date).
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

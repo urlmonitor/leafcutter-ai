@@ -53,3 +53,5 @@ notes: |
   the self-expiring behavior is unambiguous. ID-derived parent is TQ-100d (the L1
   carrying the documentation_trigger); the behavioral L2 it documents (TQ-100d-1)
   is retained in depends_on.
+change_target: docs
+risk_surface: internal

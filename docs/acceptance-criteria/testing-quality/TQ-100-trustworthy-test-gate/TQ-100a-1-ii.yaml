@@ -48,3 +48,5 @@ notes: |
   Distinct from -i (missing import): here the module imports a real target but
   the file's top-level code raises during collection. Both classes of collection
   failure must be isolated, not just the missing-import class.
+change_target: code
+risk_surface: internal
