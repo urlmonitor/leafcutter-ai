@@ -1,0 +1,47 @@
+id: TKT-200f-1-i
+title: "A build green only from stale deployed skill artifacts is rejected by the clean tree"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose captured claim is "the build passes" with the reproduction command
+    being the build, and locally the build exits 0 because stale deployed skill artifacts
+    mask two dangling skill pointers,
+  When the pre-inbox-exit premise verification runs the build against a clean, CI-equivalent
+    tree that has no stale deployed artifacts,
+  Then the clean-tree build surfaces the two dangling skill pointers and exits non-zero,
+  And the verification reports the local-vs-clean discrepancy and blocks the ticket from
+    leaving the inbox,
+  And the "build passes" premise is not allowed to become load-bearing.
+depends_on:
+  - TKT-200f-1
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The clean tree must exclude locally-deployed artifacts (e.g. deployed skill copies) so masked defects surface."
+  - "This scenario reproduces the real finding: a local build exits 0 while the clean/CI build exits non-zero on dangling skill pointers."
+delivers_to:
+  agent: create-ticket
+  contract: "Clean-tree verification that surfaces defects masked by stale local deployment"
+expects_from:
+  ac_id: TKT-200f-1
+  contract: "The clean-tree verification whose stale-artifact-masking path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

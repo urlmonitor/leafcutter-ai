@@ -1,0 +1,35 @@
+id: BO-1900c
+title: "The assigned agent actually fits the work the ticket requires"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Run-and-report goes to the test-runner, not the test-writer -- the fit is checked, not assumed.
+
+  The dispatch confirms that the assigned phase agent's charter matches what the
+  task actually asks for -- not merely that the agent is a valid name in the
+  agents map. A mis-assignment (for example, a "run the existing suite and report"
+  task handed to a test-writer) is caught before it triggers an inevitable
+  completion-manifest failure and retry loop.
+depends_on: [BO-1900]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900c-1
+  - BO-1900c-2
+  - BO-1900c-1-i
+  - BO-1900c-1-ii
+  - BO-1900c-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc

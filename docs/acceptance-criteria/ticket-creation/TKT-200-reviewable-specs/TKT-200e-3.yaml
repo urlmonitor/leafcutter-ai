@@ -1,0 +1,49 @@
+id: TKT-200e-3
+title: "Reference doc defines the premise-capture format for tickets"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given tickets must pair each motivating factual claim with a reproduction command and
+    an observed result,
+  When the documentation step runs for this feature,
+  Then a reference document is produced that specifies the capture format: how a claim is
+    written, where the reproduction command and observed result live on the ticket, and
+    the structured shape a downstream stage re-runs,
+  And the reference states what counts as a complete capture versus a flagged one
+    (missing command, missing result, placeholder result),
+  And it cross-references TKT-200f (clean-tree verification) and BO-1900b (dispatch-time
+    re-check) as the consumers of the captured data.
+depends_on:
+  - TKT-200e
+  - TKT-200e-1
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: reference-author
+estimated_complexity: S
+it_requirements:
+  - "Must specify the on-ticket location and structured shape of claim + command + observed result."
+  - "Must define complete vs flagged capture and cross-reference TKT-200f and BO-1900b as consumers."
+delivers_to:
+  agent: reference-author
+  contract: "A reference document specifying the premise-capture format and its consumers"
+expects_from:
+  ac_id: TKT-200e-1
+  contract: "The implemented capture format and completeness rules to document"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

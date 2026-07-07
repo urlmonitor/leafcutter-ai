@@ -1,0 +1,35 @@
+id: BO-1900b
+title: "A ticket's stated premises are re-checked before a run is spent"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Stale or false premises stop the dispatch instead of wasting an agent run.
+
+  The factual claims a ticket relies on ("build X fails", "these tests are red",
+  "module Y is missing") are reproduced and confirmed at the dispatch moment, so a
+  premise that has since been fixed -- or was never true -- halts the dispatch.
+  This is the dispatch-time freshness check; capturing and first-verifying those
+  premises at authoring time is covered by TKT-200e and TKT-200f.
+depends_on: [BO-1900]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900b-1
+  - BO-1900b-2
+  - BO-1900b-1-i
+  - BO-1900b-1-ii
+  - BO-1900b-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

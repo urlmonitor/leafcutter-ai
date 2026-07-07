@@ -1,0 +1,35 @@
+id: BO-1900d
+title: "A dispatch carries only a safe pointer, never a free-written prompt"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Agents are handed an allowlisted pointer -- not a hand-composed prose brief.
+
+  The payload a supervisor gives a phase agent is limited to an allowlisted set of
+  pointers (ticket path, workspace path, branch, files touched) and cannot be a
+  free-composed prompt that restates the task, repeats the sign-off steps, or
+  injects a failure premise. This removes the very freedom that let a defective,
+  false-premise dispatch be written in the first place.
+depends_on: [BO-1900]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900d-1
+  - BO-1900d-2
+  - BO-1900d-1-i
+  - BO-1900d-2-i
+  - BO-1900d-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc

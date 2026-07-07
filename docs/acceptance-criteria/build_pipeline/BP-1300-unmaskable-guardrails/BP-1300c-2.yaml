@@ -1,0 +1,44 @@
+id: BP-1300c-2
+title: "Ticket sign-off parity outside the done state fails the drive instead of warning"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the ticket sign-off parity check, which is warn-only today for tickets outside the
+    done state, and a parity violation is present (the Sign-offs checklist and frontmatter
+    disagree),
+  When the check runs inside an automated drive,
+  Then the check reports the violation as a failure and returns a non-zero exit,
+  And the drive stops on that check rather than continuing past a warning,
+  And the failure names the ticket and the field that is out of parity.
+depends_on:
+  - BP-1300c
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "In automated-drive mode the sign-off parity check must escalate a violation from warning to failure for tickets outside the done state."
+  - "The failure must name the ticket and the out-of-parity field."
+  - "Escalation must be applied to the existing scripts/commit_guardian/check_ticket_signoff_parity.py check, not a new parallel check."
+delivers_to:
+  agent: python-coder
+  contract: "Sign-off parity enforcement that fails during automated drives"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

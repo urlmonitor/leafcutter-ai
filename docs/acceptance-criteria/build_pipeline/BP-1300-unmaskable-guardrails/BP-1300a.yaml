@@ -1,0 +1,34 @@
+id: BP-1300a
+title: "A broken skill registry fails the build in every environment"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A skill pointer that resolves to nothing fails the build -- local or CI, no exceptions.
+
+  When the registry references a skill that does not exist, the build fails
+  deterministically everywhere. The check validates against the clean canonical
+  source instead of stale locally-deployed artifacts that can accidentally resolve
+  the reference and make a real break look green.
+depends_on: [BP-1300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300a-1
+  - BP-1300a-2
+  - BP-1300a-1-i
+  - BP-1300a-1-ii
+  - BP-1300a-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc

@@ -1,0 +1,32 @@
+id: BP-1300b
+title: "Checks judge the canonical source, not stale deployed copies"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Guardrails read the source of truth -- a dirty deployment can't launder a real defect.
+
+  Build and authoring guardrails resolve what they validate from the canonical
+  source tree rather than the deployed working copy, so leftover or out-of-date
+  deployed artifacts can never mask a defect that would otherwise be caught.
+depends_on: [BP-1300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300b-1
+  - BP-1300b-2
+  - BP-1300b-1-i
+  - BP-1300b-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc

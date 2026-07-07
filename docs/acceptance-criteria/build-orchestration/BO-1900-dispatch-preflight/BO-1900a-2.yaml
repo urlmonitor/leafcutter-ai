@@ -1,0 +1,45 @@
+id: BO-1900a-2
+title: "A fit ticket passes preflight and dispatch proceeds unchanged"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket that passes every fitness check (premises reproduce, the assigned
+    agent fits the task verb, and the payload is a well-formed allowlisted pointer),
+  When the supervisor reaches the spawn point and the preflight validation stage runs,
+  Then the preflight returns a fit verdict,
+  And the phase agent is spawned exactly as it would have been without the preflight stage,
+  And no held-back record is produced for that ticket.
+depends_on:
+  - BO-1900a
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "A fit verdict must be a pass-through: the spawn call, its arguments, and dispatch ordering are identical to the pre-preflight behavior."
+  - "The preflight stage must not mutate the ticket or its dispatch payload on the fit path."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A no-op-on-pass preflight gate that leaves the fit-ticket dispatch path unchanged"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

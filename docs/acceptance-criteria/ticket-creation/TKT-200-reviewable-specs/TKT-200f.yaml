@@ -1,0 +1,34 @@
+id: TKT-200f
+title: "A spec's premises are proven in a clean environment before it can be built"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Premises are confirmed against a clean, CI-equivalent tree -- not a developer's dirty local one.
+
+  Before a ticket leaves the inbox, its captured factual claims are verified
+  against a clean, CI-equivalent environment rather than a developer's local tree.
+  A premise that only looks true because of stale local artifacts -- for example a
+  build that exits 0 locally but fails in CI -- can never become load-bearing.
+depends_on: [TKT-200]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - TKT-200f-1
+  - TKT-200f-2
+  - TKT-200f-1-i
+  - TKT-200f-1-ii
+  - TKT-200f-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

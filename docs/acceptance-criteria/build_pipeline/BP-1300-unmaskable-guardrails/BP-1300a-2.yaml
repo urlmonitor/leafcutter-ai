@@ -1,0 +1,41 @@
+id: BP-1300a-2
+title: "A resolvable skill pointer passes the build check"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given every skill_id referenced in the registry's skills_invoked entries resolves to a
+    skill that exists in the canonical source,
+  When the build's skill-pointer check runs,
+  Then the check passes and the build is not failed on the skill-pointer axis,
+  And the pass is the same whether the build runs locally or in CI.
+depends_on:
+  - BP-1300a
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A registry whose skill_ids all resolve in the canonical source must pass the check."
+  - "The check must not fail the build when all pointers resolve, avoiding false positives that block valid builds."
+delivers_to:
+  agent: python-coder
+  contract: "A skill-pointer check that passes when all skill_ids resolve"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []
