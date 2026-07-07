@@ -50,3 +50,5 @@ amended_by:
 superseded_by: [TKT-500f-6-iii-a, TKT-500f-6-iii-b]
 covered_by: [TKT-500f-6-iii-a, TKT-500f-6-iii-b]
 implemented_by: []
+change_target: pipeline
+risk_surface: internal

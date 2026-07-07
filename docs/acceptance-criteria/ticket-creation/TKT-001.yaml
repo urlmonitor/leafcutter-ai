@@ -16,3 +16,5 @@ amended_by: []
 covered_by: []
 implemented_by: []
 origin_agent: "human"
+change_target: prompt
+risk_surface: internal

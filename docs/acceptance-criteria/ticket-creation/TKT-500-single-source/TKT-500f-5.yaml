@@ -58,3 +58,5 @@ amended_by:
 superseded_by: null
 covered_by: [TKT-500f-5-i]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

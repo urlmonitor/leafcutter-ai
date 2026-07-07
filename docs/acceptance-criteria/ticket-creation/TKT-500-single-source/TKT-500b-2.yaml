@@ -27,3 +27,5 @@ covered_by: [TKT-500b-2-i]
 implemented_by: []
 it_requirements:
   - "Blocking gate reads signoffs field from AC YAML, not from ticket"
+change_target: pipeline
+risk_surface: internal

@@ -27,3 +27,5 @@ covered_by: []
 implemented_by: []
 it_requirements:
   - "Error must name the target language and the registry lookup result"
+change_target: pipeline
+risk_surface: internal

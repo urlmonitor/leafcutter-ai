@@ -30,3 +30,5 @@ implemented_by: []
 it_requirements:
   - "Must implement topological sort with cycle detection"
   - "Must traverse AC hierarchy recursively to find all leaves"
+change_target: pipeline
+risk_surface: contract_boundary
