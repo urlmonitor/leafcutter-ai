@@ -29,3 +29,5 @@ amended_by: []
 superseded_by: null
 covered_by: [ACD-900a, ACD-900b]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

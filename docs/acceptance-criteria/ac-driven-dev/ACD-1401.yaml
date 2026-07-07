@@ -12,3 +12,5 @@ criteria: |
   And no v3-suffixed agent name string appears in the module
   And the bug symptom "constants define non-existent v3 agent names" must not occur
 notes: "Authored by /quick-fix. Root cause: constants were not updated when agents were renamed from v3 to canonical."
+change_target: pipeline
+risk_surface: internal

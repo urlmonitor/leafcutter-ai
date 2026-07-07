@@ -31,3 +31,5 @@ implemented_by: []
 documentation_triggers:
   - how-to
   - sequence-diagram
+change_target: docs
+risk_surface: internal

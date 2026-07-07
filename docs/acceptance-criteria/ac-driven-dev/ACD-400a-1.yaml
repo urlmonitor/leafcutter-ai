@@ -33,3 +33,5 @@ amended_by: []
 superseded_by: null
 covered_by: [ACD-400a-1-i, ACD-400a-1-ii, ACD-400a-1-iii]
 implemented_by: []
+change_target: code
+risk_surface: internal

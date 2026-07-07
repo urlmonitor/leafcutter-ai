@@ -55,3 +55,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/02_TICKET-20260618-ACD-300g-1-i.md
+change_target: pipeline
+risk_surface: internal

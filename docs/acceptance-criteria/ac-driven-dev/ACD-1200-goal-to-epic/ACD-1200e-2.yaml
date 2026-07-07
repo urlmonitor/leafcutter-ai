@@ -46,3 +46,5 @@ amended_by:
 superseded_by: null
 covered_by: [ACD-1200e-2-i]
 implemented_by: []
+change_target: prompt
+risk_surface: internal
