@@ -69,7 +69,12 @@ def load_components_registry(project_root_path: Path) -> set[str]:
         with open(registry_path, encoding="utf-8") as f:
             data = json.load(f)
         return {comp["id"] for comp in data.get("components", []) if isinstance(comp, dict) and "id" in comp}
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # fail-open: skip components validation, but surface why
+        print(
+            f"[check-ticket-signoff-parity] WARNING: could not load components registry at "
+            f"{registry_path}; skipping components validation",
+            file=sys.stderr,
+        )
         return set()
 
 
