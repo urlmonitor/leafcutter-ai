@@ -32,3 +32,5 @@ superseded_by: null
 covered_by: [BO-300c-1-1]
 implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
+change_target: code
+risk_surface: internal

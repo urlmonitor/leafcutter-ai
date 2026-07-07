@@ -35,3 +35,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-1600a, BO-1600b, BO-1600c]
 implemented_by: []
+change_target: infrastructure
+risk_surface: safety

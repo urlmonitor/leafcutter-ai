@@ -58,3 +58,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/03_TICKET-20260624-BO-1500a-2.md
+change_target: infrastructure
+risk_surface: safety

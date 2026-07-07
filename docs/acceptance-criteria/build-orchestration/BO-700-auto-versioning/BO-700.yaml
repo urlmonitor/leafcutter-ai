@@ -30,3 +30,5 @@ covered_by:
   - BO-700d
   - BO-700e
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

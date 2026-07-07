@@ -74,3 +74,5 @@ notes: |
   ssr:false render bug that only fails at route render time and reached PR/CI.
   Re-parented + renamed to BO-570-1 in the Pattern C split that moved the local
   verification gates out of BO-530 into the new sibling L1 BO-570.
+change_target: code
+risk_surface: contract_boundary

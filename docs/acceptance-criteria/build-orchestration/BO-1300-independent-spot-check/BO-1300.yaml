@@ -35,3 +35,5 @@ covered_by:
   - BO-1300d
   - BO-1300e
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

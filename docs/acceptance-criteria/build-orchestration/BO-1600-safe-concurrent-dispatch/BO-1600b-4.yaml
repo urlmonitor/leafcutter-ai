@@ -50,3 +50,5 @@ covered_by: []
 implemented_by: []
 notes: |
   Satisfies the BO-1600b L1 documentation_triggers: [state-diagram].
+change_target: docs
+risk_surface: internal

@@ -27,3 +27,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-1500c-1, BO-1500c-2, BO-1500c-3, BO-1500c-4, BO-1500c-5]
 implemented_by: []
+change_target: pipeline
+risk_surface: safety

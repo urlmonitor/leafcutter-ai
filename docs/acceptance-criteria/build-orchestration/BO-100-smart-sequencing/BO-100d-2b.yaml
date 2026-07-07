@@ -43,3 +43,5 @@ notes: |
   (templates/workflows/build-feature.md) success path. Sibling BO-100d-2a owns
   the build-epic.js success path; both reuse the BO-100d-1a probe helper.
   Lineage: TICKET-20260527-FeedbackSinkPreDriveCheck.
+change_target: prompt
+risk_surface: internal

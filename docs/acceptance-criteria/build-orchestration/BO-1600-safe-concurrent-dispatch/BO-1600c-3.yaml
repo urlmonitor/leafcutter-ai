@@ -52,3 +52,5 @@ notes: |
   Negative-guarantee AC: the original failure compounded damage by continuing on
   a broken store. This pins "stop and stay stopped" so a coder cannot reduce the
   halt to a warning the drive ignores.
+change_target: infrastructure
+risk_surface: safety

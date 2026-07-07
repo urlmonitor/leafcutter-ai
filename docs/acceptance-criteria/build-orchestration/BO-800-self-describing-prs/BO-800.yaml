@@ -29,3 +29,5 @@ covered_by:
   - BO-800d
   - BO-800e
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

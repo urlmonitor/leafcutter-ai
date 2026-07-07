@@ -31,3 +31,5 @@ covered_by:
 implemented_by: []
 documentation_triggers:
   - sequence-diagram
+change_target: infrastructure
+risk_surface: safety
