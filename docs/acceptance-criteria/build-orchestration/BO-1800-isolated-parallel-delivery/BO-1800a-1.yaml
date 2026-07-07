@@ -48,4 +48,5 @@ superseded_by: null
 covered_by:
   - BO-1800a-1-i
   - BO-1800a-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/01_TICKET-20260707-BO-1800a-1.md
