@@ -1,0 +1,52 @@
+id: FIN-100g-1
+title: "Target branch/worktree resolved from input even when invoked outside the worktree"
+level: L2
+component: finalize
+status: active
+parent: FIN-100g
+criteria: |
+  Given the finalize workflow receives a target feature branch as input (args)
+  And the process CWD is a different repository or worktree (for example the main
+  repo checked out on main)
+  When the pre-flight resolves branch and worktree_root
+  Then it locates the worktree in which the target branch is checked out
+  (for example via `git worktree list --porcelain`) and anchors subsequent git
+  reads on that path with `git -C <path>`
+  And it returns branch equal to the target feature branch (not the CWD's branch)
+  And it returns worktree_root equal to that worktree's absolute path
+  And the "must be run from a feature branch" abort fires only when the resolved
+  TARGET branch is main/master — never merely because the ambient CWD is on main
+  And when no explicit target is provided the pre-flight falls back to CWD-based
+  detection unchanged (backward compatible)
+  And if the target branch has no checked-out worktree the workflow returns a clear
+  error naming the branch, rather than silently resolving to the wrong repo
+origin_agent: "BrainCandy"
+created_by_ticket: "tickets/00_inbox/TICKET-20260707-restore-ci-test-baseline.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: M
+it_requirements: |
+  - The pre-flight MUST accept the target branch (and/or worktree path) from the
+    workflow's args rather than reading git only in the ambient CWD.
+  - When a target branch is provided, resolve its worktree via
+    `git worktree list --porcelain` (or an equivalent lookup) and use
+    `git -C <resolved_worktree>` for the branch/toplevel reads.
+  - The main/master abort MUST key off the RESOLVED target branch, not the CWD branch.
+  - Preserve the existing CWD-detection path as a fallback when no target is supplied
+    (existing in-worktree invocations keep working).
+  - Emit a clear, branch-named error when the target branch is not checked out in any
+    worktree; do not fall through to an unrelated repository.
+  - A regression test SHOULD invoke the pre-flight logic with a target branch while the
+    CWD is on main and assert branch/worktree_root resolve to the target, not "main".
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Pre-flight agent dispatch that resolves branch/worktree_root and the main/master abort guard"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map pre-flight row — target resolution contract"
+depends_on:
+  - FIN-100a-1
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

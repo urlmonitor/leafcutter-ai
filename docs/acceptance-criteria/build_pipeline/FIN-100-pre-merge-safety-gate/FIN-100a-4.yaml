@@ -1,0 +1,61 @@
+id: FIN-100a-4
+title: "Baseline (Step 0) and post-merge (Step 3) test runs use identical build/deploy setup"
+level: L2
+component: finalize
+status: active
+parent: FIN-100a
+criteria: |
+  Given Step 0 captures the baseline by running the project build
+  (python scripts/build.py, whose install_shims deploys scripts/commit_guardian,
+  scripts/feedback, scripts/doc_compliance and the .pre-commit-config.yaml)
+  before executing the full test suite in the temporary origin/main worktree
+  When Step 3 runs the full test suite on the post-merge feature worktree
+  Then Step 3 first performs the same build/deploy step against the feature
+  worktree root before invoking the suite
+  And both runs therefore collect and deploy the identical set of runtime
+  artifacts
+  So that deploy-dependent tests (for example those asserting on
+  scripts/commit_guardian/* script paths, such as test_check_ac_governance,
+  test_ensure_precommit_config, test_precommit_canary, test_verify_precommit_active,
+  and setup_ticket_worktree bootstrap-gate tests) cannot fail RED in one run and
+  pass in the other purely because of missing build state
+  And the regression_candidates set difference (post_merge_failures minus
+  baseline_failures) reflects only real code differences and never environment
+  skew between the two runs
+origin_agent: "BrainCandy"
+created_by_ticket: "tickets/00_inbox/TICKET-20260707-restore-ci-test-baseline.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - The Step 3 test-runner dispatch prompt MUST instruct running the project build
+    (python scripts/build.py --target-dir "<WORKTREE_ROOT>") before pytest, mirroring
+    the Step 0 baseline agent's build step.
+  - The build MUST target the post-merge worktree root via git -C "${WORKTREE_ROOT}"
+    so install_shims deploys into the worktree being tested (not the ambient CWD).
+  - If Step 0 downgrades self-description enforcement to complete the build
+    (--self-description-enforcement warning), Step 3 MUST use the same enforcement
+    level so the two runs stay symmetric.
+  - This AC constrains only the environment parity of the two test runs; it does not
+    alter the triage set-difference logic (FIN-100c) or the null-baseline conservative
+    path (FIN-100c-3).
+  - A regression guard test SHOULD assert that both the Step 0 and Step 3 dispatch
+    prompts contain the build/deploy instruction, so the two cannot drift apart.
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "provides post_merge_failures collected under the same build/deploy state as baseline_failures, so set-difference is valid"
+expects_from:
+  - agent: "test-runner"
+    contract: "runs the project build/deploy before pytest and returns failures collected on the deployed post-merge state"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 0 baseline agent builds before pytest (steps A0-C); the step-3-test-run dispatch must mirror that build step"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map rows 0 and 3 — baseline vs post-merge test runs must use the same setup"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Baseline capture builds before running the suite; the post-merge run must match"
+depends_on:
+  - FIN-100a-1
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
