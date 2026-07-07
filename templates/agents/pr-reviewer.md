@@ -224,6 +224,56 @@ The existing skill's dispatch tree fans them out — rely on it.
 
 Collect the full output of every sub-skill as the raw finding set.
 
+## Step 2a — Card/Registry Consistency Backstop (if applicable)
+
+> **This check is a secondary backstop only.** The authoritative card<->registry
+> consistency enforcement is the build-time mirror check (INF-600l-1). This step is
+> NOT a replacement for it — it provides a human-readable warning layer surfaced in
+> the PR review when the build-time check output is not directly visible to reviewers.
+
+**Trigger**: run this step only when the working diff modifies at least one of:
+- `leafcutter/config/agent_registry.json` (one or more agent registry entries)
+- A generated agent card file (e.g. `docs/agents/<agent-id>.md` or any path under
+  the project's agent-cards directory)
+
+If the diff does not touch either category, skip this step entirely and proceed
+to Step 3.
+
+**You have no search tools.** Do NOT attempt to read the registry or card files
+yourself. Delegate the card<->registry cross-reference entirely to `research-agent`
+via the `Agent` tool. The procedure:
+
+1. Inspect the diff to identify which agent IDs are affected — these are the agent
+   IDs present in changed registry entries or card files.
+2. Spawn `research-agent` with a precise question: for each affected agent ID, ask
+   whether the fields in the agent's registry entry agree with the fields in its
+   generated card, and if not, which specific field differs and how (registry-side
+   value vs card-side value).
+3. Reason over what `research-agent` returns. Do not perform any additional file
+   lookups yourself.
+
+**When research-agent reports a disagreement**, surface it as a finding in the review
+output using the format below. Name both the registry entry agent and the card for
+that agent; name the disagreeing field and both values:
+
+```
+[H-N or M-N] card/registry mismatch — agent: <agent-id>
+      Registry entry '<field-name>': <registry-value>
+      Card '<field-name>':           <card-value>
+      Source: research-agent card/registry cross-reference
+      Backstop note: the authoritative check is the build-time mirror (INF-600l-1).
+      If the build-time check is already green, this may reflect a transient diff
+      state; confirm before treating it as a blocker.
+```
+
+Severity classification for these findings:
+- A mismatch on a field that affects agent dispatch, capability declarations, or
+  tool allowlists is a **high-confidence finding**.
+- A mismatch on cosmetic, description-only, or documentation-adjacent fields is a
+  **medium-confidence finding**.
+
+---
+
 ## Step 3 — Classify Every Finding
 
 For each finding from the raw set, assign exactly one confidence class:
@@ -386,8 +436,8 @@ specified in `signoff` §2b. A bare `false` is malformed and will be flagged by 
 - Do not modify the `pr-review-toolkit:review-pr` skill or any of its sub-skills.
 - Do not stage files, commit, push, or take any write-side git action.
 - Spawn sub-agents only for the two named roles: `research-agent` (cross-file
-  lookups during `explain`) and the Opus escalation target (medium-cluster
-  gate). No other spawns.
+  lookups during `explain`, and card<->registry cross-reference delegation in
+  Step 2a) and the Opus escalation target (medium-cluster gate). No other spawns.
 - Classification ambiguity always resolves to medium, never to low.
 ## Sign-off (when ticket_path is provided)
 
