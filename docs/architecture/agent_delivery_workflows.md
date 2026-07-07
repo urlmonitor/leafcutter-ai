@@ -1892,9 +1892,9 @@ changed via `git diff --name-only`, then compares that set against the ticket's 
 undeclared-scope mismatch.
 
 The `alt` block shows the enforcement-strength policy from **BP-1100e-2**: with
-`files_touched_reconciliation.enabled: true, strict: false` (the shipped default) the verdict
+`predone_scope.strict: false` in `commit_guardian.json` (the shipped default) the verdict
 is **advisory** — it names the undeclared source files and warns, but does not block, so the
-ticket still reaches `done`. Only with `strict: true` (opt-in) does the same verdict **block**
+ticket still reaches `done`. Only with `predone_scope.strict: true` (opt-in) does the same verdict **block**
 the commit and stop the `done` transition until the scope is reconciled. If the hook itself
 errors while computing the diff or reading frontmatter, it **fails open** (never blocks on its
 own failure).

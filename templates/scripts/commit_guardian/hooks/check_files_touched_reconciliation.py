@@ -14,7 +14,9 @@ ARCHITECTURE: Standalone hook in templates/scripts/commit_guardian/hooks/
     Advisory by default (exit 0); blocks (exit 1) only in strict mode
     (predone_scope.strict: true in commit_guardian.json). Fail-open on all
     errors per BP-1100e-2. Registered in hooks_manifest.hooks[] of
-    commit_guardian.json.
+    commit_guardian.json. When multiple done tickets are staged together,
+    reconciliation uses the UNION of all their declared scopes so that a file
+    declared by any one ticket is not cross-flagged against the others.
 """
 
 from __future__ import annotations
@@ -79,7 +81,7 @@ def _get_staged_files() -> list[str]:
             text=True,
             check=False,
         )
-    except subprocess.SubprocessError as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
         print(f"{_HOOK_TAG} WARNING: git diff --cached failed: {exc}", file=sys.stderr)
         return []
     return [ln for ln in result.stdout.strip().splitlines() if ln.strip()]
@@ -94,7 +96,11 @@ def _get_repo_root() -> str:
             text=True,
             check=False,
         )
-    except subprocess.SubprocessError:
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(
+            f"{_HOOK_TAG} WARNING: git rev-parse --show-toplevel failed: {exc}",
+            file=sys.stderr,
+        )
         return ""
     return result.stdout.strip()
 
@@ -116,7 +122,7 @@ def _get_branch_diff_files() -> frozenset[str]:
                 text=True,
                 check=False,
             )
-        except subprocess.SubprocessError:
+        except (OSError, subprocess.SubprocessError):
             continue
         if result.returncode == 0:
             return frozenset(
@@ -149,7 +155,7 @@ def _is_case_insensitive_fs() -> bool:
             text=True,
             check=False,
         )
-    except subprocess.SubprocessError as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
         print(
             f"{_HOOK_TAG} WARNING: git config core.ignoreCase failed: {exc}",
             file=sys.stderr,
@@ -179,8 +185,36 @@ def _extract_frontmatter(content: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _strip_yaml_value(raw: str) -> str:
+    """Strip inline YAML comment and surrounding quotes from a scalar value.
+
+    Removes a trailing inline YAML comment (`` # ...``) first, then removes a
+    single pair of matching surrounding single or double quotes.  The
+    space-before-hash rule avoids stripping hashes that appear inside path
+    segments (e.g. ``scripts/build#1.py``).
+
+    Args:
+        raw: Raw string captured from YAML parsing.
+
+    Returns:
+        Cleaned scalar string value.
+    """
+    value = raw.strip()
+    # Strip inline comment: only honour space-hash to preserve in-path hashes.
+    comment_idx = value.find(" #")
+    if comment_idx != -1:
+        value = value[:comment_idx].strip()
+    # Strip a single pair of matching surrounding quotes.
+    if len(value) >= 2 and value[0] in ('"', "'") and value[-1] == value[0]:
+        value = value[1:-1]
+    return value
+
+
 def _get_status(frontmatter: str) -> str:
     """Extract the status value from frontmatter text.
+
+    Handles both unquoted (``status: done``) and quoted
+    (``status: "done"`` / ``status: 'done'``) values.
 
     Args:
         frontmatter: Raw YAML text between the --- delimiters.
@@ -189,13 +223,16 @@ def _get_status(frontmatter: str) -> str:
         Status string (e.g. 'done', 'in_progress'), or empty string if absent.
     """
     match = re.search(r"^status:\s*(\S+)", frontmatter, re.MULTILINE)
-    return match.group(1).strip() if match else ""
+    return _strip_yaml_value(match.group(1)) if match else ""
 
 
 def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
-    """Parse a block-sequence YAML list field from raw frontmatter text.
+    """Parse a YAML list field from raw frontmatter text.
 
-    Handles the ``field_name:\\n  - item`` block-sequence format.
+    Supports both block-sequence (dashes at column 0 or indented — matching
+    the PyYAML default column-0 dump as well as indented forms) and inline
+    flow-sequence ``[item, item]`` syntax.  Strips surrounding single or double
+    quotes and inline YAML comments from each item.
 
     Args:
         frontmatter: Raw YAML text between the --- delimiters.
@@ -204,12 +241,21 @@ def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
     Returns:
         List of stripped string values, or empty list if the field is absent.
     """
-    pattern = rf"^{re.escape(field_name)}:\s*\n((?:[ \t]+-[ \t]+\S[^\n]*\n?)+)"
+    # Block-sequence: field:\n[  ]*- item  (zero-or-more leading whitespace)
+    pattern = rf"^{re.escape(field_name)}:\s*\n((?:[ \t]*-[ \t]+\S[^\n]*\n?)+)"
     match = re.search(pattern, frontmatter, re.MULTILINE)
-    if not match:
-        return []
-    items = re.findall(r"^[ \t]+-[ \t]+(\S[^\n]*)", match.group(1), re.MULTILINE)
-    return [item.strip() for item in items if item.strip()]
+    if match:
+        raw_items = re.findall(r"^[ \t]*-[ \t]+(\S[^\n]*)", match.group(1), re.MULTILINE)
+        return [v for v in (_strip_yaml_value(i) for i in raw_items) if v]
+
+    # Flow-sequence: field: [item, item]
+    flow_pattern = rf"^{re.escape(field_name)}:\s*\[([^\]]*)\]"
+    flow_match = re.search(flow_pattern, frontmatter, re.MULTILINE)
+    if flow_match:
+        raw_items = flow_match.group(1).split(",")
+        return [v for v in (_strip_yaml_value(i) for i in raw_items) if v]
+
+    return []
 
 
 def _field_is_declared(frontmatter: str, field_name: str) -> bool:
@@ -241,12 +287,10 @@ def _normalise_path(path: str) -> str:
     """Strip leading ./ and normalise path separators; apply case-folding on
     case-insensitive filesystems.
 
-    Applies case-folding (lowercase) when the underlying filesystem is
-    case-insensitive, as detected by :func:`_is_case_insensitive_fs`.  This
-    ensures paths that differ only by case (e.g. ``Scripts/Build.py`` vs
-    ``scripts/build.py`` on NTFS or APFS) compare as equal after normalisation.
-    Both separator normalisation and case-folding are applied in sequence so
-    the two transformations compose correctly on Windows NTFS and macOS APFS.
+    Removes only a single leading ``./`` prefix using ``removeprefix`` so that
+    hidden files and directories (e.g. ``.github/ci.py``, ``.hidden.py``) are
+    never incorrectly stripped. The previous ``lstrip("./")`` call stripped ALL
+    leading dot and slash characters, which destroyed leading-dot filenames.
 
     Args:
         path: Raw file path from frontmatter or git output.
@@ -255,7 +299,7 @@ def _normalise_path(path: str) -> str:
         Normalised repo-relative path string, lowercased on case-insensitive
         filesystems.
     """
-    normalised = path.strip().lstrip("./").replace("\\", "/")
+    normalised = path.strip().removeprefix("./").replace("\\", "/")
     if _is_case_insensitive_fs():
         return normalised.lower()
     return normalised
@@ -362,36 +406,30 @@ def _compute_undeclared(
 
 
 # ---------------------------------------------------------------------------
-# Main entry point helpers
+# Ticket scope extraction
 # ---------------------------------------------------------------------------
 
 
-def _check_ticket(
-    rel_path: str,
-    repo_root: str,
-    staged_files: list[str],
-) -> list[str]:
-    """Check one staged ticket file for undeclared source changes.
+def _get_ticket_scope(rel_path: str, repo_root: str) -> set[str] | None:
+    """Return the normalised declared source scope for a done ticket.
 
-    Reads the ticket, parses its frontmatter, and returns undeclared source
-    files when status is 'done' and the declared scope misses a changed file.
+    Reads the ticket file, parses frontmatter, and returns the set of
+    normalised paths from ``files_touched`` UNION ``out_of_scope`` when the
+    ticket is status: done and declares a ``files_touched`` key.
 
-    When the ``files_touched`` frontmatter key is **absent** (not present in
-    the YAML at all — distinct from present-but-empty), reconciliation is
-    skipped entirely and an advisory message is printed to stderr.  This
-    no-op guard keeps the hook harmless in consumer projects that do not use
-    the ``files_touched`` convention (AC BP-1100e-1-iv, fail-open per
-    BP-1100e-2).
+    Wires the ``is_docs_only_or_config_only_ticket`` guard explicitly (AC
+    BP-1100e-1-iii): a ticket whose declared files are all non-source returns
+    an empty set, contributing no source paths to the reconciliation union.
 
     Args:
         rel_path: Repo-relative path to the staged ticket .md file.
         repo_root: Absolute git repo root path (may be empty string).
-        staged_files: All staged file paths for the current commit.
 
     Returns:
-        Sorted list of undeclared source file paths, or empty list when the
-        ticket is clean, not-done, has no ``files_touched`` declaration,
-        or a read/parse error occurred.
+        set[str] with normalised declared paths when the ticket is done and
+        has a parseable scope; empty set for docs-only tickets; None when the
+        ticket should be skipped (not done, key absent, read error, or empty
+        scope after parsing).
     """
     abs_path = Path(repo_root, rel_path) if repo_root else Path(rel_path)
 
@@ -402,33 +440,38 @@ def _check_ticket(
             f"{_HOOK_TAG} WARNING: cannot read {rel_path}: {exc} — skipping",
             file=sys.stderr,
         )
-        return []
+        return None
 
     frontmatter = _extract_frontmatter(content)
     if frontmatter is None or _get_status(frontmatter) != "done":
-        return []
+        return None
 
     if not _field_is_declared(frontmatter, "files_touched"):
-        # No files_touched key at all — no declared scope exists to reconcile
-        # against.  Skip cleanly and emit an advisory so the skip is visible
-        # rather than silent (AC BP-1100e-1-iv).
         print(
             f"{_HOOK_TAG} skipped (no files_touched declared in ticket): {rel_path}",
             file=sys.stderr,
         )
-        return []
+        return None
 
     files_touched = _parse_yaml_list_field(frontmatter, "files_touched")
     out_of_scope = _parse_yaml_list_field(frontmatter, "out_of_scope")
 
     if not files_touched and not out_of_scope:
-        return []  # no declared scope → nothing to reconcile against
+        return None  # declared key present but resolves to empty — skip
 
-    declared: set[str] = {_normalise_path(p) for p in files_touched + out_of_scope}
-    branch_diff = _get_branch_diff_files()
-    undeclared = _compute_undeclared(declared, branch_diff, staged_files)
-    ticket_norm = _normalise_path(rel_path)
-    return [p for p in undeclared if p != ticket_norm]
+    # Explicit docs/config-only guard (AC BP-1100e-1-iii): a ticket whose
+    # declared files are all non-source has no source paths to add to the
+    # reconciliation union.  Source changes are still caught because they are
+    # absent from the (empty) union declared scope.
+    if is_docs_only_or_config_only_ticket(files_touched):
+        return set()
+
+    return {_normalise_path(p) for p in files_touched + out_of_scope}
+
+
+# ---------------------------------------------------------------------------
+# Main entry point helpers
+# ---------------------------------------------------------------------------
 
 
 def _print_errors(all_errors: list[tuple[str, list[str]]]) -> None:
@@ -534,14 +577,18 @@ def _load_strict_mode(repo_root: str) -> bool:
 def main() -> int:
     """Run the pre-done scope reconciliation pre-commit hook.
 
-    Identifies done-staged tickets, computes changed source files, and either
-    prints an advisory (default) or blocks the commit (strict mode) when any
-    source file is absent from files_touched / out_of_scope.
+    Two-pass algorithm for multi-ticket commits:
+      Pass 1 — identify every staged done ticket and collect the UNION of all
+               their declared source scopes (files_touched UNION out_of_scope).
+      Pass 2 — compute undeclared source files against that union, so a file
+               declared by ANY staged done ticket is not cross-flagged against
+               the others (fixes the multi-ticket cross-flag defect).
 
     Fail-open contract (BP-1100e-2): every sub-function in this hook returns a
     safe default on error rather than propagating. _get_staged_files returns [],
-    _get_repo_root returns "", _check_ticket returns [], and _load_strict_mode
-    returns False — so any internal error collapses to a clean 0-exit.
+    _get_repo_root returns "", _get_ticket_scope returns None, and
+    _load_strict_mode returns False — so any internal error collapses to a
+    clean 0-exit.
 
     Returns:
         0 when clean, in advisory mode (default), or on any reconciliation error.
@@ -552,17 +599,35 @@ def main() -> int:
         return 0
 
     repo_root = _get_repo_root()
-    all_errors: list[tuple[str, list[str]]] = []
 
+    # Pass 1: collect all done ticket scopes and compute their union.
+    done_ticket_scopes: list[tuple[str, set[str]]] = []
     for rel_path in staged_files:
         if not rel_path.startswith("tickets/") or not rel_path.endswith(".md"):
             continue
-        undeclared = _check_ticket(rel_path, repo_root, staged_files)
-        if undeclared:
-            all_errors.append((rel_path, undeclared))
+        scope = _get_ticket_scope(rel_path, repo_root)
+        if scope is not None:
+            done_ticket_scopes.append((rel_path, scope))
 
-    if not all_errors:
+    if not done_ticket_scopes:
         return 0
+
+    union_declared: set[str] = set()
+    for _, scope in done_ticket_scopes:
+        union_declared.update(scope)
+
+    # Pass 2: compute undeclared against the union scope.
+    branch_diff = _get_branch_diff_files()
+    ticket_path_norms = {_normalise_path(rp) for rp, _ in done_ticket_scopes}
+    all_undeclared = _compute_undeclared(union_declared, branch_diff, staged_files)
+    all_undeclared = [p for p in all_undeclared if p not in ticket_path_norms]
+
+    if not all_undeclared:
+        return 0
+
+    all_errors: list[tuple[str, list[str]]] = [
+        (rp, all_undeclared) for rp, _ in done_ticket_scopes
+    ]
 
     strict = _load_strict_mode(repo_root)
     if strict:
@@ -639,4 +704,35 @@ if __name__ == "__main__":
 #   contract is preserved: each sub-function returns a safe default on error so
 #   the whole hook exits 0 on any internal failure. Added predone_scope section
 #   to commit_guardian.json with strict: false default.
+# - 2026-07-07 [python-coder/EPIC-PhantomDoneFilesTouched BP-1100e remediation]:
+#   Fix 8 confirmed defects discovered by code review and adversarial testing.
+#   D1 (CRITICAL — column-0 block sequences): _parse_yaml_list_field regex
+#     changed from [ \t]+ to [ \t]* (zero-or-more leading whitespace) in both
+#     the outer pattern and the items findall, so PyYAML default column-0 dashes
+#     parse correctly. Real-ticket parse test added.
+#   D2 (CRITICAL — FileNotFoundError fail-open hole): all four subprocess-calling
+#     functions (_get_staged_files, _get_repo_root, _get_branch_diff_files,
+#     _is_case_insensitive_fs) now catch (OSError, subprocess.SubprocessError)
+#     instead of subprocess.SubprocessError only, so a missing git binary
+#     produces fail-open exit 0 rather than an uncaught traceback.
+#   D3 (quoted declared paths): _strip_yaml_value() pure helper added; called
+#     by _parse_yaml_list_field() and _get_status() to remove surrounding
+#     single/double quotes and trailing inline comments from every parsed item.
+#   D4 (multi-ticket cross-flag): main() restructured to two-pass algorithm.
+#     Pass 1 collects all staged done tickets and computes the UNION of their
+#     declared scopes via _get_ticket_scope(). Pass 2 compares against that
+#     union, preventing cross-flagging between tickets in the same commit.
+#     _check_ticket() replaced by _get_ticket_scope() which returns set[str]|None.
+#   D5 (flow-style lists): _parse_yaml_list_field() now falls through to a
+#     flow-sequence branch when the block-sequence pattern fails: parses
+#     field: [a, b] via split(",") + _strip_yaml_value().
+#   D6 (_normalise_path lstrip over-strips): lstrip("./") replaced with
+#     str.removeprefix("./") so only a single leading "./" is removed and
+#     hidden files (.github/ci.py, .hidden.py) retain their leading dot.
+#   D7 (dead code wired): is_docs_only_or_config_only_ticket() is now called
+#     explicitly in _get_ticket_scope() as the AC BP-1100e-1-iii guard.
+#     Docs-only tickets return set() (empty source scope), contributing no
+#     source paths to the union; source changes are still caught as undeclared.
+#   D8 (quoted status): _get_status() now passes its captured value through
+#     _strip_yaml_value() so status: "done" and status: 'done' are recognised.
 # ====================================================================
