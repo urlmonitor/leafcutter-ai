@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given a repository with a large object store that contains both the specific
@@ -46,6 +46,7 @@ amended_by:
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/test_git_recovery.py::TestLargeObjectStoreSelectiveRemoval
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GuidedGitRecovery/09_TICKET-20260706-BO-1600d-3-vi.md

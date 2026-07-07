@@ -2414,5 +2414,311 @@ class TestFreshWorktreeFallback(unittest.TestCase):
         )
 
 
+# ===========================================================================
+# NEW TEST GROUP — BO-1600d-3-vi (scoped removal: only detected objects removed)
+# Regression tests proving that the remove action removes ONLY the specific corrupt
+# loose objects identified by detect_zero_byte_objects(), referenced by their
+# concrete object paths — never a blanket sweep of all empty files.
+# ===========================================================================
+
+
+class TestLargeObjectStoreSelectiveRemoval(unittest.TestCase):
+    """Regression tests for AC BO-1600d-3-vi.
+
+    Proves that:
+    1. detect_zero_byte_objects() scopes to loose object subdirs only — never pack dir.
+    2. The execute function removes ONLY the plan-time detected set.
+    3. Zero-byte files outside the loose object subdirs are NOT removed.
+    4. New zero-byte files created AFTER plan is built are NOT removed.
+    5. The plan description names each detected path individually.
+    6. In a large store (many non-corrupt + a few corrupt), exactly the corrupt
+       set is removed and all others remain.
+    """
+
+    def _plan_with_mocked_subprocess(self, repo: Path) -> list:
+        """Build a recovery plan with git version mocked to 2.41.0 and other
+        subprocess-dependent detection functions mocked to return empty/False.
+        This isolates filesystem-based tests from actual git subprocess calls."""
+        with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
+            with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
+                with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                    with patch.object(
+                        _mod, "detect_poisoned_linked_worktrees", return_value=[]
+                    ):
+                        return plan_recovery_actions(repo)
+
+    def _execute_remove_action_only(self, plan: list) -> None:
+        """Execute only the remove action from the plan (not the refetch action).
+
+        The remove action uses path.unlink() directly (no subprocess), so we
+        mock subprocess.run to avoid real network calls from the refetch step
+        but let the remove action operate on the real filesystem.
+        """
+        remove_actions = [
+            a
+            for a in plan
+            if "remove" in a.description.lower()
+            and ("zero" in a.description.lower() or "corrupt" in a.description.lower())
+            and "blocked" not in a.description.lower()
+        ]
+        for action in remove_actions:
+            action.execute()
+
+    # ------------------------------------------------------------------
+    # Test 1: detect_zero_byte_objects scopes to loose object subdirs
+    # ------------------------------------------------------------------
+
+    def test_detect_scopes_to_loose_objects_not_pack_dir(self):
+        # covers: BO-1600d-3-vi
+        """detect_zero_byte_objects must return loose objects only, never files in pack/."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            # Zero-byte loose object in a 2-char hex subdir (SHOULD be detected).
+            loose_dir = repo / ".git" / "objects" / "ab"
+            loose_dir.mkdir(parents=True)
+            corrupt_loose = loose_dir / ("cd" + "e" * 36)
+            corrupt_loose.write_bytes(b"")
+
+            # Zero-byte file in pack dir (must NOT be detected — pack/ has len > 2).
+            pack_dir = repo / ".git" / "objects" / "pack"
+            pack_dir.mkdir(parents=True)
+            pack_empty = pack_dir / "pack-aabbccddeeff.idx"
+            pack_empty.write_bytes(b"")
+
+            result = detect_zero_byte_objects(repo)
+            result_paths = [str(p) for p in result]
+
+            self.assertIn(
+                str(corrupt_loose),
+                result_paths,
+                "Zero-byte loose object must be in detection result",
+            )
+            self.assertNotIn(
+                str(pack_empty),
+                result_paths,
+                "Pack dir file must NOT be in detection result (not a 2-char hex subdir)",
+            )
+
+    # ------------------------------------------------------------------
+    # Test 2: execute removes detected loose objects, not pack dir empty files
+    # ------------------------------------------------------------------
+
+    def test_execute_removes_detected_objects_not_pack_dir_files(self):
+        # covers: BO-1600d-3-vi
+        """Given: detected zero-byte loose object AND zero-byte pack dir file.
+        When: remove action executes.
+        Then: loose object deleted; pack dir file remains (was not in detected set)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            loose_dir = repo / ".git" / "objects" / "bc"
+            loose_dir.mkdir(parents=True)
+            corrupt_obj = loose_dir / ("de" + "f" * 36)
+            corrupt_obj.write_bytes(b"")
+
+            pack_dir = repo / ".git" / "objects" / "pack"
+            pack_dir.mkdir(parents=True)
+            pack_empty = pack_dir / "pack-112233445566.pack"
+            pack_empty.write_bytes(b"")
+
+            plan = self._plan_with_mocked_subprocess(repo)
+            self._execute_remove_action_only(plan)
+
+            self.assertFalse(
+                corrupt_obj.exists(),
+                "Detected corrupt loose object must be deleted by the remove action",
+            )
+            self.assertTrue(
+                pack_empty.exists(),
+                "Pack dir zero-byte file must NOT be deleted — not in detected set",
+            )
+
+    # ------------------------------------------------------------------
+    # Test 3: execute uses plan-time detected set, not a runtime rescan
+    # ------------------------------------------------------------------
+
+    def test_execute_uses_plan_time_set_not_runtime_rescan(self):
+        # covers: BO-1600d-3-vi
+        """Files added AFTER the plan is built must NOT be removed at execute time.
+        The delete function uses the paths captured at plan() call, never re-detects."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            loose_dir = repo / ".git" / "objects" / "cd"
+            loose_dir.mkdir(parents=True)
+            original_corrupt = loose_dir / ("ef" + "0" * 36)
+            original_corrupt.write_bytes(b"")
+
+            # Build the plan — captures original_corrupt at plan time.
+            plan = self._plan_with_mocked_subprocess(repo)
+
+            # Create a SECOND zero-byte file AFTER the plan is built.
+            post_plan_file = loose_dir / ("aa" + "1" * 36)
+            post_plan_file.write_bytes(b"")
+
+            # Execute the plan — must only remove original_corrupt.
+            self._execute_remove_action_only(plan)
+
+            self.assertFalse(
+                original_corrupt.exists(),
+                "The pre-plan-time detected corrupt object must be deleted",
+            )
+            self.assertTrue(
+                post_plan_file.exists(),
+                "A file created AFTER the plan was built must NOT be deleted "
+                "(execute must use plan-time set, never re-detect)",
+            )
+
+    # ------------------------------------------------------------------
+    # Test 4: plan description names each detected path individually
+    # ------------------------------------------------------------------
+
+    def test_plan_description_names_each_detected_object_path(self):
+        # covers: BO-1600d-3-vi
+        """The remove action description must contain each detected corrupt path
+        so the human can confirm the removal set matches detection before executing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            obj_dir_ab = repo / ".git" / "objects" / "ab"
+            obj_dir_ab.mkdir(parents=True)
+            corrupt_a = obj_dir_ab / ("cd" + "1" * 36)
+            corrupt_a.write_bytes(b"")
+
+            obj_dir_ef = repo / ".git" / "objects" / "ef"
+            obj_dir_ef.mkdir(parents=True)
+            corrupt_b = obj_dir_ef / ("23" + "4" * 36)
+            corrupt_b.write_bytes(b"")
+
+            plan = self._plan_with_mocked_subprocess(repo)
+
+            remove_actions = [
+                a
+                for a in plan
+                if "remove" in a.description.lower()
+                and "zero" in a.description.lower()
+                and "blocked" not in a.description.lower()
+            ]
+            self.assertGreater(
+                len(remove_actions),
+                0,
+                "Plan must include a remove action when corrupt objects exist",
+            )
+
+            desc = remove_actions[0].description
+            self.assertIn(
+                str(corrupt_a),
+                desc,
+                f"Description must name corrupt_a path {str(corrupt_a)!r}; got: {desc!r}",
+            )
+            self.assertIn(
+                str(corrupt_b),
+                desc,
+                f"Description must name corrupt_b path {str(corrupt_b)!r}; got: {desc!r}",
+            )
+
+    # ------------------------------------------------------------------
+    # Test 5: large store — only corrupt set removed, non-corrupt remain
+    # ------------------------------------------------------------------
+
+    def test_large_store_only_corrupt_set_removed(self):
+        # covers: BO-1600d-3-vi
+        """Given a large store with M non-corrupt objects and N corrupt (zero-byte)
+        objects, the remove action deletes exactly the N corrupt objects.
+        All M non-corrupt objects remain intact."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            # Create 10 non-corrupt objects (with actual content).
+            non_corrupt: list = []
+            for prefix in ["aa", "bb", "cc", "dd", "ee"]:
+                d = repo / ".git" / "objects" / prefix
+                d.mkdir(parents=True, exist_ok=True)
+                for suffix in ["0" * 36, "1" * 36]:
+                    obj = d / suffix
+                    obj.write_bytes(b"non-corrupt content bytes")
+                    non_corrupt.append(obj)
+
+            # Create 3 corrupt (zero-byte) loose objects.
+            corrupt: list = []
+            for prefix, name in [
+                ("fa", "bc" + "2" * 36),
+                ("fb", "cd" + "3" * 36),
+                ("fc", "de" + "4" * 36),
+            ]:
+                d = repo / ".git" / "objects" / prefix
+                d.mkdir(parents=True, exist_ok=True)
+                obj = d / name
+                obj.write_bytes(b"")
+                corrupt.append(obj)
+
+            # Also create a zero-byte info file (info/ is not a 2-char hex dir).
+            info_dir = repo / ".git" / "objects" / "info"
+            info_dir.mkdir(parents=True, exist_ok=True)
+            info_empty = info_dir / "packs"
+            info_empty.write_bytes(b"")
+
+            plan = self._plan_with_mocked_subprocess(repo)
+            self._execute_remove_action_only(plan)
+
+            # All corrupt objects must be gone.
+            for obj in corrupt:
+                self.assertFalse(
+                    obj.exists(),
+                    f"Corrupt object {obj} must be deleted by the remove action",
+                )
+
+            # All non-corrupt objects must remain.
+            for obj in non_corrupt:
+                self.assertTrue(
+                    obj.exists(),
+                    f"Non-corrupt object {obj} must NOT be deleted",
+                )
+
+            # The info/ dir zero-byte file must remain (info/ is not a 2-char hex dir).
+            self.assertTrue(
+                info_empty.exists(),
+                "objects/info/ zero-byte file must NOT be deleted — "
+                "info/ is not a 2-char hex subdir",
+            )
+
+    # ------------------------------------------------------------------
+    # Test 6: no detection function called during execute
+    # ------------------------------------------------------------------
+
+    def test_no_detection_function_called_during_execute(self):
+        # covers: BO-1600d-3-vi
+        """detect_zero_byte_objects must NOT be called during plan execution.
+        The delete function must use only the paths captured at plan-build time."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            loose_dir = repo / ".git" / "objects" / "de"
+            loose_dir.mkdir(parents=True)
+            corrupt_obj = loose_dir / ("fg" + "5" * 36)
+            corrupt_obj.write_bytes(b"")
+
+            plan = self._plan_with_mocked_subprocess(repo)
+
+            # Patch detect_zero_byte_objects to raise if called — execution
+            # must NOT call it.
+            with patch.object(
+                _mod,
+                "detect_zero_byte_objects",
+                side_effect=AssertionError(
+                    "detect_zero_byte_objects must not be called at execute time"
+                ),
+            ):
+                # Execute only the remove action — must not trigger re-detection.
+                self._execute_remove_action_only(plan)
+
+            # Object must still be deleted (execute used plan-time captured paths).
+            self.assertFalse(
+                corrupt_obj.exists(),
+                "Corrupt object must be deleted even when detect_zero_byte_objects is blocked",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -58,6 +58,16 @@ DECISION HISTORY:
     git worktree add <new_path> <branch> from the now-repaired object store, then
     verifies with git read-tree HEAD in the new path. The poisoned worktree is left
     in place; the operator is instructed to re-point their work to the new path.
+
+    BO-1600d-3-vi (2026-07-07): Verified and regression-tested scoped removal.
+    The remove action in plan_recovery_actions() uses only the explicit list of
+    corrupt loose objects returned by detect_zero_byte_objects() at plan time,
+    captured in _make_delete_fn(zero_byte). The execute callable does NOT
+    re-scan the object store at execution time; files created after plan() is
+    called are not deleted. The action description names each detected path
+    individually so the operator can confirm the removal set is the detected
+    set before confirming. See TestLargeObjectStoreSelectiveRemoval in
+    tests/test_git_recovery.py.
 """
 
 from __future__ import annotations
@@ -309,7 +319,7 @@ def _determine_branch_to_reset(repo_path: Path, hint: str | None = None) -> str:
     if default_branch:
         return default_branch
 
-    raise RecoveryError(
+    raise RecoveryError(  # noqa: TRY003
         "Cannot identify affected branch unambiguously; stopping recovery rather "
         "than guessing. HEAD is detached or not a named branch and no remote "
         "default branch is configured. Inspect the repository manually and run "
