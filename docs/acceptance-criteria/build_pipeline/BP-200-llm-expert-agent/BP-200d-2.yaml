@@ -45,3 +45,5 @@ superseded_by: null
 covered_by: [BP-200d-2-i, BP-200d-2-ii]
 implemented_by:
   - "templates/skills/prompt-audit/SKILL.md"
+change_target: prompt
+risk_surface: contract_boundary

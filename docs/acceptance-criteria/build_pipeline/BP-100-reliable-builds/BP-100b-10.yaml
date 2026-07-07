@@ -33,3 +33,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - docs/build-drift-hook.md
+change_target: docs
+risk_surface: internal

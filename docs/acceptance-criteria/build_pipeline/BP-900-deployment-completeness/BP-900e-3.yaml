@@ -60,3 +60,5 @@ covered_by:
   - BP-900e-3-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RegistryCompletenessGate/04_TICKET-20260622-BP-900e-3.md
+change_target: pipeline
+risk_surface: internal

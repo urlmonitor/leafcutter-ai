@@ -52,3 +52,5 @@ superseded_by: null
 covered_by:
   - BP-1000b-2-i
 implemented_by: []
+change_target: pipeline
+risk_surface: safety

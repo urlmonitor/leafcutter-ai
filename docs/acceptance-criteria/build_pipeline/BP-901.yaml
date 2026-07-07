@@ -29,3 +29,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Authored by /quick-fix. Root cause: main() in scripts/goal_to_epic.py calls _find_worktree_root(Path(__file__)) unconditionally before parsing whether --store-root/--inbox-dir were supplied. The worktree value is only consumed to build the DEFAULT store-root/inbox-dir when those flags are absent. When the script is deployed to .leafcutter/scripts/ (outside a git tree) and the caller passes both flags explicitly, the unconditional call still raises FileNotFoundError and exits 1, even though the resolved worktree would never be used. Fix: defer/condition the _find_worktree_root() call so it only runs when at least one default path is needed (i.e. when --store-root or --inbox-dir is absent). The agent that surfaced this worked around it by invoking the source-repo script plus the direct Python API, confirming the deployed path is the broken one."
+change_target: code
+risk_surface: internal

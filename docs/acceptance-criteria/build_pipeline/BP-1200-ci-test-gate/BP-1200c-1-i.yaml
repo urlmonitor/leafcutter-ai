@@ -71,3 +71,5 @@ notes: |
   test+lint checks required for normal merges. Until that BA amendment lands, the
   criteria and the it_requirements/expects_from are intentionally inconsistent and
   this AC should not be driven to implementation.
+change_target: config
+risk_surface: safety

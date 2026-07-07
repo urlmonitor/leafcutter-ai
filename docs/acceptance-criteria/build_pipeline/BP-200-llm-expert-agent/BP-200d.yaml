@@ -30,3 +30,5 @@ covered_by:
   - BP-200d-5
 implemented_by:
   - "templates/skills/prompt-audit/SKILL.md"
+change_target: prompt
+risk_surface: contract_boundary

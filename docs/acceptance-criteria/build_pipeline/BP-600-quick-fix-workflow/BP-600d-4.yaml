@@ -47,3 +47,5 @@ superseded_by: null
 covered_by: [BP-600d-4-i]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600d-4.md
+change_target: pipeline
+risk_surface: internal

@@ -67,3 +67,5 @@ notes: |
   caught generally by BP-900f (tracked-source guard). This L3 records the
   fresh-clone CI-gate OBSERVABLE of that fix without re-specifying the mechanism,
   honoring BP-1200a's "decompose the outcome, defer the mechanism to ADR" rule.
+change_target: pipeline
+risk_surface: internal

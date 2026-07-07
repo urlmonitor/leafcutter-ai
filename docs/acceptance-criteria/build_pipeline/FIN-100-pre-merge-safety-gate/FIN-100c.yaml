@@ -31,3 +31,5 @@ covered_by:
   - FIN-100c-3
 implemented_by:
   - scripts/finalize-feature.js
+change_target: pipeline
+risk_surface: contract_boundary

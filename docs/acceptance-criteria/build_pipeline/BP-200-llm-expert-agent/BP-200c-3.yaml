@@ -41,3 +41,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - "config/agent_registry.json"
+change_target: config
+risk_surface: internal
