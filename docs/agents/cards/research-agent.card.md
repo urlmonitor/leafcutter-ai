@@ -4,7 +4,7 @@ title: "Agent Card: research-agent"
 description: "Central context-gathering hub. Accepts a structured question from a parent agent, searches the codebase or documentation using the full search toolkit, and returns curated findings: file paths with 1-3 line descriptions each, plus a synthesis paragraph. Owns Grep, Glob, jcodemunch, serena, and context7 — no other coding agent carries these tools. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-07-01
+created: 2026-07-07
 card_version: "generated"
 ---
 # research-agent
@@ -47,6 +47,7 @@ other coding agent carries these tools.
 - `test-writer`
 - `frontend-coder`
 - `llm-expert`
+- `pr-reviewer`
 ---
 
 ## Knowledge Flow
@@ -85,6 +86,7 @@ flowchart TD
     test_writer["test-writer\n(phase tier)"]:::phase
     frontend_coder["frontend-coder\n(phase tier)"]:::phase
     llm_expert["llm-expert\n(phase tier)"]:::phase
+    pr_reviewer["pr-reviewer\n(phase tier)"]:::phase
     research_agent["research-agent\n(utility tier, priority ?)"]:::target
 
     architect_review -->|dispatches| research_agent
@@ -104,6 +106,7 @@ flowchart TD
     test_writer -->|dispatches| research_agent
     frontend_coder -->|dispatches| research_agent
     llm_expert -->|dispatches| research_agent
+    pr_reviewer -->|dispatches| research_agent
 ```
 ---
 
