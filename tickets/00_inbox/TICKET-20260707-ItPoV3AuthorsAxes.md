@@ -4,8 +4,7 @@ status: blocked
 components:
   - product_ownership
 created: 2026-07-07
-depends_on:
-  - 08_ac_axes_schema_and_generator_emit.md
+depends_on: []
 priority: medium
 requires_adr: false
 requires_diagram: false
@@ -29,6 +28,8 @@ agents:
 In order for *newly authored* ACs to carry the two-axis classification automatically (not just backfilled ones), we need the `it-po-v3` technical-enrichment agent to classify and set `change_target` + `risk_surface` on each AC it enriches — making the AC store self-sustaining as the source of truth for computed quality gates.
 
 ## Context
+
+**Pulled out of EPIC-ComputedQualityGates as a standalone ticket (2026-07-07)** so the epic (tickets 01–08, 10 all done) could finalize; this ticket was the sole blocked member. Its dependency (ticket 08 — axes as AC fields) is already merged via PR #201, so it is ready to drive as soon as the it-po-v3 source unblock condition below is met.
 
 Tickets 07 + 08 make the generator consume and emit the axes, and ticket 10 backfills the existing store. But without this ticket, every AC authored *after* the backfill would again lack the axes and fall back to the legacy agent map — reopening the phantom-done hole for new work.
 
