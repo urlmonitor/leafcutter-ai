@@ -35,3 +35,7 @@ covered_by:
   - PER-100f
   - PER-100g
 implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
