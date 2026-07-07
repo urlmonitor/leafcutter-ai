@@ -24,3 +24,7 @@ amended_by: []
 superseded_by: null
 covered_by: [INF-200b-1, INF-200b-2]
 implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary

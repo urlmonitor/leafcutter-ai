@@ -28,3 +28,7 @@ covered_by:
   - INF-100c-3
   - INF-100c-4
 implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary

@@ -31,3 +31,7 @@ amended_by: []
 superseded_by: null
 covered_by: [INF-1000a-1, INF-1000a-2, INF-1000a-3]
 implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary

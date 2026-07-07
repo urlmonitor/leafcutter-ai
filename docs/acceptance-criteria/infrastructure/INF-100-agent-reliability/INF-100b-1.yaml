@@ -24,3 +24,5 @@ amended_by: []
 superseded_by: null
 covered_by: [INF-100b-1-i]
 implemented_by: []
+change_target: code
+risk_surface: internal

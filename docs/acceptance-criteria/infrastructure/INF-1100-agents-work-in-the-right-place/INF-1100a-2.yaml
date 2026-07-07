@@ -37,6 +37,9 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: surface=test-writer.md prose (llm-expert); the join algorithm is prose/judgment, the resolved root comes from the INF-1100c compiler. Criteria unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-1100a-2-i
 implemented_by: []
 notes: "Grounded in the real sibling layout: tests live under tests/<subdir>/ (e.g. tests/etl/)."
+change_target: prompt
+risk_surface: contract_boundary

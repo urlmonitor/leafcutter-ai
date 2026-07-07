@@ -34,3 +34,5 @@ covered_by:
   - INF-100c-3-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-Feedbacksubmissionresolvesitsconfigand/TICKET-20260608-INF-100c-3.md
+change_target: config
+risk_surface: internal

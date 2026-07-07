@@ -51,3 +51,5 @@ superseded_by: null
 covered_by: [INF-600g-3-i]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-INF-600g-3.md
+change_target: code
+risk_surface: contract_boundary

@@ -38,6 +38,9 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: llm-expert (test-writer.md prose); the config-wins rule lives in the agent template that reads the hand-off path. delivers_to wired to the b-2 reporting AC. Criteria unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-1100b-1-i
 implemented_by: []
 notes: "Reproduces the real incident: a ticket files_touched field carried unit_tests/etl/test_*.py and was trusted over the configured test_root."
+change_target: prompt
+risk_surface: contract_boundary
