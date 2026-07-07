@@ -3247,6 +3247,37 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
         self.assertIn("interactive terminal", out.getvalue())
         self.assertTrue(victim.exists(), "object deleted despite non-TTY refusal")
 
+    # -- #2b / Behavior 3: corrupt HEAD → probe fails but planning continues -
+
+    def test_corrupt_head_probe_nonfatal_planning_continues(self) -> None:
+        """When the current HEAD tip is corrupt so the read-only status probe
+        fails, main() reports it as an expected corruption signal and still
+        computes a non-empty plan (planning makes no repository change).
+        """
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "one\n", "first")
+        tip_sha = _commit(repo, "b.txt", "two\n", "second")
+        # Corrupt the HEAD tip commit object so `git status` fails.
+        _zero_object(repo / ".git" / "objects" / tip_sha[:2] / tip_sha[2:])
+        # Sanity: the probe really does fail on this store.
+        self.assertNotEqual(
+            _git(repo, "status", "--porcelain", check=False).returncode, 0,
+            "expected git status to fail on the corrupt-HEAD store",
+        )
+
+        out = io.StringIO()
+        with patch.object(_mod.sys.stdin, "isatty", return_value=True):
+            with patch("builtins.input", return_value="no"):
+                with contextlib.redirect_stdout(out):
+                    _mod.main(["--repo", str(repo)])
+
+        text = out.getvalue()
+        self.assertIn("status probe failed", text)
+        # Planning continued and produced repair actions (non-empty plan).
+        self.assertIn("Recovery plan", text)
+        self.assertNotIn("No recovery actions needed", text)
+
     # -- H-2 / #4: step failure is reported, not a raw traceback -------------
 
     def test_step_failure_reported_not_raised(self) -> None:
