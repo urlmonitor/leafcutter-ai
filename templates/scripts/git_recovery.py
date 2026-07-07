@@ -48,6 +48,16 @@ DECISION HISTORY:
     yield an unambiguous branch name, RecoveryError is raised with an explicit report
     rather than guessing. The deferred-reset execution path uses this hierarchy so the
     safety invariant holds even when plan-time reflog lookup fails.
+
+    BO-1600d-3-v (2026-07-07): Added fresh-worktree fallback for linked worktrees
+    whose in-place cache-tree rebuild does not clear the corruption. Added
+    detect_poisoned_linked_worktrees() which runs git worktree list --porcelain and
+    probes each linked worktree (not the main working tree) for cache-tree corruption
+    signals via git status --short. plan_recovery_actions() appends a [HEAVY]-labelled
+    RecoveryAction for every poisoned linked worktree discovered: executing it runs
+    git worktree add <new_path> <branch> from the now-repaired object store, then
+    verifies with git read-tree HEAD in the new path. The poisoned worktree is left
+    in place; the operator is instructed to re-point their work to the new path.
 """
 
 from __future__ import annotations
@@ -620,6 +630,129 @@ def detect_poisoned_index(repo_path: Path) -> bool:
     return any(signal in stderr_lower for signal in corruption_signals)
 
 
+def detect_poisoned_linked_worktrees(repo_path: Path) -> list:
+    """Detect linked git worktrees whose index cache-tree is poisoned.
+
+    Runs ``git worktree list --porcelain`` against *repo_path* and probes each
+    linked worktree (every entry except the first, which is always the main
+    working tree) for cache-tree corruption signals via
+    ``git -C <worktree_path> status --short``.  Returns a list of
+    ``(worktree_path, branch_name)`` tuples for corrupted linked worktrees.
+    *branch_name* is ``None`` for detached-HEAD worktrees.
+
+    This is the detection half of the fresh-worktree fallback introduced by AC
+    BO-1600d-3-v.  The plan step that acts on its output is appended by
+    :func:`plan_recovery_actions`.
+
+    Linked worktrees have a ``.git`` FILE (not directory) so this function does
+    NOT call :func:`detect_poisoned_index` (which guards on ``.git`` being a
+    directory); instead it runs ``git status --short`` directly in each linked
+    worktree path and checks the same corruption signals.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.  Must contain a ``.git``
+        directory (not a file) — linked worktrees themselves are excluded from
+        the top-level guard.
+
+    Returns
+    -------
+    list[tuple[Path, str | None]]
+        ``(worktree_path, branch_name)`` tuples for each linked worktree whose
+        index appears corrupted.  Empty when no linked worktrees are poisoned,
+        when ``git worktree list`` fails, or when *repo_path* has no ``.git``
+        directory.
+
+    Raises
+    ------
+    OSError
+        Re-raised (after logging at WARNING) only when the OS cannot launch the
+        ``git`` binary for the initial ``worktree list`` call.  Per-worktree OS
+        errors during status probing are logged at WARNING and skipped so other
+        worktrees are still inspected.
+    """
+    poisoned: list = []
+
+    if not (repo_path / ".git").is_dir():
+        return poisoned
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning(
+            "git worktree list --porcelain failed for %s: %s", repo_path, exc
+        )
+        return poisoned
+    except OSError as exc:
+        logger.warning(
+            "OS error running git worktree list for %s: %s", repo_path, exc
+        )
+        return poisoned
+
+    # Parse the porcelain output: blocks separated by blank lines.
+    # Each block starts with "worktree <path>" followed by HEAD and branch lines.
+    blocks: list = []
+    current: dict = {}
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if current:
+                blocks.append(current)
+                current = {}
+        elif stripped.startswith("worktree "):
+            current["path"] = Path(stripped[len("worktree "):].strip())
+        elif stripped.startswith("branch "):
+            ref = stripped[len("branch "):].strip()
+            # Convert "refs/heads/<name>" → "<name>"; leave others as None.
+            current["branch"] = (
+                ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else None
+            )
+        elif stripped == "detached":
+            current["branch"] = None
+    if current:
+        blocks.append(current)
+
+    # The first block is always the main working tree — skip it.
+    for block in blocks[1:]:
+        wt_path = block.get("path")
+        branch = block.get("branch")
+        if wt_path is None:
+            continue
+
+        # Probe the linked worktree's index for corruption signals.
+        try:
+            probe = subprocess.run(
+                ["git", "-C", str(wt_path), "status", "--short"],
+                capture_output=True,
+                text=True,
+            )
+        except OSError as exc:
+            logger.warning(
+                "OS error probing linked worktree %s for index corruption: %s",
+                wt_path,
+                exc,
+            )
+            continue
+
+        stderr_lower = probe.stderr.lower() if isinstance(probe.stderr, str) else ""
+        corruption_signals = [
+            "error: invalid object",
+            "fatal: ",
+            "error: cache-tree",
+            "error: object file",
+        ]
+        if any(signal in stderr_lower for signal in corruption_signals):
+            poisoned.append((wt_path, branch))
+
+    return poisoned
+
+
 def verify_recovery_integrity(repo_path: Path, plan: list) -> bool:
     """Verify that the items addressed by *plan* are now clean.
 
@@ -991,6 +1124,110 @@ def plan_recovery_actions(repo_path: Path) -> list:
             RecoveryAction(
                 "Rebuild index cache-tree (git read-tree HEAD)",
                 _make_cache_tree_fn(repo_path),
+            )
+        )
+
+    # (d) Fresh worktree fallback — for LINKED worktrees whose in-place index
+    # rebuild does not clear the cache-tree corruption (AC BO-1600d-3-v).
+    # Each poisoned linked worktree gets its own [HEAVY]-labelled action that
+    # creates a fresh worktree from the now-repaired object store / branch and
+    # verifies the result with git read-tree HEAD in the new path.  The poisoned
+    # worktree is left in place so the operator can migrate their work safely.
+    try:
+        poisoned_linked = detect_poisoned_linked_worktrees(repo_path)
+    except OSError:
+        poisoned_linked = []
+
+    def _make_fresh_worktree_fn(repo: Path, old_path: Path, branch: str):
+        """Return the execution callable for the fresh-worktree fallback step.
+
+        The returned callable creates a fresh git worktree at
+        ``<old_path>_recovered`` by running ``git worktree add``, then
+        verifies the new worktree with ``git read-tree HEAD``.  The poisoned
+        worktree at *old_path* is left in place.
+
+        Parameters
+        ----------
+        repo:
+            Absolute path to the main git repository root.
+        old_path:
+            Path to the poisoned linked worktree.
+        branch:
+            Branch name (or ``"HEAD"``) to pass to ``git worktree add``.
+        """
+        def _fresh_worktree_fn() -> None:
+            new_path = Path(str(old_path) + "_recovered")
+
+            # Step 1 — create the fresh worktree from the repaired object store.
+            try:
+                subprocess.run(
+                    [
+                        "git", "-C", str(repo), "worktree", "add",
+                        str(new_path), branch,
+                    ],
+                    check=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                logger.warning(
+                    "git worktree add failed creating %s from branch %s: %s",
+                    new_path,
+                    branch,
+                    exc,
+                )
+                raise
+            except OSError as exc:
+                logger.warning(
+                    "OS error creating fresh worktree %s: %s", new_path, exc
+                )
+                raise
+
+            # Step 2 — verify the fresh worktree has a clean index.
+            try:
+                subprocess.run(
+                    ["git", "-C", str(new_path), "read-tree", "HEAD"],
+                    check=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                logger.warning(
+                    "Verification failed: git read-tree HEAD in fresh worktree %s: %s",
+                    new_path,
+                    exc,
+                )
+                print(
+                    f"FAILURE: Fresh worktree at '{new_path}' still reports a "
+                    "cache-tree error.  Manual intervention required."
+                )
+                raise
+            except OSError as exc:
+                logger.warning(
+                    "OS error running git read-tree in fresh worktree %s: %s",
+                    new_path,
+                    exc,
+                )
+                raise
+
+            # Step 3 — success: tell the operator where to go.
+            print(
+                f"Fresh worktree created successfully at '{new_path}'. "
+                f"Switch to it: cd '{new_path}'"
+            )
+
+        return _fresh_worktree_fn
+
+    for old_wt_path, wt_branch in poisoned_linked:
+        branch_name = wt_branch or "HEAD"
+        new_wt_path_display = str(old_wt_path) + "_recovered"
+        heavy_desc = (
+            f"[HEAVY] Create fresh worktree at '{new_wt_path_display}' "
+            f"from branch '{branch_name}' — "
+            f"'git worktree add {new_wt_path_display} {branch_name}'. "
+            f"The poisoned worktree at '{old_wt_path}' is LEFT IN PLACE; "
+            f"re-point your work to '{new_wt_path_display}' before removing it."
+        )
+        plan.append(
+            RecoveryAction(
+                heavy_desc,
+                _make_fresh_worktree_fn(repo_path, old_wt_path, branch_name),
             )
         )
 

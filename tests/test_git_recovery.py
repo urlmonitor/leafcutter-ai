@@ -2157,5 +2157,262 @@ class TestBranchRefResetNonMain(unittest.TestCase):
         )
 
 
+# ===========================================================================
+# NEW TEST GROUP — BO-1600d-3-v (fresh worktree fallback for poisoned linked
+# worktrees)
+# Covers: detect_poisoned_linked_worktrees, and the [HEAVY] plan step added by
+# plan_recovery_actions() when a linked worktree's index is poisoned.
+# ===========================================================================
+
+
+class TestFreshWorktreeFallback(unittest.TestCase):
+    """Tests for AC BO-1600d-3-v: Fresh worktree fallback for poisoned linked worktrees.
+
+    When a linked worktree's cache-tree is poisoned such that an in-place rebuild
+    does not clear the corruption, plan_recovery_actions() must include a distinct,
+    [HEAVY]-labelled action that creates a fresh worktree and verifies it cleanly.
+    All tests use mocked subprocess — no real git operations required.
+    """
+
+    def _get_detect_linked_fn(self):
+        """Return detect_poisoned_linked_worktrees or skip if not implemented."""
+        fn = getattr(_mod, "detect_poisoned_linked_worktrees", None)
+        if fn is None:
+            self.skipTest("detect_poisoned_linked_worktrees not yet implemented")
+        return fn
+
+    # ------------------------------------------------------------------
+    # Test 1: fresh worktree action appears in dry-run plan
+    # ------------------------------------------------------------------
+
+    def test_fresh_worktree_fallback_appears_in_dry_run_plan(self):
+        # covers: BO-1600d-3-v
+        """When poisoned linked worktrees are detected, the printed plan must include
+        a fresh-worktree creation action."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            poisoned_wt = Path("/tmp/fake_worktree_abc")
+
+            with patch.object(
+                _mod,
+                "detect_poisoned_linked_worktrees",
+                return_value=[(poisoned_wt, "my-branch")],
+            ):
+                with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                    plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description for a in plan]
+        has_fresh_worktree_action = any(
+            "worktree" in d.lower()
+            and (
+                "create" in d.lower()
+                or "fresh" in d.lower()
+                or "new" in d.lower()
+                or "_recovered" in d
+            )
+            for d in descriptions
+        )
+        self.assertTrue(
+            has_fresh_worktree_action,
+            f"Plan must include a fresh-worktree action when poisoned linked worktrees "
+            f"are detected; got descriptions: {descriptions}",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 2: fresh worktree step is labelled as a distinct, heavier action
+    # ------------------------------------------------------------------
+
+    def test_fresh_worktree_fallback_is_distinct_heavy_action(self):
+        # covers: BO-1600d-3-v
+        """The fresh-worktree step must carry a [HEAVY] label and must NOT share its
+        text with the in-place cache-tree rebuild step."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            poisoned_wt = Path("/tmp/fake_worktree_heavy")
+
+            with patch.object(
+                _mod,
+                "detect_poisoned_linked_worktrees",
+                return_value=[(poisoned_wt, "some-branch")],
+            ):
+                # Enable in-place rebuild too so both actions are in the plan.
+                with patch.object(_mod, "detect_poisoned_index", return_value=True):
+                    plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description for a in plan]
+
+        # The [HEAVY] label must appear on at least one action.
+        heavy_descs = [d for d in descriptions if "[HEAVY]" in d]
+        self.assertGreater(
+            len(heavy_descs),
+            0,
+            f"Plan must include at least one action with '[HEAVY]' label; "
+            f"got: {descriptions}",
+        )
+
+        # The [HEAVY] action must be textually distinct from the in-place rebuild.
+        in_place_descs = [
+            d for d in descriptions
+            if (
+                ("cache" in d.lower() and "tree" in d.lower() and "rebuild" in d.lower())
+                or ("read-tree" in d.lower() and "[HEAVY]" not in d)
+            )
+        ]
+        for heavy in heavy_descs:
+            for in_place in in_place_descs:
+                self.assertNotEqual(
+                    heavy,
+                    in_place,
+                    "The [HEAVY] fresh-worktree step text must differ from the "
+                    "in-place cache-tree rebuild step text",
+                )
+
+    # ------------------------------------------------------------------
+    # Test 3: executing the step calls git worktree add and git read-tree HEAD
+    # ------------------------------------------------------------------
+
+    def test_fresh_worktree_fallback_creates_new_worktree(self):
+        # covers: BO-1600d-3-v
+        """On confirmation (mocked), git worktree add must be called with the correct
+        new path, and git read-tree HEAD must be called in the new worktree path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            poisoned_wt = Path("/tmp/poisoned_wt_create_test")
+
+            with patch.object(
+                _mod,
+                "detect_poisoned_linked_worktrees",
+                return_value=[(poisoned_wt, "feature-branch")],
+            ):
+                with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                    plan = plan_recovery_actions(repo)
+
+        heavy_actions = [a for a in plan if "[HEAVY]" in a.description]
+        self.assertGreater(
+            len(heavy_actions),
+            0,
+            f"No [HEAVY] action found in plan; got: {[a.description for a in plan]}",
+        )
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            with patch("builtins.print"):
+                heavy_actions[0].execute()
+
+        all_calls_str = str(mock_run.call_args_list)
+        self.assertIn(
+            "worktree",
+            all_calls_str,
+            f"'git worktree add' must be invoked; got calls: {all_calls_str}",
+        )
+        self.assertIn(
+            "read-tree",
+            all_calls_str,
+            f"'git read-tree HEAD' must be invoked in the new worktree; "
+            f"got calls: {all_calls_str}",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 4: success message names the new worktree path
+    # ------------------------------------------------------------------
+
+    def test_fresh_worktree_fallback_success_message_names_new_path(self):
+        # covers: BO-1600d-3-v
+        """After successful creation, the printed output must name the new worktree path."""
+        poisoned_wt = Path("/tmp/poisoned_wt_success_msg")
+        expected_new_path = str(poisoned_wt) + "_recovered"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_poisoned_linked_worktrees",
+                return_value=[(poisoned_wt, "main")],
+            ):
+                with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                    plan = plan_recovery_actions(repo)
+
+        heavy_actions = [a for a in plan if "[HEAVY]" in a.description]
+        self.assertGreater(len(heavy_actions), 0, "No [HEAVY] action found in plan")
+
+        printed_output: list = []
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            with patch(
+                "builtins.print",
+                side_effect=lambda *args: printed_output.append(
+                    " ".join(str(a) for a in args)
+                ),
+            ):
+                heavy_actions[0].execute()
+
+        output_str = " ".join(printed_output)
+        self.assertIn(
+            expected_new_path,
+            output_str,
+            f"Success message must name the new worktree path {expected_new_path!r}; "
+            f"got printed output: {output_str!r}",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 5: failure reported when verification (git read-tree HEAD) fails
+    # ------------------------------------------------------------------
+
+    def test_fresh_worktree_fallback_reports_failure_if_verification_fails(self):
+        # covers: BO-1600d-3-v
+        """If git read-tree HEAD exits non-zero in the new worktree, the recovery engine
+        must log at WARNING and raise CalledProcessError — it must NOT silently succeed."""
+        poisoned_wt = Path("/tmp/poisoned_wt_verify_fail")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_poisoned_linked_worktrees",
+                return_value=[(poisoned_wt, "main")],
+            ):
+                with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                    plan = plan_recovery_actions(repo)
+
+        heavy_actions = [a for a in plan if "[HEAVY]" in a.description]
+        self.assertGreater(len(heavy_actions), 0, "No [HEAVY] action found in plan")
+
+        def _mock_run(cmd, **kwargs):
+            mock = MagicMock()
+            mock.returncode = 0
+            mock.stdout = ""
+            mock.stderr = ""
+            # worktree add succeeds; read-tree fails.
+            if isinstance(cmd, list) and "worktree" in cmd and "add" in cmd:
+                return mock
+            if isinstance(cmd, list) and "read-tree" in cmd:
+                raise subprocess.CalledProcessError(
+                    128, cmd, output="", stderr="error: cache-tree poisoned"
+                )
+            return mock
+
+        with patch("subprocess.run", side_effect=_mock_run):
+            with self.assertLogs("git_recovery", level="WARNING") as log_ctx:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    heavy_actions[0].execute()
+
+        self.assertTrue(
+            any("WARNING" in line for line in log_ctx.output),
+            f"Expected at least one WARNING log when read-tree fails; "
+            f"got: {log_ctx.output}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
