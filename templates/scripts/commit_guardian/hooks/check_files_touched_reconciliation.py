@@ -237,10 +237,12 @@ def _normalise_path(path: str) -> str:
     return normalised
 
 
-def _is_source_file(path: str) -> bool:
+def is_source_file(path: str) -> bool:
     """Return True if the file has a source/executable extension.
 
     Source extensions (from BP-1100e-1): .py, .sql, .ts, .tsx, .js
+    All other extensions (e.g. .md, .yaml, .json, .txt, .toml) are not source
+    files and are never flagged as undeclared by the reconciliation hook.
 
     Args:
         path: File path to test.
@@ -249,6 +251,33 @@ def _is_source_file(path: str) -> bool:
         bool: True when the file extension is in SOURCE_EXTENSIONS.
     """
     return Path(path).suffix in SOURCE_EXTENSIONS
+
+
+def is_docs_only_or_config_only_ticket(declared_files: list[str]) -> bool:
+    """Return True if ALL declared files are non-source (docs-only or config-only).
+
+    A ticket is considered docs-only or config-only when every path in its
+    declared ``files_touched`` list has a non-source extension (i.e. NOT one
+    of ``.py``, ``.sql``, ``.ts``, ``.tsx``, ``.js``).  Such tickets have
+    legitimately narrow scope and should never be false-flagged for undeclared
+    changes, because the reconciliation hook only flags undeclared SOURCE files.
+
+    An empty ``declared_files`` list returns ``False`` — a ticket with no
+    declared scope is not classified as a narrow docs/config-only ticket; it
+    simply has nothing to reconcile against.
+
+    Args:
+        declared_files: List of file paths from the ticket's ``files_touched``
+            frontmatter field.
+
+    Returns:
+        bool: True when every declared file is a non-source file; False when at
+        least one declared file has a source extension, or when ``declared_files``
+        is empty.
+    """
+    if not declared_files:
+        return False
+    return all(not is_source_file(p) for p in declared_files)
 
 
 def _is_generated_file(path: str) -> bool:
@@ -303,7 +332,7 @@ def _compute_undeclared(
     changed_sources = {
         _normalise_path(p)
         for p in all_changed
-        if _is_source_file(p) and not _is_generated_file(p) and not _is_lockfile(p)
+        if is_source_file(p) and not _is_generated_file(p) and not _is_lockfile(p)
     }
     return sorted(changed_sources - declared_scope)
 
@@ -453,4 +482,15 @@ if __name__ == "__main__":
 #   fails open (returns False on SubprocessError) per BP-1100e-2 policy.
 #   Separator normalisation (backslash → forward slash) and case-folding
 #   compose correctly in _normalise_path() — both applied in sequence.
+# - 2026-07-06 [python-coder/BP-1100e-1-iii]: Add narrow-scope exemption
+#   for docs-only and config-only tickets.
+#   AC BP-1100e-1-iii: a ticket whose actual changes touch only declared
+#   documentation or config files (no .py/.sql/.ts/.tsx/.js source file) is
+#   a clean pass and must not be false-flagged.
+#   Changes: renamed _is_source_file() → is_source_file() (public API); added
+#   is_docs_only_or_config_only_ticket() public helper that returns True when
+#   every declared file is a non-source file. The key invariant — that
+#   _compute_undeclared() only ever collects SOURCE files into changed_sources
+#   — was already correct; these two public functions make the contract
+#   explicit and testable by downstream consumers.
 # ====================================================================
