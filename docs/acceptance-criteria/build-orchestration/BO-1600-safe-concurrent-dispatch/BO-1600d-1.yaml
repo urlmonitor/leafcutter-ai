@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given the corruption-detection halt from BO-1600c has stopped a parallel drive
