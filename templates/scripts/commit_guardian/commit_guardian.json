@@ -500,7 +500,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "BP-1100e-1: Blocks commits when a ticket transitioning to status: done has changed source files (.py/.sql/.ts/.tsx/.js) not declared in files_touched or out_of_scope. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
+                "_comment": "BP-1100e-1 / BP-1100e-2: Advisory by default — reports undeclared source files (.py/.sql/.ts/.tsx/.js) but does not block commits. Set predone_scope.strict: true in commit_guardian.json to block commits on scope violations. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
             },
             {
                 "id": "check-mermaid-drift",
@@ -820,6 +820,10 @@
                 "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
             }
         ]
+    },
+    "predone_scope": {
+        "_comment": "check_files_touched_reconciliation.py — BP-1100e-2: advisory by default; set strict: true to block commits on undeclared source files.",
+        "strict": false
     },
     "exception_handling": {
         "_comment": "check_exception_handling.py — AST-based I/O boundary and exception-clause enforcement. Ruff rules E722, BLE001, and TRY are also enforced via pyproject.toml [tool.ruff.lint] select. This section configures the custom AST check.",

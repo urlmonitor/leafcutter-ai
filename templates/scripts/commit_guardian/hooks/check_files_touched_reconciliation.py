@@ -1,21 +1,25 @@
 """
 MODULE: check_files_touched_reconciliation
-GOAL: Pre-commit hook that flags source files changed by a ticket's work but
+GOAL: Pre-commit hook that reports source files changed by a ticket's work but
     absent from the ticket's declared files_touched UNION out_of_scope,
     immediately before the ticket is allowed to reach status: done.
-BUSINESS CONTEXT: BP-1100e-1 — blocks commits when a ticket moves to done
-    but changed source files (.py, .sql, .ts, .tsx, .js) are absent from
-    files_touched or out_of_scope. Complements BP-1100a (fires before work
-    starts; this hook fires after work is done).
+BUSINESS CONTEXT: BP-1100e-1 / BP-1100e-2 — advisory by default: reports
+    undeclared source changes (.py, .sql, .ts, .tsx, .js) as a non-blocking
+    advisory. Strict blocking is opt-in via predone_scope.strict: true in
+    commit_guardian.json. Complements BP-1100a (fires before work starts;
+    this hook fires after work is done).
 ARCHITECTURE: Standalone hook in templates/scripts/commit_guardian/hooks/
     (portable — no leafcutter-internal imports). Computes branch diff plus
     staged source files, compares against files_touched UNION out_of_scope.
-    Exits 1 on undeclared sources; 0 on errors (fail-open, BP-1100e-2).
-    Registered in hooks_manifest.hooks[] of commit_guardian.json.
+    Advisory by default (exit 0); blocks (exit 1) only in strict mode
+    (predone_scope.strict: true in commit_guardian.json). Fail-open on all
+    errors per BP-1100e-2. Registered in hooks_manifest.hooks[] of
+    commit_guardian.json.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -453,6 +457,75 @@ def _print_errors(all_errors: list[tuple[str, list[str]]]) -> None:
     )
 
 
+def _print_advisory(all_errors: list[tuple[str, list[str]]]) -> None:
+    """Print advisory output for undeclared source file violations (non-blocking).
+
+    Args:
+        all_errors: List of (ticket_path, undeclared_files) tuples.
+    """
+    print(
+        f"\n{_HOOK_TAG} ADVISORY: source files changed but not declared in "
+        "files_touched or out_of_scope (advisory mode — commit not blocked).",
+        flush=True,
+    )
+    for ticket_path, undeclared_files in all_errors:
+        print(f"\n  Ticket : {ticket_path}", flush=True)
+        print("  Undeclared source files (advisory — not blocking):", flush=True)
+        for path in undeclared_files:
+            print(f"    - {path}", flush=True)
+    print(
+        "\n  To block commits on this condition, set predone_scope.strict: true",
+        flush=True,
+    )
+    print(
+        "  in commit_guardian.json. To suppress this advisory, add the above",
+        flush=True,
+    )
+    print(
+        "  files to files_touched (or out_of_scope) in the ticket frontmatter.",
+        flush=True,
+    )
+
+
+def _load_strict_mode(repo_root: str) -> bool:
+    """Load the strict mode setting from commit_guardian.json.
+
+    Reads the predone_scope.strict field from commit_guardian.json. Fails open
+    — returns False when the file is absent, unreadable, or malformed.
+
+    Searches for commit_guardian.json at two locations in order:
+    1. scripts/commit_guardian/commit_guardian.json (installed path)
+    2. templates/scripts/commit_guardian/commit_guardian.json (worktree path)
+
+    Args:
+        repo_root: Absolute path to the git repo root.
+
+    Returns:
+        bool: True when strict mode is explicitly enabled; False otherwise.
+    """
+    if not repo_root:
+        return False
+    primary = Path(repo_root, "scripts", "commit_guardian", "commit_guardian.json")
+    templates = Path(
+        repo_root, "templates", "scripts", "commit_guardian", "commit_guardian.json"
+    )
+    config_path = (
+        primary if primary.exists() else (templates if templates.exists() else None)
+    )
+    if config_path is None:
+        return False
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+        return bool(data.get("predone_scope", {}).get("strict", False))
+    except (OSError, ValueError) as exc:
+        print(
+            f"{_HOOK_TAG} WARNING: cannot read commit_guardian.json: {exc}"
+            " — using advisory mode",
+            file=sys.stderr,
+        )
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
@@ -461,12 +534,18 @@ def _print_errors(all_errors: list[tuple[str, list[str]]]) -> None:
 def main() -> int:
     """Run the pre-done scope reconciliation pre-commit hook.
 
-    Identifies done-staged tickets, computes changed source files, and blocks
-    the commit when any source file is absent from files_touched / out_of_scope.
+    Identifies done-staged tickets, computes changed source files, and either
+    prints an advisory (default) or blocks the commit (strict mode) when any
+    source file is absent from files_touched / out_of_scope.
+
+    Fail-open contract (BP-1100e-2): every sub-function in this hook returns a
+    safe default on error rather than propagating. _get_staged_files returns [],
+    _get_repo_root returns "", _check_ticket returns [], and _load_strict_mode
+    returns False — so any internal error collapses to a clean 0-exit.
 
     Returns:
-        0 when clean or on any reconciliation error (fail-open per BP-1100e-2).
-        1 when undeclared source files are found.
+        0 when clean, in advisory mode (default), or on any reconciliation error.
+        1 only when strict mode is enabled AND undeclared source files are found.
     """
     staged_files = _get_staged_files()
     if not staged_files:
@@ -485,8 +564,12 @@ def main() -> int:
     if not all_errors:
         return 0
 
-    _print_errors(all_errors)
-    return 1
+    strict = _load_strict_mode(repo_root)
+    if strict:
+        _print_errors(all_errors)
+        return 1
+    _print_advisory(all_errors)
+    return 0
 
 
 if __name__ == "__main__":
@@ -543,4 +626,17 @@ if __name__ == "__main__":
 #   parsing the value; added early-return branch in _check_ticket() that
 #   fires when _field_is_declared(frontmatter, "files_touched") is False;
 #   updated _check_ticket() docstring to document the no-op behaviour.
+# - 2026-07-07 [python-coder/BP-1100e-2]: Make reconciliation advisory by
+#   default; strict blocking is opt-in (AC BP-1100e-2).
+#   Changes: added `import json` at module level; added _print_advisory()
+#   for non-blocking output; added _load_strict_mode(repo_root) -> bool
+#   which reads predone_scope.strict from commit_guardian.json — searches
+#   primary path (scripts/commit_guardian/) then templates path; fails open
+#   (returns False) on any read/parse error. Modified main() to call
+#   _load_strict_mode() when errors are found and branch on the result:
+#   strict=True → _print_errors() + return 1 (blocking as before); strict=False
+#   (default) → _print_advisory() + return 0 (advisory, no block). The fail-open
+#   contract is preserved: each sub-function returns a safe default on error so
+#   the whole hook exits 0 on any internal failure. Added predone_scope section
+#   to commit_guardian.json with strict: false default.
 # ====================================================================

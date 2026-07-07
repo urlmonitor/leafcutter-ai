@@ -1,23 +1,30 @@
 """
 MODULE: test_check_files_touched_reconciliation
-GOAL: Unit tests for the generated-file and lockfile exemptions added in
-    AC BP-1100e-1-i to check_files_touched_reconciliation.py.
+GOAL: Unit tests for the generated-file and lockfile exemptions (BP-1100e-1-i)
+    and the advisory/strict mode behaviour (BP-1100e-2) of
+    check_files_touched_reconciliation.py.
 BUSINESS CONTEXT: Verifies that out_of_scope entries, generated artifacts,
-    and lock-files are never flagged as undeclared source changes, while
-    genuinely undeclared source files are still caught.
+    and lock-files are never flagged as undeclared source changes; that
+    genuinely undeclared source files are still caught; and that the hook is
+    advisory (exit 0) by default and only blocks (exit 1) when strict mode is
+    explicitly enabled via commit_guardian.json predone_scope.strict: true.
 ARCHITECTURE: Tests import the hook module dynamically via importlib so the
-    tests remain independent of the package install path.  All tests exercise
-    the pure helper functions (_is_generated_file, _is_lockfile) and the
-    integration function (_compute_undeclared) directly — no git subprocess
-    calls are made.
+    tests remain independent of the package install path. Pure-helper tests
+    exercise functions directly with no subprocess calls. Integration tests
+    use tempfile directories and unittest.mock.patch to inject controlled
+    fixture data without touching the real git index.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
+import tempfile
 import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # Module loader
@@ -272,6 +279,209 @@ class TestComputeUndeclared(unittest.TestCase):
         declared: set[str] = {"scripts/build_phases.py"}
         result = self._call(declared, frozenset(), [])
         self.assertEqual(result, [])
+
+
+# ---------------------------------------------------------------------------
+# Tests: _load_strict_mode (AC BP-1100e-2 config reader)
+# ---------------------------------------------------------------------------
+
+
+class TestLoadStrictMode(unittest.TestCase):
+    """Tests for the _load_strict_mode config reader (AC BP-1100e-2)."""
+
+    def test_strict_false_when_no_config_file(self) -> None:
+        """Returns False when neither config path exists (fail-open)."""
+        result = _hook._load_strict_mode("/nonexistent/path/that/does/not/exist")
+        self.assertFalse(result)
+
+    def test_strict_false_when_empty_repo_root(self) -> None:
+        """Returns False when repo_root is an empty string (fail-open)."""
+        result = _hook._load_strict_mode("")
+        self.assertFalse(result)
+
+    def test_strict_false_when_predone_scope_absent(self) -> None:
+        """Returns False when predone_scope key is absent from the config."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp) / "scripts" / "commit_guardian"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "commit_guardian.json"
+            config_file.write_text(
+                json.dumps({"other_section": {}}), encoding="utf-8"
+            )
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_strict_false_when_field_is_false(self) -> None:
+        """Returns False when predone_scope.strict is explicitly false."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp) / "scripts" / "commit_guardian"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "commit_guardian.json"
+            config_file.write_text(
+                json.dumps({"predone_scope": {"strict": False}}), encoding="utf-8"
+            )
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_strict_true_when_field_is_true(self) -> None:
+        """Returns True when predone_scope.strict is explicitly true."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp) / "scripts" / "commit_guardian"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "commit_guardian.json"
+            config_file.write_text(
+                json.dumps({"predone_scope": {"strict": True}}), encoding="utf-8"
+            )
+            result = _hook._load_strict_mode(tmp)
+            self.assertTrue(result)
+
+    def test_strict_false_on_malformed_json(self) -> None:
+        """Returns False (fail-open) when the config file contains invalid JSON."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp) / "scripts" / "commit_guardian"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "commit_guardian.json"
+            config_file.write_text("{ this is not valid json }", encoding="utf-8")
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_strict_falls_back_to_templates_path(self) -> None:
+        """Falls back to templates/ path when the primary scripts/ path is absent."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = (
+                Path(tmp)
+                / "templates"
+                / "scripts"
+                / "commit_guardian"
+            )
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "commit_guardian.json"
+            config_file.write_text(
+                json.dumps({"predone_scope": {"strict": True}}), encoding="utf-8"
+            )
+            result = _hook._load_strict_mode(tmp)
+            self.assertTrue(result)
+
+
+# ---------------------------------------------------------------------------
+# Tests: main() advisory/strict behaviour (AC BP-1100e-2)
+# ---------------------------------------------------------------------------
+
+_TICKET_REL = "tickets/bp_1100e2_test_ticket.md"
+_SOURCE_FILE = "scripts/some_undeclared_source.py"
+
+
+def _make_ticket_content(declared_source: bool) -> str:
+    """Build minimal ticket content for advisory/strict mode integration tests.
+
+    The YAML list items use two-space indentation to satisfy the
+    ``_parse_yaml_list_field`` regex which requires ``[ \\t]+`` before the
+    dash character.
+
+    Args:
+        declared_source: When True, the source file is in files_touched
+            (clean — no undeclared files). When False, the source file is
+            absent (undeclared — should trigger advisory or block).
+
+    Returns:
+        YAML-frontmatter ticket string suitable for _check_ticket to parse.
+    """
+    if declared_source:
+        files_yaml = (
+            "  - docs/some_doc.md\n"
+            f"  - {_SOURCE_FILE}\n"
+        )
+    else:
+        files_yaml = "  - docs/some_doc.md\n"
+    return (
+        "---\n"
+        "status: done\n"
+        "files_touched:\n"
+        f"{files_yaml}"
+        "---\n\n"
+        "# Test Ticket\n"
+    )
+
+
+class TestMainAdvisoryStrictMode(unittest.TestCase):
+    """Integration tests for main() advisory/strict behaviour (AC BP-1100e-2)."""
+
+    def _run_main_with_undeclared(
+        self,
+        *,
+        strict: bool,
+        declared_source: bool,
+    ) -> int:
+        """Run main() with a mocked repo containing a done ticket.
+
+        Args:
+            strict: Value returned by the mocked _load_strict_mode.
+            declared_source: When True, the source file is in files_touched.
+                When False, the source file is absent (triggers violation).
+
+        Returns:
+            The integer return value of main().
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            ticket_dir = Path(tmp) / "tickets"
+            ticket_dir.mkdir()
+            ticket_path = ticket_dir / "bp_1100e2_test_ticket.md"
+            ticket_path.write_text(
+                _make_ticket_content(declared_source), encoding="utf-8"
+            )
+            staged = [_TICKET_REL, _SOURCE_FILE]
+            branch_diff: frozenset[str] = frozenset({_SOURCE_FILE})
+            with patch.object(
+                _hook, "_get_staged_files", return_value=staged
+            ):
+                with patch.object(
+                    _hook, "_get_repo_root", return_value=tmp
+                ):
+                    with patch.object(
+                        _hook,
+                        "_get_branch_diff_files",
+                        return_value=branch_diff,
+                    ):
+                        with patch.object(
+                            _hook,
+                            "_load_strict_mode",
+                            return_value=strict,
+                        ):
+                            return _hook.main()
+
+    def test_advisory_mode_returns_zero_on_undeclared_files(self) -> None:
+        """Advisory mode (strict=False): undeclared source → exit 0, not blocked."""
+        result = self._run_main_with_undeclared(strict=False, declared_source=False)
+        self.assertEqual(result, 0)
+
+    def test_strict_mode_returns_one_on_undeclared_files(self) -> None:
+        """Strict mode (strict=True): undeclared source → exit 1, commit blocked."""
+        result = self._run_main_with_undeclared(strict=True, declared_source=False)
+        self.assertEqual(result, 1)
+
+    def test_clean_advisory_returns_zero(self) -> None:
+        """Advisory mode, all files declared → exit 0."""
+        result = self._run_main_with_undeclared(strict=False, declared_source=True)
+        self.assertEqual(result, 0)
+
+    def test_clean_strict_returns_zero(self) -> None:
+        """Strict mode, all files declared → exit 0 (nothing to block)."""
+        result = self._run_main_with_undeclared(strict=True, declared_source=True)
+        self.assertEqual(result, 0)
+
+    def test_no_staged_files_returns_zero(self) -> None:
+        """No staged files → exit 0 immediately (fail-open at the first gate)."""
+        with patch.object(_hook, "_get_staged_files", return_value=[]):
+            result = _hook.main()
+            self.assertEqual(result, 0)
+
+    def test_get_staged_files_returns_empty_on_subprocess_error(self) -> None:
+        """_get_staged_files returns [] when subprocess raises — main() exits 0."""
+        with patch(
+            "subprocess.run", side_effect=subprocess.SubprocessError("git failed")
+        ):
+            result = _hook.main()
+            self.assertEqual(result, 0)
 
 
 if __name__ == "__main__":
