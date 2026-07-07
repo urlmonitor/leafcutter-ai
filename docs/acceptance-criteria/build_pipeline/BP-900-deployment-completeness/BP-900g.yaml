@@ -1,0 +1,31 @@
+id: BP-900g
+title: "Every command you run can reach what it calls"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Deployed commands never point at something that isn't there.
+
+  Every invocation a deployed command makes — the workflow or skill it hands
+  off to — resolves to a real path that actually exists in a consumer install.
+  If a command references a target that would not resolve after deployment, the
+  build catches it before it reaches consumer projects, so commands never fail
+  with a "nothing there" dead end.
+depends_on:
+  - BP-900
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Internal build-time deploy-integrity guardrail — surfaces only as a build error; no new user-facing capability or command is introduced."
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900g-1
+  - BP-900g-2
+  - BP-900g-3
+implemented_by: []

@@ -1,0 +1,56 @@
+id: BP-300d-4
+title: "The build fails when a primary delivery command would deploy its prose flow on a supported runtime"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+criteria: |
+  Given a build for a supported Claude Code runtime,
+  And the resolved deployed body for one of the primary delivery commands
+    (build-feature, create-ticket, or finalize-feature) is the prose flow from
+    templates/workflows/<name>.md rather than the workflow-invoking command body,
+  When build.py runs its command-deployment validation,
+  Then the build exits with a non-zero status,
+  And the failure message names the offending command and states that on a
+    supported runtime the prose body was about to be deployed instead of the
+    deterministic workflow invocation,
+  And no consumer install receives the prose body as that command's default on a
+    supported runtime.
+depends_on:
+  - BP-300d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/commands/build-feature.md
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "This is the regression guardrail that makes BP-300d-1/-2 enforceable: it fails the supported-runtime build if a primary delivery command's deployed body is the prose flow. Fail-closed on this class; do not merely warn."
+  - "Failure output must name the command and the wrong (prose) source so the operator can locate the regression. Read the primary-delivery-command set and template roots from configuration; do not hardcode."
+  - "Runtime-aware: this check must NOT fire on an unsupported runtime where prose is the intended fallback (see BP-300d-3-i)."
+delivers_to: null
+expects_from:
+  ac_id: BP-300d-1
+  contract: "The definition of the correct workflow-invoking deployed body per primary delivery command, whose violation this guardrail detects and blocks."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

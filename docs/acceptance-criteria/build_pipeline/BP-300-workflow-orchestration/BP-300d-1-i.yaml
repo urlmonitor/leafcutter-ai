@@ -1,0 +1,45 @@
+id: BP-300d-1-i
+title: "A command that has only a prose skill and no deterministic workflow is not forced to invoke a workflow"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d-1.yaml"
+criteria: |
+  Given a build for a supported Claude Code runtime,
+  And a command whose only source is a prose skill body with NO deterministic
+    workflow counterpart (it is not one of the primary delivery commands
+    build-feature, create-ticket, finalize-feature),
+  When build.py deploys the command set,
+  Then that prose-only command deploys its prose body unchanged,
+  And the supported-runtime routing rule does NOT flag it and does NOT require it
+    to hand off to a workflow.
+depends_on:
+  - BP-300d-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d-1.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The supported-runtime workflow-routing rule applies only to the primary delivery command set (build-feature, create-ticket, finalize-feature). A command with no workflow counterpart must pass without a false positive."
+delivers_to: null
+expects_from:
+  ac_id: BP-300d-1
+  contract: "The primary-delivery-command set definition and the supported-runtime routing decision, applied here in the negative to a prose-only command."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
