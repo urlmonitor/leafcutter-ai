@@ -3,20 +3,23 @@ MODULE: check_files_touched_reconciliation
 GOAL: Pre-commit hook that reports source files changed by a ticket's work but
     absent from the ticket's declared files_touched UNION out_of_scope,
     immediately before the ticket is allowed to reach status: done.
-BUSINESS CONTEXT: BP-1100e-1 / BP-1100e-2 — advisory by default: reports
+BUSINESS CONTEXT: BP-1100e-1 / BP-1100e-2 — off by default: the check is
+    enabled only via files_touched_reconciliation.enabled: true in
+    commit_guardian.json. When enabled, advisory mode (strict:false) reports
     undeclared source changes (.py, .sql, .ts, .tsx, .js) as a non-blocking
-    advisory. Strict blocking is opt-in via predone_scope.strict: true in
-    commit_guardian.json. Complements BP-1100a (fires before work starts;
-    this hook fires after work is done).
+    advisory. Strict blocking is opt-in via enabled:true + strict:true.
+    Complements BP-1100a (fires before work starts; this hook fires after
+    work is done).
 ARCHITECTURE: Standalone hook in templates/scripts/commit_guardian/hooks/
     (portable — no leafcutter-internal imports). Computes branch diff plus
     staged source files, compares against files_touched UNION out_of_scope.
-    Advisory by default (exit 0); blocks (exit 1) only in strict mode
-    (predone_scope.strict: true in commit_guardian.json). Fail-open on all
-    errors per BP-1100e-2. Registered in hooks_manifest.hooks[] of
-    commit_guardian.json. When multiple done tickets are staged together,
-    reconciliation uses the UNION of all their declared scopes so that a file
-    declared by any one ticket is not cross-flagged against the others.
+    Off by default (enabled:false → exit 0, no output). Advisory when
+    enabled:true + strict:false (exit 0). Blocks when enabled:true +
+    strict:true (exit 1 on mismatch). Fail-open on all errors per BP-1100e-2.
+    Registered in hooks_manifest.hooks[] of commit_guardian.json. When
+    multiple done tickets are staged together, reconciliation uses the UNION
+    of all their declared scopes so that a file declared by any one ticket
+    is not cross-flagged against the others.
 """
 
 from __future__ import annotations
@@ -564,37 +567,48 @@ def _print_advisory(all_errors: list[tuple[str, list[str]]]) -> None:
         for path in undeclared_files:
             print(f"    - {path}", flush=True)
     print(
-        "\n  To block commits on this condition, set predone_scope.strict: true",
+        "\n  To block commits on this condition, set"
+        " files_touched_reconciliation.enabled: true and",
         flush=True,
     )
     print(
-        "  in commit_guardian.json. To suppress this advisory, add the above",
+        "  files_touched_reconciliation.strict: true in commit_guardian.json.",
         flush=True,
     )
     print(
-        "  files to files_touched (or out_of_scope) in the ticket frontmatter.",
+        "  To suppress this advisory, add the above files to files_touched",
+        flush=True,
+    )
+    print(
+        "  (or out_of_scope) in the ticket frontmatter.",
         flush=True,
     )
 
 
-def _load_strict_mode(repo_root: str) -> bool:
-    """Load the strict mode setting from commit_guardian.json.
+def _load_config(repo_root: str) -> tuple[bool, bool]:
+    """Load the enabled and strict settings from commit_guardian.json.
 
-    Reads the predone_scope.strict field from commit_guardian.json. Fails open
-    — returns False when the file is absent, unreadable, or malformed.
+    Reads the files_touched_reconciliation section from commit_guardian.json.
+    Fails open — returns (False, False) when the file is absent, unreadable,
+    or malformed.
 
     Searches for commit_guardian.json at two locations in order:
     1. scripts/commit_guardian/commit_guardian.json (installed path)
     2. templates/scripts/commit_guardian/commit_guardian.json (worktree path)
 
+    Shape robustness: wrong-shape configs (null, list, missing section) all
+    return (False, False). Only a Python bool True (JSON true) enables either
+    flag; truthy non-bool values such as "yes" or 1 do not enable them.
+
     Args:
         repo_root: Absolute path to the git repo root.
 
     Returns:
-        bool: True when strict mode is explicitly enabled; False otherwise.
+        tuple[bool, bool]: (enabled, strict). enabled=True means the check
+        runs; strict=True additionally means a mismatch blocks the commit.
     """
     if not repo_root:
-        return False
+        return (False, False)
     primary = Path(repo_root, "scripts", "commit_guardian", "commit_guardian.json")
     templates = Path(
         repo_root, "templates", "scripts", "commit_guardian", "commit_guardian.json"
@@ -603,25 +617,25 @@ def _load_strict_mode(repo_root: str) -> bool:
         primary if primary.exists() else (templates if templates.exists() else None)
     )
     if config_path is None:
-        return False
+        return (False, False)
     try:
         data = json.loads(config_path.read_text(encoding="utf-8"))
-        # Shape guard: wrong-shape configs (None, list, etc.) must not crash.
-        # Only a Python bool True (JSON true) enables strict mode; truthy
-        # non-bool values such as "yes" or 1 do not enable it.
         if not isinstance(data, dict):
-            return False
-        section = data.get("predone_scope")
+            return (False, False)
+        section = data.get("files_touched_reconciliation")
         if not isinstance(section, dict):
-            return False
-        return section.get("strict") is True
+            return (False, False)
+        enabled = section.get("enabled") is True
+        strict = section.get("strict") is True
     except (OSError, ValueError, TypeError, AttributeError) as exc:
         print(
             f"{_HOOK_TAG} WARNING: cannot read commit_guardian.json: {exc}"
-            " — using advisory mode",
+            " — check is off",
             file=sys.stderr,
         )
-        return False
+        return (False, False)
+    else:
+        return (enabled, strict)
 
 
 # ---------------------------------------------------------------------------
@@ -631,6 +645,12 @@ def _load_strict_mode(repo_root: str) -> bool:
 
 def main() -> int:
     """Run the pre-done scope reconciliation pre-commit hook.
+
+    Three-state enforcement (BP-1100e-2 config model):
+      enabled:false (default) — check is OFF: return 0 immediately, no output.
+      enabled:true, strict:false — ADVISORY: report undeclared source files to
+        stderr, exit 0 (never block).
+      enabled:true, strict:true — BLOCK: exit 1 on a real mismatch.
 
     Two-pass algorithm for multi-ticket commits:
       Pass 1 — identify every staged done ticket and collect the UNION of all
@@ -642,18 +662,22 @@ def main() -> int:
     Fail-open contract (BP-1100e-2): every sub-function in this hook returns a
     safe default on error rather than propagating. _get_staged_files returns [],
     _get_repo_root returns "", _get_ticket_scope returns None, and
-    _load_strict_mode returns False — so any internal error collapses to a
+    _load_config returns (False, False) — so any internal error collapses to a
     clean 0-exit.
 
     Returns:
-        0 when clean, in advisory mode (default), or on any reconciliation error.
-        1 only when strict mode is enabled AND undeclared source files are found.
+        0 when check is off, when clean, in advisory mode, or on any error.
+        1 only when enabled:true, strict:true, and undeclared source files found.
     """
     staged_files = _get_staged_files()
     if not staged_files:
         return 0
 
     repo_root = _get_repo_root()
+    enabled, strict = _load_config(repo_root)
+
+    if not enabled:
+        return 0
 
     # Pass 1: collect all done ticket scopes and compute their union.
     done_ticket_scopes: list[tuple[str, set[str]]] = []
@@ -684,7 +708,6 @@ def main() -> int:
         (rp, all_undeclared) for rp, _ in done_ticket_scopes
     ]
 
-    strict = _load_strict_mode(repo_root)
     if strict:
         _print_errors(all_errors)
         return 1
@@ -790,6 +813,16 @@ if __name__ == "__main__":
 #     source paths to the union; source changes are still caught as undeclared.
 #   D8 (quoted status): _get_status() now passes its captured value through
 #     _strip_yaml_value() so status: "done" and status: 'done' are recognised.
+# - 2026-07-07 [python-coder/BP-1100e-2 config-model alignment]: Rename
+#   predone_scope section to files_touched_reconciliation in commit_guardian.json
+#   (AC BP-1100e-2). Replace _load_strict_mode(repo_root) -> bool with
+#   _load_config(repo_root) -> tuple[bool, bool] returning (enabled, strict).
+#   Three-state semantics: enabled:false (default) = check OFF; enabled:true +
+#   strict:false = ADVISORY (report, exit 0); enabled:true + strict:true =
+#   BLOCK (exit 1). main() now loads config EARLY and short-circuits on
+#   not-enabled. _print_advisory updated to reference the new config keys.
+#   TRY300 pre-existing violation fixed by moving the final return to an else
+#   block. Mirrors the duplicate_code/diff_coverage enabled+strict contract.
 # - 2026-07-07 [python-coder/EPIC-PhantomDoneFilesTouched BP-1100e remediation round 2]:
 #   Fix 4 confirmed defects and 1 low-priority gap found by code review of commit
 #   08b225cf (remediation round 1).

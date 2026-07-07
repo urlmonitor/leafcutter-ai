@@ -1,13 +1,15 @@
 """
 MODULE: test_check_files_touched_reconciliation
 GOAL: Unit tests for the generated-file and lockfile exemptions (BP-1100e-1-i)
-    and the advisory/strict mode behaviour (BP-1100e-2) of
+    and the enabled/advisory/strict mode behaviour (BP-1100e-2) of
     check_files_touched_reconciliation.py.
 BUSINESS CONTEXT: Verifies that out_of_scope entries, generated artifacts,
     and lock-files are never flagged as undeclared source changes; that
     genuinely undeclared source files are still caught; and that the hook is
-    advisory (exit 0) by default and only blocks (exit 1) when strict mode is
-    explicitly enabled via commit_guardian.json predone_scope.strict: true.
+    off (exit 0, no output) when disabled, advisory (exit 0) when
+    enabled:true+strict:false, and blocking (exit 1) only when
+    files_touched_reconciliation.enabled:true and strict:true in
+    commit_guardian.json.
 ARCHITECTURE: Tests import the hook module dynamically via importlib so the
     tests remain independent of the package install path. Pure-helper tests
     exercise functions directly with no subprocess calls. Integration tests
@@ -17,7 +19,9 @@ ARCHITECTURE: Tests import the hook module dynamically via importlib so the
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import subprocess
 import tempfile
@@ -282,25 +286,25 @@ class TestComputeUndeclared(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Tests: _load_strict_mode (AC BP-1100e-2 config reader)
+# Tests: _load_config (AC BP-1100e-2 config reader)
 # ---------------------------------------------------------------------------
 
 
-class TestLoadStrictMode(unittest.TestCase):
-    """Tests for the _load_strict_mode config reader (AC BP-1100e-2)."""
+class TestLoadConfig(unittest.TestCase):
+    """Tests for the _load_config config reader (AC BP-1100e-2)."""
 
-    def test_strict_false_when_no_config_file(self) -> None:
-        """Returns False when neither config path exists (fail-open)."""
-        result = _hook._load_strict_mode("/nonexistent/path/that/does/not/exist")
-        self.assertFalse(result)
+    def test_disabled_when_no_config_file(self) -> None:
+        """Returns (False, False) when neither config path exists (fail-open)."""
+        result = _hook._load_config("/nonexistent/path/that/does/not/exist")
+        self.assertEqual(result, (False, False))
 
-    def test_strict_false_when_empty_repo_root(self) -> None:
-        """Returns False when repo_root is an empty string (fail-open)."""
-        result = _hook._load_strict_mode("")
-        self.assertFalse(result)
+    def test_disabled_when_empty_repo_root(self) -> None:
+        """Returns (False, False) when repo_root is an empty string (fail-open)."""
+        result = _hook._load_config("")
+        self.assertEqual(result, (False, False))
 
-    def test_strict_false_when_predone_scope_absent(self) -> None:
-        """Returns False when predone_scope key is absent from the config."""
+    def test_disabled_when_section_absent(self) -> None:
+        """Returns (False, False) when files_touched_reconciliation key is absent."""
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = Path(tmp) / "scripts" / "commit_guardian"
             config_dir.mkdir(parents=True)
@@ -308,44 +312,59 @@ class TestLoadStrictMode(unittest.TestCase):
             config_file.write_text(
                 json.dumps({"other_section": {}}), encoding="utf-8"
             )
-            result = _hook._load_strict_mode(tmp)
-            self.assertFalse(result)
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (False, False))
 
-    def test_strict_false_when_field_is_false(self) -> None:
-        """Returns False when predone_scope.strict is explicitly false."""
+    def test_disabled_when_enabled_false_strict_false(self) -> None:
+        """Returns (False, False) when both enabled and strict are explicitly false."""
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = Path(tmp) / "scripts" / "commit_guardian"
             config_dir.mkdir(parents=True)
             config_file = config_dir / "commit_guardian.json"
             config_file.write_text(
-                json.dumps({"predone_scope": {"strict": False}}), encoding="utf-8"
+                json.dumps({"files_touched_reconciliation": {"enabled": False, "strict": False}}),
+                encoding="utf-8",
             )
-            result = _hook._load_strict_mode(tmp)
-            self.assertFalse(result)
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (False, False))
 
-    def test_strict_true_when_field_is_true(self) -> None:
-        """Returns True when predone_scope.strict is explicitly true."""
+    def test_advisory_when_enabled_true_strict_false(self) -> None:
+        """Returns (True, False) when enabled:true and strict:false (advisory mode)."""
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = Path(tmp) / "scripts" / "commit_guardian"
             config_dir.mkdir(parents=True)
             config_file = config_dir / "commit_guardian.json"
             config_file.write_text(
-                json.dumps({"predone_scope": {"strict": True}}), encoding="utf-8"
+                json.dumps({"files_touched_reconciliation": {"enabled": True, "strict": False}}),
+                encoding="utf-8",
             )
-            result = _hook._load_strict_mode(tmp)
-            self.assertTrue(result)
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (True, False))
 
-    def test_strict_false_on_malformed_json(self) -> None:
-        """Returns False (fail-open) when the config file contains invalid JSON."""
+    def test_block_when_enabled_true_strict_true(self) -> None:
+        """Returns (True, True) when enabled:true and strict:true (blocking mode)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp) / "scripts" / "commit_guardian"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "commit_guardian.json"
+            config_file.write_text(
+                json.dumps({"files_touched_reconciliation": {"enabled": True, "strict": True}}),
+                encoding="utf-8",
+            )
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (True, True))
+
+    def test_disabled_on_malformed_json(self) -> None:
+        """Returns (False, False) (fail-open) when the config file contains invalid JSON."""
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = Path(tmp) / "scripts" / "commit_guardian"
             config_dir.mkdir(parents=True)
             config_file = config_dir / "commit_guardian.json"
             config_file.write_text("{ this is not valid json }", encoding="utf-8")
-            result = _hook._load_strict_mode(tmp)
-            self.assertFalse(result)
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (False, False))
 
-    def test_strict_falls_back_to_templates_path(self) -> None:
+    def test_falls_back_to_templates_path(self) -> None:
         """Falls back to templates/ path when the primary scripts/ path is absent."""
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = (
@@ -357,14 +376,15 @@ class TestLoadStrictMode(unittest.TestCase):
             config_dir.mkdir(parents=True)
             config_file = config_dir / "commit_guardian.json"
             config_file.write_text(
-                json.dumps({"predone_scope": {"strict": True}}), encoding="utf-8"
+                json.dumps({"files_touched_reconciliation": {"enabled": True, "strict": True}}),
+                encoding="utf-8",
             )
-            result = _hook._load_strict_mode(tmp)
-            self.assertTrue(result)
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (True, True))
 
 
 # ---------------------------------------------------------------------------
-# Tests: main() advisory/strict behaviour (AC BP-1100e-2)
+# Tests: main() three-state behaviour (AC BP-1100e-2)
 # ---------------------------------------------------------------------------
 
 _TICKET_REL = "tickets/bp_1100e2_test_ticket.md"
@@ -372,11 +392,11 @@ _SOURCE_FILE = "scripts/some_undeclared_source.py"
 
 
 def _make_ticket_content(declared_source: bool) -> str:
-    """Build minimal ticket content for advisory/strict mode integration tests.
+    """Build minimal ticket content for three-state mode integration tests.
 
-    The YAML list items use two-space indentation to satisfy the
-    ``_parse_yaml_list_field`` regex which requires ``[ \\t]+`` before the
-    dash character.
+    Uses column-0 YAML block-sequence format (PyYAML default) so that the
+    _parse_yaml_list_field regex with zero-or-more leading whitespace parses
+    correctly.
 
     Args:
         declared_source: When True, the source file is in files_touched
@@ -384,15 +404,15 @@ def _make_ticket_content(declared_source: bool) -> str:
             absent (undeclared — should trigger advisory or block).
 
     Returns:
-        YAML-frontmatter ticket string suitable for _check_ticket to parse.
+        YAML-frontmatter ticket string suitable for _get_ticket_scope to parse.
     """
     if declared_source:
         files_yaml = (
-            "  - docs/some_doc.md\n"
-            f"  - {_SOURCE_FILE}\n"
+            "- docs/some_doc.md\n"
+            f"- {_SOURCE_FILE}\n"
         )
     else:
-        files_yaml = "  - docs/some_doc.md\n"
+        files_yaml = "- docs/some_doc.md\n"
     return (
         "---\n"
         "status: done\n"
@@ -403,24 +423,35 @@ def _make_ticket_content(declared_source: bool) -> str:
     )
 
 
-class TestMainAdvisoryStrictMode(unittest.TestCase):
-    """Integration tests for main() advisory/strict behaviour (AC BP-1100e-2)."""
+class TestMainThreeStateMode(unittest.TestCase):
+    """Integration tests for main() three-state behaviour (AC BP-1100e-2).
 
-    def _run_main_with_undeclared(
+    Tests cover: check-off (enabled:false), advisory (enabled:true+strict:false),
+    and blocking (enabled:true+strict:true) states; plus fail-open paths.
+    """
+
+    def _run_main(
         self,
         *,
+        enabled: bool,
         strict: bool,
         declared_source: bool,
-    ) -> int:
-        """Run main() with a mocked repo containing a done ticket.
+    ) -> tuple[int, str]:
+        """Run main() with a mocked repo and capture all output (stdout + stderr).
+
+        Advisory and error text goes to stdout (print()); skip advisories go to
+        stderr (print(..., file=sys.stderr)). Both are captured and concatenated
+        so assertions can search for any output regardless of channel.
 
         Args:
-            strict: Value returned by the mocked _load_strict_mode.
+            enabled: enabled flag for the mocked _load_config.
+            strict: strict flag for the mocked _load_config.
             declared_source: When True, the source file is in files_touched.
                 When False, the source file is absent (triggers violation).
 
         Returns:
-            The integer return value of main().
+            A (return_code, combined_output) tuple where combined_output is
+            stdout + stderr concatenated.
         """
         with tempfile.TemporaryDirectory() as tmp:
             ticket_dir = Path(tmp) / "tickets"
@@ -431,43 +462,68 @@ class TestMainAdvisoryStrictMode(unittest.TestCase):
             )
             staged = [_TICKET_REL, _SOURCE_FILE]
             branch_diff: frozenset[str] = frozenset({_SOURCE_FILE})
-            with patch.object(
-                _hook, "_get_staged_files", return_value=staged
-            ):
-                with patch.object(
-                    _hook, "_get_repo_root", return_value=tmp
-                ):
+            out_buf = io.StringIO()
+            err_buf = io.StringIO()
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff,
+                    ):
+                        with patch.object(
+                            _hook, "_load_config", return_value=(enabled, strict),
+                        ):
+                            with contextlib.redirect_stdout(out_buf):
+                                with contextlib.redirect_stderr(err_buf):
+                                    code = _hook.main()
+            return code, out_buf.getvalue() + err_buf.getvalue()
+
+    def test_check_off_returns_zero_no_output(self) -> None:
+        """enabled:false with undeclared source → exit 0, no advisory output."""
+        code, stderr = self._run_main(enabled=False, strict=False, declared_source=False)
+        self.assertEqual(code, 0)
+        self.assertNotIn(_SOURCE_FILE, stderr, "Disabled check must produce no output")
+
+    def test_check_off_enabled_key_absent_equivalent(self) -> None:
+        """_load_config returns (False, False) when section absent → check is off."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ticket_dir = Path(tmp) / "tickets"
+            ticket_dir.mkdir()
+            (ticket_dir / "t.md").write_text(
+                "---\nstatus: done\nfiles_touched:\n- docs/some.md\n---\n",
+                encoding="utf-8",
+            )
+            staged = ["tickets/t.md", "scripts/undeclared.py"]
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
                     with patch.object(
                         _hook,
                         "_get_branch_diff_files",
-                        return_value=branch_diff,
+                        return_value=frozenset({"scripts/undeclared.py"}),
                     ):
-                        with patch.object(
-                            _hook,
-                            "_load_strict_mode",
-                            return_value=strict,
-                        ):
-                            return _hook.main()
+                        # No config file present → _load_config returns (False, False)
+                        result = _hook.main()
+            self.assertEqual(result, 0)
 
-    def test_advisory_mode_returns_zero_on_undeclared_files(self) -> None:
-        """Advisory mode (strict=False): undeclared source → exit 0, not blocked."""
-        result = self._run_main_with_undeclared(strict=False, declared_source=False)
-        self.assertEqual(result, 0)
+    def test_advisory_returns_zero_on_undeclared_files(self) -> None:
+        """enabled:true, strict:false with undeclared source → exit 0, filename in output."""
+        code, stderr = self._run_main(enabled=True, strict=False, declared_source=False)
+        self.assertEqual(code, 0)
+        self.assertIn(_SOURCE_FILE, stderr, "Advisory must name the undeclared file")
 
-    def test_strict_mode_returns_one_on_undeclared_files(self) -> None:
-        """Strict mode (strict=True): undeclared source → exit 1, commit blocked."""
-        result = self._run_main_with_undeclared(strict=True, declared_source=False)
-        self.assertEqual(result, 1)
+    def test_strict_returns_one_on_undeclared_files(self) -> None:
+        """enabled:true, strict:true with undeclared source → exit 1, commit blocked."""
+        code, _ = self._run_main(enabled=True, strict=True, declared_source=False)
+        self.assertEqual(code, 1)
 
     def test_clean_advisory_returns_zero(self) -> None:
         """Advisory mode, all files declared → exit 0."""
-        result = self._run_main_with_undeclared(strict=False, declared_source=True)
-        self.assertEqual(result, 0)
+        code, _ = self._run_main(enabled=True, strict=False, declared_source=True)
+        self.assertEqual(code, 0)
 
     def test_clean_strict_returns_zero(self) -> None:
         """Strict mode, all files declared → exit 0 (nothing to block)."""
-        result = self._run_main_with_undeclared(strict=True, declared_source=True)
-        self.assertEqual(result, 0)
+        code, _ = self._run_main(enabled=True, strict=True, declared_source=True)
+        self.assertEqual(code, 0)
 
     def test_no_staged_files_returns_zero(self) -> None:
         """No staged files → exit 0 immediately (fail-open at the first gate)."""
@@ -482,6 +538,48 @@ class TestMainAdvisoryStrictMode(unittest.TestCase):
         ):
             result = _hook.main()
             self.assertEqual(result, 0)
+
+
+class TestLoadConfigWrongShape(unittest.TestCase):
+    """Tests that _load_config fails open on wrong-shape configs (AC BP-1100e-2)."""
+
+    def _write_config(self, tmp: str, content: str) -> None:
+        """Write content to the primary scripts/ config path."""
+        config_dir = Path(tmp) / "scripts" / "commit_guardian"
+        config_dir.mkdir(parents=True)
+        (config_dir / "commit_guardian.json").write_text(content, encoding="utf-8")
+
+    def test_null_section_returns_disabled(self) -> None:
+        """files_touched_reconciliation: null → (False, False), no crash."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_config(tmp, '{"files_touched_reconciliation": null}')
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (False, False))
+
+    def test_top_level_array_returns_disabled(self) -> None:
+        """Top-level JSON array [] → (False, False), no crash."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_config(tmp, "[]")
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (False, False))
+
+    def test_enabled_truthy_string_returns_disabled(self) -> None:
+        """enabled: \"yes\" is not JSON true → enabled=False, not checked."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_config(
+                tmp, '{"files_touched_reconciliation": {"enabled": "yes", "strict": true}}'
+            )
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (False, True))
+
+    def test_strict_truthy_string_not_enabled_as_strict(self) -> None:
+        """enabled:true but strict:\"yes\" → (True, False); non-bool strict is not strict."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_config(
+                tmp, '{"files_touched_reconciliation": {"enabled": true, "strict": "yes"}}'
+            )
+            result = _hook._load_config(tmp)
+            self.assertEqual(result, (True, False))
 
 
 if __name__ == "__main__":

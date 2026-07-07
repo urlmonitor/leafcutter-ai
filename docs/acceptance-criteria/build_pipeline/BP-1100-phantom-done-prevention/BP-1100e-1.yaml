@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
 criteria: |
   Given a ticket has passed its gates and is about to be marked status: done,
@@ -64,6 +64,9 @@ covered_by:
   - BP-1100e-1-ii
   - BP-1100e-1-iii
   - BP-1100e-1-iv
+  - BP-1100e-1-v
+  - BP-1100e-1-vi
+  - BP-1100e-1-vii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/01_TICKET-20260706-BP-1100e-1.md
 notes: |

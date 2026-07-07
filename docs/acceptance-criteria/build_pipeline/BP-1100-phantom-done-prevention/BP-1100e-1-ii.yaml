@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
 criteria: |
   Given a ticket declares files_touched: ["scripts/build_phases.py"]
@@ -29,6 +29,7 @@ estimated_complexity: S
 it_requirements:
   - "Normalize both the declared and the actual paths to a canonical form before set comparison: unify path separators to POSIX forward-slash, and case-fold when the target filesystem is case-insensitive (NTFS/APFS) so casing differences do not cause a false mismatch."
   - "Do not case-fold unconditionally on case-sensitive filesystems (two files differing only by case are distinct there); gate case-folding on filesystem case-sensitivity."
+  - "_normalise_path must strip only a single leading './' via str.removeprefix('./'), NOT lstrip('./') — lstrip removes ALL leading dot/slash characters and destroys leading-dot filenames (.github/ci.py, .hidden.py, .env), producing a false undeclared-flag. Separator normalisation and case-folding still compose after the prefix strip."
   - "PORTABLE SURFACE: this path normalization lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; ADR-001 build.py round-trip parity applies. Path normalization is what keeps the check portable across the WSL2/NTFS, macOS/APFS, and native-Linux consumer filesystems."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
@@ -42,6 +43,10 @@ amended_by:
     entry: "Pinned shared-hook portable surface (check_files_touched_reconciliation.py, ADR-001 parity) and tied path normalization to cross-filesystem portability. readiness draft->reviewed."
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
+  - reason: remediation-regression-lock
+    entry: "Locked the precise './' prefix strip (str.removeprefix, not lstrip) so leading-dot filenames (.github/ci.py, .hidden.py, .env) are not over-stripped into a false mismatch (BP-1100e round 1 D6). Behavior test-locked in test_check_files_touched_reconciliation_remediation.py."
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-07-07
 superseded_by: null
 covered_by: []
 implemented_by:

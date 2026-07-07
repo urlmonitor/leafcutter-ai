@@ -500,7 +500,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "BP-1100e-1 / BP-1100e-2: Advisory by default — reports undeclared source files (.py/.sql/.ts/.tsx/.js) but does not block commits. Set predone_scope.strict: true in commit_guardian.json to block commits on scope violations. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
+                "_comment": "BP-1100e-1 / BP-1100e-2: Off by default (files_touched_reconciliation.enabled: false). When enabled, reports undeclared source files (.py/.sql/.ts/.tsx/.js). Set enabled:true and strict:true in the files_touched_reconciliation section to block commits on scope violations. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
             },
             {
                 "id": "check-mermaid-drift",
@@ -821,8 +821,9 @@
             }
         ]
     },
-    "predone_scope": {
-        "_comment": "check_files_touched_reconciliation.py — BP-1100e-2: advisory by default; set strict: true to block commits on undeclared source files.",
+    "files_touched_reconciliation": {
+        "_comment": "check_files_touched_reconciliation.py — BP-1100e-2: three-state enforcement. enabled:false (default) = check is OFF (no output). enabled:true + strict:false = ADVISORY (report undeclared source files, do not block). enabled:true + strict:true = BLOCK on undeclared source files. Fails open on internal error regardless of strict setting.",
+        "enabled": false,
         "strict": false
     },
     "exception_handling": {

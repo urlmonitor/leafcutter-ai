@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
 criteria: |
   Given the pre-done reconciliation produces a verdict that a ticket changed source
@@ -48,7 +48,8 @@ amended_by:
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1100e-2-a
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/06_TICKET-20260706-BP-1100e-2.md
 notes: |
