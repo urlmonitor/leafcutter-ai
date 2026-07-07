@@ -1,0 +1,45 @@
+id: BP-100m-1-i
+title: "A same-target collision still fails even when the two colliding sources are byte-identical"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m-1.yaml"
+criteria: |
+  Given two source templates that resolve to the same deployed target output path,
+  And the two source templates have byte-identical content,
+  When build.py runs,
+  Then the build still exits with a non-zero status and reports the collision,
+  Because the guardrail keys on the target path, not on content: even identical
+    sources leave "which source is authoritative" undefined, so a later divergent
+    edit to one could silently change the artifact.
+depends_on:
+  - BP-100m-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m-1.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Collision detection is path-based and content-agnostic. Do NOT add a content-equality escape hatch that suppresses the failure when the colliding sources happen to match — that would reintroduce silent-divergence risk on a later edit."
+  - "Flagged as a judgment call for IT PO / user review: if a deliberate identical-copy deploy is ever wanted, it should be handled by an explicit allowlist, not by content comparison."
+delivers_to: null
+expects_from:
+  ac_id: BP-100m-1
+  contract: "The path-keyed collision verdict, asserted here to remain fatal irrespective of source content equality."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

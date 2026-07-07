@@ -1,0 +1,60 @@
+id: BP-900g-1
+title: "A deployed command referencing a workflow by a path that does not resolve post-deploy fails the build"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given a deployed command whose handoff references a workflow by a path such as
+    Workflow("scripts/workflows/build-feature.js"),
+  And the workflow .js files are actually deployed to <output_root>/workflows/
+    (reachable via the .claude/workflows shim, per BP-811 — not under
+    scripts/workflows/), so no artifact exists at scripts/workflows/build-feature.js
+    in a consumer install,
+  When build.py runs its command-reference reachability check,
+  Then the build exits with a non-zero status,
+  And the failure names the command, the unresolvable target
+    "scripts/workflows/build-feature.js", and states that the path does not
+    resolve to a deployed artifact after deployment.
+depends_on:
+  - BP-900g
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/commands/build-feature.md
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-811.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Extract each command's Workflow(...) and Skill(...) handoff targets from the deployed command bodies, then resolve each target against the actual post-deploy layout. A path-form target must resolve to a real deployed artifact path; a bare .js path under scripts/workflows/ does NOT resolve, because build_workflow_scripts() deploys the workflow .js files to <output_root>/workflows/ (reachable via the .claude/workflows shim, per BP-811), not under scripts/workflows/. Resolve against the true deployed location, not the literal scripts/workflows/ prefix in the reference."
+  - "The live regression fixture is Workflow(\"scripts/workflows/build-feature.js\") in the build-feature command; a test must pin that this target is flagged as unresolvable in the current tree."
+  - "Distinct from BP-811, which owns .claude/workflows shim reachability for the deployed workflow .js files. This AC is the COMMAND-SIDE analogue (the command's reference resolving), not the shim. Do not modify or re-parent BP-811."
+delivers_to:
+  agent: python-coder
+  contract: "A command-reachability verdict listing each unresolvable handoff target: { command: str, target: str, kind: 'workflow'|'skill', reason: str }; ok=true iff empty. Non-empty fails the build."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900g-1-i
+implemented_by: []

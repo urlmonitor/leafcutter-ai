@@ -1,0 +1,31 @@
+id: BP-100m
+title: "No build artifact is ever silently overwritten by another"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  When two sources would land on the same file, the build stops and tells you — instead of quietly clobbering one.
+
+  If two or more source templates would deploy to the same target output path,
+  the build fails loudly with a clear message naming the collision, so a later
+  phase can never silently replace an artifact an earlier phase produced. You
+  always ship the artifact you intended, not whichever one happened to be
+  written last.
+depends_on:
+  - BP-100
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Internal build-time integrity guardrail — surfaces only as a build error; keeping build docs current is already owned by BP-100l."
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100m-1
+  - BP-100m-2
+  - BP-100m-3
+implemented_by: []
