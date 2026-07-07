@@ -1,6 +1,6 @@
 ---
 title: "Wire computed agents-map into the real generator path"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-02
@@ -22,7 +22,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 07: Wire Computed Agents-Map Into the Real Generator Path
@@ -69,9 +69,12 @@ Builds on 01 (ADR-017, canonical vocabulary), 03 (guardrail table), 04 (compute 
 - [x] test-runner — 2026-07-02 14:00
 - [x] pr-reviewer — 2026-07-06
 - [x] commit — 2026-07-06 18:07
-- [ ] pull-request
+- [x] pull-request — 2026-07-07
 
 ## Comments
+
+### 2026-07-07 00:00 — pull-request (status: ok)
+Pushed to PR #201; ticket 07 (plumbing + guardrail vocabulary reconciliation) complete. Feature not yet live on real ACs — follow-up tickets 08-10 will populate change_target/risk_surface in the AC pipeline.
 
 ### 2026-07-06 — pr-reviewer (status: ok)
 Fixed ruff F401 (unused `import yaml` at line 17 of test_generate_ticket_from_ac.py). Fixed full-suite pytest collection error: test_generate_ticket_from_ac.py was shadowed by the unit_tests/ac_store/ package when the full suite ran; aligned sys.path insert to scripts/ac_store/ and dropped the ac_store. namespace prefix, matching the sibling test pattern. The collection error was pre-existing at HEAD (the sys.path collision predated this branch); the fix was made in this branch's changeset. 49 tests green in isolation (and now collect in the full suite); ruff clean on all four touched files.
