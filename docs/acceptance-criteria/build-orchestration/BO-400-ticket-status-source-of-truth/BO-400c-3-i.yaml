@@ -1,0 +1,54 @@
+id: BO-400c-3-i
+title: "Editing a ticket already residing under done/ (no move) is not blocked"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+criteria: |
+  Given a ticket file already resides at EPIC-Foo/done/03_ticket.md
+    (a pre-existing location committed in a prior commit),
+  And a staged commit modifies that file in place
+    (frontmatter or body) without changing its path
+    (no add+delete pair and no rename into done/),
+  When the pre-commit done-folder prohibition check runs,
+  Then no path change into a done/ subfolder is detected,
+  And the commit is NOT blocked by the done-folder prohibition,
+  And no "prohibited done-folder move" message is emitted for that file.
+depends_on: [BO-400c-3]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must distinguish a path change (add+delete or rename into done/) from an in-place modification of a file whose path is unchanged"
+  - "Must only fire the prohibition when the staged change actually introduces a done/ path that did not exist at that path in HEAD"
+  - "Must not emit any 'prohibited done-folder move' message for a file whose staged path equals its HEAD path"
+  - "Must complete within the existing pre-commit hook time budget (<5 seconds)"
+delivers_to: null
+expects_from:
+  ac_id: BO-400c-3
+  contract: "Pre-commit done-folder prohibition check that detects moves into a done/ subfolder by comparing staged file paths"
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the move-vs-presence distinction. The deployed
+  _check_done_folder_prohibition currently over-fires on path presence
+  (any staged file whose path contains done/) rather than on an actual
+  path change into done/. This edge case fixes the false positive: a
+  ticket that has legitimately lived under done/ since a prior commit
+  must remain editable in place.
