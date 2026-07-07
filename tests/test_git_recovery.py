@@ -2720,5 +2720,229 @@ class TestLargeObjectStoreSelectiveRemoval(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# Bootstrap — load build_phases for deployment tests (BO-1600d-4)
+# ---------------------------------------------------------------------------
+
+_SCRIPTS_DIR = _REPO_ROOT / "scripts"
+_BUILD_PHASES_PATH = _SCRIPTS_DIR / "build_phases.py"
+_SOURCE_GIT_RECOVERY = _REPO_ROOT / "templates" / "scripts" / "git_recovery.py"
+
+
+def _load_build_phases():
+    """Load build_phases from scripts/ into a cached module object.
+
+    Adds ``scripts/`` to ``sys.path`` so that build_phases' sibling imports
+    (``template_compiler``, etc.) resolve correctly.  Returns a cached module
+    object on subsequent calls to avoid duplicate ``exec_module`` executions.
+
+    Returns
+    -------
+    module
+        The loaded ``build_phases`` module.
+    """
+    if str(_SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(_SCRIPTS_DIR))
+    if "build_phases" in sys.modules:
+        return sys.modules["build_phases"]
+    spec = importlib.util.spec_from_file_location("build_phases", _BUILD_PHASES_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["build_phases"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# ---------------------------------------------------------------------------
+# TestBuildDeploysCopyTier (BO-1600d-4 copy tier)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildDeploysCopyTier(unittest.TestCase):
+    """Copy-tier deployment tests: build_template_standalone_scripts() deploys git_recovery.py.
+
+    Verifies that the shallow ``glob('*.py')`` in
+    ``build_template_standalone_scripts()`` picks up
+    ``templates/scripts/git_recovery.py`` and writes a byte-identical copy
+    to ``<target>/scripts/git_recovery.py`` (BO-1600d-4).
+    """
+
+    def setUp(self) -> None:
+        """Create a fresh temporary target directory for each test."""
+        self._tmp = tempfile.TemporaryDirectory()
+        self._target = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        """Remove the temporary directory unconditionally."""
+        self._tmp.cleanup()
+
+    def test_build_template_standalone_scripts_deploys_git_recovery(self) -> None:
+        # covers: BO-1600d-4
+        """build_template_standalone_scripts() must copy git_recovery.py from
+        templates/scripts/ to <target_root>/scripts/git_recovery.py and the
+        deployed content must be byte-identical to the package source."""
+        build_phases = _load_build_phases()
+
+        written = build_phases.build_template_standalone_scripts(
+            self._target, {}, dry_run=False, force=True
+        )
+
+        deployed = self._target / "scripts" / "git_recovery.py"
+        self.assertTrue(
+            deployed.exists(),
+            f"git_recovery.py was NOT deployed to {deployed}. "
+            "Ensure templates/scripts/git_recovery.py exists at the top level "
+            "(not in a subdirectory) so build_template_standalone_scripts() "
+            "picks it up via its shallow glob('*.py').",
+        )
+        self.assertGreater(
+            written,
+            0,
+            "build_template_standalone_scripts() returned 0 — no files were written. "
+            "templates/scripts/git_recovery.py may be absent or already up-to-date.",
+        )
+        self.assertEqual(
+            deployed.read_bytes(),
+            _SOURCE_GIT_RECOVERY.read_bytes(),
+            "Deployed git_recovery.py content does not match the source at "
+            f"{_SOURCE_GIT_RECOVERY}. Content may have been corrupted during copy.",
+        )
+
+    def test_git_recovery_not_deployed_if_source_absent(self) -> None:
+        # covers: BO-1600d-4
+        """When templates/scripts/ does not contain git_recovery.py, the build
+        phase must complete gracefully (return 0, no error) and must not create
+        scripts/git_recovery.py in the target directory."""
+        build_phases = _load_build_phases()
+
+        with tempfile.TemporaryDirectory() as fake_templates_dir:
+            fake_templates = Path(fake_templates_dir)
+            # Empty scripts/ subdirectory — no .py files present.
+            (fake_templates / "scripts").mkdir(parents=True)
+
+            with patch.object(build_phases, "TEMPLATES_DIR", fake_templates):
+                written = build_phases.build_template_standalone_scripts(
+                    self._target, {}, dry_run=False, force=True
+                )
+
+        deployed = self._target / "scripts" / "git_recovery.py"
+        self.assertFalse(
+            deployed.exists(),
+            "git_recovery.py must not be deployed when source is absent, "
+            f"but the file was found at {deployed}.",
+        )
+        self.assertEqual(
+            written,
+            0,
+            f"Expected 0 files written when source dir is empty, got {written}.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBuildDeploysReachabilityTier (BO-1600d-4 reachability tier)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildDeploysReachabilityTier(unittest.TestCase):
+    """Reachability-tier tests: the deployed git_recovery.py is runnable without errors.
+
+    Deploys ``git_recovery.py`` to a temporary target via
+    ``build_template_standalone_scripts()``, then invokes the deployed copy as a
+    subprocess to verify portability (no missing imports, clean exit in non-TTY
+    mode).
+    """
+
+    def setUp(self) -> None:
+        """Deploy git_recovery.py to a temporary target for each test."""
+        self._tmp = tempfile.TemporaryDirectory()
+        self._target = Path(self._tmp.name)
+        build_phases = _load_build_phases()
+        build_phases.build_template_standalone_scripts(
+            self._target, {}, dry_run=False, force=True
+        )
+        self._deployed = self._target / "scripts" / "git_recovery.py"
+
+    def tearDown(self) -> None:
+        """Remove the temporary directory unconditionally."""
+        self._tmp.cleanup()
+
+    def test_deployed_git_recovery_invocable_no_import_error(self) -> None:
+        # covers: BO-1600d-4
+        """After deployment, invoking scripts/git_recovery.py --help must exit 0
+        and produce no ModuleNotFoundError or ImportError in its output.
+
+        This is the portability check per BO-1600d-4: the deployed copy must be
+        self-contained (stdlib-only imports) so a fresh consumer project can run
+        it without installing additional packages.
+        """
+        self.assertTrue(
+            self._deployed.exists(),
+            f"Deployed script not found at {self._deployed}. "
+            "build_template_standalone_scripts() in setUp() may have failed.",
+        )
+        try:
+            result = subprocess.run(
+                [sys.executable, str(self._deployed), "--help"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            self.fail(
+                f"subprocess.run([sys.executable, str(deployed), '--help']) raised: {exc}"
+            )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"--help exited with code {result.returncode}. stderr: {result.stderr!r}",
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotIn(
+            "ModuleNotFoundError",
+            combined,
+            f"ModuleNotFoundError present in --help output: {combined!r}",
+        )
+        self.assertNotIn(
+            "ImportError",
+            combined,
+            f"ImportError present in --help output: {combined!r}",
+        )
+
+    def test_deployed_git_recovery_non_tty_exits_cleanly(self) -> None:
+        # covers: BO-1600d-4
+        """After deployment, invoking scripts/git_recovery.py without --execute and
+        with stdin closed (non-TTY) must exit 0.
+
+        The non-TTY guard in ``main()`` prints an informational message and calls
+        ``sys.exit(0)`` when stdin is not a TTY and ``--execute`` was not supplied
+        — no git writes occur.  This verifies the guard works in the deployed copy.
+        """
+        self.assertTrue(
+            self._deployed.exists(),
+            f"Deployed script not found at {self._deployed}. "
+            "build_template_standalone_scripts() in setUp() may have failed.",
+        )
+        try:
+            result = subprocess.run(
+                [sys.executable, str(self._deployed)],
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            self.fail(
+                f"subprocess.run() with DEVNULL stdin raised: {exc}"
+            )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"Non-TTY invocation exited with code {result.returncode}. "
+            f"stderr: {result.stderr!r}. "
+            "Expected exit 0 from the non-TTY guard in main().",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
