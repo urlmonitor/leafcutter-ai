@@ -208,6 +208,26 @@ def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
     return [item.strip() for item in items if item.strip()]
 
 
+def _field_is_declared(frontmatter: str, field_name: str) -> bool:
+    """Return True if the field key appears in the frontmatter, regardless of value.
+
+    Differs from :func:`_parse_yaml_list_field` which returns an empty list for
+    both absent and empty fields.  Use this function to distinguish a ticket that
+    carries *no* ``files_touched`` key (absent — no declared baseline) from one
+    that carries the key with an empty or non-list value.
+
+    Args:
+        frontmatter: Raw YAML text between the --- delimiters.
+        field_name: Field name to test (e.g. 'files_touched').
+
+    Returns:
+        bool: True when ``<field_name>:`` appears at the start of any line in
+        the frontmatter block.
+    """
+    pattern = rf"^{re.escape(field_name)}:"
+    return bool(re.search(pattern, frontmatter, re.MULTILINE))
+
+
 # ---------------------------------------------------------------------------
 # Core reconciliation logic (pure — no I/O)
 # ---------------------------------------------------------------------------
@@ -352,6 +372,13 @@ def _check_ticket(
     Reads the ticket, parses its frontmatter, and returns undeclared source
     files when status is 'done' and the declared scope misses a changed file.
 
+    When the ``files_touched`` frontmatter key is **absent** (not present in
+    the YAML at all — distinct from present-but-empty), reconciliation is
+    skipped entirely and an advisory message is printed to stderr.  This
+    no-op guard keeps the hook harmless in consumer projects that do not use
+    the ``files_touched`` convention (AC BP-1100e-1-iv, fail-open per
+    BP-1100e-2).
+
     Args:
         rel_path: Repo-relative path to the staged ticket .md file.
         repo_root: Absolute git repo root path (may be empty string).
@@ -359,7 +386,8 @@ def _check_ticket(
 
     Returns:
         Sorted list of undeclared source file paths, or empty list when the
-        ticket is clean, not-done, or a read/parse error occurred.
+        ticket is clean, not-done, has no ``files_touched`` declaration,
+        or a read/parse error occurred.
     """
     abs_path = Path(repo_root, rel_path) if repo_root else Path(rel_path)
 
@@ -374,6 +402,16 @@ def _check_ticket(
 
     frontmatter = _extract_frontmatter(content)
     if frontmatter is None or _get_status(frontmatter) != "done":
+        return []
+
+    if not _field_is_declared(frontmatter, "files_touched"):
+        # No files_touched key at all — no declared scope exists to reconcile
+        # against.  Skip cleanly and emit an advisory so the skip is visible
+        # rather than silent (AC BP-1100e-1-iv).
+        print(
+            f"{_HOOK_TAG} skipped (no files_touched declared in ticket): {rel_path}",
+            file=sys.stderr,
+        )
         return []
 
     files_touched = _parse_yaml_list_field(frontmatter, "files_touched")
@@ -493,4 +531,16 @@ if __name__ == "__main__":
 #   _compute_undeclared() only ever collects SOURCE files into changed_sources
 #   — was already correct; these two public functions make the contract
 #   explicit and testable by downstream consumers.
+# - 2026-07-07 [python-coder/BP-1100e-1-iv]: Add absent-frontmatter no-op
+#   guard (AC BP-1100e-1-iv).
+#   When the files_touched YAML key is entirely absent from a ticket's
+#   frontmatter (not merely an empty list), _check_ticket() now skips
+#   reconciliation and prints an advisory to stderr so the skip is visible
+#   rather than silent. This keeps the hook harmless in consumer projects
+#   that do not use the files_touched convention at all.
+#   Changes: added _field_is_declared(frontmatter, field_name) -> bool pure
+#   helper that uses a regex line-anchor to detect key presence without
+#   parsing the value; added early-return branch in _check_ticket() that
+#   fires when _field_is_declared(frontmatter, "files_touched") is False;
+#   updated _check_ticket() docstring to document the no-op behaviour.
 # ====================================================================
