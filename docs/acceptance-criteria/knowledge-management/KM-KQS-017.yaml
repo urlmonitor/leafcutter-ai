@@ -40,3 +40,5 @@ superseded_by: KM-KGS-100a
 amended_by: []
 covered_by: []
 implemented_by: []
+change_target: code
+risk_surface: internal
