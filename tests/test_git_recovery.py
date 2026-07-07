@@ -3049,6 +3049,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
     # -- Headline path: zero-byte object restored via refetch from origin ----
 
     def test_zero_byte_object_restored_from_real_origin(self) -> None:
+        # covers: BO-1600d-3
         """A truncated loose object is removed and restored by refetch from origin.
 
         Proves the core BO-1600d-3 repair against a real bare origin + clone,
@@ -3104,6 +3105,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
     # -- H-1: fresh-worktree fallback succeeds against a real linked worktree -
 
     def test_fresh_worktree_fallback_succeeds_on_real_linked_worktree(self) -> None:
+        # covers: BO-1600d-3-v
         """The fresh-worktree action creates a real worktree even though the
         branch is still checked out in the poisoned worktree left in place.
 
@@ -3130,6 +3132,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
         )
 
     def test_fresh_worktree_fallback_is_idempotent_on_rerun(self) -> None:
+        # covers: BO-1600d-3-vii
         """A second run does not collide on the _recovered path."""
         repo = self.base / "repo"
         _init_repo(repo, branch="main")
@@ -3149,6 +3152,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
     # -- D / #2a: reflog-tip lookup survives a corrupt branch tip ------------
 
     def test_get_reflog_tip_recovers_when_branch_tip_is_corrupt(self) -> None:
+        # covers: BO-1600d-3-viii
         """get_reflog_tip returns a prior readable SHA when the tip is corrupt,
         via the on-disk reflog-file fallback (git reflog show dies on the tip).
         """
@@ -3174,6 +3178,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
         )
 
     def test_plan_reset_action_names_concrete_sha_at_plan_time(self) -> None:
+        # covers: BO-1600d-3-viii
         """With a corrupt tip, the plan's branch-reset action names a concrete
         reflog SHA (dry-run == execute), not a deferred 'will retry' placeholder.
         """
@@ -3195,6 +3200,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
     # -- #3: origin-less repo is not planned a (crashing) refetch ------------
 
     def test_no_origin_repo_blocks_removal_without_crashing(self) -> None:
+        # covers: BO-1600d-3-x
         """A repo with a zero-byte object but no origin plans a BLOCKED action
         (no remove, no refetch) and _execute_and_report reports it cleanly.
         """
@@ -3219,6 +3225,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
         self.assertEqual(victim.stat().st_size, 0, "blocked object was deleted")
 
     def test_healthy_repo_plans_no_actions(self) -> None:
+        # covers: BO-1600d-3-x
         """A healthy origin-less repo plans nothing — no unconditional refetch."""
         repo = self.base / "repo"
         _init_repo(repo, branch="main")
@@ -3230,6 +3237,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
     # -- H-3: --execute must not run unattended (no TTY) ---------------------
 
     def test_execute_refuses_without_tty(self) -> None:
+        # covers: BO-1600d-1
         """--execute in a non-TTY context refuses and makes no writes."""
         repo = self.base / "repo"
         _init_repo(repo, branch="main")
@@ -3250,6 +3258,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
     # -- #2b / Behavior 3: corrupt HEAD → probe fails but planning continues -
 
     def test_corrupt_head_probe_nonfatal_planning_continues(self) -> None:
+        # covers: BO-1600d-3-ix
         """When the current HEAD tip is corrupt so the read-only status probe
         fails, main() reports it as an expected corruption signal and still
         computes a non-empty plan (planning makes no repository change).
@@ -3285,6 +3294,7 @@ class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
         def _boom() -> None:
             raise _SimulatedStepFailure("simulated git failure")  # noqa: TRY003
 
+        # covers: BO-1600d-3-xi
         plan = [_mod.RecoveryAction("Reset branch ref 'x' — simulated", _boom)]
         repo = self.base / "repo"
         _init_repo(repo, branch="main")

@@ -1,0 +1,52 @@
+id: BO-1600d-3-x
+readiness: approved
+priority: high
+title: "With no origin remote, recovery blocks removal instead of crashing; refetch is planned only when it can restore"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given a repository that has zero-byte corrupt loose objects but no origin remote
+    configured
+  When recovery computes the plan
+  Then it plans neither a remove action nor a re-fetch action, and instead plans a single
+    BLOCKED action explaining the objects cannot be restored without an origin
+  And executing that plan halts with an operator-facing message and deletes nothing, so
+    the store is not left worse than the halted state
+  And a healthy repository with no origin plans no actions at all (there is no
+    unconditional re-fetch)
+depends_on:
+  - BO-1600d-3
+  - BO-1600d-3-ii
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The re-fetch action MUST be planned only when there are removed objects to restore AND an 'origin' remote exists. An origin-less repo with corrupt objects yields a BLOCKED action (no remove, no refetch) rather than a crashing 'git fetch --refetch origin'. A healthy origin-less repo plans nothing — there is no unconditional refetch."
+  - "The removal step must not run when restoration is not viable, so a no-origin case never leaves the store worse than the halted state (mirrors the BO-1600d-3-i old-git refuse)."
+  - "PORTABLE SURFACE: lives in the same standalone recovery script (templates/scripts/git_recovery.py); ADR-001 deployed/template parity applies."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3-ii
+  contract: "The unrecoverable-origin family whose no-origin-at-all case this edge case adds."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_no_origin_repo_blocks_removal_without_crashing"
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_healthy_repo_plans_no_actions"
+implemented_by:
+  - "templates/scripts/git_recovery.py"
+notes: |
+  Added 2026-07-07 during the post-epic hardening remediation. BO-1600d-3-ii
+  covered "origin exists but cannot supply the objects"; it did not cover "no
+  origin remote configured at all" (previously an unconditional refetch that
+  crashed) nor the "healthy origin-less repo plans nothing" guard. Covered by
+  two unmocked real-git regression tests.

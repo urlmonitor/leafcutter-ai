@@ -19,6 +19,10 @@ criteria: |
     repository until the human confirms; absent a confirmation it makes no git write
   And the halt path from BO-1600c only reports the damage and points the human at the
     recovery entry point — it does not chain into running recovery itself
+  And even when the explicit execute flag is supplied, recovery refuses to run in a
+    non-interactive context (no attached terminal): it prints that an interactive
+    terminal is required and makes no git write, so a stray execute flag in an automated
+    script or drive loop can never run the destructive plan unattended
 depends_on:
   - BO-1600d
 doc_links:
@@ -57,8 +61,14 @@ amended_by:
     entry: "Pinned portable surface (templates/scripts/git_recovery.py, top-level auto-deploy via build_template_standalone_scripts shallow glob; new build_phases.py phase required if placed in a subdir). Added building-epics SKILL.md reference for the serial-drive/commit-lock PREVENTION (not duplicated here). Added building-epics doc_link. readiness draft->reviewed."
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
+  - reason: hardening-remediation
+    entry: "Tightened criteria: recovery must refuse to run in a non-interactive context even when the explicit execute flag is supplied (a TTY is required for destructive execution), so a stray --execute in a script or drive loop cannot run the plan unattended. Wired the covering tests into covered_by."
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-07-07
 superseded_by: null
-covered_by: []
+covered_by:
+  - "tests/test_git_recovery.py::TestNonTTYExitsWithoutGitWrite"
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_execute_refuses_without_tty"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GuidedGitRecovery/01_TICKET-20260706-BO-1600d-1.md
 notes: |

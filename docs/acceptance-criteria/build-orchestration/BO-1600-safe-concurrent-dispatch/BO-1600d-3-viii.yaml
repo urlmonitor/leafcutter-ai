@@ -1,0 +1,51 @@
+id: BO-1600d-3-viii
+readiness: approved
+priority: high
+title: "Branch-ref reset recovers the reflog tip even when the branch tip object is corrupt"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given a branch whose tip commit object is corrupt, so a reflog read that resolves
+    objects fails
+  When recovery computes the reset-to-reflog-tip target for that branch
+  Then it recovers the most recent readable prior commit from the branch's reflog
+    history without depending on the corrupt tip object
+  And the reset action names that concrete recovered commit in the printed plan (the
+    printed plan and the executed reset target the same commit — there is no deferred
+    "will retry at execution" placeholder)
+  And the recovered commit is readable in the object store
+depends_on:
+  - BO-1600d-3
+  - BO-1600d-3-iv
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "'git reflog show' resolves objects and fails with a non-zero exit on a corrupt tip — the exact case recovery exists for. The reflog-tip lookup MUST fall back to parsing the on-disk reflog file (.git/logs/refs/heads/<branch>) which does not touch the object store, then probe candidates newest-first for the first readable commit."
+  - "The reset target MUST be resolved at plan time and named in the printed plan (dry-run == execute); a deferred 'resolve at execution' placeholder breaks the plan/confirm guarantee."
+  - "PORTABLE SURFACE: lives in the same standalone recovery script (templates/scripts/git_recovery.py); ADR-001 deployed/template parity applies."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The reset-corrupt-branch-ref-to-reflog-tip step this edge case hardens for a corrupt tip object."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_get_reflog_tip_recovers_when_branch_tip_is_corrupt"
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_plan_reset_action_names_concrete_sha_at_plan_time"
+implemented_by:
+  - "templates/scripts/git_recovery.py"
+notes: |
+  Added 2026-07-07 during the post-epic hardening remediation. BO-1600d-3 and
+  BO-1600d-3-iv covered "reset to reflog tip" and "which branch"; neither pinned
+  the resilience needed when the tip object itself is corrupt (git reflog show
+  dies on it). Covered by two unmocked real-git regression tests.
