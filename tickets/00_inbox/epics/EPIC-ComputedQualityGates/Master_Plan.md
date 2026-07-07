@@ -25,7 +25,17 @@ Make quality gates (TDD, reviewers, docs) a COMPUTED system invariant. The ticke
 04_compute_agents_map (+ fix TDD bug)
   ├→ 05_flow_change_gates
   └→ 06_test_constraints_and_complexity
+       ↓
+07_wire_computed_agents_map (plumbing + vocab reconciliation) ✅ landed PR #201
+  ↓
+08_ac_axes_schema_and_generator_emit (axes as AC fields + generator emits them)
+  ├→ 09_it_po_v3_authors_axes  (BLOCKED: it-po-v3 source not on main)
+  └→ 10_backfill_ac_axes_and_real_store_e2e (backfill store + e2e gate)
 ```
+
+> Post-drive review (2026-07-01) found the epic phantom-done: ticket 07 landed the
+> plumbing but the feature is inert on real ACs until 08 + 10 land (real AC records
+> carry no axes). See tickets 08/09/10 and ADR-017.
 
 ## Sub-Tickets
 
@@ -37,4 +47,7 @@ Make quality gates (TDD, reviewers, docs) a COMPUTED system invariant. The ticke
 | 04 | [04_compute_agents_map.md](./04_compute_agents_map.md) | Compute + materialize agents map in Python; fix TDD bug (emit ## Test Requirements) | `[ ]` |
 | 05 | [05_flow_change_gates.md](./05_flow_change_gates.md) | Flow-change gates: architect + docs before coder | `[ ]` |
 | 06 | [06_test_constraints_and_complexity.md](./06_test_constraints_and_complexity.md) | Test constraints + complexity-driven model tier selection | `[ ]` |
-| 07 | [07_wire_computed_agents_map.md](./07_wire_computed_agents_map.md) | Wire computed agents-map into the real generator; reconcile guard↔YAML vocabulary; consume flow_change_gates; deterministic ordering; end-to-end test (fixes phantom-done from post-drive review) | `[ ]` |
+| 07 | [07_wire_computed_agents_map.md](./07_wire_computed_agents_map.md) | Wire computed agents-map into the real generator; reconcile guard↔YAML vocabulary; consume flow_change_gates; deterministic ordering; end-to-end test (fixes phantom-done from post-drive review) | `[x]` done — PR #201 |
+| 08 | [08_ac_axes_schema_and_generator_emit.md](./08_ac_axes_schema_and_generator_emit.md) | Add change_target/risk_surface to AC schema + validation; generator emits axes into tickets; fold review findings H-1/M-1/M-2/M-3 | `[ ]` |
+| 09 | [09_it_po_v3_authors_axes.md](./09_it_po_v3_authors_axes.md) | it-po-v3 authors the axes during enrichment (BLOCKED: it-po-v3 source not yet on main) | `[blocked]` |
+| 10 | [10_backfill_ac_axes_and_real_store_e2e.md](./10_backfill_ac_axes_and_real_store_e2e.md) | Backfill existing AC store with axes (agent-classified, batch-reviewed) + real-store end-to-end computed-map test | `[ ]` |
