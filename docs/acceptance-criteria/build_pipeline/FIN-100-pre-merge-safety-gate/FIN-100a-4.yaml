@@ -58,4 +58,5 @@ depends_on:
 superseded_by: null
 amended_by: []
 covered_by: []
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/TICKET-20260707-FinalizeFeaturePreflightAndBuildSymmetry.md
