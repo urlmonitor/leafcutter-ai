@@ -122,7 +122,11 @@ def _get_branch_diff_files() -> frozenset[str]:
                 text=True,
                 check=False,
             )
-        except (OSError, subprocess.SubprocessError):
+        except (OSError, subprocess.SubprocessError) as exc:
+            print(
+                f"{_HOOK_TAG} WARNING: git diff {base}...HEAD failed: {exc}",
+                file=sys.stderr,
+            )
             continue
         if result.returncode == 0:
             return frozenset(
@@ -186,12 +190,16 @@ def _extract_frontmatter(content: str) -> str | None:
 
 
 def _strip_yaml_value(raw: str) -> str:
-    """Strip inline YAML comment and surrounding quotes from a scalar value.
+    """Strip surrounding quotes or inline YAML comment from a scalar value.
 
-    Removes a trailing inline YAML comment (`` # ...``) first, then removes a
-    single pair of matching surrounding single or double quotes.  The
-    space-before-hash rule avoids stripping hashes that appear inside path
-    segments (e.g. ``scripts/build#1.py``).
+    Checks for a surrounding matching quote pair FIRST.  When the value is
+    quoted, the literal interior is returned verbatim — a space-hash sequence
+    inside the quoted span belongs to the path value, not to a YAML comment
+    (e.g. ``"scripts/build #1.py"`` → ``scripts/build #1.py``).
+
+    For unquoted values, a trailing inline YAML comment is stripped via the
+    space-before-hash rule, which preserves hashes that appear directly in
+    path segments without a leading space (e.g. ``scripts/build#1.py``).
 
     Args:
         raw: Raw string captured from YAML parsing.
@@ -200,13 +208,13 @@ def _strip_yaml_value(raw: str) -> str:
         Cleaned scalar string value.
     """
     value = raw.strip()
-    # Strip inline comment: only honour space-hash to preserve in-path hashes.
+    # Quoted value: return the interior directly without comment scanning.
+    if len(value) >= 2 and value[0] in ('"', "'") and value[-1] == value[0]:
+        return value[1:-1]
+    # Unquoted value: strip inline comment (space-hash rule).
     comment_idx = value.find(" #")
     if comment_idx != -1:
         value = value[:comment_idx].strip()
-    # Strip a single pair of matching surrounding quotes.
-    if len(value) >= 2 and value[0] in ('"', "'") and value[-1] == value[0]:
-        value = value[1:-1]
     return value
 
 
@@ -226,6 +234,40 @@ def _get_status(frontmatter: str) -> str:
     return _strip_yaml_value(match.group(1)) if match else ""
 
 
+def _split_flow_items(items_str: str) -> list[str]:
+    """Split a YAML flow-sequence item string on commas, respecting quote pairs.
+
+    A naive ``split(",")`` corrupts items that contain commas inside a quoted
+    span (e.g. ``["scripts/a,b.py"]`` → two broken fragments).  This function
+    tracks single and double quote state and splits only on commas that are
+    outside any quoted span.
+
+    Args:
+        items_str: Raw substring between the ``[`` and ``]`` of a flow-sequence.
+
+    Returns:
+        List of raw (un-stripped) item strings suitable for passing to
+        :func:`_strip_yaml_value`.
+    """
+    items: list[str] = []
+    current: list[str] = []
+    in_quote: str | None = None
+    for char in items_str:
+        if in_quote is None and char in ('"', "'"):
+            in_quote = char
+            current.append(char)
+        elif in_quote is not None and char == in_quote:
+            in_quote = None
+            current.append(char)
+        elif in_quote is None and char == ",":
+            items.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    items.append("".join(current))
+    return items
+
+
 def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
     """Parse a YAML list field from raw frontmatter text.
 
@@ -233,6 +275,10 @@ def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
     the PyYAML default column-0 dump as well as indented forms) and inline
     flow-sequence ``[item, item]`` syntax.  Strips surrounding single or double
     quotes and inline YAML comments from each item.
+
+    For flow-sequences, uses :func:`_split_flow_items` to split on commas
+    only outside quoted spans so that paths containing commas inside quotes
+    (e.g. ``["scripts/a,b.py"]``) parse as single items.
 
     Args:
         frontmatter: Raw YAML text between the --- delimiters.
@@ -248,11 +294,12 @@ def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
         raw_items = re.findall(r"^[ \t]*-[ \t]+(\S[^\n]*)", match.group(1), re.MULTILINE)
         return [v for v in (_strip_yaml_value(i) for i in raw_items) if v]
 
-    # Flow-sequence: field: [item, item]
+    # Flow-sequence: field: [item, item]  — split quote-aware to avoid
+    # corrupting items whose values contain commas inside a quoted span.
     flow_pattern = rf"^{re.escape(field_name)}:\s*\[([^\]]*)\]"
     flow_match = re.search(flow_pattern, frontmatter, re.MULTILINE)
     if flow_match:
-        raw_items = flow_match.group(1).split(",")
+        raw_items = _split_flow_items(flow_match.group(1))
         return [v for v in (_strip_yaml_value(i) for i in raw_items) if v]
 
     return []
@@ -559,8 +606,16 @@ def _load_strict_mode(repo_root: str) -> bool:
         return False
     try:
         data = json.loads(config_path.read_text(encoding="utf-8"))
-        return bool(data.get("predone_scope", {}).get("strict", False))
-    except (OSError, ValueError) as exc:
+        # Shape guard: wrong-shape configs (None, list, etc.) must not crash.
+        # Only a Python bool True (JSON true) enables strict mode; truthy
+        # non-bool values such as "yes" or 1 do not enable it.
+        if not isinstance(data, dict):
+            return False
+        section = data.get("predone_scope")
+        if not isinstance(section, dict):
+            return False
+        return section.get("strict") is True
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
         print(
             f"{_HOOK_TAG} WARNING: cannot read commit_guardian.json: {exc}"
             " — using advisory mode",
@@ -735,4 +790,36 @@ if __name__ == "__main__":
 #     source paths to the union; source changes are still caught as undeclared.
 #   D8 (quoted status): _get_status() now passes its captured value through
 #     _strip_yaml_value() so status: "done" and status: 'done' are recognised.
+# - 2026-07-07 [python-coder/EPIC-PhantomDoneFilesTouched BP-1100e remediation round 2]:
+#   Fix 4 confirmed defects and 1 low-priority gap found by code review of commit
+#   08b225cf (remediation round 1).
+#   R2-Fix1 (HIGH — fail-open hole in _load_strict_mode): a valid-JSON-but-wrong-shape
+#     config such as {"predone_scope": null} or [] raised AttributeError from .get()
+#     which propagated through main() and crashed the hook (exit 1 even in advisory
+#     mode). Fix: explicit isinstance checks before .get() calls; only JSON boolean
+#     true (Python True) enables strict mode (section.get("strict") is True); caught
+#     exception tuple broadened to (OSError, ValueError, TypeError, AttributeError)
+#     as belt-and-suspenders. Tests: null, [], {"strict":"yes"}, {} all return False;
+#     {"strict":true} still returns True; integration test verifies advisory exit 0
+#     with strict:"yes" config and an undeclared file staged.
+#   R2-Fix2 (MEDIUM — Rule 3 violation in _get_branch_diff_files): the except block
+#     previously had bare `continue` with no WARNING log. Fixed by binding `as exc`
+#     and adding print(..., file=sys.stderr) before continue. Test verifies WARNING
+#     appears in stderr when git raises OSError.
+#   R2-Fix3 (MEDIUM — false-positive for quoted paths containing ' #'): _strip_yaml_value
+#     stripped a trailing ' #comment' BEFORE checking for surrounding quotes, so
+#     "scripts/build #1.py" was mangled to "scripts/build (dangling quote). Fixed by
+#     reversing the order: quoted values return their interior verbatim; comment
+#     stripping only applies to unquoted values. Tests: quoted path with ' #' is
+#     preserved; integration test verifies main() does not flag it as undeclared.
+#   R2-Fix4 (MEDIUM — test gaps): added tests: (a) docs-only ticket with stray source
+#     file staged → stray source is caught in strict mode (exit 1) and reported
+#     in advisory mode (exit 0); (b) end-to-end main() test using real ticket 02
+#     verbatim — clean with declared files, flagged with an extra undeclared .py;
+#     (c) D4 cross-flag test converted to column-0 (PyYAML default) fixtures.
+#   R2-Fix5 (LOW — flow-list comma in quoted items): naive split(",") corrupted
+#     ["a,b.py"] into two broken fragments. Added _split_flow_items() pure helper
+#     that splits only on commas outside quoted spans; _parse_yaml_list_field flow
+#     branch now uses it instead of str.split(","). Tests: single comma-in-quoted
+#     item, multiple unquoted items, mixed quoted/unquoted items.
 # ====================================================================

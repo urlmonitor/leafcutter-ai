@@ -1,8 +1,8 @@
 """
 MODULE: test_check_files_touched_reconciliation_remediation
-GOAL: Regression tests for 8 confirmed defects in check_files_touched_reconciliation.py
-    (EPIC-PhantomDoneFilesTouched BP-1100e remediation 2026-07-07). Written TDD-first
-    to establish the red baseline before production fixes are applied.
+GOAL: Regression tests for confirmed defects in check_files_touched_reconciliation.py
+    (EPIC-PhantomDoneFilesTouched BP-1100e remediation rounds 1 and 2). Written
+    TDD-first to establish the red baseline before production fixes are applied.
 BUSINESS CONTEXT: Each defect was confirmed by code review and adversarial testing.
     Tests use the real PyYAML column-0 block-sequence format (dashes at column 0)
     rather than the indented format used by the pre-remediation test suite.
@@ -14,6 +14,8 @@ ARCHITECTURE: Tests import the hook module dynamically via importlib so they rem
 
 from __future__ import annotations
 
+import contextlib
+import io
 import importlib.util
 import subprocess
 import sys
@@ -43,6 +45,14 @@ REAL_TICKET = (
     / "epics"
     / "EPIC-PhantomDoneFilesTouched"
     / "01_TICKET-20260706-BP-1100e-1.md"
+)
+REAL_TICKET_02 = (
+    REPO_ROOT
+    / "tickets"
+    / "00_inbox"
+    / "epics"
+    / "EPIC-PhantomDoneFilesTouched"
+    / "02_TICKET-20260706-BP-1100e-1-i.md"
 )
 
 
@@ -372,6 +382,369 @@ class TestDocsOnlyGuardWired(unittest.TestCase):
                 sentinel.called,
                 "is_docs_only_or_config_only_ticket was never called — dead code still present",
             )
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 1: _load_strict_mode shape robustness
+# ---------------------------------------------------------------------------
+
+
+class TestLoadStrictModeShapeRobust(unittest.TestCase):
+    """Tests that _load_strict_mode handles wrong-shape configs without crashing — Round 2 Fix 1."""
+
+    def _write_primary_config(self, tmp: str, content: str) -> None:
+        """Write content to the primary scripts/ config path in a temp dir."""
+        config_dir = Path(tmp) / "scripts" / "commit_guardian"
+        config_dir.mkdir(parents=True)
+        (config_dir / "commit_guardian.json").write_text(content, encoding="utf-8")
+
+    def test_predone_scope_null_returns_false(self) -> None:
+        """predone_scope: null raises AttributeError without shape guard — must return False."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_primary_config(tmp, '{"predone_scope": null}')
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_top_level_list_returns_false(self) -> None:
+        """Top-level JSON array [] raises AttributeError without shape guard — must return False."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_primary_config(tmp, "[]")
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_strict_truthy_non_bool_string_returns_false(self) -> None:
+        """strict: \"yes\" is a truthy non-bool — must return False (only JSON true enables strict)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_primary_config(tmp, '{"predone_scope": {"strict": "yes"}}')
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_empty_object_returns_false(self) -> None:
+        """Empty config {} must return False (predone_scope key absent)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_primary_config(tmp, "{}")
+            result = _hook._load_strict_mode(tmp)
+            self.assertFalse(result)
+
+    def test_valid_strict_true_still_returns_true(self) -> None:
+        """{"predone_scope": {"strict": true}} must still return True after the shape fix."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_primary_config(tmp, '{"predone_scope": {"strict": true}}')
+            result = _hook._load_strict_mode(tmp)
+            self.assertTrue(result)
+
+    def test_strict_truthy_non_bool_advisory_exit_zero_with_undeclared(self) -> None:
+        """strict: \"yes\" config + undeclared file → main() exits 0 (advisory, not blocked)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_primary_config(tmp, '{"predone_scope": {"strict": "yes"}}')
+            ticket_dir = Path(tmp) / "tickets"
+            ticket_dir.mkdir()
+            (ticket_dir / "t.md").write_text(
+                "---\nstatus: done\nfiles_touched:\n- scripts/declared.py\n---\n",
+                encoding="utf-8",
+            )
+            staged = ["tickets/t.md", "scripts/declared.py", "scripts/undeclared.py"]
+            branch_diff: frozenset[str] = frozenset({
+                "scripts/declared.py",
+                "scripts/undeclared.py",
+            })
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff
+                    ):
+                        result = _hook.main()
+            self.assertEqual(
+                result, 0, "strict: 'yes' must not enable strict mode — advisory exit 0"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 2: _get_branch_diff_files logs WARNING on failure
+# ---------------------------------------------------------------------------
+
+
+class TestGetBranchDiffFilesWarning(unittest.TestCase):
+    """Tests that _get_branch_diff_files logs a WARNING when git fails — Round 2 Fix 2."""
+
+    def test_warning_logged_when_git_diff_raises_oserror(self) -> None:
+        """When subprocess.run raises OSError, a WARNING is printed to stderr."""
+        buf = io.StringIO()
+        with contextlib.redirect_stderr(buf):
+            with patch(
+                "subprocess.run",
+                side_effect=OSError("No such file or directory: 'git'"),
+            ):
+                result = _hook._get_branch_diff_files()
+        self.assertEqual(result, frozenset(), "Fail-open: must return empty frozenset")
+        self.assertIn(
+            "WARNING",
+            buf.getvalue(),
+            f"Expected WARNING in stderr; got: {buf.getvalue()!r}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 3: _strip_yaml_value quoted paths with hash
+# ---------------------------------------------------------------------------
+
+
+class TestStripYamlValueQuotedHash(unittest.TestCase):
+    """Tests that quoted paths containing ' #' are not truncated — Round 2 Fix 3."""
+
+    def test_double_quoted_path_with_hash_returns_full_inner_content(self) -> None:
+        """Double-quoted path containing ' #' returns the literal interior."""
+        result = _hook._strip_yaml_value('"scripts/build #1.py"')
+        self.assertEqual(result, "scripts/build #1.py")
+
+    def test_single_quoted_path_with_hash_returns_full_inner_content(self) -> None:
+        """Single-quoted path containing ' #' returns the literal interior."""
+        result = _hook._strip_yaml_value("'scripts/build #1.py'")
+        self.assertEqual(result, "scripts/build #1.py")
+
+    def test_unquoted_path_trailing_comment_stripped(self) -> None:
+        """Unquoted path with trailing ' # note' strips the comment correctly."""
+        result = _hook._strip_yaml_value("scripts/foo.py  # note")
+        self.assertEqual(result, "scripts/foo.py")
+
+    def test_unquoted_path_inline_hash_no_space_preserved(self) -> None:
+        """Unquoted path with a hash but no leading space is preserved (in-path hash)."""
+        result = _hook._strip_yaml_value("scripts/build#1.py")
+        self.assertEqual(result, "scripts/build#1.py")
+
+
+class TestMainQuotedPathWithHash(unittest.TestCase):
+    """Integration test: main() does not flag a declared quoted path with ' #' — Round 2 Fix 3."""
+
+    _DECLARED_FILE = "scripts/build #1.py"
+
+    def _run_main(
+        self,
+        *,
+        strict: bool,
+        also_stage_undeclared: bool,
+    ) -> int:
+        """Run main() with a ticket that declares a file whose name contains ' #'."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ticket_dir = Path(tmp) / "tickets"
+            ticket_dir.mkdir()
+            # Write ticket with the hash-in-name file declared in double quotes
+            (ticket_dir / "t.md").write_text(
+                '---\nstatus: done\nfiles_touched:\n- "scripts/build #1.py"\n---\n',
+                encoding="utf-8",
+            )
+            staged = ["tickets/t.md", self._DECLARED_FILE]
+            branch_diff: frozenset[str] = frozenset({self._DECLARED_FILE})
+            if also_stage_undeclared:
+                staged.append("scripts/extra.py")
+                branch_diff = branch_diff | frozenset({"scripts/extra.py"})
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff
+                    ):
+                        with patch.object(
+                            _hook, "_load_strict_mode", return_value=strict
+                        ):
+                            return _hook.main()
+
+    def test_declared_quoted_path_with_hash_not_flagged_strict(self) -> None:
+        """Declared file with ' #' in name is NOT flagged in strict mode."""
+        result = self._run_main(strict=True, also_stage_undeclared=False)
+        self.assertEqual(result, 0, "Declared file with hash in name must not be flagged")
+
+    def test_undeclared_source_flagged_when_declared_has_hash_strict(self) -> None:
+        """An undeclared source file is still flagged even when the declared file has '#'."""
+        result = self._run_main(strict=True, also_stage_undeclared=True)
+        self.assertEqual(result, 1, "Undeclared extra source must be flagged in strict mode")
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 4a: docs-only ticket with stray source file
+# ---------------------------------------------------------------------------
+
+
+class TestDocsOnlyWithStraySource(unittest.TestCase):
+    """Docs-only ticket with a stray undeclared .py must be caught — Round 2 Fix 4a."""
+
+    def _run_main_docs_only_stray(self, *, strict: bool) -> int:
+        """Run main() with a docs-only ticket and an undeclared source file staged."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ticket_dir = Path(tmp) / "tickets"
+            ticket_dir.mkdir()
+            # Column-0 format; all declared files are .md (docs-only ticket)
+            (ticket_dir / "docs_ticket.md").write_text(
+                "---\nstatus: done\nfiles_touched:\n- docs/some_doc.md\n---\n",
+                encoding="utf-8",
+            )
+            staged = ["tickets/docs_ticket.md", "scripts/stray_source.py"]
+            branch_diff: frozenset[str] = frozenset({"scripts/stray_source.py"})
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff
+                    ):
+                        with patch.object(
+                            _hook, "_load_strict_mode", return_value=strict
+                        ):
+                            return _hook.main()
+
+    def test_docs_only_stray_source_advisory_exit_zero(self) -> None:
+        """Docs-only ticket + stray source → advisory exit 0 (not blocked, but reported)."""
+        result = self._run_main_docs_only_stray(strict=False)
+        self.assertEqual(result, 0, "Advisory mode must exit 0 even with stray source")
+
+    def test_docs_only_stray_source_strict_exit_one(self) -> None:
+        """Docs-only ticket + stray source → strict exit 1 (stray source is caught)."""
+        result = self._run_main_docs_only_stray(strict=True)
+        self.assertEqual(result, 1, "Strict mode must exit 1 when stray source is undeclared")
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 4b: real ticket 02 end-to-end
+# ---------------------------------------------------------------------------
+
+
+class TestRealTicket02EndToEnd(unittest.TestCase):
+    """End-to-end main() tests using the real ticket 02 fixture — Round 2 Fix 4b."""
+
+    _TICKET_REL = (
+        "tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched"
+        "/02_TICKET-20260706-BP-1100e-1-i.md"
+    )
+    # Files declared in the real ticket 02 frontmatter (column-0 format)
+    _DECLARED = [
+        "templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py",
+        "unit_tests/commit_guardian/test_check_files_touched_reconciliation.py",
+    ]
+
+    def _setup_temp_repo(self, tmp: str) -> None:
+        """Copy the real ticket 02 into a temp directory structure."""
+        ticket_dir = (
+            Path(tmp)
+            / "tickets"
+            / "00_inbox"
+            / "epics"
+            / "EPIC-PhantomDoneFilesTouched"
+        )
+        ticket_dir.mkdir(parents=True)
+        content = REAL_TICKET_02.read_text(encoding="utf-8")
+        (ticket_dir / "02_TICKET-20260706-BP-1100e-1-i.md").write_text(
+            content, encoding="utf-8"
+        )
+
+    @unittest.skipUnless(REAL_TICKET_02.exists(), "Ticket 02 not present in worktree")
+    def test_real_ticket_02_declared_files_clean_strict(self) -> None:
+        """Real ticket 02 with its declared files staged → clean exit 0 in strict mode."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._setup_temp_repo(tmp)
+            staged = [self._TICKET_REL] + self._DECLARED
+            branch_diff: frozenset[str] = frozenset(self._DECLARED)
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff
+                    ):
+                        with patch.object(
+                            _hook, "_load_strict_mode", return_value=True
+                        ):
+                            result = _hook.main()
+            self.assertEqual(result, 0, "Real ticket 02 with declared files → clean")
+
+    @unittest.skipUnless(REAL_TICKET_02.exists(), "Ticket 02 not present in worktree")
+    def test_real_ticket_02_undeclared_extra_source_flagged_strict(self) -> None:
+        """Real ticket 02 + extra undeclared .py staged → flagged exit 1 in strict mode."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self._setup_temp_repo(tmp)
+            extra = "scripts/sneaky_new_module.py"
+            staged = [self._TICKET_REL] + self._DECLARED + [extra]
+            branch_diff: frozenset[str] = frozenset(self._DECLARED + [extra])
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff
+                    ):
+                        with patch.object(
+                            _hook, "_load_strict_mode", return_value=True
+                        ):
+                            result = _hook.main()
+            self.assertEqual(result, 1, "Undeclared extra source → flagged in strict mode")
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 4c: D4 cross-flag test with column-0 fixtures
+# ---------------------------------------------------------------------------
+
+
+class TestMultiTicketCrossFlagColumnZero(unittest.TestCase):
+    """D4 cross-flag test with column-0 (PyYAML default) fixtures — Round 2 Fix 4c."""
+
+    def test_two_done_tickets_column0_no_cross_flag_strict(self) -> None:
+        """Two tickets with column-0 dashes do not cross-flag each other in strict mode."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ticket_dir = Path(tmp) / "tickets"
+            ticket_dir.mkdir()
+            # Column-0 format: no leading whitespace before dashes (PyYAML default)
+            (ticket_dir / "ta.md").write_text(
+                "---\nstatus: done\nfiles_touched:\n- scripts/ta.py\n---\n",
+                encoding="utf-8",
+            )
+            (ticket_dir / "tb.md").write_text(
+                "---\nstatus: done\nfiles_touched:\n- scripts/tb.py\n---\n",
+                encoding="utf-8",
+            )
+            staged = [
+                "tickets/ta.md",
+                "tickets/tb.md",
+                "scripts/ta.py",
+                "scripts/tb.py",
+            ]
+            branch_diff: frozenset[str] = frozenset({"scripts/ta.py", "scripts/tb.py"})
+            with patch.object(_hook, "_get_staged_files", return_value=staged):
+                with patch.object(_hook, "_get_repo_root", return_value=tmp):
+                    with patch.object(
+                        _hook, "_get_branch_diff_files", return_value=branch_diff
+                    ):
+                        with patch.object(
+                            _hook, "_load_strict_mode", return_value=True
+                        ):
+                            result = _hook.main()
+            self.assertEqual(
+                result,
+                0,
+                "Column-0 fixtures: union scope prevents cross-flagging → clean",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Remediation Round 2 — Fix 5: flow-list quote-aware comma splitting
+# ---------------------------------------------------------------------------
+
+
+class TestFlowListQuoteAwareSplit(unittest.TestCase):
+    """Tests for quote-aware comma splitting in flow-sequence items — Round 2 Fix 5."""
+
+    def test_quoted_item_with_comma_parses_as_single_item(self) -> None:
+        """A quoted flow item containing a comma is one item, not split on the comma."""
+        fm = 'files_touched: ["scripts/a,b.py"]\n'
+        result = _hook._parse_yaml_list_field(fm, "files_touched")
+        self.assertEqual(result, ["scripts/a,b.py"])
+
+    def test_unquoted_multiple_items_still_split_on_comma(self) -> None:
+        """Multiple unquoted items separated by commas still parse correctly."""
+        fm = "files_touched: [scripts/a.py, scripts/b.py]\n"
+        result = _hook._parse_yaml_list_field(fm, "files_touched")
+        self.assertIn("scripts/a.py", result)
+        self.assertIn("scripts/b.py", result)
+        self.assertEqual(len(result), 2)
+
+    def test_mixed_quoted_and_unquoted_flow_items(self) -> None:
+        """Mixed quoted/unquoted flow items all parse correctly."""
+        fm = 'files_touched: ["scripts/a,b.py", scripts/c.py]\n'
+        result = _hook._parse_yaml_list_field(fm, "files_touched")
+        self.assertIn("scripts/a,b.py", result)
+        self.assertIn("scripts/c.py", result)
+        self.assertEqual(len(result), 2)
 
 
 if __name__ == "__main__":
