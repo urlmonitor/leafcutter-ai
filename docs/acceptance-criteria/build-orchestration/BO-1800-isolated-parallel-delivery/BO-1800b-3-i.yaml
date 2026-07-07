@@ -1,5 +1,5 @@
 id: BO-1800b-3-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "An admin merge attempt on main is rejected outside the gate"
 component: build-orchestration
@@ -21,16 +21,16 @@ doc_links:
   - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: documentation-expert
 estimated_complexity: S
-it_requirements: |
-  ADR-018 Decision §4: even `gh pr merge --admin` cannot land on `main` outside the
-  gate when bypass is disabled. Test against the configured hub protection.
+it_requirements:
+  - "Config-verification scenario, NOT code: asserts an admin-override merge (e.g. gh pr merge --admin) on a PR with failing required checks is rejected by the hub and main is unchanged when bypass is disabled (ADR-018 Decision §4)."
+  - "The verification procedure MUST be recorded on a portable docs surface (docs/) and tested against the configured hub protection."
 delivers_to: null
 expects_from:
   ac_id: BO-1800b-3
   contract: "The no-bypass configuration this admin-merge case exercises."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

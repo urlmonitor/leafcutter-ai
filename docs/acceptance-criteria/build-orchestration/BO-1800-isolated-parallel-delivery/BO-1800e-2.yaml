@@ -1,5 +1,5 @@
 id: BO-1800e-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "Scaffold and finalize bookkeeping lands via a branch and pull request, never a direct local-main commit"
 component: build-orchestration
@@ -27,16 +27,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  ADR-018 Migration §4: scaffold/finalize bookkeeping that today lands on local main
-  moves to a branch + PR (several scaffold PRs already do this). IT-PO: surface is
-  the create-epic scaffold flow and the finalize flow; align with the existing
-  scaffold-via-PR convention (see CLAUDE.md pre-drive checklist).
+it_requirements:
+  - "Scaffold and finalize bookkeeping MUST be committed on a branch and land on hub main through a pull request subject to the BO-1800b gate; it MUST NEVER be a direct commit to a local main pushed straight to the hub (ADR-018 Migration §4)."
+  - "The change MUST align with the existing scaffold-via-PR convention on the portable finalize + create-epic workflow surfaces (templates/skills/ + scripts/workflows/) deployed by build.py — never repo-root CLAUDE.md."
+  - "This covers the Migration §5 finalize-flow change (merge is a queue-eligible PR action, not an agent-issued gh pr merge), consuming the BO-1800b-2 gate contract."
 delivers_to: null
 expects_from:
   ac_id: BO-1800b-2
   contract: "The gated PR + merge-queue path that scaffold/finalize bookkeeping travels through."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

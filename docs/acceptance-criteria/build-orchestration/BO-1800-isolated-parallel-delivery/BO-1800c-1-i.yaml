@@ -1,5 +1,5 @@
 id: BO-1800c-1-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "An inherently sequential task is not force-parallelized"
 component: build-orchestration
@@ -22,19 +22,15 @@ doc_links:
   - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
-it_requirements: |
-  ADR-018 Decision §3 / Alternatives: the per-feature cap is an UPPER bound, not a
-  target; sequential work must not be force-parallelized (past a small agent count
-  returns diminish and error amplifies). IT-PO: this is a scheduling/dispatch
-  judgment; confirm whether it is a supervisor heuristic or an explicit dependency
-  check.
+it_requirements:
+  - "Runbook heuristic on the building-epics skill surface (templates/skills/building-epics/SKILL.md): the per-feature cap is an UPPER bound, not a target; inherently sequential tasks MUST NOT be force-parallelized and MUST run with a single collaborator (or the minimum the dependencies allow) (ADR-018 Decision §3 / Alternatives)."
 delivers_to: null
 expects_from:
   ac_id: BO-1800c-1
   contract: "The per-feature agent cap whose 'upper bound not target' semantics this case exercises."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

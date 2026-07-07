@@ -1,5 +1,5 @@
 id: BO-1800e-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "A developer's local main sync is fetch plus fast-forward-only (read-only)"
 component: build-orchestration
@@ -23,15 +23,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  ADR-018 Migration §4: sync of a developer's local main becomes read-only (fetch +
-  fast-forward only). IT-PO: confirm which sync surface (finalize local-main sync /
-  a helper) enforces --ff-only and the diverged-main stop behavior.
+it_requirements:
+  - "Local main sync MUST perform a fetch followed by a fast-forward-only update (--ff-only): no local commits, no merge commits, no rebasing local work onto main (ADR-018 Migration §4)."
+  - "If local main has diverged so a fast-forward is impossible, the sync MUST stop with a clear message rather than creating a merge or force-moving main."
+  - "The sync surface MUST live on a portable package surface (finalize workflow/skill or a helper under scripts/) deployed by build.py, and MUST handle git errors per the project error handling policy."
 delivers_to: null
 expects_from:
   ac_id: BO-1800e-1
   contract: "The read-only-local-main model this fast-forward-only sync realizes for developers."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

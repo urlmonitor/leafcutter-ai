@@ -1,5 +1,5 @@
 id: BO-1800b-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "No privileged bypass exists, and agents authenticate as a least-privilege identity with no direct-push right"
 component: build-orchestration
@@ -27,20 +27,17 @@ doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: documentation-expert
 estimated_complexity: M
-it_requirements: |
-  ADR-018 Decision §4: "do not allow bypassing the above" (the setting that turns
-  convention into impossibility) + least-privilege machine credentials. Two config
-  surfaces: (1) branch-protection "do not allow bypass" / no admin override; (2)
-  the agent machine identity's permission scope. IT-PO: re-route to the config/ops
-  surface; a verification helper asserting "no bypass actor is configured" is a
-  reasonable python deliverable.
+it_requirements:
+  - "Hub CONFIGURATION + credentials policy, NOT code: the deliverable is a runbook recording (1) branch protection with bypass disabled (no admin/owner/privileged-token override) and (2) the least-privilege machine identity scope (no bypass, no direct-push right) (ADR-018 Decision §4)."
+  - "The recorded config MUST make direct mutation of hub main structurally impossible even for a privileged actor — this is the setting that converts convention into impossibility."
+  - "The runbook MUST live on a portable docs surface (docs/) — never repo-root CLAUDE.md."
 delivers_to: null
 expects_from:
   ac_id: BO-1800b-1
   contract: "The base branch protection that the no-bypass setting hardens against privileged actors."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

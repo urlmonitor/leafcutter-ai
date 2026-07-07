@@ -1,5 +1,5 @@
 id: BO-1800a-4
-readiness: draft
+readiness: approved
 priority: medium
 title: "Component diagram of the per-drive isolated-clone topology"
 component: build-orchestration
@@ -29,15 +29,16 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
-it_requirements: |
-  Satisfies the component-diagram documentation_trigger on BO-1800a. C4-style
-  component view; ground the elements in ADR-018 Decision §1. Place under
-  docs/architecture/ per the write-c4-diagram skill routing.
+it_requirements:
+  - "Satisfies the component-diagram documentation_trigger on BO-1800a."
+  - "C4-style component view grounded in ADR-018 Decision §1; MUST show the hub (authoritative origin), the warm local clone/cache, and two or more independent drive clones each with its OWN object store, and MUST make explicit that drive clones share no object store or ref namespace with each other or the hub."
+  - "MUST show the create path (reflink / reference+dissociate / plain clone) and the origin-points-at-hub relationship."
+  - "Diagram source MUST live under docs/architecture/ per the write-c4-diagram skill routing."
 delivers_to: null
 expects_from:
   ac_id: BO-1800a-1
   contract: "The isolated-clone topology this diagram documents."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

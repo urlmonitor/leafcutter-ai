@@ -1,5 +1,5 @@
 id: BO-1800b-5
-readiness: draft
+readiness: approved
 priority: medium
 title: "Reference doc for the hub main-branch protection and merge-queue configuration"
 component: build-orchestration
@@ -26,15 +26,15 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
-it_requirements: |
-  Satisfies the reference-doc documentation_trigger on BO-1800b. A configuration
-  reference/runbook grounded in ADR-018 Decision §4 and Migration §1. Route via the
-  documentation Diataxis reference surface.
+it_requirements:
+  - "Satisfies the reference-doc documentation_trigger on BO-1800b; a configuration reference/runbook grounded in ADR-018 Decision §4 + Migration §1, routed via the documentation Diataxis reference surface (docs/)."
+  - "MUST enumerate the exact required settings: PR required for main; the three required checks (ruff, full tests, schema-diff); merge queue enabled; force-push + branch deletion blocked; bypass disabled; and the least-privilege machine identity scope (no bypass, no direct-push)."
+  - "MUST state explicitly that the local pre-push/pre-commit main-guard is advisory defense-in-depth only and NOT the guarantee."
 delivers_to: null
 expects_from:
   ac_id: BO-1800b-1
   contract: "The protection configuration this reference documents."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

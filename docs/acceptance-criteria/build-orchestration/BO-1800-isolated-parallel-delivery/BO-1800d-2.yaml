@@ -1,5 +1,5 @@
 id: BO-1800d-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "Garbage collection runs only single-writer, between drives"
 component: build-orchestration
@@ -26,16 +26,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  ADR-018 Decision §2 + Migration §2: gc runs exactly once, single-writer, BETWEEN
-  drives (`git maintenance run` / `git gc`). Concurrent gc is documented to risk
-  deleting an in-use, not-yet-referenced object -> corruption. IT-PO: define where
-  the between-drives gc is scheduled and how "no active drive" is determined.
+it_requirements:
+  - "Garbage collection / maintenance MUST run only when no drive is active against that repository (between drives), as a single-writer operation (git maintenance run / git gc), and MUST never start against a repository while a drive is writing to it (ADR-018 Decision §2, Migration §2)."
+  - "Concurrent gc is documented to risk deleting an in-use, not-yet-referenced object -> corruption; the single-writer-between-drives rule prevents this."
+  - "The scheduling logic MUST live on a portable package surface (scripts/ or templates/scripts/) deployed by build.py, and MUST handle gc/subprocess errors per the project error handling policy."
 delivers_to: null
 expects_from:
   ac_id: BO-1800d-1
   contract: "The disabled in-drive auto-gc that makes the between-drives single-writer gc the only gc path."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

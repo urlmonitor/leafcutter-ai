@@ -1,5 +1,5 @@
 id: BO-1800a-5
-readiness: draft
+readiness: approved
 priority: medium
 title: "Sequence diagram of the drive create-run-remove lifecycle in an isolated clone"
 component: build-orchestration
@@ -28,15 +28,16 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
-it_requirements: |
-  Satisfies the sequence-diagram documentation_trigger on BO-1800a. Cover the
-  create -> run -> remove lifecycle grounded in ADR-018 Decision §1 and Migration
-  §3. Place under docs/architecture/ per the write-c4-diagram skill routing.
+it_requirements:
+  - "Satisfies the sequence-diagram documentation_trigger on BO-1800a."
+  - "MUST show, in order: native-filesystem precondition check, create (strategy selection with fallback), origin-set-to-hub + feature-branch creation, clone bootstrap, drive work (commits into its own object store), remove (delete directory + branch), grounded in ADR-018 Decision §1 + Migration §3."
+  - "MUST show that no step touches any other drive's object store."
+  - "Diagram source MUST live under docs/architecture/ per the write-c4-diagram skill routing."
 delivers_to: null
 expects_from:
   ac_id: BO-1800a-3
   contract: "The create/run/remove lifecycle this diagram documents."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

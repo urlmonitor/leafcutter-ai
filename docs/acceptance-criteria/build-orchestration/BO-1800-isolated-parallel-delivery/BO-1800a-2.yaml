@@ -1,5 +1,5 @@
 id: BO-1800a-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "Drive copies are created by the fastest safe strategy available, in a fixed preference order"
 component: build-orchestration
@@ -32,17 +32,17 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  ADR-018 Decision §1 creation-strategy list, in order of preference on native
-  ext4. `--reference` WITHOUT `--dissociate` and `--shared` are forbidden (git
-  documents them as "possibly dangerous" because a gc in one repo can corrupt the
-  borrower). IT-PO: the strategy selection is deterministic shell/python; confirm
-  where the "warm local clone" cache lives and how it is refreshed.
+it_requirements:
+  - "Clone creation MUST attempt strategies in this exact preference order and use the first that succeeds: (1) cp --reflink=auto of the warm local clone, (2) git clone --reference <local-cache> --dissociate <hub>, (3) plain git clone <hub> (ADR-018 Decision §1)."
+  - "Whatever strategy is used, the resulting copy MUST have a fully independent object store that borrows no objects at rest (a --reference clone MUST always be --dissociate'd) so it is safe to gc independently."
+  - "Strategy selection MUST be deterministic and MUST report which strategy was used (consumed by the fallback edge case BO-1800a-2-i and by telemetry)."
+  - "Subprocess and clone I/O failures MUST be handled per the project error handling policy."
+  - "The strategy logic MUST live on a portable package surface (scripts/ or templates/scripts/) deployed by build.py."
 delivers_to:
   agent: python-coder
   contract: "A created, fully-dissociated independent drive copy plus a signal of which strategy was used (for the fallback edge case and telemetry)."
 expects_from: null
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

@@ -1,5 +1,5 @@
 id: BO-1800b-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "The hub's main accepts changes only through a pull request; direct push, force-push, and branch deletion are rejected server-side"
 component: build-orchestration
@@ -25,19 +25,16 @@ doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: documentation-expert
 estimated_complexity: M
-it_requirements: |
-  ADR-018 Decision §4 (remote guarantee) + Migration §1. The primary surface is
-  server-side hub branch-protection configuration (disallow direct push, block
-  force-push and branch deletion). This is CONFIGURATION, not application code -- a
-  runbook plus, ideally, a verification/enforcement helper that asserts the
-  protection is in place. IT-PO: re-route to the correct config/ops surface if one
-  exists; the local pre-push/pre-commit main-guard is advisory only and is covered
-  by BO-1800e, NOT here (this AC is the server-side guarantee).
+it_requirements:
+  - "This is a hub (GitHub) branch-protection CONFIGURATION / process requirement, NOT application code: there is no coder deliverable for the server-side rule itself. The deliverable is a how-to/runbook that records the exact settings and how to verify them (ADR-018 Decision §4, Migration §1)."
+  - "The recorded configuration MUST require a pull request for hub main and MUST reject direct push, force-push, and branch deletion server-side, independently of any local hook."
+  - "The advisory local pre-push/pre-commit main-guard is out of scope here (covered by BO-1800e-1-i) and MUST NOT be presented as the guarantee — the guarantee is server-side."
+  - "The runbook/how-to MUST live on a portable docs surface (docs/) — never in repo-root CLAUDE.md."
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null

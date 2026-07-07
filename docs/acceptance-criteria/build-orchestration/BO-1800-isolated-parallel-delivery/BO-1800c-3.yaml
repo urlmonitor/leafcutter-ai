@@ -1,5 +1,5 @@
 id: BO-1800c-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "Scheduling is host-resource-aware and sheds idle drives under memory pressure"
 component: build-orchestration
@@ -29,16 +29,16 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: L
-it_requirements: |
-  ADR-018 Decision §3 + Migration §6: add a host-resource-aware scheduler (shed idle
-  drives under memory pressure), mirroring upstream Claude Code supervisor
-  behaviour, INSTEAD of a fixed feature cap. IT-PO: define the resource signals
-  (RAM/CPU) and the shed policy (pause vs stop; how idleness is detected).
+it_requirements:
+  - "A host-resource-aware scheduler MUST decide keep/pause/start from live host-resource signals (e.g. RAM/CPU) rather than a fixed feature-count cap, mirroring upstream Claude Code supervisor behaviour (ADR-018 Decision §3, Migration §6)."
+  - "Under memory pressure the scheduler MUST shed idle drives (drives doing no active work) and MUST prefer active, progressing drives over idle ones."
+  - "Resource-signal probing and process control (pause/stop) MUST handle errors per the project error handling policy."
+  - "The scheduler MUST live on a portable package surface (scripts/ or templates/scripts/) deployed by build.py."
 delivers_to: null
 expects_from:
   ac_id: BO-1800c-2
   contract: "The 'ceiling is host resources, not a fixed cap' semantics this scheduler implements."
-origin_agent: business-analyst
+origin_agent: it-po
 created: 2026-07-06
 amended_by: []
 superseded_by: null
