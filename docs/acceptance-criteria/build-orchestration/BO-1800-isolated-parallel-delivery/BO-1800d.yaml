@@ -1,0 +1,30 @@
+id: BO-1800d
+title: "Automatic cleanup never disturbs work in progress"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Routine background housekeeping can never damage a delivery that is still running.
+
+  The automatic tidying that keeps the repository healthy is prevented from ever
+  running against work that is still in flight, so it can no longer corrupt an
+  active build. Cleanup happens safely, on its own, when nothing is being built.
+depends_on: [BO-1800]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800d-1
+  - BO-1800d-2
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal reliability safeguard for background housekeeping -- no user-facing behaviour or command is introduced."

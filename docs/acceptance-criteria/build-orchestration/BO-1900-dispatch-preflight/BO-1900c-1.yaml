@@ -1,0 +1,52 @@
+id: BO-1900c-1
+title: "A run-and-report task assigned to test-writer is caught as a mis-assignment"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose task asks to "run the existing suite and report the results"
+    and whose assigned phase agent is test-writer,
+    and the agent registry describes test-writer's charter as authoring new tests and
+    test-runner's charter as executing an existing suite and reporting,
+  When the preflight charter check runs before spawn,
+  Then it compares the task verb ("run and report") against the assigned agent's charter,
+  And it returns an unfit verdict because test-writer's charter does not cover run-and-report,
+  And the held-back reason names the assigned agent, the task verb, and the agent whose
+    charter does fit (test-runner),
+  And no phase agent is spawned.
+depends_on:
+  - BO-1900c
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The charter check must read each agent's charter/description from config/agent_registry.json (the canonical registry), not from a hardcoded list."
+  - "The check must go beyond the frontmatter enum validation: a name that is a valid registry agent can still be an unfit assignment for the task verb."
+  - "The held-back reason must name the assigned agent, the task verb, and the better-fitting agent when one is identifiable."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A charter-vs-verb check that holds back tickets whose assigned agent does not fit the task"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by:
+  - BO-1900c-1-i
+  - BO-1900c-1-ii
+implemented_by: []

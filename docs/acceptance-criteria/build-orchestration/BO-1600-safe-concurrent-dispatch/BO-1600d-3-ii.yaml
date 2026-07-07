@@ -1,0 +1,48 @@
+id: BO-1600d-3-ii
+readiness: approved
+priority: high
+title: "When origin genuinely lacks the missing objects, recovery reports it as unrecoverable and does not loop"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given the objects needed to repair the store are not present on origin (origin
+    cannot supply them, so a re-fetch cannot restore them)
+  When the recovery step engine attempts the re-fetch-from-origin action
+  Then after the fetch completes without restoring the needed objects, recovery
+    reports the situation as unrecoverable-by-this-tool and names the objects that
+    could not be restored from origin
+  And it stops rather than retrying the same fetch indefinitely — it does not loop
+  And it does not leave the store in a worse state than the halt (it does not delete
+    objects it cannot restore)
+depends_on:
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "After the refetch, verify the needed objects are now present; if origin did not supply them, classify the outcome as unrecoverable, report the specific unresolved objects, and STOP — a single fetch attempt, no retry loop."
+  - "Do not delete objects that cannot be restored from origin; the unrecoverable path must never leave the store worse than the halted state."
+  - "PORTABLE SURFACE: this unrecoverable-outcome guard lives in the same standalone recovery script (templates/scripts/git_recovery.py) pinned in BO-1600d-1/BO-1600d-4; ADR-001 deployed/template parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The re-fetch-from-origin step whose unrecoverable outcome this edge case defines."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (templates/scripts/git_recovery.py, ADR-001 parity). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GuidedGitRecovery/05_TICKET-20260706-BO-1600d-3-ii.md

@@ -1,0 +1,413 @@
+/**
+ * build-feature.js — Claude Code Workflow script
+ *
+ * Entry-point dispatcher for /build-feature. Resolves the target argument
+ * as an epic folder or a single-ticket file, creates/reuses the worktree,
+ * then routes to the appropriate build flow:
+ *
+ *   - Epic target → inline planner + parallel batch dispatch (ticket-supervisor per ticket)
+ *   - Single-ticket target → dispatch ticket-supervisor directly
+ *
+ * This gives build-ticket.js and build-epic.js their caller: build-feature.js
+ * routes to ticket-supervisor (single) or the planner + ticket-supervisor
+ * batch loop (epic). workflow() is NOT called — E2 leaf-invariant preserved.
+ *
+ * Minimum Claude Code version: 2.1.154 (workflow script support)
+ *
+ * E2 canonical form: top-level body, agent(prompt, opts), args global.
+ * No export async function run() — E2 executes the top-level body directly.
+ *
+ * ADR: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+ * Ticket: tickets/00_inbox/epics/EPIC-DualEngineWorkflowSupport/10_e2_command_wiring_correctness.md
+ */
+
+export const meta = {
+  name: "build-feature",
+  description: "Resolve a build target (epic folder or single ticket file) and drive it to completion. Dispatches a status-checker to determine epic-vs-single-ticket and set up the worktree. For epics: runs the planner then dispatches ticket-supervisor per batch via parallel(). For single tickets: dispatches ticket-supervisor directly.",
+  phases: [
+    "resolve-target: status-checker determines epic vs single-ticket + worktree path",
+    "build: planner + parallel ticket-supervisor batch loop (epic) or direct ticket-supervisor (single)",
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// JSON Schemas for agent() responses
+// ---------------------------------------------------------------------------
+
+const RESOLVE_SCHEMA = {
+  type: "object",
+  properties: {
+    target_type: { type: "string", enum: ["epic", "ticket"] },
+    epic_path: { type: "string" },
+    ticket_path: { type: "string" },
+    worktree_path: { type: "string" },
+  },
+  required: ["target_type"],
+};
+
+const PLANNER_SCHEMA = {
+  type: "object",
+  required: ["epic_path", "title", "batches"],
+  properties: {
+    epic_path: { type: "string" },
+    title: { type: "string" },
+    batches: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["batch_number", "tickets"],
+        properties: {
+          batch_number: { type: "integer" },
+          tickets: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["path", "status"],
+              properties: {
+                path: { type: "string" },
+                status: { type: "string", enum: ["todo", "blocked"] },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const TICKET_RESULT_SCHEMA = {
+  type: "object",
+  properties: {
+    status: { type: "string", enum: ["ok", "blocked", "failed", "error", "halt"] },
+    message: { type: "string" },
+    ticket_path: { type: "string" },
+  },
+  required: ["status"],
+};
+
+const WORKTREE_SCHEMA = {
+  type: "object",
+  required: ["worktree_path", "status"],
+  properties: {
+    worktree_path: { type: "string" },
+    status: { type: "string", enum: ["created", "reused"] },
+    error: { type: "string" },
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Phase 0 — Resolve target and worktree
+// ---------------------------------------------------------------------------
+
+phase("Resolve Target");
+
+const target = (args && (args.target || args.userInput || "").trim()) || "";
+
+if (!target) {
+  return {
+    status: "error",
+    message:
+      "No target provided. Pass args: { target: '<epic-name or ticket-path>' }\n" +
+      "Examples:\n" +
+      "  { target: 'EPIC-AgentSupervisor' }\n" +
+      "  { target: 'tickets/01_todo/10_my_ticket.md' }",
+  };
+}
+
+const resolveResult = await agent(
+  `Resolve the /build-feature target and set up the worktree.\n\n` +
+  `Target: "${target}"\n\n` +
+  `1. Determine whether the target is an epic or a single ticket:\n` +
+  `   - If it ends in ".md" or is a path to a file: target_type = "ticket"\n` +
+  `   - If it looks like an epic folder (e.g. EPIC-*, contains Master_Plan.md): target_type = "epic"\n\n` +
+  `2. Resolve the absolute path:\n` +
+  `   - For ticket: resolve to the absolute path of the ticket .md file\n` +
+  `   - For epic: resolve to the absolute path of the epic folder\n\n` +
+  `3. Determine the worktree path:\n` +
+  `   - Run: test -f .git && echo file || echo directory\n` +
+  `   - If .git is a file, we are inside a worktree; report the current directory as worktree_path\n` +
+  `   - If .git is a directory, the caller is in the main clone; report the epic folder path as worktree_path\n\n` +
+  `Return JSON: { "target_type": "epic"|"ticket", "epic_path": "<abs>"|null, "ticket_path": "<abs>"|null, "worktree_path": "<abs>" }`,
+  {
+    agentType: "status-checker",
+    schema: RESOLVE_SCHEMA,
+    label: "resolve-target",
+    phase: "Resolve Target",
+  }
+);
+
+if (!resolveResult) {
+  return {
+    status: "error",
+    message:
+      "resolve-target agent returned null. Cannot determine build target.",
+  };
+}
+
+const { target_type, epic_path, ticket_path } = resolveResult;
+
+// Establish the isolated worktree (create or reuse) before any build work.
+const worktreeTarget = target_type === "epic"
+  ? (epic_path || target)
+  : (ticket_path || target);
+
+const worktreeResult = await agent(
+  `Create or reuse the isolated git worktree for the build target.\n\n` +
+  `Target: "${worktreeTarget}"\n` +
+  `Target type: "${target_type}"\n\n` +
+  `Instructions:\n` +
+  `1. Run 'git worktree list --porcelain' to check if a worktree for this target already exists.\n` +
+  `2. If it exists: REUSE it — report the existing absolute path as worktree_path, status "reused".\n` +
+  `3. If it does not exist: CREATE it from origin/main.\n` +
+  `   For epics: 'git worktree add <path> -b <branch-name> origin/main'\n` +
+  `   Report the new absolute path as worktree_path, status "created".\n` +
+  `4. On any error: report status "failed" with an error message.\n\n` +
+  `IMPORTANT: After creating, bootstrap the worktree: copy/symlink .leafcutter from the main clone so hooks are present.\n\n` +
+  `Return JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`,
+  {
+    agentType: "worktree-agent",
+    schema: WORKTREE_SCHEMA,
+    label: "worktree-setup",
+    phase: "Resolve Target",
+  }
+);
+
+if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error) {
+  return {
+    status: "error",
+    message:
+      `worktree-agent failed to create/reuse isolated worktree for "${worktreeTarget}". ` +
+      `Error: ${(worktreeResult && worktreeResult.error) || "worktree-agent returned null or failed"}. ` +
+      `Safety abort: /build-feature will NOT fall back to driving ticket-supervisors ` +
+      `against the main clone. Fix the worktree issue and re-run.`,
+    abort_reason: "worktree-setup-failed",
+  };
+}
+
+const realWorktreePath = worktreeResult.worktree_path;
+if (!realWorktreePath) {
+  return {
+    status: "error",
+    message:
+      "worktree-agent returned no worktree_path. Cannot drive ticket-supervisors without " +
+      "a confirmed isolated worktree path.",
+    abort_reason: "worktree-path-missing",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Derive worktree-resident paths from resolve output
+//
+// resolve may return epic_path / ticket_path as an absolute main-clone path
+// (e.g. /home/user/leafcutter-ai/tickets/…) or as a repo-relative path
+// (e.g. tickets/00_inbox/epics/EPIC-X).  Either way we must land inside
+// realWorktreePath before passing paths to the planner or ticket-supervisor.
+//
+// Algorithm:
+//   1. If the path is already inside realWorktreePath → use as-is.
+//   2. If absolute → strip to the repo-relative portion via known directory
+//      anchors (tickets/, templates/, docs/, unit_tests/), then join under
+//      realWorktreePath.
+//   3. If repo-relative (no leading slash) → join directly under realWorktreePath.
+// ---------------------------------------------------------------------------
+
+function toWorktreePath(resolvedPath, worktreePath) {
+  if (!resolvedPath) return null;
+
+  // Case 1: already inside the worktree
+  if (
+    resolvedPath === worktreePath ||
+    resolvedPath.startsWith(worktreePath + "/")
+  ) {
+    return resolvedPath;
+  }
+
+  // Case 2: absolute path — strip to repo-relative using known anchors
+  if (resolvedPath.startsWith("/")) {
+    const anchors = ["tickets/", "templates/", "docs/", "unit_tests/"];
+    for (const anchor of anchors) {
+      const idx = resolvedPath.indexOf("/" + anchor);
+      if (idx !== -1) {
+        return worktreePath + "/" + resolvedPath.slice(idx + 1);
+      }
+    }
+    // Fallback: try anchor without requiring a leading slash
+    for (const anchor of anchors) {
+      const idx = resolvedPath.indexOf(anchor);
+      if (idx !== -1) {
+        return worktreePath + "/" + resolvedPath.slice(idx);
+      }
+    }
+  }
+
+  // Case 3: repo-relative (no leading slash) — join directly
+  return worktreePath + "/" + resolvedPath;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1 — Build: route to epic or single-ticket flow
+// ---------------------------------------------------------------------------
+
+phase("Build");
+
+if (target_type === "epic") {
+  // -----------------------------------------------------------------------
+  // Epic path: planner + parallel batch dispatch
+  // Mirrors build-epic.js Phase 1 + Phase 2 inline (no workflow() call).
+  // worktreeEpicPath is the epic folder INSIDE the real worktree — the
+  // planner reads accurate (post-drive) ticket statuses from there so that
+  // resume correctly omits already-done tickets.
+  // -----------------------------------------------------------------------
+  const worktreeEpicPath = toWorktreePath(epic_path || target, realWorktreePath);
+
+  const plannerResult = await agent(
+    `Read Master_Plan.md at the epic folder: "${worktreeEpicPath}". Then read the frontmatter of every NN_*.md sub-ticket. ` +
+    `Compute dependency-ordered batches: (1) Build a dependency graph using depends_on (logical) and files_touched overlap (physical). ` +
+    `(2) Compute the maximal antichain of ready tickets (all depends_on met). ` +
+    `(3) Split the antichain into batches so no two tickets share any files_touched entry. ` +
+    `(4) Tickets with status 'done' are OMITTED from all batches (resume). ` +
+    `Return a JSON object with: epic_path, title, batches. Return ONLY the JSON object.`,
+    {
+      agentType: "status-checker",
+      schema: PLANNER_SCHEMA,
+      label: "epic-planner",
+      phase: "Build",
+    }
+  );
+
+  const plan = plannerResult || {};
+  const batches = plan.batches || [];
+  const epicTitle = plan.title || worktreeEpicPath;
+
+  if (batches.length === 0) {
+    return {
+      status: "ok",
+      message: `Epic "${epicTitle}" complete (or no tickets to run). All tickets are done or the epic is empty.`,
+      epic_path: worktreeEpicPath,
+      batches_run: 0,
+    };
+  }
+
+  const BATCH_SIZE = 12;
+  const completedBatches = [];
+
+  for (const batch of batches) {
+    const batchNumber = batch.batch_number;
+    const tickets = batch.tickets || [];
+
+    if (tickets.length === 0) {
+      completedBatches.push({ batch_number: batchNumber, tickets_completed: 0 });
+      continue;
+    }
+
+    const batchResults = [];
+
+    for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+      const chunk = tickets.slice(i, i + BATCH_SIZE);
+
+      const chunkResults = await parallel(
+        chunk.map((ticket) => async () => {
+          const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
+          const result = await agent(
+            `Drive ticket to completion: ${worktreeTicketPath}. Worktree: ${realWorktreePath}. Execute all needed phase agents in order. worktree_path: ${realWorktreePath}`,
+            {
+              agentType: "ticket-supervisor",
+              schema: TICKET_RESULT_SCHEMA,
+              label: `ticket:${ticket.path}`,
+              phase: "Build",
+            }
+          );
+          return {
+            ticket_path: ticket.path,
+            status: result && result.status ? result.status : "ok",
+            result,
+          };
+        })
+      );
+
+      for (const r of chunkResults) {
+        if (r) {
+          batchResults.push(r);
+        }
+      }
+    }
+
+    const haltedTickets = batchResults.filter(
+      (r) =>
+        r.status === "failed" ||
+        r.status === "blocked" ||
+        r.status === "halt" ||
+        r.status === "error"
+    );
+
+    if (haltedTickets.length > 0) {
+      const haltSummary = haltedTickets.map((r) => ({
+        ticket_path: r.ticket_path,
+        status: r.status,
+        error: r.error || (r.result && r.result.message) || "unknown error",
+      }));
+
+      return {
+        status: "blocked",
+        message:
+          `Epic "${epicTitle}" halted at batch ${batchNumber} — ` +
+          `${haltedTickets.length} ticket(s) failed or blocked.`,
+        epic_path: worktreeEpicPath,
+        halted_at_batch: batchNumber,
+        halted_tickets: haltSummary,
+        completed_batches: completedBatches,
+        suggested_action:
+          "Review the ## Comments section of each halted ticket for the blocker details. " +
+          "Resolve the blocker(s) and re-run /build-feature to resume.",
+      };
+    }
+
+    completedBatches.push({
+      batch_number: batchNumber,
+      tickets_completed: tickets.length,
+      tickets: batchResults.map((r) => r.ticket_path),
+    });
+  }
+
+  const totalTickets = completedBatches.reduce(
+    (sum, b) => sum + (b.tickets_completed || 0),
+    0
+  );
+
+  return {
+    status: "ok",
+    epic_path: worktreeEpicPath,
+    title: epicTitle,
+    worktree_path: realWorktreePath,
+    batches_run: completedBatches.length,
+    tickets_completed: totalTickets,
+    completed_batches: completedBatches,
+    message:
+      `Epic "${epicTitle}" complete. ` +
+      `${completedBatches.length} batch(es) run, ${totalTickets} ticket(s) completed.`,
+  };
+} else {
+  // -----------------------------------------------------------------------
+  // Single-ticket path: dispatch ticket-supervisor directly.
+  // worktreeTicketPath is the ticket file INSIDE the real worktree so that
+  // the ticket-supervisor reads accurate (post-drive) frontmatter statuses.
+  // -----------------------------------------------------------------------
+  const singleTicketPath = ticket_path || target;
+  const worktreeTicketPath = toWorktreePath(singleTicketPath, realWorktreePath);
+
+  const ticketResult = await agent(
+    `Drive ticket to completion: "${worktreeTicketPath}". Worktree: ${realWorktreePath}. ` +
+    `Execute all needed phase agents in order. worktree_path: ${realWorktreePath}`,
+    {
+      agentType: "ticket-supervisor",
+      schema: TICKET_RESULT_SCHEMA,
+      label: "build-ticket",
+      phase: "Build",
+    }
+  );
+
+  return ticketResult || {
+    status: "error",
+    message: `ticket-supervisor returned null for ticket: ${worktreeTicketPath}`,
+  };
+}

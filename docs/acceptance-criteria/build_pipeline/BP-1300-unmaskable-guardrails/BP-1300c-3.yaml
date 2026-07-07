@@ -1,0 +1,42 @@
+id: BP-1300c-3
+title: "Outside an automated drive the same checks stay warn-only"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the self-description and sign-off-parity checks, and a violation is present,
+  When the checks run outside an automated drive (interactive or local development, with no
+    drive context active),
+  Then the checks emit warnings and return a zero exit,
+  And they do not hard-block the interactive user,
+  And the escalation to failure applies only when a drive context is active.
+depends_on:
+  - BP-1300c
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Enforcement level must depend on whether an automated-drive context is active; outside a drive the checks remain warn-only."
+  - "The drive-context detection must be explicit and testable so interactive users are not falsely hard-blocked."
+delivers_to:
+  agent: python-coder
+  contract: "Drive-context-gated enforcement that stays warn-only outside a drive"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

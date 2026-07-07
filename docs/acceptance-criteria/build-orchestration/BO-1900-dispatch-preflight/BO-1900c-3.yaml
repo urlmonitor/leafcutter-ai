@@ -1,0 +1,48 @@
+id: BO-1900c-3
+title: "Reference doc defines the charter-vs-task-verb matching rules"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the preflight charter check matches an assigned agent's registry charter against
+    the task verb,
+  When the documentation step runs for this feature,
+  Then a reference document is produced that specifies: which registry field supplies the
+    charter, how a task verb is derived, the fit/unfit/cannot-confirm outcomes, and worked
+    examples including the run-and-report -> test-runner (not test-writer) case,
+  And the reference names the held-back reason formats for mis-assignment, ambiguous verb,
+    and missing charter,
+  And a reader can determine, for a given ticket, whether its assigned agent would pass.
+depends_on:
+  - BO-1900c
+  - BO-1900c-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: reference-author
+estimated_complexity: S
+it_requirements:
+  - "Must document the registry charter source field and the fit/unfit/cannot-confirm decision outcomes."
+  - "Must include the test-writer-vs-test-runner worked example."
+delivers_to:
+  agent: reference-author
+  contract: "A reference document specifying the charter-vs-verb matching rules and outcomes"
+expects_from:
+  ac_id: BO-1900c-1
+  contract: "The implemented charter-vs-verb matching behavior to document"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

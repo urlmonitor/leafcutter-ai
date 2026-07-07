@@ -1,0 +1,41 @@
+id: BO-1800a-2-i
+readiness: approved
+priority: medium
+title: "Reflink unsupported falls back cleanly to the next creation strategy"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800a.yaml"
+criteria: |
+  Given the filesystem hosting the drive copies does not support copy-on-write
+    reflinks (so `cp --reflink=auto` cannot make a reflinked copy),
+  When the isolation layer creates a new drive copy,
+  Then it does not fail and does not fall back to a plain byte copy of the reflink
+    step; instead it moves to the next strategy in order
+    (`git clone --reference <cache> --dissociate`, then plain `git clone`),
+  And the drive copy that results still has a fully independent, dissociated object
+    store identical in isolation guarantees to the reflink path.
+depends_on: [BO-1800a-2]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The strategy layer MUST explicitly detect reflink UNsupport (cp --reflink=auto silently degrades to a full byte copy on non-CoW filesystems) and MUST fall through to git clone --reference --dissociate rather than accept an accidental full byte copy, so the intended ordering is honored."
+  - "The fallback result MUST have the same fully-independent, dissociated object store as the reflink path."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800a-2
+  contract: "The strategy-selection path this fallback exercises."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/05_TICKET-20260707-BO-1800a-2-i.md

@@ -1,0 +1,46 @@
+id: TKT-200f-2
+title: "A premise that reproduces in the clean tree is confirmed and the ticket may proceed"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose captured claim reproduces identically when its reproduction command
+    is run against a clean, CI-equivalent tree,
+  When the pre-inbox-exit premise verification runs,
+  Then the verification confirms the premise holds in the clean environment,
+  And the ticket is cleared to leave the inbox on the premise-verification axis,
+  And the confirmed clean-tree result is recorded on the ticket.
+depends_on:
+  - TKT-200f
+  - TKT-200e
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A clean-tree result matching the captured result must confirm the premise and clear the ticket on this axis."
+  - "The check must not block a ticket whose premise genuinely reproduces in the clean tree, avoiding false positives that stall correct tickets."
+  - "The confirmed clean-tree result must be recorded for downstream consumers (BO-1900b re-check)."
+delivers_to:
+  agent: create-ticket
+  contract: "Clean-tree confirmation that clears tickets whose premises reproduce in the clean environment"
+expects_from:
+  ac_id: TKT-200e
+  contract: "Structured captured premises (claim + command + observed result) to verify against the clean tree"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

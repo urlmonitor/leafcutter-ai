@@ -1,0 +1,45 @@
+id: TKT-200f-1-ii
+title: "When the clean tree cannot be established the ticket is held, not passed on local"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket at the pre-inbox-exit verification step,
+    and the clean, CI-equivalent tree cannot be established (its setup fails or times out),
+  When the premise verification attempts to run,
+  Then the ticket is held in the inbox with a reason that verification could not be performed
+    in a clean environment,
+  And the ticket is NOT cleared on the strength of the dirty local result,
+  And the premise is not marked confirmed.
+depends_on:
+  - TKT-200f-1
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A failure to establish the clean tree must fail closed: the ticket is held, never cleared on the local result."
+  - "The held reason must distinguish 'clean tree unavailable' from 'premise failed in clean tree'."
+delivers_to:
+  agent: create-ticket
+  contract: "Fail-closed behavior when the clean verification environment cannot be established"
+expects_from:
+  ac_id: TKT-200f-1
+  contract: "The clean-tree verification whose environment-setup-failure path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

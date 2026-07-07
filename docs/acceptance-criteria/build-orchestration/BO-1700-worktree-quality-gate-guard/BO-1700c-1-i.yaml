@@ -1,0 +1,42 @@
+id: BO-1700c-1-i
+readiness: approved
+priority: medium
+title: "When a symlink cannot be created the hook copies the config and the probe passes"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c.yaml"
+criteria: |
+  Given the filesystem rejects symlink creation (for example an NTFS/WSL2 mount),
+  When the self-healing hook re-materializes the config,
+  Then it falls back to copying the config file into the worktree,
+  And after the copy the worktree's `.pre-commit-config.yaml` resolves and a
+    subsequent probe run returns a passing verdict.
+depends_on: [BO-1700c-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Catch the SPECIFIC symlink-creation error (OSError family) and fall back to a
+  file copy; log at WARNING per the project error-handling policy (never a bare
+  except, never a silent swallow). Never leave the config unresolved after a failed
+  symlink attempt. Implemented in the self-healing hook (BO-1700c-1); ADR-001
+  deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700c-1
+  contract: "The self-healing hook's re-materialization path this edge case exercises."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

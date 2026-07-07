@@ -1,0 +1,58 @@
+id: INF-600l-3
+readiness: approved
+priority: high
+title: "The pr-reviewer prose backstop for card/registry consistency delegates the search to research-agent"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+criteria: |
+  Given a change modifies an agent's registry entry or its generated card, and the
+    pr-reviewer is reviewing it as a backstop to the build-time mirror check
+  When the pr-reviewer's review instructions cover card<->registry consistency
+  Then the pr-reviewer does not attempt to search the registry and cards itself
+    (it has no search tools) -- instead it delegates the card<->registry
+    cross-reference to research-agent and reasons over what research-agent returns
+  And the review instructions frame this consistency check as a BACKSTOP to the
+    authoritative build-time check (INF-600l-1), not a replacement for it
+  And when research-agent reports a card<->registry disagreement, the pr-reviewer
+    surfaces it in the review naming both agents and the disagreeing side
+depends_on:
+  - INF-600l
+  - INF-600l-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "PORTABLE SURFACE: the surface is the pr-reviewer agent template PROSE at 'templates/agents/pr-reviewer.md' (confirmed present) -> llm-expert, NOT a python hook. Add review-instruction prose for card<->registry consistency."
+  - "pr-reviewer has NO search tools (confirmed against the registry / per the strict research-delegation rule); the prose MUST instruct it to delegate the registry/card cross-reference to research-agent (confirmed present in the registry) and reason over the returned findings -- it must not be written as if pr-reviewer can grep the store itself."
+  - "Frame the prose check explicitly as a BACKSTOP to the authoritative build-time mirror check (INF-600l-1); it does not replace the deterministic check and must not be relied on as the primary gate."
+  - "PORTABLE per ADR-001: the pr-reviewer template ships to consumers via build.py; the deployed (.claude/agents/) and template-source (templates/agents/) copies must be kept in parity via the build.py round-trip; must NOT rely on the leafcutter repo's own root CLAUDE.md."
+delivers_to: null
+expects_from:
+  ac_id: INF-600l-1
+  contract: "The authoritative build-time card<->registry mirror-consistency verdict that this pr-reviewer prose backstops (does not replace)."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Confirmed pr-reviewer.md template present + research-agent present in the registry; confirmed pr-reviewer has no search tools (delegation to research-agent is mandatory). Tightened ADR-001 parity to name both deployed (.claude/agents/) and template-source copies. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCardMirror/05_TICKET-20260706-INF-600l-3.md
+notes: |
+  The user flagged that pr-reviewer prose is only a backstop and that pr-reviewer
+  has no search tools, so any reviewer check must delegate to research-agent. This
+  is a prose/template surface (llm-expert), separate from the python-coder hook
+  extension (INF-600l-1).

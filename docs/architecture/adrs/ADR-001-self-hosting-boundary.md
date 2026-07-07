@@ -78,3 +78,7 @@ for the full detection flowchart and directory tree examples.
 ## Alternatives
 
 The `--self` flag approach was rejected because it adds a special code path that only leafcutter uses. Config-driven paths are more general and testable.
+
+## See Also
+
+- [ADR-017 — Worktree Quality Gate Guard](ADR-017-worktree-quality-gate-guard.md) — extends the template/deployed source parity principle established here (Decision §3, "Build outputs vs source") to the three guard scripts that enforce pre-commit hook execution in epic worktrees. Per ADR-017 Decision §5, each guard script's authoritative source lives in the tracked template tree and `build.py` deploys it to the consumer/worktree location — directly applying the ADR-001 boundary rule. This was motivated by the fresh-worktree silent-skip failure in EPIC-AcPipelineDeployGaps Finding #2, where a guard that only existed in a deployed (untracked) location would itself vanish in a fresh worktree, reproducing the exact class of bug it was designed to prevent.

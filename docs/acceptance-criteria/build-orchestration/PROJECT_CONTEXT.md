@@ -10,14 +10,15 @@ Read this before authoring or decomposing ACs in this component.
 ## ID numbering
 
 - L0s occupy hundreds: 100, 200, 201, 202, 300, 400, 500, 700, 800, 900, 1100,
-  1200, 1300, 1400, 1500, 1600.
-- Next free L0 hundred after BO-1500 was **BO-1600** (assigned to the
-  safe-concurrent-dispatch goal). Pick the next free hundred for any new L0.
+  1200, 1300, 1400, 1500, 1600, 1700, 1800.
+- Next free L0 hundred after BO-1800 is **BO-1900**. Pick the next free hundred
+  for any new L0. (BO-1700 = worktree-quality-gate-guard, added 2026-07-01;
+  BO-1800 = isolated-parallel-delivery, added 2026-07-06 from ADR-018.)
 - Deprecated/superseded IDs are reserved permanently — never reuse a numeric slot.
 
 ## Concurrency / atomicity scope boundaries (avoid duplication)
 
-Three SEPARATE concurrency-adjacent concepts live across build-orchestration —
+Four SEPARATE concurrency-adjacent concepts live across build-orchestration —
 do not conflate or duplicate when authoring near any of them:
 
 - **BO-100c** — file-conflict ISOLATION: separates tickets whose `files_touched`
@@ -28,10 +29,56 @@ do not conflate or duplicate when authoring near any of them:
   commit CONCURRENTLY into ONE shared worktree (origin: EPIC-FinalizeFeatureHardening
   retro KI-1 — parallel ticket-supervisors produced a 0-byte loose object that
   corrupted the worktree index). PREVENTION ONLY by design — no recovery L1.
+- **BO-1800** — isolation TOPOLOGY from ADR-018: give every drive its own
+  independent copy (no shared store at all) + make main changeable only through
+  the gated review/merge workflow (server-side guarantee) + cap agents-per-feature
+  not features-in-flight + background housekeeping can't corrupt an active drive +
+  no direct-to-shared-main commits. Five L1s BO-1800a..e. origin BrainCandy.
 
 BO-100c = "don't let same-file tickets run together" (pre-dispatch scheduling).
 BO-200  = "make one ticket's commit atomic" (single-supervisor).
 BO-1600 = "don't let concurrent commits corrupt the shared git store" (multi-supervisor, storage layer).
+BO-1800 = "remove the sharing entirely + gate main" (topology; supersedes the
+          shared-workspace ASSUMPTION behind BO-1600).
+
+### BO-1600 vs BO-1800 relationship (read before touching either)
+
+BO-1800 is the ADR-018 topology change. It is INTENDED to supersede the
+shared-worktree model that BO-1600 protects: BO-1600 hardens ONE shared store
+against concurrent committers; BO-1800 eliminates the shared store (per-drive
+isolated copies) so that whole corruption class is structurally impossible.
+Per ADR-018 §"Impact on in-flight ACs", BO-1600a/b/c (prevention) are largely
+obsoleted by the topology and BO-1600d (guided recovery) survives as a
+de-prioritised safety net. The formal supersession bookkeeping (status flips,
+`superseded_by` pointers) is handled SEPARATELY — do NOT edit BO-1600 as a
+side-effect of BO-1800 authoring.
+
+## Worktree quality-gate boundaries (avoid duplication) — BO-1700 family
+
+BO-1700 ("Code can never ship from a workspace with its quality gates switched
+off", added 2026-07-01) closes the fresh-worktree silent-hook-skip hole:
+`.pre-commit-config.yaml` is a gitignored `.leafcutter` symlink, so a worktree
+checked out from origin/main has neither symlink nor dir → pre-commit exits 0
+running ZERO hooks. Six L1s: BO-1700a (execution/canary probe, not file-exists),
+b (fail closed), c (self-healing shared hook), d (dual gate at create-time +
+pre-drive), e (portable self-build + installed), f (graceful no-op where no
+gates exist). Keep these DISTINCT from the adjacent trees:
+
+- **Upstream of BO-210** — the pre-commit safety net (re-dispatch original coder
+  on a hook FAILURE) assumes hooks FIRE. BO-1700 guarantees they fire first.
+  Do not fold BO-1700 into BO-210 or vice versa.
+- **Distinct from BO-1500e** — BO-1500e is the AC-authoring workflow's OWN
+  worktree robustness (start-from-main / installed-copy). BO-1700 is general
+  epic/feature BUILD-DRIVE worktrees. Same portability instinct, different path.
+- **Distinct from BP-100k / BP-1000** (build-pipeline) — those govern hook
+  CONTENT / source↔template parity. BO-1700 governs hook EXECUTION in a worktree.
+
+Component-choice rationale (for future similar features): a "does the hook chain
+actually FIRE during a drive" concern belongs in build-orchestration (drive /
+worktree / pre-drive-gate territory), NOT build-pipeline (build.py / parity) or
+infrastructure (hook content / conventions). By the same rationale the ADR-018
+isolation-topology capability landed in build-orchestration (drive isolation +
+main-branch gating during drives), not build-pipeline or infrastructure.
 
 ## Cross-component placement notes (parity & registry — NOT build-orchestration)
 

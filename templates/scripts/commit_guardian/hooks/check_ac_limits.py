@@ -6,8 +6,9 @@ BUSINESS CONTEXT: Oversized tickets (>7 ACs for one agent or >20 total) are
     too large for safe atomic implementation. This hook detects bloated tickets
     at commit time so the IT PO can split them before they enter the
     implementation pipeline. Tickets with `ac_limit_override: true` in
-    frontmatter are warned but not blocked. v1 tickets (no `## Agent Contracts`
-    section) are skipped transparently. Structured JSON on stderr enables
+    frontmatter are warned but not blocked. v1-flat tickets (no `## Agent
+    Contracts` section) are subject to the 20-total cap but not the per-agent
+    cap. Structured JSON on stderr enables
     `precommit-autofix` to route the failure to the IT PO agent automatically.
 ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
     env var for unit testing), extracts paths of staged `.md` ticket files,
@@ -17,7 +18,9 @@ ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
     counts `- [ ] AC-N:` lines per agent (excluding `<!-- scope: integration -->`
     lines from per-agent counts), and also tallies a ticket-level total.
     Exits non-zero with a structured JSON payload on stderr when limits are
-    exceeded.
+    exceeded. v1-flat tickets (no `## Agent Contracts` section) are now
+    subject to the 20-total cap; the per-agent cap (7) is not applied because
+    there are no `### <agent>` subsections to parse.
 DOC_LINKS:
   - tickets/00_inbox/epics/EPIC-ContractDrivenACs/02b_ac_count_hook.md
 
@@ -70,6 +73,7 @@ _AGENT_CONTRACTS_H2_RE = re.compile(r"^##\s+Agent Contracts\s*$", re.MULTILINE)
 
 # Detects any h2 section start (to find the end of Agent Contracts)
 _H2_RE = re.compile(r"^##\s+\S", re.MULTILINE)
+
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +217,72 @@ def _extract_agent_contracts_block(content: str) -> str | None:
     return content[start:]
 
 
+def _strip_fenced_code(text: str) -> str:
+    """Remove triple-backtick fenced code blocks from text before AC counting.
+
+    Fenced code blocks may contain example ``- [ ] AC-N:`` lines that look like
+    real acceptance criteria but are illustrative only (e.g. in a "Usage" or
+    "Example" section of a ticket). Stripping them before counting prevents
+    false-positives in the 20-total-cap check on the v1-flat path.
+
+    Uses a two-pass line-by-line approach so that only *properly terminated*
+    fence blocks are stripped. An unterminated opening fence (one followed by
+    a second fence opener before any bare closing `` ``` `` line appears) is
+    treated as literal text — real AC lines between an unterminated opener and
+    the next fence block are preserved and counted normally.
+
+    Pure function — no I/O, no side effects. May be called on any substring.
+
+    Args:
+        text: Input text, possibly containing ``` ... ``` fenced code blocks.
+
+    Returns:
+        Text with all properly terminated fenced code blocks removed.
+    """
+    lines = text.split("\n")
+
+    # Pass 1 — identify properly terminated fence regions as (start, end) pairs.
+    # Rules for fence state transitions:
+    #   • Any line whose stripped form starts with ``` opens a fence when none is
+    #     currently open (fence_start = current index).
+    #   • A bare ``` line (stripped form == "```") while inside a fence is the
+    #     proper closing fence — the pair is recorded and the fence is closed.
+    #   • A ``` + language-specifier line (e.g. ```python) while inside a fence
+    #     signals the previous opener was unterminated; the unterminated region is
+    #     discarded and the language-specifier line starts a new fence instead.
+    fence_regions: list[tuple[int, int]] = []
+    fence_start: int | None = None
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if fence_start is None:
+                # Beginning of a potential fence block.
+                fence_start = i
+            elif stripped == "```":
+                # Bare closing backticks — properly terminates the open fence.
+                fence_regions.append((fence_start, i))
+                fence_start = None
+            else:
+                # ``` + language specifier encountered while inside a fence.
+                # The previous opener had no bare closing line — it was
+                # unterminated. Start fresh from this language-specifier line.
+                fence_start = i
+
+    # fence_start non-None here means the last fence was unterminated — not stripped.
+
+    if not fence_regions:
+        return text
+
+    # Pass 2 — exclude lines that fall within any identified fence region.
+    excluded: set[int] = set()
+    for start, end in fence_regions:
+        for j in range(start, end + 1):
+            excluded.add(j)
+
+    return "\n".join(line for i, line in enumerate(lines) if i not in excluded)
+
+
 def _count_acs_in_block(block: str) -> int:
     """Count total unchecked AC lines in a block, including integration-scoped ones.
 
@@ -328,16 +398,38 @@ def _analyse_ticket(path: str, project_root: Path) -> TicketResult:
         if contracts_block:
             result.per_agent = _count_acs_per_agent(contracts_block)
             result.total_ac_count = _count_total_acs(contracts_block)
+        else:
+            # v1-flat format with override: count full-body ACs for the warning.
+            # Strip fenced code blocks first so example AC lines inside ``` blocks
+            # are not counted as real acceptance criteria (H-1 fix).
+            result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
         return result
 
-    # No Agent Contracts section → skip (v1 backward compatibility)
+    # Extract the ## Agent Contracts section (present on v2 tickets).
     contracts_block = _extract_agent_contracts_block(content)
     if contracts_block is None:
-        result.skipped = True
+        # v1-flat format: no ## Agent Contracts section. Count all _AC_LINE_RE
+        # matches across the full ticket body and apply the 20-total cap.
+        # The per-agent cap (7) is NOT applied on this path — it requires
+        # ### <agent> subsection structure.
+        # Strip fenced code blocks before counting so that example AC lines
+        # inside ``` blocks are not counted as real ACs (H-1 fix).
+        result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
+        if result.total_ac_count > _MAX_ACS_TOTAL:
+            result.total_violation = True
         return result
 
     result.per_agent = _count_acs_per_agent(contracts_block)
     result.total_ac_count = _count_total_acs(contracts_block)
+
+    # Gap 1 fix: when the Agent Contracts block is present but yields zero ACs
+    # (e.g. an empty "decoy" ## Agent Contracts heading followed by real AC lines
+    # elsewhere in the body), fall back to the fence-stripped full-body count for
+    # the total cap check. Per-agent counts from the (empty) contracts block are
+    # preserved for the per-agent cap. This prevents a ticket from evading the
+    # 20-total cap by placing an empty ## Agent Contracts heading at the top.
+    if result.total_ac_count == 0:
+        result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
 
     # Check per-agent limits
     for agent_name, count in result.per_agent.items():
@@ -514,6 +606,32 @@ DECISION HISTORY
     Integration-scoped ACs excluded from per-agent counts.
     Structured JSON payload on stderr for precommit-autofix routing.
     ac_limit_override: true in frontmatter warns but does not block.
-    v1 tickets (no ## Agent Contracts section) are skipped silently.
+    v1 tickets (no ## Agent Contracts section) were originally skipped silently.
+- 2026-07-06 [GE-114]: Fixed silent skip of 20-total AC cap for v1-flat tickets.
+    When ## Agent Contracts is absent, _analyse_ticket now counts all _AC_LINE_RE
+    matches across the full body and applies the 20-total cap. result.skipped=True
+    is now reserved exclusively for the OSError (unreadable file) path.
+    The per-agent cap (7) is NOT applied on the v1-flat path.
+    The ac_limit_override: true branch also populates total_ac_count for flat
+    tickets so the override warning can report the excess count.
+- 2026-07-06 [GE-114 H-1]: Added fenced code block exclusion on the flat path.
+    A compiled _FENCED_BLOCK_RE constant and a _strip_fenced_code() pure helper
+    were added. Both the v1-flat path and the flat-override path now call
+    _strip_fenced_code(content) before passing to _count_acs_in_block, so that
+    example ``- [ ] AC-N:`` lines inside ``` fenced blocks are not counted as
+    real ACs. The v2 Agent Contracts path is unaffected — it counts only within
+    the extracted contracts_block which is already a sub-section of the ticket
+    body and does not undergo fence-stripping at the total-count level.
+- 2026-07-07 [GE-114 H-2]: Fixed two residual hardening gaps.
+    Gap 1 (decoy/empty heading evades cap): _analyse_ticket now falls back to
+    the fence-stripped full-body AC count when the extracted Agent Contracts block
+    yields zero ACs. This prevents a ticket with an empty ## Agent Contracts
+    heading from evading the 20-total cap. Per-agent counts from the contracts
+    block are unaffected. Gap 2 (cross-boundary fence strip): _strip_fenced_code
+    was rewritten as a line-by-line two-pass algorithm that only strips properly
+    terminated fence blocks. An unterminated opening fence (one followed by a
+    second fence opener before any bare ``` closing line) is treated as literal
+    text; real AC lines in the gap are preserved and counted correctly.
+    _FENCED_BLOCK_RE was removed (no longer referenced).
 ====================================================================
 """

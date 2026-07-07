@@ -33,7 +33,7 @@ origin_agent: product-owner-v3
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: [BO-1600a, BO-1600b, BO-1600c]
+covered_by: [BO-1600a, BO-1600b, BO-1600c, BO-1600d]
 implemented_by: []
 change_target: infrastructure
 risk_surface: safety

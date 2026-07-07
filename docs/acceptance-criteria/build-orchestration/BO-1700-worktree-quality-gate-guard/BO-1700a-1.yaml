@@ -1,0 +1,59 @@
+id: BO-1700a-1
+readiness: approved
+priority: medium
+title: "Probe orchestrator runs four checks and returns a structured pass/fail result"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700a.yaml"
+criteria: |
+  Given a worktree path is passed to the verification probe with a JSON-output flag,
+  When the probe runs, it executes four checks in order:
+    - Check A: the pre-commit executable is discoverable on PATH.
+    - Check B: the worktree's `.pre-commit-config.yaml` resolves through the
+      `.leafcutter` symlink to a readable file that parses as YAML and passes
+      config validation.
+    - Check C: the shared git hook at the effective hooks path contains the
+      pre-commit sentinel.
+    - Check D: a canary hook run emits the canary token.
+  Then the probe prints a single JSON object to stdout with exactly these keys:
+    `binary` (bool), `config` (bool), `git_hook` (bool), `canary` (bool),
+    and `failing_checks` (a list of the check letters that failed, in A-B-C-D order).
+  And when all four checks pass the probe exits 0 and `failing_checks` is the empty list.
+  And when any check fails the probe exits with a non-zero code, stops at the
+    first failing check, and stderr names that check (e.g. "Check B").
+depends_on: [BO-1700a, BO-1700a-2, BO-1700e-2]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  New script scripts/commit_guardian/verify_precommit_active.py with a
+  templates/scripts/commit_guardian/ mirror; the deployed copy and its packaged
+  template source are edited TOGETHER and verified byte-for-byte via the build.py
+  round-trip (ADR-001 self-hosting boundary) — never edit one side only.
+  This script is the SINGLE shared probe helper (the single producer): every gate
+  in the BO-1700d family and every invariant in the BO-1700b family consumes THIS
+  result and must not reimplement the four checks, so the surfaces cannot drift.
+  Fail CLOSED on any internal error (per BO-1700b-1): an uncaught exception, a
+  non-zero subprocess, or a timeout must NEVER emit a passing result. The ONLY
+  passing outcome is exit 0 AND an empty failing_checks list.
+delivers_to:
+  agent: python-coder
+  contract: "Structured probe result printed as ONE JSON object to stdout: {binary: bool, config: bool, git_hook: bool, canary: bool, failing_checks: [str in A-B-C-D order]}, plus a non-zero exit on any failing check. This is the single producer consumed by all gates (BO-1700b/d families)."
+expects_from:
+  ac_id: BO-1700a-2
+  contract: "The manual-stage-only canary hook that Check D invokes and whose exact token PRECOMMIT_CANARY_OK it asserts."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

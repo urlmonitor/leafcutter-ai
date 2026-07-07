@@ -1,0 +1,68 @@
+id: BO-400c-3-ii
+title: "Branch commit moving a ticket into tickets/99_done/ is blocked (finalize carve-out)"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+criteria: |
+  Given the sanctioned completion location tickets/99_done/ is reserved
+    for the finalize-feature archive step on main,
+  And a staged BRANCH commit moves a ticket from tickets/01_todo/...
+    (or an epic folder) into tickets/99_done/...,
+  When the pre-commit done-folder prohibition check runs,
+  Then the move into tickets/99_done/ IS detected as a prohibited
+    done-folder move,
+  And the commit IS blocked with a clear message naming the offending
+    file and the 99_done destination.
+
+  Given the sanctioned finalize-feature archive step runs its ticket
+    reconciliation on main,
+  And it moves completed tickets into tickets/99_done/ through the
+    finalize path (identified by an explicit context signal — e.g. an
+    env flag or an allowlisted invocation),
+  When the done-folder prohibition check runs in that finalize context,
+  Then the 99_done archive move is exempted and NOT blocked.
+depends_on: [BO-400c-3]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must treat a move into the top-level tickets/99_done/ lifecycle folder as a prohibited done-folder move on an ordinary branch commit"
+  - "Error message must name the offending file and the tickets/99_done/ destination, consistent with the existing done-folder prohibition message"
+  - "Must define an explicit context signal (env flag or allowlisted invocation) that identifies the finalize-feature archive step running on main"
+  - "Must exempt (not block) moves into tickets/99_done/ only when that finalize context signal is present"
+  - "Must NOT exempt any 99_done move when the context signal is absent (branches must never archive)"
+  - "Must complete within the existing pre-commit hook time budget (<5 seconds)"
+delivers_to: null
+expects_from:
+  ac_id: BO-400c-3
+  contract: "Pre-commit done-folder prohibition check that detects moves into a done/ subfolder by comparing staged file paths"
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED INTENT (from the user): on ordinary branch commits, moves into
+  tickets/99_done/ MUST be caught by the prohibition — branches must never
+  archive; archiving happens ONLY via the finalize-feature flow running on
+  main. The implementation must define the mechanism that distinguishes an
+  ordinary branch commit from the finalize archive step (env/context flag or
+  allowlist); this carve-out is what keeps finalize working while blocking
+  premature branch-side archival.

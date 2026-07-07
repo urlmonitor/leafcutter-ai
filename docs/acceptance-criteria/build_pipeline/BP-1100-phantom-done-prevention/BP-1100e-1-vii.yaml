@@ -1,0 +1,49 @@
+id: BP-1100e-1-vii
+readiness: approved
+priority: high
+title: "A done ticket is detected regardless of status-value quoting; a quoted status is never silently skipped"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a ticket whose frontmatter marks it done using a quoted status value —
+    status double-quoted or single-quoted — as well as the unquoted status: done form
+  When the pre-done reconciliation decides whether the ticket is a done ticket to
+    reconcile
+  Then it recognises the ticket as done in all three forms and proceeds to reconcile it
+  And it does NOT silently skip a quoted-status done ticket (which would let a
+    phantom-done ticket pass unreconciled — the exact failure this feature prevents)
+depends_on:
+  - BP-1100e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: relates
+    status: exists
+  - path: "templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "_get_status must pass its captured value through _strip_yaml_value so a double- or single-quoted status resolves to the bare token. A quoted status previously failed the == 'done' trigger check, causing the ticket to be skipped entirely — a silent under-block (phantom-done slips through), the most severe failure direction."
+  - "This is the done-ticket TRIGGER guard, distinct from the declared-list parsing of BP-1100e-1-v: a regression here fails toward a silent miss, not a safe false-positive, which is why it is captured separately."
+  - "PORTABLE SURFACE: this lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; ADR-001 build.py round-trip parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The reconciliation verdict whose done-ticket trigger this AC hardens so a quoted status value cannot silently disable the check for a ticket."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/01_TICKET-20260706-BP-1100e-1.md
+notes: |
+  Regression-lock authored post-remediation (BP-1100e round 1 D8). Behavior already
+  implemented and test-locked (quoted-status recognition tests) in
+  test_check_files_touched_reconciliation_remediation.py.

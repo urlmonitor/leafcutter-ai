@@ -1,0 +1,34 @@
+id: BO-1700h
+readiness: approved
+priority: medium
+title: "The check stays correct even when the workspace behaves oddly"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The proof-of-protection check keeps giving a correct, safe answer even when the
+  workspace has drifted from the main line, a check hangs, or the project has
+  redirected where its checks live.
+
+  You get a check that does not quietly go wrong under real-world messiness: a
+  stale workspace is flagged rather than trusted, a check that never finishes is
+  treated as a failure rather than a pass, and a project that keeps its checks in
+  an unusual place is still found and verified.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: []
+documentation_rationale: "Robustness/drift hardening of the probe defined and documented under BO-1700a (how-to + sequence diagram); these environment-quirk assertions extend the same probe surface and need no separate documentation artifact."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: "split: BO-1700a -> BO-1700a + BO-1700g + BO-1700h [intermediate, 11->5+3+3], 2026-07-02"
+superseded_by: null
+covered_by: [BO-1700h-1, BO-1700h-2, BO-1700h-3]
+implemented_by: []

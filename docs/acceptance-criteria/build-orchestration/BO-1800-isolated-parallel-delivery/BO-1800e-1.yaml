@@ -1,0 +1,44 @@
+id: BO-1800e-1
+readiness: approved
+priority: medium
+title: "No drive step commits to a local main; a clone's main is a read-only tracking branch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800e.yaml"
+criteria: |
+  Given a drive running in its own isolated clone,
+  When the drive performs any of its steps (scaffold, implementation, finalize
+    bookkeeping),
+  Then none of those steps commit onto a local `main` branch,
+  And the clone's `main` is treated as a read-only tracking branch of the hub -- all
+    of the drive's own work happens on a feature branch, never on `main`.
+depends_on: [BO-1800e, BO-1800a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "No drive step (scaffold, implementation, finalize bookkeeping) MUST commit onto a local main branch; a clone's main MUST be treated as a read-only tracking branch of the hub, with all drive work on a feature branch (ADR-018 Decision §4 local, Migration §4)."
+  - "The clone's origin MUST point at the hub; this behavior spans the drive-step scripts and the clone-agent lifecycle. The advisory local pre-commit main-guard is the edge-case enforcement in BO-1800e-1-i."
+  - "Behavior MUST live on portable package surfaces (templates/agents/worktree-agent.md clone-agent prose + scripts/ drive-step logic) deployed by build.py — never repo-root CLAUDE.md."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800a-1
+  contract: "The per-drive clone whose main is kept read-only by this behavior."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800e-1-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/24_TICKET-20260707-BO-1800e-1.md

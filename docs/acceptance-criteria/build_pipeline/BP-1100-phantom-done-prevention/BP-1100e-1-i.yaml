@@ -1,0 +1,51 @@
+id: BP-1100e-1-i
+readiness: approved
+priority: high
+title: "out_of_scope entries and generated/lockfiles are exempt from the mismatch flag"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a ticket declares files_touched: ["scripts/build_phases.py"] and
+    out_of_scope: ["scripts/legacy_shim.py"],
+  And its actual changed files include "scripts/legacy_shim.py" (declared out_of_scope),
+    "poetry.lock" (a lockfile), and "scripts/generated/paths_index.py" (a generated file)
+  When the pre-done reconciliation runs
+  Then it does NOT flag "scripts/legacy_shim.py" (it is in the declared files_touched
+    UNION out_of_scope set)
+  And it does NOT flag "poetry.lock" or the generated file (lockfiles and generated
+    artifacts are exempt source-file categories, not undeclared behavior work)
+  And it still flags any source file that is neither declared, out_of_scope, generated,
+    nor a lockfile
+depends_on:
+  - BP-1100e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The comparison baseline is files_touched UNION out_of_scope — an out_of_scope entry is a legitimate declared exemption and must never be flagged."
+  - "Generated files and lockfiles (e.g. *.lock, poetry.lock, package-lock.json, and files under known generated/build-output paths) are exempt categories and must not be flagged as undeclared source work; define the exempt set explicitly so it is not open-ended."
+  - "The exemptions must not swallow genuinely undeclared hand-written source; a source file that is neither declared, out_of_scope, generated, nor a lockfile is still flagged."
+  - "PORTABLE SURFACE: this exemption logic lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; ADR-001 build.py round-trip parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The reconciliation verdict whose comparison baseline this AC extends with the out_of_scope union and the generated/lockfile exemptions."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned shared-hook portable surface (check_files_touched_reconciliation.py, ADR-001 parity). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/02_TICKET-20260706-BP-1100e-1-i.md

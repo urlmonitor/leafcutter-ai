@@ -335,3 +335,28 @@ Do NOT use `COMMIT_AGENT_MODE=1` outside of a human-supervised batch drive.
 
 (Source: EPIC-Oneagenthandlesboththelookandthecodefor retrospective, 2026-06-22,
 Friction point #3.)
+
+### Full test suite + ruff at epic-finalize (before merge)
+
+**What to check:** Per-ticket sign-offs run only that ticket's own tests (often via
+`unittest discover` on a subdir), so cross-cutting breakage and lint violations slip
+through — especially when the worktree pre-commit hooks are not established. Before
+merging any epic PR, run the FULL suite and ruff from the worktree root:
+
+```bash
+python -m pytest <worktree-root>/unit_tests/ -q
+ruff check <worktree-root>/scripts <worktree-root>/tests <worktree-root>/unit_tests
+```
+
+Fix everything they surface on the branch before merge. Treat the pre-existing
+non-required pytest failures (the registry self-description build-guard) as the known
+baseline — but any NEW failure or any ruff violation is a merge blocker (ruff is a
+required CI gate).
+
+**Why this matters:** During EPIC-WorktreeQualityGateGuard (2026-07-06), two defects
+passed per-ticket sign-off but were caught only by the full run: (1) idempotency tests
+that read every deployed file as UTF-8 crashed on `__pycache__/*.pyc` under `pytest`
+though they passed under `unittest discover`; (2) `ruff F401/F841` unused-import/variable
+violations in new test files that the (unestablished) worktree ruff hook never ran. Both
+forced extra fix commits at finalize.
+(Source: EPIC-WorktreeQualityGateGuard retrospective KI-3, 2026-07-06.)

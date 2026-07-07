@@ -1,0 +1,44 @@
+id: BO-1700c-2
+readiness: approved
+priority: medium
+title: "Component diagram: worktree, main tree, .leafcutter, and shared git hooks"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c.yaml"
+criteria: |
+  Given a reader wants to understand how a worktree obtains its protection,
+  When they open the component diagram,
+  Then it shows the worktree, the main tree, the `.leafcutter` directory, the
+    `.pre-commit-config.yaml` symlink into `.leafcutter`, and the shared git hooks
+    directory reached via the shared git dir, with the self-healing hook's
+    re-materialization edge from worktree to main tree.
+depends_on: [BO-1700c, BO-1700c-1]
+doc_links:
+  - path: docs/architecture/diagrams/worktree-precommit-component.md
+    relationship: creates
+    status: planned
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  Depict the .leafcutter symlink -> main-tree topology accurately: the worktree's
+  .pre-commit-config.yaml is a symlink into .leafcutter, and the shared hooks are
+  reached via git-common-dir (per BO-1700e-2), not a per-worktree copy.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700c-1
+  contract: "The self-healing topology (symlink-or-copy re-materialization from the main tree) this diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

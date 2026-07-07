@@ -1,0 +1,36 @@
+id: TKT-200e
+title: "Every factual claim a spec makes comes with a way to reproduce it"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Each premise ships with the command to reproduce it and the result you'd see.
+
+  Every motivating factual claim in a spec ("build X fails", "these tests are
+  red", "module Y is missing") is captured together with the exact command that
+  reproduces it and the observed result, so a reviewer can check the claim instead
+  of taking it on trust. Confirming those claims against a clean environment
+  before the ticket leaves the inbox is TKT-200f; re-checking them at dispatch time
+  is BO-1900b.
+depends_on: [TKT-200]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - TKT-200e-1
+  - TKT-200e-2
+  - TKT-200e-1-i
+  - TKT-200e-1-ii
+  - TKT-200e-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc

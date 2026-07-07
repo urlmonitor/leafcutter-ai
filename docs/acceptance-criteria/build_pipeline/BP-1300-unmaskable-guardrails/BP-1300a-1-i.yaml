@@ -1,0 +1,46 @@
+id: BP-1300a-1-i
+title: "Real dangling pointers that pass locally fail against the canonical source"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the registry references skill pointers documentation-expert -> direct-write and
+    python-coder -> run-tests, neither of which resolves in the canonical source, while a
+    stale deployed .claude/skills tree happens to resolve them,
+  When the build's skill-pointer check runs against the canonical source,
+  Then the build fails with a non-zero exit,
+  And the failure names both dangling pointers,
+  And the same run performed locally (with the stale deployed tree present) and in CI both
+    fail identically.
+depends_on:
+  - BP-1300a-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "This scenario reproduces the real finding: documentation-expert->direct-write and python-coder->run-tests error in CI but pass on a stale local deployment."
+  - "Both dangling pointers must be reported, not just the first encountered."
+delivers_to:
+  agent: python-coder
+  contract: "Canonical-source resolution that catches real dangling pointers masked by stale local deployment"
+expects_from:
+  ac_id: BP-1300a-1
+  contract: "The skill-pointer check whose real-dangling-pointer path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

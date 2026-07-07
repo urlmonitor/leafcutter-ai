@@ -107,6 +107,29 @@ class BootstrapError(RuntimeError):
             "then re-run bootstrap or run build.py manually."
         )
 
+    @classmethod
+    def probe_failure(cls, failing_checks: list) -> "BootstrapError":
+        """Return a gate error when verify_precommit_active.py reports failures.
+
+        Used by the create-time gate (BO-1700d-1 / d-1-i) in _bootstrap() to
+        raise a structured error when the probe exits non-zero or reports any
+        failing check keys. The error message names each failing check so the
+        operator can diagnose without running the probe manually.
+
+        Args:
+            failing_checks: List of check key strings that failed
+                (e.g. ``['binary', 'config']``). May be empty when the probe
+                crashed or emitted malformed output.
+
+        Returns:
+            BootstrapError with a structured diagnostic message.
+        """
+        return cls(
+            f"Pre-commit gate failed after bootstrap. Failing checks: {failing_checks}. "
+            "Run verify_precommit_active.py manually in the worktree to diagnose. "
+            "Hint: if config is missing, run build.py again or check .leafcutter/ symlink."
+        )
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -636,6 +659,17 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     general absence (when build.py was not found or install_shims failed
     silently).
 
+    7. **Create-time gate** (``verify_precommit_active.py`` probe,
+       BO-1700d-1 / d-1-i): after the AC-5 config-existence check passes,
+       invokes ``scripts/commit_guardian/verify_precommit_active.py --json``
+       as a subprocess in the worktree root.  Parses its JSON output and raises
+       ``BootstrapError`` when the probe exits non-zero or reports any
+       failing check keys.  This catches the case where the config file is
+       present but hooks are still misconfigured (e.g. binary missing, hook
+       not installed).  When ``verify_precommit_active.py`` is absent from the
+       scripts directory the gate is skipped with a WARNING (graceful no-op for
+       installs that have not yet deployed the guardian scripts).
+
     Args:
         main_repo: Absolute Path to the main repository root where source
             ``.env``, ``.mcp.json``, and ``.leafcutter/`` reside.
@@ -645,6 +679,10 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         BootstrapError: If neither ``.leafcutter`` nor ``.pre-commit-config.yaml``
             is present at the worktree root after ``_establish_pre_commit_config``
             runs — i.e. when the main repo had no config sources (AC-5).
+        BootstrapError: If the ``verify_precommit_active.py`` probe exits
+            non-zero or reports any failing checks — i.e. when the pre-commit
+            hooks are misconfigured even though the config file is present
+            (BO-1700d-1 / d-1-i).
     """
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
@@ -766,6 +804,68 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     config_path = worktree_path / ".pre-commit-config.yaml"
     if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
         raise BootstrapError.missing_config(config_path, build_exc)
+
+    # Gate: verify_precommit_active probe (BO-1700d-1 / d-1-i)
+    # Invoked AFTER _establish_pre_commit_config guarantees config exists.
+    # This catches the case where config is present but hooks are still misconfigured
+    # (e.g. binary missing, hook uninstalled). Raises BootstrapError (fail-closed)
+    # so the drive never proceeds with hooks silently disabled.
+    # Depends on: ticket 02 (probe), ticket 05 (config guarantee).
+    _script_dir = Path(__file__).resolve().parent
+    verify_script = _script_dir / "commit_guardian" / "verify_precommit_active.py"
+    if not verify_script.exists():
+        print(
+            f"WARNING: verify_precommit_active.py not found at {verify_script}; "
+            "skipping create-time gate (graceful no-op). "
+            "Run build.py to deploy the guardian scripts.",
+            file=sys.stderr,
+        )
+        return
+
+    try:
+        probe_result = subprocess.run(
+            [sys.executable, str(verify_script), "--json"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"ERROR: verify_precommit_active.py probe failed to launch: {exc}",
+            file=sys.stderr,
+        )
+        raise BootstrapError.probe_failure([]) from exc
+
+    if probe_result.returncode != 0 or not probe_result.stdout:
+        failing_checks: list[str] = []
+        try:
+            probe_data = json.loads(probe_result.stdout)
+            failing_checks = probe_data.get("failing_checks", [])
+        except (ValueError, KeyError) as exc:
+            print(
+                f"WARNING: could not parse probe JSON output ({exc}); "
+                f"raw stdout: {probe_result.stdout!r}",
+                file=sys.stderr,
+            )
+        raise BootstrapError.probe_failure(failing_checks)
+
+    # Exit code 0: parse JSON and double-check that no failing checks were reported.
+    # The probe exits 0 only when all checks pass, but we verify the JSON payload
+    # directly so that a buggy probe that exits 0 with non-empty failing_checks
+    # is still caught here (defence in depth).
+    try:
+        probe_data = json.loads(probe_result.stdout)
+        failing_checks = probe_data.get("failing_checks", [])
+    except (ValueError, KeyError) as exc:
+        print(
+            f"ERROR: probe exited 0 but output is not valid JSON ({exc}); "
+            f"treating as gate failure. Raw stdout: {probe_result.stdout!r}",
+            file=sys.stderr,
+        )
+        raise BootstrapError.probe_failure(["(json-parse-error)"]) from exc
+
+    if failing_checks:
+        raise BootstrapError.probe_failure(failing_checks)
 
 
 def _derive_slug(ticket_path: Path) -> str:

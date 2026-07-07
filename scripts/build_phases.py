@@ -264,6 +264,46 @@ def build_agents(target_root: Path, config: dict[str, Any],
     return written
 
 
+def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
+    """Return engine-specific bytes for a canonical E2 workflow source.
+
+    The build pipeline is E2-only. Only ``"e2"`` and ``"auto"`` are supported
+    (``"auto"`` is resolved to ``"e2"`` upstream by ``build_workflow_scripts``
+    before this function is invoked, but ``"auto"`` is also accepted here for
+    callers that invoke this function directly).
+
+    Requesting ``"e1"`` raises ``ValueError``. The E1 wrap was fundamentally
+    broken — it prepended ``export async function run`` over a top-level body
+    that contains a bare ``return`` statement, producing an ESM module that
+    throws ``SyntaxError: Illegal return statement`` on import. It has been
+    removed per the decision recorded in
+    EPIC-DualEngineWorkflowSupport ticket 09 (2026-07-06).
+
+    Args:
+        raw: Raw bytes of the canonical E2 workflow script.
+        engine: Target engine identifier. ``"e2"`` and ``"auto"`` produce the
+            identity transform (raw bytes returned unchanged). ``"e1"`` raises
+            ``ValueError`` (unsupported — see above). Any other unknown value
+            also returns raw bytes unchanged (safe identity default).
+
+    Returns:
+        Transformed bytes ready to write to the output directory.
+
+    Raises:
+        ValueError: When ``engine`` is ``"e1"`` — E1 is not supported.
+    """
+    if engine == "e1":
+        raise ValueError(
+            "E1 workflow engine is not supported. "
+            "Use engine='e2' or engine='auto' (resolves to e2). "
+            "The E1 wrap was removed in EPIC-DualEngineWorkflowSupport/09 "
+            "because it produced an unloadable ESM module."
+        )
+    # "e2", "auto", and any unknown value all return raw bytes unchanged.
+    # (The identity transform is the correct E2 contract.)
+    return raw
+
+
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
@@ -274,18 +314,30 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
        Default is ``False`` — workflows are experimental. If absent or ``False``,
        the phase skips silently with a "skipped (not enabled" message.
 
-    2. **Version check**: detects Claude Code version via the
+    2. **Version check (floor only)**: detects Claude Code version via the
        ``CLAUDE_CODE_VERSION`` environment variable, then ``claude --version``
        subprocess (2-second timeout), then treats version as unknown.
        - Below minimum (``2.1.154``): warn and skip file copying.
        - Unknown: warn and install (fail-open, since CI may lack Claude Code).
+       The version check is a **floor gate only** — it does NOT influence which
+       engine is selected. Engine selection is determined solely by
+       ``config["workflows"]["engine"]``.
+
+    **Engine resolution**: ``config["workflows"]["engine"]`` is resolved before
+    any file is written. The value ``"auto"`` resolves to ``"e2"`` (the
+    deterministic E2 top-level-body engine, per ADR-017 and ticket 09). The
+    resolved engine is passed to ``_emit_workflow_variant``. Only ``"e2"`` and
+    ``"auto"`` are supported; ``"e1"`` raises ``ValueError`` (the E1 wrap was
+    removed in EPIC-DualEngineWorkflowSupport ticket 09 — it produced an
+    unloadable ESM module).
 
     Applies the compare-before-write guard so that identical files are skipped
     on subsequent runs, satisfying the idempotency requirement.
 
     Args:
         target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``.
+        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``
+            and ``config["workflows"]["engine"]``.
         dry_run: When True, logs intent but writes nothing.
         force: When True, overwrites existing files.
 
@@ -303,6 +355,11 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     # ------------------------------------------------------------------
     workflows_config = config.get("workflows", {})
     enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
+    _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
+    # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
+    # Engine selection is purely config-driven; the version check below is a
+    # floor gate only and must NOT influence which engine is selected (ADR-017).
+    engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
         return 0
@@ -364,6 +421,16 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         dest = output_dir / js_file.name
         content = js_file.read_bytes()
 
+        try:
+            emitted = _emit_workflow_variant(content, engine)
+        except UnicodeDecodeError as exc:
+            _log.warning(
+                "Skipping %s: workflow transform failed (non-UTF-8 source): %s",
+                js_file.name,
+                exc,
+            )
+            continue
+
         if not _should_overwrite(dest, force):
             continue
 
@@ -371,7 +438,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
-            new_digest = _hashlib.sha256(content).hexdigest()
+            new_digest = _hashlib.sha256(emitted).hexdigest()
             if existing_digest == new_digest:
                 global _uptodate_count  # noqa: PLW0603
                 _uptodate_count += 1
@@ -383,7 +450,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
             written += 1
         else:
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(content)
+            dest.write_bytes(emitted)
             written += 1
 
     if not dry_run:
@@ -925,10 +992,21 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
 
 def build_commit_guardian(target_root: Path, config: dict[str, Any],
                           dry_run: bool, force: bool) -> int:
-    """Copy commit guardian files to ``<target_root>/scripts/commit_guardian/``.
+    """Copy commit guardian files to the consumer directory structure.
+
+    Deploys all files from ``templates/scripts/commit_guardian/`` to
+    ``<target_root>/scripts/commit_guardian/``, then additionally copies the
+    manifest ``commit_guardian.json`` to ``<target_root>/config/commit_guardian/``
+    (BO-1700f-1-ii — manifest at canonical config path).
 
     Text files (``.json``, ``.py``, ``.yaml``, ``.yml``, ``.md``) have config
     placeholders injected; all other file types are copied verbatim.
+
+    The manifest is deployed to both locations so that:
+    - ``scripts/commit_guardian/commit_guardian.json`` serves the hook runner.
+    - ``config/commit_guardian/commit_guardian.json`` serves as the authoritative
+      "guardian installed" indicator for ``check_guardian_scripts_complete()``
+      (BO-1700e-5 — no-config detection).
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -974,6 +1052,30 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
                 shutil.copy2(template_file, output_path)
                 print(f"  scripts/commit_guardian/{rel}")
                 written += 1
+
+    # Deploy manifest to config/commit_guardian/ (BO-1700f-1-ii).
+    # The manifest is the authoritative hook registry; deploying it to config/
+    # separates configuration from scripts and enables the authoritative
+    # "no config" detection check_guardian_scripts_complete() in
+    # verify_precommit_active.py (BO-1700e-5).
+    manifest_src = cg_dir / "commit_guardian.json"
+    if manifest_src.exists():
+        config_guardian_dir = target_root / "config" / "commit_guardian"
+        config_dest = config_guardian_dir / "commit_guardian.json"
+        try:
+            raw = manifest_src.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning(
+                "build_commit_guardian: cannot read manifest source %s: %s",
+                manifest_src,
+                exc,
+            )
+        else:
+            text = inject_config(raw, config)
+            if _write(config_dest, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print("  config/commit_guardian/commit_guardian.json")
 
     return written
 
@@ -2016,4 +2118,23 @@ def clean_stale_artifacts(
 #   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
 #   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
 #   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-07-02 [python-coder/EPIC-DualEngineWorkflowSupport/07]:
+#   build_workflow_scripts(): resolved "auto" → "e2" explicitly before
+#   calling _emit_workflow_variant (ADR-017: E2 is the default deterministic
+#   engine). Version check remains a floor gate only — it warns/skips when
+#   the Claude Code version is below the minimum but does NOT influence engine
+#   selection. Updated _emit_workflow_variant docstring to reflect that "auto"
+#   is resolved upstream and no longer reaches the transform function.
+#   (#EPIC-DualEngineWorkflowSupport/07)
+# - 2026-07-06 [python-coder/EPIC-DualEngineWorkflowSupport/09]:
+#   Removed _E1_SHIM constant and the E1-wrap branch from
+#   _emit_workflow_variant. "e1" now raises ValueError("E1 workflow engine is
+#   not supported") — no file is ever written for e1. The E1 wrap was
+#   fundamentally broken: it prepended `export async function run` over a
+#   top-level body containing a bare `return` statement, producing an ESM
+#   module that throws SyntaxError: Illegal return statement on import.
+#   "e2" and "auto" both return raw bytes unchanged (identity transform).
+#   Updated build_workflow_scripts docstring to reflect E1 is unsupported.
+#   Ruff F401 clean: hashlib and json remain used elsewhere in this module.
+#   (#EPIC-DualEngineWorkflowSupport/09)
 # ====================================================================

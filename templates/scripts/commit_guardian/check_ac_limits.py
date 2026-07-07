@@ -390,8 +390,10 @@ def _get_staged_ac_paths() -> list[str]:
 # via run_hook.py with a sys.path that does not guarantee the scripts/ package
 # is importable at hook runtime.  Replicating the two patterns keeps the hook
 # self-contained without any fragile path manipulation.
-_ID_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3})$")
-_ID_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3})([a-z]+)$")
+# Digit run is {3,} (not {3}) so four-digit-hundred L0s like BO-1700 and their
+# children (BO-1700a) derive correctly. Mirrors ac_parent_id.py.
+_ID_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3,})$")
+_ID_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3,})([a-z]+)$")
 
 
 def _derive_parent_id(ac_id: str) -> str | None:

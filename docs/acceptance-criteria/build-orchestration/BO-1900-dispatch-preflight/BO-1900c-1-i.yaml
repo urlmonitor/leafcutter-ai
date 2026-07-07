@@ -1,0 +1,44 @@
+id: BO-1900c-1-i
+title: "A task verb with no confidently-matching charter is held back, not passed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose task verb cannot be confidently matched to any single agent
+    charter (the task is ambiguous or spans multiple charters),
+  When the preflight charter check runs before spawn,
+  Then it returns an unfit verdict rather than silently allowing the assigned agent,
+  And the held-back reason states that agent fit could not be confirmed for the task verb,
+  And no phase agent is spawned.
+depends_on:
+  - BO-1900c-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When no charter confidently covers the task verb, the check must return unfit (cannot-confirm), never a silent fit."
+  - "The unfit reason for an ambiguous verb must be distinct from the reason for a clear mis-assignment."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "Cannot-confirm-fit held-back for ambiguous task verbs"
+expects_from:
+  ac_id: BO-1900c-1
+  contract: "The charter-vs-verb check whose ambiguous-verb path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

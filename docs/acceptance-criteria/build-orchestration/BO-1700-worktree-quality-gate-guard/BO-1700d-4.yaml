@@ -1,0 +1,43 @@
+id: BO-1700d-4
+readiness: approved
+priority: medium
+title: "Sequence diagram: probe checkpoints across the worktree lifecycle"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700d.yaml"
+criteria: |
+  Given a reader wants to understand where the probe runs across the lifecycle,
+  When they open the sequence diagram,
+  Then it shows the create-time gate at worktree creation, the pre-drive gate
+    before the first phase agent, and the commit-phase gate before git commit,
+    each invoking the shared probe and halting on a non-zero verdict.
+depends_on: [BO-1700d, BO-1700d-1, BO-1700d-2, BO-1700d-3]
+doc_links:
+  - path: docs/architecture/diagrams/worktree-gate-checkpoints-sequence.md
+    relationship: creates
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  Depict all THREE checkpoints (create-time, pre-drive, commit-phase) each invoking
+  the SAME shared probe (BO-1700a-1) and halting on a non-zero verdict, so the
+  diagram reflects the single-producer / verify-at-every-gate design.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The shared probe invoked at each of the three lifecycle checkpoints this diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

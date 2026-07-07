@@ -1,0 +1,64 @@
+id: BP-100m-1
+title: "Two source templates deploying to the same command path fail the build, naming both sources and the target"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m.yaml"
+criteria: |
+  Given a build for the claude platform where both
+    templates/commands/build-feature.md and templates/workflows/build-feature.md
+    resolve to the same deployed target path <root>/commands/build-feature.md
+    (build_commands deploys templates/commands/*.md to commands/, and for the
+    claude platform build_workflows also deploys templates/workflows/*.md to
+    commands/),
+  When build.py runs,
+  Then the build exits with a non-zero status,
+  And the failure message names BOTH colliding source templates
+    (templates/commands/build-feature.md and templates/workflows/build-feature.md)
+    and the shared deployed target path commands/build-feature.md,
+  And the same collision is reported for create-ticket.md and finalize-feature.md,
+    which are also present in both templates/commands/ and templates/workflows/.
+depends_on:
+  - BP-100m
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/commands/build-feature.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows/build-feature.md
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Build a mapping of source-template -> resolved deployed target path across the artifact phases (build_commands and, for the claude platform, build_workflows per platform_dirs['claude']='commands'). Any target path reached by two or more distinct source templates is a collision."
+  - "The three live collisions (build-feature.md, create-ticket.md, finalize-feature.md, each present in both templates/commands/ and templates/workflows/) are the regression fixtures; a test must pin that the current tree triggers all three."
+  - "Failure must be behavioral: non-zero exit plus a message naming every colliding source and the shared target. Do not implement as a string-scan of deployed files."
+  - "Distinct from BP-300d (which asserts WHICH body wins) — this AC only asserts that a same-target collision is detected and fatal, independent of which source would have won."
+delivers_to:
+  agent: python-coder
+  contract: "A collision verdict listing each colliding deployed target path with the set of source templates mapping to it: { target_path: str, sources: [str, ...] }; ok=true iff the list is empty. Non-empty list fails the build."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100m-1-i
+implemented_by:
+- tickets/00_inbox/TICKET-20260707-BP-100m-1.md

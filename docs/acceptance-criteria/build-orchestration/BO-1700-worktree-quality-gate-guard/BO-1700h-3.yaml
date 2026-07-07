@@ -1,0 +1,46 @@
+id: BO-1700h-3
+readiness: approved
+priority: medium
+title: "The probe honors a core.hooksPath override when locating the shared hook"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700h.yaml"
+criteria: |
+  Given the repository sets a `core.hooksPath` git config value that redirects
+    hook resolution away from the default shared hooks directory,
+  When the probe runs Check C,
+  Then it resolves the shared pre-commit hook from the effective hooks path
+    (honoring the override), and if that effective path holds no sentinel-bearing
+    pre-commit hook, Check C fails, `git_hook` is false, and the probe exits
+    non-zero.
+  And when the override points at a directory that does contain the
+    sentinel-bearing pre-commit hook, Check C passes.
+depends_on: [BO-1700h, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Compute the EFFECTIVE hooks path from git config (core.hooksPath) layered over
+  git-common-dir (the shared resolver in BO-1700e-2); do not assume the default
+  hooks directory. Implemented in the shared probe helper (BO-1700a-1); fail closed
+  (BO-1700b-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check C hook-path resolution."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: "split: renamed BO-1700a-8 -> BO-1700h-3 (BO-1700a intermediate split), 2026-07-02"
+superseded_by: null
+covered_by: []
+implemented_by: []

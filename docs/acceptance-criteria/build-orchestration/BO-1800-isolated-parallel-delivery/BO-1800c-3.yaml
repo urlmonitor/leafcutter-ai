@@ -1,0 +1,47 @@
+id: BO-1800c-3
+readiness: approved
+priority: medium
+title: "Scheduling is host-resource-aware and sheds idle drives under memory pressure"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800c.yaml"
+criteria: |
+  Given many independent drives are running and the host approaches a resource
+    ceiling (for example memory pressure),
+  When the scheduler decides whether to keep, pause, or start drives,
+  Then it makes the decision from live host-resource signals rather than a fixed
+    feature-count cap,
+  And under memory pressure it sheds idle drives (pauses or stops drives doing no
+    active work) to relieve the host,
+  And active, progressing drives are preferred over idle ones when resources are
+    constrained.
+depends_on: [BO-1800c, BO-1800c-2]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "A host-resource-aware scheduler MUST decide keep/pause/start from live host-resource signals (e.g. RAM/CPU) rather than a fixed feature-count cap, mirroring upstream Claude Code supervisor behaviour (ADR-018 Decision §3, Migration §6)."
+  - "Under memory pressure the scheduler MUST shed idle drives (drives doing no active work) and MUST prefer active, progressing drives over idle ones."
+  - "Resource-signal probing and process control (pause/stop) MUST handle errors per the project error handling policy."
+  - "The scheduler MUST live on a portable package surface (scripts/ or templates/scripts/) deployed by build.py."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800c-2
+  contract: "The 'ceiling is host resources, not a fixed cap' semantics this scheduler implements."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/19_TICKET-20260707-BO-1800c-3.md

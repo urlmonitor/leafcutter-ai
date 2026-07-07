@@ -4,7 +4,7 @@ description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-06-24"
+last_updated: "2026-07-07"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -1873,6 +1873,105 @@ checkout — is unchanged.
 
 ---
 
+## 10. Files-Touched Reconciliation Flow (post-change, pre-done)
+
+This flow shows the **BP-1100e** declared-vs-actual reconciliation: the check that runs
+**after** a ticket's work is complete and its gates are green, but **before** the ticket is
+allowed to reach `status: done`. Its job is to catch *phantom-done* drift — a ticket that
+passes every gate yet delivered nothing in the right place, because the source files it
+actually changed do not match the scope it declared in `files_touched` (for example, it
+edited documentation when its behaviour belonged in the code that runs).
+
+The five participants are `ticket-supervisor` (the depth-0 orchestrator), the ordered
+`phase-agents` (architect-review … commit), `commit-guardian` (the pre-commit hook runner),
+`check_files_touched_reconciliation.py` (the new BP-1100e reconciliation hook), and the
+`Ticket` (the frontmatter whose `status:` transitions to `done`). The reconciliation hook
+computes the set of source files (`.py`/`.sql`/`.ts`/`.tsx`/`.js`) that were *actually*
+changed via `git diff --name-only`, then compares that set against the ticket's declared
+`files_touched UNION out_of_scope`. Any changed source file absent from that union is an
+undeclared-scope mismatch.
+
+The `alt` block shows the enforcement-strength policy from **BP-1100e-2**: the
+`files_touched_reconciliation` section in `commit_guardian.json` drives three states:
+`enabled:true` + `strict:false` (the shipped default) is **advisory** — it names the
+undeclared source files and warns, but does not block, so the ticket still reaches
+`done`; the guard is active out of the box rather than shipping dormant.
+`enabled:false` turns the check **off** — no output, exit 0.
+`enabled:true` + `strict:true` (opt-in) **blocks** the commit and stops the `done`
+transition until the scope is reconciled. If the hook itself errors while computing the
+diff or reading frontmatter, it **fails open** (never blocks on its own failure,
+regardless of the strict setting).
+
+```mermaid
+sequenceDiagram
+    participant TS as ticket-supervisor
+    participant PA as phase-agents
+    participant CG as commit-guardian
+    participant RH as check_files_touched_reconciliation.py
+    participant TK as Ticket
+
+    Note over TS,TK: BP-1100e reconciliation is POST-change and PRE-done —<br/>it runs AFTER work is complete and gates are green,<br/>and BEFORE the ticket is marked status: done.<br/>Distinct from the BP-1100a PRE-dispatch scope check,<br/>which runs BEFORE any phase agent is dispatched.
+
+    Note over TS,PA: Step 1 — work completes, gates pass
+    TS->>PA: dispatch ordered phases (…→ test-runner → commit)
+    activate PA
+    PA-->>TS: all phases signed off (tests green, sign-offs complete)
+    deactivate PA
+
+    Note over TS,RH: Step 2 — pre-done reconciliation fires (before status: done)
+    TS->>CG: run commit / pre-commit hooks
+    activate CG
+    CG->>RH: invoke reconciliation hook
+    activate RH
+
+    Note over RH: Step 3 — compute actually-changed source files
+    RH->>RH: git diff --name-only (filter to .py/.sql/.ts/.tsx/.js)
+
+    Note over RH,TK: Step 4 — compare against declared scope
+    RH->>TK: read declared files_touched UNION out_of_scope
+    TK-->>RH: declared scope set
+    RH->>RH: changed-source − (files_touched ∪ out_of_scope) = undeclared set
+
+    Note over CG,TK: Step 5 — verdict: advise (default) / off / block (strict)
+    alt enabled:true, strict:false (default — advisory, fail-open)
+        RH-->>CG: warn: names undeclared source files (does NOT block)
+        CG-->>TS: hooks pass (advisory recorded)
+        TS->>TK: mark status: done
+    else enabled:false (check is off, no output)
+        RH-->>CG: exit 0, no output (check is off)
+        CG-->>TS: hooks pass
+        TS->>TK: mark status: done
+    else enabled:true, strict:true (opt-in — block)
+        RH-->>CG: block: undeclared source files must be reconciled
+        CG-->>TS: commit blocked — status stays not-done
+        TS-->>TS: halt; scope must be reconciled before done
+    else reconciliation errors internally
+        RH-->>CG: fail open (report to stderr, do NOT block)
+        CG-->>TS: hooks pass
+        TS->>TK: mark status: done
+    end
+    deactivate RH
+    deactivate CG
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-view-epic--ticket-supervisor-flow-build-feature)
+
+> [!IMPORTANT]
+> **Two bookends, not one check.** BP-1100e is the *post-change* counterpart to the
+> **BP-1100a** *pre-dispatch* scope check — they guard opposite ends of the ticket lifecycle
+> and must not be confused:
+>
+> | Check | When it runs | What it compares | Question it answers |
+> |---|---|---|---|
+> | **BP-1100a** (pre-dispatch) | **BEFORE** any phase agent is dispatched | Declared `files_touched` vs. whether it names an executable/source target | "Did the ticket declare the *right kind* of scope up front?" |
+> | **BP-1100e** (post-change, pre-done) | **AFTER** work + gates, **BEFORE** `status: done` | *Actually-changed* source files vs. declared `files_touched UNION out_of_scope` | "Did what actually changed match what was declared?" |
+>
+> BP-1100a catches a declared scope missing its executable target *before* work starts;
+> BP-1100e catches the opposite drift — the real change and the declared scope having parted
+> ways — *after* work is done, before `done` can mask missing work.
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
@@ -1894,6 +1993,7 @@ checkout — is unchanged.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-07-07 [architecture-diagram-author]: Added §10 Files-Touched Reconciliation Flow (post-change, pre-done) sequence diagram (sequenceDiagram) showing the five participants (ticket-supervisor, phase-agents, commit-guardian, check_files_touched_reconciliation.py, Ticket) and the ordered interactions: work completes + gates pass → commit-guardian invokes the reconciliation hook → hook computes actually-changed source files via git diff --name-only → compares against declared files_touched UNION out_of_scope → alt-branch verdict advises (default, fail-open) or blocks (strict opt-in) or fails open on internal error, before the ticket is marked status: done. Includes a Note making the check explicitly POST-change and PRE-done, and a bookend comparison table distinguishing it from the BP-1100a pre-dispatch scope check. (#EPIC-PhantomDoneFilesTouched/07 BP-1100e-3)
 - 2026-06-24 [EPIC-SafeAcAuthoring/18/python-coder]: Added §9 Installed-Copy Path Resolution (AC BO-1500e-2). Documents the _resolve_installed_layout() detection logic in setup_ticket_worktree.py: dev layout (parent of leafcutter-ai/ is not a git repo → worktrees at workspace/worktrees/) vs consumer layout (parent is its own git repo → worktrees at <consumer_root>/worktrees/). Includes layout comparison table, directory tree examples for both layouts, Mermaid detection-sequence flowchart, and isolation-invariant preservation note. Updated Key Design Principles to add item 6 (layout-aware path resolution).
 - 2026-06-24 [architecture-diagram-author]: Added §8 approval-to-PR delivery flow sequence diagram (sequenceDiagram) showing the five participants (User, Authoring Workflow, Git, Origin, GitHub) and the ordered interactions from final approval, through pushing the authoring branch to origin, opening the PR to main, the required CI checks running, to the PR reference returning to the user, with an explicit delivery invariant note that no step commits AC files directly onto main (main changes only via the reviewed/merged PR). (#EPIC-SafeAcAuthoring/15 BO-1500c-5)
 - 2026-06-24 [architecture-diagram-author]: Added §7 resumable per-stage authoring lifecycle state diagram (stateDiagram-v2) showing the seven authoring states (PO pending/committed, BA pending/committed, IT-PO pending/committed, delivered) and their transitions, crash-durability self-loops on each committed state, and interruption→resume self-loops on each pending state documenting that resume re-enters the first not-yet-committed stage. (#EPIC-SafeAcAuthoring/09 BO-1500b-4)

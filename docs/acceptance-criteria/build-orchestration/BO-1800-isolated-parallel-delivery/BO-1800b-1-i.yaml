@@ -1,0 +1,38 @@
+id: BO-1800b-1-i
+readiness: approved
+priority: medium
+title: "An agent's direct push to main is rejected at the hub"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800b.yaml"
+criteria: |
+  Given an autonomous drive running in its own clone whose `origin` points at the hub,
+  When the agent runs `git push origin main` (or `git push origin HEAD:main`) directly,
+  Then the hub rejects the push,
+  And `main` on the hub is unchanged,
+  And the rejection does not depend on any local hook having fired in the clone.
+depends_on: [BO-1800b-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Config-verification scenario, NOT code: local control is bypassable and therefore cannot be the guarantee (ADR-018 Decision §4); this case asserts the hub rejects an agent's direct git push origin main and leaves main unchanged, independent of any local hook."
+  - "The verification procedure MUST be recorded on a portable docs surface (docs/) and tested against the configured hub protection."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800b-1
+  contract: "The server-side direct-push rejection this case exercises for an agent client."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/10_TICKET-20260707-BO-1800b-1-i.md

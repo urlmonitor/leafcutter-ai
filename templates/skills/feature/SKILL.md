@@ -108,24 +108,38 @@ python -c "import os, sys; p='.pre-commit-config.yaml'; sys.exit(0 if os.path.ex
 Interpret the probe result as follows:
 
 - **Probe passes** (file exists and resolves): bootstrap is complete. Package hooks
-  will run on commits made inside this worktree.
-- **Probe fails — build.py returned non-zero**: emit the following structured error
-  and stop; do NOT claim the worktree is ready:
+  will run on commits made inside this worktree. Skip the recovery step below.
+- **Probe fails** (for any reason — build.py returned non-zero, build.py was not
+  found, or the symlink is dangling): do NOT claim the worktree is ready and do NOT
+  proceed to step 5. Run the **mandatory config recovery** below.
 
-  ```
-  BOOTSTRAP ERROR (AC-5): build.py ran but .pre-commit-config.yaml is missing.
-  The build failed — package hooks will NOT run in this worktree.
-  Resolution: re-run build.py manually inside the worktree, or run the package
-  hooks manually against the branch diff before merge.
-  ```
+**Mandatory config recovery (fail-closed — run when, and only when, the probe fails):**
 
-- **Probe fails — build.py was not found**: emit:
+`build.py` is not the only way to establish the config, and a fresh epic worktree
+must never proceed with hooks disabled. Attempt to establish
+`.pre-commit-config.yaml` deterministically from the main tree. Try Option A first;
+fall back to Option B only if the symlink cannot be created (NTFS/WSL2):
 
-  ```
-  BOOTSTRAP ERROR (AC-5): build.py not found in worktree.
-  .pre-commit-config.yaml was not created — package hooks will NOT run.
-  Resolution: locate and run the correct build.py for this project layout.
-  ```
+```bash
+# Option A — symlink the whole .leafcutter dir from the main tree (preferred):
+ln -s "$MAIN_REPO/.leafcutter" "$WORKTREE_PATH/.leafcutter"
+```
+
+```bash
+# Option B — copy the resolved config file (NTFS/WSL2 fallback where symlinks fail):
+cp "$MAIN_REPO/.pre-commit-config.yaml" "$WORKTREE_PATH/.pre-commit-config.yaml"
+```
+
+Then **re-run the probe**. If it now passes, bootstrap is complete. If it STILL
+fails after both options, HALT with this structured error — do not start the drive:
+
+```
+BOOTSTRAP ERROR (AC-5): .pre-commit-config.yaml could not be established in the
+worktree after build.py, symlink, and copy were all attempted. Package hooks
+would be SILENTLY SKIPPED for the entire drive.
+This is a hard halt. Resolution: fix the main tree's .leafcutter/ (run build.py
+in $MAIN_REPO), then recreate the worktree. Do NOT proceed with the drive.
+```
 
 **Do NOT use `PRE_COMMIT_ALLOW_NO_CONFIG=1` as the default path.** That env-var
 silently disables all package hooks and masks the bootstrap failure. It is a

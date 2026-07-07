@@ -1,0 +1,56 @@
+id: BP-300d-2
+title: "create-ticket and finalize-feature deployed commands also invoke their deterministic workflow on a supported runtime"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+criteria: |
+  Given a build for a supported Claude Code runtime where each of the remaining
+    primary delivery commands is defined by two source templates:
+    - templates/commands/create-ticket.md and templates/workflows/create-ticket.md
+    - templates/commands/finalize-feature.md and templates/workflows/finalize-feature.md
+  When build.py deploys the command set for the supported runtime,
+  Then the deployed commands/create-ticket.md is the workflow-invoking body and
+    NOT the prose flow from templates/workflows/create-ticket.md,
+  And the deployed commands/finalize-feature.md is the workflow-invoking body and
+    NOT the prose flow from templates/workflows/finalize-feature.md.
+depends_on:
+  - BP-300d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/commands/create-ticket.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows/finalize-feature.md
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Apply the same supported-runtime routing rule proven for build-feature (BP-300d-1) to create-ticket and finalize-feature; the rule must generalize to the full primary-delivery-command set rather than being special-cased per command."
+  - "Assert against deployed file content for each command, not the source template name alone."
+delivers_to: null
+expects_from:
+  ac_id: BP-300d-1
+  contract: "The supported-runtime workflow-routing rule established for build-feature, generalized to the remaining primary delivery commands."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,48 @@
+id: TKT-200f-3
+title: "Sequence diagram documents clean-tree premise verification before inbox exit"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the pre-inbox-exit premise verification runs captured reproduction commands against
+    a clean, CI-equivalent tree,
+  When the documentation step runs for this feature,
+  Then a sequence diagram is produced showing: ticket capture -> establish clean tree ->
+    run reproduction command in clean tree -> compare to captured result -> on match, clear
+    the ticket; on mismatch, block; on clean-tree unavailable, hold,
+  And the diagram shows the confirm, block, and hold branches,
+  And it distinguishes this authoring-time clean-tree verification from the dispatch-time
+    re-check (BO-1900b).
+depends_on:
+  - TKT-200f
+  - TKT-200f-1
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Must render as valid Mermaid sequence-diagram syntax."
+  - "Must show the confirm, block, and hold (clean-tree-unavailable) branches."
+delivers_to:
+  agent: architecture-diagram-author
+  contract: "A Mermaid sequence diagram of the clean-tree premise verification flow"
+expects_from:
+  ac_id: TKT-200f-1
+  contract: "The implemented clean-tree verification behavior to document"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

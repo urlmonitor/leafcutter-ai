@@ -1,0 +1,49 @@
+id: BO-1700e-2
+readiness: approved
+priority: medium
+title: "The guard resolves the shared git dir to the main checkout's config when self-hosting"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700e.yaml"
+criteria: |
+  Given the project is building itself and the guard runs inside a worktree,
+  When the guard needs the authoritative pre-commit config or shared hooks,
+  Then it resolves the shared git directory (via `git rev-parse --git-common-dir`)
+    to the main checkout, and reads the config and shared hooks from there,
+  And this resolution is available to the probe (BO-1700a-1) for locating the
+    worktree's config, shared hook, and the main tree's current config.
+depends_on: [BO-1700e]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The shared-git-dir resolution is ONE shared helper (single producer) that the
+  probe (BO-1700a-1) and the self-healing hook (BO-1700c-1) both consume; it is
+  UPSTREAM of the probe (the probe expects_from this). Both the probe and the heal
+  MUST use this one resolver so the worktree/main-tree location logic cannot drift.
+  ADR-001 gitignored-symlink convention: config lives as a .leafcutter symlink; the
+  main checkout is the authoritative source. New script with a
+  templates/scripts/commit_guardian/ mirror, verified in parity via the build.py
+  round-trip (ADR-001).
+delivers_to:
+  agent: python-coder
+  contract: "Shared-git-dir -> main-checkout resolution (via git rev-parse --git-common-dir, handling both the linked-worktree case and the plain-clone case where common-dir == .git) consumed by the probe (BO-1700a-1) and the self-healing hook (BO-1700c-1)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

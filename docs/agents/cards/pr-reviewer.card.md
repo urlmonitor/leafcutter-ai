@@ -4,7 +4,7 @@ title: "Agent Card: pr-reviewer"
 description: "Pre-PR self-review against the working diff. Classifies every finding from the underlying pr-review-toolkit:review-pr skill into high / medium / low confidence, surfaces only high-confidence issues, suppresses low-confidence noise, and escalates a medium-confidence cluster to Opus when more than 3 medium findings are returned. Use when: user types /pr-review; asks \"review my changes before I open a PR\"; wants a sanity check on the working diff; or types \"is there anything wrong with this diff?\". Also invoked by pull-request as a pre-open step."
 type: card
 status: active
-created: 2026-07-01
+created: 2026-07-07
 card_version: "generated"
 ---
 # pr-reviewer
@@ -57,8 +57,10 @@ flowchart TD
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
     pr_reviewer["pr-reviewer\n(phase tier, priority 11)"]:::target
+    research_agent["research-agent\n(utility tier)"]:::utility
 
     ticket_supervisor -->|dispatches| pr_reviewer
+    pr_reviewer -->|spawns| research_agent
 ```
 ---
 

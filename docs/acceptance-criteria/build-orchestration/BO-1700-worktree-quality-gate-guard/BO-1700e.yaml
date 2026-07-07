@@ -1,0 +1,31 @@
+id: BO-1700e
+readiness: approved
+priority: medium
+title: "Works everywhere: the project building itself, or installed inside another project"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The protection works the same whether the project is building itself or is
+  installed inside another project.
+
+  You get consistent, portable protection across every supported setup, without
+  configuring anything differently for each one.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: []
+documentation_rationale: "Portability robustness for the same guard documented under BO-1700a and BO-1700c; no separate documentation artifact is needed beyond those."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700e-1, BO-1700e-2, BO-1700e-3, BO-1700e-4, BO-1700e-5]
+implemented_by: []
+notes: "This durable guard SUPERSEDES the interim one-file fail-closed slice already committed to feature/SKILL.md separately. The self-healing hook (BO-1700c-1) is the single live config-establishment path; the two competing establishment paths must be reconciled at implementation so only one remains live."
