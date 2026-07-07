@@ -39,7 +39,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -157,7 +157,7 @@ Then it skips the deployed-output comparison, still performs runtime-vs-canonica
 - [x] test-runner — 2026-07-07 18:15
 - [x] pr-reviewer — 2026-07-07 18:45
 - [x] commit — 2026-07-07 17:20
-- [ ] pull-request
+- [x] pull-request — 2026-07-07 17:23
 
 ## Comments
 
@@ -196,6 +196,13 @@ completion_manifest:
   test_coverage: true
   registration: true
 All 9 ACs verified correct: check_script_parity (BP-100i-1, -1-i, -1-ii), check_manifest_parity (BP-100i-2, -2-i), check_deployed_parity (BP-100i-3, -3-i), silent pass (BP-100i-5), pre-commit registration (BP-100i-4). All I/O wrapped in try/except OSError or JSONDecodeError; no bare excepts; fail-open on errors; exit 1 only on detected parity violations. All paths read from hook_parity config section — none hardcoded. All three copies of check_hook_parity.py are byte-for-byte identical. 25 tests cover all ACs and are green. check-hook-parity registered in all three commit_guardian.json files with correct files pattern and stages: [pre-commit].
+
+### 2026-07-07 17:23 — pull-request (status: ok)
+feedback-id: fb_2026-07-07_34bdb79a
+completion_manifest:
+  push_succeeded: true
+  pr_updated: true
+Pushed ticket 04 implementation commits to origin/EPIC-Phase1ReadyHardening (fast-forward 2fd2a094..14a8e25c). PR #223 at https://github.com/urlmonitor/leafcutter-ai/pull/223 now reflects the check_hook_parity.py implementation, all three template copies, all three commit_guardian.json registrations, and the 25-test suite. No new PR was opened — existing PR #223 updated in-place.
 
 ### 2026-07-07 17:20 — commit (status: ok)
 feedback-id: fb_2026-07-07_aa227829
