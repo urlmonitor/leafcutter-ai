@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given a linked worktree's index cache-tree is poisoned such that an in-place
@@ -19,6 +19,9 @@ criteria: |
     cache-tree error
   And the fallback is presented as a distinct, heavier action in the dry-run plan (so
     the human sees a new worktree will be created) — it is not applied silently
+  And the fresh worktree is created successfully even though the damaged worktree is
+    deliberately left in place with its branch still checked out — recovery does not fail
+    because the branch is "already used by" the poisoned worktree
 depends_on:
   - BO-1600d-3
 doc_links:
@@ -44,8 +47,13 @@ amended_by:
     entry: "Pinned portable surface (templates/scripts/git_recovery.py, ADR-001 parity). readiness draft->reviewed."
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
+  - reason: hardening-remediation
+    entry: "Tightened criteria to pin runtime success: the fresh worktree must be created (git worktree add --force) even though the poisoned worktree is deliberately left in place with its branch still checked out — the pre-hardening code failed here with exit 128. Wired the covering real-repo test into covered_by."
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-07-07
 superseded_by: null
-covered_by: []
+covered_by:
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_fresh_worktree_fallback_succeeds_on_real_linked_worktree"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GuidedGitRecovery/08_TICKET-20260706-BO-1600d-3-v.md
 notes: |

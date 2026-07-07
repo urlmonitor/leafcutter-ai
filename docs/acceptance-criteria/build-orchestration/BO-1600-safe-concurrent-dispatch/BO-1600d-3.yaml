@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given the human has confirmed execution of the recovery plan against a shared
@@ -69,6 +69,11 @@ covered_by:
   - BO-1600d-3-iv
   - BO-1600d-3-v
   - BO-1600d-3-vi
+  - BO-1600d-3-vii
+  - BO-1600d-3-viii
+  - BO-1600d-3-ix
+  - BO-1600d-3-x
+  - BO-1600d-3-xi
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GuidedGitRecovery/03_TICKET-20260706-BO-1600d-3.md
 notes: |

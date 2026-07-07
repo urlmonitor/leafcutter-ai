@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given a fresh consumer project that has installed leafcutter and run
@@ -57,7 +57,11 @@ amended_by:
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
 superseded_by: null
-covered_by: []
+covered_by:
+  - "tests/test_git_recovery.py::TestBuildDeploysCopyTier::test_build_template_standalone_scripts_deploys_git_recovery"
+  - "tests/test_git_recovery.py::TestBuildDeploysCopyTier::test_git_recovery_not_deployed_if_source_absent"
+  - "tests/test_git_recovery.py::TestBuildDeploysReachabilityTier::test_deployed_git_recovery_invocable_no_import_error"
+  - "tests/test_git_recovery.py::TestBuildDeploysReachabilityTier::test_deployed_git_recovery_non_tty_exits_cleanly"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GuidedGitRecovery/10_TICKET-20260706-BO-1600d-4.md
 notes: |

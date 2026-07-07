@@ -1,0 +1,46 @@
+id: BO-1600d-3-vii
+readiness: approved
+priority: high
+title: "The fresh-worktree fallback is idempotent — a re-run creates a distinct recovered worktree, never a collision"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given a fresh-worktree fallback has already created a recovered worktree for the
+    damaged worktree in a prior recovery run
+  When recovery performs the fresh-worktree fallback again for that same damaged worktree
+  Then it creates a new, distinctly-named recovered worktree that does not collide with
+    the worktree created by the previous run
+  And the second run completes without error
+depends_on:
+  - BO-1600d-3
+  - BO-1600d-3-v
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The fresh-worktree creation must pick a target path that does not already exist (uniquify the '<old>_recovered' name) so a re-run does not fail with a path collision; recovery tools are re-run repeatedly under stress."
+  - "PORTABLE SURFACE: lives in the same standalone recovery script (templates/scripts/git_recovery.py); ADR-001 deployed/template parity applies."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3-v
+  contract: "The fresh-worktree fallback whose re-run idempotency this edge case pins."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_fresh_worktree_fallback_is_idempotent_on_rerun"
+implemented_by:
+  - "templates/scripts/git_recovery.py"
+notes: |
+  Added 2026-07-07 during the post-epic hardening remediation (code review +
+  real-repo behavioral spot-check). Pins a runtime guarantee the original
+  BO-1600d-3-v did not: the fallback must survive re-invocation. Covered by an
+  unmocked real-git regression test.

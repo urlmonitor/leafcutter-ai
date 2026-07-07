@@ -1,7 +1,7 @@
 ---
 epic_name: EPIC-GuidedGitRecovery
 created: 2026-07-06
-status: in_progress
+status: done
 components:
   - build-orchestration
 source_ac: BO-1600d
