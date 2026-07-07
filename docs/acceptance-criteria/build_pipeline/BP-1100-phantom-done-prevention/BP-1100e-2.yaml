@@ -32,10 +32,10 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "CONFIG MODEL — mirror the existing duplicate_code / diff_coverage gating contract EXACTLY: add a top-level 'files_touched_reconciliation' section to commit_guardian.json with two boolean keys 'enabled' and 'strict', BOTH defaulting to false. Do NOT introduce a single 'mode' key — consistency with the existing enabled+strict commit_guardian contract wins. enabled:false means the check is off; enabled:true + strict:false = ADVISORY (report, do not block); enabled:true + strict:true = BLOCK on a real mismatch. The advisory/fail-open posture is the shipped default."
+  - "CONFIG MODEL — a top-level 'files_touched_reconciliation' section in commit_guardian.json with two boolean keys 'enabled' and 'strict' (enabled+strict shape, mirroring duplicate_code / diff_coverage; NOT a single 'mode' key). SHIPPED DEFAULTS: enabled:true, strict:false = the guard is ACTIVE in ADVISORY mode out of the box (report undeclared source, do not block), so the phantom-done guard exercises on every install rather than shipping dormant. enabled:false turns the check off; enabled:true + strict:true = BLOCK on a real mismatch. Advisory/fail-open remains the default posture."
   - "Fail-open on INTERNAL error is orthogonal to the enabled/strict config: any exception in computing the verdict causes the check to not block (report to stderr, exit non-blocking), so a script error never strands a ticket — regardless of the strict setting."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): specific exception types, log at WARNING or higher, never swallow silently."
-  - "PORTABLE per ADR-001: the check + its commit_guardian.json 'files_touched_reconciliation' section (enabled:false, strict:false defaults) ship to consumers via build.py, kept in parity via the build.py round-trip (canonical source = templates/scripts/commit_guardian/commit_guardian.json); it must NOT rely on the leafcutter repo's own root CLAUDE.md."
+  - "PORTABLE per ADR-001: the check + its commit_guardian.json 'files_touched_reconciliation' section (enabled:true, strict:false defaults = advisory-on) ship to consumers via build.py, kept in parity via the build.py round-trip (canonical source = templates/scripts/commit_guardian/commit_guardian.json); it must NOT rely on the leafcutter repo's own root CLAUDE.md."
 delivers_to: null
 expects_from:
   ac_id: BP-1100e-1
@@ -47,6 +47,10 @@ amended_by:
     entry: "Pinned the config model to mirror duplicate_code/diff_coverage EXACTLY: top-level commit_guardian.json 'files_touched_reconciliation' section with enabled + strict boolean keys (both default false), NOT a single mode key. Named the three-state semantics (off / advisory / block). Added commit_guardian.json doc_link. readiness draft->reviewed."
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
+  - reason: shipped-default-advisory-on
+    entry: "PO decision (dogfood): flip the shipped default from enabled:false to enabled:true (strict stays false) so the guard is ACTIVE in advisory mode out of the box instead of shipping dormant — resolving the tension with this AC's own criteria (which describes advisory-as-default) and giving leafcutter + every consumer the phantom-done advisory without a manual opt-in. Off-switch (enabled:false) and blocking (strict:true) remain available. Config, hook default behavior, and doc section 10 updated in lockstep."
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-07-07
 superseded_by: null
 covered_by:
   - BP-1100e-2-a

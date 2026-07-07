@@ -3,19 +3,21 @@ MODULE: check_files_touched_reconciliation
 GOAL: Pre-commit hook that reports source files changed by a ticket's work but
     absent from the ticket's declared files_touched UNION out_of_scope,
     immediately before the ticket is allowed to reach status: done.
-BUSINESS CONTEXT: BP-1100e-1 / BP-1100e-2 — off by default: the check is
-    enabled only via files_touched_reconciliation.enabled: true in
-    commit_guardian.json. When enabled, advisory mode (strict:false) reports
-    undeclared source changes (.py, .sql, .ts, .tsx, .js) as a non-blocking
-    advisory. Strict blocking is opt-in via enabled:true + strict:true.
-    Complements BP-1100a (fires before work starts; this hook fires after
-    work is done).
+BUSINESS CONTEXT: BP-1100e-1 / BP-1100e-2 — advisory-on by default: the
+    shipped commit_guardian.json sets files_touched_reconciliation.enabled:
+    true + strict:false, so the guard is active in advisory mode out of the
+    box (reports undeclared source changes .py/.sql/.ts/.tsx/.js as a
+    non-blocking advisory). Strict blocking is opt-in via enabled:true +
+    strict:true; the check is turned off with enabled:false. Complements
+    BP-1100a (fires before work starts; this hook fires after work is done).
 ARCHITECTURE: Standalone hook in templates/scripts/commit_guardian/hooks/
     (portable — no leafcutter-internal imports). Computes branch diff plus
     staged source files, compares against files_touched UNION out_of_scope.
-    Off by default (enabled:false → exit 0, no output). Advisory when
-    enabled:true + strict:false (exit 0). Blocks when enabled:true +
-    strict:true (exit 1 on mismatch). Fail-open on all errors per BP-1100e-2.
+    Shipped default is advisory (enabled:true + strict:false → exit 0, names
+    undeclared files). Blocks when enabled:true + strict:true (exit 1 on
+    mismatch). Turned off with enabled:false (exit 0, no output). The code
+    itself fails SAFE to off when the config is absent or unreadable
+    (_load_config → (False, False)). Fail-open on all errors per BP-1100e-2.
     Registered in hooks_manifest.hooks[] of commit_guardian.json. When
     multiple done tickets are staged together, reconciliation uses the UNION
     of all their declared scopes so that a file declared by any one ticket

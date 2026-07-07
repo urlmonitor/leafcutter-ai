@@ -1893,9 +1893,10 @@ undeclared-scope mismatch.
 
 The `alt` block shows the enforcement-strength policy from **BP-1100e-2**: the
 `files_touched_reconciliation` section in `commit_guardian.json` drives three states:
-`enabled:false` (the shipped default) means the check is **off** — no output, exit 0.
-`enabled:true` + `strict:false` is **advisory** — names the undeclared source files and
-warns, but does not block, so the ticket still reaches `done`.
+`enabled:true` + `strict:false` (the shipped default) is **advisory** — it names the
+undeclared source files and warns, but does not block, so the ticket still reaches
+`done`; the guard is active out of the box rather than shipping dormant.
+`enabled:false` turns the check **off** — no output, exit 0.
 `enabled:true` + `strict:true` (opt-in) **blocks** the commit and stops the `done`
 transition until the scope is reconciled. If the hook itself errors while computing the
 diff or reading frontmatter, it **fails open** (never blocks on its own failure,
@@ -1931,14 +1932,14 @@ sequenceDiagram
     TK-->>RH: declared scope set
     RH->>RH: changed-source − (files_touched ∪ out_of_scope) = undeclared set
 
-    Note over CG,TK: Step 5 — verdict: off (default) / advise / block (strict)
-    alt enabled:false (default — check is off, no output)
-        RH-->>CG: exit 0, no output (check is off)
-        CG-->>TS: hooks pass
-        TS->>TK: mark status: done
-    else enabled:true, strict:false (advisory, fail-open)
+    Note over CG,TK: Step 5 — verdict: advise (default) / off / block (strict)
+    alt enabled:true, strict:false (default — advisory, fail-open)
         RH-->>CG: warn: names undeclared source files (does NOT block)
         CG-->>TS: hooks pass (advisory recorded)
+        TS->>TK: mark status: done
+    else enabled:false (check is off, no output)
+        RH-->>CG: exit 0, no output (check is off)
+        CG-->>TS: hooks pass
         TS->>TK: mark status: done
     else enabled:true, strict:true (opt-in — block)
         RH-->>CG: block: undeclared source files must be reconciled
