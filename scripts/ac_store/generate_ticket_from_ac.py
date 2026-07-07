@@ -74,6 +74,20 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "pull-request",
 ]
 
+#: Phase order for flow-change pairs: documentation-expert is placed before
+#: any coder (priority 4 → doc planning before implementation).
+_FLOW_CHANGE_PHASE_ORDER: list[str] = [
+    "architect-review",
+    "documentation-expert",
+    "test-writer",
+    "python-coder",
+    "sql-coder",
+    "test-runner",
+    "pr-reviewer",
+    "commit",
+    "pull-request",
+]
+
 #: Default path of the agent registry relative to the repo root.
 _DEFAULT_AGENT_REGISTRY = "config/agent_registry.json"
 
@@ -256,8 +270,9 @@ def _load_production_code_agents(agent_registry_path: Path) -> set[str]:
         raise
     producers: set[str] = set()
     for agent in registry.get("agents", []):
-        if agent.get("produces") == "production_code":
-            producers.add(agent["id"])
+        agent_id = agent.get("id", "")
+        if agent.get("produces") == "production_code" and agent_id:
+            producers.add(agent_id)
     return producers
 
 
@@ -335,6 +350,28 @@ def _build_agents_map(
             if gate_list:
                 guardrail_set.update(gate_list)
 
+        # Consume flow_change_gates: for each (change_target, risk_surface) pair
+        # that is listed as a flow-change pair, union mandatory_agents into guardrail_set
+        # and switch to the flow-change phase order so documentation-expert is placed
+        # BEFORE any coder (as required by the phase_constraint in each entry).
+        flow_change_entries = gates.get("flow_change_gates", []) or []
+        is_flow_change_pair = False
+        for entry in flow_change_entries:
+            if not isinstance(entry, dict):
+                continue
+            if (
+                entry.get("change_target") in change_targets
+                and entry.get("risk_surface") == risk_surface
+            ):
+                mandatory = entry.get("mandatory_agents") or []
+                guardrail_set.update(mandatory)
+                is_flow_change_pair = True
+
+        # For flow-change pairs, documentation-expert must appear before any coder.
+        # _FLOW_CHANGE_PHASE_ORDER encodes this constraint; all other pairs use the
+        # standard _CANONICAL_PHASE_ORDER.
+        phase_order = _FLOW_CHANGE_PHASE_ORDER if is_flow_change_pair else _CANONICAL_PHASE_ORDER
+
         # Collect all agent names that should appear in the map
         # Start with guardrails + assigned agent + standard tail agents
         all_needed: set[str] = set(guardrail_set)
@@ -354,22 +391,34 @@ def _build_agents_map(
         for agent in overrides:
             all_needed.discard(agent)
 
-        # Build ordered result according to _CANONICAL_PHASE_ORDER
+        # Build ordered result according to the chosen phase order.
+        # Non-canonical agents (not in phase_order) are inserted in stable
+        # sorted order BEFORE commit and pull-request so they are never placed
+        # after the terminal phase agents.
         agents: dict[str, str] = {}
-        # First add agents in canonical order
-        for canonical_agent in _CANONICAL_PHASE_ORDER:
-            if canonical_agent in overrides:
-                agents[canonical_agent] = "not_needed"
-            elif canonical_agent in all_needed:
-                agents[canonical_agent] = "needed"
 
-        # Then add any remaining agents not in _CANONICAL_PHASE_ORDER
-        for agent in all_needed:
-            if agent not in _CANONICAL_PHASE_ORDER and agent not in agents:
-                if agent in overrides:
-                    agents[agent] = "not_needed"
-                else:
-                    agents[agent] = "needed"
+        # Separate non-canonical needed agents; insert them sorted before commit.
+        non_canonical_needed = sorted(
+            a for a in all_needed
+            if a not in phase_order and a not in overrides
+        )
+        non_canonical_not_needed = sorted(
+            a for a in overrides
+            if a not in phase_order
+        )
+
+        # Walk phase order; insert non-canonical agents just before commit.
+        for phase_agent in phase_order:
+            if phase_agent == "commit":
+                # Insert non-canonical agents at a stable position before commit.
+                for nc_agent in non_canonical_needed:
+                    agents[nc_agent] = "needed"
+                for nc_agent in non_canonical_not_needed:
+                    agents[nc_agent] = "not_needed"
+            if phase_agent in overrides:
+                agents[phase_agent] = "not_needed"
+            elif phase_agent in all_needed:
+                agents[phase_agent] = "needed"
 
         # Add any overrides for agents not already in the map
         for agent, status in overrides.items():
@@ -517,12 +566,37 @@ def _map_priority(ac: AcRecord) -> str:
     return mapping.get(complexity, "medium")
 
 
+def _computed_map_has_production_code_producer(
+    agents_map: dict[str, str],
+    agent_registry_path: "Path | str | None" = None,
+) -> bool:
+    """Return True if any agent in the computed map is a production_code producer.
+
+    Args:
+        agents_map: The computed agents map (agent name → status).
+        agent_registry_path: Path to agent_registry.json; resolved from repo
+                             root when omitted.
+
+    Returns:
+        True if any 'needed' agent in the map produces production_code.
+    """
+    needed_agents = [name for name, status in agents_map.items() if status == "needed"]
+    return any(
+        _agent_produces_production_code(name, agent_registry_path)
+        for name in needed_agents
+    )
+
+
 def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     """Build the ticket body (everything after the frontmatter).
 
     Includes: Actor/Goal, Context, Acceptance Criteria (verbatim from AC),
-    an optional Test Requirements block (emitted for any production_code agent),
-    and Sign-offs.
+    an optional Test Requirements block (emitted when the computed agent map
+    contains any production_code producer), and Sign-offs.
+
+    The Test Requirements block is gated on the COMPUTED map (not only the
+    assigned agent) so that a non-coder assigned agent whose guardrail
+    classification pulls in a coder still receives the block.
 
     Args:
         ac: Parsed AC record.
@@ -534,10 +608,31 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     title = ac.get("title", f"Implement {ac_id}")
     criteria = ac.get("criteria", "(No criteria provided)")
     assigned_agent = ac.get("assigned_agent", "python-coder")
-    agents = _build_agents_map(assigned_agent)
+
+    # Extract classification fields from the AC record; default to None so
+    # _build_agents_map falls back to legacy behaviour when absent.
+    change_target_raw = ac.get("change_target")
+    risk_surface = ac.get("risk_surface") or None
+
+    # Normalise change_target to a list.
+    if change_target_raw is None:
+        change_targets = None
+    elif isinstance(change_target_raw, list):
+        change_targets = change_target_raw if change_target_raw else None
+    else:
+        change_targets = [change_target_raw]
+
+    agents = _build_agents_map(
+        assigned_agent,
+        change_targets=change_targets,
+        risk_surface=risk_surface,
+    )
     signoffs = _build_signoffs_section(agents)
-    is_code_producer = _agent_produces_production_code(assigned_agent)
     complexity = _infer_complexity(ac)
+
+    # Gate Test Requirements block on computed map: emit whenever any needed
+    # agent in the computed map produces production_code.
+    has_code_producer = _computed_map_has_production_code_producer(agents)
 
     lines: list[str] = [
         f"# {title}",
@@ -553,7 +648,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
         f"Component: `{ac.get('component', 'unknown')}`. "
         f"Assigned agent: `{assigned_agent}`. "
         f"Estimated complexity: `{ac.get('estimated_complexity', '?')}`. "
-        f"complexity: `{complexity}`.",
+        f"Complexity: `{complexity}`.",
         "",
         "## Acceptance Criteria",
         "",
@@ -563,7 +658,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
         "",
     ]
 
-    if is_code_producer:
+    if has_code_producer:
         lines.extend([
             "## Test Requirements",
             "",
@@ -877,7 +972,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         files_touched = _extract_local_paths(ac.get("doc_links") or [])
         assigned_agent = ac.get("assigned_agent", "python-coder")
-        agents = _build_agents_map(assigned_agent)
+        change_target_raw = ac.get("change_target")
+        risk_surface = ac.get("risk_surface") or None
+        if change_target_raw is None:
+            change_targets = None
+        elif isinstance(change_target_raw, list):
+            change_targets = change_target_raw if change_target_raw else None
+        else:
+            change_targets = [change_target_raw]
+        agents = _build_agents_map(
+            assigned_agent,
+            change_targets=change_targets,
+            risk_surface=risk_surface,
+        )
         frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
         body = _build_ticket_body(ac, ac_id)
         print(frontmatter)
@@ -898,7 +1005,19 @@ def main(argv: list[str] | None = None) -> int:
     # Build ticket content
     files_touched = _extract_local_paths(ac.get("doc_links") or [])
     assigned_agent = ac.get("assigned_agent", "python-coder")
-    agents = _build_agents_map(assigned_agent)
+    change_target_raw = ac.get("change_target")
+    risk_surface = ac.get("risk_surface") or None
+    if change_target_raw is None:
+        change_targets = None
+    elif isinstance(change_target_raw, list):
+        change_targets = change_target_raw if change_target_raw else None
+    else:
+        change_targets = [change_target_raw]
+    agents = _build_agents_map(
+        assigned_agent,
+        change_targets=change_targets,
+        risk_surface=risk_surface,
+    )
     frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
     body = _build_ticket_body(ac, ac_id)
     ticket_content = frontmatter + "\n\n" + body

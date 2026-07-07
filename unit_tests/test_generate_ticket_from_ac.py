@@ -13,20 +13,18 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-import yaml
-
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_SCRIPTS_DIR = _REPO_ROOT / "scripts"
+_SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from ac_store.generate_ticket_from_ac import (  # noqa: E402
+from generate_ticket_from_ac import (  # noqa: E402
     _build_agents_map,
     _build_ticket_body,
     _parse_test_constraints,
     _infer_complexity,
     _complexity_to_model_tier,
     _should_escalate_to_opus,
+    main as _generator_main,
 )
 
 # ---------------------------------------------------------------------------
@@ -158,11 +156,16 @@ class TestCanonicalOrdering:
         documentation-expert → pr-reviewer → commit → pull-request.
         Agents not present in the map may be absent; present agents must not violate
         the canonical sequence (no agent appears before an agent that should precede it).
+
+        Uses code/internal, which is NOT a flow-change pair, so _CANONICAL_PHASE_ORDER
+        applies (documentation-expert after python-coder). Using code/production would
+        trigger the flow-change gate and _FLOW_CHANGE_PHASE_ORDER, which intentionally
+        places documentation-expert BEFORE python-coder — a different, valid ordering.
         """
         result = _build_agents_map(
             "python-coder",
             change_targets=["code"],
-            risk_surface="production",
+            risk_surface="internal",
             guardrail_config_path=_GUARDRAIL_CONFIG,
         )
 
@@ -618,3 +621,408 @@ class TestChallengeGateFlow:
             "Expected 'complexity:' key in generated ticket body when AC has "
             f"estimated_complexity='M', but it was not found.\n\nActual body:\n{body}"
         )
+
+
+# ---------------------------------------------------------------------------
+# TestEndToEndGeneratorComputedMap
+# AC-1 / AC-6 — CRITICAL: end-to-end test driving the real generator
+# ---------------------------------------------------------------------------
+
+
+import tempfile
+import yaml as _yaml_mod
+
+
+class TestEndToEndGeneratorComputedMap:
+    """AC-1 / AC-6: Driving the real generator with a code/production AC must
+    produce a ticket whose agents: frontmatter contains architect-review.
+
+    This test is RED before the ticket-07 fix because _build_ticket_body and
+    main() call _build_agents_map(assigned_agent) with no change_targets/risk_surface,
+    so the legacy path is always used and architect-review is never included.
+    """
+
+    def test_ac1_ac6_generated_ticket_has_architect_review_for_code_production(self) -> None:
+        # covers: AC-1
+        # covers: AC-6
+        """AC-1 / AC-6: A ticket generated from a code/production AC must have
+        architect-review in its agents: frontmatter block.
+
+        This test exercises the REAL generator path end-to-end (not just the
+        isolated _build_agents_map function), so it catches the phantom-done hole
+        where _build_agents_map is implemented but never wired in.
+
+        The test is RED before the fix because _build_ticket_body() at line ~537
+        calls _build_agents_map(assigned_agent) with NO change_targets/risk_surface,
+        which activates the legacy path. The legacy path does not add architect-review
+        for python-coder.
+        """
+        # Build a synthetic AC record with change_target=code, risk_surface=production
+        ac_record: dict = {
+            "id": "BO-E2E-001",
+            "title": "End-to-end generated ticket must include architect-review",
+            "component": "infrastructure",
+            "assigned_agent": "python-coder",
+            "change_target": "code",
+            "risk_surface": "production",
+            "estimated_complexity": "M",
+            "criteria": (
+                "Given an AC with change_target=code and risk_surface=production\n"
+                "When the ticket generator runs\n"
+                "Then the generated ticket's agents: frontmatter contains architect-review"
+            ),
+            "doc_links": [],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Write the synthetic AC to a temp directory
+            ac_root = Path(tmpdir) / "docs" / "acceptance-criteria" / "infrastructure"
+            ac_root.mkdir(parents=True)
+            ac_file = ac_root / "BO-E2E-001.yaml"
+            with open(ac_file, "w", encoding="utf-8") as fh:
+                _yaml_mod.dump(ac_record, fh, allow_unicode=True)
+
+            tickets_root = Path(tmpdir) / "tickets" / "00_inbox"
+            tickets_root.mkdir(parents=True)
+
+            # Run the real generator
+            exit_code = _generator_main([
+                "--ac", "BO-E2E-001",
+                "--ac-root", str(ac_root.parent.parent),
+                "--tickets-root", str(tickets_root),
+            ])
+
+            assert exit_code == 0, (
+                f"Generator exited with {exit_code} — expected 0. "
+                f"Check that the AC record is valid and the temp directories exist."
+            )
+
+            # Find the generated ticket file (inside tmpdir, still alive)
+            generated_tickets = list(tickets_root.rglob("*.md"))
+            assert len(generated_tickets) == 1, (
+                f"Expected exactly one generated ticket file; found {len(generated_tickets)}: "
+                f"{[str(p) for p in generated_tickets]}"
+            )
+
+            ticket_text = generated_tickets[0].read_text(encoding="utf-8")
+
+            # Parse the frontmatter
+            assert ticket_text.startswith("---"), (
+                "Generated ticket must start with YAML frontmatter (---)"
+            )
+            parts = ticket_text.split("---", 2)
+            assert len(parts) >= 3, (
+                "Generated ticket must have opening and closing --- delimiters"
+            )
+            fm = _yaml_mod.safe_load(parts[1])
+            agents_fm = fm.get("agents", {})
+
+            assert "architect-review" in agents_fm, (
+                f"Expected 'architect-review' in agents: frontmatter for a code/production AC, "
+                f"but it was not found.\n\n"
+                f"Agents map: {agents_fm}\n\n"
+                f"This is the phantom-done hole: _build_agents_map() is never called with "
+                f"change_target/risk_surface in the real generation path. The fix must thread "
+                f"ac['change_target'] and ac['risk_surface'] through to _build_agents_map() "
+                f"at all real call sites (main(), _build_ticket_body())."
+            )
+
+            assert agents_fm.get("architect-review") == "needed", (
+                f"architect-review must be 'needed' (not '{agents_fm.get('architect-review')}') "
+                f"for a code/production AC."
+            )
+
+
+# ---------------------------------------------------------------------------
+# TestComputedMapTestRequirementsGating
+# AC-3: ## Test Requirements emitted based on computed map, not assigned agent
+# ---------------------------------------------------------------------------
+
+
+class TestComputedMapTestRequirementsGating:
+    """AC-3: ## Test Requirements block is emitted when the COMPUTED map contains
+    a production_code producer, even if the assigned agent is a non-coder.
+
+    This test is RED before the ticket-07 fix because _build_ticket_body() gates
+    the ## Test Requirements block on _agent_produces_production_code(assigned_agent),
+    not on whether the computed map contains any production_code producer.
+    """
+
+    def test_ac3_test_requirements_emitted_when_computed_map_has_coder(self) -> None:
+        # covers: AC-3
+        """AC-3: When the computed agent map for a (change_target, risk_surface) pair
+        includes a production_code producer (e.g. python-coder via guardrails), the
+        ## Test Requirements block must be emitted in the ticket body even if the
+        assigned agent is a non-coder (e.g. documentation-expert).
+
+        This test is RED before the fix because _build_ticket_body() at line ~539 checks:
+            is_code_producer = _agent_produces_production_code(assigned_agent)
+        which is False for 'documentation-expert', so the block is suppressed.
+        The fix must change the gate to check whether any agent in the *computed* map
+        is a production_code producer.
+        """
+        # Use code/production change classification — guardrail config mandates
+        # python-coder-adjacent agents (test-writer, test-runner, architect-review, pr-reviewer)
+        # for code/production. We create a scenario where the assigned agent is
+        # 'documentation-expert' (non-coder) but the computed map pulls in a coder via
+        # the guardrail union.
+        #
+        # For this test we explicitly construct the computed map to include 'python-coder'
+        # as a guardrail-injected agent, then call _build_ticket_body with an AC that has
+        # assigned_agent='documentation-expert'. The test asserts the block is present.
+        #
+        # If _build_ticket_body doesn't accept change_target/risk_surface, the block will
+        # be absent because documentation-expert is not a production_code producer.
+        ac_record_noncoder: dict = {
+            "id": "BO-AC3-001",
+            "title": "Non-coder AC that pulls in a coder via computed guardrails",
+            "component": "infrastructure",
+            "assigned_agent": "documentation-expert",
+            "change_target": "code",
+            "risk_surface": "production",
+            "estimated_complexity": "S",
+            "criteria": (
+                "Given a non-coder assigned agent\n"
+                "And the computed map includes a coder via guardrail union\n"
+                "When a ticket is generated\n"
+                "Then the test-requirements section is present in the output"
+            ),
+            "doc_links": [],
+        }
+
+        body = _build_ticket_body(ac_record_noncoder, "BO-AC3-001")
+
+        # Use a line-anchored search: the section heading must appear at the start of a
+        # line (not embedded in gherkin criteria text). Check for the heading followed by
+        # a newline or end-of-string to distinguish it from substring matches inside criteria.
+        import re as _re
+        has_test_requirements_section = bool(
+            _re.search(r"^## Test Requirements\s*$", body, _re.MULTILINE)
+        )
+
+        assert has_test_requirements_section, (
+            "Expected a '## Test Requirements' section heading (on its own line) in the "
+            "ticket body because the computed agent map for code/production includes "
+            "production_code producers via guardrail union. The assigned agent is "
+            "'documentation-expert' (non-coder), but the computed guardrails should force "
+            "the block.\n\n"
+            "This test is RED before the fix: the current code checks "
+            "_agent_produces_production_code(assigned_agent) and skips the block because "
+            "documentation-expert is not a coder. The fix must change the gate to check "
+            "whether any agent in the *computed* map is a production_code producer.\n\n"
+            f"Actual ticket body:\n{body}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestFlowChangeSequencing
+# AC-4: flow_change_gates consumed — architect-review + documentation-expert
+# appear BEFORE any coder for flow-change pairs
+# ---------------------------------------------------------------------------
+
+
+class TestFlowChangeSequencing:
+    """AC-4: For flow-change (target, surface) pairs, architect-review and
+    documentation-expert must appear BEFORE any coder in the computed map.
+
+    This test is RED before the ticket-07 fix because _build_agents_map never
+    reads the flow_change_gates section of guardrail_gates.yaml, so
+    documentation-expert is never added for code/production.
+    """
+
+    def test_ac4_flow_change_code_production_includes_documentation_expert(self) -> None:
+        # covers: AC-4
+        """AC-4: For the code/production flow-change pair, documentation-expert must
+        appear in the computed map with status 'needed'.
+
+        The guardrail_gates.yaml flow_change_gates section declares code/production
+        as a flow-change pair with mandatory_agents: [architect-review, documentation-expert].
+        _build_agents_map must read this section and include documentation-expert.
+
+        This test is RED before the fix because _build_agents_map only reads the
+        per-surface gate table (code → production → [...]) and never reads flow_change_gates.
+        documentation-expert is not in the code/production gate list, so it is absent.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="production",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+        )
+
+        assert "documentation-expert" in result, (
+            f"Expected 'documentation-expert' in the computed map for code/production "
+            f"(a flow-change pair per guardrail_gates.yaml flow_change_gates), "
+            f"but it was absent.\n\n"
+            f"Computed map: {result}\n\n"
+            f"The fix must read flow_change_gates from the YAML and union mandatory_agents "
+            f"into the computed map for matching (change_target, risk_surface) pairs."
+        )
+
+        assert result.get("documentation-expert") == "needed", (
+            f"documentation-expert must be 'needed'; got {result.get('documentation-expert')!r}"
+        )
+
+    def test_ac4_documentation_expert_before_coder_for_flow_change_pair(self) -> None:
+        # covers: AC-4
+        """AC-4: documentation-expert must appear BEFORE python-coder in the computed
+        map key order for the code/production flow-change pair.
+
+        This verifies that the canonical ordering (architect-review priority 4,
+        documentation-expert priority 10 per SKILL.md) places both agents before
+        any coder (python-coder priority 6, sql-coder priority 7).
+
+        Note: The _CANONICAL_PHASE_ORDER list places documentation-expert AFTER
+        python-coder, so the fix must either use a modified ordering or ensure
+        that for flow-change pairs, documentation-expert is treated as a pre-coder
+        agent. The test specifically requires documentation-expert before python-coder.
+
+        This test is RED before the fix because documentation-expert is absent
+        from the computed map entirely (flow_change_gates not consumed).
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="production",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+        )
+
+        keys = list(result.keys())
+        assert "documentation-expert" in keys, (
+            "documentation-expert must be present in the computed map for code/production "
+            "(flow-change pair). It is currently absent because flow_change_gates is not consumed."
+        )
+        assert "python-coder" in keys, (
+            "python-coder must be present in the computed map."
+        )
+
+        de_idx = keys.index("documentation-expert")
+        pc_idx = keys.index("python-coder")
+
+        assert de_idx < pc_idx, (
+            f"documentation-expert (index {de_idx}) must appear BEFORE python-coder "
+            f"(index {pc_idx}) in the computed map for a flow-change pair.\n"
+            f"Full map keys: {keys}\n\n"
+            f"The fix must ensure flow-change pairs place documentation-expert before "
+            f"any coder in the agent ordering."
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestDeterministicOrdering
+# AC-5: Agents outside _CANONICAL_PHASE_ORDER placed at stable phase, not
+# after commit/pull-request
+# ---------------------------------------------------------------------------
+
+
+class TestDeterministicOrdering:
+    """AC-5: Non-canonical agents must be placed at a stable sorted position,
+    never after commit/pull-request.
+
+    This test is RED before the ticket-07 fix because the current code appends
+    non-canonical agents via set-iteration order (nondeterministic) at the end,
+    AFTER commit/pull-request.
+    """
+
+    def test_ac5_non_canonical_agent_not_after_commit_pull_request(self, tmp_path: Path) -> None:
+        # covers: AC-5
+        """AC-5: An agent that is NOT in _CANONICAL_PHASE_ORDER (e.g. 'status-checker')
+        must appear BEFORE commit and pull-request in the output map.
+
+        Uses an injected fixture guardrail config (written to tmp_path) that explicitly
+        maps config/contract_boundary to include 'status-checker' (a non-canonical agent).
+        The test is fully deterministic: it never depends on the production
+        config/guardrail_gates.yaml, so it cannot be silently skipped by a YAML rebuild.
+
+        status-checker is NOT in _CANONICAL_PHASE_ORDER, so it is a non-canonical agent.
+        The production code's non-canonical insertion logic must place it at a stable
+        sorted position BEFORE commit and pull-request.  The test FAILS if a non-canonical
+        agent is appended after those terminal-phase agents.
+        """
+        # Build a minimal fixture guardrail YAML that mandates status-checker.
+        # Using config/contract_boundary so the pair always mandates status-checker
+        # regardless of what the production guardrail_gates.yaml contains.
+        fixture_gates = {
+            "config": {
+                "contract_boundary": ["status-checker", "pr-reviewer"],
+                "internal": [],
+            },
+            "flow_change_gates": [],
+        }
+        fixture_path = tmp_path / "fixture_guardrail_gates.yaml"
+        fixture_path.write_text(
+            _yaml_mod.dump(fixture_gates, default_flow_style=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["config"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=fixture_path,
+        )
+
+        keys = list(result.keys())
+
+        # status-checker is mandated by the fixture YAML and is NOT in _CANONICAL_PHASE_ORDER
+        assert "status-checker" in keys, (
+            f"Expected 'status-checker' (a non-canonical guardrail agent) to be "
+            f"present in the computed map for config/contract_boundary; got keys: {keys}"
+        )
+
+        commit_idx = keys.index("commit") if "commit" in keys else len(keys)
+        pull_request_idx = keys.index("pull-request") if "pull-request" in keys else len(keys)
+        non_canonical_idx = keys.index("status-checker")
+
+        assert non_canonical_idx < commit_idx, (
+            f"'status-checker' (index {non_canonical_idx}) must appear BEFORE "
+            f"'commit' (index {commit_idx}) in the computed map.\n"
+            f"Full map keys: {keys}\n\n"
+            f"The fix must place non-canonical agents at a stable sorted phase position, "
+            f"not at the end after commit/pull-request."
+        )
+
+        assert non_canonical_idx < pull_request_idx, (
+            f"'status-checker' (index {non_canonical_idx}) must appear BEFORE "
+            f"'pull-request' (index {pull_request_idx}) in the computed map.\n"
+            f"Full map keys: {keys}"
+        )
+
+    def test_ac5_deterministic_ordering_multiple_calls(self) -> None:
+        # covers: AC-5
+        """AC-5: Calling _build_agents_map multiple times with the same args must
+        produce identical key ordering (no set-iteration nondeterminism).
+
+        This test runs the function 20 times and asserts all outputs have the same
+        key order. In CPython 3.7+ dict insertion order is deterministic, but the
+        intermediate 'all_needed' set is still a Python set (hash-order nondeterministic
+        across interpreter runs). The sort/canonicalization must be stable.
+
+        Note: This test may be green in a single interpreter session due to CPython's
+        fixed-seed hash for small sets in a single run. The ac5_non_canonical_agent
+        placement test above is the primary red indicator; this test is an additional
+        assertion for determinism.
+        """
+        baseline = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="production",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+        )
+        baseline_keys = list(baseline.keys())
+
+        for i in range(19):
+            repeated = _build_agents_map(
+                "python-coder",
+                change_targets=["code"],
+                risk_surface="production",
+                guardrail_config_path=_GUARDRAIL_CONFIG,
+            )
+            repeated_keys = list(repeated.keys())
+            assert repeated_keys == baseline_keys, (
+                f"Call {i+2} produced different key order than call 1.\n"
+                f"  Call 1 keys:   {baseline_keys}\n"
+                f"  Call {i+2} keys: {repeated_keys}\n\n"
+                f"The ordering is nondeterministic. The fix must sort or canonicalize "
+                f"non-canonical agents so the output is stable across calls."
+            )

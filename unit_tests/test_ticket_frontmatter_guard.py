@@ -377,5 +377,104 @@ class TestRiskSurfaceValidation(unittest.TestCase):
         )
 
 
+# ===========================================================================
+# AC-2: Guard enum ↔ guardrail_gates.yaml vocabulary contract
+# The YAML's top-level keys must equal ALLOWED_CHANGE_TARGETS and each
+# target's sub-keys must equal ALLOWED_RISK_SURFACES.
+# This test is intentionally RED before ticket-07 fix (vocabulary is disjoint).
+# ===========================================================================
+
+import os as _os
+
+_REPO_ROOT_FOR_YAML = _os.path.join(_os.path.dirname(__file__), "..")
+_GUARDRAIL_YAML_PATH = _os.path.join(
+    _REPO_ROOT_FOR_YAML, "config", "guardrail_gates.yaml"
+)
+
+
+class TestGuardrailYamlVocabularyContract(unittest.TestCase):
+    """AC-2: guardrail_gates.yaml vocabulary must match the ADR-017 guard enums.
+
+    These tests are RED before the ticket-07 fix and GREEN after the YAML is
+    rebuilt to the canonical vocabulary.
+    """
+
+    def _load_yaml(self):
+        import yaml as _yaml
+        with open(_GUARDRAIL_YAML_PATH, encoding="utf-8") as fh:
+            return _yaml.safe_load(fh)
+
+    def test_ac2_yaml_top_level_keys_equal_allowed_change_targets(self):
+        # covers: AC-2
+        """AC-2: The top-level keys of guardrail_gates.yaml (excluding the
+        flow_change_gates sentinel key) must be identical to the set defined by
+        ALLOWED_CHANGE_TARGETS in ticket_frontmatter_guard.py (10 ADR-017 values:
+        code, schema, ui, infrastructure, pipeline, prompt, model, config, docs,
+        dependency).
+
+        This test FAILS before the fix because the YAML currently uses a different
+        vocabulary ({documentation, test, hook, skill, template, data, ...}) that
+        is disjoint from the guard enum.
+        """
+        data = self._load_yaml()
+        yaml_change_targets = {
+            k for k in data.keys() if k != "flow_change_gates"
+        }
+        guard_set = set(ALLOWED_CHANGE_TARGETS)
+
+        self.assertEqual(
+            yaml_change_targets,
+            guard_set,
+            msg=(
+                "guardrail_gates.yaml top-level keys do not match ALLOWED_CHANGE_TARGETS.\n"
+                f"  YAML keys:  {sorted(yaml_change_targets)}\n"
+                f"  Guard enum: {sorted(guard_set)}\n"
+                f"  Extra in YAML (must be removed):   {sorted(yaml_change_targets - guard_set)}\n"
+                f"  Missing from YAML (must be added): {sorted(guard_set - yaml_change_targets)}\n"
+                "Rebuild guardrail_gates.yaml to use the 10 ADR-017 change_target values."
+            ),
+        )
+
+    def test_ac2_yaml_risk_surface_subkeys_equal_allowed_risk_surfaces(self):
+        # covers: AC-2
+        """AC-2: For every change_target section in guardrail_gates.yaml, the set of
+        sub-keys must be identical to ALLOWED_RISK_SURFACES (6 ADR-017 values:
+        internal, contract_boundary, auth, privacy, safety, cost).
+
+        This test FAILS before the fix because the YAML currently uses a different
+        sub-key vocabulary ({production, staging, integration, unit, none, all}) that
+        is disjoint from the guard enum.
+        """
+        data = self._load_yaml()
+        guard_risk_surfaces = set(ALLOWED_RISK_SURFACES)
+        failures: list[str] = []
+
+        for change_target, surface_map in data.items():
+            if change_target == "flow_change_gates":
+                continue
+            if not isinstance(surface_map, dict):
+                continue
+            yaml_surfaces = set(surface_map.keys())
+            if yaml_surfaces != guard_risk_surfaces:
+                failures.append(
+                    f"  change_target='{change_target}':\n"
+                    f"    YAML sub-keys: {sorted(yaml_surfaces)}\n"
+                    f"    Guard enum:    {sorted(guard_risk_surfaces)}\n"
+                    f"    Extra in YAML: {sorted(yaml_surfaces - guard_risk_surfaces)}\n"
+                    f"    Missing:       {sorted(guard_risk_surfaces - yaml_surfaces)}"
+                )
+
+        self.assertEqual(
+            failures,
+            [],
+            msg=(
+                "guardrail_gates.yaml risk_surface sub-keys do not match "
+                "ALLOWED_RISK_SURFACES for the following change_target(s):\n"
+                + "\n".join(failures)
+                + "\nRebuild each section to use the 6 ADR-017 risk_surface values."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -37,3 +37,4 @@ Make quality gates (TDD, reviewers, docs) a COMPUTED system invariant. The ticke
 | 04 | [04_compute_agents_map.md](./04_compute_agents_map.md) | Compute + materialize agents map in Python; fix TDD bug (emit ## Test Requirements) | `[ ]` |
 | 05 | [05_flow_change_gates.md](./05_flow_change_gates.md) | Flow-change gates: architect + docs before coder | `[ ]` |
 | 06 | [06_test_constraints_and_complexity.md](./06_test_constraints_and_complexity.md) | Test constraints + complexity-driven model tier selection | `[ ]` |
+| 07 | [07_wire_computed_agents_map.md](./07_wire_computed_agents_map.md) | Wire computed agents-map into the real generator; reconcile guard↔YAML vocabulary; consume flow_change_gates; deterministic ordering; end-to-end test (fixes phantom-done from post-drive review) | `[ ]` |

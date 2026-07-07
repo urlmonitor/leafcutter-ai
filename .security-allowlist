@@ -33,3 +33,13 @@ ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:233
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:240
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:269
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:276
+# False positives: ticket-07 new tests — guardrail config path constant passed as kwarg (not a secret)
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:124
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:169
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:206
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:243
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:279
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:850
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:887
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:1010
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:1019
