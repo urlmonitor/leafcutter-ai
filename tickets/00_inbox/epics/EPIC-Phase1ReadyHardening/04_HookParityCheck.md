@@ -1,6 +1,6 @@
 ---
 title: "check_hook_parity.py — enforce commit-guardian hook parity across all template directories"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-07
