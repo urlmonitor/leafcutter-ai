@@ -906,6 +906,100 @@ def run_status_probe(repo_path: Path) -> str | None:
     )
 
 
+def detect_shallow_or_bare_repo(repo_path: Path) -> tuple:
+    """Detect whether the repository is a shallow or bare clone.
+
+    Shallow detection is performed in the following order:
+
+    1. Check whether ``.git/shallow`` exists in *repo_path*. Its mere presence
+       indicates a shallow clone (no ``try/except`` — pure filesystem probe,
+       per Rule 4).
+    2. Run ``git -C <repo> rev-parse --is-shallow-repository``; if it outputs
+       ``"true"``, the repository is shallow.
+
+    Bare detection:
+    - Run ``git -C <repo> rev-parse --is-bare-repository``; if it outputs
+      ``"true"``, the repository is a bare clone (no working tree).
+
+    Subprocess failures (command not found, not a git repo) are logged at
+    WARNING level and treated as "not shallow / not bare" so the main flow
+    continues and surfaces a clearer diagnostic on the next operation.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root (or the bare repository
+        directory itself).
+
+    Returns
+    -------
+    tuple[bool, str]
+        ``(True, reason)`` when the repository is shallow or bare, where
+        *reason* is a human-readable explanation of why recovery is refused.
+        ``(False, "")`` when neither condition is detected.
+    """
+    # Rule 4: pure filesystem existence probe — no try/except.
+    shallow_file = repo_path / ".git" / "shallow"
+    if shallow_file.exists():
+        return (
+            True,
+            f"Repository at {repo_path} is a shallow clone (.git/shallow marker is present).",
+        )
+
+    # Shallow probe via git command — Rule 1/2/3: wrap subprocess in specific try/except.
+    try:
+        shallow_result = subprocess.run(
+            ["git", "-C", str(repo_path), "rev-parse", "--is-shallow-repository"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if shallow_result.stdout.strip() == "true":
+            return (
+                True,
+                (
+                    f"Repository at {repo_path} is a shallow clone "
+                    "(git rev-parse --is-shallow-repository reports true)."
+                ),
+            )
+    except subprocess.CalledProcessError as exc:
+        logger.warning(
+            "git rev-parse --is-shallow-repository failed for %s: %s", repo_path, exc
+        )
+    except OSError as exc:
+        logger.warning(
+            "OS error running git rev-parse --is-shallow-repository for %s: %s",
+            repo_path,
+            exc,
+        )
+
+    # Bare-repository probe — Rule 1/2/3: wrap subprocess in specific try/except.
+    try:
+        bare_result = subprocess.run(
+            ["git", "-C", str(repo_path), "rev-parse", "--is-bare-repository"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if bare_result.stdout.strip() == "true":
+            return (
+                True,
+                f"Repository at {repo_path} is a bare clone (no working tree).",
+            )
+    except subprocess.CalledProcessError as exc:
+        logger.warning(
+            "git rev-parse --is-bare-repository failed for %s: %s", repo_path, exc
+        )
+    except OSError as exc:
+        logger.warning(
+            "OS error running git rev-parse --is-bare-repository for %s: %s",
+            repo_path,
+            exc,
+        )
+
+    return (False, "")
+
+
 def _report_unrecoverable(result: dict) -> None:
     """Print a structured unrecoverable-origin report to stdout.
 
@@ -970,6 +1064,15 @@ def main(args=None) -> None:
             "Run this script in an interactive terminal."
         )
         sys.exit(0)
+
+    # Shallow/bare clone guard — pre-plan check, fires before any repair action
+    # (AC BO-1600d-3-iii).  No object removal, no ref reset, no index rebuild
+    # may occur before this guard returns clean.
+    is_unsupported, unsupported_reason = detect_shallow_or_bare_repo(repo_path)
+    if is_unsupported:
+        print(f"Recovery refused: {unsupported_reason}")
+        print("This recovery does not support shallow or bare clones.")
+        return
 
     # Read-only probe — no git writes at this stage.
     probe_summary = run_status_probe(repo_path)

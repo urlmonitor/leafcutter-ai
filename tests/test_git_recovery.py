@@ -51,6 +51,10 @@ RecoveryAction = _mod.RecoveryAction
 # break all 18 existing tests.
 detect_zero_byte_objects = _mod.detect_zero_byte_objects
 
+# detect_shallow_or_bare_repo — use getattr so the test module still imports
+# cleanly even if the function has not yet been added to the implementation.
+detect_shallow_or_bare_repo = getattr(_mod, "detect_shallow_or_bare_repo", None)
+
 
 # ---------------------------------------------------------------------------
 # Test-only exception — used by test_ac4_failed_step_halts_plan_execution
@@ -1564,6 +1568,262 @@ class TestUnrecoverableOriginDetection(unittest.TestCase):
             missing_sha,
             exc.result.get("missing_objects", []),
             "The missing SHA must be in UnrecoverableOriginError.result['missing_objects']",
+        )
+
+
+# ===========================================================================
+# NEW TEST GROUP — BO-1600d-3-iii (shallow/bare clone pre-plan guard)
+# Covers: detect_shallow_or_bare_repo, and the main() guard that fires
+# before any repair action when the repo is shallow or bare.
+# ===========================================================================
+
+
+class TestShallowOrBareClonesRefused(unittest.TestCase):
+    """Tests for AC BO-1600d-3-iii: Recovery refuses to run on shallow or bare clones.
+
+    Verifies that:
+    - detect_shallow_or_bare_repo is defined and detects .git/shallow presence.
+    - detect_shallow_or_bare_repo detects bare repos via git command.
+    - detect_shallow_or_bare_repo returns (False, "") for normal repos.
+    - main() returns without calling run_status_probe or plan_recovery_actions
+      when detect_shallow_or_bare_repo returns (True, ...).
+    - No object removal, ref reset, or index rebuild subprocess calls are made
+      on the shallow/bare path.
+    - A human-readable refusal message mentioning "shallow" or "bare" is printed.
+    """
+
+    def _get_detect_fn(self):
+        """Return detect_shallow_or_bare_repo or skip if not implemented."""
+        fn = getattr(_mod, "detect_shallow_or_bare_repo", None)
+        if fn is None:
+            self.skipTest("detect_shallow_or_bare_repo not yet implemented")
+        return fn
+
+    # ------------------------------------------------------------------
+    # 1. Existence check
+    # ------------------------------------------------------------------
+
+    def test_detect_shallow_or_bare_exists(self):
+        # covers: BO-1600d-3-iii
+        """detect_shallow_or_bare_repo must be defined in the module."""
+        fn = getattr(_mod, "detect_shallow_or_bare_repo", None)
+        self.assertIsNotNone(
+            fn,
+            "detect_shallow_or_bare_repo must be defined in git_recovery.py but was not found",
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Shallow detection via .git/shallow file presence
+    # ------------------------------------------------------------------
+
+    def test_shallow_clone_detected_via_shallow_file(self):
+        # covers: BO-1600d-3-iii
+        """When .git/shallow exists, detect_shallow_or_bare_repo returns (True, <non-empty reason>)."""
+        fn = self._get_detect_fn()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            git_dir = repo / ".git"
+            git_dir.mkdir(parents=True)
+            shallow_marker = git_dir / "shallow"
+            shallow_marker.write_bytes(b"")  # presence alone signals shallow
+
+            result = fn(repo)
+
+        self.assertIsInstance(result, tuple, "Return value must be a 2-tuple")
+        self.assertEqual(len(result), 2, "Return value must be a 2-tuple")
+        is_unsupported, reason = result
+        self.assertTrue(is_unsupported, "Must return True when .git/shallow exists")
+        self.assertIsInstance(reason, str, "Reason must be a string")
+        self.assertTrue(reason, "Reason string must be non-empty when shallow detected")
+
+    # ------------------------------------------------------------------
+    # 3. Bare clone detection via git command
+    # ------------------------------------------------------------------
+
+    def test_bare_clone_detected_via_git_command(self):
+        # covers: BO-1600d-3-iii
+        """When git rev-parse --is-bare-repository returns 'true', function returns (True, <reason>)."""
+        fn = self._get_detect_fn()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            # No .git/shallow — detection via git command only.
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.returncode = 0
+                if "--is-bare-repository" in cmd:
+                    mock.stdout = "true\n"
+                elif "--is-shallow-repository" in cmd:
+                    mock.stdout = "false\n"
+                else:
+                    mock.stdout = ""
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                result = fn(repo)
+
+        self.assertIsInstance(result, tuple, "Return value must be a 2-tuple")
+        is_unsupported, reason = result
+        self.assertTrue(
+            is_unsupported,
+            "Must return True when git reports bare repository",
+        )
+        self.assertTrue(reason, "Reason string must be non-empty when bare detected")
+
+    # ------------------------------------------------------------------
+    # 4. Normal repo returns (False, "")
+    # ------------------------------------------------------------------
+
+    def test_non_shallow_non_bare_returns_false(self):
+        # covers: BO-1600d-3-iii
+        """When no .git/shallow and git returns 'false' for both checks, returns (False, '')."""
+        fn = self._get_detect_fn()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.returncode = 0
+                mock.stdout = "false\n"
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                result = fn(repo)
+
+        self.assertIsInstance(result, tuple, "Return value must be a 2-tuple")
+        is_unsupported, reason = result
+        self.assertFalse(
+            is_unsupported,
+            "Must return False when repo is neither shallow nor bare",
+        )
+        self.assertEqual(reason, "", "Reason must be empty string for a normal repo")
+
+    # ------------------------------------------------------------------
+    # 5. main() refuses on shallow clone — no run_status_probe or plan call
+    # ------------------------------------------------------------------
+
+    def test_main_refuses_on_shallow_clone(self):
+        # covers: BO-1600d-3-iii
+        """When detect_shallow_or_bare_repo returns (True, ...), main() must not call
+        run_status_probe or plan_recovery_actions."""
+        with patch.object(_mod, "detect_shallow_or_bare_repo", return_value=(True, "shallow clone detected")):
+            with patch.object(_mod, "run_status_probe") as mock_probe:
+                with patch.object(_mod, "plan_recovery_actions") as mock_plan:
+                    with patch("sys.stdin") as mock_stdin:
+                        mock_stdin.isatty.return_value = True
+                        result = main(["--repo", "/tmp"])
+
+        mock_probe.assert_not_called()
+        mock_plan.assert_not_called()
+        self.assertIsNone(result, "main() must return None (not sys.exit) on shallow refusal")
+
+    # ------------------------------------------------------------------
+    # 6. main() refuses on bare clone — no run_status_probe or plan call
+    # ------------------------------------------------------------------
+
+    def test_main_refuses_on_bare_clone(self):
+        # covers: BO-1600d-3-iii
+        """When detect_shallow_or_bare_repo returns (True, 'bare clone detected'), main()
+        must not call run_status_probe or plan_recovery_actions."""
+        with patch.object(_mod, "detect_shallow_or_bare_repo", return_value=(True, "bare clone detected")):
+            with patch.object(_mod, "run_status_probe") as mock_probe:
+                with patch.object(_mod, "plan_recovery_actions") as mock_plan:
+                    with patch("sys.stdin") as mock_stdin:
+                        mock_stdin.isatty.return_value = True
+                        result = main(["--repo", "/tmp"])
+
+        mock_probe.assert_not_called()
+        mock_plan.assert_not_called()
+        self.assertIsNone(result, "main() must return None (not sys.exit) on bare refusal")
+
+    # ------------------------------------------------------------------
+    # 7. No object removal when shallow
+    # ------------------------------------------------------------------
+
+    def test_no_object_removal_when_shallow(self):
+        # covers: BO-1600d-3-iii
+        """When detect_shallow_or_bare_repo returns (True, ...), no subprocess write command
+        or Path.unlink is called."""
+        with patch.object(_mod, "detect_shallow_or_bare_repo", return_value=(True, "shallow clone")):
+            with patch("subprocess.run") as mock_run:
+                with patch.object(Path, "unlink") as mock_unlink:
+                    with patch("sys.stdin") as mock_stdin:
+                        mock_stdin.isatty.return_value = True
+                        main(["--repo", "/tmp"])
+
+        write_cmds = {"fetch", "update-ref", "read-tree"}
+        for call in mock_run.call_args_list:
+            cmd = call[0][0] if call[0] else []
+            self.assertFalse(
+                any(w in cmd for w in write_cmds),
+                f"No write command must run when shallow guard fires; got: {cmd}",
+            )
+        mock_unlink.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # 8. No ref reset when bare
+    # ------------------------------------------------------------------
+
+    def test_no_ref_reset_when_bare(self):
+        # covers: BO-1600d-3-iii
+        """When detect_shallow_or_bare_repo returns (True, ...), no git update-ref call happens."""
+        with patch.object(_mod, "detect_shallow_or_bare_repo", return_value=(True, "bare clone detected")):
+            with patch("subprocess.run") as mock_run:
+                with patch("sys.stdin") as mock_stdin:
+                    mock_stdin.isatty.return_value = True
+                    main(["--repo", "/tmp"])
+
+        update_ref_calls = [
+            c for c in mock_run.call_args_list if "update-ref" in str(c)
+        ]
+        self.assertEqual(
+            update_ref_calls,
+            [],
+            f"git update-ref must not be called when bare guard fires; got: {update_ref_calls}",
+        )
+
+    # ------------------------------------------------------------------
+    # 9. No index rebuild when shallow
+    # ------------------------------------------------------------------
+
+    def test_no_index_rebuild_when_shallow(self):
+        # covers: BO-1600d-3-iii
+        """When detect_shallow_or_bare_repo returns (True, ...), no git read-tree call happens."""
+        with patch.object(_mod, "detect_shallow_or_bare_repo", return_value=(True, "shallow clone")):
+            with patch("subprocess.run") as mock_run:
+                with patch("sys.stdin") as mock_stdin:
+                    mock_stdin.isatty.return_value = True
+                    main(["--repo", "/tmp"])
+
+        read_tree_calls = [
+            c for c in mock_run.call_args_list if "read-tree" in str(c)
+        ]
+        self.assertEqual(
+            read_tree_calls,
+            [],
+            f"git read-tree must not be called when shallow guard fires; got: {read_tree_calls}",
+        )
+
+    # ------------------------------------------------------------------
+    # 10. Refusal message printed mentioning "shallow" or "bare"
+    # ------------------------------------------------------------------
+
+    def test_refusal_message_printed(self):
+        # covers: BO-1600d-3-iii
+        """When the shallow/bare guard fires, main() prints a message containing 'shallow' or 'bare'."""
+        with patch.object(_mod, "detect_shallow_or_bare_repo", return_value=(True, "shallow clone")):
+            with patch("sys.stdin") as mock_stdin:
+                mock_stdin.isatty.return_value = True
+                with patch("builtins.print") as mock_print:
+                    main(["--repo", "/tmp"])
+
+        printed_output = " ".join(str(c) for c in mock_print.call_args_list).lower()
+        self.assertTrue(
+            "shallow" in printed_output or "bare" in printed_output,
+            f"Refusal message must mention 'shallow' or 'bare'; got: {printed_output!r}",
         )
 
 
