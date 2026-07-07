@@ -37,8 +37,10 @@ DECISION HISTORY:
     each previously-zero-byte object SHA via git cat-file -e. If origin cannot
     supply the needed objects, the function returns {"status": "unrecoverable",
     "missing_objects": [...], "message": str}; the plan action raises
-    UnrecoverableOriginError and execution halts immediately. No further deletions
-    are made on the unrecoverable path — the store is left in its pre-halt state.
+    UnrecoverableOriginError and execution halts immediately. The removed objects
+    are the empty (zero-byte) placeholders, which hold no recoverable data; no
+    content-bearing object is deleted, so the unrecoverable path never leaves the
+    store worse than the halt for any object that origin could have restored.
 
     BO-1600d-3-iv (2026-07-07): Hardened branch-ref reset to never use a hardcoded
     branch name. Added RecoveryError, _get_current_head_branch,
@@ -68,6 +70,32 @@ DECISION HISTORY:
     individually so the operator can confirm the removal set is the detected
     set before confirming. See TestLargeObjectStoreSelectiveRemoval in
     tests/test_git_recovery.py.
+
+    Review remediation (2026-07-07): a post-epic behavioral spot-check + code
+    review (against real corrupted repos, not mocks) found several execution-time
+    defects that mocked unit tests had masked. Fixes:
+      - Fresh-worktree fallback now runs `git worktree add --force`; without it
+        the command always exited 128 because the branch is still checked out in
+        the poisoned worktree we deliberately leave in place. The new-worktree
+        path is also uniquified so a re-run does not collide.
+      - get_reflog_tip() falls back to parsing the on-disk reflog file when
+        `git reflog show` fails — it dies with exit 128 on a corrupt tip, the
+        exact case the branch-ref reset must handle.
+      - The refetch step is planned only when there are removed objects to
+        restore AND an `origin` remote exists (_has_origin_remote); previously it
+        was appended unconditionally and crashed on any origin-less repo.
+      - main() no longer aborts when the read-only status probe fails; a failing
+        probe is itself a corruption signal, so planning continues.
+      - A TTY is now required even with --execute, so a destructive plan can
+        never run unattended from an automated context (AC BO-1600d-1).
+      - Every step failure (RecoveryError / CalledProcessError / ValueError /
+        RuntimeError) is reported via _execute_and_report/_report_step_failure as
+        an operator-facing stop-and-report instead of a raw traceback.
+      - The unrecoverable-origin message no longer claims the store is untouched;
+        it states that empty placeholders were removed and no content-bearing
+        object was deleted.
+    Covered by TestGitRecoveryRealRepoBehavioral in tests/test_git_recovery.py
+    (unmocked, real git repositories).
 """
 
 from __future__ import annotations
@@ -81,7 +109,6 @@ from pathlib import Path
 from typing import Callable
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 _GIT_REFETCH_MIN_VERSION: tuple = (2, 36, 0)
 
@@ -532,12 +559,61 @@ def detect_corrupt_branch_refs(repo_path: Path) -> list:
     return corrupt
 
 
+def _read_reflog_file_shas(repo_path: Path, branch_name: str) -> list:
+    """Return candidate commit SHAs from the on-disk reflog file, newest-first.
+
+    Reads ``.git/logs/refs/heads/<branch_name>`` directly.  Each reflog line has
+    the form ``<old_sha> <new_sha> <committer> <ts> <tz>\\t<message>``; the
+    ``<new_sha>`` (second whitespace-separated field) is the state the branch
+    pointed at after that reflog entry.  The file is oldest-first, so this
+    returns the new-SHAs reversed (most recent first).
+
+    This is the corruption-resilient fallback for :func:`get_reflog_tip`:
+    ``git reflog show`` resolves objects and fails with exit 128 precisely when
+    the branch tip is corrupt (the case recovery must handle), but the reflog
+    *file* is a plain text log that does not require the object store to read.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+    branch_name:
+        Local branch name (no ``refs/heads/`` prefix).
+
+    Returns
+    -------
+    list[str]
+        Candidate 40-char SHAs, most-recent first.  Empty when the reflog file
+        is absent or unreadable.
+    """
+    reflog_file = repo_path / ".git" / "logs" / "refs" / "heads" / branch_name
+    try:
+        raw = reflog_file.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        logger.warning("Cannot read reflog file %s: %s", reflog_file, exc)
+        return []
+
+    shas: list = []
+    for line in raw.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and len(parts[1]) == 40 and _is_hex(parts[1]):
+            shas.append(parts[1])
+    # File is oldest-first; return most-recent first.
+    shas.reverse()
+    return shas
+
+
 def get_reflog_tip(repo_path: Path, branch_name: str) -> str:
     """Return the first readable commit SHA from the branch's reflog.
 
     Iterates the branch reflog in order (most-recent first) and returns the
     first SHA that ``git cat-file -t`` can read.  Skips entries that are
     themselves corrupt.
+
+    When ``git reflog show`` fails (it resolves objects and therefore dies with
+    exit 128 when the branch tip is corrupt — the exact case recovery exists to
+    handle), this falls back to :func:`_read_reflog_file_shas`, which parses the
+    reflog log file directly without touching the object store.
 
     Parameters
     ----------
@@ -553,11 +629,11 @@ def get_reflog_tip(repo_path: Path, branch_name: str) -> str:
 
     Raises
     ------
-    subprocess.CalledProcessError
-        Re-raised if ``git reflog show`` itself fails.
     ValueError
-        Raised when no readable reflog entry exists for the branch.
+        Raised when no readable reflog entry exists for the branch (from either
+        ``git reflog show`` or the on-disk reflog file).
     """
+    candidate_shas: list = []
     try:
         result = subprocess.run(
             [
@@ -569,15 +645,26 @@ def get_reflog_tip(repo_path: Path, branch_name: str) -> str:
             check=True,
         )
     except subprocess.CalledProcessError as exc:
+        # git reflog show touches the object store and fails on a corrupt tip.
+        # Fall back to parsing the reflog file directly — it does not.
         logger.warning(
-            "git reflog failed for %s branch %s: %s", repo_path, branch_name, exc
+            "git reflog show failed for %s branch %s (%s); "
+            "falling back to on-disk reflog file",
+            repo_path,
+            branch_name,
+            exc,
         )
-        raise
+        candidate_shas = _read_reflog_file_shas(repo_path, branch_name)
+    else:
+        candidate_shas = [
+            sha.strip() for sha in result.stdout.strip().splitlines() if sha.strip()
+        ]
+        if not candidate_shas:
+            # git reflog show can succeed with empty output when the ref's own
+            # tip is unreadable; the file fallback still finds prior entries.
+            candidate_shas = _read_reflog_file_shas(repo_path, branch_name)
 
-    for sha in result.stdout.strip().splitlines():
-        sha = sha.strip()
-        if not sha:
-            continue
+    for sha in candidate_shas:
         try:
             subprocess.run(
                 ["git", "-C", str(repo_path), "cat-file", "-t", sha],
@@ -914,6 +1001,133 @@ def step_refetch_and_verify(repo_path: Path, required_sha_list: list) -> dict:
     return {"status": "ok"}
 
 
+def _make_fresh_worktree_fn(repo: Path, old_path: Path, branch: str):
+    """Return the execution callable for the fresh-worktree fallback step.
+
+    The returned callable creates a fresh git worktree at
+    ``<old_path>_recovered`` (uniquified if that path already exists) by running
+    ``git worktree add --force``, then verifies the new worktree with
+    ``git read-tree HEAD``.  The poisoned worktree at *old_path* is left in
+    place.
+
+    Module-level (not a closure) so it can be unit-tested directly against a
+    real linked worktree — the operation that silently failed with exit 128
+    before the ``--force`` fix was added.
+
+    Parameters
+    ----------
+    repo:
+        Absolute path to the main git repository root.
+    old_path:
+        Path to the poisoned linked worktree.
+    branch:
+        Branch name (or ``"HEAD"``) to pass to ``git worktree add``.
+    """
+    def _fresh_worktree_fn() -> None:
+        # Pick a path that does not already exist so a re-run does not
+        # collide with a worktree created by a previous recovery attempt.
+        base = Path(str(old_path) + "_recovered")
+        new_path = base
+        suffix = 2
+        while new_path.exists():
+            new_path = Path(f"{base}_{suffix}")
+            suffix += 1
+
+        # Step 1 — create the fresh worktree from the repaired object store.
+        # --force is REQUIRED: the poisoned worktree is deliberately left in
+        # place, so its branch is still checked out.  Without --force,
+        # `git worktree add <path> <branch>` refuses with
+        # "fatal: '<branch>' is already used by worktree at ...".
+        try:
+            subprocess.run(
+                [
+                    "git", "-C", str(repo), "worktree", "add", "--force",
+                    str(new_path), branch,
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.warning(
+                "git worktree add failed creating %s from branch %s: %s",
+                new_path,
+                branch,
+                exc,
+            )
+            raise
+        except OSError as exc:
+            logger.warning(
+                "OS error creating fresh worktree %s: %s", new_path, exc
+            )
+            raise
+
+        # Step 2 — verify the fresh worktree has a clean index.
+        try:
+            subprocess.run(
+                ["git", "-C", str(new_path), "read-tree", "HEAD"],
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.warning(
+                "Verification failed: git read-tree HEAD in fresh worktree %s: %s",
+                new_path,
+                exc,
+            )
+            print(
+                f"FAILURE: Fresh worktree at '{new_path}' still reports a "
+                "cache-tree error.  Manual intervention required."
+            )
+            raise
+        except OSError as exc:
+            logger.warning(
+                "OS error running git read-tree in fresh worktree %s: %s",
+                new_path,
+                exc,
+            )
+            raise
+
+        # Step 3 — success: tell the operator where to go.
+        print(
+            f"Fresh worktree created successfully at '{new_path}'. "
+            f"Switch to it: cd '{new_path}'"
+        )
+
+    return _fresh_worktree_fn
+
+
+def _has_origin_remote(repo_path: Path) -> bool:
+    """Return True if the repository has a remote named ``origin``.
+
+    Runs ``git remote`` and checks the output for an ``origin`` entry.  The
+    refetch step can only restore objects when an origin exists, so this gates
+    whether the refetch action is planned at all — a repo with no reachable
+    origin must not have the (guaranteed-to-fail) ``git fetch --refetch origin``
+    step appended.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+
+    Returns
+    -------
+    bool
+        ``True`` when ``origin`` is present in ``git remote`` output; ``False``
+        when it is absent or the command cannot be run.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "remote"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, OSError) as exc:
+        logger.warning("git remote failed for %s: %s", repo_path, exc)
+        return False
+
+    return "origin" in result.stdout.split()
+
+
 def plan_recovery_actions(repo_path: Path) -> list:
     """Compute the ordered recovery plan without executing any git writes.
 
@@ -943,19 +1157,26 @@ def plan_recovery_actions(repo_path: Path) -> list:
     try:
         detected_ver = _git_version()
         refetch_viable = detected_ver >= _GIT_REFETCH_MIN_VERSION
-    except (subprocess.CalledProcessError, ValueError) as exc:
+    except (subprocess.CalledProcessError, OSError, ValueError) as exc:
         logger.warning(
             "Cannot determine git version; disabling refetch path: %s", exc
         )
         refetch_viable = False
 
+    # Restoring removed zero-byte objects requires BOTH a git new enough for
+    # fetch --refetch AND a reachable origin to fetch from.  Only probe for an
+    # origin when there are zero-byte objects to consider — an origin-less
+    # healthy repo needs no refetch step at all.
+    zero_byte = detect_zero_byte_objects(repo_path)
+
     # Collect SHAs of zero-byte objects at plan time so the refetch step can
     # verify them after the fetch (before files are removed by the delete step).
     zero_byte_shas: list = []
 
-    zero_byte = detect_zero_byte_objects(repo_path)
     if zero_byte:
-        if refetch_viable:
+        has_origin = _has_origin_remote(repo_path)
+        restore_viable = refetch_viable and has_origin
+        if restore_viable:
             # Capture SHA hashes now — the delete step will remove the files,
             # so we must extract them before execution begins.
             zero_byte_shas = [_sha_from_object_path(p) for p in zero_byte]
@@ -976,34 +1197,40 @@ def plan_recovery_actions(repo_path: Path) -> list:
 
             plan.append(RecoveryAction(description, _make_delete_fn(zero_byte)))
         else:
-            # Refuse path: do NOT remove objects (would leave store worse off).
+            # Refuse path: do NOT remove objects (would leave store worse off,
+            # because they could not be restored).
             ver_str = ".".join(str(v) for v in detected_ver)
             min_ver_str = ".".join(str(v) for v in _GIT_REFETCH_MIN_VERSION)
             n = len(zero_byte)
+            if not refetch_viable:
+                reason = (
+                    f"git {ver_str} does not support fetch --refetch "
+                    f"(minimum required: {min_ver_str}) — upgrade git to "
+                    f"{min_ver_str} or later and re-run recovery"
+                )
+            else:
+                reason = (
+                    "no 'origin' remote is configured, so the removed objects "
+                    "could not be restored — add an origin that has the objects "
+                    "and re-run recovery"
+                )
             blocked_description = (
-                f"BLOCKED — git {ver_str} does not support fetch --refetch "
-                f"(minimum required: {min_ver_str}). "
-                f"{n} zero-byte object(s) detected but the remove step is not applied: "
-                f"without --refetch the objects cannot be restored from origin and the "
-                f"object store would be left in a worse state. "
-                f"Upgrade git to 2.36 or later and re-run recovery."
+                f"BLOCKED — {n} zero-byte object(s) detected but the remove step "
+                f"is not applied: {reason}. Removing them without a working "
+                f"restore path would leave the object store in a worse state."
             )
 
-            def _make_blocked_fn(ver, min_ver):
+            def _make_blocked_fn(message):
                 def _blocked_fn():
-                    ver_str = ".".join(str(v) for v in ver)
-                    min_str = ".".join(str(v) for v in min_ver)
-                    msg = (
-                        f"Recovery blocked: installed git {ver_str} does not support "
-                        f"fetch --refetch (minimum required: {min_str}). "
-                        f"Upgrade git to {min_str} or later."
-                    )
-                    raise RuntimeError(msg)
+                    raise RuntimeError(f"Recovery blocked: {message}.")  # noqa: TRY003
                 return _blocked_fn
 
-            plan.append(RecoveryAction(blocked_description, _make_blocked_fn(detected_ver, _GIT_REFETCH_MIN_VERSION)))
+            plan.append(RecoveryAction(blocked_description, _make_blocked_fn(reason)))
 
-    if refetch_viable:
+    # Only re-fetch when there are removed objects to restore.  A refetch with an
+    # empty required-object set would be a pointless (and, without an origin,
+    # failing) network round-trip.
+    if zero_byte_shas:
         # After the fetch, step_refetch_and_verify checks whether the previously-
         # zero-byte objects are now accessible.  If origin cannot supply them,
         # UnrecoverableOriginError is raised — no retry, no further deletion.
@@ -1148,82 +1375,6 @@ def plan_recovery_actions(repo_path: Path) -> list:
     except OSError:
         poisoned_linked = []
 
-    def _make_fresh_worktree_fn(repo: Path, old_path: Path, branch: str):
-        """Return the execution callable for the fresh-worktree fallback step.
-
-        The returned callable creates a fresh git worktree at
-        ``<old_path>_recovered`` by running ``git worktree add``, then
-        verifies the new worktree with ``git read-tree HEAD``.  The poisoned
-        worktree at *old_path* is left in place.
-
-        Parameters
-        ----------
-        repo:
-            Absolute path to the main git repository root.
-        old_path:
-            Path to the poisoned linked worktree.
-        branch:
-            Branch name (or ``"HEAD"``) to pass to ``git worktree add``.
-        """
-        def _fresh_worktree_fn() -> None:
-            new_path = Path(str(old_path) + "_recovered")
-
-            # Step 1 — create the fresh worktree from the repaired object store.
-            try:
-                subprocess.run(
-                    [
-                        "git", "-C", str(repo), "worktree", "add",
-                        str(new_path), branch,
-                    ],
-                    check=True,
-                )
-            except subprocess.CalledProcessError as exc:
-                logger.warning(
-                    "git worktree add failed creating %s from branch %s: %s",
-                    new_path,
-                    branch,
-                    exc,
-                )
-                raise
-            except OSError as exc:
-                logger.warning(
-                    "OS error creating fresh worktree %s: %s", new_path, exc
-                )
-                raise
-
-            # Step 2 — verify the fresh worktree has a clean index.
-            try:
-                subprocess.run(
-                    ["git", "-C", str(new_path), "read-tree", "HEAD"],
-                    check=True,
-                )
-            except subprocess.CalledProcessError as exc:
-                logger.warning(
-                    "Verification failed: git read-tree HEAD in fresh worktree %s: %s",
-                    new_path,
-                    exc,
-                )
-                print(
-                    f"FAILURE: Fresh worktree at '{new_path}' still reports a "
-                    "cache-tree error.  Manual intervention required."
-                )
-                raise
-            except OSError as exc:
-                logger.warning(
-                    "OS error running git read-tree in fresh worktree %s: %s",
-                    new_path,
-                    exc,
-                )
-                raise
-
-            # Step 3 — success: tell the operator where to go.
-            print(
-                f"Fresh worktree created successfully at '{new_path}'. "
-                f"Switch to it: cd '{new_path}'"
-            )
-
-        return _fresh_worktree_fn
-
     for old_wt_path, wt_branch in poisoned_linked:
         branch_name = wt_branch or "HEAD"
         new_wt_path_display = str(old_wt_path) + "_recovered"
@@ -1313,9 +1464,7 @@ def run_status_probe(repo_path: Path) -> str | None:
     count = len(lines)
     return (
         f"Repository: {repo_path}\n"
-        f"Git status: {count} modified/untracked file(s) detected.\n"
-        "\nNote: Further diagnosis and recovery steps are handled in "
-        "BO-1600d-2 and BO-1600d-3."
+        f"Git status: {count} modified/untracked file(s) detected."
     )
 
 
@@ -1435,9 +1584,77 @@ def _report_unrecoverable(result: dict) -> None:
         for sha in missing:
             print(f"  {sha}")
     print(
-        "\nThe object store is preserved in its current state. "
-        "Manual intervention is required to restore the missing objects."
+        "\nThe corrupt zero-byte placeholders (which held no recoverable data) "
+        "were removed, but no content-bearing objects were touched. "
+        "The objects listed above could not be restored from origin and require "
+        "manual intervention."
     )
+
+
+def _report_step_failure(exc: Exception) -> None:
+    """Print a structured stop-and-report for a recovery step failure.
+
+    Called by :func:`_execute_and_report` when a recovery step raises anything
+    other than :exc:`UnrecoverableOriginError` (which has its own dedicated
+    report).  Turns what would otherwise be a raw Python traceback into an
+    operator-facing message naming the failure and the safe next step.
+
+    Parameters
+    ----------
+    exc:
+        The exception raised by the failing recovery step.
+    """
+    print("\nRecovery halted — a step failed before the plan finished.")
+    print(f"Reason: {exc}")
+    print(
+        "\nExecution stopped at the failing step; no later steps were run. "
+        "The repository is in the state left by the steps that completed above. "
+        "Inspect the messages above, resolve the reported problem, and re-run "
+        "recovery."
+    )
+
+
+def _execute_and_report(plan: list, repo_path: Path) -> None:
+    """Execute *plan*, then verify integrity, reporting failures structurally.
+
+    Wraps :func:`execute_recovery_plan` so that every failure mode surfaces as
+    an operator-facing report rather than a raw traceback:
+
+    * :exc:`UnrecoverableOriginError` → :func:`_report_unrecoverable`.
+    * :exc:`RecoveryError`, :exc:`subprocess.CalledProcessError`,
+      :exc:`ValueError`, :exc:`RuntimeError` (including the git-too-old /
+      no-origin BLOCKED step) → :func:`_report_step_failure`.
+
+    On success, runs the post-recovery integrity check and prints
+    ``"Recovery complete."``.
+
+    Parameters
+    ----------
+    plan:
+        The same ``list[RecoveryAction]`` that was printed to the operator.
+    repo_path:
+        Absolute path to the git repository root.
+    """
+    try:
+        execute_recovery_plan(plan)
+    except UnrecoverableOriginError as exc:
+        _report_unrecoverable(exc.result)
+        return
+    except (
+        RecoveryError,
+        subprocess.CalledProcessError,
+        ValueError,
+        RuntimeError,
+    ) as exc:
+        _report_step_failure(exc)
+        return
+
+    if not verify_recovery_integrity(repo_path, plan):
+        print(
+            "Warning: Post-recovery integrity check found remaining issues. "
+            "Check the log above for details."
+        )
+    print("Recovery complete.")
 
 
 def main(args=None) -> None:
@@ -1467,14 +1684,21 @@ def main(args=None) -> None:
     args:
         Optional argument list; defaults to ``sys.argv[1:]`` when ``None``.
     """
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+
     parsed = parse_args(args)
     repo_path = Path(parsed.repo).resolve()
 
-    # Non-interactive guard: no git writes without a TTY unless --execute was given.
-    if not sys.stdin.isatty() and not parsed.execute:
+    # Non-interactive guard: recovery is destructive and human-invoked only
+    # (AC BO-1600d-1).  A TTY is required even with --execute, so the tool can
+    # never run a destructive plan unattended from an automated context — a
+    # single stray --execute flag in a script or drive loop must NOT delete
+    # objects, reset refs, or rebuild indexes.
+    if not sys.stdin.isatty():
         print(
-            "Recovery requires interactive confirmation. "
-            "Run this script in an interactive terminal."
+            "Recovery requires an interactive terminal. It will not run "
+            "unattended — even with --execute — because it performs "
+            "destructive repair steps. Run it from an interactive shell."
         )
         sys.exit(0)
 
@@ -1487,16 +1711,20 @@ def main(args=None) -> None:
         print("This recovery does not support shallow or bare clones.")
         return
 
-    # Read-only probe — no git writes at this stage.
+    # Read-only probe — no git writes at this stage.  A FAILING probe is itself
+    # a corruption signal (e.g. the current branch tip is corrupt so
+    # `git status` exits non-zero), NOT a reason to abort: planning is read-only
+    # and the detection functions handle a damaged store.  Warn and continue so
+    # recovery can actually address the corruption the probe just revealed.
     probe_summary = run_status_probe(repo_path)
     if probe_summary is None:
         print(
-            "Error: repository probe failed. "
-            "Check the log above for details. Recovery aborted."
+            "Note: the read-only status probe failed — this is expected when the "
+            "repository is corrupt (e.g. a corrupt current-branch tip). "
+            "Continuing to compute the recovery plan; planning makes no changes."
         )
-        return
-
-    print(probe_summary)
+    else:
+        print(probe_summary)
     print()
 
     # Compute and display the recovery plan — no git writes during planning.
@@ -1504,19 +1732,10 @@ def main(args=None) -> None:
     print_recovery_plan(plan)
     print()
 
-    # --execute flag: skip interactive prompt and execute immediately.
+    # --execute flag: skip interactive prompt and execute immediately (a TTY is
+    # still required — see the non-interactive guard above).
     if parsed.execute:
-        try:
-            execute_recovery_plan(plan)
-        except UnrecoverableOriginError as exc:
-            _report_unrecoverable(exc.result)
-            return
-        if not verify_recovery_integrity(repo_path, plan):
-            print(
-                "Warning: Post-recovery integrity check found remaining issues. "
-                "Check the log above for details."
-            )
-        print("Recovery complete.")
+        _execute_and_report(plan, repo_path)
         return
 
     # Interactive confirmation gate — no git writes until human explicitly confirms.
@@ -1527,17 +1746,7 @@ def main(args=None) -> None:
         return
 
     if answer == "yes":
-        try:
-            execute_recovery_plan(plan)
-        except UnrecoverableOriginError as exc:
-            _report_unrecoverable(exc.result)
-            return
-        if not verify_recovery_integrity(repo_path, plan):
-            print(
-                "Warning: Post-recovery integrity check found remaining issues. "
-                "Check the log above for details."
-            )
-        print("Recovery complete.")
+        _execute_and_report(plan, repo_path)
     else:
         print("Recovery aborted — no changes made.")
 

@@ -15,7 +15,10 @@ ARCHITECTURE: Pure unit tests using importlib.util to load the template
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -265,16 +268,21 @@ class TestErrorHandlingSubprocessFailure(unittest.TestCase):
 
     @patch("sys.stdin")
     def test_subprocess_error_logged_not_propagated(self, mock_stdin):
-        """CalledProcessError from the probe must be logged at WARNING and not raised."""
+        """CalledProcessError from the probe must be logged at WARNING and not raised.
+
+        The probe is non-fatal (a failing probe is itself a corruption signal),
+        so main() continues to planning; 'no' at the confirmation gate aborts.
+        """
         mock_stdin.isatty.return_value = True
 
         exc = subprocess.CalledProcessError(128, ["git", "status"])
 
-        with patch("subprocess.run", side_effect=exc):
-            # assertLogs verifies at least one WARNING was emitted by the logger.
-            with self.assertLogs("git_recovery", level="WARNING") as log_ctx:
-                # Must NOT raise — exception is caught inside run_status_probe.
-                main(["--repo", "/tmp"])
+        with patch("builtins.input", return_value="no"):
+            with patch("subprocess.run", side_effect=exc):
+                # assertLogs verifies at least one WARNING was emitted by the logger.
+                with self.assertLogs("git_recovery", level="WARNING") as log_ctx:
+                    # Must NOT raise — exception is caught inside run_status_probe.
+                    main(["--repo", "/tmp"])
 
         self.assertTrue(
             any("WARNING" in line for line in log_ctx.output),
@@ -286,10 +294,11 @@ class TestErrorHandlingSubprocessFailure(unittest.TestCase):
         """OSError from the probe must be logged at WARNING and not raised."""
         mock_stdin.isatty.return_value = True
 
-        with patch("subprocess.run", side_effect=OSError("git: no such file")):
-            with self.assertLogs("git_recovery", level="WARNING") as log_ctx:
-                # Must NOT raise.
-                main(["--repo", "/tmp"])
+        with patch("builtins.input", return_value="no"):
+            with patch("subprocess.run", side_effect=OSError("git: no such file")):
+                with self.assertLogs("git_recovery", level="WARNING") as log_ctx:
+                    # Must NOT raise.
+                    main(["--repo", "/tmp"])
 
         self.assertTrue(
             any("WARNING" in line for line in log_ctx.output),
@@ -298,13 +307,14 @@ class TestErrorHandlingSubprocessFailure(unittest.TestCase):
 
     @patch("sys.stdin")
     def test_subprocess_error_returns_gracefully(self, mock_stdin):
-        """After a probe failure, main() must return cleanly without further calls."""
+        """After a probe failure, main() must return cleanly (no raised exception)."""
         mock_stdin.isatty.return_value = True
         exc = subprocess.CalledProcessError(128, ["git", "status"])
 
-        with patch("subprocess.run", side_effect=exc):
-            with self.assertLogs("git_recovery", level="WARNING"):
-                result = main(["--repo", "/tmp"])
+        with patch("builtins.input", return_value="no"):
+            with patch("subprocess.run", side_effect=exc):
+                with self.assertLogs("git_recovery", level="WARNING"):
+                    result = main(["--repo", "/tmp"])
 
         # main() returns None on graceful abort.
         self.assertIsNone(result)
@@ -423,8 +433,8 @@ class TestDryRunFirstBehavior(unittest.TestCase):
     def test_execute_flag_skips_interactive_prompt(
         self, mock_stdin, mock_input, mock_subprocess_run
     ):
-        """With --execute, builtins.input must NOT be called (no interactive prompt)."""
-        mock_stdin.isatty.return_value = False  # non-TTY; --execute bypasses the guard
+        """With --execute on a TTY, builtins.input must NOT be called (no prompt)."""
+        mock_stdin.isatty.return_value = True  # TTY required even with --execute
         mock_subprocess_run.return_value = self._make_probe_result()
 
         main(["--repo", "/tmp", "--execute"])
@@ -438,8 +448,8 @@ class TestDryRunFirstBehavior(unittest.TestCase):
     @patch("subprocess.run")
     @patch("sys.stdin")
     def test_execute_flag_makes_writes(self, mock_stdin, mock_subprocess_run):
-        """With --execute, subprocess.run must be called more than once (probe + steps)."""
-        mock_stdin.isatty.return_value = False  # non-TTY; --execute bypasses the guard
+        """With --execute on a TTY, subprocess.run is called more than once (probe + steps)."""
+        mock_stdin.isatty.return_value = True  # TTY required even with --execute
         mock_subprocess_run.return_value = self._make_probe_result()
 
         main(["--repo", "/tmp", "--execute"])
@@ -502,7 +512,8 @@ class TestDryRunFirstBehavior(unittest.TestCase):
             zero_byte_file = obj_dir / "cd1234deadbeef"
             zero_byte_file.write_bytes(b"")  # zero bytes
 
-            plan = plan_recovery_actions(repo)
+            with patch.object(_mod, "_has_origin_remote", return_value=True):
+                plan = plan_recovery_actions(repo)
 
         # At least one action in the plan.
         self.assertGreater(len(plan), 0, "plan_recovery_actions returned an empty plan")
@@ -584,7 +595,8 @@ class TestZeroByteDetectionAndRemovalOrder(unittest.TestCase):
             obj_dir.mkdir(parents=True)
             (obj_dir / "cd1234deadbeef").write_bytes(b"")
 
-            plan = plan_recovery_actions(repo)
+            with patch.object(_mod, "_has_origin_remote", return_value=True):
+                plan = plan_recovery_actions(repo)
 
         descriptions = [a.description.lower() for a in plan]
         remove_idx = next(
@@ -832,13 +844,14 @@ class TestDependencyOrdering(unittest.TestCase):
             obj_dir.mkdir(parents=True)
             (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
 
-            with patch.object(
-                _mod,
-                "detect_corrupt_branch_refs",
-                return_value=[("main", "deadbeef")],
-            ):
-                with patch.object(_mod, "get_reflog_tip", return_value="abc1234"):
-                    plan = plan_recovery_actions(repo)
+            with patch.object(_mod, "_has_origin_remote", return_value=True):
+                with patch.object(
+                    _mod,
+                    "detect_corrupt_branch_refs",
+                    return_value=[("main", "deadbeef")],
+                ):
+                    with patch.object(_mod, "get_reflog_tip", return_value="abc1234"):
+                        plan = plan_recovery_actions(repo)
 
         descriptions = [a.description.lower() for a in plan]
         remove_idx = next(
@@ -866,8 +879,9 @@ class TestDependencyOrdering(unittest.TestCase):
             obj_dir.mkdir(parents=True)
             (obj_dir / "cd1234deadbeef").write_bytes(b"")
 
-            with patch.object(_mod, "detect_poisoned_index", return_value=True):
-                plan = plan_recovery_actions(repo)
+            with patch.object(_mod, "_has_origin_remote", return_value=True):
+                with patch.object(_mod, "detect_poisoned_index", return_value=True):
+                    plan = plan_recovery_actions(repo)
 
         descriptions = [a.description.lower() for a in plan]
         remove_idx = next(
@@ -1001,7 +1015,7 @@ class TestPostExecutionIntegrityVerification(unittest.TestCase):
                 with patch("subprocess.run") as mock_run:
                     mock_run.return_value = MagicMock(returncode=0, stdout="")
                     with patch("sys.stdin") as mock_stdin:
-                        mock_stdin.isatty.return_value = False
+                        mock_stdin.isatty.return_value = True
                         main(["--repo", str(repo), "--execute"])
 
         self.assertGreater(
@@ -1033,7 +1047,7 @@ class TestPostExecutionIntegrityVerification(unittest.TestCase):
                 with patch("subprocess.run") as mock_run:
                     mock_run.return_value = MagicMock(returncode=0, stdout="")
                     with patch("sys.stdin") as mock_stdin:
-                        mock_stdin.isatty.return_value = False
+                        mock_stdin.isatty.return_value = True
                         main(["--repo", str(repo), "--execute"])
 
         self.assertIn(
@@ -1212,19 +1226,24 @@ class TestGitVersionGuard(unittest.TestCase):
         )
 
     def test_new_git_plan_includes_refetch_action(self):
-        """On new git (2.41.0), plan must include a refetch action."""
+        """On new git (2.41.0) with a zero-byte object and an origin, the plan
+        includes a refetch action to restore the removed object."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
-            (repo / ".git" / "objects").mkdir(parents=True)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
 
             with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
-                plan = plan_recovery_actions(repo)
+                with patch.object(_mod, "_has_origin_remote", return_value=True):
+                    plan = plan_recovery_actions(repo)
 
         descriptions = [a.description.lower() for a in plan]
         has_refetch = any("fetch" in d for d in descriptions)
         self.assertTrue(
             has_refetch,
-            f"Plan must include a refetch action when git >= 2.36; got: {descriptions}",
+            f"Plan must include a refetch action when git >= 2.36 and there are "
+            f"zero-byte objects to restore from origin; got: {descriptions}",
         )
 
     def test_new_git_plan_includes_remove_action_with_zero_byte_objects(self):
@@ -1236,7 +1255,8 @@ class TestGitVersionGuard(unittest.TestCase):
             (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
 
             with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
-                plan = plan_recovery_actions(repo)
+                with patch.object(_mod, "_has_origin_remote", return_value=True):
+                    plan = plan_recovery_actions(repo)
 
         descriptions = [a.description.lower() for a in plan]
         # A real remove action starts with "remove" (not "blocked").
@@ -1537,12 +1557,16 @@ class TestUnrecoverableOriginDetection(unittest.TestCase):
             repo = Path(tmpdir)
             (repo / ".git").mkdir()
 
+            # A refetch action is only planned when there are zero-byte objects to
+            # restore AND an origin exists — provide both so the action is present.
+            fake_zero_byte = [repo / ".git" / "objects" / "aa" / ("b" * 38)]
             with patch.object(_mod, "step_refetch_and_verify", return_value=unrecoverable_result):
                 with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
-                    with patch.object(_mod, "detect_zero_byte_objects", return_value=[]):
-                        with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
-                            with patch.object(_mod, "detect_poisoned_index", return_value=False):
-                                plan = plan_recovery_actions(repo)
+                    with patch.object(_mod, "_has_origin_remote", return_value=True):
+                        with patch.object(_mod, "detect_zero_byte_objects", return_value=fake_zero_byte):
+                            with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
+                                with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                                    plan = plan_recovery_actions(repo)
 
                                 fetch_actions = [
                                     a for a in plan
@@ -2440,12 +2464,13 @@ class TestLargeObjectStoreSelectiveRemoval(unittest.TestCase):
         subprocess-dependent detection functions mocked to return empty/False.
         This isolates filesystem-based tests from actual git subprocess calls."""
         with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
-            with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
-                with patch.object(_mod, "detect_poisoned_index", return_value=False):
-                    with patch.object(
-                        _mod, "detect_poisoned_linked_worktrees", return_value=[]
-                    ):
-                        return plan_recovery_actions(repo)
+            with patch.object(_mod, "_has_origin_remote", return_value=True):
+                with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
+                    with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                        with patch.object(
+                            _mod, "detect_poisoned_linked_worktrees", return_value=[]
+                        ):
+                            return plan_recovery_actions(repo)
 
     def _execute_remove_action_only(self, plan: list) -> None:
         """Execute only the remove action from the plan (not the refetch action).
@@ -2942,6 +2967,303 @@ class TestBuildDeploysReachabilityTier(unittest.TestCase):
             f"stderr: {result.stderr!r}. "
             "Expected exit 0 from the non-TTY guard in main().",
         )
+
+
+# ---------------------------------------------------------------------------
+# Real-repository behavioral tests (UNMOCKED)
+#
+# These tests exercise git_recovery.py against genuinely-corrupted, real git
+# repositories built on disk — NO subprocess mocking.  They were added after a
+# post-epic behavioral spot-check + code review found execution-time defects
+# that the mock-based tests above had masked (e.g. the fresh-worktree fallback
+# exited 128 every time because the branch was still checked out).  Every test
+# here would have failed against the pre-remediation implementation.
+# ---------------------------------------------------------------------------
+
+_GIT_AVAILABLE = shutil.which("git") is not None
+
+
+def _git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a git command in *repo* and return the completed process."""
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        capture_output=True,
+        text=True,
+        check=check,
+    )
+
+
+def _init_repo(path: Path, branch: str = "main") -> None:
+    """Initialise a real git repo at *path* on *branch* with committer identity."""
+    path.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["git", "init", "-b", branch, str(path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    _git(path, "config", "user.email", "test@example.com")
+    _git(path, "config", "user.name", "Test User")
+    _git(path, "config", "commit.gpgsign", "false")
+
+
+def _commit(repo: Path, filename: str, content: str, message: str) -> str:
+    """Write a file, commit it, and return the new commit SHA."""
+    (repo / filename).write_text(content, encoding="utf-8")
+    _git(repo, "add", filename)
+    _git(repo, "commit", "-m", message)
+    return _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+
+def _loose_objects(repo: Path) -> list:
+    """Return paths of all loose objects under *repo*/.git/objects/<xx>/."""
+    objects_dir = repo / ".git" / "objects"
+    found: list = []
+    for sub in sorted(objects_dir.iterdir()):
+        if sub.is_dir() and len(sub.name) == 2:
+            found.extend(sorted(sub.iterdir()))
+    return found
+
+
+def _zero_object(path: Path) -> None:
+    """Genuinely corrupt a loose object by truncating it to zero bytes.
+
+    Git writes loose object files read-only (mode 0444), so make it writable
+    before truncating.
+    """
+    path.chmod(0o644)
+    path.write_bytes(b"")
+
+
+@unittest.skipUnless(_GIT_AVAILABLE, "git binary not available")
+class TestGitRecoveryRealRepoBehavioral(unittest.TestCase):
+    """End-to-end behavioral tests against real, genuinely-corrupted git repos."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.mkdtemp(prefix="gr_real_")
+        self.base = Path(self._tmp)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    # -- Headline path: zero-byte object restored via refetch from origin ----
+
+    def test_zero_byte_object_restored_from_real_origin(self) -> None:
+        """A truncated loose object is removed and restored by refetch from origin.
+
+        Proves the core BO-1600d-3 repair against a real bare origin + clone,
+        with no mocks: plan → remove(zero-byte) → refetch → object readable +
+        fsck clean.
+        """
+        if _mod._git_version() < _mod._GIT_REFETCH_MIN_VERSION:
+            self.skipTest("git too old for fetch --refetch")
+
+        origin = self.base / "origin.git"
+        subprocess.run(
+            ["git", "init", "--bare", "-b", "main", str(origin)],
+            capture_output=True, text=True, check=True,
+        )
+        work = self.base / "work"
+        _init_repo(work, branch="main")
+        _git(work, "remote", "add", "origin", str(origin))
+        _commit(work, "a.txt", "hello world\n", "first")
+        _commit(work, "b.txt", "second file\n", "second")
+        _git(work, "push", "-u", "origin", "main")
+
+        loose = _loose_objects(work)
+        self.assertTrue(loose, "expected loose objects in the work clone")
+        victim = loose[0]
+        victim_sha = victim.parent.name + victim.name
+        # Genuinely corrupt it — truncate to zero bytes.
+        _zero_object(victim)
+        self.assertEqual(victim.stat().st_size, 0)
+
+        plan = _mod.plan_recovery_actions(work)
+        descs = [a.description for a in plan]
+        self.assertTrue(
+            any(d.startswith("Remove ") and "zero-byte" in d for d in descs),
+            f"expected a remove action, got: {descs}",
+        )
+        self.assertTrue(
+            any("Re-fetch objects from origin" in d for d in descs),
+            f"expected a refetch action, got: {descs}",
+        )
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            _mod.execute_recovery_plan(plan)
+
+        # The object must now be present and readable, and fsck must be clean.
+        self.assertEqual(
+            _git(work, "cat-file", "-e", victim_sha, check=False).returncode,
+            0,
+            "object was not restored from origin after recovery",
+        )
+        fsck = _git(work, "fsck", "--full", check=False)
+        self.assertEqual(fsck.returncode, 0, f"fsck not clean: {fsck.stderr!r}")
+
+    # -- H-1: fresh-worktree fallback succeeds against a real linked worktree -
+
+    def test_fresh_worktree_fallback_succeeds_on_real_linked_worktree(self) -> None:
+        """The fresh-worktree action creates a real worktree even though the
+        branch is still checked out in the poisoned worktree left in place.
+
+        Against the pre-remediation code this failed with exit 128
+        ('<branch>' is already used by worktree ...).
+        """
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "content\n", "first")
+        _git(repo, "branch", "feature")
+        poisoned_wt = self.base / "wt_feature"
+        _git(repo, "worktree", "add", str(poisoned_wt), "feature")
+
+        action_fn = _mod._make_fresh_worktree_fn(repo, poisoned_wt, "feature")
+        with contextlib.redirect_stdout(io.StringIO()):
+            action_fn()  # must NOT raise
+
+        new_path = Path(str(poisoned_wt) + "_recovered")
+        self.assertTrue(new_path.exists(), "fresh worktree was not created")
+        self.assertEqual(
+            _git(new_path, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip(),
+            "feature",
+            "fresh worktree is not on the expected branch",
+        )
+
+    def test_fresh_worktree_fallback_is_idempotent_on_rerun(self) -> None:
+        """A second run does not collide on the _recovered path."""
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "content\n", "first")
+        _git(repo, "branch", "feature")
+        poisoned_wt = self.base / "wt_feature"
+        _git(repo, "worktree", "add", str(poisoned_wt), "feature")
+
+        action_fn = _mod._make_fresh_worktree_fn(repo, poisoned_wt, "feature")
+        with contextlib.redirect_stdout(io.StringIO()):
+            action_fn()
+            action_fn()  # second run must not raise
+
+        self.assertTrue(Path(str(poisoned_wt) + "_recovered").exists())
+        self.assertTrue(Path(str(poisoned_wt) + "_recovered_2").exists())
+
+    # -- D / #2a: reflog-tip lookup survives a corrupt branch tip ------------
+
+    def test_get_reflog_tip_recovers_when_branch_tip_is_corrupt(self) -> None:
+        """get_reflog_tip returns a prior readable SHA when the tip is corrupt,
+        via the on-disk reflog-file fallback (git reflog show dies on the tip).
+        """
+        repo = self.base / "repo"
+        _init_repo(repo, branch="EPIC-Foo")
+        first_sha = _commit(repo, "a.txt", "one\n", "first")
+        tip_sha = _commit(repo, "b.txt", "two\n", "second")
+
+        # Corrupt the tip commit object.
+        obj_path = repo / ".git" / "objects" / tip_sha[:2] / tip_sha[2:]
+        self.assertTrue(obj_path.exists(), "tip commit object not loose")
+        _zero_object(obj_path)
+
+        recovered = _mod.get_reflog_tip(repo, "EPIC-Foo")
+        self.assertEqual(
+            _git(repo, "cat-file", "-t", recovered, check=False).returncode,
+            0,
+            "get_reflog_tip returned an unreadable SHA",
+        )
+        self.assertEqual(
+            recovered, first_sha,
+            "expected the previous readable commit as the reflog tip",
+        )
+
+    def test_plan_reset_action_names_concrete_sha_at_plan_time(self) -> None:
+        """With a corrupt tip, the plan's branch-reset action names a concrete
+        reflog SHA (dry-run == execute), not a deferred 'will retry' placeholder.
+        """
+        repo = self.base / "repo"
+        _init_repo(repo, branch="EPIC-Foo")
+        first_sha = _commit(repo, "a.txt", "one\n", "first")
+        tip_sha = _commit(repo, "b.txt", "two\n", "second")
+        _zero_object(repo / ".git" / "objects" / tip_sha[:2] / tip_sha[2:])
+
+        plan = _mod.plan_recovery_actions(repo)
+        reset_descs = [
+            a.description for a in plan
+            if "Reset branch ref 'EPIC-Foo'" in a.description
+        ]
+        self.assertEqual(len(reset_descs), 1, f"expected one reset action: {reset_descs}")
+        self.assertIn(first_sha, reset_descs[0])
+        self.assertNotIn("will retry at execution", reset_descs[0])
+
+    # -- #3: origin-less repo is not planned a (crashing) refetch ------------
+
+    def test_no_origin_repo_blocks_removal_without_crashing(self) -> None:
+        """A repo with a zero-byte object but no origin plans a BLOCKED action
+        (no remove, no refetch) and _execute_and_report reports it cleanly.
+        """
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "one\n", "first")
+        _commit(repo, "b.txt", "two\n", "second")
+        victim = _loose_objects(repo)[0]
+        _zero_object(victim)
+
+        plan = _mod.plan_recovery_actions(repo)
+        descs = [a.description for a in plan]
+        self.assertTrue(any(d.startswith("BLOCKED") for d in descs), descs)
+        self.assertFalse(any("Re-fetch objects from origin" in d for d in descs), descs)
+        self.assertFalse(any(d.startswith("Remove ") for d in descs), descs)
+
+        # Reporting must not raise a traceback, and the object stays untouched.
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            _mod._execute_and_report(plan, repo)
+        self.assertIn("Recovery halted", out.getvalue())
+        self.assertEqual(victim.stat().st_size, 0, "blocked object was deleted")
+
+    def test_healthy_repo_plans_no_actions(self) -> None:
+        """A healthy origin-less repo plans nothing — no unconditional refetch."""
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "one\n", "first")
+
+        plan = _mod.plan_recovery_actions(repo)
+        self.assertEqual(plan, [], f"expected empty plan, got: {[a.description for a in plan]}")
+
+    # -- H-3: --execute must not run unattended (no TTY) ---------------------
+
+    def test_execute_refuses_without_tty(self) -> None:
+        """--execute in a non-TTY context refuses and makes no writes."""
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "one\n", "first")
+        _commit(repo, "b.txt", "two\n", "second")
+        victim = _loose_objects(repo)[0]
+        _zero_object(victim)
+
+        out = io.StringIO()
+        with patch.object(_mod.sys.stdin, "isatty", return_value=False):
+            with contextlib.redirect_stdout(out):
+                with self.assertRaises(SystemExit) as ctx:
+                    _mod.main(["--repo", str(repo), "--execute"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertIn("interactive terminal", out.getvalue())
+        self.assertTrue(victim.exists(), "object deleted despite non-TTY refusal")
+
+    # -- H-2 / #4: step failure is reported, not a raw traceback -------------
+
+    def test_step_failure_reported_not_raised(self) -> None:
+        """A failing step surfaces via _execute_and_report without propagating."""
+        def _boom() -> None:
+            raise _SimulatedStepFailure("simulated git failure")  # noqa: TRY003
+
+        plan = [_mod.RecoveryAction("Reset branch ref 'x' — simulated", _boom)]
+        repo = self.base / "repo"
+        _init_repo(repo, branch="main")
+        _commit(repo, "a.txt", "one\n", "first")
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            _mod._execute_and_report(plan, repo)  # must NOT raise
+        self.assertIn("Recovery halted", out.getvalue())
+        self.assertIn("simulated git failure", out.getvalue())
 
 
 if __name__ == "__main__":
