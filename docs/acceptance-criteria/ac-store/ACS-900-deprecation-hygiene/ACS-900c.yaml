@@ -36,3 +36,5 @@ notes: |
   implemented_by to the successor AC named in superseded_by. Keep the message on
   the channel the committing agent actually receives (per ACS-400e-1, write to
   stdout, not only stderr).
+change_target: code
+risk_surface: contract_boundary

@@ -60,3 +60,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-Acpatternenforcementismechanically/03_TICKET-20260617-ACS-500f-2.md
+change_target: prompt
+risk_surface: internal

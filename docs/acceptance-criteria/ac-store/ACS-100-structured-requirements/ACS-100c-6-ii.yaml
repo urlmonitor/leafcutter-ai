@@ -57,3 +57,5 @@ notes: |
   parent as soon as superseding redundant children brings the active count back
   under the default cap — the stopgap-retirement direction recorded in the
   ACS-800 PROJECT_CONTEXT note.
+change_target: code
+risk_surface: internal

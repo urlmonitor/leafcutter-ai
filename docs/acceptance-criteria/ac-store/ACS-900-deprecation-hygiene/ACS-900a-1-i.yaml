@@ -48,3 +48,5 @@ notes: |
   IT-PO enrichment (2026-06-22): pinned the head-None == new-file mechanism to the
   exact check_ac_governance.py precedent so the python-coder reuses the established
   pattern rather than inventing a new-file heuristic.
+change_target: code
+risk_surface: internal

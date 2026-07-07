@@ -48,3 +48,5 @@ notes: |
   IT-PO enrichment (2026-06-22): re-stated the staged-tree dependency (same-commit
   deletion must read as absent) so the no-false-positive guarantee is mechanically
   achievable, and pinned the silent-pass (clean stdout, exit 0) contract.
+change_target: code
+risk_surface: internal

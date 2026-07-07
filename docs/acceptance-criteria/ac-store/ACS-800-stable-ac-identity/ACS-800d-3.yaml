@@ -36,3 +36,5 @@ notes: |
   scan_ac_orphans.py / check_ac_parent_covered_by.py). Pairs with ACS-800d-2-i,
   which defines that pre-existing dangling references are reported but not blamed
   on the migration.
+change_target: code
+risk_surface: internal

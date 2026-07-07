@@ -28,3 +28,5 @@ superseded_by: null
 notes: "child_limit_override is a temporary escape hatch. Remove once the AC-UID-decoupling refactor restructures this L0 tree."
 covered_by: [ACS-100a, ACS-100b, ACS-100c, ACS-100d, ACS-100e, ACS-100f, ACS-100g, ACS-100h, ACS-100i]
 implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

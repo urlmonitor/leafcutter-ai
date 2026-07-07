@@ -28,3 +28,5 @@ covered_by:
   - ACS-100d-3
   - ACS-100d-4
 implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

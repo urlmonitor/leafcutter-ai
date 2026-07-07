@@ -36,3 +36,5 @@ notes: |
   Edge case of ACS-800d-1: a legacy id that derive_parent_id() cannot meaningfully
   parse (the function's "malformed ID — treat as root-equivalent" branch). Migration
   must flag rather than mis-home such entries.
+change_target: code
+risk_surface: internal

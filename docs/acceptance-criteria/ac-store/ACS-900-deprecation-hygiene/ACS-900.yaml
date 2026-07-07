@@ -65,3 +65,5 @@ notes: |
   Lifecycle). For superseded_by, "reconciled" legitimately includes re-pointing
   implemented_by to the successor AC named in the superseded_by field, not only
   outright code deletion — see ACS-900d.
+change_target: code
+risk_surface: contract_boundary

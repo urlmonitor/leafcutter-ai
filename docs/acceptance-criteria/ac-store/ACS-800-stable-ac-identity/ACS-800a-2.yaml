@@ -37,3 +37,5 @@ notes: |
   with the reservation rule already in ac-schema.md ("If an AC is deprecated, its
   ID remains reserved") — here the reserved unit is the opaque UID rather than the
   position-encoded id string.
+change_target: code
+risk_surface: internal

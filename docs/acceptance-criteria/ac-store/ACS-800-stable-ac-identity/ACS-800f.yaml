@@ -51,3 +51,7 @@ notes: |
     - docs/reference/ac-schema.md prose (the ID Format / Parent Derivation sections).
   This L1 also captures retiring references to child_limit_override as a stopgap once
   ACS-800 has landed.
+change_target:
+  - prompt
+  - docs
+risk_surface: contract_boundary

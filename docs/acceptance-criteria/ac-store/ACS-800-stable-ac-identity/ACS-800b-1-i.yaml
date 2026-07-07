@@ -35,3 +35,5 @@ notes: |
   Edge case of ACS-800b-1. The metadata equivalent of today's scan_ac_orphans.py
   dangling-link detection, but operating on the parent-pointer UID rather than on a
   derived id string.
+change_target: code
+risk_surface: internal

@@ -42,3 +42,5 @@ notes: |
   the BA/IT-PO will finalize exact field names at L2 and add them to the schema. The
   parent relationship is expressed by a metadata pointer to the parent's stable UID
   (from ACS-800a), so a child no longer depends on its name to know its parent.
+change_target: schema
+risk_surface: contract_boundary

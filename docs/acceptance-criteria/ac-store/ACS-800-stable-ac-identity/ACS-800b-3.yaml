@@ -38,3 +38,5 @@ notes: |
   "order" as the example name). New field to be added to config/ac_store_schema.json
   by IT-PO/python-coder. Replaces today's reliance on the numeric/alpha suffix of the
   id string to imply sibling order.
+change_target: schema
+risk_surface: internal

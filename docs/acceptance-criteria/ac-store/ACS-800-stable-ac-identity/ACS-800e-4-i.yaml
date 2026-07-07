@@ -40,3 +40,5 @@ notes: |
   must handle BOTH id-derived and metadata-declared hierarchy simultaneously while
   ACS-800d's migration is in progress. The fallback retires naturally once the store
   is fully migrated.
+change_target: code
+risk_surface: internal
