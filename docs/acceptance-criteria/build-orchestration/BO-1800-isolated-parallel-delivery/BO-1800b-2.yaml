@@ -1,0 +1,48 @@
+id: BO-1800b-2
+readiness: draft
+priority: medium
+title: "Merges to main are performed by the merge queue only after required checks pass"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800b.yaml"
+criteria: |
+  Given a pull request targeting the hub `main`,
+  When the change is landed on `main`,
+  Then it is landed by the merge queue, not by an agent-issued merge command,
+  And the merge queue lands it only after the required status checks all pass:
+    ruff lint, the full test suite, and the schema-diff check (each configured as a
+    REQUIRED check, not advisory),
+  And the merge is built against the latest `main` and serialized with other queued
+    merges,
+  And a pull request whose required checks are failing or missing is not landed.
+depends_on: [BO-1800b]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  ADR-018 Decision §4 + Migration §1 and §5. Surface is hub configuration: enable
+  the merge queue and mark ruff + full tests + schema-diff as REQUIRED checks; and
+  the finalize flow change so the merge is a queue-eligible PR action, never an
+  agent-issued `gh pr merge`. IT-PO: split the finalize-flow code change (likely
+  workflow/python) from the hub config if it prefers; the load-bearing behavior is
+  "the queue merges, only when required checks are green."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800b-1
+  contract: "The PR-only-to-main constraint that makes the queue the sole merge path."
+origin_agent: business-analyst
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,44 @@
+id: BO-1800e-1-i
+readiness: draft
+priority: medium
+title: "An attempt to commit onto local main during a drive is prevented or flagged"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800e.yaml"
+criteria: |
+  Given a drive clone whose current branch is `main`,
+  When a drive step attempts `git commit` onto `main`,
+  Then the local pre-commit main-guard prevents or flags the commit with a message
+    saying work must go on a feature branch, not `main`,
+  And this local guard is defense-in-depth only -- it is explicitly NOT the
+    guarantee (the server-side gate in BO-1800b is), so a bypass of the local guard
+    still cannot land on the hub's `main`.
+depends_on: [BO-1800e-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  ADR-018 Decision §4 (local, advisory): a pre-commit/pre-push hook refuses commits
+  or pushes targeting main. Catches mistakes early but is bypassable (--no-verify);
+  BO-1800b is the real guarantee. IT-PO: implement as a commit_guardian hook; keep
+  its advisory framing explicit so it is never mistaken for the guarantee.
+delivers_to: null
+expects_from:
+  ac_id: BO-1800e-1
+  contract: "The no-local-main-commit rule this advisory guard enforces at the local edge."
+origin_agent: business-analyst
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

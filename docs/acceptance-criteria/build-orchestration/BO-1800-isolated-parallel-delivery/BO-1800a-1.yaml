@@ -1,0 +1,55 @@
+id: BO-1800a-1
+readiness: draft
+priority: medium
+title: "Each drive runs in an independent copy with its own object store, isolated from every other drive"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800a.yaml"
+criteria: |
+  Given two drives A and B are started at the same time for two different features,
+  When the isolation layer provisions each drive,
+  Then drive A and drive B each get their own working copy backed by its OWN git
+    object store and ref namespace (an independent clone), NOT a git worktree that
+    shares one repository's `.git/objects` and `refs/`.
+  And while both drives are running, any commit, branch creation, ref update, or
+    garbage-collection that drive A performs is observable only inside drive A's
+    object store and leaves drive B's object store and refs byte-for-byte unchanged
+    (and vice versa).
+  And no manual repair of a shared object store is ever required as a result of the
+    two drives running concurrently.
+depends_on: [BO-1800a]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements: |
+  ADR-018 Decision §1: the isolation primitive is an independent clone with its
+  own object store, replacing the shared-`.git` worktree. Surface is the
+  worktree-agent -> clone-agent migration (templates/agents/worktree-agent.md,
+  templates/skills/feature/SKILL.md) plus the create/remove lifecycle helper.
+  Object-store-sharing shortcuts (`git clone --shared`, `--reference` WITHOUT
+  `--dissociate`, and `git worktree`) are explicitly disallowed for autonomous
+  drives. IT-PO: confirm whether the clone mechanic lives in a python helper, the
+  worktree-agent template, or both; keep the create/remove interface stable so
+  /build-feature and finalize call sites are unchanged.
+delivers_to:
+  agent: python-coder
+  contract: "An independent per-drive working copy whose object store and refs are physically disjoint from every other concurrent drive; consumed by the create/remove lifecycle and by the gc-disable behavior (BO-1800d)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800a-1-i
+  - BO-1800a-1-ii
+implemented_by: []

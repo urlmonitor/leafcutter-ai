@@ -1,0 +1,43 @@
+id: BO-1800d-1
+readiness: draft
+priority: medium
+title: "Automatic garbage collection and maintenance are disabled inside a drive clone during a drive"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml"
+criteria: |
+  Given a drive clone has been created and a drive is active in it,
+  When the clone's git configuration is inspected during the drive,
+  Then `gc.auto` is set to 0 and `maintenance.auto` is set to false in that clone,
+  And these settings are established as part of drive creation (before any work
+    commits), so no automatic repack or maintenance can start while the drive runs.
+depends_on: [BO-1800d, BO-1800a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  ADR-018 Decision §2 + Migration §2/§3: set gc.auto=0 and maintenance.auto=false
+  in every drive clone (and the hub) for the drive duration. Even with per-clone
+  isolation this removes the last in-clone concurrency hazard (cheap insurance).
+  IT-PO: set as part of the clone-creation lifecycle (BO-1800a-2/-3 sibling step).
+delivers_to: null
+expects_from:
+  ac_id: BO-1800a-1
+  contract: "The independent clone whose git config this behavior hardens against auto-gc."
+origin_agent: business-analyst
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800d-1-i
+implemented_by: []

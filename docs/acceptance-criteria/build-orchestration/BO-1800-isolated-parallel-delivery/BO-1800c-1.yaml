@@ -1,0 +1,43 @@
+id: BO-1800c-1
+readiness: draft
+priority: medium
+title: "The number of agents collaborating on a single feature is capped"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800c.yaml"
+criteria: |
+  Given a single feature/drive is being built,
+  When agents are assigned to collaborate on that one feature,
+  Then the count of agents working concurrently on that single feature is capped at
+    a small number (the drive runbook cap, on the order of 3-4),
+  And an attempt to add agents beyond the cap onto one feature is prevented or held,
+    rather than piling on more concurrent collaborators.
+depends_on: [BO-1800c]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  ADR-018 Decision §3 + Migration §6: cap agents-PER-feature (~3-4) in the drive
+  runbook. This is the axis WHERE coordination overhead and error amplification
+  appear (Google/MIT scaling evidence). Distinct from the uncapped features axis
+  (BO-1800c-2). IT-PO: confirm where the per-feature agent count is enforced
+  (supervisor dispatch vs runbook config).
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800c-1-i
+implemented_by: []

@@ -23,7 +23,11 @@ origin_agent: BrainCandy
 created: 2026-07-06
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-1800c-1
+  - BO-1800c-2
+  - BO-1800c-3
+  - BO-1800c-4
 implemented_by: []
 documentation_triggers:
   - reference-doc
