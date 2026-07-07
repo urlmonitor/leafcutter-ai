@@ -4,7 +4,7 @@ component: guardrail-engine
 status: active
 level: L2
 readiness: draft
-work_status: todo
+work_status: done
 priority: high
 criteria: |
   Given a staged v1-flat ticket that exceeds 20 flat ACs
@@ -19,5 +19,7 @@ criteria: |
 origin_agent: "business-analyst-v2"
 created: 2026-07-06
 created_by_ticket: "tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md"
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_ac_count_limits.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/hooks/check_ac_limits.py"
