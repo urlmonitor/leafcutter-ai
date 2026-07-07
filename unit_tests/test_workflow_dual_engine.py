@@ -34,7 +34,6 @@ ARCHITECTURE: Pure Python test — uses the _workflow_engine_harness module to
 from __future__ import annotations
 
 import re
-import shutil
 import tempfile
 from pathlib import Path
 
