@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
 criteria: |
   Given a ticket (or a repository whose tickets) carries no files_touched frontmatter

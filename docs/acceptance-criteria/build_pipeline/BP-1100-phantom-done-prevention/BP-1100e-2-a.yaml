@@ -1,0 +1,58 @@
+id: BP-1100e-2-a
+readiness: approved
+priority: high
+title: "Fail-open covers a valid-JSON-but-wrong-shape config and a missing git binary, not only missing/corrupt config"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given the reconciliation's config is valid JSON but the wrong SHAPE —
+    e.g. files_touched_reconciliation set to null, a top-level list, an absent key,
+    or a non-boolean enabled/strict value such as "yes"
+  When the hook reads the config to decide off / advisory / block
+  Then it fails open: it never crashes on the shape, treats enabled and strict as set
+    ONLY when the value is the JSON boolean true (a truthy non-boolean such as "yes"
+    does NOT enable), and any wrong shape degrades to the check being off/advisory —
+    never a hard block from the hook's own config read
+  And given the git binary is entirely absent from PATH (raising OSError /
+    FileNotFoundError) in any of the hook's git helpers
+  When the hook attempts to compute the staged files, repo root, branch diff, or
+    filesystem case-sensitivity
+  Then every git helper fails open (returns its safe default) and logs a WARNING, and
+    the hook exits 0 rather than propagating an uncaught traceback that would block
+    the commit
+depends_on:
+  - BP-1100e-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: relates
+    status: exists
+  - path: "templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "_load_config must isinstance-guard before any .get(): a non-dict top level or a non-dict files_touched_reconciliation section returns (False, False); enabled/strict are set only when the value is True (identity check, not truthiness). The caught exception tuple is broadened to (OSError, ValueError, TypeError, AttributeError) with a WARNING log. A wrong-shape config must never crash the hook."
+  - "All four subprocess-calling helpers (_get_staged_files, _get_repo_root, _get_branch_diff_files, _is_case_insensitive_fs) must catch (OSError, subprocess.SubprocessError) — not subprocess.SubprocessError alone — so a missing git binary (FileNotFoundError, a subclass of OSError) fails open. Each except block logs a WARNING before returning its safe default (Rule 3)."
+  - "This AC makes concrete two failure classes of BP-1100e-2's general 'when the reconciliation itself cannot run, it fails open' clause; it does not change the enabled/strict config contract."
+  - "PORTABLE SURFACE: lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py); ADR-001 build.py round-trip parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-2
+  contract: "The advisory-default / fail-open posture this AC extends to a wrong-shape config and a missing git binary, so neither the hook's own config read nor a missing git binary can turn the check into a hard block."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/06_TICKET-20260706-BP-1100e-2.md
+notes: |
+  Regression-lock authored post-remediation (BP-1100e round 1 D2, round 2 Fix1/Fix2).
+  Behavior already implemented and test-locked (wrong-shape config fail-open,
+  git-binary-missing) in test_check_files_touched_reconciliation_remediation.py.

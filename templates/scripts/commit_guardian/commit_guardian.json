@@ -501,6 +501,18 @@
                 "pass_filenames": false
             },
             {
+                "id": "check-predone-scope",
+                "name": "Check Pre-Done Scope Reconciliation (files_touched vs actual diff)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "BP-1100e-1 / BP-1100e-2: Advisory by default (files_touched_reconciliation.enabled: true, strict: false) — reports undeclared source files (.py/.sql/.ts/.tsx/.js) without blocking. Set strict:true in the files_touched_reconciliation section to block commits on scope violations, or enabled:false to turn the check off. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
+            },
+            {
                 "id": "check-mermaid-drift",
                 "name": "Check Mermaid Diagram Drift",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_mermaid_drift.py",
@@ -828,6 +840,11 @@
                 "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
             }
         ]
+    },
+    "files_touched_reconciliation": {
+        "_comment": "check_files_touched_reconciliation.py — BP-1100e-2: three-state enforcement. enabled:true (default) + strict:false = ADVISORY (report undeclared source files, do not block) — the guard is active out of the box. enabled:false = check is OFF (no output). enabled:true + strict:true = BLOCK on undeclared source files. Fails open on internal error regardless of strict setting.",
+        "enabled": true,
+        "strict": false
     },
     "exception_handling": {
         "_comment": "check_exception_handling.py — AST-based I/O boundary and exception-clause enforcement. Ruff rules E722, BLE001, and TRY are also enforced via pyproject.toml [tool.ruff.lint] select. This section configures the custom AST check.",
