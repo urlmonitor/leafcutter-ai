@@ -29,12 +29,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +352,13 @@ def _build_agents_map(
             gate_list = surface_map.get(risk_surface, [])
             if gate_list:
                 guardrail_set.update(gate_list)
+            else:
+                logger.warning(
+                    "No guardrail entry for (change_target=%r, risk_surface=%r) — "
+                    "no guardrail agents added for this pair.",
+                    target,
+                    risk_surface,
+                )
 
         # Consume flow_change_gates: for each (change_target, risk_surface) pair
         # that is listed as a flow-change pair, union mandatory_agents into guardrail_set
@@ -546,6 +556,13 @@ def _build_frontmatter(
     test_constraints = _parse_test_constraints(test_constraints_raw)
     if test_constraints:
         fm["test_constraints"] = test_constraints
+    # Emit classification axes when the source AC carries them (AC-4).
+    change_target = ac.get("change_target")
+    if change_target is not None:
+        fm["change_target"] = change_target
+    risk_surface = ac.get("risk_surface")
+    if risk_surface is not None:
+        fm["risk_surface"] = risk_surface
     return "---\n" + yaml.dump(fm, default_flow_style=False, allow_unicode=True) + "---"
 
 
@@ -587,7 +604,29 @@ def _computed_map_has_production_code_producer(
     )
 
 
-def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
+def _normalize_change_target(ac: AcRecord) -> list[str] | None:
+    """Normalize the change_target field from an AC record to a list or None.
+
+    Converts a string value to a single-item list, passes a list through
+    unchanged (but returns None for an empty list), and returns None when the
+    field is absent or explicitly set to None.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        A non-empty list of change-target strings when the field is present
+        and non-empty, or None when the field is absent, None, or an empty list.
+    """
+    raw = ac.get("change_target")
+    if raw is None:
+        return None
+    if isinstance(raw, list):
+        return raw if raw else None
+    return [raw]
+
+
+def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | None" = None) -> str:
     """Build the ticket body (everything after the frontmatter).
 
     Includes: Actor/Goal, Context, Acceptance Criteria (verbatim from AC),
@@ -598,9 +637,14 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     assigned agent) so that a non-coder assigned agent whose guardrail
     classification pulls in a coder still receives the block.
 
+    When ``agents_map`` is provided it is used as-is (M-1: avoids double-compute
+    and drift). When absent the map is computed internally via _build_agents_map.
+
     Args:
         ac: Parsed AC record.
         ac_id: The AC id.
+        agents_map: Optional pre-computed agents map. When provided, it is used
+            instead of recomputing _build_agents_map internally.
 
     Returns:
         The ticket body string (not including the frontmatter block).
@@ -609,24 +653,20 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     criteria = ac.get("criteria", "(No criteria provided)")
     assigned_agent = ac.get("assigned_agent", "python-coder")
 
-    # Extract classification fields from the AC record; default to None so
-    # _build_agents_map falls back to legacy behaviour when absent.
-    change_target_raw = ac.get("change_target")
-    risk_surface = ac.get("risk_surface") or None
-
-    # Normalise change_target to a list.
-    if change_target_raw is None:
-        change_targets = None
-    elif isinstance(change_target_raw, list):
-        change_targets = change_target_raw if change_target_raw else None
+    if agents_map is not None:
+        # M-1: use the pre-computed map; do not recompute.
+        agents = agents_map
     else:
-        change_targets = [change_target_raw]
+        # Extract classification fields from the AC record; default to None so
+        # _build_agents_map falls back to legacy behaviour when absent.
+        change_targets = _normalize_change_target(ac)
+        risk_surface = ac.get("risk_surface") or None
 
-    agents = _build_agents_map(
-        assigned_agent,
-        change_targets=change_targets,
-        risk_surface=risk_surface,
-    )
+        agents = _build_agents_map(
+            assigned_agent,
+            change_targets=change_targets,
+            risk_surface=risk_surface,
+        )
     signoffs = _build_signoffs_section(agents)
     complexity = _infer_complexity(ac)
 
@@ -972,21 +1012,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         files_touched = _extract_local_paths(ac.get("doc_links") or [])
         assigned_agent = ac.get("assigned_agent", "python-coder")
-        change_target_raw = ac.get("change_target")
+        change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
-        if change_target_raw is None:
-            change_targets = None
-        elif isinstance(change_target_raw, list):
-            change_targets = change_target_raw if change_target_raw else None
-        else:
-            change_targets = [change_target_raw]
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
         )
         frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
-        body = _build_ticket_body(ac, ac_id)
+        body = _build_ticket_body(ac, ac_id, agents_map=agents)
         print(frontmatter)
         print()
         print(body)
@@ -1005,21 +1039,15 @@ def main(argv: list[str] | None = None) -> int:
     # Build ticket content
     files_touched = _extract_local_paths(ac.get("doc_links") or [])
     assigned_agent = ac.get("assigned_agent", "python-coder")
-    change_target_raw = ac.get("change_target")
+    change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
-    if change_target_raw is None:
-        change_targets = None
-    elif isinstance(change_target_raw, list):
-        change_targets = change_target_raw if change_target_raw else None
-    else:
-        change_targets = [change_target_raw]
     agents = _build_agents_map(
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
     )
     frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
-    body = _build_ticket_body(ac, ac_id)
+    body = _build_ticket_body(ac, ac_id, agents_map=agents)
     ticket_content = frontmatter + "\n\n" + body
 
     # Write ticket file

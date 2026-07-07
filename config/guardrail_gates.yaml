@@ -247,10 +247,14 @@ dependency:
 # documentation planning BEFORE any coder runs.
 #
 # For these pairs, the mandatory_agents list is UNIONED into the computed agent
-# map on top of the per-surface gate list. The risk_surface values used here
-# are the legacy operational labels (production, all) that correspond to the
-# highest-scrutiny scenarios; they are not constrained to ALLOWED_RISK_SURFACES
-# because they represent pre-existing call-site labels used by the generator.
+# map on top of the per-surface gate list.
+#
+# risk_surface values MUST be from the ADR-017 blast-radius vocabulary:
+#   internal, contract_boundary, auth, privacy, safety, cost
+#
+# Migration note (ticket 08): legacy labels 'production' → 'contract_boundary'
+# and 'all' → 'safety'. 'contract_boundary' captures the highest-scrutiny
+# boundary-crossing scenario; 'safety' captures the cross-all-surfaces catch-all.
 #
 # mandatory_agents: agents that must appear in the computed agents map for this
 #   pair (deduplication against the per-surface gate list is the caller's
@@ -261,7 +265,7 @@ dependency:
 
 flow_change_gates:
   - change_target: code
-    risk_surface: production
+    risk_surface: contract_boundary
     mandatory_agents:
       - architect-review
       - documentation-expert
@@ -275,7 +279,7 @@ flow_change_gates:
       sql-coder (priority 7).
 
   - change_target: code
-    risk_surface: all
+    risk_surface: safety
     mandatory_agents:
       - architect-review
       - documentation-expert
@@ -289,7 +293,7 @@ flow_change_gates:
       sql-coder (priority 7).
 
   - change_target: schema
-    risk_surface: production
+    risk_surface: contract_boundary
     mandatory_agents:
       - architect-review
       - documentation-expert
@@ -301,7 +305,7 @@ flow_change_gates:
       must be dispatched before sql-coder (priority 7).
 
   - change_target: schema
-    risk_surface: all
+    risk_surface: safety
     mandatory_agents:
       - architect-review
       - documentation-expert
@@ -313,10 +317,10 @@ flow_change_gates:
       must be dispatched before sql-coder (priority 7).
 
   - change_target: config
-    risk_surface: production
+    risk_surface: contract_boundary
     mandatory_agents:
       - status-checker
       - pr-reviewer
     phase_constraint: >
-      status-checker must verify the production environment before
+      status-checker must verify boundary impact before
       config changes are merged; pr-reviewer gates the merge.

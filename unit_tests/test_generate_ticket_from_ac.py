@@ -78,11 +78,11 @@ class TestComputeAgentsMapBasic:
         result = _build_agents_map(
             "python-coder",
             change_targets=["code"],
-            risk_surface="production",
+            risk_surface="contract_boundary",
             guardrail_config_path=_GUARDRAIL_CONFIG,
         )
 
-        # Guardrail gates for code/production: architect-review, test-writer, test-runner, pr-reviewer
+        # Guardrail gates for code/contract_boundary: architect-review, test-writer, test-runner, pr-reviewer
         assert result.get("architect-review") == "needed", (
             f"architect-review should be 'needed' for code/production; got {result.get('architect-review')!r}"
         )
@@ -120,12 +120,12 @@ class TestComputeAgentsMapUnion:
         result = _build_agents_map(
             "python-coder",
             change_targets=["code", "schema"],
-            risk_surface="production",
+            risk_surface="contract_boundary",
             guardrail_config_path=_GUARDRAIL_CONFIG,
         )
 
-        # code/production gates: architect-review, test-writer, test-runner, pr-reviewer
-        # schema/production gates: architect-review, test-writer, test-runner, pr-reviewer
+        # code/contract_boundary gates: architect-review, test-writer, test-runner, pr-reviewer
+        # schema/contract_boundary gates: architect-review, test-writer, test-runner, pr-reviewer
         # Union (deduplicated): all four of the above
         for agent in ("architect-review", "test-writer", "test-runner", "pr-reviewer"):
             assert result.get(agent) == "needed", (
@@ -657,14 +657,14 @@ class TestEndToEndGeneratorComputedMap:
         which activates the legacy path. The legacy path does not add architect-review
         for python-coder.
         """
-        # Build a synthetic AC record with change_target=code, risk_surface=production
+        # Build a synthetic AC record with change_target=code, risk_surface=contract_boundary
         ac_record: dict = {
             "id": "BO-E2E-001",
             "title": "End-to-end generated ticket must include architect-review",
             "component": "infrastructure",
             "assigned_agent": "python-coder",
             "change_target": "code",
-            "risk_surface": "production",
+            "risk_surface": "contract_boundary",
             "estimated_complexity": "M",
             "criteria": (
                 "Given an AC with change_target=code and risk_surface=production\n"
@@ -779,7 +779,7 @@ class TestComputedMapTestRequirementsGating:
             "component": "infrastructure",
             "assigned_agent": "documentation-expert",
             "change_target": "code",
-            "risk_surface": "production",
+            "risk_surface": "contract_boundary",
             "estimated_complexity": "S",
             "criteria": (
                 "Given a non-coder assigned agent\n"
@@ -846,12 +846,12 @@ class TestFlowChangeSequencing:
         result = _build_agents_map(
             "python-coder",
             change_targets=["code"],
-            risk_surface="production",
+            risk_surface="contract_boundary",
             guardrail_config_path=_GUARDRAIL_CONFIG,
         )
 
         assert "documentation-expert" in result, (
-            f"Expected 'documentation-expert' in the computed map for code/production "
+            f"Expected 'documentation-expert' in the computed map for code/contract_boundary "
             f"(a flow-change pair per guardrail_gates.yaml flow_change_gates), "
             f"but it was absent.\n\n"
             f"Computed map: {result}\n\n"
@@ -883,13 +883,13 @@ class TestFlowChangeSequencing:
         result = _build_agents_map(
             "python-coder",
             change_targets=["code"],
-            risk_surface="production",
+            risk_surface="contract_boundary",
             guardrail_config_path=_GUARDRAIL_CONFIG,
         )
 
         keys = list(result.keys())
         assert "documentation-expert" in keys, (
-            "documentation-expert must be present in the computed map for code/production "
+            "documentation-expert must be present in the computed map for code/contract_boundary "
             "(flow-change pair). It is currently absent because flow_change_gates is not consumed."
         )
         assert "python-coder" in keys, (
@@ -1006,7 +1006,7 @@ class TestDeterministicOrdering:
         baseline = _build_agents_map(
             "python-coder",
             change_targets=["code"],
-            risk_surface="production",
+            risk_surface="contract_boundary",
             guardrail_config_path=_GUARDRAIL_CONFIG,
         )
         baseline_keys = list(baseline.keys())
@@ -1015,7 +1015,7 @@ class TestDeterministicOrdering:
             repeated = _build_agents_map(
                 "python-coder",
                 change_targets=["code"],
-                risk_surface="production",
+                risk_surface="contract_boundary",
                 guardrail_config_path=_GUARDRAIL_CONFIG,
             )
             repeated_keys = list(repeated.keys())
@@ -1026,3 +1026,358 @@ class TestDeterministicOrdering:
                 f"The ordering is nondeterministic. The fix must sort or canonicalize "
                 f"non-canonical agents so the output is stable across calls."
             )
+
+
+# ---------------------------------------------------------------------------
+# AC-4: _build_frontmatter emits change_target / risk_surface when AC carries them
+# (ticket 08)
+# ---------------------------------------------------------------------------
+# RED before fix: _build_frontmatter does not include change_target or risk_surface
+# in the fm dict, so generated frontmatter never contains these fields.
+# ---------------------------------------------------------------------------
+
+
+class TestBuildFrontmatterEmitsAxes:
+    """AC-4: _build_frontmatter emits change_target/risk_surface when the source AC carries them."""
+
+    def test_ac4_frontmatter_emits_change_target_when_present(self) -> None:
+        # covers: UNKNOWN
+        """AC-4: When the source AC has change_target='code', the generated ticket
+        frontmatter must include change_target: code.
+
+        RED before fix: _build_frontmatter() does not add change_target to the fm dict.
+        Fix: add 'change_target': ac.get('change_target') to fm when present.
+        """
+        import yaml as _yaml
+
+        from generate_ticket_from_ac import _build_frontmatter  # noqa: E402
+
+        ac: dict = {
+            "id": "BO-FM-001",
+            "title": "Test frontmatter change_target emission",
+            "component": "test",
+            "assigned_agent": "python-coder",
+            "change_target": "code",
+            "criteria": "Given something\nWhen something\nThen something",
+        }
+        agents = {"python-coder": "needed", "commit": "needed", "pull-request": "needed"}
+
+        fm_str = _build_frontmatter(ac, "BO-FM-001", [], agents)
+
+        parts = fm_str.split("---", 2)
+        fm = _yaml.safe_load(parts[1])
+
+        assert "change_target" in fm, (
+            "Expected 'change_target' in the generated ticket frontmatter when the source "
+            "AC carries change_target='code'. Currently _build_frontmatter does not emit "
+            "this field. Fix: add ac.get('change_target') to the fm dict and only include "
+            "it when the value is not None."
+        )
+        assert fm["change_target"] == "code", (
+            f"Expected change_target='code' in frontmatter, got {fm.get('change_target')!r}"
+        )
+
+    def test_ac4_frontmatter_emits_risk_surface_when_present(self) -> None:
+        # covers: UNKNOWN
+        """AC-4: When the source AC has risk_surface='internal', the generated ticket
+        frontmatter must include risk_surface: internal.
+
+        RED before fix: _build_frontmatter() does not add risk_surface to the fm dict.
+        """
+        import yaml as _yaml
+
+        from generate_ticket_from_ac import _build_frontmatter  # noqa: E402
+
+        ac: dict = {
+            "id": "BO-FM-002",
+            "title": "Test frontmatter risk_surface emission",
+            "component": "test",
+            "assigned_agent": "python-coder",
+            "risk_surface": "internal",
+            "criteria": "Given something\nWhen something\nThen something",
+        }
+        agents = {"python-coder": "needed", "commit": "needed", "pull-request": "needed"}
+
+        fm_str = _build_frontmatter(ac, "BO-FM-002", [], agents)
+
+        parts = fm_str.split("---", 2)
+        fm = _yaml.safe_load(parts[1])
+
+        assert "risk_surface" in fm, (
+            "Expected 'risk_surface' in the generated ticket frontmatter when the source "
+            "AC carries risk_surface='internal'. Currently _build_frontmatter does not "
+            "emit this field. Fix: include ac.get('risk_surface') in the fm dict."
+        )
+        assert fm["risk_surface"] == "internal", (
+            f"Expected risk_surface='internal' in frontmatter, got {fm.get('risk_surface')!r}"
+        )
+
+    def test_ac4_frontmatter_emits_both_axes_when_present(self) -> None:
+        # covers: UNKNOWN
+        """AC-4: When the source AC has both change_target and risk_surface, both
+        must appear in the generated frontmatter.
+
+        RED before fix: neither field is emitted by _build_frontmatter.
+        """
+        import yaml as _yaml
+
+        from generate_ticket_from_ac import _build_frontmatter  # noqa: E402
+
+        ac: dict = {
+            "id": "BO-FM-003",
+            "title": "Test frontmatter both axes",
+            "component": "test",
+            "assigned_agent": "python-coder",
+            "change_target": "schema",
+            "risk_surface": "contract_boundary",
+            "criteria": "Given something\nWhen something\nThen something",
+        }
+        agents = {"python-coder": "needed", "commit": "needed", "pull-request": "needed"}
+
+        fm_str = _build_frontmatter(ac, "BO-FM-003", [], agents)
+
+        parts = fm_str.split("---", 2)
+        fm = _yaml.safe_load(parts[1])
+
+        assert "change_target" in fm, (
+            "Expected 'change_target' in frontmatter when AC has change_target='schema'. "
+            f"Generated frontmatter keys: {sorted(fm.keys())}"
+        )
+        assert "risk_surface" in fm, (
+            "Expected 'risk_surface' in frontmatter when AC has risk_surface='contract_boundary'. "
+            f"Generated frontmatter keys: {sorted(fm.keys())}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-5 (H-1): _build_agents_map logs WARNING on guardrail lookup miss (ticket 08)
+# ---------------------------------------------------------------------------
+# RED before fix: _build_agents_map silently ignores a miss (no warning logged).
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAgentsMapWarnOnMiss:
+    """AC-5 (H-1): _build_agents_map logs a WARNING when a guardrail lookup misses."""
+
+    def test_ac5_build_agents_map_warns_on_missing_guardrail_entry(
+        self, tmp_path: Path, caplog: object
+    ) -> None:
+        # covers: UNKNOWN
+        """AC-5: When change_targets=['schema'] has no entry in the fixture guardrail
+        config, _build_agents_map must log a WARNING via the project logger.
+
+        RED before fix: _build_agents_map does not log any warning — the miss is
+        silently ignored and guardrail_set stays empty.
+        Fix: add logger.warning(...) when gate_list is empty for a (target, surface) pair.
+        """
+        import logging
+
+        import yaml as _yaml
+
+        # Fixture guardrail config: only "code/internal" has an entry.
+        # Calling with change_target="schema" → no entry → should warn.
+        fixture_gates = {
+            "code": {
+                "internal": ["test-writer"],
+            },
+            "flow_change_gates": [],
+        }
+        fixture_path = tmp_path / "fixture_guardrail.yaml"
+        fixture_path.write_text(
+            _yaml.dump(fixture_gates, default_flow_style=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.WARNING):
+            _build_agents_map(
+                "python-coder",
+                change_targets=["schema"],  # "schema" has no entry in fixture
+                risk_surface="internal",
+                guardrail_config_path=fixture_path,
+            )
+
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) > 0, (
+            "_build_agents_map must log a WARNING when (change_target='schema', "
+            "risk_surface='internal') has no guardrail entry in the config. "
+            "Currently no warning is logged — the miss is silently ignored. "
+            "Fix: add logger.warning(...) for each (target, surface) pair where "
+            "gate_list is empty or the surface key is absent from the config."
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-6 (M-1): _build_ticket_body accepts pre-computed agents_map (ticket 08)
+# ---------------------------------------------------------------------------
+# RED before fix: _build_ticket_body(ac, ac_id) has no agents_map parameter.
+# Calling it with agents_map=... raises TypeError.
+# ---------------------------------------------------------------------------
+
+
+class TestBuildTicketBodyAcceptsPrecomputedAgentsMap:
+    """AC-6 M-1: _build_ticket_body accepts a pre-computed agents map."""
+
+    def test_ac6_m1_build_ticket_body_accepts_agents_map_kwarg(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-1: _build_ticket_body must accept an agents_map kwarg and use it
+        in the Sign-offs section instead of recomputing the map internally.
+
+        RED before fix: the current signature is _build_ticket_body(ac, ac_id) with
+        no agents_map parameter → TypeError when called with agents_map=...
+        Fix: add agents_map parameter to _build_ticket_body; use it when provided.
+        """
+        ac: dict = {
+            "id": "BO-M1-001",
+            "title": "Test pre-computed agents map acceptance",
+            "component": "test",
+            "assigned_agent": "python-coder",
+            "change_target": "code",
+            "risk_surface": "internal",
+            "criteria": "Given something\nWhen it runs\nThen it works",
+        }
+        # The unique marker agent must appear in the Sign-offs section when the
+        # pre-computed map is used (proves the map was not recomputed).
+        custom_agents_map = {
+            "sentinel-agent-M1": "needed",
+            "python-coder": "needed",
+            "commit": "needed",
+            "pull-request": "needed",
+        }
+
+        # This raises TypeError before the fix:
+        # "_build_ticket_body() got an unexpected keyword argument 'agents_map'"
+        body = _build_ticket_body(ac, "BO-M1-001", agents_map=custom_agents_map)
+
+        assert "sentinel-agent-M1" in body, (
+            "Expected 'sentinel-agent-M1' (a unique marker) in the ticket body when a "
+            "pre-computed agents_map is passed to _build_ticket_body. The map must be "
+            "used as-is rather than recomputed. "
+            f"Actual body (first 600 chars):\n{body[:600]}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-6 (M-2): _normalize_change_target helper (ticket 08)
+# ---------------------------------------------------------------------------
+# RED before fix: function does not exist → ImportError.
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeChangeTargetHelper:
+    """AC-6 M-2: _normalize_change_target helper normalizes str/list/None consistently."""
+
+    def test_ac6_m2_normalize_str_returns_single_item_list(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-2: _normalize_change_target({"change_target": "code"}) → ["code"].
+
+        RED before fix: function does not exist in generate_ticket_from_ac → ImportError.
+        Fix: extract inline normalization logic into a named _normalize_change_target(ac)
+        helper that returns list[str] | None.
+        """
+        from generate_ticket_from_ac import _normalize_change_target  # noqa: E402
+
+        result = _normalize_change_target({"change_target": "code"})
+        assert result == ["code"], (
+            f"Expected ['code'] for change_target='code' (string form), got {result!r}"
+        )
+
+    def test_ac6_m2_normalize_list_passthrough(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-2: _normalize_change_target({"change_target": ["code", "schema"]}) → ["code", "schema"].
+
+        RED before fix: ImportError.
+        """
+        from generate_ticket_from_ac import _normalize_change_target  # noqa: E402
+
+        result = _normalize_change_target({"change_target": ["code", "schema"]})
+        assert result == ["code", "schema"], (
+            f"Expected ['code', 'schema'] for list form, got {result!r}"
+        )
+
+    def test_ac6_m2_normalize_absent_field_returns_none(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-2: _normalize_change_target({}) → None when field is absent.
+
+        RED before fix: ImportError.
+        """
+        from generate_ticket_from_ac import _normalize_change_target  # noqa: E402
+
+        result = _normalize_change_target({})
+        assert result is None, (
+            f"Expected None when change_target is absent, got {result!r}"
+        )
+
+    def test_ac6_m2_normalize_empty_list_returns_none(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-2: _normalize_change_target({"change_target": []}) → None (empty list).
+
+        RED before fix: ImportError.
+        """
+        from generate_ticket_from_ac import _normalize_change_target  # noqa: E402
+
+        result = _normalize_change_target({"change_target": []})
+        assert result is None, (
+            f"Expected None for empty change_target list, got {result!r}"
+        )
+
+    def test_ac6_m2_normalize_none_field_returns_none(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-2: _normalize_change_target({"change_target": None}) → None.
+
+        RED before fix: ImportError.
+        """
+        from generate_ticket_from_ac import _normalize_change_target  # noqa: E402
+
+        result = _normalize_change_target({"change_target": None})
+        assert result is None, (
+            f"Expected None for change_target: None, got {result!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-6 (M-3): flow_change_gates uses blast-radius risk_surface vocabulary (ticket 08)
+# ---------------------------------------------------------------------------
+# RED before fix: current flow_change_gates entries use 'production' and 'all'
+# as risk_surface labels, which are NOT in the blast-radius vocabulary.
+# ---------------------------------------------------------------------------
+
+
+class TestFlowChangeGatesBlastRadiusVocabulary:
+    """AC-6 M-3: flow_change_gates entries must use blast-radius risk_surface values."""
+
+    def test_ac6_m3_flow_change_gates_risk_surface_in_allowed(self) -> None:
+        # covers: UNKNOWN
+        """AC-6 M-3: Every risk_surface value in flow_change_gates must be one of the
+        6 blast-radius values: internal, contract_boundary, auth, privacy, safety, cost.
+
+        RED before fix: current flow_change_gates uses 'production' and 'all' as
+        risk_surface labels — neither is in ALLOWED_RISK_SURFACES.
+        Fix: migrate each flow_change_gates entry to use the correct blast-radius label
+        (e.g. 'production' → 'contract_boundary' or 'safety', 'all' → suitable label).
+        """
+        import yaml as _yaml
+
+        guardrail_path = _REPO_ROOT / "config" / "guardrail_gates.yaml"
+        gates = _yaml.safe_load(guardrail_path.read_text(encoding="utf-8"))
+        flow_change_gates = gates.get("flow_change_gates") or []
+
+        _ALLOWED_RISK_SURFACES = frozenset(
+            {"internal", "contract_boundary", "auth", "privacy", "safety", "cost"}
+        )
+
+        invalid_entries = []
+        for entry in flow_change_gates:
+            if not isinstance(entry, dict):
+                continue
+            rs = entry.get("risk_surface")
+            ct = entry.get("change_target")
+            if rs not in _ALLOWED_RISK_SURFACES:
+                invalid_entries.append(f"  ({ct!r}, risk_surface={rs!r})")
+
+        assert not invalid_entries, (
+            "flow_change_gates entries must use blast-radius risk_surface values "
+            "{{internal, contract_boundary, auth, privacy, safety, cost}}. "
+            "The following entries use legacy labels not in ALLOWED_RISK_SURFACES:\n"
+            + "\n".join(invalid_entries)
+            + "\n\nFix: migrate each entry to use the correct blast-radius label."
+        )
