@@ -92,6 +92,21 @@ Consult it for project-specific terms when reading code or docs.
 - **Do NOT hand-edit to add entries** — always use the triage flow so the blacklist
   stays consistent. Manual edits are only for correcting existing entries.
 
+## Knowledge & Memory Capture — MANDATORY
+
+When the user asks you to "remember this", "capture this", "write this down",
+"save this for later", or otherwise store a learning or memory, do NOT write
+directly to a memory file, the glossary, a doc, or a config value. First invoke
+the `route-knowledge` skill, which classifies the request and returns a
+structured `{ target_surface, path, rationale }` routing decision. Persist the
+knowledge to the surface it names.
+
+This prevents defaulting every learning to a memory file: `route-knowledge`
+distinguishes memory (session-spanning working context) from the glossary
+(project terminology), documentation surfaces (how-tos, references, ADRs,
+explanations), and config values. It is also the required pre-flight gate before
+dispatching `documentation-expert`.
+
 <!-- roadmap-phase:start — AUTO-GENERATED from docs/roadmap.json; edits between these markers are overwritten on next render -->
 
 | Roadmap | [docs/roadmap.json](docs/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |
