@@ -46,8 +46,8 @@ def _load_doc_types() -> dict:
         try:
             with open(_DOC_TYPES_JSON, encoding="utf-8") as f:
                 data = _json.load(f)
-        except (ValueError, OSError):
-            pass
+        except (ValueError, OSError) as exc:
+            print(f"[ticket_frontmatter_guard] WARNING: failed to load doc types: {exc}", file=sys.stderr)
         else:
             _DOC_TYPES_CACHE = data.get("doc_types", {})
             return _DOC_TYPES_CACHE

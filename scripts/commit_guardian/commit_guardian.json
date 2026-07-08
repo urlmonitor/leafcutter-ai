@@ -816,7 +816,7 @@
             {
                 "id": "check-hook-parity",
                 "name": "Check Hook Parity (leafcutter)",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_hook_parity.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_parity.py",
                 "language": "system",
                 "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/",
                 "stages": [

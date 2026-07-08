@@ -210,6 +210,13 @@ categories:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-07-08 [python-coder/EPIC-Phase1ReadyHardening/03_InfrastructureFixes]:
+#   Created templates/config/feedback_categories.yaml as the canonical template
+#   source, kept in parity with config/feedback_categories.yaml. This file
+#   is deployed to target projects' config/ directory by build.py.
+#   All standard phase agents (python-coder, sql-coder, frontend-coder, llm-expert,
+#   test-writer, test-runner, pr-reviewer, commit) are present in allowed_writers
+#   for all broad categories per AC INF-100c-3.
 # - 2026-05-15 10:00 [EPIC-FeedbackCollection/ticket-01]: Initial creation.
 #   Seven starter categories defined: complete, knowledge-gap, quality-concern,
 #   tooling-issue, convention-ambiguity, blocker, success-pattern. quality-concern

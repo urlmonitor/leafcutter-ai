@@ -551,9 +551,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         sidecar_path.write_text(feedback_id, encoding="utf-8")
         print(f"sidecar:{sidecar_path}", file=sys.stderr)
-    except OSError:
-        # Non-fatal: sidecar write failure does not affect the JSONL entry.
-        pass
+    except OSError as exc:
+        print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
 
     return 0
 
@@ -564,6 +563,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-07-08 [python-coder/EPIC-Phase1ReadyHardening/03_InfrastructureFixes]:
+#   Promoted scripts/feedback/submit_feedback.py to a tracked source file
+#   (removed scripts/feedback/ from .gitignore). The file was previously
+#   classified as a build output but tests reference it directly. The template
+#   at templates/scripts/feedback/submit_feedback.py remains the canonical
+#   source; this file is kept in sync with it. (AC INF-100c-1)
 # - 2026-06-08 12:30 [python-coder/EPIC-FeedbackPortability/04_TICKET-20260608-INF-100c-4]:
 #   Improved _load_categories() error message to satisfy AC INF-100c-4: when
 #   feedback_categories.yaml is not found, the error now prints three lines:

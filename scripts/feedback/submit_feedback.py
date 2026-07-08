@@ -551,9 +551,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         sidecar_path.write_text(feedback_id, encoding="utf-8")
         print(f"sidecar:{sidecar_path}", file=sys.stderr)
-    except OSError:
-        # Non-fatal: sidecar write failure does not affect the JSONL entry.
-        pass
+    except OSError as exc:
+        print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
 
     return 0
 
@@ -586,6 +585,7 @@ if __name__ == "__main__":
 #   source (leafcutter-ai/scripts/feedback/) and deployed (.leafcutter/scripts/feedback/)
 #   both resolve to two parents up + /config/. _find_project_root() is retained for
 #   _JSONL_DEFAULT which must remain at the project root. (AC INF-100c-1) (#EPIC-FeedbackPortability)
+# - 2026-06-03 09:00 [python-coder/EPIC-TemplateDocViolations/06]: Confirmed 2026-05-21 entry already has HH:MM (12:00); no change needed. Added this audit entry for traceability. (#EPIC-TemplateDocViolations/06)
 # - 2026-05-30 12:00 [python-coder/TICKET-20260528-FeedbackCorrelationIDLoss]:
 #   Wrapped JSONL append and stdout print in fcntl.flock(LOCK_EX) advisory
 #   lock so concurrent writers serialise both the append and the stdout
