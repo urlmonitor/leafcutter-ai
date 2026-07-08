@@ -130,7 +130,11 @@ def pytest_runtest_makereport(
 
     try:
         enforcement = _get_enforcement()
-    except ImportError:
+    except ImportError as exc:
+        print(
+            f"WARNING: pytest_ac_enforcement: cannot import test_enforcement: {exc}",
+            file=sys.stderr,
+        )
         return
 
     ac_id = enforcement.extract_covers_tag(item)
