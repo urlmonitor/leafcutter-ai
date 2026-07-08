@@ -31,9 +31,9 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -110,8 +110,8 @@ templates/commit-guardian/ copy into the canonical tree.
 
 - [x] test-writer — 2026-07-08 10:00
 - [x] python-coder — 2026-07-08 12:00
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-runner — 2026-07-08 10:36
+- [x] pr-reviewer — 2026-07-08 15:15
 - [ ] commit
 - [ ] pull-request
 
@@ -179,3 +179,24 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "fix: recreate diagram_type_validators + update enum + port test-file exemption (GE-103/105/110)"; staged files: templates/commit-guardian/commit_guardian.json, templates/commit-guardian/diagram_type_validators.py, tickets/00_inbox/epics/EPIC-Phase1ReadyHardening/02_GuardrailEngineFixes.md, unit_tests/commit_guardian/test_commit_guardian_imports.py. Hook autofix applied: added feedback-id: (submit-failed) to two prior comment headings missing it (ticket-supervisor 10:00, python-coder 12:00). SHA: ca68d339.
+
+### 2026-07-08 10:36 — test-runner (status: ok)
+feedback-id: fb_2026-07-08_24775ac8
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Re-run after H-1 blocker fix: 13/13 import smoke tests pass (targeting templates/scripts/commit_guardian/ — canonical tracked source, not gitignored runtime dir). 49/49 exception-handling tests pass with no regressions. Both suites exit 0.
+
+### 2026-07-08 15:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-08_53847a82
+completion_manifest:
+  h1_fix_verified: true
+  scripts_commit_guardian_path_now_tracked: true
+  external_dep_modules_exclusion_correct: true
+  ge103_diagram_type_validators_present_in_all_dirs: true
+  ge105_all_eleven_enum_values_in_both_json_files: true
+  ge105_fallback_list_complete: true
+  ge110_no_regressions_no_changes: true
+  no_new_high_confidence_findings: true
+Final review after H-1 fix (SHA 31966f46): _SCRIPTS_COMMIT_GUARDIAN confirmed changed from scripts/commit_guardian/ (gitignored) to templates/scripts/commit_guardian/ (tracked). _EXTERNAL_DEP_MODULES frozenset correctly excludes check_docstrings, docstring_validators, check_secrets. GE-105: all 11 values (data_flow, user_flow, agent_flow, dataflow, context, container, component, sequence, erd, state, none) confirmed in both commit_guardian.json files and in both diagram_type_validators.py fallback lists. GE-103: templates/scripts/commit_guardian/ contains diagram_type_validators.py plus full set of check_*.py modules. GE-110: unchanged; prior verified sign-off stands. No new findings.
