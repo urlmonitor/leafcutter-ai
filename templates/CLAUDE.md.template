@@ -38,6 +38,16 @@ This project uses the leafcutter conventions:
 - Do NOT bypass hooks with `--no-verify` except for files this session did not touch.
 - When `git commit` fails on pre-commit, invoke the `precommit-autofix` skill.
 
+### Knowledge & Memory Capture
+When asked to "remember this", "capture this", "write this down", "save this for
+later", or to store a learning/memory, do NOT write directly to a memory file,
+the glossary, a doc, or a config value. First invoke the `route-knowledge` skill,
+which returns a structured `{ target_surface, path, rationale }` decision, then
+persist the knowledge to the surface it names. This keeps learnings on the right
+surface (memory vs glossary vs docs vs config) instead of defaulting everything to
+a memory file, and it is the required pre-flight gate before dispatching
+`documentation-expert`.
+
 ### Folder READMEs are load-bearing
 Before editing any file in a gated folder (`.claude/agents/`, `.claude/skills/`,
 `.claude/hooks/`, `alembic/versions/`), read the nearest-ancestor `README.md`.
@@ -53,6 +63,7 @@ The `readme_read_guard.py` hook will block edits if the README has not been read
 DECISION HISTORY
 ====================================================================
 - 2026-05-22 [AI]: Added STRICT WORKFLOW ENFORCEMENT section to prevent untracked code changes and enforce ticket-driven development.
+- 2026-07-08 [BrainCandy]: Added "Knowledge & Memory Capture" rule under Critical Rules — requires invoking the route-knowledge skill before storing any learning/memory so it routes to the correct surface (memory vs glossary vs docs vs config) instead of defaulting to a memory file. Mirrors the leafcutter-ai repo CLAUDE.md convention (PR #236).
 ====================================================================
 -->
 
