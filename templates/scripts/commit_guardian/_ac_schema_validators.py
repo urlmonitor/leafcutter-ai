@@ -23,6 +23,12 @@ DECISION HISTORY:
     YAML loading helpers, schema validation, and three cross-file pattern checks:
     pattern_bindings completeness, deprecated-reference guard, and criteria-
     duplicate detection.
+  - 2026-07-08 [feature/ac-source-of-truth-test-spec]: Added validate_test_contract()
+    (+ _is_code_ac / _is_leaf_ac helpers). Enforces that a leaf code AC that is
+    approved and not yet done declares a test contract — a non-empty test_spec or an
+    explicit test_required: false — and blocks the contradictory test_spec +
+    test_required:false state. Runs on staged files only (forward ratchet; does not
+    retroactively fail the store). The AC is the source of truth for tests. (AC BO-2000e)
 """
 
 from __future__ import annotations
@@ -38,6 +44,12 @@ _HOOK_PREFIX = "[check-ac-schema]"
 REQUIRED_FIELDS = ["id", "title", "component", "status", "created_by", "criteria"]
 VALID_STATUSES = {"active", "deprecated", "superseded_by"}
 _ID_REGEX = re.compile(r"^[A-Z]{2,6}-[0-9]{3}$")
+
+# Agents that produce production code. A leaf AC assigned to one of these — or
+# whose change_target targets code/schema — is a "code AC" that must carry a
+# test contract (test_spec or an explicit test_required: false).
+_CODER_AGENTS = {"python-coder", "sql-coder", "frontend-coder"}
+_CODE_CHANGE_TARGETS = {"code", "schema"}
 
 
 # ---------------------------------------------------------------------------
@@ -396,5 +408,110 @@ def validate_criteria_not_pattern_duplicate(
                 f"{pattern_id} — skipping duplicate check",
                 file=sys.stderr,
             )
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Test-contract validation (BO-2000e-derived: ACs are the source of truth for tests)
+# ---------------------------------------------------------------------------
+
+def _is_code_ac(data: dict[str, Any]) -> bool:
+    """Return True when the AC targets production code (needs a test contract).
+
+    A code AC is one whose ``change_target`` includes ``code`` or ``schema``,
+    or whose ``assigned_agent`` is a production-code producer. ``change_target``
+    may be a scalar string or a list of strings.
+
+    Args:
+        data: Parsed AC YAML content.
+
+    Returns:
+        True when the AC targets production code.
+    """
+    change_target = data.get("change_target")
+    targets: set[str] = set()
+    if isinstance(change_target, str):
+        targets = {change_target}
+    elif isinstance(change_target, list):
+        targets = {t for t in change_target if isinstance(t, str)}
+    if targets & _CODE_CHANGE_TARGETS:
+        return True
+    return data.get("assigned_agent") in _CODER_AGENTS
+
+
+def _is_leaf_ac(data: dict[str, Any]) -> bool:
+    """Return True when the AC is a leaf (implementable) AC, not a composite.
+
+    Prefers the explicit ``level`` field (L2/L3 = leaf, L0/L1 = composite).
+    When ``level`` is absent, treats an AC as a leaf when it has an
+    ``assigned_agent`` and no ``covered_by`` children.
+
+    Args:
+        data: Parsed AC YAML content.
+
+    Returns:
+        True when the AC is a leaf-level AC.
+    """
+    level = data.get("level")
+    if level in {"L2", "L3"}:
+        return True
+    if level in {"L0", "L1"}:
+        return False
+    covered_by = data.get("covered_by") or []
+    return bool(data.get("assigned_agent")) and not covered_by
+
+
+def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
+    """Validate that a leaf code AC carries a test contract (source of truth).
+
+    The AC — not the ticket — owns what must be tested. A leaf code AC that is
+    ``readiness: approved`` and not yet built (``work_status`` != ``done``) must
+    declare EITHER a non-empty ``test_spec`` (what test-writer should author)
+    OR an explicit ``test_required: false`` (genuinely test-free, e.g. a
+    prompt/docs change). This closes the silent-skip hole where a code ticket
+    with no test contract caused test-writer to self-skip TDD.
+
+    Also blocks the contradictory state where ``test_spec`` lists tests but
+    ``test_required`` is ``false``.
+
+    Runs on staged files only (per check_ac_schema Phase 1), so it is a forward
+    ratchet — it does not retroactively fail the existing store.
+
+    Args:
+        path: Filesystem path to the AC file (for error messages).
+        data: Parsed AC YAML content.
+
+    Returns:
+        List of error message strings; empty when the contract is satisfied.
+    """
+    errors: list[str] = []
+    test_spec = data.get("test_spec")
+    test_required = data.get("test_required")
+    has_spec = isinstance(test_spec, list) and len(test_spec) > 0
+
+    # Contradiction — always a real authoring bug, regardless of readiness.
+    if has_spec and test_required is False:
+        errors.append(
+            f"{path}: test_spec lists {len(test_spec)} test(s) but "
+            f"test_required is false — remove test_required: false or clear test_spec"
+        )
+
+    # Missing contract on an approved, not-yet-built leaf code AC.
+    if (
+        data.get("readiness") == "approved"
+        and data.get("work_status") != "done"
+        and _is_code_ac(data)
+        and _is_leaf_ac(data)
+        and not has_spec
+        and test_required is not False
+    ):
+        errors.append(
+            f"{path}: approved code AC must declare a test contract — add a "
+            f"non-empty test_spec (what test-writer should author, derived from "
+            f"the Gherkin criteria) or set test_required: false for a genuinely "
+            f"test-free AC. ACs are the source of truth for tests; the generated "
+            f"ticket's Test Requirements is derived from test_spec."
+        )
 
     return errors

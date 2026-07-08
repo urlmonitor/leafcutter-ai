@@ -266,7 +266,7 @@ is loaded once per ticket run (cached in memory across the agent loop).
 |---|---|---|
 | `production_code` | YES | Inject `test-writer` (priority 5) before the agent and `test-runner` (priority 9) after. If the ticket already has these agents in `agents:` map as `not_needed`, skip injection (explicit ticket override wins). |
 | `documentation` | NO | Neither `test-writer` nor `test-runner` are required. Docs-only agents produce human-readable artifacts, not executable logic. |
-| `prompt` | NO (TDD) | TDD guardrails do NOT apply. Prompt-quality guardrails apply instead (see llm-expert's `## Prompt-Quality Checklist`). The `test-writer` skip rule already handles this via the `## Test Requirements` block absence check. |
+| `prompt` | NO (TDD) | TDD guardrails do NOT apply. Prompt-quality guardrails apply instead (see llm-expert's `## Prompt-Quality Checklist`). A prompt-only AC should carry `test_required: false`; a prompt-only ticket has no production-code agent, so the test-writer skip rule (non-code ticket) handles it. |
 | `test_artifact` | NO | Agent IS the test artifact producer — it would be circular to wrap it in test-writer/test-runner. |
 | `review_verdict` | NO | Review agents produce verdicts, not executable artifacts. |
 | `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
@@ -297,56 +297,49 @@ else:
 ```
 
 **Interaction with existing skip rules:**
-The test-writer skip rule (below) runs on the TICKET'S `## Test Requirements` block and
-can skip test-writer even for `production_code` agents if the ticket explicitly has no
-test requirements. The produces-trait check is the AGENT-LEVEL rule; the test requirements
-check is the TICKET-LEVEL rule. The ticket-level rule always wins when it says "skip".
+The test-writer skip decision keys on the AGENT MAP (is a production-code agent
+needed?), NOT on the `## Test Requirements` block. This is deliberate: the block
+is *derived from the source AC* by `generate_ticket_from_ac.py` and is guaranteed
+non-empty for code tickets by the `check-ticket-test-requirements` guard, so an
+absent/empty block on a code ticket is a defect to surface — never a licence to
+skip. (The historical block-absence skip silently disabled TDD on every
+AC-generated code ticket.)
 
-### Docs-only / config-only test-writer skip rule
+### test-writer skip rule — non-code tickets only
 
-Before dispatching `test-writer` (priority 5), read the ticket's `## Test Requirements` block.
-Parse the `tests:` YAML array inside that block.
-
-Use the following decision logic:
+Before dispatching `test-writer` (priority 5), inspect the ticket's `agents:`
+map for a production-code agent (`python-coder`, `sql-coder`, or `frontend-coder`
+set to `needed`).
 
 ```
 IF next_agent == "test-writer":
-  READ ticket body. Locate the ## Test Requirements block.
-  IF block is ABSENT entirely:
-    → SKIP test-writer (mark signed_off, append comment, GOTO loop)
-  IF block is PRESENT but tests array is empty (tests: []) AND no agent in the
-     ticket's agents: map has produces: production_code in the registry:
-    → SKIP test-writer
-  OTHERWISE (block present with entries, OR block present with empty array but
-     a production_code agent exists in the ticket):
-    → dispatch test-writer normally
+  IF NO production-code agent is "needed" in the agents map:
+    → SKIP test-writer (non-code ticket): mark signed_off, append comment, GOTO loop
+  ELSE (a coder is needed):
+    → dispatch test-writer normally. Do NOT skip, regardless of the state of the
+      ## Test Requirements block. If that block is empty/absent, test-writer
+      derives the tests from the source AC directly (its own AC Store pre-flight).
 ```
 
-**Important — computed agents map interaction:** For AC-generated tickets where
-`generate_ticket_from_ac.py` computes the agents map, the `## Test Requirements`
-block will always be present for tickets with a production-code agent — but the
-`tests:` array may start empty (test-writer is responsible for filling in concrete
-test specs). Do NOT skip test-writer simply because `tests: []` when the block is
-present and the ticket has a `production_code` agent. The empty array is the expected
-initial state; test-writer populates it as its primary deliverable.
+**Do NOT skip on an empty `tests:` array for a code ticket.** For AC-generated
+tickets, `## Test Requirements` is derived from the source AC (`test_spec` first,
+else the Gherkin `criteria`) and is never a hardcoded `tests: []` stub; test-writer
+then confirms the red baseline. An explicit `agents: test-writer: not_needed` in
+the ticket frontmatter remains a valid skip path (explicit override wins).
 
-**Skip actions (when skip rule fires):**
+**Skip actions (only when NO coder is needed):**
 - Mark `agents["test-writer"] = "signed_off"` in frontmatter (via Edit).
-- Append a note to `## Comments`:
+- Append a note to `## Comments` with an ACCURATE reason (never the hardcoded
+  "docs-only or config-only" string on a code ticket):
   ```
   ### YYYY-MM-DD HH:MM — ticket-supervisor (status: ok)
-  test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
+  no production-code agent needed — test-writer phase skipped (non-code ticket)
   ```
 - Continue to the next pending agent (GOTO step 1 with updated map).
 
-**Dispatch normally** when `tests:` array has one or more entries, OR when the
-`## Test Requirements` block is present and the ticket contains any agent whose
-`produces` trait is `production_code` in `config/agent_registry.json`.
-
-This prevents docs PRs and config-only tickets from stalling at the test-writer phase
-indefinitely, while ensuring that computed agents maps for code-producing tickets are
-not silently undone by this rule. Both the ticket's `agents: test-writer: not_needed`
-setting AND this runtime check are valid skip paths — whichever fires first takes precedence.
+This prevents docs/config-only tickets from stalling at the test-writer phase,
+while guaranteeing that every code-producing ticket runs test-writer against its
+AC-derived test contract.
 
 ### Post-coder contract-shrinking check (supervisor-side warn, not block)
 

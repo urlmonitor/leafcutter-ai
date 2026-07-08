@@ -3,7 +3,9 @@ description: |
   IT Product Owner — technical enrichment agent for the AC pipeline. Operates
   AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
   fields: assigned_agent, it_requirements, estimated_complexity,
-  delivers_to/expects_from contracts, and doc_links to architecture documents.
+  delivers_to/expects_from contracts, doc_links to architecture documents, and
+  the test contract (test_spec / test_required) that the ticket's Test
+  Requirements is derived from.
 
   Does NOT create tickets. Does NOT modify the BA's criteria field. Uses
   architecture docs, component registries, and agent registries to understand
@@ -401,6 +403,47 @@ doc_links:
 If a relevant architecture doc does not exist yet, set `status: planned`.
 Never link to source files (.py, .ts, .sql, etc.) — the coder agents will
 locate those during implementation.
+
+### 2.7 — test_spec / test_required (the test contract — MANDATORY for code ACs)
+
+The AC — not the ticket — is the source of truth for what must be tested.
+`generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section
+from these fields, and test-writer authors failing tests from them. You MUST set
+one of the two on every leaf code AC (`change_target` includes `code`/`schema`,
+or `assigned_agent` is a coder):
+
+**`test_spec`** — a non-empty list of test descriptors, one per behaviour the
+Gherkin `criteria` promises. Derive them from the `Then` clauses: each `Then`
+becomes at least one test. Do NOT restate the criteria — name the assertion.
+
+```yaml
+test_spec:
+  - name: test_merged_output_has_seven_entries
+    target_dir: unit_tests/ac_store/
+    framework: unittest          # unittest (project default) or pytest
+    type: unit                   # unit | integration | e2e | behavioral
+    description: "3 tickets + 4 ready ACs with --include-acs yields exactly 7 entries"
+  - name: test_merged_output_sorted_by_priority
+    target_dir: unit_tests/ac_store/
+    type: unit
+    description: "Entries sorted critical > high > medium > low"
+```
+
+Rules for `test_spec`:
+- One descriptor per distinct `Then` (and per meaningful edge case in L3 ACs).
+- `name` and `target_dir` are required; prefer the project's real test dirs
+  (`unit_tests/<component>/`). `framework`/`type`/`description` are recommended.
+- `covers` defaults to `[<this AC id>]`; set it explicitly only for a test that
+  spans multiple ACs.
+
+**`test_required: false`** — set this INSTEAD of `test_spec` only when the AC
+genuinely produces no executable behaviour (e.g. `change_target: prompt` or
+`docs`). This records the intent explicitly so test-writer skips with an
+accurate reason rather than the code being silently left untested. Never set
+`test_required: false` on an AC that also has a `test_spec`.
+
+An approved leaf code AC with neither `test_spec` nor `test_required: false` is
+rejected by the `check-ac-schema` guard — the test contract is not optional.
 
 ---
 

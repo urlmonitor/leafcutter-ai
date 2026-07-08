@@ -1566,3 +1566,132 @@ class TestRealStoreComputedMapE2E:
             f"got {agents_fm.get('architect-review')!r}.\n"
             f"Full agents block: {agents_fm}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Test Requirements derived from the AC (source of truth)
+# ---------------------------------------------------------------------------
+
+import re as _re_tc  # noqa: E402
+
+from generate_ticket_from_ac import (  # noqa: E402
+    _build_test_requirements_section,
+    _build_verification_report,
+    _derive_tests_from_criteria,
+    _test_descriptors_from_spec,
+)
+
+
+class TestTestRequirementsDerivedFromAC:
+    """## Test Requirements is derived from the AC's test_spec/criteria, never a
+    hardcoded empty stub. This is the hybrid source-of-truth behaviour."""
+
+    _CODE_AGENTS = {
+        "python-coder": "needed",
+        "test-writer": "needed",
+        "test-runner": "needed",
+    }
+
+    def test_derives_from_explicit_test_spec(self):
+        ac = {
+            "assigned_agent": "python-coder",
+            "criteria": "Given x\nWhen y\nThen z",
+            "test_spec": [
+                {"name": "test_alpha", "target_dir": "unit_tests/ac_store/",
+                 "description": "alpha holds", "framework": "pytest", "type": "unit"},
+                {"name": "test_beta", "target_dir": "unit_tests/ac_store/"},
+            ],
+        }
+        section = _build_test_requirements_section(ac, "ZZ-100a-1")
+        assert "## Test Requirements" in section
+        assert "test_alpha" in section and "test_beta" in section
+        # file path derived from target_dir + ac slug
+        assert "unit_tests/ac_store/test_zz_100a_1.py" in section
+        # no hardcoded empty stub
+        assert "tests: []" not in section
+
+    def test_falls_back_to_criteria_then_clauses(self):
+        ac = {
+            "assigned_agent": "python-coder",
+            "criteria": "Given a store\nWhen scanned\nThen it returns ready ACs\nThen it sorts by priority",
+        }
+        descriptors = _derive_tests_from_criteria(ac, "BP-811")
+        # one descriptor per Then clause
+        assert len(descriptors) == 2
+        assert all(d["name"].startswith("test_bp_811_") for d in descriptors)
+        assert all(d["covers"] == ["BP-811"] for d in descriptors)
+
+    def test_no_then_clause_yields_one_generic_stub(self):
+        ac = {"assigned_agent": "python-coder", "criteria": "A prose criterion with no gherkin."}
+        descriptors = _derive_tests_from_criteria(ac, "BP-900")
+        assert len(descriptors) == 1
+        assert descriptors[0]["name"] == "test_bp_900_satisfies_criteria"
+
+    def test_test_required_false_omits_section(self):
+        ac = {
+            "assigned_agent": "llm-expert",
+            "criteria": "Given a prompt\nWhen edited\nThen it reads better",
+            "test_required": False,
+        }
+        section = _build_test_requirements_section(ac, "GE-700a-2")
+        assert section == ""
+
+    def test_spec_descriptor_normalisation(self):
+        ac = {"test_spec": [{"name": "t1", "target_dir": "unit_tests/x/",
+                             "requires_db": True, "covers": ["A-1", "A-2"]}]}
+        descriptors = _test_descriptors_from_spec(ac, "A-1")
+        assert descriptors[0]["requires_db"] is True
+        assert descriptors[0]["covers"] == ["A-1", "A-2"]
+
+    def test_generated_block_passes_name_entry_regex(self):
+        # The ticket-level guard requires at least one "- name: <x>" entry.
+        ac = {
+            "assigned_agent": "python-coder",
+            "criteria": "Given a\nWhen b\nThen c happens",
+        }
+        body = _build_ticket_body(
+            ac, "ZZ-200a-1", agents_map=dict(self._CODE_AGENTS)
+        )
+        assert _re_tc.search(r"^\s*-\s+name:\s+\S+", body, _re_tc.MULTILINE), (
+            "derived ## Test Requirements must contain a populated test entry so the "
+            "check-ticket-test-requirements guard passes"
+        )
+
+
+class TestVerificationReport:
+    """--verify report flags source-of-truth gaps without a hard FAIL on the
+    common (criteria-derivable) path."""
+
+    def test_report_passes_with_test_spec(self):
+        ac = {
+            "assigned_agent": "python-coder",
+            "readiness": "approved",
+            "criteria": "Given a\nWhen b\nThen c",
+            "it_requirements": ["reuse the loader"],
+            "test_spec": [{"name": "test_c", "target_dir": "unit_tests/x/"}],
+        }
+        agents = {"python-coder": "needed", "test-writer": "needed"}
+        body = _build_ticket_body(ac, "ZZ-300a-1", agents_map=agents)
+        report, has_fail = _build_verification_report(ac, "ZZ-300a-1", agents, body, ["scripts/x.py"])
+        assert has_fail is False
+        assert "test_spec authored" in report
+
+    def test_report_warns_without_test_spec_but_no_fail(self):
+        ac = {
+            "assigned_agent": "python-coder",
+            "readiness": "approved",
+            "criteria": "Given a\nWhen b\nThen c",
+        }
+        agents = {"python-coder": "needed", "test-writer": "needed"}
+        body = _build_ticket_body(ac, "ZZ-301a-1", agents_map=agents)
+        report, has_fail = _build_verification_report(ac, "ZZ-301a-1", agents, body, [])
+        assert has_fail is False
+        assert "DERIVED from criteria" in report
+
+    def test_report_fails_when_no_criteria_and_no_spec(self):
+        ac = {"assigned_agent": "python-coder", "readiness": "approved", "criteria": ""}
+        agents = {"python-coder": "needed", "test-writer": "needed"}
+        body = _build_ticket_body(ac, "ZZ-302a-1", agents_map=agents)
+        report, has_fail = _build_verification_report(ac, "ZZ-302a-1", agents, body, [])
+        assert has_fail is True
+        assert "BLOCKED" in report
