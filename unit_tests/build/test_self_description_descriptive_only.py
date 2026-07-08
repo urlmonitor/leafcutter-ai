@@ -75,6 +75,8 @@ import shutil
 import sys
 from pathlib import Path
 
+import pytest
+
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -573,6 +575,96 @@ class TestVerdictIndependentOfStaleDeploy:
 
 
 # ---------------------------------------------------------------------------
+# M-2 guard: mis-typed descriptive_only values must NOT exempt an unresolvable
+# skill_id from validate_agent_self_description
+# ---------------------------------------------------------------------------
+
+
+class TestMisTypedMarkerNotExemptedValidator:
+    """M-2: non-bool descriptive_only values must NOT exempt skill-dir resolution.
+
+    The production guard uses ``inv.get("descriptive_only") is True`` (strict
+    identity test). A string "true", integer 1, or None must NOT skip the
+    resolution check — they are data entry errors, not the intentional marker.
+    These tests LOCK that strict-identity safety property so that weakening the
+    check to truthiness would immediately surface as a regression.
+
+    All three tests are expected to be GREEN immediately; the code already has
+    the correct strict ``is True`` guard (scripts/build_phases.py line ~1760).
+    """
+
+    @pytest.mark.parametrize(
+        "bad_value,label",
+        [
+            ("true", "string-true"),
+            (1, "int-one"),
+            (None, "none"),
+        ],
+    )
+    def test_mistyped_descriptive_only_does_not_exempt_validator(
+        self, tmp_path: Path, bad_value: object, label: str
+    ) -> None:
+        # covers: UNKNOWN
+        """M-2: a descriptive_only value that is not bool True must NOT exempt
+        an unresolvable skill_id from the validator.
+
+        Given a skills_invoked entry with skill_id='bogus-typed-marker-xyz' that
+        has no matching templates/skills/ directory, and with descriptive_only set
+        to a non-bool value (string "true", int 1, or None),
+        When validate_agent_self_description runs in error mode,
+        Then error_count > 0 (the entry is NOT exempted — it still fails).
+
+        Rationale: only an explicit ``descriptive_only: true`` (Python bool True)
+        is the intentional marker. String/int/None values are data entry errors
+        and must be caught by the validator. The strict ``is True`` identity check
+        in the production code enforces this invariant.
+
+        What would break if the check were weakened to truthiness:
+            if inv.get("descriptive_only"):   # <-- BAD: truthy, not identity
+                continue
+        With that weaker check, ``descriptive_only: "true"`` or
+        ``descriptive_only: 1`` would silently exempt genuinely dangling
+        skill_ids and defeat the guardrail that BP-1300a-1 enforces.
+        """
+        validator = _require_validator()
+        agent_name = "fake-agent"
+        fm = dict(_FULL_FRONTMATTER)
+        fm["name"] = agent_name
+
+        registry_entry = {
+            "id": agent_name,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "bogus-typed-marker-xyz",
+                    "mode": "always",
+                    "descriptive_only": bad_value,  # mis-typed: not bool True
+                },
+            ],
+            "knowledge_channels": [{"channel": 1, "source": "template description"}],
+        }
+
+        _write_agent_template(tmp_path, agent_name, fm)
+        _write_registry(tmp_path, [registry_entry])
+        # Intentionally: NO templates/skills/bogus-typed-marker-xyz/ dir
+
+        error_count, _warning_count = validator(
+            target_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+
+        assert error_count > 0, (
+            f"Expected validator to flag unresolvable skill_id 'bogus-typed-marker-xyz' "
+            f"when descriptive_only={bad_value!r} ({label}), but got error_count=0. "
+            "Only strict bool True must exempt entries from skill-dir resolution. "
+            "A non-bool value is a data entry error, not the intentional marker — "
+            "the strict ``is True`` identity check must NOT be weakened to truthiness."
+        )
+
+
+# ---------------------------------------------------------------------------
 # M-1 follow-on: check_skills_invoked_xref must honour descriptive_only too
 # ---------------------------------------------------------------------------
 
@@ -701,4 +793,75 @@ class TestCheckSkillsInvokedXrefDescriptiveOnly:
             f"'unreferenced-skill', but got warnings: {xref_warnings}. "
             "The descriptive_only fix must only suppress warnings for entries explicitly "
             "marked descriptive_only: true — unmarked entries must still be warned about."
+        )
+
+    def test_string_descriptive_only_does_not_suppress_xref_warning(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: UNKNOWN
+        """M-2 xref guard: descriptive_only: "true" (string) must NOT suppress Direction 2 warning.
+
+        Given a skills_invoked entry with descriptive_only set to the STRING "true"
+        (not bool True) and whose template body has NO reference to that skill_id,
+        When check_skills_invoked_xref runs,
+        Then a Direction 2 advisory warning IS emitted (the entry is NOT exempted).
+
+        Rationale: the production guard in check_skills_invoked_xref uses
+        ``e.get("descriptive_only") is not True`` (strict identity). A string "true"
+        satisfies ``"true" is not True`` → True, so the entry remains in declared_ids
+        and the warning fires. This test locks that property so that weakening the
+        check to ``not e.get("descriptive_only")`` (falsiness) would be caught
+        immediately — that weaker form would silently suppress the warning for string
+        "true", masking a genuine data-entry error in the registry.
+
+        What must remain unchanged after any refactor:
+            declared_ids = {
+                e["skill_id"]
+                for e in skills_invoked_entries
+                if "skill_id" in e and e.get("descriptive_only") is not True
+            }
+        Only entries where the value IS exactly bool True are excluded.
+        """
+        from registry_validator import check_skills_invoked_xref
+
+        agent_name = "fake-agent"
+        agents_dir = tmp_path / "templates" / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        # Template body has NO reference to 'bogus-typed-xref-skill'
+        (agents_dir / f"{agent_name}.md").write_text(
+            "You are a test agent with no skill references.\n"
+        )
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        registry = {
+            "agents": [
+                {
+                    "id": agent_name,
+                    "portable": True,
+                    "template_path": f"templates/agents/{agent_name}.md",
+                    "skills_invoked": [
+                        {
+                            "skill_id": "bogus-typed-xref-skill",
+                            "mode": "conditional",
+                            "descriptive_only": "true",  # string, not bool True
+                        }
+                    ],
+                }
+            ]
+        }
+        (config_dir / "agent_registry.json").write_text(json.dumps(registry, indent=2))
+
+        xref_warnings = check_skills_invoked_xref(tmp_path)
+
+        matching = [
+            w
+            for w in xref_warnings
+            if "bogus-typed-xref-skill" in w and "no reference found" in w
+        ]
+        assert len(matching) >= 1, (
+            "Expected a Direction 2 xref warning for entry with descriptive_only: 'true' "
+            f"(string, not bool), but got warnings: {xref_warnings}. "
+            "Only strict bool True (``is True``) must suppress the warning. "
+            "A string 'true' is a data entry error and must still trigger the advisory."
         )

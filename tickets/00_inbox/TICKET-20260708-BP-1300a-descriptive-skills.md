@@ -277,3 +277,38 @@ This is non-blocking (the function's return value is printed-only, not added
 to the errors list — confirmed at registry_validator.py line 124 comment and
 lines 126-128). No fix required before merge; a follow-up could suppress xref
 warnings for descriptive_only entries in registry_validator.check_skills_invoked_xref.
+
+### 2026-07-08 — test-writer (status: ok) [M-2 guard tests]
+feedback-id: (submit-failed)
+completion_manifest:
+  m2_guard_tests_added: true
+  validator_parametrized: true
+  xref_guard_added: true
+  all_tests_green: true
+  ruff_clean: true
+
+M-2 guard tests added to unit_tests/build/test_self_description_descriptive_only.py
+to lock the strict ``is True`` identity check against regression.
+
+New tests added (all GREEN immediately — they assert the existing correct behavior):
+
+validate_agent_self_description guard (parametrized, class TestMisTypedMarkerNotExemptedValidator):
+  - test_mistyped_descriptive_only_does_not_exempt_validator[true-string-true]
+    descriptive_only: "true" (string) on unresolvable skill_id → error_count > 0
+  - test_mistyped_descriptive_only_does_not_exempt_validator[1-int-one]
+    descriptive_only: 1 (int) on unresolvable skill_id → error_count > 0
+  - test_mistyped_descriptive_only_does_not_exempt_validator[None-none]
+    descriptive_only: None on unresolvable skill_id → error_count > 0
+
+check_skills_invoked_xref guard (class TestCheckSkillsInvokedXrefDescriptiveOnly):
+  - test_string_descriptive_only_does_not_suppress_xref_warning
+    descriptive_only: "true" (string) with no template body reference → Direction 2
+    warning IS emitted (entry is NOT exempted by the xref guard)
+
+All 12 tests pass (existing 8 + new 4). Ruff: exit 0. The real functions are
+exercised directly (validate_agent_self_description from build_phases,
+check_skills_invoked_xref from registry_validator) — no reimplementations.
+
+Verification:
+  command: python -m pytest unit_tests/build/test_self_description_descriptive_only.py -v --tb=short
+  result: 12/12 passed (exit 0)
