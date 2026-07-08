@@ -1,0 +1,38 @@
+id: BO-2000b-1-i
+title: "A hook that raises an unexpected OSError exits 0"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pre-commit hook written under the python-coder fail-open rule,
+    and the hook hits an unexpected OSError during its run (for example a file it
+    expected to read is unreadable),
+  When the hook executes,
+  Then it emits a diagnostic on the error stream naming the failure,
+  And it exits with code 0,
+  And the commit is not blocked by that unexpected error.
+depends_on:
+  - BO-2000b-1
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Test coverage: construct a hook invocation that triggers an unexpected OSError and assert exit code 0 plus a non-empty stderr diagnostic."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000b-1
+  contract: "The fail-open carve-out whose OSError path this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

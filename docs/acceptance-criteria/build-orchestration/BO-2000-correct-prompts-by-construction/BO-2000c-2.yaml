@@ -1,0 +1,40 @@
+id: BO-2000c-2
+title: "Implementation Notes carries the full task spec verbatim from the AC"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC whose it_requirements carries a config-schema fragment, an
+    N-location rule, a required-skills list, and post-write commands,
+  When a ticket is generated from that AC,
+  Then the Implementation Notes section reproduces each of those elements verbatim
+    from the AC,
+  And none of them is dropped, summarized, or paraphrased in the emitted section.
+depends_on:
+  - BO-2000c
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The emitted Implementation Notes section must carry, verbatim from the AC's it_requirements: the config-schema fragment, the N-location rule, the required_skills list, and the post-write commands. (The resolved reference-file path is covered by BO-2000c-3.)"
+  - "Test coverage: generate a ticket from an AC populated with all elements and assert each element's text appears unchanged in the emitted section."
+delivers_to:
+  agent: workflow-architect
+  contract: "An Implementation Notes section carrying the complete task spec verbatim"
+expects_from:
+  ac_id: BO-2000c-1
+  contract: "The Implementation Notes emit path this AC populates"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

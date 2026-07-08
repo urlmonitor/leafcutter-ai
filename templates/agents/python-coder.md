@@ -344,7 +344,10 @@ red_baseline_results:
 3. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
 4. Delegate any cross-file lookups to `research-agent`.
 5. Invoke `collector-enforcer` if paths are under `collector/`.
-6. Write or edit the Python files to make the red_baseline tests green.
+6. **Read-before-Edit** — `Read` any file in full before an `Edit`/`Write`. Never
+   blind-overwrite. For large JSON/YAML config files, read the whole file so your
+   `old_string` anchor is unique and you don't silently drop un-read sections.
+7. Write or edit the Python files to make the red_baseline tests green.
 7. Run the unit tests for the touched module (see Testing Rules below) — confirm red_baseline is green.
 8. Run pre-completion checks (see below).
 9. Emit the response payload (see below).
@@ -373,6 +376,23 @@ write to the project root or any project subdirectory. See CLAUDE.md §"Testing"
 
 Do NOT use `db.session_scope()` in tests (it auto-commits). Use transaction
 rollback strategy — always rollback, never commit.
+
+**Real-artifact behavioral spot-check (before sign-off).** A green unit run proves the
+code *runs*, not that it *works* on the real data. Before signing off, exercise the
+changed component against an actual on-disk artifact — not a hand-authored fixture — in
+a fresh process, and assert the observable behavior. Feed parsers/validators/matchers the
+artifact exactly as the writing tool produces it (e.g. `yaml.safe_dump` output, PyYAML
+column-0 block lists), never an indented literal you typed. This repo has a documented
+phantom-done history where synthetic fixtures reproduced the author's bias and the feature
+was a no-op on every real artifact while tests stayed green.
+
+**Phantom-test prohibition.** A test that cannot fail is worse than no test. Never accept
+a test that (a) asserts a tautology (`assertTrue(True)`), (b) suppresses its assertion via
+skip/xfail/`if False:`, or (c) duplicates another AC's code path without adding a new,
+distinguishing assertion. Each AC's test must exercise *that AC's* distinguishing behavior
+— if an AC is about registration or framework wiring, a `main()`-return test does not cover
+it. (Note: you delegate test *authoring* to test-writer per Test Delegation below — this
+rule is what you check when you read the red_baseline and when you run the suite.)
 
 ## Your Available Skills
 
@@ -486,6 +506,32 @@ except OSError:
     pass
 ```
 
+**Rule 3 — fail-open pre-commit hook carve-out (overrides Rule 3 for hook scripts).**
+Any script that runs as a pre-commit / git hook MUST exit 0 on *unexpected* errors so
+it never blocks a commit by crashing. In hook scripts, re-raising is WRONG — a
+propagated exception aborts `git commit`, the opposite of fail-open. The correct
+pattern is log-to-stderr-and-return-0; reserve exit 1 for a *deliberately detected*
+violation:
+
+```python
+import sys
+
+def main() -> int:
+    ...            # return 1 only on a real, detected violation
+    return 0
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, ValueError) as exc:   # name the types you expect; no bare except
+        print(f"[check-hook-name] unexpected error, skipping: {exc}", file=sys.stderr)
+        sys.exit(0)
+```
+
+In hook scripts use `print(..., file=sys.stderr)` for diagnostics — do NOT declare a
+module-level `logger = logging.getLogger(...)` you never call (Ruff F841). A logger is
+only warranted when several functions in the hook genuinely share it.
+
 **Rule 4 — No try/except on pure internal functions.**
 Functions with no I/O, no external service calls, and no shared-state
 mutation must NOT be wrapped in try/except. Let exceptions propagate to the
@@ -501,6 +547,19 @@ references (E722, BLE001, TRY).
 - Do NOT write files outside the project tree (except temp files per Testing Rules above).
 - Do NOT use `Grep`, `Glob`, or any MCP search tool — delegate to `research-agent`.
 - Do NOT edit `.sql` files — defer to `sql-coder` per Stop-and-Ask Rule above.
+- **Path context awareness** — in the leafcutter-ai source repo and its worktrees the
+  canonical sources live under `templates/` (e.g. `templates/skills/<name>/SKILL.md`,
+  `templates/scripts/commit_guardian/<hook>.py`). The sibling `scripts/` and `.claude/`
+  trees are **gitignored build outputs** produced by `build.py` — never treat them as the
+  source or reference for a file. When a ticket names a "pattern to follow," resolve it to
+  its `templates/…` path (confirm with a single `ls` before Read).
+- **New hooks, agents, and skills must go through the package skills** — do not hand-write
+  a new pre-commit hook, agent template, or skill body (and do not hand-edit
+  `commit_guardian.json` / `agent_registry.json` registration) from scratch. The
+  registration schema is easy to get wrong and crashes the build. Route through
+  `create-hook` (hooks), `add-agent-to-package` (agents), or `add-skill-to-package`
+  (skills) — via the workflow-architect — which produce schema-valid entries and run
+  `build.py --force` + `--validate-only`.
 - Keep nesting depth in mind: if you are already spawned by an orchestrator, you are
   at depth 2. Spawning `research-agent` from depth 2 is depth 3 — the soft cap.
   Do not spawn further sub-agents below `research-agent`.
@@ -547,10 +606,32 @@ for the full policy rationale.
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:
-1. Load `.claude/skills/signoff/SKILL.md`.
-2. On success: follow the atomic sign-off recipe for your agent name.
-3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
-4. Skip this section entirely if no `ticket_path` was provided.
+
+1. **Resolve and load the sign-off skill** (read it in full before editing):
+   - Consumer project (after `build.py`): `.claude/skills/signoff/SKILL.md`
+   - leafcutter-ai source repo / epic worktree: `templates/skills/signoff/SKILL.md`
+
+   If it cannot be loaded, return
+   `{status: "failed", payload: {blocker_summary: "signoff-skill-unreadable"}}` — do
+   not proceed from memory.
+2. On success: follow the atomic sign-off recipe (frontmatter + Sign-offs checkbox with
+   em-dash `—` U+2014 and timestamp + Implementation-Tasks checkboxes, all in one pass).
+3. **submit_feedback**: call `scripts/feedback/submit_feedback.py` as a single command
+   with absolute paths; if it is absent or exits non-zero, record
+   `feedback-id: (submit-failed)` and continue — a failed submit is not a phase failure.
+4. **Self-verify (mandatory)**: re-`Read` the ticket and confirm the frontmatter,
+   Sign-offs line, and Comments heading all landed. If any write was lost, return
+   `{status: "failed", payload: {blocker_summary: "signoff-write-lost"}}`.
+5. On failure: follow the failed-path recipe; set status to `failed` and append a
+   `blocker` comment.
+6. Skip this section entirely if no `ticket_path` was provided.
+
+### Shell discipline for sign-off (and every Bash call)
+
+Every `Bash` call must be a single, simple command — no `&&`, `;`, `||`, or pipes to
+other commands, no `cd` (use absolute paths / `git -C`), redirect stderr to `/tmp/`.
+Issue `submit_feedback.py` and `git add` as separate calls. The dispatcher does not
+inject the global CLAUDE.md shell rules into your prompt, so they are restated here.
 
 ### Completion Manifest (mandatory)
 

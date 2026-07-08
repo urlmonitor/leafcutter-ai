@@ -1,0 +1,42 @@
+id: BO-2000c
+components:
+  - build-orchestration
+title: "The task-specific implementation spec is authored into the ticket body and the dispatch points to it"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The spec has a home in the ticket, and the dispatch just points there.
+
+  When a ticket is generated from an AC that carries implementation requirements,
+  the generator writes a structured Implementation Notes section into the ticket
+  body carrying that spec verbatim -- config-schema fragment, the resolved
+  reference-file path, the N-location rule, required skills, and post-write
+  commands. The deterministic dispatch stays thin: it hands the agent a pointer and
+  an explicit instruction to read the ticket first, rather than inlining (and
+  drifting) the spec into the prompt. The spec now travels on one owning channel
+  instead of being re-typed off-channel.
+depends_on: [BO-2000]
+doc_links:
+  - docs/architecture/agent_knowledge_plane.md
+  - docs/architecture/components/build-ticket-workflow-dispatch.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000c-1
+  - BO-2000c-2
+  - BO-2000c-3
+  - BO-2000c-4
+  - BO-2000c-1-i
+  - BO-2000c-3-i
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/03_implementation_notes_emission.md

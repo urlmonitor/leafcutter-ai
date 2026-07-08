@@ -1,0 +1,37 @@
+id: BO-2000a-2-i
+title: "Sign-off comment heading uses an em-dash so the parser can find it"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent appending its sign-off comment per the sign-off block,
+  When it writes the comment heading,
+  Then the heading uses the em-dash separator required by the comment parser,
+  And a heading that used a plain ASCII hyphen instead is treated as malformed and
+    would not be recognized as a valid sign-off comment.
+depends_on:
+  - BO-2000a-2
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The sign-off block must require the comment heading to use the em-dash character U+2014 (not '-' or '--')."
+  - "Test coverage: assert the block specifies U+2014 in the heading schema, and that the comment parser recognizes an em-dash heading while rejecting an ASCII-hyphen heading."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000a-2
+  contract: "The comment-append step whose heading format this scenario constrains"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

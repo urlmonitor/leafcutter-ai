@@ -1,0 +1,39 @@
+id: BO-2000a-3
+title: "Sign-off degrades safely when the feedback sink is unreachable"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent submitting feedback during sign-off per the sign-off block,
+    and the feedback sink is unreachable,
+  When the feedback submission fails,
+  Then the agent records a submit-failed marker for that submission,
+  And the agent continues and completes its sign-off,
+  And the phase is not hard-failed solely because the feedback submission could not
+    be delivered.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The sign-off block must define a (submit-failed) fallback: a failed submit_feedback call is logged as (submit-failed) and does not abort the sign-off."
+  - "Test coverage: assert the block text specifies the (submit-failed) fallback token and non-fatal continuation; optionally a behavioral test that a failing feedback call yields a (submit-failed) marker and a completed sign-off."
+delivers_to:
+  agent: llm-expert
+  contract: "A (submit-failed) non-fatal feedback fallback clause in the sign-off block"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
