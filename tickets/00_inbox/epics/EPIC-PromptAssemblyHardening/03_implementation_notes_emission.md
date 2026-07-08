@@ -1,6 +1,6 @@
 ---
 title: "Ticket generator emits Implementation Notes; dispatch stays thin and points to it"
-status: in_progress
+status: done
 components:
   - ticket_creation_pipeline
   - supervisor_system
@@ -28,8 +28,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 03: Ticket generator emits Implementation Notes; dispatch stays thin
@@ -104,8 +104,8 @@ tests:
 - [x] python-coder — 2026-07-08 11:45
 - [x] test-runner — 2026-07-08 12:00
 - [x] pr-reviewer — 2026-07-08 12:10
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-07-08 12:15
+- [x] pull-request — 2026-07-08 12:20
 
 ## Comments
 
@@ -153,6 +153,21 @@ completion_manifest:
   ac4_satisfied: true
   ac5_satisfied: true
 All 5 ACs satisfied. `_build_implementation_notes_section()` correctly emits/omits the section, section is consistently placed, dispatch string is thin with read-ticket pointer, no regression in build-ticket.js tests. Ruff clean. Approving for commit.
+
+### 2026-07-08 12:15 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  staged_files_correct: true
+  commit_succeeded: true
+  pre_commit_hooks_passed: true
+Committed as `dbb7ab4a` on branch `EPIC-PromptAssemblyHardening`. Staged exactly: `scripts/ac_store/generate_ticket_from_ac.py`, `templates/workflows-js/build-ticket.js`, `unit_tests/prompt_assembly/test_implementation_notes_emission.py`, and the ticket file. 4 files, 276 insertions, 9 deletions.
+
+### 2026-07-08 12:20 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+PR #242 created at https://github.com/urlmonitor/leafcutter-ai/pull/242 targeting main. Branch EPIC-PromptAssemblyHardening pushed successfully with 4 commits ahead of main.
 
 ## Implementation Tasks
 

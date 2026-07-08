@@ -1,6 +1,6 @@
 ---
 title: "Sign-off block carries the full portable sign-off protocol"
-status: in_progress
+status: done
 components:
   - llm_authoring
   - supervisor_system
