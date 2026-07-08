@@ -37,7 +37,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -146,7 +146,7 @@ And the commit is NOT blocked by this hook.
 - [x] python-coder — 2026-07-08 10:15
 - [x] test-runner — 2026-07-08 08:51
 - [x] pr-reviewer — 2026-07-08 10:30
-- [ ] commit
+- [x] commit — 2026-07-08 09:07
 - [ ] pull-request
 
 ## Comments
@@ -262,3 +262,11 @@ completion_manifest:
   new_high_confidence_blockers: false
   escalated_to_opus: false
 Second-pass review confirmed H-1 fixed: validate_component_minimum_schema, validate_agent_affinity, validate_exposed_interfaces, and validate_depends_on are all called inside the added_keys loop in main(); all_component_ids computed once before loop. M-2 fixed: snake_case regex (r'^[a-z][a-z0-9_]*$') present; import re added. One medium finding surfaced: doc_path.exists() in validate_component_minimum_schema is unwrapped I/O — violates error-handling Rule 1 and the fail-open design intent; low practical risk (pre-existing pattern in sibling code), not a blocker. Medium count 1 (below escalation threshold of 3). No new high-confidence blockers. Signing off status: ok.
+
+### 2026-07-08 09:07 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (supervised path): subject "feat(commit-guardian): extend component-entry schema validation + AC-hook UTF-8 fail-open"; staged files: scripts/build_phases.py, templates/scripts/commit_guardian/check_ac_parent_covered_by.py, templates/scripts/commit_guardian/check_components_integrity.py, tickets/00_inbox/epics/EPIC-Phase1ReadyHardening/00_ComponentGovernance.md, unit_tests/commit_guardian/test_check_ac_parent_covered_by.py, unit_tests/commit_guardian/test_check_components_integrity.py. SHA: 4216ddcf. One hook autofix applied (added feedback-id: (submit-failed) to ticket-supervisor comment) before retry succeeded.
