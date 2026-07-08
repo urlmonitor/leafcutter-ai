@@ -313,7 +313,7 @@
             ]
         },
         "it_requirements": {
-            "description": "Technical requirements for implementing this AC. May be a multi-line string or a list of requirement strings. Set by it-po during technical enrichment.",
+            "description": "Technical requirements for implementing this AC. May be a multi-line string, a list of requirement strings, or — for package-surface ACs (assigned_agent=python-coder, component in build_pipeline/build-orchestration) — a structured object with machine-checkable implementation fields (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands). Set by it-po during technical enrichment.",
             "oneOf": [
                 {
                     "type": "string",
@@ -324,6 +324,50 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                {
+                    "type": "object",
+                    "description": "Structured implementation spec required for package-surface ACs (assigned_agent=python-coder, component in build_pipeline/build-orchestration). Must include all five required implementation fields.",
+                    "required": [
+                        "config_schema_fragment",
+                        "reference_file_path",
+                        "n_location_rule",
+                        "required_skills",
+                        "post_write_commands"
+                    ],
+                    "properties": {
+                        "config_schema_fragment": {
+                            "description": "JSON Schema fragment describing the config key this AC registers (object or any valid schema type)."
+                        },
+                        "reference_file_path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Path (relative to repo root) to the file that must be modified for registration. Must be a real, resolvable path — validated at authoring time by validate_ac.py."
+                        },
+                        "n_location_rule": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "How many locations in reference_file_path must be updated (e.g. '1', 'all', 'one per component'). Prevents partial-registration defects."
+                        },
+                        "required_skills": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "minItems": 1,
+                            "description": "List of skills or agent names required to implement this AC (e.g. ['python-coder', 'knowledge-query'])."
+                        },
+                        "post_write_commands": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "description": "Commands to run after modifying the reference file (e.g. ['python scripts/build.py']). May be empty for ACs that require no build step."
+                        }
+                    },
+                    "additionalProperties": true
                 },
                 {
                     "type": "null"
@@ -464,6 +508,42 @@
                 "safety",
                 "cost"
             ]
+        }
+    },
+    "if": {
+        "description": "Package-surface AC detection: applies when the AC is assigned to python-coder and belongs to a build-pipeline or build-orchestration component.",
+        "properties": {
+            "assigned_agent": {
+                "const": "python-coder"
+            },
+            "component": {
+                "enum": [
+                    "build_pipeline",
+                    "build-orchestration"
+                ]
+            }
+        },
+        "required": [
+            "assigned_agent",
+            "component"
+        ]
+    },
+    "then": {
+        "description": "For package-surface ACs, it_requirements MUST be a structured object (not a plain string or array) with the five required implementation fields. This prevents fictional or thin specs from reaching the coder.",
+        "required": [
+            "it_requirements"
+        ],
+        "properties": {
+            "it_requirements": {
+                "type": "object",
+                "required": [
+                    "config_schema_fragment",
+                    "reference_file_path",
+                    "n_location_rule",
+                    "required_skills",
+                    "post_write_commands"
+                ]
+            }
         }
     }
 }

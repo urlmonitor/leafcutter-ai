@@ -318,6 +318,46 @@ Rules for it_requirements:
 - Never prescribe specific exception types, exit codes, or design patterns
 - If no technical constraints beyond the criteria are needed, set to `[]`
 
+#### Package-surface AC obligation (MANDATORY — BO-2000d)
+
+When the AC's `assigned_agent` is `python-coder` AND its `component` is
+`build_pipeline` or `build-orchestration`, you MUST write `it_requirements` as a
+**structured object** (not a plain string or list). This is a machine-checked
+contract: `scripts/ac_store/validate_ac.py` will reject a thin or fictional spec
+at authoring time.
+
+The object MUST contain ALL five fields:
+
+```yaml
+it_requirements:
+  config_schema_fragment:
+    # JSON Schema fragment for the key this AC registers
+    # (e.g. {"type": "string"} for a simple string config key)
+    type: string
+  reference_file_path: "config/ac_store_schema.json"
+    # Path (relative to repo root) to the file that must be modified.
+    # Must be a real, existing file — validate_ac.py checks at authoring time.
+  n_location_rule: "1"
+    # How many locations in reference_file_path must be updated.
+    # Use "1" for a single addition, "all" to update every occurrence.
+  required_skills:
+    - python-coder
+    # List of agent names or skills required to implement this AC.
+    # Must be non-empty.
+  post_write_commands:
+    - "python scripts/build.py"
+    # Commands to run after modifying reference_file_path (e.g. rebuild).
+    # May be empty ([]) for ACs with no build step.
+```
+
+**Why this exists:** A fictional or thin package-surface spec (e.g. a
+`reference_file_path` pointing to a non-existent script, or missing `n_location_rule`)
+silently passes authoring today but blocks coders at implementation time. The BO-2000d
+requirement closes this gap by making the package-surface spec machine-checkable before
+the AC reaches a coder. If you are enriching a package-surface AC and cannot supply a
+real `reference_file_path`, the AC is not ready for implementation — raise this as a
+blocker in your sign-off comment.
+
 ### 2.4 — delivers_to
 
 Set this when the AC produces an output that another AC consumes. Format:
