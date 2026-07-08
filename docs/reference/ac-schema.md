@@ -817,6 +817,7 @@ component IDs to their prefix and description.
 ## See Also
 
 - `docs/how-to/ac-traceability-store.md` — task-oriented guide for creating, amending, and deprecating ACs.
+- `docs/how-to/declare-component-membership.md` — how to add the `components` list to an AC (or any knowledge item) so it joins the component view, and how to query a component back to its criteria and delivering code.
 - `docs/acceptance-criteria/README.md` — directory structure and quick-start.
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07) for the AC YAML format.
 - `docs/README.md` — full documentation index.

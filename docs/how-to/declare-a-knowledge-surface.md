@@ -182,3 +182,6 @@ keys used in documents on that surface. Field names are case-sensitive.
   classify, route, and persist learnings across surfaces.
 - `scripts/visualise_knowledge_graph.py` — renders the full graph as an
   interactive HTML visualization.
+- `docs/how-to/declare-component-membership.md` — how to add the `components`
+  list to a knowledge item so it joins the component view, and how to query a
+  component back to its criteria and delivering code.
