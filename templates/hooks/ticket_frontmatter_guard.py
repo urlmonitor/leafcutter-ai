@@ -46,27 +46,41 @@ def _load_doc_types() -> dict:
         try:
             with open(_DOC_TYPES_JSON, encoding="utf-8") as f:
                 data = _json.load(f)
-            _DOC_TYPES_CACHE = data.get("doc_types", {})
-            return _DOC_TYPES_CACHE
         except (ValueError, OSError):
             pass
+        else:
+            _DOC_TYPES_CACHE = data.get("doc_types", {})
+            return _DOC_TYPES_CACHE
     # fallback: accept any string (no blocking on missing file)
     _DOC_TYPES_CACHE = {}
     return _DOC_TYPES_CACHE
 
 
+# Project-root markers checked in order of preference.  Any one of these
+# suffices to identify a project root.  Both hooks (ticket_frontmatter_guard
+# and documentation_guard) use this identical list so a future addition is a
+# one-line change in both files (AC-5).
+MARKER_FILES = [".git", "CLAUDE.md", "pyproject.toml", "requirements-dev.txt"]
+
+
 def find_project_root(start: Path) -> Path | None:
-    """Walk up from *start* to the first ancestor that contains pyproject.toml.
+    """Walk up from *start* to the first ancestor containing a project-root marker.
+
+    Checks for ``.git``, ``CLAUDE.md``, ``pyproject.toml``, or
+    ``requirements-dev.txt``.  Returns the first ancestor directory containing
+    **any** of these markers, walking up to 15 levels.  A ``.git`` directory
+    is the strongest signal; the others ensure portability for projects that
+    use no Poetry/PEP-621 packaging (AC-1).
 
     Args:
         start: Path to begin the search from.
 
     Returns:
-        The project root, or None when no pyproject.toml is found within 15 levels.
+        The project root, or None when no marker is found within 15 levels.
     """
     cur = start
     for _ in range(15):
-        if (cur / "pyproject.toml").exists():
+        if any((cur / marker).exists() for marker in MARKER_FILES):
             return cur
         if cur.parent == cur:
             return None
@@ -95,7 +109,7 @@ def parse_frontmatter(content: str) -> dict | None:
         return None
     try:
         parsed = yaml.safe_load(raw)
-    except Exception:
+    except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -458,12 +472,18 @@ def _resolve_ticket_path(payload: dict) -> tuple[Path, str] | None:
         return None
     try:
         file_path = Path(raw).resolve()
-    except Exception:
+    except (ValueError, OSError):
         return None
     if file_path.suffix.lower() != ".md" or file_path.name.lower() == "readme.md":
         return None
     project_root = find_project_root(file_path)
     if project_root is None:
+        print(
+            "[ticket_frontmatter_guard] WARNING: could not determine project root "
+            "(no .git, CLAUDE.md, pyproject.toml, or requirements-dev.txt found "
+            f"within 15 parent levels of {file_path}); skipping frontmatter check.",
+            file=sys.stderr,
+        )
         return None
     try:
         rel = file_path.relative_to(project_root).as_posix()
@@ -541,7 +561,7 @@ def main() -> None:
     """Entry point. Reads the PostToolUse payload from stdin and emits a decision."""
     try:
         payload = json.loads(sys.stdin.read() or "{}")
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         sys.exit(0)
 
     resolved = _resolve_ticket_path(payload)
@@ -551,7 +571,7 @@ def main() -> None:
 
     try:
         content = file_path.read_text(encoding="utf-8")
-    except Exception:
+    except OSError:
         sys.exit(0)
 
     fm = parse_frontmatter(content)
