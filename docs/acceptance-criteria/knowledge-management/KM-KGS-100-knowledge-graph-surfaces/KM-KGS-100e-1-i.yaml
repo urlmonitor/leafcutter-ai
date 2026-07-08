@@ -23,15 +23,22 @@ criteria: |
 depends_on:
   - KM-KGS-100e-1
 doc_links:
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: describes
+    status: exists
   - path: scripts/ac_store/validate_ac_schema.py
     relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "All three degenerate inputs — missing `components` key, empty list [], and a list containing only an empty string [\"\"] — MUST be rejected identically with the same 'at least one non-empty component name is required' message; no input may pass where another is rejected."
+  - "Treat whitespace-only names as empty (strip before the non-empty test), so [\"   \"] fails the same way as [\"\"]."
+  - "Implement inside the single required-non-empty-`components`-list predicate from KM-KGS-100e-1 (deployed + templates/scripts/commit_guardian/ source in parity); do NOT add a second divergent validation code path for the empty-name case."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-1
-  contract: "The commit-time validation that requires a declared component membership on every acceptance criterion"
+  contract: "The commit-time validation predicate that requires a non-empty components list on every acceptance criterion (check_ac_schema.py manual path + ac_store_schema.json + validate_ac_schema.py)"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []

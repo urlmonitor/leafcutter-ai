@@ -21,15 +21,22 @@ criteria: |
 depends_on:
   - KM-KGS-100e-5
 doc_links:
+  - path: scripts/ac_store/backfill_readiness.py
+    relationship: context
+    status: exists
   - path: config/paths.json
     relationship: context
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "When the component cannot be determined from content or location, the backfill MUST leave the item's frontmatter unchanged and emit a review report naming the item and stating why inference failed; it MUST NOT write a guessed value."
+  - "The uninferable-report path must preserve idempotency (KM-KGS-100e-5): items routed to review remain unchanged on every subsequent run, and the report is deterministic across runs on an unchanged store."
+  - "Follow the project error-handling policy; the review report is data output, not an error/exception."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-5
-  contract: "The backfill pass over items that lack a component membership"
+  contract: "The backfill pass over items that lack a component membership; this AC defines its uninferable-item review-report branch"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []

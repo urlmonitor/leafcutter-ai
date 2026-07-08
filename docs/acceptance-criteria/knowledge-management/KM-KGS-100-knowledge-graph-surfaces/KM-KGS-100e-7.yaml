@@ -32,12 +32,20 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: context
     status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Author the how-to under docs/how-to/ following the project doc-frontmatter conventions (type: how-to plus the required frontmatter fields) AND — per this feature's own rule — include a non-empty `components: [knowledge-management]` frontmatter list so the guide itself passes the KM-KGS-100e-2 doc-frontmatter check."
+  - "Document both directions: (a) how to declare a knowledge item's `components` membership so it passes the commit-time check (KM-KGS-100e-1/-2/-3), and (b) how to run the component query (KM-KGS-100e-6) to get a component's criteria and, through them, the delivering code and tests."
+  - "State which surfaces are REQUIRED to declare a component and that the glossary is exempt because its config/paths.json edge_fields is empty — describe the rule generically (driven by paths.json), not as a fixed named list."
+  - "Keep the guide consistent with the reconciled docs/reference/ac-schema.md: the `components` LIST is the authoritative membership field the graph reads and the checks enforce."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-6
-  contract: "A working component query path whose invocation and output the guide documents"
+  contract: "A working component-query path whose invocation and output the guide documents"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []

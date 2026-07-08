@@ -30,12 +30,21 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Add a component-centric query to scripts/knowledge_query.py (and document its invocation in templates/skills/knowledge-query/SKILL.md) that, given a component, returns its acceptance criteria and, by following each criterion's implemented_by (source) and covered_by (test) edges, the delivering source and test files."
+  - "Resolve component membership via the `components` list edge (the component_membership hub) — the same field KM-KGS-100e-1 enforces and the acs surface declares in config/paths.json — so a component that has criteria never returns empty."
+  - "Reuse the existing graph assembly (knowledge_query _collect_all / edge extraction driven by paths.json edge_fields); do NOT add a second ingestion path or a hard-coded surface list."
+  - "Add a unit test (unit_tests/) that exercises the component query against a built-graph fixture: a component with >=1 criterion returns a non-empty result that connects criteria to their source and test files. Tag the test with a # covers: comment per the AC-coverage convention."
+  - "Follow the project error-handling policy; the query should complete within a reasonable time for the current store size."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-5
-  contract: "A store in which every criterion declares its component membership so a component query returns a populated, connected result"
+  contract: "A store in which every criterion declares its `components` membership (populated by the backfill), so a component query returns a populated, connected result"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []

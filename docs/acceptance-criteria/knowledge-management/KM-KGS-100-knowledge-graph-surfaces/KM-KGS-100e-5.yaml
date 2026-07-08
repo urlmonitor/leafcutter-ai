@@ -24,6 +24,9 @@ depends_on:
   - KM-KGS-100e
   - KM-KGS-100e-1
 doc_links:
+  - path: scripts/ac_store/backfill_readiness.py
+    relationship: context
+    status: exists
   - path: scripts/knowledge_query.py
     relationship: context
     status: exists
@@ -35,9 +38,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "Implement as an idempotent backfill script following the pattern of scripts/ac_store/backfill_readiness.py: assign a non-empty, registry-valid `components` list to membership-bearing items lacking one across the surfaces that declare `components` in config/paths.json (acs, tickets, docs, and the registries). Determine required-vs-exempt from paths.json edge_fields, never a hard-coded surface list."
+  - "Idempotency is a hard requirement: a second run over the same store MUST change no file (byte-stable). Verify by running twice and diffing; the second run produces an empty diff."
+  - "Infer the component from the item's location/content, and validate the inferred value against the registry BEFORE writing so backfilled values themselves pass the KM-KGS-100e-1 check."
+  - "Preserve existing frontmatter and field ordering on write — insert only the `components` field, do not reflow or reserialize unrelated content (avoid the destructive whole-file-rewrite failure mode noted in project memory)."
+  - "Follow the project error-handling policy; log per-item actions at an appropriate severity so a run is auditable."
 delivers_to:
   agent: python-coder
-  contract: "A store in which every membership-bearing item declares a non-empty, registry-valid component so a component query returns a populated result"
+  contract: "A store in which every membership-bearing item declares a non-empty, registry-valid `components` list, so a component query (KM-KGS-100e-6) returns a populated result"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-07-08

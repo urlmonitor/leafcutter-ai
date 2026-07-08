@@ -29,13 +29,27 @@ doc_links:
   - path: config/paths.json
     relationship: specifies
     status: exists
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: context
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
   - path: scripts/knowledge_query.py
     relationship: context
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Enforce a non-empty, registry-valid `components` frontmatter list on ticket files (tickets/) and documentation files (docs/), reusing the SAME predicate as KM-KGS-100e-1 rather than a divergent per-surface rule."
+  - "Which surfaces are subject to the rule is DATA-DRIVEN from config/paths.json surface edge_fields: tickets and docs both declare `components`, so they are membership-declaring. Do not hard-code the surface list — a surface stops/starts being subject to the rule by changing its paths.json edge_fields, with no code change."
+  - "Extend the existing frontmatter guardian hooks (the ticket frontmatter guard and the doc-frontmatter check under scripts/commit_guardian/) rather than adding a parallel hook; keep deployed/template parity per ADR-001 via build.py."
+  - "Hard block naming the file and the missing-membership reason; each file passes once it declares components: [<registry-valid>]. Follow the project error-handling policy; fail-open on internal error, hard-block on real violation."
+  - "Respect the known worktree path-resolution behavior of the frontmatter hooks (they resolve project root via the .leafcutter symlink target) so the new check does not falsely fail or silently skip in worktree contexts."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The shared non-empty-registry-valid-`components`-list validation predicate, applied here to ticket and doc frontmatter"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []
