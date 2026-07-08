@@ -1,6 +1,6 @@
 ---
 title: "Portable project-root resolution — stop hardcoding pyproject.toml in hooks and worktree bootstrap"
-status: in_progress
+status: done
 components:
   - guardrail-engine
   - build_pipeline
@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -126,7 +126,7 @@ Then behavior is unchanged (pyproject.toml still resolves the root; poetry insta
 - [x] test-runner — 2026-07-08 13:00
 - [x] pr-reviewer — 2026-07-08 14:00
 - [x] commit — 2026-07-08 14:30
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 15:10
 
 ## Comments
 
@@ -201,3 +201,11 @@ Summary:
 - Ruff: unit_tests/ files are clean under project ruff.toml (templates/ is excluded from CI scope per ruff.toml §extend-exclude).
 - 20/20 tests green.
 - 4 low-confidence nits noted but not blocking (pre-existing E701 in excluded templates/ tree; find_project_root called with file rather than parent dir; one soft-assertion test; AC-5 one-line vs two-line future change). None are correctness issues.
+
+### 2026-07-08 15:10 — pull-request (status: ok)
+feedback-id: fb_2026-07-08_0e848a78
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Branch EPIC-Phase1ReadyHardening pushed to origin (e52589e2..6ab7d6ad). PR #223 already existed (https://github.com/urlmonitor/leafcutter-ai/pull/223); no new PR opened. All agents signed off — ticket status flipped to done.
