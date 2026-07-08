@@ -31,7 +31,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -92,7 +92,7 @@ And it does NOT crash with FileNotFoundError "Could not locate worktree root".
 - [x] python-coder — 2026-07-08 14:30
 - [x] test-runner — 2026-07-08 09:34
 - [x] pr-reviewer — 2026-07-08 16:00
-- [ ] commit
+- [x] commit — 2026-07-08 09:50
 - [ ] pull-request
 
 ## Comments
@@ -152,3 +152,11 @@ completion_manifest:
   test_files_assessed: true
   no_high_confidence_blockers: true
 All three ACs verified directly against source code and tests. BP-811: `build_workflow_scripts()` deploys to `output_root/workflows/` and `install_shims()` shim_map entry `(".claude/workflows", "workflows")` resolves to the same location — confirmed match. BP-812: both `"templates/skills/"` and `"templates\\skills\\"` present in `_PROSE_FILE_PREFIXES` in the canonical template source. BP-901: `main()` guards `_find_worktree_root()` behind `if args.store_root and args.inbox_dir` — confirmed. Three medium observations noted (pre-existing `_MANAGED_ARTIFACT_DIRS` workflows cleanup bug, misleading dry-run log, `files_touched` listing an absent file); none are blockers for this ticket's ACs. Opus escalation threshold not met (medium count 3, threshold > 3).
+
+### 2026-07-08 09:50 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (supervised path). Committed SHA 96a83b86: 14 regression tests for BP-812 (test_check_secrets.py, 10 tests) and BP-901 (test_goal_to_epic.py, 4 tests) plus ticket sign-offs. One autofix applied: added `feedback-id: (submit-failed)` to the ticket-supervisor comment that was missing it, re-staged, and committed successfully on the second attempt. All hooks passed.
