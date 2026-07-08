@@ -16,24 +16,27 @@ depth-1 agent chain (ADR-006).
 
 Resolves `branch` and `worktree_root` for all downstream steps.
 
-**Accepts `args.target_branch` (FIN-100g-1):** when the caller passes an
-explicit target branch (e.g. `Workflow("finalize-feature", { target_branch: "feature/foo" })`),
-the pre-flight uses `git worktree list --porcelain` to locate the worktree
-where that branch is checked out. This allows `/finalize-feature` to be
-invoked from anywhere — including from the main repo checked out on `main` —
-without triggering the "must be run from a feature branch" abort.
+**Anchors on the epic/ticket argument, not the session CWD
+(TICKET-20260707-Finalize_Preflight_Branch_Detection, PR #231):** when the
+caller passes a target argument (e.g. `/finalize-feature EPIC-FooBar`), the
+pre-flight runs `git worktree list --porcelain` and matches the worktree whose
+branch equals the argument, equals `feature/<argument>`, or contains it as a
+substring (excluding `main`/`master`; shortest match wins on ties). Branch and
+toplevel detection are then anchored with `git -C <worktree_root>`. This lets
+`/finalize-feature` be invoked from anywhere — including the main repo checked
+out on `main` — without a false "must be run from a feature branch" abort.
 
-- If a matching worktree is found: `BRANCH` and `WORKTREE_ROOT` are set to
-  the target branch and its absolute path.
-- If no matching worktree is found: the workflow returns a clear, branch-named
-  error (`no worktree for branch <name>`) rather than silently resolving to
-  the wrong repo.
-- If `args.target_branch` is absent: falls back to CWD-based detection
+- If a matching worktree is found: `BRANCH` and `WORKTREE_ROOT` are set to that
+  worktree's branch and absolute path.
+- If no matching worktree is found: the workflow returns a clear, actionable
+  error (`No worktree found matching '<argument>'`) rather than silently
+  resolving to the wrong repo.
+- If no argument is provided: falls back to CWD-based detection
   (`git branch --show-current` + `git rev-parse --show-toplevel`) for
   backward compatibility.
 
-The "must be run from a feature branch" abort fires on the **resolved** target
-branch, never on the ambient CWD branch.
+The "must be run from a feature branch" abort fires on the **resolved** branch,
+never on the ambient CWD branch.
 
 ## Pre-flight 2 — GitHub Account Verification (EMU-aware)
 
@@ -114,5 +117,5 @@ confirmation gate) to the `worktree-agent`.
 
 | Arg | Type | Description |
 |-----|------|-------------|
-| `target_branch` | `string \| null` | Feature branch to finalize. When provided, pre-flight resolves branch/worktree_root via `git worktree list --porcelain` instead of the ambient CWD. |
+| `args` (positional string) | `string \| null` | Epic/ticket name to finalize (e.g. `EPIC-FooBar`). When provided, pre-flight resolves branch/worktree_root via `git worktree list --porcelain` (matching the argument against worktree branches) instead of the ambient CWD. |
 | `baseline_ts` | `string \| null` | Timestamp suffix for the temp baseline worktree path. Replaces `Date.now()` (banned in E2). Defaults to `'baseline'` when absent. |

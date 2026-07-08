@@ -128,33 +128,69 @@ function safeParseJSON(raw) {
   }
 }
 
-// FIN-100g-1: Resolve target branch from explicit input (args.target_branch),
-// not the ambient CWD. When the caller provides a target branch, use
-// git worktree list --porcelain to locate the correct worktree rather than
-// resolving against the current working directory.
-const targetBranch = args.target_branch || null;
+// -------------------------------------------------------------------------
+// Pre-flight worktree resolution
+//
+// Fix (TICKET-20260707-Finalize_Preflight_Branch_Detection):
+// Previously the pre-flight ran `git branch --show-current` with no -C
+// anchor, reading from the session CWD — which is often the main clone on
+// `main`. This caused a false "must be run from a feature branch" abort even
+// when a valid epic worktree existed.
+//
+// The new approach:
+//   1. Extract the epic/ticket name from `args` (e.g. "EPIC-FooBar").
+//   2. Run `git worktree list --porcelain` (no anchor needed — lists all
+//      registered worktrees for this repo regardless of CWD) to find the
+//      worktree whose branch matches `EPIC-<name>` or the single-ticket branch.
+//   3. Anchor the branch/toplevel detection at the resolved worktree root
+//      using `git -C <worktree_root>`.
+//   4. When no matching worktree is found, fail with a clear, actionable
+//      message (not a silent misdetection or a false "on main" abort).
+//   5. When no arg is provided, fall back to the CWD-based detection so
+//      existing callers that pass no argument are unaffected.
+// -------------------------------------------------------------------------
+
+// Extract the epic/ticket argument passed to the workflow.
+// For `/finalize-feature EPIC-FooBar`, args is the string "EPIC-FooBar".
+// When args is not a string (or is empty), fall back to CWD-based detection.
+const epicArg = (typeof args === 'string' ? args.trim() : '');
 
 const preflightResult = await agent(
-  "Resolve the feature branch and worktree root for this finalize run.\n" +
+  "Detect the target worktree branch and root path for /finalize-feature.\n" +
   "\n" +
-  (targetBranch
-    ? "Target branch provided: \"" + targetBranch + "\"\n" +
-      "Step 1 — Locate the worktree where this branch is checked out:\n" +
+  (epicArg
+    ? "A target argument was provided. Resolve the worktree from it.\n" +
+      `Argument: "${epicArg}"\n` +
+      "\n" +
+      "Step 1 — list all registered worktrees:\n" +
       "  Run: git worktree list --porcelain\n" +
-      "  Parse each worktree block (separated by blank lines). Each block has fields:\n" +
-      "    worktree <absolute-path>\n" +
-      "    HEAD <sha>\n" +
-      "    branch refs/heads/<branch-name>  (or 'detached' for detached HEADs)\n" +
-      "  Find the block whose branch line ends with '/" + targetBranch + "'.\n" +
-      "  If found: extract the worktree path from that block and return:\n" +
-      "    { \"branch\": \"" + targetBranch + "\", \"worktree_root\": \"<absolute-path>\" }\n" +
-      "  If not found: return a clear branch-named error:\n" +
-      "    { \"error\": \"no worktree for branch " + targetBranch + " — ensure the branch is checked out as a git worktree\",\n" +
-      "      \"branch\": \"" + targetBranch + "\", \"worktree_root\": null }\n"
-    : "No target_branch provided — fall back to CWD-based detection (backward compatible):\n" +
-      "  Run: git branch --show-current\n" +
-      "  Run: git rev-parse --show-toplevel\n" +
-      "  Return: { \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }\n"
+      "  Parse the output. Each block starts with 'worktree <path>' followed by\n" +
+      "  'HEAD <sha>' and optionally 'branch refs/heads/<branch_name>'.\n" +
+      "  Detached-HEAD entries have no 'branch' line — skip them.\n" +
+      "\n" +
+      "Step 2 — find the matching worktree:\n" +
+      "  Find a worktree whose branch_name:\n" +
+      `    - equals "${epicArg}" (exact match), OR\n` +
+      `    - equals "feature/${epicArg}", OR\n` +
+      `    - contains "${epicArg}" as a substring.\n` +
+      "  Exclude any worktree whose branch_name is 'main' or 'master'.\n" +
+      "  If multiple candidates match, prefer the one whose branch_name is\n" +
+      "  shortest (fewest extra characters beyond the argument string).\n" +
+      "\n" +
+      "Step 3a — matching worktree found:\n" +
+      "  Let <wt_path> = the matched worktree path.\n" +
+      "  Run: git -C \"<wt_path>\" branch --show-current\n" +
+      "  Run: git -C \"<wt_path>\" rev-parse --show-toplevel\n" +
+      "  Return ONLY: { \"found\": true, \"branch\": \"<branch_name>\", \"worktree_root\": \"<path>\" }\n" +
+      "\n" +
+      "Step 3b — no matching worktree found:\n" +
+      `  Return ONLY: { "found": false, "branch": null, "worktree_root": null,\n` +
+      `               "error": "No worktree found matching '${epicArg}'. ` +
+      `Run \\"git worktree list\\" to see all registered worktrees." }`
+    : "No target argument provided — fall back to CWD-based detection.\n" +
+      "1. Run: git branch --show-current\n" +
+      "2. Run: git rev-parse --show-toplevel\n" +
+      "Return ONLY: { \"found\": true, \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }"
   ),
   { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
 )
@@ -164,35 +200,35 @@ let preflightInfo;
   const { value, malformed } = safeParseJSON(preflightResult);
   if (malformed) {
     log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
-    preflightInfo = { branch: "unknown", worktree_root: "unknown" };
+    preflightInfo = { found: true, branch: "unknown", worktree_root: "unknown" };
   } else {
-    preflightInfo = value || { branch: "unknown", worktree_root: "unknown" };
+    preflightInfo = value || { found: true, branch: "unknown", worktree_root: "unknown" };
   }
 }
 
-// FIN-100g-1: If the agent returned a no-worktree error, halt early with a
-// clear, branch-named message rather than silently resolving to the wrong repo.
-if (preflightInfo.error) {
+// When the worktree resolution step found no matching worktree, fail with a
+// clear, actionable message rather than a silent misdetection.
+if (preflightInfo.found === false) {
   return {
     status: "error",
-    message: String(preflightInfo.error),
-    action_required: "ensure_worktree_exists_for_branch",
-    branch: preflightInfo.branch || targetBranch,
+    message:
+      preflightInfo.error ||
+      `/finalize-feature could not find a worktree matching "${epicArg}". ` +
+      "Run `git worktree list` to see all registered worktrees, " +
+      "then re-run with the correct epic or ticket name.",
+    action_required: "resolve_worktree_argument",
   };
 }
 
 const BRANCH = (preflightInfo.branch || "").trim();
 const WORKTREE_ROOT = (preflightInfo.worktree_root || "").trim();
 
-// FIN-100g-1: The abort condition fires on the RESOLVED target branch,
-// not on the ambient CWD branch. When targetBranch is provided, BRANCH is
-// set to the resolved worktree branch — never to the CWD branch.
 if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
   return {
     status: "error",
     message:
       "/finalize-feature must be run from a feature branch, not main/master " +
-      `(detected branch: "${BRANCH}"). ` +
+      `(detected branch: "${BRANCH}" from worktree resolved via arg: "${epicArg}"). ` +
       "Checkout your feature branch and re-run.",
     action_required: "switch_to_feature_branch",
   };
@@ -404,7 +440,7 @@ const baselineResult = await agent(
   `  Run: python3 "${baselineTmpPath}/scripts/build.py" --target-dir "${baselineTmpPath}"\n` +
   "  (Deploys commit_guardian, feedback scripts, and .pre-commit-config.yaml — same build state as production.)\n" +
   "  If build.py exits non-zero: log a warning but continue (shim deploy failure is non-fatal for baseline).\n" +
-  `  Then run: python3 -m pytest "${baselineTmpPath}" --tb=no -q 2>&1\n` +
+  `  Then run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
   "  Collect each line that matches the pattern '<file>::<test_name> FAILED'.\n" +
   "  Build a list of failing test IDs (strings like 'test_foo.py::test_bar').\n" +
   "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
@@ -642,7 +678,7 @@ testResult = await agent(
   "to deploy shims (same build.py step as the Step 0 baseline — ensures identical build state " +
   "for commit_guardian, feedback scripts, and .pre-commit-config.yaml). " +
   "If build.py exits non-zero: log a warning but continue. " +
-  "Then run the full test suite via pytest on the post-merge worktree. " +
+  "Then run the full test suite on the post-merge worktree. " +
   "Return a JSON object: { \"passed\": true|false, \"output\": \"<verbatim test output>\", " +
   "\"failing_tests\": [\"<file>::<test_name>\", ...] }\n" +
   `Baseline context: baseline_sha=${JSON.stringify(baselineSha)}, ` +

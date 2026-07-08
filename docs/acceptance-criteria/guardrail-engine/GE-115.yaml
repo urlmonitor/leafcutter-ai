@@ -1,0 +1,20 @@
+id: "GE-115"
+title: "check_doc_frontmatter resolves staged file paths against the git worktree top-level, not the .leafcutter-derived project root"
+component: guardrail-engine
+status: active
+level: L2
+readiness: approved
+work_status: todo
+priority: high
+criteria: |
+  Given a git worktree checked out at a path different from the main working tree
+  And a staged docs/*.md or tickets/**/*.md file whose path is relative to the worktree root
+  When the check_doc_frontmatter pre-commit hook runs inside that worktree
+  Then the hook resolves each staged file path against the git worktree top-level
+    (as reported by `git rev-parse --show-toplevel`), not the .leafcutter-symlink-derived project root
+  And the file is opened and validated successfully without a false-positive violation
+  And the commit does not need SKIP=check-doc-frontmatter to succeed
+  And behaviour on the main (non-worktree) checkout is unchanged
+origin_agent: "BrainCandy"
+created: 2026-07-08
+notes: "Authored by /quick-fix. Root cause: staged file paths (relative to the worktree root, from `git diff --cached`) were joined against project_root, which resolves to the workspace parent via the deployed .leafcutter symlink target rather than the worktree root, so open() received a non-existent path inside worktrees and the hook reported a bogus frontmatter violation."

@@ -1,5 +1,5 @@
 ---
-title: "finalize-feature: resolve pre-flight target from input + build/deploy symmetry between baseline and post-merge test runs"
+title: "finalize-feature: build/deploy symmetry between baseline and post-merge test runs"
 status: done
 components:
   - build_pipeline
@@ -29,7 +29,6 @@ agents:
   architecture-diagram-author: not_needed
 ac_traceability:
   l2:
-    - FIN-100g-1
     - FIN-100a-4
   ac_path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/
 ---
@@ -38,53 +37,36 @@ ac_traceability:
 
 ## Actor / Goal
 
-As an operator running `/finalize-feature`, I want the workflow to (a) resolve the
-target branch and worktree from explicit input rather than the ambient CWD, and
-(b) run the Step 3 post-merge test suite with the same build/deploy setup as the
-Step 0 baseline — so that finalize can be driven from anywhere without a spurious
-"must be run from a feature branch" abort, and so that deploy-dependent tests are
-never falsely triaged as regressions.
+As an operator running `/finalize-feature`, I want the Step 3 post-merge test suite
+to run with the same build/deploy setup as the Step 0 baseline, so that
+deploy-dependent tests are never falsely triaged as regressions and the finalize
+gate does not halt on a phantom `test_regression`.
 
 ## Context
 
-Both defects were surfaced during the GE-114-H2 finalize (PR #216) and required
-manual workarounds to complete:
+**FIN-100a-4 (build/deploy symmetry):** Step 0 (baseline on origin/main) runs
+`scripts/build.py` (install_shims deploys `scripts/commit_guardian/`,
+`scripts/feedback/`, etc. and the `.pre-commit-config.yaml`) before pytest, but
+Step 3 (post-merge) does **not**. The asymmetry makes ~13 deploy-dependent tests
+fail RED in Step 3 while passing in the Step 0 baseline, and the triage
+set-difference (`post_merge − baseline`) then misclassifies them as regressions →
+false `test_regression` halt. This was surfaced during the GE-114-H2 finalize
+(PR #216) and required a manual workaround to complete.
 
-- **Gap A (FIN-100g-1):** the pre-flight dispatches `status-checker` with bare
-  `git branch --show-current` / `git rev-parse --show-toplevel`, which resolve
-  against the *ambient process CWD*. When finalize is invoked from the main repo
-  (or any directory that is not the target worktree) the pre-flight resolves
-  `branch: "main"` and aborts with "must be run from a feature branch", ignoring the
-  branch the caller actually named. EPIC-FinalizeFeatureHardening ticket 06 threaded
-  `git -C "${WORKTREE_ROOT}"` into all **downstream** steps but deliberately left the
-  pre-flight untouched (WORKTREE_ROOT does not exist until the pre-flight computes it).
-- **Gap B (FIN-100a-4):** Step 0 (baseline on origin/main) runs `scripts/build.py`
-  (install_shims deploys `scripts/commit_guardian/`, `scripts/feedback/`, etc. and the
-  `.pre-commit-config.yaml`) before pytest, but Step 3 (post-merge) does **not**. The
-  asymmetry makes ~13 deploy-dependent tests fail RED in Step 3 while passing in the
-  Step 0 baseline, and the triage set-difference (`post_merge − baseline`) then
-  misclassifies them as regressions → false `test_regression` halt.
+The edit target is `templates/workflows-js/finalize-feature.js` — the Step 0 (Step C)
+baseline dispatch and the Step 3 test-runner dispatch both gain a `scripts/build.py`
+step before their test runs — plus the step-map doc.
 
-The primary edit target is `templates/workflows-js/finalize-feature.js` (both the
-pre-flight agent dispatch and the Step 3 test-runner dispatch), with the step-map doc
-updated to match. Both changes touch the same file, so they are delivered as one ticket
-to avoid a self-conflict.
+> **Scope note (rework 2026-07-08):** This ticket originally also covered
+> **FIN-100g-1** (pre-flight resolves its target from explicit input, not the ambient
+> CWD). That fix shipped independently on `main` via **PR #231**
+> (`TICKET-20260707-Finalize_Preflight_Branch_Detection`, `e6056a36`) while this
+> branch was in flight. To avoid a competing-solution collision in
+> `finalize-feature.js`, this ticket's pre-flight reimplementation was dropped and the
+> branch rebased onto #231's pre-flight; the ticket is now **FIN-100a-4 only**.
+> FIN-100g-1 is satisfied by #231.
 
 ## Acceptance Criteria
-
-<!-- FIN-100g-1 — pre-flight resolves target from input, not ambient CWD -->
-```gherkin
-# covers: FIN-100g-1
-Given the finalize workflow receives a target feature branch as input (args)
-And the process CWD is a different repository or worktree (for example the main repo checked out on main)
-When the pre-flight resolves branch and worktree_root
-Then it locates the worktree in which the target branch is checked out (for example via `git worktree list --porcelain`) and anchors subsequent git reads on that path with `git -C <path>`
-And it returns branch equal to the target feature branch (not the CWD's branch)
-And it returns worktree_root equal to that worktree's absolute path
-And the "must be run from a feature branch" abort fires only when the resolved TARGET branch is main/master — never merely because the ambient CWD is on main
-And when no explicit target is provided the pre-flight falls back to CWD-based detection unchanged (backward compatible)
-And if the target branch has no checked-out worktree the workflow returns a clear error naming the branch, rather than silently resolving to the wrong repo
-```
 
 <!-- FIN-100a-4 — baseline (Step 0) and post-merge (Step 3) use identical build/deploy setup -->
 ```gherkin
@@ -99,17 +81,13 @@ And the regression_candidates set difference (post_merge_failures minus baseline
 
 ## Test Requirements
 
-Create `unit_tests/workflows/test_finalize_feature_preflight.py` covering:
+`unit_tests/workflows/test_finalize_feature_preflight.py` covers **FIN-100a-4**: a
+guard asserting that BOTH the Step 0 baseline dispatch prompt and the Step 3
+test-runner dispatch prompt in `finalize-feature.js` contain the `build.py` /
+install_shims instruction (so the two runs cannot drift apart), plus an ordering
+guard that build precedes the test-suite run in Step 3.
 
-- **FIN-100g-1:** invoking the pre-flight logic with a target branch while the CWD is
-  on `main` resolves `branch`/`worktree_root` to the *target* worktree, not `"main"`;
-  the main/master abort keys off the resolved target; the no-worktree case returns a
-  clear branch-named error; and the no-target case still falls back to CWD detection.
-- **FIN-100a-4:** a guard asserting that BOTH the Step 0 baseline dispatch prompt and
-  the Step 3 test-runner dispatch prompt in `finalize-feature.js` contain the
-  `build.py` / install_shims instruction (so the two runs cannot drift apart).
-
-All new tests must be RED before implementation and GREEN after.
+All new tests were RED before implementation and GREEN after.
 
 ## Out of Scope
 

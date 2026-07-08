@@ -52,7 +52,50 @@ from pathlib import Path
 
 from _resolve_root import find_project_root
 
-project_root = find_project_root()
+
+def _resolve_worktree_root() -> Path:
+    """Return the git working-tree top-level for the current process cwd.
+
+    Preferred over ``find_project_root()`` (which is ``__file__``-relative) for
+    determining the base directory against which staged file paths are resolved.
+    During a pre-commit run, the process cwd is always set to the git
+    working-tree root by git itself.  Inside a linked git worktree that root
+    differs from the primary checkout, so ``git rev-parse --show-toplevel``
+    (cwd-relative) is the only reliable anchor.
+
+    ``find_project_root()`` is still imported and used as the fallback for three
+    conditions:
+
+    * ``git`` is not on PATH — ``OSError`` raised by ``subprocess.run``.
+    * The invocation exits non-zero — not inside a git repository, e.g. a
+      manual ``--all`` scan from an arbitrary directory.
+    * ``git rev-parse`` returns empty output (degenerate edge case).
+
+    In all three cases, ``find_project_root()`` is returned so that non-git
+    usage continues to work exactly as before (AC GE-115 criterion 3).
+
+    Returns:
+        Path: Absolute path to the git working-tree root (from
+        ``git rev-parse --show-toplevel``) on success; ``find_project_root()``
+        on any failure.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return find_project_root()
+
+    top_level = result.stdout.strip()
+    if not top_level:
+        return find_project_root()
+    return Path(top_level)
+
+
+project_root = _resolve_worktree_root()
 
 from config import (
     DOC_FM_COMPONENTS_REGISTRY,
@@ -567,5 +610,15 @@ DECISION HISTORY
   frontmatter on docs/*.md files per docs/FRONTMATTER.md specification.
   Blocks on missing/invalid required fields and broken paths; warns on stale
   last_updated dates. Follows existing commit guardian patterns.
+- 2026-07-08 [python-coder/GE-115]: Fixed false "Could not read file" violation
+  inside linked git worktrees. Replaced module-level
+  ``project_root = find_project_root()`` (``__file__``-relative, resolves to
+  the leafcutter-ai source root regardless of cwd) with
+  ``project_root = _resolve_worktree_root()``. The new helper runs
+  ``git rev-parse --show-toplevel`` via subprocess — a cwd-relative command
+  that always returns the worktree root during a pre-commit run — and falls back
+  to ``find_project_root()`` when git is absent or the process is not inside a
+  repo. Eliminates the need for SKIP=check-doc-frontmatter in worktree-based
+  drives. (AC GE-115)
 ====================================================================
 """
