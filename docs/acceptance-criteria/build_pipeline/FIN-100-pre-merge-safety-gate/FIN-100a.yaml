@@ -26,6 +26,7 @@ covered_by:
   - FIN-100a-1
   - FIN-100a-2
   - FIN-100a-3
+  - FIN-100a-4
 implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline

@@ -30,6 +30,7 @@ covered_by:
   - FIN-100d
   - FIN-100e
   - FIN-100f
+  - FIN-100g
 implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
