@@ -506,6 +506,12 @@ original's status.
   `delivers_to`, `expects_from`, and `doc_links` fields
 - For splits: write new files, then update original with `superseded_by`
 - Validate that every enriched file has a non-null `assigned_agent`
+- **Verify every enriched file has a non-empty `components:` list.** If the incoming
+  AC lacks `components` or has it empty, add it: use `[<value of component>]` for
+  single-component ACs. This is the LIST the knowledge graph reads for
+  `component_membership` edges (not the scalar `component`). Every value must be a
+  component `id` from `docs/acceptance-criteria/index.yaml`. Normative source:
+  `docs/reference/ac-schema.md`.
 - **After enriching an AC with all technical fields, set `readiness: reviewed`.**
   Do NOT set `readiness: approved` — only the user may promote to `approved`.
   The scanner ignores `reviewed` ACs; the user must explicitly approve before
@@ -585,6 +591,11 @@ Before presenting the confirmation gate, verify:
        it_requirements do NOT restate behavioral rules already defined in the
        referenced pattern (only instance-specific implementation constraints
        are added).
+[ ] 15. Every enriched AC has a non-empty `components:` list. Each value is a
+       component `id` from `docs/acceptance-criteria/index.yaml`. If the incoming
+       file lacked `components` or had it empty, it was added per the S7 write rules.
+       This is the LIST the knowledge graph reads for `component_membership` edges
+       (not the scalar `component`). Normative source: `docs/reference/ac-schema.md`.
 ```
 
 ---
