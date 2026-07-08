@@ -38,12 +38,20 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+it_requirements:
+  - "Implement the criteria as a store-wide scan/audit (pattern like the scanners under scripts/ac_store/) that selects ACs whose origin_agent is one of the authoring agents {product-owner, business-analyst, it-po} and reports any lacking a non-empty, registry-valid `components` list as a violation, reusing the KM-KGS-100e-1 predicate."
+  - "origin_agent matching MUST tolerate the free-form provenance values documented in ac-schema.md — the canonical names plus historical/renamed variants (product-owner-v3, business-analyst-v3, it-po-v3). Do NOT validate origin_agent against the live agent registry (ac-schema.md states it is intentionally not registry-validated)."
+  - "Scope clarity: this is a store-wide AUDIT surface (reports violations), distinct from the per-commit hard-block gate of KM-KGS-100e-1. Decide and record whether the audit also runs as a blocking hook or as an advisory report; keep it consistent with the fail-open-on-internal-error convention either way."
+  - "COMPANION SURFACE (see caveat, not covered by this AC's criteria): for authoring agents to 'already carry' components at emission time, the three agent templates — templates/agents/product-owner.md, templates/agents/business-analyst.md, templates/agents/it-po.md — must instruct emitting a non-empty registry-valid `components` list on every AC they author. A markdown template cannot import the Python predicate, so mandate SPEC PARITY: state the rule once normatively in docs/reference/ac-schema.md and have both the scan and the template prose mirror it. The template-prose change is an llm-expert surface with no dedicated criterion in this batch."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-1
-  contract: "The rule that a non-empty, registry-valid component membership is required on every acceptance criterion"
+  contract: "The rule that a non-empty, registry-valid components list is required on every acceptance criterion; this AC audits authoring-agent-produced ACs against it"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []

@@ -22,18 +22,28 @@ criteria: |
 depends_on:
   - KM-KGS-100e-1
 doc_links:
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: describes
+    status: exists
   - path: scripts/ac_store/validate_ac_schema.py
     relationship: describes
     status: exists
   - path: docs/components.json
     relationship: specifies
     status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: specifies
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Validate each `components` value against the project component registry and hard-block on an unrecognized value, naming the file and the offending value; a registry-present value passes."
+  - "Resolve the registry ambiguity before implementing (see caveat): AC component names are documented against docs/acceptance-criteria/index.yaml component ids in ac-schema.md, while ADR-007 and docs/components.json describe a components.json registry. The validator MUST check against the SAME registry that the knowledge graph treats as real component hubs for the component_membership edge, so a value that passes validation always resolves to a real hub node (no phantom targets) and vice-versa. Confirm which of index.yaml / components.json is that authoritative set and validate against it."
+  - "Same hook/parity constraints as KM-KGS-100e-1: implement in the shared predicate across the deployed hook and the templates/scripts/commit_guardian/ source, verified via build.py."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-1
-  contract: "The commit-time validation that requires a declared component membership on every acceptance criterion"
+  contract: "The commit-time validation predicate that requires a non-empty components list on every acceptance criterion; this AC adds the registry-membership check on each list value"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []

@@ -24,12 +24,19 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: context
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "A component whose criteria declare empty implemented_by/covered_by lists MUST still return those criteria; empty edge sets are handled gracefully and produce no exception."
+  - "Cover with a unit test fixture: criteria present, zero source/test edges → non-empty result, no error raised. Tag the test with a # covers: comment."
+  - "Follow the project error-handling policy — the absence of downstream links is a normal state, not an error condition."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100e-6
-  contract: "The component query path over the built knowledge map"
+  contract: "The component query path over the built knowledge map; this AC defines its behavior for a component whose criteria have no implementing/covering edges"
 origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []
