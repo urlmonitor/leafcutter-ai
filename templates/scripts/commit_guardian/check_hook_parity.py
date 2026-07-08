@@ -9,16 +9,26 @@ BUSINESS CONTEXT: The leafcutter package compiles hook scripts from templates
     EPIC-Phase1ReadyHardening. This hook is the guardrail that catches
     cross-location parity gaps at commit time.
 ARCHITECTURE: Reads directory/manifest paths from a 'hook_parity' section in
-    commit_guardian.json (resolved from scripts/commit_guardian/ adjacent to
-    this file, then cwd/scripts/commit_guardian/ as fallback). All configured
-    paths are relative to the project root (cwd). Runs three checks:
+    commit_guardian.json (resolved from project_root/scripts/commit_guardian/
+    first — the runtime config written by build.py — then the directory adjacent
+    to this script as a fallback for template-source-tree invocations). All
+    configured paths are relative to the project root (cwd). Runs three checks:
     1. Script parity: runtime dir vs canonical template dir (hook-script-pattern
        files only; excludes __init__.py, README.md, __pycache__/ contents, and
        any filename in hook_parity.excluded_scripts).
     2. Manifest parity: legacy manifest hook IDs vs canonical manifest hook IDs
        (disabled hooks still require canonical parity).
     3. Deployed output parity: canonical template dir vs deployed output dir.
-       Skips with an info message if deployed output dir does not exist.
+       Skips with an info message if deployed output dir does not exist or is not
+       a directory. Downgrades missing-script findings to informational warnings
+       (exit 0) — a present-but-stale deployed dir (state after adding a hook to
+       the canonical template before build.py runs) is indistinguishable from
+       genuine template->deployed drift; blocking on this check would cause the
+       hook to self-block its own commit. Run build.py to resolve any gap.
+    Runtime-manifest vs canonical-manifest comparison (L-3) is intentionally
+    omitted: build.py overwrites scripts/commit_guardian/commit_guardian.json
+    directly from templates/scripts/commit_guardian/commit_guardian.json on every
+    build, so a diverged runtime manifest is already caught by check_build_drift.
     Exits 1 on any detected violation; exits 0 (fail-open) on I/O or parse
     errors — unexpected errors must never block a commit.
 """
@@ -27,12 +37,8 @@ from __future__ import annotations
 
 import fnmatch
 import json
-import logging
 import sys
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # ---------------------------------------------------------------------------
 # Internal constants
@@ -49,9 +55,15 @@ _ALWAYS_EXCLUDED: frozenset[str] = frozenset({"__init__.py", "README.md"})
 def _load_config(project_root: Path) -> dict | None:
     """Load and return the hook_parity section from commit_guardian.json.
 
-    Tries the directory adjacent to this script first (the canonical location
-    when running as a deployed hook), then cwd/scripts/commit_guardian/ as a
-    fallback (useful when tests call main() from the project root).
+    Tries project_root/scripts/commit_guardian/commit_guardian.json FIRST (the
+    runtime config written by build.py — authoritative at runtime), then the
+    directory adjacent to this script as a last fallback (useful when the hook
+    runs directly from the template source tree or during unit tests before a
+    full build).
+
+    This ordering ensures the configurable project_root contract is honoured:
+    tests that inject a config at project_root/scripts/commit_guardian/ will
+    always see their fixture rather than the adjacent template-tree config.
 
     Args:
         project_root: Absolute path to the project root (usually cwd).
@@ -60,8 +72,8 @@ def _load_config(project_root: Path) -> dict | None:
         The hook_parity configuration dict, or None if not found or unparseable.
     """
     candidates: list[Path] = [
-        Path(__file__).resolve().parent / "commit_guardian.json",
         project_root / "scripts" / "commit_guardian" / "commit_guardian.json",
+        Path(__file__).resolve().parent / "commit_guardian.json",
     ]
 
     for config_path in candidates:
@@ -70,7 +82,7 @@ def _load_config(project_root: Path) -> dict | None:
 
         try:
             raw = config_path.read_text(encoding="utf-8")
-        except OSError as exc:
+        except (OSError, UnicodeDecodeError) as exc:
             print(
                 f"check-hook-parity: WARNING — cannot read config {config_path}: {exc}",
                 file=sys.stderr,
@@ -166,14 +178,15 @@ def _load_manifest_hook_ids(manifest_path: Path) -> set[str] | None:
         manifest_path: Absolute path to the commit_guardian.json manifest.
 
     Returns:
-        Set of hook ID strings, or None if the file is absent or unparseable.
+        Set of hook ID strings, or None if the file is absent, unparseable, or
+        has a structurally malformed hooks_manifest (non-dict or absent key).
     """
     if not manifest_path.exists():
         return None
 
     try:
         raw = manifest_path.read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         print(
             f"check-hook-parity: WARNING — cannot read manifest {manifest_path}: {exc}",
             file=sys.stderr,
@@ -189,7 +202,16 @@ def _load_manifest_hook_ids(manifest_path: Path) -> set[str] | None:
         )
         return None
 
-    hooks = cfg.get("hooks_manifest", {}).get("hooks", [])
+    # Guard against malformed structure: hooks_manifest must be a dict.
+    # Returning None lets the caller print the "skip manifest check" warning.
+    hooks_manifest = cfg.get("hooks_manifest")
+    if not isinstance(hooks_manifest, dict):
+        return None
+
+    hooks = hooks_manifest.get("hooks", [])
+    # Guard against non-list hooks array: treat as empty set (no IDs to compare).
+    if not isinstance(hooks, list):
+        return set()
     return {h["id"] for h in hooks if isinstance(h, dict) and "id" in h}
 
 
@@ -287,9 +309,17 @@ def check_deployed_parity(
 ) -> list[str]:
     """Verify every script in canonical_dir exists in deployed_dir.
 
-    If deployed_dir does not exist (fresh clone, build.py not yet run), emits a
-    single informational message to stderr and skips the check — this is not a
+    If deployed_dir does not exist or is not a directory, emits a single
+    informational message to stderr and skips the check — this is not a
     violation.
+
+    If deployed_dir exists but is missing canonical scripts, emits an
+    informational warning to stderr and returns no violations (exit 0).
+    Rationale: a present-but-stale deployed dir (the state immediately after
+    adding a hook script to the canonical template before running build.py) is
+    indistinguishable from genuine template->deployed drift. Blocking on this
+    check would cause the hook to self-block its own commit. Run build.py to
+    regenerate the deployed output dir and resolve the gap.
 
     Args:
         canonical_dir: Absolute path to the canonical template directory.
@@ -298,12 +328,13 @@ def check_deployed_parity(
         excluded: Filenames to suppress from comparison.
 
     Returns:
-        List of human-readable violation strings (empty if deployed dir is absent
-        or no violations).
+        Always returns an empty list — deployed-output discrepancies are
+        downgraded to informational warnings (never blocking).
     """
-    if not deployed_dir.exists():
+    if not deployed_dir.is_dir():
+        # L-2: use is_dir() so an exists-but-is-a-file path is treated as absent.
         print(
-            f"check-hook-parity: INFO — deployed output dir not found "
+            f"check-hook-parity: INFO — deployed output dir not found or not a directory "
             f"({deployed_dir}). Run build.py to populate it. "
             "Skipping deployed-output parity check.",
             file=sys.stderr,
@@ -317,14 +348,16 @@ def check_deployed_parity(
     if not missing:
         return []
 
-    violations: list[str] = [
-        f"  The following scripts exist in canonical template dir ({canonical_dir}) "
-        f"but are absent from deployed output dir ({deployed_dir}):"
-    ]
-    for name in missing:
-        violations.append(f"    - {name}")
-    violations.append("  FIX: Run build.py to regenerate the deployed output dir.")
-    return violations
+    # M-3: downgrade to informational warning (exit 0) — never block.
+    # Cannot distinguish present-but-stale from genuine drift without a
+    # reliable freshness signal. See ARCHITECTURE docstring for rationale.
+    print(
+        f"check-hook-parity: INFO — the following scripts exist in canonical template "
+        f"dir ({canonical_dir}) but are absent from deployed output dir ({deployed_dir}): "
+        f"{', '.join(missing)}. Run build.py to regenerate deployed output. (Non-blocking.)",
+        file=sys.stderr,
+    )
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -340,12 +373,35 @@ def main() -> int:
     2. Manifest parity: legacy manifest hook IDs vs canonical manifest.
     3. Deployed output parity: canonical template dir vs deployed output dir.
 
-    All I/O errors are handled with fail-open (exit 0 + warning). Only detected
-    parity violations produce exit 1.
+    All I/O errors are handled with fail-open (exit 0 + warning). A top-level
+    except Exception boundary ensures that any unexpected error (UnicodeDecodeError
+    on a non-UTF-8 config, AttributeError from a structurally malformed manifest,
+    etc.) also fails-open rather than blocking the commit.
+
+    Only detected parity violations produce exit 1.
 
     Returns:
         0 if no parity violations are detected (or on unexpected I/O errors);
         1 if one or more parity violations are detected.
+    """
+    try:
+        return _run_checks()
+    except Exception as exc:  # noqa: BLE001 — deliberate fail-open boundary
+        print(
+            f"check-hook-parity: WARNING — unexpected error (fail-open): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+
+
+def _run_checks() -> int:
+    """Execute all three parity checks and return the exit code.
+
+    Separated from main() so the top-level except Exception boundary in main()
+    does not suppress legitimate logic errors during development.
+
+    Returns:
+        0 if no parity violations; 1 if violations detected.
     """
     project_root = Path.cwd()
 
@@ -430,4 +486,18 @@ if __name__ == "__main__":
 #   BP-100i-3-i: deployed output dir absent → skip with info to stderr, exit 0.
 #   BP-100i-2-i: disabled hooks still require canonical parity (build.py reads
 #   canonical manifest regardless of enabled state).
+# - 2026-07-08 [python-coder/remediation]: Applied 10-finding code review fixes.
+#   H-1: Added top-level except Exception fail-open in main() + extracted
+#   _run_checks(); hardened _load_config and _load_manifest_hook_ids against
+#   UnicodeDecodeError and non-dict/non-list structures.
+#   H-2: Added hook_parity section + check-hook-parity entry to runtime config
+#   (scripts/commit_guardian/commit_guardian.json).
+#   M-2: Reordered _load_config candidates — project_root first, adjacent second,
+#   honouring the configurable-project_root contract.
+#   M-3: Downgraded check_deployed_parity violations to informational warnings
+#   (exit 0) — present-but-stale and genuine-drift are indistinguishable.
+#   L-1: Removed dead logger/logging.basicConfig (all output is print-to-stderr).
+#   L-2: Changed deployed_dir.exists() → deployed_dir.is_dir() so a file at that
+#   path is treated as absent rather than causing a false block.
+#   L-3: Omitted runtime-manifest comparison; documented rationale in ARCHITECTURE.
 # ====================================================================

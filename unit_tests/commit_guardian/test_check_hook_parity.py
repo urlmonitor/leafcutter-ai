@@ -405,20 +405,70 @@ class TestDeployedParity(unittest.TestCase):
         """Remove temporary directories."""
         self._tmp.cleanup()
 
-    def test_script_in_canonical_absent_from_deployed_is_violation(self) -> None:
-        """BP-100i-3: canonical has script absent from deployed → violation."""
-        # covers: BP-100i-3
+    def test_script_in_canonical_absent_from_deployed_emits_warning(self) -> None:
+        """M-3: canonical has script absent from deployed → warning (exit 0, no violations).
+
+        After the M-3 fix, check_deployed_parity never blocks when the deployed dir
+        is present but stale (indistinguishable from genuine drift). It emits an
+        informational warning to stderr instead.
+        """
+        # covers: M-3 (present-but-stale case — canonical has new script, deployed stale)
+        import io
+
         self.deployed.mkdir()
         (self.canonical / "check_gamma.py").write_text("", encoding="utf-8")
 
-        violations = _mod.check_deployed_parity(
-            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
-        )
+        captured = io.StringIO()
+        original_stderr = sys.stderr
+        sys.stderr = captured
+        try:
+            violations = _mod.check_deployed_parity(
+                self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+            )
+        finally:
+            sys.stderr = original_stderr
 
-        self.assertEqual(len(violations) >= 1, True)
-        violation_text = "\n".join(violations)
-        self.assertIn("check_gamma.py", violation_text)
-        self.assertIn(str(self.deployed), violation_text)
+        self.assertEqual(
+            violations,
+            [],
+            msg="M-3: present-but-stale deployed dir must not block (downgraded to warning).",
+        )
+        stderr_output = captured.getvalue()
+        self.assertIn("check_gamma.py", stderr_output)
+        self.assertIn("INFO", stderr_output.upper())
+
+    def test_script_in_canonical_absent_from_deployed_genuine_drift_exits_0(self) -> None:
+        """M-3: genuine drift (canonical has script, deployed was built but is now stale) → exit 0.
+
+        Both present-but-stale and genuine-drift scenarios are indistinguishable from
+        the hook's perspective. Both result in exit 0 with an informational warning.
+        """
+        # covers: M-3 (genuine-drift case — same structural scenario, different semantic meaning)
+        import io
+
+        self.deployed.mkdir()
+        # Simulate: both scripts existed before, then canonical got an extra script
+        (self.canonical / "check_alpha.py").write_text("", encoding="utf-8")
+        (self.deployed / "check_alpha.py").write_text("", encoding="utf-8")
+        (self.canonical / "check_new_hook.py").write_text("", encoding="utf-8")
+        # deployed does NOT have check_new_hook.py yet (build.py not run)
+
+        captured = io.StringIO()
+        original_stderr = sys.stderr
+        sys.stderr = captured
+        try:
+            violations = _mod.check_deployed_parity(
+                self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+            )
+        finally:
+            sys.stderr = original_stderr
+
+        self.assertEqual(
+            violations,
+            [],
+            msg="M-3: genuine-drift case must also not block (exit 0).",
+        )
+        self.assertIn("check_new_hook.py", captured.getvalue())
 
     def test_same_scripts_in_both_dirs_is_clean(self) -> None:
         """BP-100i-3: canonical and deployed have same scripts → no violations."""
@@ -590,12 +640,10 @@ class TestIntegrationMain(unittest.TestCase):
 class TestConfigLoadFailOpen(unittest.TestCase):
     """Tests that _load_config and main() fail-open on missing or bad config.
 
-    Note: _load_config has a fallback chain: (1) script-adjacent commit_guardian.json,
-    then (2) project_root/scripts/commit_guardian/commit_guardian.json. In the test
-    environment, the script-adjacent file is the real canonical template config (which
-    has the hook_parity section), so tests that pass an empty project_root still get
-    the real config from the adjacent fallback. The observable behavior tests via
-    main() are therefore more meaningful than _load_config() direct calls.
+    After the M-2 fix, _load_config checks project_root/scripts/commit_guardian/
+    commit_guardian.json FIRST, then the adjacent script's config as a fallback.
+    Tests that genuinely need an absent config use unittest.mock.patch to remove
+    both lookup paths rather than relying on the adjacent fallback being absent.
     """
 
     def setUp(self) -> None:
@@ -609,8 +657,12 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_load_config_returns_hook_parity_section(self) -> None:
-        """_load_config returns the hook_parity section when it exists in config."""
-        # covers: config loading (positive path)
+        """_load_config returns the hook_parity section from the project_root config first.
+
+        After the M-2 fix, project_root/scripts/commit_guardian/ is checked before the
+        adjacent script fallback, so the fixture config is always found.
+        """
+        # covers: config loading (positive path), M-2 (project_root-first ordering)
         config_dir = self.tmp / "scripts" / "commit_guardian"
         config_dir.mkdir(parents=True)
         parity_cfg = {
@@ -620,9 +672,6 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         (config_dir / "commit_guardian.json").write_text(
             json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
         )
-        # With project_root config present, _load_config may find either
-        # the adjacent or the project_root config — both have hook_parity.
-        # What matters: the returned dict contains the expected key.
         result = _mod._load_config(self.tmp)
         self.assertIsNotNone(result)
         self.assertIn("runtime_dir", result)
@@ -647,13 +696,41 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         self.assertIn(result, (0, 1), msg="main() must return 0 or 1.")
 
     def test_main_returns_0_when_config_absent(self) -> None:
-        """main() returns 0 when called from a dir with no config (fail-open)."""
-        # covers: fail-open policy
-        # When there is no project-root config, _load_config falls back to
-        # the adjacent script's config (which has hook_parity). main() then
-        # runs the checks with paths relative to project_root (self.tmp). All
-        # configured dirs will be absent or empty → no violations → exit 0.
+        """main() returns 0 when _load_config genuinely returns None (fail-open).
+
+        Uses unittest.mock.patch to make _load_config return None, bypassing both
+        the project_root candidate and the adjacent-script fallback. This is the
+        only reliable way to simulate a genuinely absent config without removing
+        the adjacent template-tree config that always exists in the test environment.
+        """
+        # covers: M-4 (genuinely absent config fail-open)
         import os
+        from unittest.mock import patch
+
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(self.tmp)
+            with patch.object(_mod, "_load_config", return_value=None):
+                result = _mod.main()
+        finally:
+            os.chdir(original_cwd)
+
+        self.assertEqual(
+            result,
+            0,
+            msg="main() must return 0 when _load_config returns None (fail-open).",
+        )
+
+    def test_main_returns_0_on_non_utf8_config(self) -> None:
+        """H-1 fail-open: main() returns 0 on a non-UTF-8 config file, no traceback."""
+        # covers: H-1 (UnicodeDecodeError handled gracefully in _load_config)
+        import os
+
+        config_dir = self.tmp / "scripts" / "commit_guardian"
+        config_dir.mkdir(parents=True)
+        config_path = config_dir / "commit_guardian.json"
+        # Write invalid UTF-8 bytes (e.g. a lone 0xFF byte)
+        config_path.write_bytes(b'\xff\xfe{"hook_parity": "not_really_utf8"}')
 
         original_cwd = Path.cwd()
         try:
@@ -665,7 +742,170 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         self.assertEqual(
             result,
             0,
-            msg="main() must return 0 when no parity violations are found.",
+            msg="H-1: non-UTF-8 config must not raise; main() must return 0 (fail-open).",
+        )
+
+    def test_main_returns_0_on_malformed_hooks_manifest(self) -> None:
+        """H-1 fail-open: main() returns 0 when hooks_manifest is not a dict."""
+        # covers: H-1 (AttributeError from malformed hooks_manifest is handled)
+        import os
+
+        # Set up a full project structure so check_script_parity passes,
+        # but write a malformed manifest for check_manifest_parity to encounter.
+        runtime_dir = self.tmp / "scripts" / "commit_guardian"
+        canonical_dir = self.tmp / "templates" / "scripts" / "commit_guardian"
+        legacy_dir = self.tmp / "templates" / "commit-guardian"
+        runtime_dir.mkdir(parents=True)
+        canonical_dir.mkdir(parents=True)
+        legacy_dir.mkdir(parents=True)
+
+        parity_cfg = {
+            "runtime_dir": "scripts/commit_guardian",
+            "canonical_template_dir": "templates/scripts/commit_guardian",
+            "legacy_template_dir": "templates/commit-guardian",
+            "deployed_output_dir": ".leafcutter/scripts/commit_guardian",
+            "manifests": {
+                "canonical": "templates/scripts/commit_guardian/commit_guardian.json",
+                "legacy": "templates/commit-guardian/commit_guardian.json",
+            },
+            "excluded_scripts": [],
+            "hook_script_patterns": ["check_*.py"],
+        }
+        (runtime_dir / "commit_guardian.json").write_text(
+            json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
+        )
+        # Write a manifest where hooks_manifest is a string, not a dict
+        malformed = {"hooks_manifest": "oops"}
+        (canonical_dir / "commit_guardian.json").write_text(
+            json.dumps(malformed), encoding="utf-8"
+        )
+        (legacy_dir / "commit_guardian.json").write_text(
+            json.dumps(malformed), encoding="utf-8"
+        )
+
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(self.tmp)
+            result = _mod.main()
+        finally:
+            os.chdir(original_cwd)
+
+        self.assertEqual(
+            result,
+            0,
+            msg="H-1: malformed hooks_manifest must not raise; main() must return 0.",
+        )
+
+    def test_all_in_sync_silent_stdout_stderr(self) -> None:
+        """BP-100i-5: when all dirs are in sync, stdout AND stderr are completely silent."""
+        # covers: M-4 (BP-100i-5 silence verification), BP-100i-5
+        import io
+        import os
+
+        runtime_dir = self.tmp / "scripts" / "commit_guardian"
+        canonical_dir = self.tmp / "templates" / "scripts" / "commit_guardian"
+        legacy_dir = self.tmp / "templates" / "commit-guardian"
+        runtime_dir.mkdir(parents=True)
+        canonical_dir.mkdir(parents=True)
+        legacy_dir.mkdir(parents=True)
+
+        # deployed_dir intentionally absent → INFO skip (to stderr, but we only care
+        # about violations on the fully-in-sync path; the INFO message is acceptable)
+        parity_cfg = {
+            "runtime_dir": "scripts/commit_guardian",
+            "canonical_template_dir": "templates/scripts/commit_guardian",
+            "legacy_template_dir": "templates/commit-guardian",
+            "deployed_output_dir": ".leafcutter/scripts/commit_guardian",
+            "manifests": {
+                "canonical": "templates/scripts/commit_guardian/commit_guardian.json",
+                "legacy": "templates/commit-guardian/commit_guardian.json",
+            },
+            "excluded_scripts": [],
+            "hook_script_patterns": ["check_*.py"],
+        }
+        (runtime_dir / "commit_guardian.json").write_text(
+            json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
+        )
+        (canonical_dir / "commit_guardian.json").write_text(
+            json.dumps({"hooks_manifest": {"hooks": [{"id": "check-hook-parity", "enabled": True}]}}),
+            encoding="utf-8",
+        )
+        (legacy_dir / "commit_guardian.json").write_text(
+            json.dumps({"hooks_manifest": {"hooks": [{"id": "check-hook-parity", "enabled": True}]}}),
+            encoding="utf-8",
+        )
+        # Same hook script in both runtime and canonical dirs
+        (runtime_dir / "check_alpha.py").write_text("", encoding="utf-8")
+        (canonical_dir / "check_alpha.py").write_text("", encoding="utf-8")
+
+        captured_stdout = io.StringIO()
+        captured_stderr = io.StringIO()
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        sys.stdout = captured_stdout
+        sys.stderr = captured_stderr
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(self.tmp)
+            result = _mod.main()
+        finally:
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            os.chdir(original_cwd)
+
+        self.assertEqual(result, 0, msg="In-sync dirs must produce exit 0.")
+        self.assertEqual(
+            captured_stdout.getvalue(),
+            "",
+            msg="BP-100i-5: stdout must be silent on the fully-in-sync path.",
+        )
+        # stderr may contain the INFO message about the absent deployed dir;
+        # it must NOT contain any BLOCKED or violation text.
+        stderr_text = captured_stderr.getvalue()
+        self.assertNotIn("BLOCKED", stderr_text)
+        self.assertNotIn("violation", stderr_text.lower())
+
+    def test_manifest_entry_has_required_fields(self) -> None:
+        """BP-100i-4: the check-hook-parity manifest entry has 'files' and 'stages' fields."""
+        # covers: M-4 (BP-100i-4 registration test), BP-100i-4
+        canonical_manifest_path = _CANONICAL.parent / "commit_guardian.json"
+        if not canonical_manifest_path.exists():
+            self.skipTest(
+                f"Canonical manifest not found at {canonical_manifest_path}. "
+                "Run build.py or ensure the template config is present."
+            )
+
+        try:
+            raw = canonical_manifest_path.read_text(encoding="utf-8")
+            manifest = json.loads(raw)
+        except (OSError, json.JSONDecodeError) as exc:
+            self.fail(f"Cannot read or parse canonical manifest: {exc}")
+
+        hooks = manifest.get("hooks_manifest", {}).get("hooks", [])
+        entry = next((h for h in hooks if h.get("id") == "check-hook-parity"), None)
+        self.assertIsNotNone(
+            entry,
+            msg="BP-100i-4: 'check-hook-parity' must be registered in the canonical manifest.",
+        )
+        self.assertIn(
+            "files",
+            entry,
+            msg="BP-100i-4: manifest entry must have a 'files' field.",
+        )
+        self.assertIn(
+            "stages",
+            entry,
+            msg="BP-100i-4: manifest entry must have a 'stages' field.",
+        )
+        self.assertIsInstance(
+            entry["stages"],
+            list,
+            msg="BP-100i-4: 'stages' must be a list.",
+        )
+        self.assertIn(
+            "pre-commit",
+            entry["stages"],
+            msg="BP-100i-4: 'stages' must include 'pre-commit'.",
         )
 
 
@@ -683,4 +923,13 @@ if __name__ == "__main__":
 #   test_check_contract_shrinking.py. Integration tests use os.chdir() to
 #   set project root for _load_config(). Fail-open tests verify exit 0 on
 #   missing config and missing manifests.
+# - 2026-07-08 [python-coder/remediation]: Updated for 10-finding code review.
+#   M-3: Replaced test_script_in_canonical_absent_from_deployed_is_violation with
+#   test_script_in_canonical_absent_from_deployed_emits_warning (M-3 downgrade to
+#   warning); added genuine-drift case test.
+#   M-4: Fixed test_main_returns_0_when_config_absent to use unittest.mock.patch
+#   for genuine config absence. Added tests: test_main_returns_0_on_non_utf8_config
+#   (H-1), test_main_returns_0_on_malformed_hooks_manifest (H-1),
+#   test_all_in_sync_silent_stdout_stderr (BP-100i-5 silence),
+#   test_manifest_entry_has_required_fields (BP-100i-4 registration).
 # ====================================================================
