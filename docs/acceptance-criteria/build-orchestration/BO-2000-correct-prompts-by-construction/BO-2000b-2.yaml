@@ -1,0 +1,41 @@
+id: BO-2000b-2
+title: "python-coder treats templates as source and generated dirs as build outputs"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the python-coder template,
+  When it describes where source lives versus where build outputs live,
+  Then it states that the templates area is the editable source of truth,
+  And it states that the deployed script and agent-config areas are generated build
+    outputs that must never be edited as source,
+  So a coder changing behavior edits the template, not its generated copy.
+depends_on:
+  - BO-2000b
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The python-coder template must carry a path-context-awareness constraint: templates/ is source; scripts/ and .claude/ are gitignored build outputs and are never edited or cited as source."
+  - "Test coverage: assert the template text names templates/ as source and scripts/ + .claude/ as generated build outputs that must not be edited."
+delivers_to:
+  agent: llm-expert
+  contract: "A path-context-awareness (source vs build-output) clause in the python-coder template"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

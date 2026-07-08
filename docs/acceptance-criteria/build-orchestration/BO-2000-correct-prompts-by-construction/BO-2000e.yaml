@@ -1,0 +1,37 @@
+id: BO-2000e
+components:
+  - build-orchestration
+title: "A code ticket cannot be authored or dispatched without a test-requirements section"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  No code ticket slips through with an empty test spec.
+
+  A ticket that produces code must carry a populated Test Requirements section. An
+  empty or absent section on a code ticket is blocked at authoring with a reason,
+  and the supervisor refuses to dispatch the coder phase for such a ticket -- so the
+  failure mode where test-writer is skipped and the coder self-writes its own tests
+  (producing phantom coverage that violates the test-delegation rule) can no longer
+  happen. Non-code tickets keep the documented docs-only skip behavior.
+depends_on: [BO-2000]
+doc_links:
+  - docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - docs/architecture/agent_delivery_workflows.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000e-1
+  - BO-2000e-2
+  - BO-2000e-1-i
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/05_test_requirements_guard.md

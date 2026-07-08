@@ -1,0 +1,44 @@
+id: BO-2000a-1
+title: "Sign-off block resolves its skill in both consumer and source layouts"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent following the shared sign-off block,
+    and the agent is running in a deployed consumer project where its skills live in
+    the consumer skills location,
+  When the agent resolves the sign-off skill,
+  Then it loads the skill from the deployed consumer location,
+  And when that location is absent (the agent is running in the package source or a
+    worktree), it loads the same skill from the package source location instead,
+  And the sign-off proceeds using whichever location resolved.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The sign-off block must state a dual-path skill-resolution rule: try the deployed consumer path (.claude/skills/<name>/SKILL.md) first, then fall back to the package source path (templates/skills/<name>/SKILL.md)."
+  - "Test coverage: assert the compiled sign-off block text enumerates BOTH resolution paths and the fallback order; a content/section scan of the deployed _signoff_block.md is sufficient (Layer A is already implemented)."
+delivers_to:
+  agent: llm-expert
+  contract: "A portable dual-path skill-resolution clause in the shared sign-off block"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-1-i
+implemented_by: []

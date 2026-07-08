@@ -1,0 +1,35 @@
+id: BO-2000c-1-i
+title: "No Implementation Notes section is emitted when the AC has no it_requirements"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC record whose it_requirements field is absent or empty,
+  When a ticket is generated from that AC,
+  Then the generated ticket body contains no Implementation Notes section,
+  And no empty or placeholder Implementation Notes heading is written.
+depends_on:
+  - BO-2000c-1
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Test coverage: generate a ticket from an AC with empty/absent it_requirements and assert the '## Implementation Notes' heading is not present in the output."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000c-1
+  contract: "The emit path whose empty-it_requirements branch this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

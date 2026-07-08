@@ -1,0 +1,46 @@
+id: BO-2000
+components:
+  - build-orchestration
+title: "A phase agent is never dispatched with a prompt missing the knowledge it needs"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Phase agents get the right prompt by construction, not by hand-typing.
+
+  Every piece of knowledge a phase agent needs to do its job well has one owning
+  channel and arrives automatically. The portable "how to do this craft" knowledge
+  (sign-off protocol, coder discipline, fail-open hook handling, registration
+  routing) lives in the agent's own template and skills. The task-specific "what to
+  build here" knowledge (config-schema fragment, the resolved reference-file path,
+  the registration schema, the N-location rule, required skills, post-write
+  commands) is authored once at planning time into a structured, machine-checked
+  ticket section, and the deterministic dispatch hands the agent a thin, safe
+  pointer to that ticket. Because no critical detail is left to be re-typed
+  off-channel, prompts stop drifting and a single invocation can no longer emit a
+  batch of defects that were all avoidable. This sits at the assembly of a phase
+  agent's prompt -- distinct from BO-1900 (which checks a ticket is fit to dispatch
+  at the spawn moment) and BO-100 (which only decides dispatch ORDER). It applies
+  the ADR-004 pattern (schema-validated section authored by a planning agent, with
+  hook / supervisor / template enforcement) to the Agent Knowledge Plane's
+  Channel 6 (agent template/skill) and Channel 8 (ticket body).
+depends_on: []
+doc_links:
+  - docs/architecture/agent_knowledge_plane.md
+  - docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: [BO-2000a, BO-2000b, BO-2000c, BO-2000d, BO-2000e]
+implemented_by: []

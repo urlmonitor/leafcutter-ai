@@ -1,0 +1,47 @@
+id: BO-2000e-2
+title: "The supervisor refuses to dispatch the coder before tests exist for a code ticket"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a code ticket in the dispatch loop whose Test Requirements are absent and for
+    which no test-writer red-baseline has been produced,
+  When the supervisor reaches the point where it would spawn the coder phase,
+  Then it does not spawn the coder,
+  And it holds the ticket back with a reason stating that tests must exist first,
+  So the coder cannot proceed to self-write its own tests (phantom coverage).
+depends_on:
+  - BO-2000e
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The deterministic dispatch loop (templates/workflows-js/build-ticket.js, a .js workflow body -- python-coder surface per the repo convention) must not spawn python-coder/sql-coder for a code ticket lacking Test Requirements and a test-writer red-baseline; it holds the ticket back with a reason."
+  - "The gate is the run-time backstop for the authoring-time guard in BO-2000e-1; it must stay a depth-1 dispatch decision and must NOT chain a build supervisor inline (ADR-006)."
+  - "Test coverage: simulate a code ticket with no Test Requirements / no red-baseline and assert the coder phase is not dispatched and a held-back reason is recorded."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A pre-coder gate that blocks coder dispatch until tests exist for a code ticket"
+expects_from:
+  ac_id: BO-2000e-1
+  contract: "The authoring guard this dispatch-time gate backstops at run time"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

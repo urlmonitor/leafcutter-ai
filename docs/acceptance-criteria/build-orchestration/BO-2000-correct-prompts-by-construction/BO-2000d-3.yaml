@@ -1,0 +1,41 @@
+id: BO-2000d-3
+title: "The IT-PO template states the package-surface spec obligation"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the it-po agent template,
+  When it describes enrichment of package-surface ACs,
+  Then it states the obligation that for ACs assigned to python-coder in the
+    build_pipeline or build-orchestration components, it_requirements must carry the
+    config-schema fragment, resolved reference-file path, N-location rule,
+    required-skills list, and post-write commands,
+  So the human-readable obligation backs the machine-checkable schema.
+depends_on:
+  - BO-2000d
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The it-po template must carry the package-surface it_requirements obligation matching the schema rule in BO-2000d-1."
+  - "Test coverage: assert the it-po template text enumerates the five mandatory fields for package-surface ACs."
+delivers_to:
+  agent: it-po
+  contract: "A package-surface spec obligation clause in the it-po template"
+expects_from:
+  ac_id: BO-2000d-1
+  contract: "The schema rule this template obligation must stay consistent with"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

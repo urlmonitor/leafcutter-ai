@@ -1,0 +1,40 @@
+id: BO-2000d-1-i
+title: "A non-package-surface AC is exempt from the mandatory spec fields"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC that is not a package-surface AC (for example assigned to
+    documentation-expert, or in a component other than build_pipeline or
+    build-orchestration),
+    and its it_requirements does not carry the config-schema fragment, reference-file
+    path, N-location rule, required-skills list, or post-write commands,
+  When the AC is validated,
+  Then validation passes,
+  And the mandatory-spec-field rule is not applied to it.
+depends_on:
+  - BO-2000d-1
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The mandatory-spec rule must be scoped strictly to package-surface ACs (assigned_agent == python-coder AND component in {build_pipeline, build-orchestration}); all other ACs are exempt."
+  - "Test coverage: a docs-component or non-python-coder AC without the fields passes validation."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000d-1
+  contract: "The validation rule whose scope boundary this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,39 @@
+id: BO-2000a-2
+title: "Sign-off updates frontmatter, checklist, and comment as one atomic edit"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent completing its work on a ticket and following the sign-off block,
+  When it records its sign-off,
+  Then the frontmatter status, the Sign-offs checklist entry, and the appended
+    sign-off comment are all updated together in one edit batch,
+  And the ticket is never left in a state where one of the three is updated while
+    another still shows the pre-sign-off value.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The sign-off block must specify the atomic 3-part edit (frontmatter status + Sign-offs checklist + appended comment) as a single write batch in one agent turn."
+  - "Test coverage: assert the block text mandates all three updates in the same batch; optionally a behavioral test that a simulated partial edit is treated as an incomplete sign-off."
+delivers_to:
+  agent: llm-expert
+  contract: "An atomic 3-part sign-off edit clause in the shared sign-off block"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-2-i
+implemented_by: []
