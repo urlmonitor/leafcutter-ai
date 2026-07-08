@@ -1,6 +1,6 @@
 ---
 title: "finalize-feature: resolve pre-flight target from input + build/deploy symmetry between baseline and post-merge test runs"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-07
