@@ -44,6 +44,21 @@ git commit -m "some message"
 # Agent tool → commit agent → dispatches COMMIT_AGENT_MODE=1 git commit internally
 ```
 
+### Commit messages must match the diff — MANDATORY
+
+Every factual claim in a commit message ("Added X", "Fixed Y", "Now logs a WARNING
+in Z") must be verifiable in `git diff --staged`. Do NOT describe an intended change
+that is not actually in the staged hunks. A message that claims work the diff does not
+contain is the same phantom-done failure mode this repo exists to prevent, one level up:
+it makes a reviewer (and future you) believe a change landed when it did not.
+
+**Why this matters:** During EPIC-PhantomDoneFilesTouched (2026-07-07) a remediation
+commit message stated a WARNING log had been added to a helper, but the diff contained
+no such change — the log was only added in a later round. The claim survived until a
+code-review agent grepped the actual file. Before committing, re-read your message against
+the staged diff and delete any claim you cannot point to a hunk for.
+(Source: EPIC-PhantomDoneFilesTouched retrospective KI-4, 2026-07-07.)
+
 ## Repository Structure
 
 This repo IS the leafcutter-ai package. Origin: `git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git`
@@ -360,3 +375,23 @@ though they passed under `unittest discover`; (2) `ruff F401/F841` unused-import
 violations in new test files that the (unestablished) worktree ruff hook never ran. Both
 forced extra fix commits at finalize.
 (Source: EPIC-WorktreeQualityGateGuard retrospective KI-3, 2026-07-06.)
+
+### Real-artifact behavioral spot-check before declaring done
+
+**What to check:** Before an epic is called done (and ideally before the `pr-reviewer`
+phase signs off), exercise the changed component against the ACTUAL on-disk artifact it
+processes — not a hand-authored fixture — in a fresh process, and assert the observable
+behavior. For a parser/validator/matcher, feed it the real ticket / config / YAML exactly
+as the tool that writes it produces (e.g. `yaml.safe_dump`, PyYAML column-0 block lists),
+never an indented literal you typed.
+
+**Why this matters:** During EPIC-PhantomDoneFilesTouched (2026-07-07), all 7 tickets
+passed green phase sign-offs while the core hook was a **complete no-op on every real
+ticket**: real `files_touched` lists serialize with dashes at column 0, but the parser
+regex required indented dashes. The synthetic unit fixtures reproduced the indented bias,
+so the tests passed on a feature that did nothing. Even the first behavioral spot-check
+during remediation reused indented fixtures and missed it — only running the parser
+against a real on-disk ticket file caught the defect. Green sign-offs prove the code runs;
+they do not prove it works on the real data format.
+(Source: EPIC-PhantomDoneFilesTouched retrospective KI-1, 2026-07-07.
+See also user-memory feedback_spotcheck_real_data_format.)
