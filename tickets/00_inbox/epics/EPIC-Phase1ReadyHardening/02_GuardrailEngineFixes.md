@@ -34,7 +34,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -112,7 +112,7 @@ templates/commit-guardian/ copy into the canonical tree.
 - [x] python-coder — 2026-07-08 12:00
 - [x] test-runner — 2026-07-08 10:36
 - [x] pr-reviewer — 2026-07-08 15:15
-- [ ] commit
+- [x] commit — 2026-07-08 15:30
 - [ ] pull-request
 
 ## Comments
@@ -200,3 +200,11 @@ completion_manifest:
   ge110_no_regressions_no_changes: true
   no_new_high_confidence_findings: true
 Final review after H-1 fix (SHA 31966f46): _SCRIPTS_COMMIT_GUARDIAN confirmed changed from scripts/commit_guardian/ (gitignored) to templates/scripts/commit_guardian/ (tracked). _EXTERNAL_DEP_MODULES frozenset correctly excludes check_docstrings, docstring_validators, check_secrets. GE-105: all 11 values (data_flow, user_flow, agent_flow, dataflow, context, container, component, sequence, erd, state, none) confirmed in both commit_guardian.json files and in both diagram_type_validators.py fallback lists. GE-103: templates/scripts/commit_guardian/ contains diagram_type_validators.py plus full set of check_*.py modules. GE-110: unchanged; prior verified sign-off stands. No new findings.
+
+### 2026-07-08 15:30 — commit (status: ok)
+feedback-id: fb_2026-07-08_2fedf0be
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "chore(ticket): test-runner and pr-reviewer sign-offs for 02_GuardrailEngineFixes"; staged files: tickets/00_inbox/epics/EPIC-Phase1ReadyHardening/02_GuardrailEngineFixes.md. SHA: fda0a61d. Probe git_hook false-positive: session cwd lacked .git (at /home/henzeh/projects/leafcutter); hook verified present at leafcutter-ai/.git/hooks/pre-commit (6 sentinel matches). All four conditions verifiably true; proceeding under supervised-mode auto-authorization.
