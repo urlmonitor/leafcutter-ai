@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ac_traceability:
@@ -125,7 +125,7 @@ All new tests must be RED before implementation and GREEN after.
 - [x] test-runner — 2026-07-08 11:30
 - [x] pr-reviewer — 2026-07-08 12:00
 - [x] commit — 2026-07-08 12:30
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 07:45
 
 ## Comments
 
@@ -179,3 +179,12 @@ completion_manifest:
   frontmatter_component_fixed: true
   all_hooks_passed: true
 Committed 6 files as 88238c62 (feat(finalize): pre-flight target resolution + Step 3 build symmetry). Pre-commit hook `check-doc-frontmatter` initially failed because the ticket's `components` field contained `finalize` (not a registered component); fixed by changing it to `build_pipeline` and re-staging. All subsequent hooks passed on retry. Commit message accurately reflects FIN-100g-1 and FIN-100a-4 as implemented.
+
+### 2026-07-08 07:45 — pull-request (status: ok)
+feedback-id: fb_2026-07-08_1681e95b
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_number: 234
+  pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/234
+PR #234 opened at https://github.com/urlmonitor/leafcutter-ai/pull/234 (title: "feat(finalize): pre-flight target resolution + Step 3 build symmetry (FIN-100g-1, FIN-100a-4)"). Branch `feature/finalizefeaturepreflightandbuildsymmetry` pushed via SSH remote `git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git`. `gh pr create` failed (not in a git repo from the ambient CWD); PR created via `gh api` REST fallback under `urlmonitor` account. Covers FIN-100g-1 and FIN-100a-4.
