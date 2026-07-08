@@ -1,6 +1,6 @@
 ---
 title: "Build-pipeline reachability + hook false-positive fixes (workflows shim, check_secrets prose, goal_to_epic root)"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-07
@@ -32,7 +32,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -93,7 +93,7 @@ And it does NOT crash with FileNotFoundError "Could not locate worktree root".
 - [x] test-runner — 2026-07-08 09:34
 - [x] pr-reviewer — 2026-07-08 16:00
 - [x] commit — 2026-07-08 09:50
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 17:00
 
 ## Comments
 
@@ -160,3 +160,17 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (supervised path). Committed SHA 96a83b86: 14 regression tests for BP-812 (test_check_secrets.py, 10 tests) and BP-901 (test_goal_to_epic.py, 4 tests) plus ticket sign-offs. One autofix applied: added `feedback-id: (submit-failed)` to the ticket-supervisor comment that was missing it, re-staged, and committed successfully on the second attempt. All hooks passed.
+
+### 2026-07-08 17:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created:
+    result: false
+    reason: "Serial supervised drive — no per-ticket PR to main; epic-level PR opened after all tickets complete."
+    remediation: "Open epic PR to main once all tickets in EPIC-Phase1ReadyHardening are signed off."
+  pr_body_complete:
+    result: false
+    reason: "No PR was opened; PR body is not applicable for this ticket phase."
+    remediation: "PR body will be written when the epic-level PR is opened."
+Epic branch EPIC-Phase1ReadyHardening pushed successfully to origin. No PR to main opened — this is a serial supervised drive; the epic-level PR will be opened after all tickets complete. Ticket signed off as the last needed phase agent; status flipped to done.
