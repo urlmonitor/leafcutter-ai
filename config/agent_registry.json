@@ -469,6 +469,11 @@
                 {
                     "skill_id": "doc-enforcer",
                     "mode": "always"
+                },
+                {
+                    "skill_id": "run-tests",
+                    "mode": "conditional",
+                    "descriptive_only": true
                 }
             ],
             "knowledge_channels": [
@@ -755,6 +760,11 @@
                 {
                     "skill_id": "signoff",
                     "mode": "conditional"
+                },
+                {
+                    "skill_id": "direct-write",
+                    "mode": "conditional",
+                    "descriptive_only": true
                 }
             ],
             "behavioral_patterns": [

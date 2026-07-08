@@ -107,6 +107,13 @@ All new tests were RED before implementation and GREEN after.
 
 ## Comments
 
+> **Note (rework 2026-07-08):** The sign-off entries below were recorded during the
+> original two-AC drive and describe the now-**superseded** FIN-100g-1 pre-flight
+> reimplementation (references to `args.target_branch`, "9 tests", `fin_100g1_*`
+> manifests). That pre-flight code was dropped in favour of PR #231; this ticket now
+> ships only FIN-100a-4. See the Context "Scope note" above. The FIN-100a-4 portions
+> of these entries remain accurate.
+
 ### 2026-07-08 09:15 — test-writer (status: ok)
 feedback-id: fb_2026-07-08_b5bffd6e
 completion_manifest:
