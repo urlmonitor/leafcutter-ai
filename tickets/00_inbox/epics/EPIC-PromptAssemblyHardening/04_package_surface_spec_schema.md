@@ -1,6 +1,6 @@
 ---
 title: "Package-surface ACs must carry a machine-checkable implementation spec"
-status: in_progress
+status: done
 components:
   - ac_store
   - product_ownership
@@ -15,7 +15,7 @@ change_target: schema
 risk_surface: contract_boundary
 test_constraints: unit_only
 complexity: medium
-ac_coverage: 0/4
+ac_coverage: 4/4
 files_touched:
   - config/ac_store_schema.json
   - scripts/ac_store/validate_ac.py
