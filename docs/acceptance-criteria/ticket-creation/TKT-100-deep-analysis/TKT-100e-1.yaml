@@ -1,4 +1,6 @@
 id: TKT-100e-1
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "PO agent produces exactly one L0 AC per feature request"

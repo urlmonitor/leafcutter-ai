@@ -1,4 +1,6 @@
 id: TKT-100
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "From idea to ready-to-build spec in minutes"

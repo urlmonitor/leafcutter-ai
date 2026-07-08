@@ -1,4 +1,6 @@
 id: BO-1100a-3
+components:
+  - build-orchestration
 title: "Router delegates to the pattern-learning specialist when no group matches"
 component: build-orchestration
 level: L2

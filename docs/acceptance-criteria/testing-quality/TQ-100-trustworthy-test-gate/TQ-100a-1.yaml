@@ -1,4 +1,6 @@
 id: TQ-100a-1
+components:
+  - testing-quality
 title: "The suite runs every loadable test even when one file fails to load"
 component: testing-quality
 level: L2

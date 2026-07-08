@@ -1,4 +1,6 @@
 id: ACS-100c-5
+components:
+  - ac-store
 title: "Parent AC amendment does not invalidate existing child ACs"
 component: ac-store
 level: L2

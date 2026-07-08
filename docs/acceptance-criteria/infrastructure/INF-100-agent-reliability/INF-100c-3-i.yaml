@@ -1,4 +1,6 @@
 id: INF-100c-3-i
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "Unknown agent is still rejected with a clear error"

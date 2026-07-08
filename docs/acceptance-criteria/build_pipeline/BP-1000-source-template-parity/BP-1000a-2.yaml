@@ -1,4 +1,6 @@
 id: BP-1000a-2
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A source script edited during the drive whose template copy was not updated is reported as drift and blocks"

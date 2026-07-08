@@ -1,4 +1,6 @@
 id: INF-600i
+components:
+  - infrastructure
 title: "Agent template declares its knowledge and skills"
 component: infrastructure
 level: L1

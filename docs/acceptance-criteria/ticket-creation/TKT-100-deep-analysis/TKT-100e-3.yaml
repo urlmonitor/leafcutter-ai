@@ -1,4 +1,6 @@
 id: TKT-100e-3
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "PO agent L1 criteria use natural-language behavioral statements, not Gherkin"

@@ -1,4 +1,6 @@
 id: INF-400d-3
+components:
+  - infrastructure
 title: "Context files remain readable and useful as they accumulate entries over many runs"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: ACD-1200g
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Learn the goal-to-epic flow from clear docs"

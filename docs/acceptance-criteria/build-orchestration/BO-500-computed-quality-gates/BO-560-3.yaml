@@ -1,4 +1,6 @@
 id: BO-560-3
+components:
+  - build-orchestration
 title: "Manually-authored agents map is overwritten by the computed chain"
 component: build-orchestration
 level: L2

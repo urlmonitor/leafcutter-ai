@@ -1,4 +1,6 @@
 id: BO-1700f-1-ii
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "The no-config verdict is judged against the main tree, and ambiguity fails closed"

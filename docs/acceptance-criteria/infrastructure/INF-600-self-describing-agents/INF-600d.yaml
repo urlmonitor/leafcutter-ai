@@ -1,4 +1,6 @@
 id: INF-600d
+components:
+  - infrastructure
 title: "See who spawns each agent and what it spawns"
 component: infrastructure
 level: L1

@@ -1,4 +1,6 @@
 id: BP-800
+components:
+  - build-pipeline
 title: "Get a specialist for every language in your project without configuring one"
 component: build-pipeline
 level: L0

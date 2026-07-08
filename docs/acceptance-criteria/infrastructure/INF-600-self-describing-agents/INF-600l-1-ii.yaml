@@ -1,4 +1,6 @@
 id: INF-600l-1-ii
+components:
+  - infrastructure
 readiness: approved
 priority: high
 title: "When the agent registry is absent, the mirror check no-ops instead of false-failing"

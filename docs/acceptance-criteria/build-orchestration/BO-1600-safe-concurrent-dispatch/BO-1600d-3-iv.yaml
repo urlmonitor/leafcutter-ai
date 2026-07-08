@@ -1,4 +1,6 @@
 id: BO-1600d-3-iv
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Branch-ref reset targets the detected default/current branch, never a hardcoded main"

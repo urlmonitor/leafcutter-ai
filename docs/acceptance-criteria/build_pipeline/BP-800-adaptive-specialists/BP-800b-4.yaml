@@ -1,4 +1,6 @@
 id: BP-800b-4
+components:
+  - build-pipeline
 title: "Framework specialist inherits and extends parent language best practices"
 component: build-pipeline
 level: L2

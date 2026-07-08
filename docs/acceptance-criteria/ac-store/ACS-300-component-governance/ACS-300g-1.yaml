@@ -1,4 +1,6 @@
 id: ACS-300g-1
+components:
+  - ac-store
 title: "Each backfilled component entry satisfies the minimum schema"
 component: ac-store
 level: L2

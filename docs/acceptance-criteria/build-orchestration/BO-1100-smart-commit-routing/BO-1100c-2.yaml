@@ -1,4 +1,6 @@
 id: BO-1100c-2
+components:
+  - build-orchestration
 title: "Adding a new routing pattern requires only a single entry addition"
 component: build-orchestration
 level: L2

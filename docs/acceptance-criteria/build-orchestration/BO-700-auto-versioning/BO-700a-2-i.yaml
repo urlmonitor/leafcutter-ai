@@ -1,4 +1,6 @@
 id: BO-700a-2-i
+components:
+  - build-orchestration
 title: "Duplicate completion events do not produce duplicate changelog entries"
 component: build-orchestration
 level: L3

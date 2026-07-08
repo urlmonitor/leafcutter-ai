@@ -1,4 +1,6 @@
 id: GE-101b-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "diff-cover hook blocks commit when strict mode is enabled and coverage is below threshold"

@@ -1,4 +1,6 @@
 id: BP-1300b-2
+components:
+  - build-pipeline
 title: "A dirty deployed copy does not launder a clean canonical source into a failure"
 component: build-pipeline
 level: L2

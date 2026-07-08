@@ -1,4 +1,6 @@
 id: ACS-300h-2-i
+components:
+  - ac-store
 title: "Stale agent ID detection after registry removal"
 component: ac-store
 level: L3

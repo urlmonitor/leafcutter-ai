@@ -1,4 +1,6 @@
 id: INF-1100a
+components:
+  - infrastructure
 title: "Your config is the single source of truth for where work goes"
 component: infrastructure
 level: L1

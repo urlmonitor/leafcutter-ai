@@ -1,4 +1,6 @@
 id: BP-100j
+components:
+  - build-pipeline
 readiness: reviewed
 priority: medium
 title: "Workflows land in the right place after every build"

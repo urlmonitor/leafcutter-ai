@@ -1,4 +1,6 @@
 id: ACD-700a-5-i
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Explicit --ac flag with non-existent or non-ready AC is rejected"

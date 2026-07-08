@@ -1,4 +1,6 @@
 id: INF-400c-1
+components:
+  - infrastructure
 title: "An ADR documents the decision on whether learning emissions reuse the existing telemetry sink"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: FIN-100b-3
+components:
+  - finalize
 title: "Already-up-to-date branch skips merge step without error"
 level: L2
 component: finalize

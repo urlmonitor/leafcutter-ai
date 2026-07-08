@@ -1,4 +1,6 @@
 id: BP-1300a-1-ii
+components:
+  - build-pipeline
 title: "A stale deployed artifact that would resolve the pointer is not consulted"
 component: build-pipeline
 level: L3

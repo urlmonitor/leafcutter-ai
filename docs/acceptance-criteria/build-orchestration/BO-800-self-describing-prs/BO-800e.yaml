@@ -1,4 +1,6 @@
 id: BO-800e
+components:
+  - build-orchestration
 title: "Every PR links back to the goal it serves"
 component: build-orchestration
 level: L1

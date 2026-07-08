@@ -1,4 +1,6 @@
 id: BP-100f-1
+components:
+  - build-pipeline
 title: "finalize-feature emits warning and skips git steps outside a git worktree"
 component: build-pipeline
 level: L2

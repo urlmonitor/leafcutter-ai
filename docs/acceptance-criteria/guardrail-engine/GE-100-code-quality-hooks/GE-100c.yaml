@@ -1,4 +1,6 @@
 id: GE-100c
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "jscpd hook blocks commit when strict mode is enabled and duplicates exceed threshold"

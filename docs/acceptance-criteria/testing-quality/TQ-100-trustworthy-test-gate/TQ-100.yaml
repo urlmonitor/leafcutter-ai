@@ -1,4 +1,6 @@
 id: TQ-100
+components:
+  - testing-quality
 title: "Your test suite only blocks main for failures that actually matter"
 component: testing-quality
 level: L0

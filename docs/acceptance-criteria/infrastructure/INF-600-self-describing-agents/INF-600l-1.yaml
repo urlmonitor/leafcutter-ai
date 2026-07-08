@@ -1,4 +1,6 @@
 id: INF-600l-1
+components:
+  - infrastructure
 readiness: approved
 priority: high
 title: "The consistency check catches a wired relationship present on one side (card or registry) but not the other"

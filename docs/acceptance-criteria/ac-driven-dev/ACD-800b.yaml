@@ -1,4 +1,6 @@
 id: ACD-800b
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Keyword-and-component matching discovers medium-confidence implementations"

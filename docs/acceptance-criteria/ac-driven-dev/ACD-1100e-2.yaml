@@ -1,4 +1,6 @@
 id: ACD-1100e-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Build output references the package version"

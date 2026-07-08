@@ -1,4 +1,6 @@
 id: BP-800e-1-i
+components:
+  - build-pipeline
 title: "Migration failure does not leave the project in an inconsistent state"
 component: build-pipeline
 level: L3

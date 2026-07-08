@@ -1,4 +1,6 @@
 id: TKT-500f-5
+components:
+  - ticket-creation
 readiness: approved
 priority: high
 title: "Generators emit only ticket-phase agents, substituting non-phase assignments"

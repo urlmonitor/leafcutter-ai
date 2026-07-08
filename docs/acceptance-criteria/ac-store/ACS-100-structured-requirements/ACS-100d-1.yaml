@@ -1,4 +1,6 @@
 id: ACS-100d-1
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "origin_agent field records the creating agent's identity"

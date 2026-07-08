@@ -1,4 +1,6 @@
 id: INF-100b-3
+components:
+  - infrastructure
 title: "All 8 worktree-environment emit_entry test failures resolve after fix"
 component: infrastructure
 level: L2

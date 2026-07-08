@@ -1,4 +1,6 @@
 id: GE-111e-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "The block message names the criterion, the broken link, what changed, and the fix options"

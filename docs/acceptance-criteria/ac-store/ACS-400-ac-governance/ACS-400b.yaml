@@ -1,4 +1,6 @@
 id: ACS-400b
+components:
+  - ac-store
 title: "Implementation agents can report progress without changing scope"
 component: ac-store
 level: L1

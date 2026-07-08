@@ -1,4 +1,6 @@
 id: ACD-1300a
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Priorities you set on goals decide what gets built next"

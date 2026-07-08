@@ -1,4 +1,6 @@
 id: ACD-300c
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "The user confirms each authoring stage before the next agent begins"

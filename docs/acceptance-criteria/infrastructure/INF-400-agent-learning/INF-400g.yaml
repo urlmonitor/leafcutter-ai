@@ -1,4 +1,6 @@
 id: INF-400g
+components:
+  - infrastructure
 title: "The telemetry emission script is deployed, functional, and verifiable"
 component: infrastructure
 level: L1

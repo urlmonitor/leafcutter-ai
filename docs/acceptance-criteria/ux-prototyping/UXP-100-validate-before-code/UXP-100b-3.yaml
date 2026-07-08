@@ -1,4 +1,6 @@
 id: UXP-100b-3
+components:
+  - ux-prototyping
 title: "Gap report distinguishes near-matches from entirely new components"
 component: ux-prototyping
 level: L2

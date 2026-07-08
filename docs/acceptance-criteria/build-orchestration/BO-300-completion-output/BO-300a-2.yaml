@@ -1,4 +1,6 @@
 id: BO-300a-2
+components:
+  - build-orchestration
 title: "Step 6 message string contains all four sections in order"
 component: build-orchestration
 level: L2

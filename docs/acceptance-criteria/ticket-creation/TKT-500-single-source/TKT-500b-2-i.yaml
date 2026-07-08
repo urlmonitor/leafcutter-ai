@@ -1,4 +1,6 @@
 id: TKT-500b-2-i
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Coder dispatched to a tests-after AC does not wait for nonexistent test sign-off"

@@ -1,4 +1,6 @@
 id: TKT-500a-6
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "Component diagram: AC-as-dispatch-artifact architecture"

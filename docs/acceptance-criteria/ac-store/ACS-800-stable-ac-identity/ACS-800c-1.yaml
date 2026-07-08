@@ -1,4 +1,6 @@
 id: ACS-800c-1
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Re-parenting a requirement is a single parent-pointer change with no rename"

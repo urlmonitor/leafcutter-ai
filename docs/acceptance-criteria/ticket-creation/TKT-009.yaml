@@ -1,4 +1,6 @@
 id: TKT-009
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Hook exits 1 when referenced AC file does not exist"

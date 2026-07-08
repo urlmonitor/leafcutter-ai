@@ -1,4 +1,6 @@
 id: INF-600l-3
+components:
+  - infrastructure
 readiness: approved
 priority: high
 title: "The pr-reviewer prose backstop for card/registry consistency delegates the search to research-agent"

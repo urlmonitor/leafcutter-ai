@@ -1,4 +1,6 @@
 id: ACS-400b-3
+components:
+  - ac-store
 title: "Implementation agents are rejected when touching protected requirement fields"
 component: ac-store
 level: L2

@@ -1,4 +1,6 @@
 id: INF-400e-2
+components:
+  - infrastructure
 title: "Second-run PO uses previously-learned user framing preferences in L0/L1 language"
 component: infrastructure
 level: L2

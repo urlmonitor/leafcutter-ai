@@ -1,4 +1,6 @@
 id: BO-1100e-1
+components:
+  - build-orchestration
 title: "Filtering skill narrows git log to commits touching the same directory set"
 component: build-orchestration
 level: L2

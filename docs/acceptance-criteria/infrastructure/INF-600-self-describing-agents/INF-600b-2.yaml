@@ -1,4 +1,6 @@
 id: INF-600b-2
+components:
+  - infrastructure
 title: "Generated card surfaces per-agent AC assignments so agents can work AC-by-AC"
 component: infrastructure
 level: L2

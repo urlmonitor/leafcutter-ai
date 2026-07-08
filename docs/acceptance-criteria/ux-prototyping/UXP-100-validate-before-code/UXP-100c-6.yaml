@@ -1,4 +1,6 @@
 id: UXP-100c-6
+components:
+  - ux-prototyping
 title: "Sequence diagram showing the prototype approval gate lifecycle"
 component: ux-prototyping
 level: L2

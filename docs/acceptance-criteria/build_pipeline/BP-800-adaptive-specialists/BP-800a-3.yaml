@@ -1,4 +1,6 @@
 id: BP-800a-3
+components:
+  - build-pipeline
 title: "Database technology detection from connection strings and driver dependencies"
 component: build-pipeline
 level: L2

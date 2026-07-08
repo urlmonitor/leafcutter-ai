@@ -1,4 +1,6 @@
 id: BO-1800a-2-i
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Reflink unsupported falls back cleanly to the next creation strategy"

@@ -1,4 +1,6 @@
 id: ACS-300g-4-i
+components:
+  - ac-store
 title: "Write tooling rejects duplicate component ID"
 component: ac-store
 level: L3

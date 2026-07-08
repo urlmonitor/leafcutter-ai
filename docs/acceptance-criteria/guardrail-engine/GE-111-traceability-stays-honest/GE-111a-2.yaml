@@ -1,4 +1,6 @@
 id: GE-111a-2
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Blocking is the default; a warn-only tier exists only as an explicit opt-in"

@@ -1,4 +1,6 @@
 id: PER-100a-2
+components:
+  - persona-management
 title: "Persona definition includes phase-specific detail sections"
 component: persona-management
 level: L2

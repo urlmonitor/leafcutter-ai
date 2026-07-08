@@ -1,4 +1,6 @@
 id: SD-100
+components:
+  - stakeholder-delivery
 title: "Stakeholders see the value of what you are building, not raw requirements"
 component: stakeholder-delivery
 level: L0

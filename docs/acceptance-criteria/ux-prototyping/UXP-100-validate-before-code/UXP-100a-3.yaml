@@ -1,4 +1,6 @@
 id: UXP-100a-3
+components:
+  - ux-prototyping
 title: "How-to guide for assembling prototypes from the component library"
 component: ux-prototyping
 level: L2

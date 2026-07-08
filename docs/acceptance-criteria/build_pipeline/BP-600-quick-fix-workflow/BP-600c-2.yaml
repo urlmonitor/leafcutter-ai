@@ -1,4 +1,6 @@
 id: BP-600c-2
+components:
+  - build-pipeline
 title: "Quick-fix workflow runs the new test and confirms it fails (red phase)"
 component: build-pipeline
 level: L2

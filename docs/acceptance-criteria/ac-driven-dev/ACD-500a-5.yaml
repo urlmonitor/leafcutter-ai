@@ -1,4 +1,6 @@
 id: ACD-500a-5
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "AC prioritizer reports a clear error when the AC store scanner is unavailable"

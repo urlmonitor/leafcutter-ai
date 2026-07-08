@@ -1,4 +1,6 @@
 id: BP-1200c
+components:
+  - build-pipeline
 title: "The test check can't be skipped or overridden"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: TKT-300c-3
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "No AC files are written to disk without prior user approval"

@@ -1,4 +1,6 @@
 id: ACD-1500c-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Resolved entries are excluded from the next scan"

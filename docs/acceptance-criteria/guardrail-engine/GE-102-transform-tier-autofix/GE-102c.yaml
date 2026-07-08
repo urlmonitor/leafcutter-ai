@@ -1,4 +1,6 @@
 id: GE-102c
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Each manifest hook declares a tier and transform hooks are ordered before their validators"

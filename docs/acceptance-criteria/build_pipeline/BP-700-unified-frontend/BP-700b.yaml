@@ -1,4 +1,6 @@
 id: BP-700b
+components:
+  - build-pipeline
 title: "Projects without frontend work are never bothered"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: ACD-300a-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Triage routes 'new feature / strategic' requests to PO v3 first"

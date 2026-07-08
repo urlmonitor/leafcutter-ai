@@ -1,4 +1,6 @@
 id: BP-1000d
+components:
+  - build-pipeline
 title: "Only real shipped copies are checked — no false alarms"
 component: build-pipeline
 level: L1

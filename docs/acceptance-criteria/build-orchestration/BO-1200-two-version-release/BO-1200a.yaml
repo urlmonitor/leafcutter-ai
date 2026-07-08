@@ -1,4 +1,6 @@
 id: BO-1200a
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "The stable version is always ready to show"

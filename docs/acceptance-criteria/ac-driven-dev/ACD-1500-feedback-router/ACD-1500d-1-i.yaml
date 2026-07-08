@@ -1,4 +1,6 @@
 id: ACD-1500d-1-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Missing roadmap fails safe — entry is parked, not assumed aligned"

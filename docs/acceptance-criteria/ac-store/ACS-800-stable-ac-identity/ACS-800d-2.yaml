@@ -1,4 +1,6 @@
 id: ACS-800d-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Existing cross-references keep resolving after migration"

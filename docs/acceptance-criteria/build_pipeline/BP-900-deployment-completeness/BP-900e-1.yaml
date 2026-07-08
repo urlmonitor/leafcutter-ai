@@ -1,4 +1,6 @@
 id: BP-900e-1
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A hook registered in commit_guardian.json with no template copy fails the registry-completeness gate"

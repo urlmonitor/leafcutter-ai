@@ -1,4 +1,6 @@
 id: ACD-300f-2
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Agent Consumption Protocol defines zero-result and empty-graph handling as non-error conditions"

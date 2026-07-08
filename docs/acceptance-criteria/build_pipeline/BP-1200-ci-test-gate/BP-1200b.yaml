@@ -1,4 +1,6 @@
 id: BP-1200b
+components:
+  - build-pipeline
 title: "A pull request with failing tests is automatically stopped"
 component: build-pipeline
 level: L1

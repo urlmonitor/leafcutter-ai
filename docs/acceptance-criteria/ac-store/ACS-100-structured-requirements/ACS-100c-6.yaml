@@ -1,4 +1,6 @@
 id: ACS-100c-6
+components:
+  - ac-store
 readiness: approved
 priority: medium
 title: "Superseded children do not count toward the child-count cap"

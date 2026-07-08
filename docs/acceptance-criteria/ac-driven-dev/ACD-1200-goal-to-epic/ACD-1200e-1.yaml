@@ -1,4 +1,6 @@
 id: ACD-1200e-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "/build-ac with a leaf AC continues the existing single-ticket behavior unchanged"

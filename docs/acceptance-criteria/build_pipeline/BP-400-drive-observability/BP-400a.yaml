@@ -1,4 +1,6 @@
 id: BP-400a
+components:
+  - build-pipeline
 title: "Every agent dispatch, retry, and failure is recorded automatically"
 component: build-pipeline
 level: L1

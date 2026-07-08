@@ -1,4 +1,6 @@
 id: UXP-100d-1-i
+components:
+  - ux-prototyping
 title: "Handoff artifact is not produced for a rejected or pending-changes prototype"
 component: ux-prototyping
 level: L3

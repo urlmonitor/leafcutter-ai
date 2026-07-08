@@ -1,4 +1,6 @@
 id: BO-500
+components:
+  - build-orchestration
 title: "The right quality gates happen automatically based on what you are changing"
 component: build-orchestration
 level: L0

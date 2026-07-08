@@ -1,4 +1,6 @@
 id: ACD-1200a-10
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Leaf collection excludes done and superseded ACs while still recursing into a superseded AC's replacement children"

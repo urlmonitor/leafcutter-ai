@@ -1,4 +1,6 @@
 id: KM-KQS-039
+components:
+  - knowledge-management
 readiness: draft
 priority: medium
 title: "Agent Protocol section is structured so agent templates can delegate to it with a single reference"

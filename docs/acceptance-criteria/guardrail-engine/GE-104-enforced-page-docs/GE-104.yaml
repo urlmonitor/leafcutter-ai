@@ -1,4 +1,6 @@
 id: GE-104
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "New work never ships without the documentation it needs"

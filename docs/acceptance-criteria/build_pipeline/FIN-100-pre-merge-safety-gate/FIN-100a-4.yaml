@@ -1,4 +1,6 @@
 id: FIN-100a-4
+components:
+  - finalize
 title: "Baseline (Step 0) and post-merge (Step 3) test runs use identical build/deploy setup"
 level: L2
 component: finalize

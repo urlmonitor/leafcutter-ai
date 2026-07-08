@@ -1,4 +1,6 @@
 id: BO-900a
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "The epic workflow warns you before your branch drifts too far from main"

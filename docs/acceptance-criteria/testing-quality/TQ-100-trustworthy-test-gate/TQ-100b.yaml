@@ -1,4 +1,6 @@
 id: TQ-100b
+components:
+  - testing-quality
 title: "Tests for unfinished features watch quietly until the feature ships"
 component: testing-quality
 level: L1

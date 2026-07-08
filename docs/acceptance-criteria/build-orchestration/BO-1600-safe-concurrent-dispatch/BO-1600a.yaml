@@ -1,4 +1,6 @@
 id: BO-1600a
+components:
+  - build-orchestration
 title: "Concurrent commits never corrupt the shared repository"
 component: build-orchestration
 level: L1

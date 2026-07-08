@@ -1,4 +1,6 @@
 id: TKT-500e
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Within a goal, agents carry forward what they learned"

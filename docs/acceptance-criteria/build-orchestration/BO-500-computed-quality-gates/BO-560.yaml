@@ -1,4 +1,6 @@
 id: BO-560
+components:
+  - build-orchestration
 title: "The build system computes the full agent chain -- no one hand-curates it"
 component: build-orchestration
 level: L1

@@ -1,4 +1,6 @@
 id: INF-200a
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Leafcutter uses debug logging, never print() — enforced by pre-commit hook"

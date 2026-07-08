@@ -1,4 +1,6 @@
 id: TKT-100l
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Specifications describe what happens, not how to code it"

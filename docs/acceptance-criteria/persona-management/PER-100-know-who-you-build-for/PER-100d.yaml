@@ -1,4 +1,6 @@
 id: PER-100d
+components:
+  - persona-management
 readiness: approved
 priority: medium
 title: "Agents automatically know who they are building for"

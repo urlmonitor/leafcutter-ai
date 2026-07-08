@@ -1,4 +1,6 @@
 id: BP-600c
+components:
+  - build-pipeline
 title: "Proven correct before you move on"
 component: build-pipeline
 level: L1

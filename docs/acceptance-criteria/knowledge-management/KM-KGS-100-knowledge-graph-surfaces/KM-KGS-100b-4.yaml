@@ -1,4 +1,6 @@
 id: KM-KGS-100b-4
+components:
+  - knowledge-management
 readiness: approved
 priority: high
 title: "Sequence diagram of a requirement-to-code traversal"

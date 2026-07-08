@@ -1,4 +1,6 @@
 id: ACS-100a-3
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Status field accepts only the three allowed enum values"

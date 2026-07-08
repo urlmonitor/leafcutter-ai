@@ -1,4 +1,6 @@
 id: PER-100c
+components:
+  - persona-management
 readiness: approved
 priority: medium
 title: "See everything you offer a specific persona at a glance"

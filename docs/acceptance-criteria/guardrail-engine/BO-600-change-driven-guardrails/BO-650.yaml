@@ -1,4 +1,6 @@
 id: BO-650
+components:
+  - build-orchestration
 title: "The architect actively produces design artifacts, not just reviews"
 component: build-orchestration
 level: L1

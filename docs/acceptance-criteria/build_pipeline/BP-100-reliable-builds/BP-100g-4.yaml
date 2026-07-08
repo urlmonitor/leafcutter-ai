@@ -1,4 +1,6 @@
 id: BP-100g-4
+components:
+  - build-pipeline
 title: "build.py deploys all skills successfully when all SKILL.md files have valid frontmatter"
 component: build-pipeline
 level: L2

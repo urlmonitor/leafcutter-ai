@@ -1,4 +1,6 @@
 id: BO-700a-1-i
+components:
+  - build-orchestration
 title: "Ticket completed without a source_ac produces a placeholder entry"
 component: build-orchestration
 level: L3

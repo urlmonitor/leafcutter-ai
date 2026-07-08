@@ -1,4 +1,6 @@
 id: BO-1100b-1-i
+components:
+  - build-orchestration
 title: "Mixed commit with 3+ groups lists all groups in the warning"
 component: build-orchestration
 level: L3

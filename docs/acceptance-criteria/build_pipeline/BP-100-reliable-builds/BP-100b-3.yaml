@@ -1,4 +1,6 @@
 id: BP-100b-3
+components:
+  - build-pipeline
 readiness: reviewed
 priority: medium
 title: "Stale workflow artifacts are removed during build cleanup"

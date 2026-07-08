@@ -1,4 +1,6 @@
 id: BP-800c-4
+components:
+  - build-pipeline
 title: "Reference documentation for the best-practice knowledge layer"
 component: build-pipeline
 level: L2

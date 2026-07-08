@@ -1,4 +1,6 @@
 id: TKT-400i
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Business agents cannot accidentally read or modify source code"

@@ -1,4 +1,6 @@
 id: ACS-800b-1
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A requirement names its parent by the parent's stable UID"

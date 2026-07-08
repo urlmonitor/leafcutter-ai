@@ -1,4 +1,6 @@
 id: ACS-100h-6
+components:
+  - ac-store
 title: "Pattern C documentation is consistent with the ID-derivation child-counting rule"
 component: ac-store
 level: L2

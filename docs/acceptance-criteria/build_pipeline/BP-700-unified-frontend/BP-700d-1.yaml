@@ -1,4 +1,6 @@
 id: BP-700d-1
+components:
+  - build-pipeline
 title: "build.py deploys unified template and removes legacy skill directory"
 component: build-pipeline
 level: L2

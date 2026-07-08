@@ -1,4 +1,6 @@
 id: BO-700a-3
+components:
+  - build-orchestration
 title: "Changelog entries group into releases by version tag boundary"
 component: build-orchestration
 level: L2

@@ -1,4 +1,6 @@
 id: ACD-800
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Existing implementations are automatically discovered and linked to their ACs"

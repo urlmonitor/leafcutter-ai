@@ -1,4 +1,6 @@
 id: ACD-1200d-2
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "ACs excluded by the approval gate do NOT receive target_epic"

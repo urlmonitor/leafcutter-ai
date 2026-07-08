@@ -1,4 +1,6 @@
 id: TKT-300d-3
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "The supervisor reads the AC hierarchy for sequencing, not a separate epic plan"

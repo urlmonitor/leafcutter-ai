@@ -1,4 +1,6 @@
 id: BO-1100b-3-i
+components:
+  - build-orchestration
 title: "Confirmed mixed commit message indicates the mixed nature"
 component: build-orchestration
 level: L3

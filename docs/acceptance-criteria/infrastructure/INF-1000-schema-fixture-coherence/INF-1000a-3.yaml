@@ -1,4 +1,6 @@
 id: INF-1000a-3
+components:
+  - infrastructure
 readiness: draft
 priority: medium
 title: "The check runs at commit time as a pre-commit hook"

@@ -1,4 +1,6 @@
 id: INF-400g-4
+components:
+  - infrastructure
 title: "epic-supervisor CFCS emit block is imperative, not example code"
 component: infrastructure
 level: L2

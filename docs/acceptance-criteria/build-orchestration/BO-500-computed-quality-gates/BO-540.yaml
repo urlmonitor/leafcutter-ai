@@ -1,4 +1,6 @@
 id: BO-540
+components:
+  - build-orchestration
 title: "Flow changes get architecture review and documentation before coding starts"
 component: build-orchestration
 level: L1

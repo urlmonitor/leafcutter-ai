@@ -1,4 +1,6 @@
 id: GE-104a-1-i
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Page-path to doc-path mapping is deterministic for a simple route segment"

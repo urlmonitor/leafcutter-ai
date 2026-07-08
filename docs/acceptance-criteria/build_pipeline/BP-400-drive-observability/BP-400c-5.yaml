@@ -1,4 +1,6 @@
 id: BP-400c-5
+components:
+  - build-pipeline
 title: "feedback-analyst agent is read-only and never modifies feedback files"
 component: build-pipeline
 level: L2

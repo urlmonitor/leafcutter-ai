@@ -1,4 +1,6 @@
 id: INF-400c-3
+components:
+  - infrastructure
 title: "The harvester is idempotent: re-running it does not duplicate persisted learnings"
 component: infrastructure
 level: L2

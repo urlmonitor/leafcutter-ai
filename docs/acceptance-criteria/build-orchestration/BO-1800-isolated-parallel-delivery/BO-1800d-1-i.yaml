@@ -1,4 +1,6 @@
 id: BO-1800d-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "No background auto-gc fires mid-drive even after the loose-object threshold is passed"

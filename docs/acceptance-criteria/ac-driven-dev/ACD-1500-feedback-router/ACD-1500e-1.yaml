@@ -1,4 +1,6 @@
 id: ACD-1500e-1
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Thin feedback that blocks confident routing triggers the router's own process-feedback"

@@ -1,4 +1,6 @@
 id: GE-108
+components:
+  - guardrail-engine
 readiness: approved
 priority: medium
 title: "Exception-handling guard enforces the error-handling policy faithfully and accurately"

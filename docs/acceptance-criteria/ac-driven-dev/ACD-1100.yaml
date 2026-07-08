@@ -1,4 +1,6 @@
 id: ACD-1100
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "The AC-driven development pipeline is the only pipeline — no legacy alternatives remain"

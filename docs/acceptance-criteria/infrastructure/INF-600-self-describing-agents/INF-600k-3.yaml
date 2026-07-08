@@ -1,4 +1,6 @@
 id: INF-600k-3
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "A genuinely unknown agent in spawned_by is still rejected"

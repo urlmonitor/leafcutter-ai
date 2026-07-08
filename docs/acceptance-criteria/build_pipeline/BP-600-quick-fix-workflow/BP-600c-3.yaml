@@ -1,4 +1,6 @@
 id: BP-600c-3
+components:
+  - build-pipeline
 title: "Quick-fix workflow runs the test after the fix and confirms it passes (green phase)"
 component: build-pipeline
 level: L2

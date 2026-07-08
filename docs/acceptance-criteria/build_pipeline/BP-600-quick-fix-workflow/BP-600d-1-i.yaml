@@ -1,4 +1,6 @@
 id: BP-600d-1-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow rejects input that lacks a file path or root cause"
 component: build-pipeline
 level: L3

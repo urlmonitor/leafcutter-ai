@@ -1,4 +1,6 @@
 id: INF-300a-2
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "PO and BA agents consult the surface map before placing knowledge"

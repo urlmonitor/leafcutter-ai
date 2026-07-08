@@ -1,4 +1,6 @@
 id: BP-1300c-4
+components:
+  - build-pipeline
 title: "Reference doc lists the warn-to-fail checks and the drive-context rule"
 component: build-pipeline
 level: L2

@@ -1,4 +1,6 @@
 id: BP-100m-3
+components:
+  - build-pipeline
 title: "A later phase can never silently overwrite an earlier phase's artifact — collision is fatal, not last-write-wins"
 component: build-pipeline
 level: L2

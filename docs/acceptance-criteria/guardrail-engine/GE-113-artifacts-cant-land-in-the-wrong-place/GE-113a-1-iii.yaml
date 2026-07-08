@@ -1,4 +1,6 @@
 id: GE-113a-1-iii
+components:
+  - guardrail-engine
 title: "A non-test file outside the test root is not blocked by the test-placement guard"
 component: guardrail-engine
 level: L3

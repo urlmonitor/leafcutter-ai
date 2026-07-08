@@ -1,4 +1,6 @@
 id: ACD-1500
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "The platform turns its own agents' feedback into shipped improvements"

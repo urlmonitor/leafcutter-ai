@@ -1,4 +1,6 @@
 id: ACS-700
+components:
+  - ac-store
 status: active
 component: ac-store
 level: L2

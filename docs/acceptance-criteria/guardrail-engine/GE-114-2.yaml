@@ -1,4 +1,6 @@
 id: "GE-114-2"
+components:
+  - guardrail-engine
 title: "v1-flat tickets within the cap pass, and the per-agent cap is not applied to the flat path"
 component: guardrail-engine
 status: active

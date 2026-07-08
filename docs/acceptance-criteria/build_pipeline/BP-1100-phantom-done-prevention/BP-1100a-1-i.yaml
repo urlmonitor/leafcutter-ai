@@ -1,4 +1,6 @@
 id: BP-1100a-1-i
+components:
+  - build-pipeline
 title: "Behavior ticket with both documentation and an executable surface passes the lens"
 component: build-pipeline
 level: L3

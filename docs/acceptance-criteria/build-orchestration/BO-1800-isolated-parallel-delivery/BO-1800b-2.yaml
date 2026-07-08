@@ -1,4 +1,6 @@
 id: BO-1800b-2
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Merges to main are performed by the merge queue only after required checks pass"

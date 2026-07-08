@@ -1,4 +1,6 @@
 id: TKT-500b-5
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "How-to: configuring and overriding TDD sequencing"

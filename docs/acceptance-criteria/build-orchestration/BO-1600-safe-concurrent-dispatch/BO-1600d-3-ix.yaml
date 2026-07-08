@@ -1,4 +1,6 @@
 id: BO-1600d-3-ix
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "A failing read-only status probe is non-fatal — recovery keeps planning when HEAD is corrupt"

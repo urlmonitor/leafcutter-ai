@@ -1,4 +1,6 @@
 id: FIN-200b
+components:
+  - finalize
 title: "The changelog entry lands atomically with the work it describes"
 component: finalize
 level: L1

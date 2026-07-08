@@ -1,4 +1,6 @@
 id: TKT-500e-1
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Coder agent persists across sequential ACs within the same goal"

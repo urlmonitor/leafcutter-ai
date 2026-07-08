@@ -1,4 +1,6 @@
 id: BO-550-1-i
+components:
+  - build-orchestration
 title: "IT PO modifying agents map for testing is rejected in favor of test_constraints"
 component: build-orchestration
 level: L3

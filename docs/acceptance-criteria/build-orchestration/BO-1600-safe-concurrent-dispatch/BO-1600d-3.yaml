@@ -1,4 +1,6 @@
 id: BO-1600d-3
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Recovery performs the real repair steps observed in the incident, in dependency order"

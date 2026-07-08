@@ -1,4 +1,6 @@
 id: BP-100c-5
+components:
+  - build-pipeline
 readiness: reviewed
 priority: medium
 title: "Consumer project with no config override gets standard default paths"

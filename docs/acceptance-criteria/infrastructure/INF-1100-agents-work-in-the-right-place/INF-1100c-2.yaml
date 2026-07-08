@@ -1,4 +1,6 @@
 id: INF-1100c-2
+components:
+  - infrastructure
 title: "An automated test guards compiled prompts against unresolved work-location placeholders"
 component: infrastructure
 level: L2

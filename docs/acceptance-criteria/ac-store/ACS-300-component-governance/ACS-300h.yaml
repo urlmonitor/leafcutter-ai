@@ -1,4 +1,6 @@
 id: ACS-300h
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Agent affinity field maps components to default agents"

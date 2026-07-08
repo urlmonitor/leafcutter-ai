@@ -1,4 +1,6 @@
 id: BP-300a-3
+components:
+  - build-pipeline
 title: "Workflow prompts user for clarification when investigators disagree or have low confidence"
 component: build-pipeline
 level: L2

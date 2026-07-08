@@ -1,4 +1,6 @@
 id: FIN-200a
+components:
+  - finalize
 title: "Finalizing a feature writes its changelog entry automatically"
 component: finalize
 level: L1

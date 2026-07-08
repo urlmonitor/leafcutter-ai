@@ -1,4 +1,6 @@
 id: BP-100i
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "Commit guardian hooks ship identically across all template directories — no silent gaps between runtime and consumer deployments"

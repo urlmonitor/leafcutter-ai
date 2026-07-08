@@ -1,4 +1,6 @@
 id: BO-1100b-2
+components:
+  - build-orchestration
 title: "Mixed-change warning names the conflicting groups and lists files per group"
 component: build-orchestration
 level: L2

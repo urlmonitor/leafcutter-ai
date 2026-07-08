@@ -1,4 +1,6 @@
 id: BP-400
+components:
+  - build-pipeline
 title: "Understand how every drive performed — never fly blind"
 component: build-pipeline
 level: L0

@@ -1,4 +1,6 @@
 id: GE-111e
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Understand exactly which requirement broke and why, every time"

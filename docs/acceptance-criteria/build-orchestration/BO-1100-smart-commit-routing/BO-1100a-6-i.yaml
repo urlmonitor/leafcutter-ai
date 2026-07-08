@@ -1,4 +1,6 @@
 id: BO-1100a-6-i
+components:
+  - build-orchestration
 title: "Paths containing target directory name as an infix in a longer segment are not matched"
 component: build-orchestration
 level: L3

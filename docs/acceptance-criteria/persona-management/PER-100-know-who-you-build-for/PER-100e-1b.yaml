@@ -1,4 +1,6 @@
 id: PER-100e-1b
+components:
+  - persona-management
 title: "Persona creation script writes validated persona.yaml from structured input"
 component: persona-management
 level: L2

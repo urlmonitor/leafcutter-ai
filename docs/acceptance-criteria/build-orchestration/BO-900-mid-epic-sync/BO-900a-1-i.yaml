@@ -1,4 +1,6 @@
 id: BO-900a-1-i
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "Unreachable remote is treated as zero divergence (safe default)"

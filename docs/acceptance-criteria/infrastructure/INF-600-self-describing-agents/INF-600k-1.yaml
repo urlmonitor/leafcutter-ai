@@ -1,4 +1,6 @@
 id: INF-600k-1
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "A workflow filename in spawned_by passes registry validation as an external caller"

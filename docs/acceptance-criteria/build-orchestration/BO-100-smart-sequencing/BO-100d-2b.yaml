@@ -1,4 +1,6 @@
 id: BO-100d-2b
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "build-feature.md prose lets the drive proceed when the telemetry sink is reachable"

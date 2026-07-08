@@ -1,4 +1,6 @@
 id: FIN-200a-4
+components:
+  - finalize
 title: "How-to guide documents the automatic changelog step"
 component: finalize
 level: L2

@@ -1,4 +1,6 @@
 id: INF-500
+components:
+  - infrastructure
 title: "You can see what happened and why — retrospectives and analysis are never blocked by tooling gaps"
 component: infrastructure
 level: L0

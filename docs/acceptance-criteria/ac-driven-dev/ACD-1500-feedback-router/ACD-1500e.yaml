@@ -1,4 +1,6 @@
 id: ACD-1500e
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "The platform improves how it collects feedback, not just what it does with it"

@@ -1,4 +1,6 @@
 id: TKT-500c-3
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "work_status transitions to done when all assigned agents have signed off"

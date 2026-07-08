@@ -1,4 +1,6 @@
 id: ACS-300h-2
+components:
+  - ac-store
 title: "Every agent ID in agent_affinity exists in the agent registry"
 component: ac-store
 level: L2

@@ -1,4 +1,6 @@
 id: INF-600g-2-i
+components:
+  - infrastructure
 title: "Non-phase agent individually listed alongside __ticket_phase_agents__ is valid"
 component: infrastructure
 level: L3

@@ -1,4 +1,6 @@
 id: BO-1600c
+components:
+  - build-orchestration
 title: "You are told if the repository is left in a bad state, and the drive stops"
 component: build-orchestration
 level: L1

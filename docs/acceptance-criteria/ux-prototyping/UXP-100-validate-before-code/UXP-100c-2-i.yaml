@@ -1,4 +1,6 @@
 id: UXP-100c-2-i
+components:
+  - ux-prototyping
 title: "Prototype with pending component research cannot be approved — only deferred"
 component: ux-prototyping
 level: L3

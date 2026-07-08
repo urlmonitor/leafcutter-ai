@@ -1,4 +1,6 @@
 id: BO-1800b-4
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Sequence diagram of the gated PR-to-merge-queue landing flow"

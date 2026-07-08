@@ -1,4 +1,6 @@
 id: BO-800b
+components:
+  - build-orchestration
 title: "PR descriptions tell you what value this change delivers"
 component: build-orchestration
 level: L1

@@ -1,4 +1,6 @@
 id: KM-KQS-030
+components:
+  - knowledge-management
 title: "Phantom target filtering uses node-existence check not a hardcoded blocklist"
 component: knowledge-management
 level: L3

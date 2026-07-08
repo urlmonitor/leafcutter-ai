@@ -1,4 +1,6 @@
 id: TKT-100f-7
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "BA v3 classifies non-overlapping L2 as genuinely-new"

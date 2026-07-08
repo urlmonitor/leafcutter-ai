@@ -1,4 +1,6 @@
 id: BP-900e-2
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A registered hook that does have a template copy passes without a false alarm"

@@ -1,4 +1,6 @@
 id: BO-1100c-4
+components:
+  - build-orchestration
 title: "Pattern config reflects the current file contents on every classification invocation"
 component: build-orchestration
 level: L2

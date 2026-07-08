@@ -1,4 +1,6 @@
 id: ACD-600b
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Post-merge hook automatically marks ACs done for completed tickets in the merge"

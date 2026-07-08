@@ -1,4 +1,6 @@
 id: BO-1700f-1
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "A project with no pre-commit config at all: the guard prints INFO and exits 0"

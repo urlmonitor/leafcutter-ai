@@ -1,4 +1,6 @@
 id: BO-1700b-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Any non-positive probe outcome halts every gate; only an all-pass result proceeds"

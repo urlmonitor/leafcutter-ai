@@ -1,4 +1,6 @@
 id: INF-100c
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "Feedback submission resolves its config and validates writers correctly in deployed projects"

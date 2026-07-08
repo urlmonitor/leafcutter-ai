@@ -1,4 +1,6 @@
 id: ACD-1500a-4
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Classification of the same entry is deterministic across runs"

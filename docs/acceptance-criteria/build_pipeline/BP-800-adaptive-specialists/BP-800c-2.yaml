@@ -1,4 +1,6 @@
 id: BP-800c-2
+components:
+  - build-pipeline
 title: "Best-practice knowledge files follow a standard structure"
 component: build-pipeline
 level: L2

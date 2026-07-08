@@ -1,4 +1,6 @@
 id: ACD-1100f-1
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Historical origin_agent values pass AC schema validation"

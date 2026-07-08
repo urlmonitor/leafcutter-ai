@@ -1,4 +1,6 @@
 id: BP-700a-5
+components:
+  - build-pipeline
 title: "Component diagram shows unified agent in the dispatch topology"
 component: build-pipeline
 level: L2

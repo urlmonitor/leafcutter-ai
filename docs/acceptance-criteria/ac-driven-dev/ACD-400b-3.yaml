@@ -1,4 +1,6 @@
 id: ACD-400b-3
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Generator is idempotent -- re-run with existing ticket exits non-zero without duplicating"

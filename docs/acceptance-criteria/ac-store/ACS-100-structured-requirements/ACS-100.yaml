@@ -1,4 +1,6 @@
 id: ACS-100
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Requirements that build themselves"

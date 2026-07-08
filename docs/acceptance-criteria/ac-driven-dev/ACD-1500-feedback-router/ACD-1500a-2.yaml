@@ -1,4 +1,6 @@
 id: ACD-1500a-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Each entry is classified into a work type and a size"

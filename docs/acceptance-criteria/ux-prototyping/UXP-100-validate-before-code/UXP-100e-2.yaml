@@ -1,4 +1,6 @@
 id: UXP-100e-2
+components:
+  - ux-prototyping
 title: "BA can reference the in-progress prototype when decomposing L2 behaviors"
 component: ux-prototyping
 level: L2

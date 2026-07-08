@@ -1,4 +1,6 @@
 id: INF-100b
+components:
+  - infrastructure
 title: "emit_entry resolves repo root correctly in all git checkout forms"
 component: infrastructure
 level: L1

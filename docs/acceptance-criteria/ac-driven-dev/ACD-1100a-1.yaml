@@ -1,4 +1,6 @@
 id: ACD-1100a-1
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Legacy pipeline agent templates are deleted from the package"

@@ -1,4 +1,6 @@
 id: BO-1500a-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: An existing authoring worktree/branch from a prior run is reused, not blindly recreated

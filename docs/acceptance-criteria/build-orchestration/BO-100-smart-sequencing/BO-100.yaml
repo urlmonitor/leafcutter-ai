@@ -1,4 +1,6 @@
 id: BO-100
+components:
+  - build-orchestration
 readiness: reviewed
 priority: medium
 title: "Ship changes in the right order without thinking about it"

@@ -1,4 +1,6 @@
 id: ACD-1500b-4
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Parked entries remain unresolved so feedback-review still surfaces them"

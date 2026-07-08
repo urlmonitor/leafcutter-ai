@@ -1,4 +1,6 @@
 id: ACS-300g-1-i
+components:
+  - ac-store
 title: "Entry with null detail_ref is accepted without error"
 component: ac-store
 level: L3

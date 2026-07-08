@@ -1,4 +1,6 @@
 id: ACS-800e-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "The parent-child coverage check verifies the link by parent-pointer metadata"

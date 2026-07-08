@@ -1,4 +1,6 @@
 id: GE-102a-1-i
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Doc-frontmatter transform fails open on parse uncertainty and no-ops when the docs layout is absent"

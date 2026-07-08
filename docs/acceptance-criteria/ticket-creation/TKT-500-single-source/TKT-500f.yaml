@@ -1,4 +1,6 @@
 id: TKT-500f
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Ticket generation from ACs is trustworthy and migration-safe"

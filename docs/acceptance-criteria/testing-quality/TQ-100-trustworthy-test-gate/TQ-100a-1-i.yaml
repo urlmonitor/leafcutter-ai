@@ -1,4 +1,6 @@
 id: TQ-100a-1-i
+components:
+  - testing-quality
 title: "A test file importing a nonexistent module does not stop the other files"
 component: testing-quality
 level: L3

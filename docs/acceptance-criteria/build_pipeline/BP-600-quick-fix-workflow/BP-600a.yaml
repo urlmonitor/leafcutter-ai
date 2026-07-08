@@ -1,4 +1,6 @@
 id: BP-600a
+components:
+  - build-pipeline
 title: "Stay where you are while fixing"
 component: build-pipeline
 level: L1

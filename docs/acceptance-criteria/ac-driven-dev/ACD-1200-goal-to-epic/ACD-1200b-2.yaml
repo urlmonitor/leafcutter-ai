@@ -1,4 +1,6 @@
 id: ACD-1200b-2
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "User can proceed with approved-only subset or request bulk review"

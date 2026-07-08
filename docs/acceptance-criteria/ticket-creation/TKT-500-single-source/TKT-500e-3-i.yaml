@@ -1,4 +1,6 @@
 id: TKT-500e-3-i
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Agent spawned for goal-B has no memory leakage from goal-A"

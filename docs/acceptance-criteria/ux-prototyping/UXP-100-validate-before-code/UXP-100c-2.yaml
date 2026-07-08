@@ -1,4 +1,6 @@
 id: UXP-100c-2
+components:
+  - ux-prototyping
 title: "Pipeline blocks until the user provides an explicit prototype decision"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: ACD-1100d
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Retired agents (product-owner-agent, test-planner) are removed"

@@ -1,4 +1,6 @@
 id: BO-1300a-3
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "How-to guide: requesting an independent spot-check of a finished feature"

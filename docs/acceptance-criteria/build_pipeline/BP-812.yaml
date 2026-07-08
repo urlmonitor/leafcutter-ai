@@ -1,4 +1,6 @@
 id: BP-812
+components:
+  - build-pipeline
 readiness: approved
 priority: medium
 title: "check_secrets.py treats templates/skills/ prose files as prose (no placeholder false-positives)"

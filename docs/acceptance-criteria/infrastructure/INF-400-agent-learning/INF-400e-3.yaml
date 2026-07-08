@@ -1,4 +1,6 @@
 id: INF-400e-3
+components:
+  - infrastructure
 title: "Second-run IT PO assigns agents correctly based on previously-learned component-agent mappings"
 component: infrastructure
 level: L2

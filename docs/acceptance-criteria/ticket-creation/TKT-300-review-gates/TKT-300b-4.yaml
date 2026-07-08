@@ -1,4 +1,6 @@
 id: TKT-300b-4
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Sign-off status is tracked in AC metadata and queryable"

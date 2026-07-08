@@ -1,4 +1,6 @@
 id: TQ-100c-2-ii
+components:
+  - testing-quality
 title: "Downgrading an AC from done to not-done while its test is failing is flagged, not silently relaxed"
 component: testing-quality
 level: L3

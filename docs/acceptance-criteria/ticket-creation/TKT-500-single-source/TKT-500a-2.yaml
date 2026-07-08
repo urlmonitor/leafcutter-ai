@@ -1,4 +1,6 @@
 id: TKT-500a-2
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Agent reads criteria from the AC YAML at dispatch time"

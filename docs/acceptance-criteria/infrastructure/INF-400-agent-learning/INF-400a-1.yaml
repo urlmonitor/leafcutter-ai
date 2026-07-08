@@ -1,4 +1,6 @@
 id: INF-400a-1
+components:
+  - infrastructure
 title: "V3 agent templates contain a pre-flight step that loads domain-scoped accumulated context"
 component: infrastructure
 level: L2

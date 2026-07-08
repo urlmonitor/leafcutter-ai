@@ -1,4 +1,6 @@
 id: BO-1600d-3-x
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "With no origin remote, recovery blocks removal instead of crashing; refetch is planned only when it can restore"

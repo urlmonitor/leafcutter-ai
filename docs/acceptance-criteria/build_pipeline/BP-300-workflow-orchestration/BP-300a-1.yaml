@@ -1,4 +1,6 @@
 id: BP-300a-1
+components:
+  - build-pipeline
 title: "debug.js dispatches three parallel Explore agents in Phase 1"
 component: build-pipeline
 level: L2

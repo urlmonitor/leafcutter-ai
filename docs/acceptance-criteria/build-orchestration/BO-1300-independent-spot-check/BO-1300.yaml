@@ -1,4 +1,6 @@
 id: BO-1300
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Catch the problems your tests never thought to check before calling a feature done"

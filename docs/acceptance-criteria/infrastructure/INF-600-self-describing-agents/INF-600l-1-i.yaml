@@ -1,4 +1,6 @@
 id: INF-600l-1-i
+components:
+  - infrastructure
 readiness: approved
 priority: high
 title: "When agent cards are absent, the mirror check no-ops instead of false-failing"

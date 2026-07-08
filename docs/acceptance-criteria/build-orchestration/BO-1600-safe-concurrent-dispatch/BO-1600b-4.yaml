@@ -1,4 +1,6 @@
 id: BO-1600b-4
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "State diagram of a commit's lifecycle through interruption and cleanup"

@@ -1,4 +1,6 @@
 id: ACD-1100e
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "The package carries a visible version marker (2.0)"

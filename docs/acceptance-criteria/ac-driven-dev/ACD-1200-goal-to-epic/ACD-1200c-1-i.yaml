@@ -1,4 +1,6 @@
 id: ACD-1200c-1-i
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Circular dependency among leaf ACs is detected and reported before ticket generation"

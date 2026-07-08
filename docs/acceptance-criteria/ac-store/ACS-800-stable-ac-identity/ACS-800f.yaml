@@ -1,4 +1,6 @@
 id: ACS-800f
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "The authoring guidance reflects the new model"

@@ -1,4 +1,6 @@
 id: BP-1000a-1-i
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "The merge-gate parity check catches cumulative cross-ticket drift that per-ticket sync verification let through"

@@ -1,4 +1,6 @@
 id: ACD-800d
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Every audit run produces a persistent JSON report for human review"

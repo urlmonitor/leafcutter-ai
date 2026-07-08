@@ -1,4 +1,6 @@
 id: FIN-200
+components:
+  - finalize
 title: "Every shipped feature leaves a record of what changed"
 component: finalize
 level: L0

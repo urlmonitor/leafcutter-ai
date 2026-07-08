@@ -1,4 +1,6 @@
 id: INF-600g-3-i
+components:
+  - infrastructure
 title: "Project-local skill referenced in skills_invoked resolves via .claude/skills/ fallback"
 component: infrastructure
 level: L3

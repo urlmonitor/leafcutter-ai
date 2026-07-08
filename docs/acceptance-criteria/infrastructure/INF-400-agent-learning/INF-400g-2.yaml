@@ -1,4 +1,6 @@
 id: INF-400g-2
+components:
+  - infrastructure
 title: "emit_event.py appends a valid JSON line when invoked with valid arguments"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: FIN-100
+components:
+  - finalize
 title: "Integration failures are caught before code reaches main"
 component: finalize
 level: L0

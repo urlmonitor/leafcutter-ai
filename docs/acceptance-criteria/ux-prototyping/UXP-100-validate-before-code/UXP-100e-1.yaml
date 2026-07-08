@@ -1,4 +1,6 @@
 id: UXP-100e-1
+components:
+  - ux-prototyping
 title: "UX designer and BA are dispatched concurrently after PO completes L0/L1 framing"
 component: ux-prototyping
 level: L2

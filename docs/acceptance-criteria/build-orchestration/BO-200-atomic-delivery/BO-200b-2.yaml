@@ -1,4 +1,6 @@
 id: BO-200b-2
+components:
+  - build-orchestration
 title: "Failed commit rolls back staging area to pre-commit state"
 component: build-orchestration
 level: L2

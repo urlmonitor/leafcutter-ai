@@ -1,4 +1,6 @@
 id: TKT-500a-1
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Supervisor resolves AC file path and passes it to the dispatched agent"

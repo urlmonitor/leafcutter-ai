@@ -1,4 +1,6 @@
 id: BO-1300d-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Blocking spot-check findings are surfaced in the build's completion output"

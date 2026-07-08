@@ -1,4 +1,6 @@
 id: FIN-200a-1
+components:
+  - finalize
 title: "Finalize invokes the existing changelog generator, which writes the entry into changelogs/"
 component: finalize
 level: L2

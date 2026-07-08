@@ -1,4 +1,6 @@
 id: INF-100c-1
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "Config resolution uses the script's own location as anchor"

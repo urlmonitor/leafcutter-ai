@@ -1,4 +1,6 @@
 id: BP-800b-1-i
+components:
+  - build-pipeline
 title: "Duplicate technology entries in manifest do not produce duplicate agents"
 component: build-pipeline
 level: L3

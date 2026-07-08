@@ -1,4 +1,6 @@
 id: TQ-100c-2-i
+components:
+  - testing-quality
 title: "An AC marked done with zero covering tests is flagged by the integrity check"
 component: testing-quality
 level: L3

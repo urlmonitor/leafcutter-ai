@@ -1,4 +1,6 @@
 id: FIN-100f
+components:
+  - finalize
 title: "Step ordering guarantees tests complete before PR merge"
 component: finalize
 level: L1

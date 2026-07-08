@@ -1,4 +1,6 @@
 id: INF-500b-6
+components:
+  - infrastructure
 title: "feedback-report command supports --since date filtering"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: TQ-100b-1-i
+components:
+  - testing-quality
 title: "When its AC flips to done, the same test transitions from informational to enforced with no test edit"
 component: testing-quality
 level: L3

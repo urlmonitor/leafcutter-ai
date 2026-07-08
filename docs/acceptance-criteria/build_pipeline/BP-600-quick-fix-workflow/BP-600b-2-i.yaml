@@ -1,4 +1,6 @@
 id: BP-600b-2-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow infers component from diagnosed file path when not provided"
 component: build-pipeline
 level: L3

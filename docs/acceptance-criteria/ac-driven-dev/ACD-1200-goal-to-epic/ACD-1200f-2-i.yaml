@@ -1,4 +1,6 @@
 id: ACD-1200f-2-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "traverse_ac_tree emits each leaf once even when reachable by multiple covered_by paths"

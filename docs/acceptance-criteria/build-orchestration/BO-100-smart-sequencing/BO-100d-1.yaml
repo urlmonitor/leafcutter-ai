@@ -1,4 +1,6 @@
 id: BO-100d-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "An unreachable telemetry sink hard-blocks the drive before any dispatch"

@@ -1,4 +1,6 @@
 id: ACS-100h-7-i
+components:
+  - ac-store
 title: "When the AC tree is already at the limit and cannot be auto-split, the scaffold error tells the author to split first"
 component: ac-store
 level: L3

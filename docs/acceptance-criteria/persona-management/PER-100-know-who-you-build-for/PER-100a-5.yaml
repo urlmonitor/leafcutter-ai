@@ -1,4 +1,6 @@
 id: PER-100a-5
+components:
+  - persona-management
 title: "Reference doc for persona YAML schema"
 component: persona-management
 level: L2

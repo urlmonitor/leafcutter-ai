@@ -1,4 +1,6 @@
 id: ACD-300f-1
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "SKILL.md defines three standard invocation patterns in an Agent Consumption Protocol section"

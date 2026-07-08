@@ -1,4 +1,6 @@
 id: FIN-100d-2
+components:
+  - finalize
 title: "blocks_finalization=false allows workflow to proceed to PR merge"
 level: L2
 component: finalize

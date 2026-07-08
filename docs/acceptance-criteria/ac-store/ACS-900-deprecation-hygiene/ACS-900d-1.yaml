@@ -1,4 +1,6 @@
 id: ACS-900d-1
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Retirement with the implementing code removed passes cleanly"

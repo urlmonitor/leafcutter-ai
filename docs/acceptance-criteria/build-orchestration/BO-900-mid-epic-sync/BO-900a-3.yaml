@@ -1,4 +1,6 @@
 id: BO-900a-3
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "Automatic merge execution when user accepts sync"

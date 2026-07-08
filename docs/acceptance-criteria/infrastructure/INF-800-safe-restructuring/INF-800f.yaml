@@ -1,4 +1,6 @@
 id: INF-800f
+components:
+  - infrastructure
 title: "Refactoring specialist recognized as a first-class agent"
 component: infrastructure
 level: L1

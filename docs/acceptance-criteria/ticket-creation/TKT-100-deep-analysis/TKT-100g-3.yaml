@@ -1,4 +1,6 @@
 id: TKT-100g-3
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Router classifies L2 when criteria contain Given/When/Then with concrete inputs"

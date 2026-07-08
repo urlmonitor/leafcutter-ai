@@ -1,4 +1,6 @@
 id: INF-600a-1
+components:
+  - infrastructure
 title: "Registry declares every skill an agent invokes, with invocation mode"
 component: infrastructure
 level: L2

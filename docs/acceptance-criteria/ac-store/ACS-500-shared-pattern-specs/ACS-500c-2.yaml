@@ -1,4 +1,6 @@
 id: ACS-500c-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "IT PO agent preserves implements_pattern when enriching an AC"

@@ -1,4 +1,6 @@
 id: GE-108c
+components:
+  - guardrail-engine
 readiness: approved
 priority: medium
 title: "Tuple exception types are rendered in full in the violation message"

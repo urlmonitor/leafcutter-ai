@@ -1,4 +1,6 @@
 id: GE-111d-2
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Reconcile by confirming the code still satisfies the criterion"

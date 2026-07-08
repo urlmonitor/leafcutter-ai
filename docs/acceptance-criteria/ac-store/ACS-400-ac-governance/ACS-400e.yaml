@@ -1,4 +1,6 @@
 id: ACS-400e
+components:
+  - ac-store
 title: "Violations are caught before they reach the repository"
 component: ac-store
 level: L1

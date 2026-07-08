@@ -1,4 +1,6 @@
 id: INF-600b
+components:
+  - infrastructure
 title: "Agent cards are assembled during the build"
 component: infrastructure
 level: L1

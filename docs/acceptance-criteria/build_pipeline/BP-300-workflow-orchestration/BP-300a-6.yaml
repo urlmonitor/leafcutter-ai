@@ -1,4 +1,6 @@
 id: BP-300a-6
+components:
+  - build-pipeline
 title: "Workflow return object contains all required structured fields"
 component: build-pipeline
 level: L2

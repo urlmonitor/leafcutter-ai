@@ -1,4 +1,6 @@
 id: ACS-300h-1
+components:
+  - ac-store
 title: "Agent affinity field is present on every component entry"
 component: ac-store
 level: L2

@@ -1,4 +1,6 @@
 id: BO-1100d-2-i
+components:
+  - build-orchestration
 title: "Shape with 10 occurrences but inconsistent historical messages is flagged for manual rule authoring"
 component: build-orchestration
 level: L3

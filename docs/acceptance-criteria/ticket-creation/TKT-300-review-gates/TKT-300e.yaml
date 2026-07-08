@@ -1,4 +1,6 @@
 id: TKT-300e
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Complex requirements are split into buildable pieces automatically"

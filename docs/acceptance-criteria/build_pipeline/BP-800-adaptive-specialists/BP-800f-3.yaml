@@ -1,4 +1,6 @@
 id: BP-800f-3
+components:
+  - build-pipeline
 title: "Multiple database paradigms in one project produce independent specialists"
 component: build-pipeline
 level: L2

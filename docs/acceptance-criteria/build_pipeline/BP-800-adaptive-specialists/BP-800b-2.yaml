@@ -1,4 +1,6 @@
 id: BP-800b-2
+components:
+  - build-pipeline
 title: "Multiple technologies produce independent specialists without interference"
 component: build-pipeline
 level: L2

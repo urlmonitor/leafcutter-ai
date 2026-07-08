@@ -1,4 +1,6 @@
 id: BP-600b
+components:
+  - build-pipeline
 title: "Quality assurance without the ceremony"
 component: build-pipeline
 level: L1

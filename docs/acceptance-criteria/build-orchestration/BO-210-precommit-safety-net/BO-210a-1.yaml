@@ -1,4 +1,6 @@
 id: BO-210a-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Routing config is rewritten from the dead stub to the documented defaults/commit_review/rules shape"

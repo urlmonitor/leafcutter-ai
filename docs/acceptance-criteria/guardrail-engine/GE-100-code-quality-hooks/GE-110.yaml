@@ -1,4 +1,6 @@
 id: GE-110
+components:
+  - guardrail-engine
 readiness: approved
 priority: medium
 title: "Test-file exemption is present in the canonical exception-handling guard tree"

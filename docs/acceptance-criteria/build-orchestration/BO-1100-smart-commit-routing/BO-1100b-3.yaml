@@ -1,4 +1,6 @@
 id: BO-1100b-3
+components:
+  - build-orchestration
 title: "User can confirm a mixed commit or abort to split"
 component: build-orchestration
 level: L2

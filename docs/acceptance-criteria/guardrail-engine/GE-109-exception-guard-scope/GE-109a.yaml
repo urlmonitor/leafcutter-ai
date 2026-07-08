@@ -1,4 +1,6 @@
 id: GE-109a
+components:
+  - guardrail-engine
 readiness: approved
 priority: medium
 title: "Exception-handling guard skips test files"

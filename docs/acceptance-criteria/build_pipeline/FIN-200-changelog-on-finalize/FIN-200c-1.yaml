@@ -1,4 +1,6 @@
 id: FIN-200c-1
+components:
+  - finalize
 title: "Changelog capture failure warns clearly but does not block the merge by default"
 component: finalize
 level: L2

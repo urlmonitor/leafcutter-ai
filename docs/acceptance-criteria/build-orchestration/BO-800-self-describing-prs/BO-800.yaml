@@ -1,4 +1,6 @@
 id: BO-800
+components:
+  - build-orchestration
 title: "Pull requests explain themselves using what was already decided"
 component: build-orchestration
 level: L0

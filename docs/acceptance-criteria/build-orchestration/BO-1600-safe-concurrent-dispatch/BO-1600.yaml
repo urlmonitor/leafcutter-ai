@@ -1,4 +1,6 @@
 id: BO-1600
+components:
+  - build-orchestration
 title: "Run many tickets at once without corrupting your repository"
 component: build-orchestration
 level: L0

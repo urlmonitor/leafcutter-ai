@@ -1,4 +1,6 @@
 id: FIN-200a-2
+components:
+  - finalize
 title: "The entry covers the merged work via the correct feature ref range"
 component: finalize
 level: L2

@@ -1,4 +1,6 @@
 id: TKT-200d-1
+components:
+  - ticket-creation
 title: "Changed spec triggers regeneration of its dependent diagram"
 component: ticket-creation
 level: L2

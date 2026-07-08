@@ -1,4 +1,6 @@
 id: KM-KQS-025
+components:
+  - knowledge-management
 title: "Combined edge improvements produce at least 600 valid edges from the real repository"
 component: knowledge-management
 level: L2

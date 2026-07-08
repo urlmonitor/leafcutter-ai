@@ -1,4 +1,6 @@
 id: ACD-1200c-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "AC depends_on relationships are propagated to ticket depends_on fields"

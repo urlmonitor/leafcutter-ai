@@ -1,4 +1,6 @@
 id: ACS-400a-1
+components:
+  - ac-store
 title: "Authorized requirement agents can create the criteria field"
 component: ac-store
 level: L2

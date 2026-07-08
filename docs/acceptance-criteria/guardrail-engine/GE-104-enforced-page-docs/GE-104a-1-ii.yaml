@@ -1,4 +1,6 @@
 id: GE-104a-1-ii
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Nested and dynamic route segments derive a single deterministic doc path"

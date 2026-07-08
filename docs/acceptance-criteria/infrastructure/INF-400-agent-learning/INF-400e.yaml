@@ -1,4 +1,6 @@
 id: INF-400e
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Repeat work on the same domain is noticeably better than the first time"

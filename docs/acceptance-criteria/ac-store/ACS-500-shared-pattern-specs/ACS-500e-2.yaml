@@ -1,4 +1,6 @@
 id: ACS-500e-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Composition depth is visible through the AC parent-child hierarchy"

@@ -1,4 +1,6 @@
 id: BP-1000a-3
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "When every mirrored script is byte-identical the parity check passes and the merge proceeds"

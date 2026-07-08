@@ -1,4 +1,6 @@
 id: BO-610-3
+components:
+  - build-orchestration
 title: "Multi-value classification: a work unit carries one or more change_targets"
 component: build-orchestration
 level: L2

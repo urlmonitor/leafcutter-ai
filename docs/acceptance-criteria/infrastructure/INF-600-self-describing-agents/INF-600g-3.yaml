@@ -1,4 +1,6 @@
 id: INF-600g-3
+components:
+  - infrastructure
 title: "Build cross-references skills_invoked against actual skill usage in agent template body"
 component: infrastructure
 level: L2

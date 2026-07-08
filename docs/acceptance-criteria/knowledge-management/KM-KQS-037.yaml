@@ -1,4 +1,6 @@
 id: KM-KQS-037
+components:
+  - knowledge-management
 readiness: draft
 priority: medium
 title: "Agent Protocol deduplication warning distinguishes AC overlap from doc/skill overlap"

@@ -1,4 +1,6 @@
 id: ACS-900a-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Orphaned-code check inspects the retired AC's implemented_by file list"

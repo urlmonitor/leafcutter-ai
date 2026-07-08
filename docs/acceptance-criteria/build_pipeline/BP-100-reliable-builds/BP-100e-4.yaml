@@ -1,4 +1,6 @@
 id: BP-100e-4
+components:
+  - build-pipeline
 title: "Pre-commit hook accepts failed sign-off lines with valid timestamps"
 component: build-pipeline
 level: L2

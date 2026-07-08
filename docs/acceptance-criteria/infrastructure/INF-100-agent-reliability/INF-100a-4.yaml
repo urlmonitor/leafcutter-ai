@@ -1,4 +1,6 @@
 id: INF-100a-4
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Wiring tests verify template Pre-Flight section and PROJECT_CONTEXT.md content"

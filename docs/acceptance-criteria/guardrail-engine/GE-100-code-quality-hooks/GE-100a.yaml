@@ -1,4 +1,6 @@
 id: GE-100a
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "jscpd hook exits cleanly when the jscpd binary is not installed"
