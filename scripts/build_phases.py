@@ -58,6 +58,106 @@ SKILLS_TEMPLATE_DIR = TEMPLATES_DIR / "skills"
 
 _log = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Components-table injection helpers (ACS-300k-1)
+# ---------------------------------------------------------------------------
+
+
+def _build_components_table(components_json_path: Path) -> str:
+    """Generate a Markdown table of components sorted by id.
+
+    Reads docs/components.json and produces a Markdown table with columns:
+    id, name, type, description, agent_affinity.  Handles both dict and list
+    formats for the ``components`` field.
+
+    Args:
+        components_json_path: Absolute path to docs/components.json.
+
+    Returns:
+        Markdown table string.  Returns a descriptive placeholder string when
+        the file is absent or unparseable.
+    """
+    if not components_json_path.is_file():
+        return "*(components.json not found)*"
+
+    try:
+        raw = components_json_path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except OSError as exc:
+        _log.warning(
+            "_build_components_table: cannot read %s: %s",
+            components_json_path,
+            exc,
+        )
+        return "*(components.json read error)*"
+    except json.JSONDecodeError as exc:
+        _log.warning(
+            "_build_components_table: cannot parse %s: %s",
+            components_json_path,
+            exc,
+        )
+        return "*(components.json parse error)*"
+
+    components_value = data.get("components", {})
+    if isinstance(components_value, dict):
+        items: list[tuple[str, dict]] = list(components_value.items())
+    elif isinstance(components_value, list):
+        items = [
+            (c.get("id", ""), c)
+            for c in components_value
+            if isinstance(c, dict)
+        ]
+    else:
+        return "*(components.json format error)*"
+
+    if not items:
+        return "*(no components registered)*"
+
+    # Sort by component id for deterministic output.
+    items.sort(key=lambda x: x[0])
+
+    headers = ["id", "name", "type", "description", "agent_affinity"]
+    header_row = "| " + " | ".join(headers) + " |"
+    sep_row = "|" + "|".join("-" * (len(h) + 2) for h in headers) + "|"
+
+    rows: list[str] = []
+    for cid, comp in items:
+        name = str(comp.get("name", "")).replace("|", "\\|")
+        ctype = str(comp.get("type", "")).replace("|", "\\|")
+        desc = str(comp.get("description", "")).replace("|", "\\|")
+        affinity = comp.get("agent_affinity", [])
+        if isinstance(affinity, list):
+            affinity_str = (", ".join(str(a) for a in affinity)) if affinity else "[]"
+        else:
+            affinity_str = str(affinity)
+        rows.append(f"| {cid} | {name} | {ctype} | {desc} | {affinity_str} |")
+
+    return "\n".join([header_row, sep_row] + rows)
+
+
+def _inject_components_table(text: str, package_root: Path) -> str:
+    """Replace the ``{{components_table}}`` placeholder with a Markdown table.
+
+    Reads ``docs/components.json`` from *package_root* and generates a table
+    sorted by component id.  If the placeholder is absent the text is returned
+    unchanged.  Leaves zero occurrences of ``{{components_table}}`` in the
+    output (ACS-300k-1).
+
+    Args:
+        text: Template text that may contain ``{{components_table}}``.
+        package_root: Absolute path to the package root; ``docs/components.json``
+            is resolved relative to it.
+
+    Returns:
+        Text with ``{{components_table}}`` replaced by the Markdown table.
+    """
+    placeholder = "{{components_table}}"
+    if placeholder not in text:
+        return text
+    components_json_path = package_root / "docs" / "components.json"
+    table = _build_components_table(components_json_path)
+    return text.replace(placeholder, table)
+
 # Re-export build_precommit_config so callers (build.py, tests) can import it
 # from either module.
 from build_precommit import (  # noqa: E402, F401  # re-exported for callers
@@ -244,6 +344,10 @@ def build_agents(target_root: Path, config: dict[str, Any],
             agents=agents_list,
             skills_root=skills_root,
         )
+
+        # Inject {{components_table}} placeholder after all other compilation
+        # steps so the generated table is always fresh (ACS-300k-1).
+        compiled = _inject_components_table(compiled, PACKAGE_ROOT)
 
         for platform, is_active in platforms.items():
             if not is_active:

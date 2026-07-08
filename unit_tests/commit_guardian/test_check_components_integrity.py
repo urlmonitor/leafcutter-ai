@@ -353,6 +353,9 @@ class TestRepoRootResolvesToGitToplevelForExistingDetailRef(unittest.TestCase):
             _git(["commit", "-m", "docs: add widget architecture doc"], cwd=repo)
 
             # --- Stage the updated components.json that ADDS 'widget' with a valid detail_ref ---
+            # The widget entry must satisfy all four schema validators now wired into main():
+            # validate_component_minimum_schema, validate_agent_affinity,
+            # validate_exposed_interfaces, validate_depends_on.
             staged_json = json.dumps(
                 {
                     "components": {
@@ -361,9 +364,16 @@ class TestRepoRootResolvesToGitToplevelForExistingDetailRef(unittest.TestCase):
                             "description": "Already in HEAD.",
                         },
                         "widget": {
+                            "id": "widget",
                             "name": "Widget",
-                            "description": "The widget component.",
+                            "type": "utility",
+                            "description": "The widget component for testing purposes.",
                             "detail_ref": "docs/architecture/components/widget.md",
+                            "status": "active",
+                            "primary_code": ["scripts/widget.py"],
+                            "agent_affinity": [],
+                            "exposed_interfaces": [],
+                            "depends_on": [],
                         },
                     }
                 },
@@ -411,6 +421,464 @@ class TestRepoRootResolvesToGitToplevelForExistingDetailRef(unittest.TestCase):
                     f"an unrelated error.  Full stderr: {result.stderr}"
                 ),
             )
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for the new full-schema validators (ACS-300g-1, ACS-300h-1,
+# ACS-300i-1, ACS-300i-2, ACS-300j-1) — loaded via importlib from the template.
+# ---------------------------------------------------------------------------
+
+import importlib.util
+
+_TEMPLATE_HOOK = (
+    Path(__file__).parent.parent.parent
+    / "templates"
+    / "scripts"
+    / "commit_guardian"
+    / "check_components_integrity.py"
+)
+
+try:
+    _spec = importlib.util.spec_from_file_location(
+        "_check_ci_schema_shim", str(_TEMPLATE_HOOK)
+    )
+    _schema_mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+    _spec.loader.exec_module(_schema_mod)  # type: ignore[union-attr]
+
+    _validate_minimum = _schema_mod.validate_component_minimum_schema
+    _validate_affinity = _schema_mod.validate_agent_affinity
+    _validate_interfaces = _schema_mod.validate_exposed_interfaces
+    _validate_depends = _schema_mod.validate_depends_on
+    _ALLOWED_TYPES = _schema_mod.ALLOWED_TYPES
+    _ALLOWED_STATUSES = _schema_mod.ALLOWED_STATUSES
+    _SCHEMA_MOD_OK = True
+    _SCHEMA_MOD_ERR = ""
+except Exception as _exc:  # noqa: BLE001
+    _SCHEMA_MOD_OK = False
+    _SCHEMA_MOD_ERR = str(_exc)
+
+
+def _full_entry(overrides: dict | None = None) -> dict:
+    """Return a complete, valid component entry dict.
+
+    Args:
+        overrides: Optional key-value pairs to replace in the base entry.
+
+    Returns:
+        A fully-populated component dict satisfying all validator constraints.
+    """
+    base: dict = {
+        "id": "my_component",
+        "name": "My Component",
+        "type": "utility",
+        "description": "A well-formed component used for testing purposes.",
+        "detail_ref": None,
+        "status": "active",
+        "primary_code": ["scripts/my_component.py"],
+        "agent_affinity": [],
+        "exposed_interfaces": [],
+        "depends_on": [],
+    }
+    if overrides:
+        base.update(overrides)
+    return base
+
+
+@unittest.skipUnless(
+    _SCHEMA_MOD_OK,
+    f"schema module load failed: {_SCHEMA_MOD_ERR}",
+)
+class TestValidateComponentMinimumSchemaAcs300g1(unittest.TestCase):
+    """Unit tests for validate_component_minimum_schema (ACS-300g-1).
+
+    Verifies that a valid entry passes and that each missing required field
+    causes an appropriate error.
+    """
+
+    def test_valid_entry_passes(self) -> None:
+        """A fully valid component entry returns no errors."""
+        errors = _validate_minimum("my_component", _full_entry())
+        self.assertEqual(errors, [], f"Unexpected errors: {errors}")
+
+    def test_detail_ref_null_passes(self) -> None:
+        """detail_ref null is accepted as per ACS-300g-1."""
+        errors = _validate_minimum("my_component", _full_entry({"detail_ref": None}))
+        self.assertEqual(errors, [])
+
+    def test_missing_id_fails(self) -> None:
+        """A component entry missing 'id' is rejected."""
+        entry = _full_entry()
+        del entry["id"]
+        errors = _validate_minimum("my_component", entry)
+        self.assertTrue(
+            any("'id'" in e for e in errors),
+            f"Expected id error in: {errors}",
+        )
+
+    def test_missing_name_fails(self) -> None:
+        """A component entry missing 'name' is rejected."""
+        entry = _full_entry()
+        del entry["name"]
+        errors = _validate_minimum("my_component", entry)
+        self.assertTrue(
+            any("'name'" in e for e in errors),
+            f"Expected name error in: {errors}",
+        )
+
+    def test_missing_type_fails(self) -> None:
+        """A component entry missing 'type' is rejected."""
+        entry = _full_entry()
+        del entry["type"]
+        errors = _validate_minimum("my_component", entry)
+        self.assertTrue(
+            any("'type'" in e for e in errors),
+            f"Expected type error in: {errors}",
+        )
+
+    def test_missing_description_fails(self) -> None:
+        """A component entry missing 'description' is rejected."""
+        entry = _full_entry()
+        del entry["description"]
+        errors = _validate_minimum("my_component", entry)
+        self.assertTrue(
+            any("'description'" in e for e in errors),
+            f"Expected description error in: {errors}",
+        )
+
+    def test_missing_status_fails(self) -> None:
+        """A component entry missing 'status' is rejected."""
+        entry = _full_entry()
+        del entry["status"]
+        errors = _validate_minimum("my_component", entry)
+        self.assertTrue(
+            any("'status'" in e for e in errors),
+            f"Expected status error in: {errors}",
+        )
+
+    def test_missing_primary_code_fails(self) -> None:
+        """A component entry missing 'primary_code' is rejected."""
+        entry = _full_entry()
+        del entry["primary_code"]
+        errors = _validate_minimum("my_component", entry)
+        self.assertTrue(
+            any("'primary_code'" in e for e in errors),
+            f"Expected primary_code error in: {errors}",
+        )
+
+    def test_invalid_type_value_fails(self) -> None:
+        """A 'type' value not in ALLOWED_TYPES is rejected."""
+        errors = _validate_minimum("my_component", _full_entry({"type": "not_valid"}))
+        self.assertTrue(
+            any("'type'" in e for e in errors),
+            f"Expected type-enum error in: {errors}",
+        )
+
+    def test_all_allowed_types_pass(self) -> None:
+        """Every value in ALLOWED_TYPES passes type validation."""
+        for t in _ALLOWED_TYPES:
+            errors = _validate_minimum("my_component", _full_entry({"type": t}))
+            type_errs = [e for e in errors if "'type'" in e]
+            self.assertEqual(
+                type_errs,
+                [],
+                f"Type '{t}' was unexpectedly rejected: {type_errs}",
+            )
+
+    def test_description_too_short_fails(self) -> None:
+        """A description shorter than DESCRIPTION_MIN_LEN is rejected."""
+        errors = _validate_minimum("my_component", _full_entry({"description": "Short"}))
+        self.assertTrue(
+            any("'description'" in e for e in errors),
+            f"Expected description-length error in: {errors}",
+        )
+
+    def test_invalid_status_fails(self) -> None:
+        """A 'status' value not in ALLOWED_STATUSES is rejected."""
+        errors = _validate_minimum("my_component", _full_entry({"status": "unknown"}))
+        self.assertTrue(
+            any("'status'" in e for e in errors),
+            f"Expected status-enum error in: {errors}",
+        )
+
+    def test_detail_ref_nonexistent_file_fails(self) -> None:
+        """detail_ref pointing to a non-existent file is rejected."""
+        errors = _validate_minimum(
+            "my_component",
+            _full_entry({"detail_ref": "docs/does_not_exist_ever.md"}),
+        )
+        self.assertTrue(
+            any("'detail_ref'" in e and "does not exist" in e for e in errors),
+            f"Expected detail_ref path error in: {errors}",
+        )
+
+    def test_id_not_snake_case_fails(self) -> None:
+        """An 'id' value that is not snake_case is rejected (ACS-300g-1, M-2)."""
+        # camelCase "myComponent" violates the snake_case constraint
+        errors = _validate_minimum("myComponent", _full_entry({"id": "myComponent"}))
+        self.assertTrue(
+            any("snake_case" in e for e in errors),
+            f"Expected snake_case error in: {errors}",
+        )
+
+    def test_id_with_hyphen_fails(self) -> None:
+        """An 'id' containing hyphens is rejected — only underscores are allowed."""
+        errors = _validate_minimum("my_comp", _full_entry({"id": "my-comp"}))
+        # id field does not match the top-level key either, so any id-related error suffices
+        self.assertTrue(
+            any("'id'" in e for e in errors),
+            f"Expected id error in: {errors}",
+        )
+
+    def test_id_snake_case_with_digits_passes(self) -> None:
+        """An 'id' with digits in snake_case format is accepted."""
+        errors = _validate_minimum("my_comp2", _full_entry({"id": "my_comp2"}))
+        id_errors = [e for e in errors if "'id'" in e]
+        self.assertEqual(id_errors, [], f"snake_case id with digit should pass: {id_errors}")
+
+
+@unittest.skipUnless(
+    _SCHEMA_MOD_OK,
+    f"schema module load failed: {_SCHEMA_MOD_ERR}",
+)
+class TestValidateAgentAffinityAcs300h1(unittest.TestCase):
+    """Unit tests for validate_agent_affinity (ACS-300h-1).
+
+    Every component entry must have agent_affinity as a JSON array.
+    Null and absent are both invalid; empty array [] is valid.
+    """
+
+    def test_empty_array_passes(self) -> None:
+        """agent_affinity: [] (empty array) is valid."""
+        errors = _validate_affinity("my_component", {"agent_affinity": []})
+        self.assertEqual(errors, [], f"Empty array should pass: {errors}")
+
+    def test_non_empty_array_passes(self) -> None:
+        """agent_affinity: [python-coder] (non-empty array) is valid."""
+        errors = _validate_affinity(
+            "my_component", {"agent_affinity": ["python-coder"]}
+        )
+        self.assertEqual(errors, [], f"Non-empty array should pass: {errors}")
+
+    def test_missing_field_fails(self) -> None:
+        """A component entry without agent_affinity is rejected."""
+        errors = _validate_affinity("my_component", {})
+        self.assertTrue(
+            len(errors) > 0,
+            "Expected an error for missing agent_affinity field.",
+        )
+        self.assertTrue(
+            any("agent_affinity" in e for e in errors),
+            f"Error should mention 'agent_affinity': {errors}",
+        )
+
+    def test_null_value_fails(self) -> None:
+        """agent_affinity: null is rejected (must be an array)."""
+        errors = _validate_affinity("my_component", {"agent_affinity": None})
+        self.assertTrue(
+            len(errors) > 0,
+            "Expected an error for null agent_affinity.",
+        )
+        self.assertTrue(
+            any("agent_affinity" in e for e in errors),
+            f"Error should mention 'agent_affinity': {errors}",
+        )
+
+    def test_non_dict_input_returns_empty(self) -> None:
+        """Non-dict component_data returns [] without raising."""
+        errors = _validate_affinity("my_component", "not_a_dict")
+        self.assertEqual(errors, [])
+
+
+@unittest.skipUnless(
+    _SCHEMA_MOD_OK,
+    f"schema module load failed: {_SCHEMA_MOD_ERR}",
+)
+class TestValidateExposedInterfacesAcs300i1Acs300i2(unittest.TestCase):
+    """Unit tests for validate_exposed_interfaces (ACS-300i-1, ACS-300i-2).
+
+    exposed_interfaces must be a present array (never null, never absent).
+    Each element must have all four fields: name, type, path, shape.
+    All missing fields per element are reported in one error (not fail-on-first).
+    """
+
+    def test_empty_array_passes(self) -> None:
+        """exposed_interfaces: [] is valid for internal components."""
+        errors = _validate_interfaces("my_component", {"exposed_interfaces": []})
+        self.assertEqual(errors, [], f"Empty array should pass: {errors}")
+
+    def test_valid_interface_element_passes(self) -> None:
+        """A fully-populated interface element passes validation."""
+        entry = {
+            "exposed_interfaces": [
+                {
+                    "name": "run_hook",
+                    "type": "hook_protocol",
+                    "path": "scripts/commit_guardian/run_hook.py",
+                    "shape": "python callable",
+                }
+            ]
+        }
+        errors = _validate_interfaces("my_component", entry)
+        self.assertEqual(errors, [], f"Valid element should pass: {errors}")
+
+    def test_missing_field_fails_absent(self) -> None:
+        """A component entry without exposed_interfaces is rejected (ACS-300i-2)."""
+        errors = _validate_interfaces("my_component", {})
+        self.assertTrue(
+            len(errors) > 0,
+            "Expected error for absent exposed_interfaces.",
+        )
+        self.assertTrue(
+            any("exposed_interfaces" in e for e in errors),
+            f"Error should mention 'exposed_interfaces': {errors}",
+        )
+
+    def test_null_value_fails(self) -> None:
+        """exposed_interfaces: null is rejected (ACS-300i-2)."""
+        errors = _validate_interfaces("my_component", {"exposed_interfaces": None})
+        self.assertTrue(
+            len(errors) > 0,
+            "Expected error for null exposed_interfaces.",
+        )
+
+    def test_all_missing_fields_reported_in_one_pass(self) -> None:
+        """An element missing multiple fields reports ALL of them in one error (ACS-300i-1)."""
+        entry = {
+            "exposed_interfaces": [
+                # name and shape are missing; type and path are present
+                {
+                    "type": "file_contract",
+                    "path": "docs/schema.md",
+                }
+            ]
+        }
+        errors = _validate_interfaces("my_component", entry)
+        # There should be exactly one error for element[0] listing both missing fields.
+        iface_errors = [e for e in errors if "exposed_interfaces[0]" in e and "missing" in e]
+        self.assertEqual(
+            len(iface_errors),
+            1,
+            f"Expected a single error listing all missing fields: {errors}",
+        )
+        self.assertIn(
+            "name",
+            iface_errors[0],
+            f"Error should mention missing 'name': {iface_errors[0]}",
+        )
+        self.assertIn(
+            "shape",
+            iface_errors[0],
+            f"Error should mention missing 'shape': {iface_errors[0]}",
+        )
+
+    def test_single_missing_field_reported(self) -> None:
+        """An element missing only one field is rejected with an error naming it."""
+        entry = {
+            "exposed_interfaces": [
+                {
+                    "name": "my_func",
+                    "type": "function_signature",
+                    "path": "scripts/my.py",
+                    # shape is missing
+                }
+            ]
+        }
+        errors = _validate_interfaces("my_component", entry)
+        iface_errors = [e for e in errors if "exposed_interfaces[0]" in e and "missing" in e]
+        self.assertGreater(len(iface_errors), 0, f"Expected missing-field error: {errors}")
+        self.assertIn("shape", iface_errors[0])
+
+    def test_invalid_interface_type_fails(self) -> None:
+        """An element with an unsupported type value is rejected."""
+        entry = {
+            "exposed_interfaces": [
+                {
+                    "name": "my_func",
+                    "type": "not_a_valid_type",
+                    "path": "scripts/my.py",
+                    "shape": "dict",
+                }
+            ]
+        }
+        errors = _validate_interfaces("my_component", entry)
+        type_errors = [e for e in errors if "type" in e and "not_a_valid_type" in e]
+        self.assertGreater(
+            len(type_errors),
+            0,
+            f"Expected interface-type-enum error: {errors}",
+        )
+
+
+@unittest.skipUnless(
+    _SCHEMA_MOD_OK,
+    f"schema module load failed: {_SCHEMA_MOD_ERR}",
+)
+class TestValidateDependsOnAcs300j1(unittest.TestCase):
+    """Unit tests for validate_depends_on (ACS-300j-1).
+
+    depends_on references must only name IDs that exist in the same file.
+    Error messages must name the invalid reference, the declaring component,
+    and the list of valid IDs.
+    """
+
+    def test_valid_depends_on_reference_passes(self) -> None:
+        """A depends_on referencing a known component ID passes."""
+        all_ids = {"my_component", "other_component"}
+        entry = {"depends_on": ["other_component"]}
+        errors = _validate_depends("my_component", entry, all_ids)
+        self.assertEqual(errors, [], f"Valid reference should pass: {errors}")
+
+    def test_empty_depends_on_passes(self) -> None:
+        """An empty depends_on list produces no errors."""
+        errors = _validate_depends("my_component", {"depends_on": []}, {"my_component"})
+        self.assertEqual(errors, [])
+
+    def test_absent_depends_on_passes(self) -> None:
+        """A component without depends_on produces no errors."""
+        errors = _validate_depends("my_component", {}, {"my_component"})
+        self.assertEqual(errors, [])
+
+    def test_unknown_id_fails(self) -> None:
+        """A depends_on referencing an unknown ID is rejected."""
+        all_ids = {"my_component", "known_component"}
+        entry = {"depends_on": ["unknown_component"]}
+        errors = _validate_depends("my_component", entry, all_ids)
+        self.assertGreater(len(errors), 0, "Expected an error for unknown ID.")
+        self.assertIn(
+            "unknown_component",
+            errors[0],
+            f"Error should name the invalid reference: {errors[0]}",
+        )
+        self.assertIn(
+            "my_component",
+            errors[0],
+            f"Error should name the declaring component: {errors[0]}",
+        )
+
+    def test_error_lists_valid_ids(self) -> None:
+        """The error message for an invalid reference includes the valid IDs."""
+        all_ids = {"alpha", "beta", "gamma"}
+        entry = {"depends_on": ["nonexistent"]}
+        errors = _validate_depends("check_dep_test", entry, all_ids)
+        self.assertGreater(len(errors), 0)
+        # The sorted valid IDs should appear somewhere in the error message.
+        for valid_id in sorted(all_ids):
+            self.assertIn(
+                valid_id,
+                errors[0],
+                f"Expected valid ID '{valid_id}' in error: {errors[0]}",
+            )
+
+    def test_multiple_invalid_ids_each_reported(self) -> None:
+        """Each invalid depends_on entry produces a separate error."""
+        all_ids = {"my_component"}
+        entry = {"depends_on": ["bad_one", "bad_two"]}
+        errors = _validate_depends("my_component", entry, all_ids)
+        self.assertEqual(
+            len(errors),
+            2,
+            f"Expected one error per invalid reference: {errors}",
+        )
 
 
 if __name__ == "__main__":

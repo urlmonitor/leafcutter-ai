@@ -4,23 +4,32 @@ Pre-commit hook: components.json integrity guard.
 MODULE: check_components_integrity
 GOAL: Block commits that add a new top-level component to docs/components.json
       without providing a detail_ref pointing to a real on-disk doc AND a
-      flight_level in that doc's frontmatter.
+      flight_level in that doc's frontmatter. Also exposes full schema validators
+      for programmatic validation (ACS-300g-1, ACS-300h-1, ACS-300i-1,
+      ACS-300i-2, ACS-300j-1).
 BUSINESS CONTEXT: Prevents the registry from drifting ahead of the documentation
-      tree — a component added to the registry must have a doc in the same
-      commit (or already have one). This closes the "9 undocumented components"
-      class of drift.
+      tree. Standalone validator functions expose full schema enforcement for
+      backfill tooling and other hooks.
 ARCHITECTURE: Not needed.
 
 Logic:
-    1. `git show HEAD:docs/components.json` → "before" JSON (None if new file).
-    2. `git show :docs/components.json` (staged index) → "after" JSON.
+    1. `git show HEAD:docs/components.json` -> "before" JSON (None if new file).
+    2. `git show :docs/components.json` (staged index) -> "after" JSON.
     3. Diff top-level keys: `added = after_keys - before_keys`.
     4. For each added key:
        a. `detail_ref` must be present and non-empty.
        b. The path pointed to by `detail_ref` must exist on disk.
        c. The referenced doc must have `flight_level` in its frontmatter.
-    5. Existing components (no diff) are NOT checked — legacy drift is accepted;
+    5. Existing components (no diff) are NOT checked -- legacy drift is accepted;
        backfilling is handled by Phase 4 tickets.
+
+    Full schema validators (called from main() for each newly-added component):
+      validate_component_minimum_schema  -- id (snake_case), name, type, description,
+                                           status, primary_code, detail_ref (ACS-300g-1)
+      validate_agent_affinity            -- agent_affinity array (ACS-300h-1)
+      validate_exposed_interfaces        -- exposed_interfaces array + element
+                                           schema (ACS-300i-1, ACS-300i-2)
+      validate_depends_on                -- referential integrity (ACS-300j-1)
 
 Exit codes:
     0 - All new components are valid
@@ -54,11 +63,25 @@ DECISION HISTORY:
     hook file's install location. Falls back to Path(__file__).resolve().parents[2]
     when git is unavailable or returns a non-zero exit code. main() calls
     _repo_root() once and threads the resolved root into validate_new_component().
+  - 2026-07-07 [python-coder/ACS-300g-1,h-1,i-1,i-2,j-1]: Added full schema
+    validator functions: validate_component_minimum_schema, validate_agent_affinity,
+    validate_exposed_interfaces, validate_depends_on. Added module-level constants
+    ALLOWED_TYPES, ALLOWED_STATUSES, VALID_INTERFACE_TYPES, DESCRIPTION_MIN_LEN,
+    and REPO_ROOT (patchable for tests). Validators exposed for programmatic use;
+    main() continues to enforce only the detail_ref+flight_level rule on new
+    components (backfill compatibility -- existing entries lack the new fields).
+  - 2026-07-08 [python-coder/H-1-fix,M-2]: Wired all four schema validators into
+    main() for each added_keys entry: validate_component_minimum_schema,
+    validate_agent_affinity, validate_exposed_interfaces, validate_depends_on.
+    Added snake_case check for the id field per ACS-300g-1 (M-2). Computed
+    all_component_ids once before the loop for validate_depends_on. Existing
+    components (no diff) remain unchecked for backfill compatibility.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -69,7 +92,39 @@ import yaml
 # Constants
 # ---------------------------------------------------------------------------
 
+
 COMPONENTS_JSON_PATH = "docs/components.json"
+
+# Allowed enumeration values for component entry fields (ACS-300g-1).
+ALLOWED_TYPES: frozenset[str] = frozenset({
+    "infrastructure",
+    "utility",
+    "orchestration",
+    "coding",
+    "review",
+    "documentation",
+    "analysis",
+})
+ALLOWED_STATUSES: frozenset[str] = frozenset({"active", "reviewed", "planned"})
+
+# Allowed type values for elements in exposed_interfaces (ACS-300i-1).
+VALID_INTERFACE_TYPES: frozenset[str] = frozenset({
+    "file_contract",
+    "json_schema",
+    "function_signature",
+    "cli_command",
+    "hook_protocol",
+    "event",
+    "data_shape",
+})
+
+# Minimum character count for the description field (ACS-300g-1).
+DESCRIPTION_MIN_LEN: int = 10
+
+# Repository root: initialized to the __file__-relative fallback at import time.
+# main() updates this via _repo_root() for CWD-based commit-time resolution.
+# Tests may patch this module-level variable to redirect detail_ref existence checks.
+REPO_ROOT: Path = Path(__file__).resolve().parents[2]
 
 # ---------------------------------------------------------------------------
 # Root resolution
@@ -249,7 +304,281 @@ def _is_components_json_staged() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Validation helpers
+# Full schema validation helpers (ACS-300g-1, ACS-300h-1, ACS-300i-1,
+# ACS-300i-2, ACS-300j-1)
+# ---------------------------------------------------------------------------
+
+
+def validate_component_minimum_schema(
+    component_id: str,
+    component_data: object,
+) -> list[str]:
+    """Validate required minimum-schema fields for a component entry (ACS-300g-1).
+
+    Checks the six required scalar/list fields (id, name, type, description,
+    status, primary_code) plus the optional detail_ref field.  The module-level
+    ``REPO_ROOT`` variable controls how detail_ref paths are resolved on disk;
+    tests may patch it without patching the filesystem.
+
+    Args:
+        component_id: Top-level key name for this component in components.json.
+        component_data: The component dict value.  Must be a dict; a non-dict
+            value produces a single error and returns immediately.
+
+    Returns:
+        List of human-readable error strings.  Empty list means the entry is
+        valid against the minimum schema.
+    """
+    errors: list[str] = []
+
+    if not isinstance(component_data, dict):
+        errors.append(
+            f"Component '{component_id}': entry is not a JSON object."
+        )
+        return errors
+
+    # id: present, non-empty string, matches the top-level key, and snake_case
+    cid = component_data.get("id")
+    if "id" not in component_data or not isinstance(cid, str) or not cid:
+        errors.append(
+            f"Component '{component_id}': 'id' must be a non-empty string."
+        )
+    elif cid != component_id:
+        errors.append(
+            f"Component '{component_id}': 'id' field value {cid!r} does not match "
+            f"the top-level key '{component_id}'."
+        )
+    elif not re.match(r'^[a-z][a-z0-9_]*$', cid):
+        errors.append(
+            f"Component '{component_id}': 'id' must be snake_case "
+            f"(lowercase letters, digits, and underscores only, starting with a "
+            f"lowercase letter), got {cid!r}."
+        )
+
+    # name: present, non-empty string
+    name = component_data.get("name")
+    if "name" not in component_data or not isinstance(name, str) or not name:
+        errors.append(
+            f"Component '{component_id}': 'name' must be a non-empty string."
+        )
+
+    # type: present, must be in ALLOWED_TYPES
+    comp_type = component_data.get("type")
+    if "type" not in component_data:
+        errors.append(
+            f"Component '{component_id}': 'type' is required and must be "
+            f"one of the allowed types: {sorted(ALLOWED_TYPES)}."
+        )
+    elif comp_type not in ALLOWED_TYPES:
+        errors.append(
+            f"Component '{component_id}': 'type' value {comp_type!r} is "
+            f"not one of the allowed types: {sorted(ALLOWED_TYPES)}."
+        )
+
+    # description: present, string, >= DESCRIPTION_MIN_LEN chars
+    description = component_data.get("description")
+    if "description" not in component_data:
+        errors.append(
+            f"Component '{component_id}': 'description' is required (>= "
+            f"{DESCRIPTION_MIN_LEN} characters)."
+        )
+    elif not isinstance(description, str) or len(description) < DESCRIPTION_MIN_LEN:
+        desc_len = len(description) if isinstance(description, str) else "non-string"
+        errors.append(
+            f"Component '{component_id}': 'description' must be a string of at least "
+            f"{DESCRIPTION_MIN_LEN} characters (got {desc_len})."
+        )
+
+    # status: present, must be in ALLOWED_STATUSES
+    status = component_data.get("status")
+    if "status" not in component_data:
+        errors.append(
+            f"Component '{component_id}': 'status' is required and must be "
+            f"one of the allowed statuses: {sorted(ALLOWED_STATUSES)}."
+        )
+    elif status not in ALLOWED_STATUSES:
+        errors.append(
+            f"Component '{component_id}': 'status' value {status!r} is "
+            f"not one of the allowed statuses: {sorted(ALLOWED_STATUSES)}."
+        )
+
+    # primary_code: present, non-empty list of non-empty strings
+    primary_code = component_data.get("primary_code")
+    if "primary_code" not in component_data:
+        errors.append(
+            f"Component '{component_id}': 'primary_code' is required."
+        )
+    elif not isinstance(primary_code, list):
+        errors.append(
+            f"Component '{component_id}': 'primary_code' must be an array of path strings."
+        )
+    elif not primary_code:
+        errors.append(
+            f"Component '{component_id}': 'primary_code' must contain at least one path string."
+        )
+    elif not all(isinstance(p, str) and p for p in primary_code):
+        errors.append(
+            f"Component '{component_id}': 'primary_code' must contain only non-empty strings."
+        )
+
+    # detail_ref: optional key; when present and not null must be a valid path
+    if "detail_ref" in component_data:
+        detail_ref = component_data["detail_ref"]
+        if detail_ref is not None:
+            if not isinstance(detail_ref, str) or not detail_ref:
+                errors.append(
+                    f"Component '{component_id}': 'detail_ref' must be a string path or null."
+                )
+            else:
+                doc_path = REPO_ROOT / detail_ref
+                if not doc_path.exists():
+                    errors.append(
+                        f"Component '{component_id}': 'detail_ref' file does not exist: "
+                        f"{detail_ref}"
+                    )
+
+    return errors
+
+
+def validate_agent_affinity(
+    component_id: str,
+    component_data: object,
+) -> list[str]:
+    """Validate that agent_affinity is present as a JSON array (ACS-300h-1).
+
+    The field must be present on every component entry; null and absent are
+    both invalid.  An empty list ``[]`` is valid (no agent affinity declared).
+
+    Args:
+        component_id: Top-level key name for this component.
+        component_data: The component dict value.  Non-dict input returns [].
+
+    Returns:
+        List of human-readable error strings.  Empty list means the field is valid.
+    """
+    if not isinstance(component_data, dict):
+        return []
+    errors: list[str] = []
+    if "agent_affinity" not in component_data:
+        errors.append(
+            f"Component '{component_id}': 'agent_affinity' field is required "
+            f"(use [] if no agent affinity)."
+        )
+    elif not isinstance(component_data["agent_affinity"], list):
+        errors.append(
+            f"Component '{component_id}': 'agent_affinity' must be a JSON array, "
+            f"never null."
+        )
+    return errors
+
+
+def validate_exposed_interfaces(
+    component_id: str,
+    component_data: object,
+) -> list[str]:
+    """Validate exposed_interfaces field and its element schema (ACS-300i-1, ACS-300i-2).
+
+    The field must be present and must be an array (null and absent are both
+    invalid).  Each element must have all four required fields: name, type,
+    path, shape.  All missing fields per element are reported in a single error
+    (not fail-on-first).  The element ``type`` value is also validated against
+    ``VALID_INTERFACE_TYPES``.
+
+    Args:
+        component_id: Top-level key name for this component.
+        component_data: The component dict value.  Non-dict input returns [].
+
+    Returns:
+        List of human-readable error strings.  Empty list means the field is valid.
+    """
+    if not isinstance(component_data, dict):
+        return []
+    errors: list[str] = []
+
+    if "exposed_interfaces" not in component_data:
+        errors.append(
+            f"Component '{component_id}': 'exposed_interfaces' field is required "
+            f"(use [] if the component has no external interfaces)."
+        )
+        return errors
+
+    ifaces = component_data["exposed_interfaces"]
+    if not isinstance(ifaces, list):
+        errors.append(
+            f"Component '{component_id}': 'exposed_interfaces' must be an array, "
+            f"never null."
+        )
+        return errors
+
+    _REQUIRED_IFACE_FIELDS = ("name", "type", "path", "shape")
+    for i, iface in enumerate(ifaces):
+        if not isinstance(iface, dict):
+            errors.append(
+                f"Component '{component_id}': exposed_interfaces[{i}] "
+                f"must be a JSON object."
+            )
+            continue
+        # Report ALL missing fields in one pass (not fail-on-first).
+        missing = [
+            f for f in _REQUIRED_IFACE_FIELDS
+            if f not in iface or not iface.get(f)
+        ]
+        if missing:
+            errors.append(
+                f"Component '{component_id}': exposed_interfaces[{i}] "
+                f"is missing required fields: {', '.join(missing)}."
+            )
+        iface_type = iface.get("type")
+        if iface_type and iface_type not in VALID_INTERFACE_TYPES:
+            errors.append(
+                f"Component '{component_id}': exposed_interfaces[{i}] "
+                f"'type' value {iface_type!r} is not one of the valid interface "
+                f"types: {sorted(VALID_INTERFACE_TYPES)}."
+            )
+
+    return errors
+
+
+def validate_depends_on(
+    component_id: str,
+    component_data: object,
+    all_component_ids: set[str],
+) -> list[str]:
+    """Validate depends_on references only valid component IDs (ACS-300j-1).
+
+    Each element of the depends_on list must match an ID present in
+    ``all_component_ids``.  On failure the error message names the invalid
+    reference, the declaring component, and the sorted list of valid IDs.
+
+    Args:
+        component_id: Top-level key name for this component.
+        component_data: The component dict value.  Non-dict input returns [].
+        all_component_ids: Set of all valid component IDs in the same file.
+
+    Returns:
+        List of human-readable error strings.  Empty list means all references
+        are valid (or depends_on is absent / empty).
+    """
+    if not isinstance(component_data, dict):
+        return []
+    errors: list[str] = []
+    depends_on = component_data.get("depends_on")
+    if not depends_on:
+        return []
+    if not isinstance(depends_on, list):
+        return []
+    valid_ids_sorted = sorted(all_component_ids)
+    for dep_id in depends_on:
+        if dep_id not in all_component_ids:
+            errors.append(
+                f"Component '{component_id}': depends_on references unknown ID "
+                f"'{dep_id}'. Valid component IDs: {valid_ids_sorted}."
+            )
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Validation helpers (pre-existing)
 # ---------------------------------------------------------------------------
 
 
@@ -349,7 +678,7 @@ def main() -> int:
         Exit code: 0 on success, 1 if any new component fails validation.
     """
     if not _is_components_json_staged():
-        # File not staged — nothing to check
+        # File not staged -- nothing to check
         return 0
 
     if _is_merge_in_progress():
@@ -359,7 +688,7 @@ def main() -> int:
         # --no-verify. (ACS-300g-5)
         print(
             "[components-integrity] merge in progress (MERGE_HEAD present)"
-            " — skipping new-component check",
+            " -- skipping new-component check",
             file=sys.stderr,
         )
         return 0
@@ -368,7 +697,7 @@ def main() -> int:
     after_content = _git_show(f":{COMPONENTS_JSON_PATH}")
 
     if after_content is None:
-        # Staged version unreadable — let other hooks deal with it
+        # Staged version unreadable -- let other hooks deal with it
         return 0
 
     before_keys = _parse_component_keys(before_content)
@@ -377,16 +706,26 @@ def main() -> int:
     added_keys = after_keys - before_keys
 
     if not added_keys:
-        return 0  # No new components — nothing to enforce
+        return 0  # No new components -- nothing to enforce
 
     after_components = _parse_components_json(after_content)
 
     repo_root = _repo_root()
+    # Update module-level REPO_ROOT so validate_component_minimum_schema uses
+    # the CWD-based path at runtime (not the __file__-relative fallback).
+    global REPO_ROOT  # noqa: PLW0603
+    REPO_ROOT = repo_root
+
+    all_component_ids = set(after_components.keys())
     all_errors: list[str] = []
     for component_id in sorted(added_keys):
         component_data = after_components.get(component_id, {})
         errors = validate_new_component(repo_root, component_id, component_data)
         all_errors.extend(errors)
+        all_errors.extend(validate_component_minimum_schema(component_id, component_data))
+        all_errors.extend(validate_agent_affinity(component_id, component_data))
+        all_errors.extend(validate_exposed_interfaces(component_id, component_data))
+        all_errors.extend(validate_depends_on(component_id, component_data, all_component_ids))
 
     if not all_errors:
         print(
@@ -395,22 +734,27 @@ def main() -> int:
         )
         return 0
 
-    print("\n🔒 Components Integrity Check Failed\n", file=sys.stderr)
+    print("\n[components-integrity] Components Integrity Check Failed\n", file=sys.stderr)
     print(
         f"   {len(added_keys)} new component(s) detected in docs/components.json:\n"
         f"   {', '.join(sorted(added_keys))}\n",
         file=sys.stderr,
     )
     for error in all_errors:
-        print(f"❌ {error}\n", file=sys.stderr)
+        print(f"[x] {error}\n", file=sys.stderr)
 
     print(
         "   RULE: Every new component added to docs/components.json must have:\n"
         "     1. A 'detail_ref' field pointing to an on-disk architecture doc.\n"
         "     2. That doc must exist at the referenced path.\n"
         "     3. That doc must have 'flight_level' in its YAML frontmatter.\n"
+        "     4. All minimum-schema fields: id (snake_case), name, type, description\n"
+        "        (>= 10 chars), status (active|reviewed|planned), primary_code (>= 1 path).\n"
+        "     5. An 'agent_affinity' field that is a JSON array (use [] if none).\n"
+        "     6. An 'exposed_interfaces' field that is a JSON array (use [] if none).\n"
+        "     7. All 'depends_on' entries must reference existing component IDs.\n"
         "   This ensures the registry and the documentation tree stay in sync.\n"
-        "   Existing components (no diff) are not checked — legacy state is accepted.",
+        "   Existing components (no diff) are not checked -- legacy state is accepted.",
         file=sys.stderr,
     )
     return 1
