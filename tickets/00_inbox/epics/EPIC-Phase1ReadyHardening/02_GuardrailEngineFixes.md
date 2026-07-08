@@ -1,6 +1,6 @@
 ---
 title: "Commit-guardian import integrity + diagram_type enum + test-file exemption parity"
-status: in_progress
+status: done
 components:
   - guardrail-engine
 created: 2026-07-07
