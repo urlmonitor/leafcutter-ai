@@ -1,5 +1,5 @@
 id: KM-KGS-100e-1
-readiness: draft
+readiness: approved
 priority: high
 title: "An acceptance criterion cannot be committed without declaring its component"
 component: knowledge-management

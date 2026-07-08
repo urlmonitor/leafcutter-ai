@@ -1,5 +1,5 @@
 id: KM-KGS-100e-6-i
-readiness: draft
+readiness: approved
 priority: high
 title: "A component with criteria but no delivering code yet still returns a non-empty answer"
 component: knowledge-management

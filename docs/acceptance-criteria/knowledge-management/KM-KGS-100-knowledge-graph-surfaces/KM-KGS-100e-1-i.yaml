@@ -1,5 +1,5 @@
 id: KM-KGS-100e-1-i
-readiness: draft
+readiness: approved
 priority: high
 title: "A missing component key, an empty list, and an empty name all fail identically"
 component: knowledge-management

@@ -1,5 +1,5 @@
 id: KM-KGS-100e-5
-readiness: draft
+readiness: approved
 priority: high
 title: "Pre-existing items are backfilled with a component, and re-running changes nothing"
 component: knowledge-management

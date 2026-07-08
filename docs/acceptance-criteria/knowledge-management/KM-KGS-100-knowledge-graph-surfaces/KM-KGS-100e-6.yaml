@@ -1,5 +1,5 @@
 id: KM-KGS-100e-6
-readiness: draft
+readiness: approved
 priority: high
 title: "Querying a component returns its criteria and, through them, its code and tests"
 component: knowledge-management

@@ -1,5 +1,5 @@
 id: KM-KGS-100e-5-i
-readiness: draft
+readiness: approved
 priority: high
 title: "An item whose component cannot be inferred is reported for review, never guessed"
 component: knowledge-management
