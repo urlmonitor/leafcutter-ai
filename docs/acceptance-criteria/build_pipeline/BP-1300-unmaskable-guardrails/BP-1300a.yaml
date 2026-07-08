@@ -1,4 +1,6 @@
 id: BP-1300a
+components:
+  - build-pipeline
 title: "A broken skill registry fails the build in every environment"
 component: build-pipeline
 level: L1

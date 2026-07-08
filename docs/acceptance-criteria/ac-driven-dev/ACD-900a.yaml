@@ -1,4 +1,6 @@
 id: ACD-900a
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "pick_next.py presents the highest-priority work item from the merged ticket-and-AC list"

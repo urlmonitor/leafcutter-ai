@@ -1,4 +1,6 @@
 id: BP-1000c-1
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A parity failure names each drifted script and shows how the shipped copy differs from its source"

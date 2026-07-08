@@ -1,4 +1,6 @@
 id: INF-600h
+components:
+  - infrastructure
 title: "Know what an agent can and cannot do from its category alone"
 component: infrastructure
 level: L1

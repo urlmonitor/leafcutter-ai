@@ -1,4 +1,6 @@
 id: GE-112
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "AC schema hook treats the JSON Schema as authoritative; manual field checks are a fallback only"

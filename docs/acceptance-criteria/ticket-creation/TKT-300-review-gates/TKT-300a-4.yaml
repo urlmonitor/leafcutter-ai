@@ -1,4 +1,6 @@
 id: TKT-300a-4
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "IT PO never modifies the BA's criteria field"

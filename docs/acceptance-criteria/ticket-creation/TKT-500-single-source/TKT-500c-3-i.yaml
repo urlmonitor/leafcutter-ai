@@ -1,4 +1,6 @@
 id: TKT-500c-3-i
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "AC with zero assigned agents cannot reach done status"

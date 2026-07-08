@@ -1,4 +1,6 @@
 id: BP-1200a-1-iii
+components:
+  - build-pipeline
 title: "On a fresh clone the build's deployable-script preflight does not abort for want of a tracked feedback source"
 component: build-pipeline
 level: L3

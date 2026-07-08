@@ -1,4 +1,6 @@
 id: INF-600j
+components:
+  - infrastructure
 title: "Agent template declares its contracts and behaviors"
 component: infrastructure
 level: L1

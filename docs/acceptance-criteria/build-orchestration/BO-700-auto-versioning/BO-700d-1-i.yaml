@@ -1,4 +1,6 @@
 id: BO-700d-1-i
+components:
+  - build-orchestration
 title: "An empty release (no tickets between tags) produces a No changes entry"
 component: build-orchestration
 level: L3

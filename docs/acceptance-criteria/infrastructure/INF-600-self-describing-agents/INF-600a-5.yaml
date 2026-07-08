@@ -1,4 +1,6 @@
 id: INF-600a-5
+components:
+  - infrastructure
 title: "Agent frontmatter declares structured pre-flight reads"
 component: infrastructure
 level: L2

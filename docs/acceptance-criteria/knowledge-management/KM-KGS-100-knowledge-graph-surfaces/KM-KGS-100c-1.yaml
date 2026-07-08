@@ -1,4 +1,6 @@
 id: KM-KGS-100c-1
+components:
+  - knowledge-management
 readiness: approved
 priority: high
 title: "Every surface declared in the config is ingested, however many there are"

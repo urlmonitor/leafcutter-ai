@@ -1,4 +1,6 @@
 id: BP-600e-3-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow does not leave partial commits when escalating"
 component: build-pipeline
 level: L3

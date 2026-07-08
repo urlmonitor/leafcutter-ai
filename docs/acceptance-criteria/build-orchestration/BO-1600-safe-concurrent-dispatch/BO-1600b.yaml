@@ -1,4 +1,6 @@
 id: BO-1600b
+components:
+  - build-orchestration
 title: "A failed or interrupted parallel commit cleans up after itself"
 component: build-orchestration
 level: L1

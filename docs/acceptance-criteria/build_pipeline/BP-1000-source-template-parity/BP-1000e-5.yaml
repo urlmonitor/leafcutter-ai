@@ -1,4 +1,6 @@
 id: BP-1000e-5
+components:
+  - build-pipeline
 readiness: approved
 priority: medium
 title: "A workflow-mirror drift failure names every drifted file and shows the diff"

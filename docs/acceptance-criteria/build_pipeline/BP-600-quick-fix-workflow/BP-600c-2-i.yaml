@@ -1,4 +1,6 @@
 id: BP-600c-2-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow halts when red-phase test errors out rather than failing cleanly"
 component: build-pipeline
 level: L3

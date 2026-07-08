@@ -1,4 +1,6 @@
 id: BP-1100d-2
+components:
+  - build-pipeline
 title: "pr-reviewer checks the agentType at every commit step in workflow JavaScript"
 component: build-pipeline
 level: L2

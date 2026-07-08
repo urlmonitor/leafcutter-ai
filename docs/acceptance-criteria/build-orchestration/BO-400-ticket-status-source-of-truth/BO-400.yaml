@@ -1,4 +1,6 @@
 id: BO-400
+components:
+  - build-orchestration
 title: "Know exactly which tickets are in progress, done, or waiting — without moving files around"
 component: build-orchestration
 level: L0

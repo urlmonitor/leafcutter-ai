@@ -1,4 +1,6 @@
 id: INF-800e
+components:
+  - infrastructure
 title: "Clear boundary between writing new code and restructuring existing code"
 component: infrastructure
 level: L1

@@ -1,4 +1,6 @@
 id: INF-1000a-2
+components:
+  - infrastructure
 readiness: draft
 priority: medium
 title: "Report identifies each stale fixture file and the missing field"

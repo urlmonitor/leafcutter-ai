@@ -1,4 +1,6 @@
 id: BP-700c-3
+components:
+  - build-pipeline
 title: "Webapp-testing skill integration preserved as optional"
 component: build-pipeline
 level: L2

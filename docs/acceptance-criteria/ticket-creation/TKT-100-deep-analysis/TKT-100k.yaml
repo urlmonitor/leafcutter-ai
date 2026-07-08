@@ -1,4 +1,6 @@
 id: TKT-100k
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "New requirements never duplicate or conflict with what already exists"

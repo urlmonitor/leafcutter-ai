@@ -1,4 +1,6 @@
 id: BP-600e-1
+components:
+  - build-pipeline
 title: "Quick-fix workflow warns when the fix modifies more than the target file"
 component: build-pipeline
 level: L2

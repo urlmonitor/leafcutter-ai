@@ -1,4 +1,6 @@
 id: BP-600d
+components:
+  - build-pipeline
 title: "One command from diagnosis to done"
 component: build-pipeline
 level: L1

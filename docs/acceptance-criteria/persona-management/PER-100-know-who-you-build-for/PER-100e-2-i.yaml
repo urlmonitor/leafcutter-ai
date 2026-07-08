@@ -1,4 +1,6 @@
 id: PER-100e-2-i
+components:
+  - persona-management
 title: "Persona refinement does not remove existing entries without explicit user confirmation"
 component: persona-management
 level: L3

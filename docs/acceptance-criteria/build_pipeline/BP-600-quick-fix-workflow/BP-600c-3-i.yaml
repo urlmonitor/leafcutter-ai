@@ -1,4 +1,6 @@
 id: BP-600c-3-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow detects when the fix breaks existing related tests"
 component: build-pipeline
 level: L3

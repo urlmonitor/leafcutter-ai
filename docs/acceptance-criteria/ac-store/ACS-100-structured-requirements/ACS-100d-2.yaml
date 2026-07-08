@@ -1,4 +1,6 @@
 id: ACS-100d-2
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "created_by field links to the originating ticket path"

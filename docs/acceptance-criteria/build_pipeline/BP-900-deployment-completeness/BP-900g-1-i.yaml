@@ -1,4 +1,6 @@
 id: BP-900g-1-i
+components:
+  - build-pipeline
 title: "A name-based workflow reference that resolves through the workflow registry passes"
 component: build-pipeline
 level: L3

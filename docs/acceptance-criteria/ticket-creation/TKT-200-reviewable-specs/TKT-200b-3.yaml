@@ -1,4 +1,6 @@
 id: TKT-200b-3
+components:
+  - ticket-creation
 title: "Boundary doc for a new component is created; existing component doc is updated"
 component: ticket-creation
 level: L2

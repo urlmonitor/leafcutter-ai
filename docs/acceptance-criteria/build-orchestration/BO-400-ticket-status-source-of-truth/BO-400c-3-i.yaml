@@ -1,4 +1,6 @@
 id: BO-400c-3-i
+components:
+  - build-orchestration
 title: "Editing a ticket already residing under done/ (no move) is not blocked"
 component: build-orchestration
 level: L3

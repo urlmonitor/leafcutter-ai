@@ -1,4 +1,6 @@
 id: GE-111a
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Get stopped when a refactor breaks a requirement's link to its code"

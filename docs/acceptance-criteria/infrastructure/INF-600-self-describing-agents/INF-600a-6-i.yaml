@@ -1,4 +1,6 @@
 id: INF-600a-6-i
+components:
+  - infrastructure
 title: "Agent with no conditional behaviors has an empty behavioral_patterns array"
 component: infrastructure
 level: L3

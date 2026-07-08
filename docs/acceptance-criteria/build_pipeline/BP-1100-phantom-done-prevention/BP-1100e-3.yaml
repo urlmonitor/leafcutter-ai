@@ -1,4 +1,6 @@
 id: BP-1100e-3
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A sequence diagram shows where the declared-vs-actual reconciliation sits before done"

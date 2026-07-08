@@ -1,4 +1,6 @@
 id: BO-520-3-i
+components:
+  - build-orchestration
 title: "Unknown change_type value is rejected with valid options listed"
 component: build-orchestration
 level: L3

@@ -1,4 +1,6 @@
 id: BP-1100c-1
+components:
+  - build-pipeline
 title: "Finalization of a behavioral epic dispatches at least two independent angle-testing agents"
 component: build-pipeline
 level: L2

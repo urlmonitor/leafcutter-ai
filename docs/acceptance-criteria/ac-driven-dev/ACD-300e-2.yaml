@@ -1,4 +1,6 @@
 id: ACD-300e-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "PO v3 queries the knowledge graph during S1 to discover related L0/L1 nodes before framing"

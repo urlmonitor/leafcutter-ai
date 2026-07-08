@@ -1,4 +1,6 @@
 id: INF-1000a
+components:
+  - infrastructure
 readiness: draft
 priority: medium
 title: "Adding a required schema field surfaces all stale fixtures before merge"

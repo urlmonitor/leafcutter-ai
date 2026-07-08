@@ -1,4 +1,6 @@
 id: INF-100a-1
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Pull-request template contains Pre-Flight section that loads PROJECT_CONTEXT.md"

@@ -1,4 +1,6 @@
 id: INF-600g-2
+components:
+  - infrastructure
 title: "Build detects phase agents redundantly listed alongside __ticket_phase_agents__ macro"
 component: infrastructure
 level: L2

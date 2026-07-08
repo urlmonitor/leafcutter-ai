@@ -1,4 +1,6 @@
 id: INF-400f-2
+components:
+  - infrastructure
 title: "BA v3 component discoveries are available to the IT PO v3 in the same pipeline run"
 component: infrastructure
 level: L2

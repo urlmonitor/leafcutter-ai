@@ -1,4 +1,6 @@
 id: TKT-200f-3
+components:
+  - ticket-creation
 title: "Sequence diagram documents clean-tree premise verification before inbox exit"
 component: ticket-creation
 level: L2

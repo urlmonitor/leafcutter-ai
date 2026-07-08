@@ -1,4 +1,6 @@
 id: KM-KGS-100c-2
+components:
+  - knowledge-management
 readiness: approved
 priority: high
 title: "Declaring a new surface makes it join the map with no code change"

@@ -1,4 +1,6 @@
 id: BO-700a-1
+components:
+  - build-orchestration
 title: "Changelog entry content is assembled from AC fields of completed tickets"
 component: build-orchestration
 level: L2

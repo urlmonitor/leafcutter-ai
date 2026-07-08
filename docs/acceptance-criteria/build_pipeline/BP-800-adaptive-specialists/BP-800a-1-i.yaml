@@ -1,4 +1,6 @@
 id: BP-800a-1-i
+components:
+  - build-pipeline
 title: "Empty project produces an empty detection result without error"
 component: build-pipeline
 level: L3

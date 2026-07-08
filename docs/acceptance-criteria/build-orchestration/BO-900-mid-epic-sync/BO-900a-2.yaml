@@ -1,4 +1,6 @@
 id: BO-900a-2
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "User prompt with merge-or-continue choice when threshold exceeded"

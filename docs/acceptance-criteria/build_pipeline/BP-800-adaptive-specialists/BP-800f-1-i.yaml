@@ -1,4 +1,6 @@
 id: BP-800f-1-i
+components:
+  - build-pipeline
 title: "Unknown database driver is detected but categorized as unclassified paradigm"
 component: build-pipeline
 level: L3

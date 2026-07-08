@@ -1,4 +1,6 @@
 id: ACS-100h-6-i
+components:
+  - ac-store
 title: "Pattern C warns that the L2 rename is an ID-change cascade requiring a store-wide grep"
 component: ac-store
 level: L3

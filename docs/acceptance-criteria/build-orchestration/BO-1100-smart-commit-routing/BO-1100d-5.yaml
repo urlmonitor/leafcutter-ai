@@ -1,4 +1,6 @@
 id: BO-1100d-5
+components:
+  - build-orchestration
 title: "Observation store write failure does not crash the commit workflow"
 component: build-orchestration
 level: L2

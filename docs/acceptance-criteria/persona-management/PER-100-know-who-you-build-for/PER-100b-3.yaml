@@ -1,4 +1,6 @@
 id: PER-100b-3
+components:
+  - persona-management
 title: "Orphan AC report lists ACs with no persona_for value"
 component: persona-management
 level: L2

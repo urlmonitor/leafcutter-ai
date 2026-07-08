@@ -1,4 +1,6 @@
 id: PER-100e
+components:
+  - persona-management
 readiness: approved
 priority: medium
 title: "New personas emerge from discovery, not guesswork"

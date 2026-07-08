@@ -1,4 +1,6 @@
 id: ACD-1200e-2
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "/build-ac with an L0 or L1 AC automatically switches to epic-generation mode"

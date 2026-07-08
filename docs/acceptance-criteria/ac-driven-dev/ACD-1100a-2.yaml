@@ -1,4 +1,6 @@
 id: ACD-1100a-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Legacy pipeline agent registry entries are removed"

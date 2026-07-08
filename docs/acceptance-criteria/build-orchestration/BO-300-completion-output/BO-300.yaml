@@ -1,4 +1,6 @@
 id: BO-300
+components:
+  - build-orchestration
 title: "Know exactly what was built and what to do next after every successful drive"
 component: build-orchestration
 level: L0

@@ -1,4 +1,6 @@
 id: PER-100d-4
+components:
+  - persona-management
 title: "Sequence diagram for persona context injection flow"
 component: persona-management
 level: L2

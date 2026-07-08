@@ -1,4 +1,6 @@
 id: ACD-1500a-3
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Routing matrix sends each classified entry to its destination"

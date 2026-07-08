@@ -1,4 +1,6 @@
 id: BP-800a2
+components:
+  - build-pipeline
 title: "Detection results are reliable and well-documented"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: ACD-1200c-3
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "A dependency cycle in one subtree degrades the store-wide scan to a warning, while a real intra-scope cycle still hard-fails a scoped epic build"

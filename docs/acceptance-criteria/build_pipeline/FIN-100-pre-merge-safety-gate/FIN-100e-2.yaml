@@ -1,4 +1,6 @@
 id: FIN-100e-2
+components:
+  - finalize
 title: "Ticket creation failure is non-fatal and does not halt the workflow"
 level: L2
 component: finalize

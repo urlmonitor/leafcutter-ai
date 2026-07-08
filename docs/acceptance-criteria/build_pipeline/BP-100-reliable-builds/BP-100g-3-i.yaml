@@ -1,4 +1,6 @@
 id: BP-100g-3-i
+components:
+  - build-pipeline
 title: "Validation accepts allowed-tools as comma-separated string or YAML list"
 component: build-pipeline
 level: L3

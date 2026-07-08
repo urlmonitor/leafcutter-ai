@@ -1,4 +1,6 @@
 id: BP-1200a
+components:
+  - build-pipeline
 title: "The whole test suite passes on a brand-new copy of the project, every time"
 component: build-pipeline
 level: L1

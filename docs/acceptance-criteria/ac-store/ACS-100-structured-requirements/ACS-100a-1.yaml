@@ -1,4 +1,6 @@
 id: ACS-100a-1
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Required fields reject missing values at commit time"

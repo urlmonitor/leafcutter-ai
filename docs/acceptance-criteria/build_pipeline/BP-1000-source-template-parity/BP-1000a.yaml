@@ -1,4 +1,6 @@
 id: BP-1000a
+components:
+  - build-pipeline
 title: "Receive scripts identical to the ones the maintainers tested"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: INF-400c-2-i
+components:
+  - infrastructure
 title: "Harvester skips events with an unrecognized entry_kind without crashing"
 component: infrastructure
 level: L3

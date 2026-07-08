@@ -1,4 +1,6 @@
 id: TKT-500
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Your approved requirements are always what agents execute against — never a stale copy"

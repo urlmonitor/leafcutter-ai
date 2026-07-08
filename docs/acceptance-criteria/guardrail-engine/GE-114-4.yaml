@@ -1,4 +1,6 @@
 id: "GE-114-4"
+components:
+  - guardrail-engine
 title: "Existing v2 Agent Contracts counting behaviour is unchanged by the flat-path fallback"
 component: guardrail-engine
 status: active

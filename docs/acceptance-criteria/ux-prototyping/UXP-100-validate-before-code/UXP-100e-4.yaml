@@ -1,4 +1,6 @@
 id: UXP-100e-4
+components:
+  - ux-prototyping
 title: "Sequence diagram showing parallel dispatch of UX designer and BA agents"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: BP-200a
+components:
+  - build-pipeline
 title: "Get expert-level prompt review without being an expert yourself"
 component: build-pipeline
 level: L1

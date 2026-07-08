@@ -1,4 +1,6 @@
 id: PER-100d-3
+components:
+  - persona-management
 title: "Persona injection is scoped to agents that need audience awareness"
 component: persona-management
 level: L2

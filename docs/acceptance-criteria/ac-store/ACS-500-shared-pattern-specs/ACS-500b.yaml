@@ -1,4 +1,6 @@
 id: ACS-500b
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Page-level specs only describe what is unique to that page"

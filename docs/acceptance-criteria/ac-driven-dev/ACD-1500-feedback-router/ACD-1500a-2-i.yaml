@@ -1,4 +1,6 @@
 id: ACD-1500a-2-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Entry resolved between scan and route is dropped without action"

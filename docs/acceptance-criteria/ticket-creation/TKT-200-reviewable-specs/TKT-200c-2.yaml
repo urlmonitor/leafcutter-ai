@@ -1,4 +1,6 @@
 id: TKT-200c-2
+components:
+  - ticket-creation
 title: "Review package cross-references specs to their diagrams and docs"
 component: ticket-creation
 level: L2

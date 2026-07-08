@@ -1,4 +1,6 @@
 id: BO-1700a-2
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Canary hook prints a fixed token and only ever runs when explicitly invoked"

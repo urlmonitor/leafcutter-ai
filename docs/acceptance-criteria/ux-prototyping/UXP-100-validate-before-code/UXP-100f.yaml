@@ -1,4 +1,6 @@
 id: UXP-100f
+components:
+  - ux-prototyping
 readiness: approved
 priority: medium
 title: "Know what happens after you decide on a prototype"

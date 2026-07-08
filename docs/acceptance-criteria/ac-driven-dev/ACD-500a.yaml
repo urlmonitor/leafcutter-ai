@@ -1,4 +1,6 @@
 id: ACD-500a
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "The ticket prioritizer merges AC readiness into its output with a single opt-in flag"

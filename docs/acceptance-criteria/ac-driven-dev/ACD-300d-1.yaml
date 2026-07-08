@@ -1,4 +1,6 @@
 id: ACD-300d-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Each authoring agent writes ACs to the correct component subdirectory with valid schema"

@@ -1,4 +1,6 @@
 id: PER-100g
+components:
+  - persona-management
 readiness: approved
 priority: medium
 title: "Get the full persona story whenever you need it"

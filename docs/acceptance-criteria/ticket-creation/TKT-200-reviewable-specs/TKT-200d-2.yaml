@@ -1,4 +1,6 @@
 id: TKT-200d-2
+components:
+  - ticket-creation
 title: "Only affected documentation is regenerated, not the entire package"
 component: ticket-creation
 level: L2

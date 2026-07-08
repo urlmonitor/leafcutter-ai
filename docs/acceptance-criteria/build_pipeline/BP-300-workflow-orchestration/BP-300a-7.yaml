@@ -1,4 +1,6 @@
 id: BP-300a-7
+components:
+  - build-pipeline
 title: "debug.md falls back to prose skill for older Claude Code runtimes"
 component: build-pipeline
 level: L2

@@ -1,4 +1,6 @@
 id: ACS-400e-3
+components:
+  - ac-store
 title: "Non-AC files in the same commit are not affected by governance rejection"
 component: ac-store
 level: L2

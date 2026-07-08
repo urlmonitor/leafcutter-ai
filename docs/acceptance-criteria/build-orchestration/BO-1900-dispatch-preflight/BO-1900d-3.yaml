@@ -1,4 +1,6 @@
 id: BO-1900d-3
+components:
+  - build-orchestration
 title: "Reference doc specifies the allowlisted dispatch-payload contract"
 component: build-orchestration
 level: L2

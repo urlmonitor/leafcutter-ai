@@ -1,4 +1,6 @@
 id: BO-210c-1-ii
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Judgment-tier failure with no capsule degrades gracefully to a warn-and-proceed fixer"

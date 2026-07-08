@@ -1,4 +1,6 @@
 id: KM-DBF-009
+components:
+  - knowledge-management
 readiness: reviewed
 priority: medium
 title: "Backfill unit tests cover all modes and edge cases"

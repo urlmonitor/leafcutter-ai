@@ -1,4 +1,6 @@
 id: BO-700e
+components:
+  - build-orchestration
 title: "Trust that every shipped change has a changelog entry"
 component: build-orchestration
 level: L1

@@ -1,4 +1,6 @@
 id: ACS-300j-1
+components:
+  - ac-store
 title: "depends_on field references only valid component IDs"
 component: ac-store
 level: L2

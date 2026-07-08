@@ -1,4 +1,6 @@
 id: BP-600b-3
+components:
+  - build-pipeline
 title: "Quick-fix AC persists after the fix ticket lifecycle closes"
 component: build-pipeline
 level: L2

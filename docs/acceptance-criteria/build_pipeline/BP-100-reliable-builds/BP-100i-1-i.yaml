@@ -1,4 +1,6 @@
 id: BP-100i-1-i
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "Scripts listed in a parity-exclusion allowlist do not trigger violations"

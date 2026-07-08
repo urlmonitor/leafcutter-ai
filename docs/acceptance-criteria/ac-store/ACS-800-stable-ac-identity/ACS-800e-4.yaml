@@ -1,4 +1,6 @@
 id: ACS-800e-4
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "The id-string parent-derivation module is replaced by a metadata lookup"

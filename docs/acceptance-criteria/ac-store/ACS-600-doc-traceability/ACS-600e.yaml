@@ -1,4 +1,6 @@
 id: ACS-600e
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Stale diagrams and ADRs get flagged automatically"

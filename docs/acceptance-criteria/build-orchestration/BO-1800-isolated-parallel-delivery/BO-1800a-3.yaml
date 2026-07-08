@@ -1,4 +1,6 @@
 id: BO-1800a-3
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Removing a drive deletes both its working copy and its feature branch"

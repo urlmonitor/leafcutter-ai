@@ -1,4 +1,6 @@
 id: ACD-1200a-3-i
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Goal with zero leaf ACs beneath it produces an error, not an empty epic"

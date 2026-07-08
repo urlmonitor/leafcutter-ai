@@ -1,4 +1,6 @@
 id: BP-400b-4
+components:
+  - build-pipeline
 title: "Pre-move happy path remains unchanged (no behavioral regression)"
 component: build-pipeline
 level: L2

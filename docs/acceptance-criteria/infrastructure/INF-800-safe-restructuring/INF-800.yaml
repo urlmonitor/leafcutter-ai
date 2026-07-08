@@ -1,4 +1,6 @@
 id: INF-800
+components:
+  - infrastructure
 title: "Restructure code safely without breaking what depends on it"
 component: infrastructure
 level: L0

@@ -1,4 +1,6 @@
 id: BO-510-4-i
+components:
+  - build-orchestration
 title: "llm-expert flags ambiguous agent trait for human review"
 component: build-orchestration
 level: L3

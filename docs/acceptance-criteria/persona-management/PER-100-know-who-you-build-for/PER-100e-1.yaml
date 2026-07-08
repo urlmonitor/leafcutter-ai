@@ -1,4 +1,6 @@
 id: PER-100e-1
+components:
+  - persona-management
 title: "Persona expert agent creates new persona from a user request"
 component: persona-management
 level: L2

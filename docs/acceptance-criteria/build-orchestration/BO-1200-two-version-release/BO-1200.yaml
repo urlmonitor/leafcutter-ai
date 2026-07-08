@@ -1,4 +1,6 @@
 id: BO-1200
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "A version you can always demo and a version that is always being improved"

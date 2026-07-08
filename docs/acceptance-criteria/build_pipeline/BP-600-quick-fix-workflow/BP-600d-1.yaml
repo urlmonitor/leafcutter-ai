@@ -1,4 +1,6 @@
 id: BP-600d-1
+components:
+  - build-pipeline
 title: "Quick-fix workflow accepts a structured diagnosis as input"
 component: build-pipeline
 level: L2

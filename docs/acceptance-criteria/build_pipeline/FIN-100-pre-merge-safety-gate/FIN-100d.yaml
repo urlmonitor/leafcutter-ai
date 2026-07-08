@@ -1,4 +1,6 @@
 id: FIN-100d
+components:
+  - finalize
 title: "Regressions trigger a hard halt — PR merge is blocked"
 component: finalize
 level: L1

@@ -1,4 +1,6 @@
 id: ACS-800a-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A requirement's UID is immutable for the life of the requirement"

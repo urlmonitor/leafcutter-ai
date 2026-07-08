@@ -1,4 +1,6 @@
 id: TKT-500c-2
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Agent sign-off is recorded on the AC YAML itself"

@@ -1,4 +1,6 @@
 id: INF-500a-3
+components:
+  - infrastructure
 title: "Manual SHA overrides bypass git log path queries"
 component: infrastructure
 level: L2

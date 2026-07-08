@@ -1,4 +1,6 @@
 id: ACS-100h-7
+components:
+  - ac-store
 title: "Epic scaffolding validates AC-tree limits before generating any ticket stub"
 component: ac-store
 level: L2

@@ -1,4 +1,6 @@
 id: BP-1000b
+components:
+  - build-pipeline
 title: "Drift is caught before merge, not discovered after release"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: BO-1100d-6
+components:
+  - build-orchestration
 title: "Already-classified shapes are not recorded as unknown observations"
 component: build-orchestration
 level: L2

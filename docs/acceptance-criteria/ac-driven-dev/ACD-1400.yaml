@@ -1,4 +1,6 @@
 id: ACD-1400
+components:
+  - ac-driven-dev
 status: active
 component: ac-driven-dev
 title: "plan-feature workflow dispatches canonical agent names"

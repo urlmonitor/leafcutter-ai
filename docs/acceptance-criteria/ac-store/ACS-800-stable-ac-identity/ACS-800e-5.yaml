@@ -1,4 +1,6 @@
 id: ACS-800e-5
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "The schema accepts an opaque id and validates the new hierarchy metadata fields"

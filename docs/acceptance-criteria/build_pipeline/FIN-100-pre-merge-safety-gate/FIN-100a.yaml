@@ -1,4 +1,6 @@
 id: FIN-100a
+components:
+  - finalize
 title: "Pre-merge test baseline is captured from main HEAD"
 component: finalize
 level: L1

@@ -1,4 +1,6 @@
 id: ACD-1200b-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Readiness report surfaces count and IDs of unapproved ACs before generation"

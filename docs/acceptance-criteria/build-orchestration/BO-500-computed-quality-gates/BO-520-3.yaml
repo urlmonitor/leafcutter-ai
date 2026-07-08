@@ -1,4 +1,6 @@
 id: BO-520-3
+components:
+  - build-orchestration
 title: "Each change_type maps to a defined set of mandatory guardrail agents"
 component: build-orchestration
 level: L2

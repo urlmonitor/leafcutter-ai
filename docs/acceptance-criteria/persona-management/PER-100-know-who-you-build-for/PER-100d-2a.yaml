@@ -1,4 +1,6 @@
 id: PER-100d-2a
+components:
+  - persona-management
 title: "Persona-detail skill SKILL.md provides full persona content on demand"
 component: persona-management
 level: L2

@@ -1,4 +1,6 @@
 id: BP-1300c
+components:
+  - build-pipeline
 title: "During automated drives, guardrails block instead of whispering"
 component: build-pipeline
 level: L1

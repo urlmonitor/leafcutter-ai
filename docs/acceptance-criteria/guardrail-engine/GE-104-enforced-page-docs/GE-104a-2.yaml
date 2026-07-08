@@ -1,4 +1,6 @@
 id: GE-104a-2
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Planning-time trigger flips documentation-expert to needed when a ticket adds a new page without its reference doc"

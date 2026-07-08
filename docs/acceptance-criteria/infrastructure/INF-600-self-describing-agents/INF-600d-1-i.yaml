@@ -1,4 +1,6 @@
 id: INF-600d-1-i
+components:
+  - infrastructure
 title: "Agent that delegates to a specialist for complex cases AND has a fallback skill declares both"
 component: infrastructure
 level: L3

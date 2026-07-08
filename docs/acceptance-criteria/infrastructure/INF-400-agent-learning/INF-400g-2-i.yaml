@@ -1,4 +1,6 @@
 id: INF-400g-2-i
+components:
+  - infrastructure
 title: "emit_event.py handles optional arguments gracefully (null in payload)"
 component: infrastructure
 level: L3

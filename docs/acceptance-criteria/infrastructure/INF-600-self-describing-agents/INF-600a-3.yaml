@@ -1,4 +1,6 @@
 id: INF-600a-3
+components:
+  - infrastructure
 title: "Registry declares which knowledge channels feed each agent"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: ACS-400b-3-i
+components:
+  - ac-store
 title: "Mixed commit with both allowed and disallowed field changes is fully rejected"
 component: ac-store
 level: L3

@@ -1,4 +1,6 @@
 id: FIN-100c
+components:
+  - finalize
 title: "Test failures are triaged into regression, pre-existing, or flaky"
 component: finalize
 level: L1

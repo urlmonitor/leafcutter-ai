@@ -1,4 +1,6 @@
 id: TKT-500c-6
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "State diagram: AC work_status lifecycle"

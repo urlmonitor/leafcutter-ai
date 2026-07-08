@@ -1,4 +1,6 @@
 id: BO-1700
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Code can never ship from a workspace with its quality gates switched off"

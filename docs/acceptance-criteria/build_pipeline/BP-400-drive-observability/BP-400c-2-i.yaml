@@ -1,4 +1,6 @@
 id: BP-400c-2-i
+components:
+  - build-pipeline
 title: "trend_report.py handles empty or absent feedback.jsonl gracefully"
 component: build-pipeline
 level: L3

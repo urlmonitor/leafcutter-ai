@@ -1,4 +1,6 @@
 id: INF-200a-6
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Rules for same file type are merged — one rule + one hook per glob"

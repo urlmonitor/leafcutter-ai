@@ -1,4 +1,6 @@
 id: BO-530-1
+components:
+  - build-orchestration
 title: "test-writer is injected before any coder-class agent in the computed chain"
 component: build-orchestration
 level: L2

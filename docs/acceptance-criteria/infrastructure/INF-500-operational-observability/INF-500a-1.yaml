@@ -1,4 +1,6 @@
 id: INF-500a-1
+components:
+  - infrastructure
 title: "extract_epic_facts.py resolves git history via rename fallback for moved folders"
 component: infrastructure
 level: L2

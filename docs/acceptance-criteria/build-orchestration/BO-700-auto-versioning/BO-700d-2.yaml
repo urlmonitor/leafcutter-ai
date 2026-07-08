@@ -1,4 +1,6 @@
 id: BO-700d-2
+components:
+  - build-orchestration
 title: "A structured YAML release manifest is produced alongside the Markdown"
 component: build-orchestration
 level: L2

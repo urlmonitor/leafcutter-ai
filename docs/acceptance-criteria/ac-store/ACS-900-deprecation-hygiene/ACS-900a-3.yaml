@@ -1,4 +1,6 @@
 id: ACS-900a-3
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "How-to guide and sequence diagram for the retirement-detection trigger"

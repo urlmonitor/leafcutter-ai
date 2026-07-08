@@ -1,4 +1,6 @@
 id: GE-100g-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Onboarding wizard offers diff-cover enablement following the same detect-then-prompt pattern"

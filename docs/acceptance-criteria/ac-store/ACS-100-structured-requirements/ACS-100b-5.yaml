@@ -1,4 +1,6 @@
 id: ACS-100b-5
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Tooling can reconstruct the parent-child tree from hierarchical IDs"

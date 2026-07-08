@@ -1,4 +1,6 @@
 id: BO-1500c-2
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: The authoring PR passes the same CI gates as any other change

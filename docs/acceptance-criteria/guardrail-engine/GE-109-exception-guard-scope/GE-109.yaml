@@ -1,4 +1,6 @@
 id: GE-109
+components:
+  - guardrail-engine
 readiness: approved
 priority: medium
 title: "Exception-handling guard enforces the error-handling policy on production code only"

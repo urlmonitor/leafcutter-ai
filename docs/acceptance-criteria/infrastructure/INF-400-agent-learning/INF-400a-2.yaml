@@ -1,4 +1,6 @@
 id: INF-400a-2
+components:
+  - infrastructure
 title: "V3 agents read memory files that contain learnings from their own prior runs"
 component: infrastructure
 level: L2

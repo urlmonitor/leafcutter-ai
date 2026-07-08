@@ -1,4 +1,6 @@
 id: BO-570-4-ii
+components:
+  - build-orchestration
 title: "Ruff tooling unavailable in the worktree surfaces clearly and never silently passes"
 component: build-orchestration
 level: L3

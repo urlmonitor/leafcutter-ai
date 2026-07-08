@@ -1,4 +1,6 @@
 id: BO-600
+components:
+  - build-orchestration
 title: "The system routes quality gates from what you are changing and how complex it is"
 component: build-orchestration
 level: L0

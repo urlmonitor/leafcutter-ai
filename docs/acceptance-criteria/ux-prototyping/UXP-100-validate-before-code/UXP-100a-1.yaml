@@ -1,4 +1,6 @@
 id: UXP-100a-1
+components:
+  - ux-prototyping
 title: "Prototype composition reads the component library catalog before assembly"
 component: ux-prototyping
 level: L2

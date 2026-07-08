@@ -1,4 +1,6 @@
 id: GE-101a
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "diff-cover hook exits cleanly when the diff-cover tool or coverage artifact is absent"

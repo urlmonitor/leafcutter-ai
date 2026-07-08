@@ -1,4 +1,6 @@
 id: ACD-800c
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "The --apply flag atomically backfills high-confidence matches into AC metadata"

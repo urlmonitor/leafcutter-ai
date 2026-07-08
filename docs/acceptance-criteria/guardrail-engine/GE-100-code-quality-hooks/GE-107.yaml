@@ -1,4 +1,6 @@
 id: GE-107
+components:
+  - guardrail-engine
 readiness: approved
 priority: medium
 title: "check_exception_handling hook avoids cursor false-positives and degrades gracefully on unreadable files"

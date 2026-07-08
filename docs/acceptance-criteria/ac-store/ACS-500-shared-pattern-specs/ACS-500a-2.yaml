@@ -1,4 +1,6 @@
 id: ACS-500a-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Pattern definitions live in the existing component registry hierarchy"

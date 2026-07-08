@@ -1,4 +1,6 @@
 id: UXP-100d
+components:
+  - ux-prototyping
 readiness: approved
 priority: medium
 title: "Design decisions carry forward into implementation"

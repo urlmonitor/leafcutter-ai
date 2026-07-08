@@ -1,4 +1,6 @@
 id: BO-800c
+components:
+  - build-orchestration
 title: "The test plan is the acceptance criteria"
 component: build-orchestration
 level: L1

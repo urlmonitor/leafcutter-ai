@@ -1,4 +1,6 @@
 id: FIN-100a-1
+components:
+  - finalize
 title: "Successful baseline capture records failing tests from main HEAD"
 level: L2
 component: finalize

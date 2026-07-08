@@ -1,4 +1,6 @@
 id: BP-700d-1-i
+components:
+  - build-pipeline
 title: "Fresh install without prior frontend-design skill succeeds cleanly"
 component: build-pipeline
 level: L3

@@ -1,4 +1,6 @@
 id: BP-100c
+components:
+  - build-pipeline
 readiness: reviewed
 priority: medium
 title: "Build output respects your project's folder layout"

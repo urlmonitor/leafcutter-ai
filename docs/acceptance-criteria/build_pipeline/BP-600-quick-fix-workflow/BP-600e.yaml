@@ -1,4 +1,6 @@
 id: BP-600e
+components:
+  - build-pipeline
 title: "Guardrails when the fix is bigger than expected"
 component: build-pipeline
 level: L1

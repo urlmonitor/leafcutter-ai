@@ -1,4 +1,6 @@
 id: INF-100
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Agents work without manual intervention"

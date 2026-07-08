@@ -1,4 +1,6 @@
 id: TKT-100g
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "The system picks the right workflow for your request automatically"

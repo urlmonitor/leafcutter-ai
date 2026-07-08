@@ -1,4 +1,6 @@
 id: INF-500b-2-i
+components:
+  - infrastructure
 title: "Priority scoring ranks high-severity categories above equal-count low-severity"
 component: infrastructure
 level: L3

@@ -1,4 +1,6 @@
 id: BO-1800a-1-ii
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "A drive requested on a non-native filesystem is refused before it can start"

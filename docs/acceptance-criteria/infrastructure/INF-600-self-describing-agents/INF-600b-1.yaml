@@ -1,4 +1,6 @@
 id: INF-600b-1
+components:
+  - infrastructure
 title: "Generated card includes hyperlinks to component docs and architecture references"
 component: infrastructure
 level: L2

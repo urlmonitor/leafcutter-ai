@@ -1,4 +1,6 @@
 id: BO-1500e-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: Authoring works when invoked while checked out on protected main (the common case)

@@ -1,4 +1,6 @@
 id: INF-400a
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Agents start each run informed by everything learned in previous runs"

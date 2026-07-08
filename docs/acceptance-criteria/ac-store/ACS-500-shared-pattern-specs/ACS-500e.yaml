@@ -1,4 +1,6 @@
 id: ACS-500e
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Component composition is captured in the AC hierarchy"

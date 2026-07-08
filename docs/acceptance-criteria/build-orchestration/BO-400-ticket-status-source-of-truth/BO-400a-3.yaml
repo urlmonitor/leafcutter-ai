@@ -1,4 +1,6 @@
 id: BO-400a-3
+components:
+  - build-orchestration
 title: "finalize-feature reads status from frontmatter, not folder position"
 component: build-orchestration
 level: L2

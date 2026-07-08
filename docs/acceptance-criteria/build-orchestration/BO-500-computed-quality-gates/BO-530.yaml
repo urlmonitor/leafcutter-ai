@@ -1,4 +1,6 @@
 id: BO-530
+components:
+  - build-orchestration
 title: "Code changes always get tests written first and verified after"
 component: build-orchestration
 level: L1

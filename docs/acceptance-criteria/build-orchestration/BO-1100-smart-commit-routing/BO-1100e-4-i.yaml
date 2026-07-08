@@ -1,4 +1,6 @@
 id: BO-1100e-4-i
+components:
+  - build-orchestration
 title: "Negative max_commits value is rejected before querying git history"
 component: build-orchestration
 level: L3

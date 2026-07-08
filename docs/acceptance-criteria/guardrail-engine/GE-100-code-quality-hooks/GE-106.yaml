@@ -1,4 +1,6 @@
 id: GE-106
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "AC tree-limit hook counts children by ID-derived parent, not depends_on membership"

@@ -1,4 +1,6 @@
 id: INF-600e
+components:
+  - infrastructure
 title: "See what goes in and what comes out"
 component: infrastructure
 level: L1

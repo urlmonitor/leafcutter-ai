@@ -1,4 +1,6 @@
 id: BP-100f
+components:
+  - build-pipeline
 title: "Git-dependent workflows degrade gracefully outside a repository"
 component: build-pipeline
 level: L1

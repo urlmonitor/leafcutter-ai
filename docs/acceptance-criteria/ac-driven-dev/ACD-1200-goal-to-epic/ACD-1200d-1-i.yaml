@@ -1,4 +1,6 @@
 id: ACD-1200d-1-i
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "AC already tagged with a different target_epic triggers a conflict warning"

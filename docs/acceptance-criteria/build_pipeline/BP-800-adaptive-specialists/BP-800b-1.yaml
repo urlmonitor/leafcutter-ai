@@ -1,4 +1,6 @@
 id: BP-800b-1
+components:
+  - build-pipeline
 title: "Agent template generated from technology manifest entry"
 component: build-pipeline
 level: L2

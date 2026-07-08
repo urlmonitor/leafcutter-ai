@@ -1,4 +1,6 @@
 id: ACS-500
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Define a behavior once, reuse the spec everywhere it appears"

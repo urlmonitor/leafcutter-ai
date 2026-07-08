@@ -1,4 +1,6 @@
 id: ACS-800c-3
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A re-home keeps both ends of the parent-child link consistent and is auditable"

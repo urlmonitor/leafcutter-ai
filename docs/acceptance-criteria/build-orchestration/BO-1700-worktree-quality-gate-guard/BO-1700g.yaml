@@ -1,4 +1,6 @@
 id: BO-1700g
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "A workspace that only looks protected can't slip past the check"

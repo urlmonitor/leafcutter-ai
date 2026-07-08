@@ -1,4 +1,6 @@
 id: INF-400g-9
+components:
+  - infrastructure
 title: "aggregate.py returns non-empty output for subagent-quality after an epic drive"
 component: infrastructure
 level: L2

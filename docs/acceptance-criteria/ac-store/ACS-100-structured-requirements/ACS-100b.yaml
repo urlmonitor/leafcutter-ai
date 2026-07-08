@@ -1,4 +1,6 @@
 id: ACS-100b
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Find any requirement instantly by its ID"

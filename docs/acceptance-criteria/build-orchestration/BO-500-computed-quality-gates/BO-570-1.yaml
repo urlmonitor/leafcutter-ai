@@ -1,4 +1,6 @@
 id: BO-570-1
+components:
+  - build-orchestration
 title: "Deterministic render-smoke runner helper for the frontend sign-off gate"
 component: build-orchestration
 level: L2

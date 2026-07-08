@@ -1,4 +1,6 @@
 id: BP-1300
+components:
+  - build-pipeline
 title: "Every guardrail gives the same verdict everywhere -- a green local run can't hide a real break"
 component: build-pipeline
 level: L0

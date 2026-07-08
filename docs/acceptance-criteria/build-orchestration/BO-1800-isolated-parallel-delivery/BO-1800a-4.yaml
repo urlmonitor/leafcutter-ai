@@ -1,4 +1,6 @@
 id: BO-1800a-4
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Component diagram of the per-drive isolated-clone topology"

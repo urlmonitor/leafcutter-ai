@@ -1,4 +1,6 @@
 id: BP-900g-1
+components:
+  - build-pipeline
 title: "A deployed command referencing a workflow by a path that does not resolve post-deploy fails the build"
 component: build-pipeline
 level: L2

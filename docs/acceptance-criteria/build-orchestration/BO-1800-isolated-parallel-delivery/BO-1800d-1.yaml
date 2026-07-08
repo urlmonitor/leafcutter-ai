@@ -1,4 +1,6 @@
 id: BO-1800d-1
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Automatic garbage collection and maintenance are disabled inside a drive clone during a drive"

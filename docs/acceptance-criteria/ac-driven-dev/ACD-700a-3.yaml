@@ -1,4 +1,6 @@
 id: ACD-700a-3
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Answering skip defers the current AC and proposes the next candidate"

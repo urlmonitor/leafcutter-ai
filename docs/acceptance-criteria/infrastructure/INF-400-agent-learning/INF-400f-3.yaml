@@ -1,4 +1,6 @@
 id: INF-400f-3
+components:
+  - infrastructure
 title: "Cross-agent knowledge flows through shared persistence, not agent-to-agent message passing"
 component: infrastructure
 level: L2

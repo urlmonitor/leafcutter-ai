@@ -1,4 +1,6 @@
 id: ACS-800b
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A requirement's place in the tree is information, not its name"

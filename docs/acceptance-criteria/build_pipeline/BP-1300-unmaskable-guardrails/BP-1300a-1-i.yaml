@@ -1,4 +1,6 @@
 id: BP-1300a-1-i
+components:
+  - build-pipeline
 title: "Real dangling pointers that pass locally fail against the canonical source"
 component: build-pipeline
 level: L3

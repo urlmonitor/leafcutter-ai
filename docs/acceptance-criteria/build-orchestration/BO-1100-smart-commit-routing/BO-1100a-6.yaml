@@ -1,4 +1,6 @@
 id: BO-1100a-6
+components:
+  - build-orchestration
 title: "Path rules match only their intended directory subtree, not unrelated paths sharing a substring"
 component: build-orchestration
 level: L2

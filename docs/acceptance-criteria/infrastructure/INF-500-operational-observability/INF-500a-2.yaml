@@ -1,4 +1,6 @@
 id: INF-500a-2
+components:
+  - infrastructure
 title: "extract_epic_facts.py exits non-zero with clear warning when no commits found"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: INF-600c
+components:
+  - infrastructure
 title: "See where each agent gets its knowledge"
 component: infrastructure
 level: L1

@@ -1,4 +1,6 @@
 id: INF-100c-4
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "Feedback submission error message identifies the missing config path"

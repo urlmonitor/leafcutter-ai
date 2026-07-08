@@ -1,4 +1,6 @@
 id: BO-1100e
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "The specialist only reads relevant history, not thousands of commits"

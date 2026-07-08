@@ -1,4 +1,6 @@
 id: BO-560-1
+components:
+  - build-orchestration
 title: "Full agent chain is derived from change_type and the work agent's produces trait"
 component: build-orchestration
 level: L2

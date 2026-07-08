@@ -1,4 +1,6 @@
 id: BP-1100
+components:
+  - build-pipeline
 title: "A done ticket means the feature actually runs, not just that it looks done"
 component: build-pipeline
 level: L0

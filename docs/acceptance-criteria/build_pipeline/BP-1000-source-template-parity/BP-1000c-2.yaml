@@ -1,4 +1,6 @@
 id: BP-1000c-2
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "How-to guide for reading a parity failure and resolving the drift it names"

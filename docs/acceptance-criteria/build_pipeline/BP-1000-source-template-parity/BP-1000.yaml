@@ -1,4 +1,6 @@
 id: BP-1000
+components:
+  - build-pipeline
 title: "Get the exact behavior the maintainers tested — never a silently downgraded copy"
 component: build-pipeline
 level: L0

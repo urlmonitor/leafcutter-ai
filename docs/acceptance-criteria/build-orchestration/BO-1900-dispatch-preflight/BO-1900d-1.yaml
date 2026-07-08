@@ -1,4 +1,6 @@
 id: BO-1900d-1
+components:
+  - build-orchestration
 title: "A payload of only allowlisted pointers is accepted"
 component: build-orchestration
 level: L2

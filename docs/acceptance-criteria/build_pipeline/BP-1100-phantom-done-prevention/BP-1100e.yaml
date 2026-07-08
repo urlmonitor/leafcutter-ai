@@ -1,4 +1,6 @@
 id: BP-1100e
+components:
+  - build-pipeline
 title: "A ticket cannot be called done when its real changes don't match what it said it would touch"
 component: build-pipeline
 level: L1

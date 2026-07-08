@@ -1,4 +1,6 @@
 id: BO-570-3
+components:
+  - build-orchestration
 title: "Deterministic repo-ruff runner helper for the python sign-off gate"
 component: build-orchestration
 level: L2

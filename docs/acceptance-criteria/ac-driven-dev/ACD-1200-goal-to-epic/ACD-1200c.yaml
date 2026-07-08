@@ -1,4 +1,6 @@
 id: ACD-1200c
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Tickets arrive in the right build order"

@@ -1,4 +1,6 @@
 id: BO-1300a-4
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Sequence diagram: on-demand spot-check pass from invocation to tracked tickets"

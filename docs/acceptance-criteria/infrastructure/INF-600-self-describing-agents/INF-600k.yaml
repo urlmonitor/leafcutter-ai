@@ -1,4 +1,6 @@
 id: INF-600k
+components:
+  - infrastructure
 title: "External callers like workflows are recognized, not flagged as broken"
 component: infrastructure
 level: L1

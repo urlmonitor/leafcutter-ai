@@ -1,4 +1,6 @@
 id: BO-1700c-1-iii
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "If another hook is ordered before the self-healing hook the guard fails closed"

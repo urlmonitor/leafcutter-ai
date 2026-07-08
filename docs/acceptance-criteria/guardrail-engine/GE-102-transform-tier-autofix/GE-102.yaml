@@ -1,4 +1,6 @@
 id: GE-102
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Deterministic transform hooks auto-fix mechanical doc fields and hooks declare their fixer tier"

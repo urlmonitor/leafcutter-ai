@@ -1,4 +1,6 @@
 id: FIN-100b
+components:
+  - finalize
 title: "Main is merged into the worktree before the PR merge decision"
 component: finalize
 level: L1

@@ -1,4 +1,6 @@
 id: FIN-200c
+components:
+  - finalize
 title: "Finalize never silently ships without a changelog record"
 component: finalize
 level: L1

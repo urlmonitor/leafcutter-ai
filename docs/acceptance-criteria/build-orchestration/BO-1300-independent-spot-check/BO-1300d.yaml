@@ -1,4 +1,6 @@
 id: BO-1300d
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Every finished feature is reviewed automatically before it counts as done"

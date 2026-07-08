@@ -1,4 +1,6 @@
 id: BO-1500b-3
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: Partial-run recovery pre-flight still detects stranded AC files on the isolated branch

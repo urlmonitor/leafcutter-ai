@@ -1,4 +1,6 @@
 id: BO-1300e-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "A clean spot-check creates no tickets and signs off the feature"

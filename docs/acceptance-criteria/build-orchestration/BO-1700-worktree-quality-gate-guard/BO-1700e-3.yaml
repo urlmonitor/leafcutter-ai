@@ -1,4 +1,6 @@
 id: BO-1700e-3
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "A partial deploy missing a guard script is detected and fails closed"

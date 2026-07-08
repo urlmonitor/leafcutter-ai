@@ -1,4 +1,6 @@
 id: BO-1900d-2-i
+components:
+  - build-orchestration
 title: "A premise injected inside an allowlisted pointer value is rejected"
 component: build-orchestration
 level: L3

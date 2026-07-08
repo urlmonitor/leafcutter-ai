@@ -1,4 +1,6 @@
 id: BO-570-2-ii
+components:
+  - build-orchestration
 title: "Render tooling unavailable in the worktree surfaces clearly and never silently passes"
 component: build-orchestration
 level: L3

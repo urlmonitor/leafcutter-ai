@@ -1,4 +1,6 @@
 id: TQ-100e-1-iii
+components:
+  - testing-quality
 title: "Switching enforcement modes changes behavior with no edits to any test"
 component: testing-quality
 level: L3

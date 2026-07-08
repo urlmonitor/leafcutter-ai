@@ -1,4 +1,6 @@
 id: INF-400b-1-ii
+components:
+  - infrastructure
 title: "Duplicate learnings are not persisted twice across consecutive runs"
 component: infrastructure
 level: L3

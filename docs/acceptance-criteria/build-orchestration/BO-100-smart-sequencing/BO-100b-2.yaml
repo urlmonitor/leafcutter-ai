@@ -1,4 +1,6 @@
 id: BO-100b-2
+components:
+  - build-orchestration
 readiness: reviewed
 priority: medium
 title: "Custom cap overrides default when configured in epic metadata"

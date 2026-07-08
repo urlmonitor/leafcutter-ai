@@ -1,4 +1,6 @@
 id: ACS-800f-1
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "The tree-split guidance describes re-home as a single metadata change"

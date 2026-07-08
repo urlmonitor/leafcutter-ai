@@ -1,4 +1,6 @@
 id: GE-113a-1-i
+components:
+  - guardrail-engine
 title: "A test inside a nested subfolder of the configured test root is allowed"
 component: guardrail-engine
 level: L3

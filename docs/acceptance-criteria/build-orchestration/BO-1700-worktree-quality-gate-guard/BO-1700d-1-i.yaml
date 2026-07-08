@@ -1,4 +1,6 @@
 id: BO-1700d-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Binary absent while main has config halts creation with an install hint"

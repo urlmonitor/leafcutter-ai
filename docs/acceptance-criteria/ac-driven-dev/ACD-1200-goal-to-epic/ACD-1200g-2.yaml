@@ -1,4 +1,6 @@
 id: ACD-1200g-2
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Sequence diagram illustrates the goal-to-epic dispatch flow"

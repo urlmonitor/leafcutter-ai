@@ -1,4 +1,6 @@
 id: INF-100c-1-i
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "Config resolution in a worktree of a deployed project"

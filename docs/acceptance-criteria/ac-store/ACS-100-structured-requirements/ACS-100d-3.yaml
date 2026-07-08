@@ -1,4 +1,6 @@
 id: ACS-100d-3
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "amended_by array accumulates ticket paths for each modification"

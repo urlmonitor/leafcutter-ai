@@ -1,4 +1,6 @@
 id: BO-1100c-1
+components:
+  - build-orchestration
 title: "Routing configuration is a single JSON file with an array of pattern entries"
 component: build-orchestration
 level: L2

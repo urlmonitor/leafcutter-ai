@@ -1,4 +1,6 @@
 id: BP-901
+components:
+  - build-pipeline
 readiness: approved
 priority: medium
 title: "goal_to_epic.py main() only resolves the worktree root when a default path is actually needed"

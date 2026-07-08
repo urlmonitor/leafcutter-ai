@@ -1,4 +1,6 @@
 id: BO-560-3-i
+components:
+  - build-orchestration
 title: "Pre-existing agents map is fully replaced, not merged, with audit trail"
 component: build-orchestration
 level: L3

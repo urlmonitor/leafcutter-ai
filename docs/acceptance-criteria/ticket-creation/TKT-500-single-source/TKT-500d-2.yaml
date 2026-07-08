@@ -1,4 +1,6 @@
 id: TKT-500d-2
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "L0 is marked done only when all leaf-level descendants have work_status: done"

@@ -1,4 +1,6 @@
 id: GE-111b-2-i
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Symbol tier fails open when tooling is unavailable; the file-path floor still applies"

@@ -1,4 +1,6 @@
 id: ACD-900a-3
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "The --json flag outputs machine-readable JSON matching the defined schema"

@@ -1,4 +1,6 @@
 id: FIN-100e-1
+components:
+  - finalize
 title: "One tracking ticket is created per pre-existing or flaky failure"
 level: L2
 component: finalize

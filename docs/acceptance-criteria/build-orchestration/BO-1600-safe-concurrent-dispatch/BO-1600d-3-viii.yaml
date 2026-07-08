@@ -1,4 +1,6 @@
 id: BO-1600d-3-viii
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Branch-ref reset recovers the reflog tip even when the branch tip object is corrupt"

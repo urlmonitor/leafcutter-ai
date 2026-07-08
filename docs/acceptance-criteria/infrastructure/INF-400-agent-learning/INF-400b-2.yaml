@@ -1,4 +1,6 @@
 id: INF-400b-2
+components:
+  - infrastructure
 title: "Knowledge emissions from v3 agents use the same JSONL event schema as signoff section 7"
 component: infrastructure
 level: L2

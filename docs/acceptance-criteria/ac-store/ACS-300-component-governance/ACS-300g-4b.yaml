@@ -1,4 +1,6 @@
 id: ACS-300g-4b
+components:
+  - ac-store
 title: "Skill wrapper for the add-component script"
 component: ac-store
 level: L2

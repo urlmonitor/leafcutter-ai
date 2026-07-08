@@ -1,4 +1,6 @@
 id: INF-1000a-1
+components:
+  - infrastructure
 readiness: draft
 priority: medium
 title: "Detect stale fixtures when a required field is added to a schema"

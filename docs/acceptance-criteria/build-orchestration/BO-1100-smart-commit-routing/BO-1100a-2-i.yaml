@@ -1,4 +1,6 @@
 id: BO-1100a-2-i
+components:
+  - build-orchestration
 title: "Empty staging area produces no commit message"
 component: build-orchestration
 level: L3

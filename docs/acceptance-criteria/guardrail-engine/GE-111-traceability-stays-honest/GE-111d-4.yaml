@@ -1,4 +1,6 @@
 id: GE-111d-4
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "How-to guide: the two routes to reconcile a flagged AC link"

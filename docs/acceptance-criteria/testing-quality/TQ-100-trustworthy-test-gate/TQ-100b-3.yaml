@@ -1,4 +1,6 @@
 id: TQ-100b-3
+components:
+  - testing-quality
 title: "State diagram of a tagged test's informational-to-enforced lifecycle"
 component: testing-quality
 level: L2

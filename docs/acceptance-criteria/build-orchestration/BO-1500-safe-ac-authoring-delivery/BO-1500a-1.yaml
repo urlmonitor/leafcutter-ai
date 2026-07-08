@@ -1,4 +1,6 @@
 id: BO-1500a-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: Authoring runs in a dedicated worktree on a new branch cut from origin/main

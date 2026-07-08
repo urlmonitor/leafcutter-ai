@@ -1,4 +1,6 @@
 id: INF-400d-2
+components:
+  - infrastructure
 title: "Skill-scoped PROJECT_CONTEXT.md files grow with each agent run that discovers skill-relevant learnings"
 component: infrastructure
 level: L2

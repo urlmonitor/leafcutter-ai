@@ -1,4 +1,6 @@
 id: TQ-100e-1-i
+components:
+  - testing-quality
 title: "Report-only mode surfaces results but never fails the run"
 component: testing-quality
 level: L3

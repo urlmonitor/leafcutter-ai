@@ -1,4 +1,6 @@
 id: BO-610-4
+components:
+  - build-orchestration
 title: "Every ticket frontmatter includes change_target and risk_surface fields"
 component: build-orchestration
 level: L2

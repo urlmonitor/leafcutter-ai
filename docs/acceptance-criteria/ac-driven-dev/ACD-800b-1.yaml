@@ -1,4 +1,6 @@
 id: ACD-800b-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Audit finds keyword-and-component matches at medium confidence"

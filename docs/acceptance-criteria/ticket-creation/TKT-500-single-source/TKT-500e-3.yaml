@@ -1,4 +1,6 @@
 id: TKT-500e-3
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Cross-goal boundary forces a fresh agent spawn"

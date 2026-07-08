@@ -1,4 +1,6 @@
 id: PER-100d-2-i
+components:
+  - persona-management
 title: "Requesting detail for a non-existent persona returns an informative error"
 component: persona-management
 level: L3

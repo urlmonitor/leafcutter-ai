@@ -1,4 +1,6 @@
 id: BP-600f
+components:
+  - build-pipeline
 status: active
 component: build-pipeline
 origin_agent: BrainCandy

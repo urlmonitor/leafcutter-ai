@@ -1,4 +1,6 @@
 id: ACD-1500e-1-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Process-feedback is deduplicated to prevent feedback storms"

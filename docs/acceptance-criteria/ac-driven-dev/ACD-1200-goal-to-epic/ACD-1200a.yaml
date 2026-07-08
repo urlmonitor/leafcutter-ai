@@ -1,4 +1,6 @@
 id: ACD-1200a
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Get a full epic from a single goal reference"

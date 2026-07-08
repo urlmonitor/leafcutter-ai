@@ -1,4 +1,6 @@
 id: ACS-300g
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Complete component coverage in the registry"

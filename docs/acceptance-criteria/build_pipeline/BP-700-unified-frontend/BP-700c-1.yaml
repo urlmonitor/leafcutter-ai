@@ -1,4 +1,6 @@
 id: BP-700c-1
+components:
+  - build-pipeline
 title: "All frontend-design skill principles are present in unified template"
 component: build-pipeline
 level: L2

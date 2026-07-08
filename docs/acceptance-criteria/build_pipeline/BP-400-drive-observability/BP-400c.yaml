@@ -1,4 +1,6 @@
 id: BP-400c
+components:
+  - build-pipeline
 title: "Get a prioritized summary of what to fix next — on demand"
 component: build-pipeline
 level: L1

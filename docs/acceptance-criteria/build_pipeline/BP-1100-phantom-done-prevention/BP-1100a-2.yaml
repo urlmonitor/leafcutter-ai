@@ -1,4 +1,6 @@
 id: BP-1100a-2
+components:
+  - build-pipeline
 title: "Ticket-supervisor pre-dispatch read halts a behavior ticket with only documentation in files_touched"
 component: build-pipeline
 level: L2

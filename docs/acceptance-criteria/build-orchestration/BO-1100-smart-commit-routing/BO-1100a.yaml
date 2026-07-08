@@ -1,4 +1,6 @@
 id: BO-1100a
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "The right message style is chosen for you based on what changed"

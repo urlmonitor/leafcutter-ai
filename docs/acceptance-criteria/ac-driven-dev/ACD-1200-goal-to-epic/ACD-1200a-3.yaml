@@ -1,4 +1,6 @@
 id: ACD-1200a-3
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Generated tickets are assembled into a named EPIC folder ready for the supervisor"

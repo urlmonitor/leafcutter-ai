@@ -1,4 +1,6 @@
 id: INF-600
+components:
+  - infrastructure
 title: "Understand any agent without reading its source"
 component: infrastructure
 level: L0

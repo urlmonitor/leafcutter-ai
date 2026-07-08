@@ -1,4 +1,6 @@
 id: ACS-800d-1-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Migration surfaces a requirement whose legacy name cannot be parsed"

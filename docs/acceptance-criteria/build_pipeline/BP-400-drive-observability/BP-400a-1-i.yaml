@@ -1,4 +1,6 @@
 id: BP-400a-1-i
+components:
+  - build-pipeline
 title: "emit_event.py write failure is non-fatal (exits 0 with stderr warning)"
 component: build-pipeline
 level: L3

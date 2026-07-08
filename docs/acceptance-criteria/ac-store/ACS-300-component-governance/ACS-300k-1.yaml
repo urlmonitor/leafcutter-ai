@@ -1,4 +1,6 @@
 id: ACS-300k-1
+components:
+  - ac-store
 title: "build.py injects components data into agent templates via a placeholder"
 component: ac-store
 level: L2

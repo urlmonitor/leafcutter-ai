@@ -1,4 +1,6 @@
 id: TKT-300c-2
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "User reviews enriched plan before implementation dispatch"

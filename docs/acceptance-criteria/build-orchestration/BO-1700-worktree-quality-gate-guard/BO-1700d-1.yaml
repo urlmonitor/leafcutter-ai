@@ -1,4 +1,6 @@
 id: BO-1700d-1
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Create-time gate: workspace creation halts when the probe fails"

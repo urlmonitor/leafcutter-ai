@@ -1,4 +1,6 @@
 id: INF-1100b-1-i
+components:
+  - infrastructure
 title: "A hand-off path that already agrees with config is used unchanged and raises no contradiction"
 component: infrastructure
 level: L3

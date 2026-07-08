@@ -1,4 +1,6 @@
 id: BP-300d-1
+components:
+  - build-pipeline
 title: "On a supported runtime, the deployed /build-feature command invokes its deterministic workflow, not the prose flow"
 component: build-pipeline
 level: L2

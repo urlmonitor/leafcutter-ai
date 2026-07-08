@@ -1,4 +1,6 @@
 id: BO-1600d-2
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Recovery is non-destructive by default: it prints exactly what it will do and only acts on explicit confirmation"

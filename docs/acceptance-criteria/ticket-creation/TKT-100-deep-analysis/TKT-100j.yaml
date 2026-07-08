@@ -1,4 +1,6 @@
 id: TKT-100j
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Requirements are precise, structured, and free of vague language"

@@ -1,4 +1,6 @@
 id: BO-1100e-2-i
+components:
+  - build-orchestration
 title: "Path pattern matching zero commits returns an empty result set without error"
 component: build-orchestration
 level: L3

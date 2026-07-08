@@ -1,4 +1,6 @@
 id: PER-100b
+components:
+  - persona-management
 readiness: approved
 priority: medium
 title: "Every AC declares who it is for"

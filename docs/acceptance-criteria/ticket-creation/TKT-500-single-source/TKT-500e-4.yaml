@@ -1,4 +1,6 @@
 id: TKT-500e-4
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Agent retains memory of files it modified in prior ACs within the goal"

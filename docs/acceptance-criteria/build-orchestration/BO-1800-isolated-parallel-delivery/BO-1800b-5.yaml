@@ -1,4 +1,6 @@
 id: BO-1800b-5
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Reference doc for the hub main-branch protection and merge-queue configuration"

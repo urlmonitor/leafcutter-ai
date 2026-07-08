@@ -1,4 +1,6 @@
 id: BP-100a-4
+components:
+  - build-pipeline
 readiness: reviewed
 priority: medium
 title: "Test verifies warning is emitted when a hook script is missing"

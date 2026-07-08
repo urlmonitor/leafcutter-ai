@@ -1,4 +1,6 @@
 id: FIN-200b-1
+components:
+  - finalize
 title: "Changelog entry is committed on the feature branch before the PR merge step"
 component: finalize
 level: L2

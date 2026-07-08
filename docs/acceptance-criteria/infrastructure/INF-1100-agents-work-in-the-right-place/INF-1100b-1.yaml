@@ -1,4 +1,6 @@
 id: INF-1100b-1
+components:
+  - infrastructure
 title: "A hand-off test path that disagrees with config is overridden by the config-resolved path"
 component: infrastructure
 level: L2

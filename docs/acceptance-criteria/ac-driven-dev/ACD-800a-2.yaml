@@ -1,4 +1,6 @@
 id: ACD-800a-2
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Unrelated tickets produce no matches (false-positive prevention)"

@@ -1,4 +1,6 @@
 id: BO-570-2-iii
+components:
+  - build-orchestration
 title: "A locally-passing render or ruff check records auditable evidence in the sign-off"
 component: build-orchestration
 level: L3

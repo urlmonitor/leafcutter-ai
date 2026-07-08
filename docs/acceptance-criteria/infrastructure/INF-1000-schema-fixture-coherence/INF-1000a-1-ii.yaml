@@ -1,4 +1,6 @@
 id: INF-1000a-1-ii
+components:
+  - infrastructure
 readiness: draft
 priority: medium
 title: "Fixture files that already contain the new field are not flagged"

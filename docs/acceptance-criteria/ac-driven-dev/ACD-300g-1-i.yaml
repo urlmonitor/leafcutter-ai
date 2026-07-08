@@ -1,4 +1,6 @@
 id: ACD-300g-1-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Commit failure aborts the pipeline with an actionable error"

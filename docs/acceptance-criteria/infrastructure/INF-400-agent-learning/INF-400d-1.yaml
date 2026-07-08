@@ -1,4 +1,6 @@
 id: INF-400d-1
+components:
+  - infrastructure
 title: "Each component's AC directory has a README.md that accumulates domain conventions"
 component: infrastructure
 level: L2

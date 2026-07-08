@@ -1,4 +1,6 @@
 id: ACS-300i-1
+components:
+  - ac-store
 title: "Interface descriptor schema is enforced on exposed_interfaces elements"
 component: ac-store
 level: L2

@@ -1,4 +1,6 @@
 id: ACS-100h-3
+components:
+  - ac-store
 title: "Split requires user confirmation at each gate before modifying files"
 component: ac-store
 level: L2

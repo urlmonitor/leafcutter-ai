@@ -1,4 +1,6 @@
 id: BP-800d-4
+components:
+  - build-pipeline
 title: "How-to guide for legacy agent retirement"
 component: build-pipeline
 level: L2

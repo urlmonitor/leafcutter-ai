@@ -1,4 +1,6 @@
 id: BO-1700e-5
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "The gate applies to the main tree too; main-tree commits are not exempt"

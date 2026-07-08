@@ -1,4 +1,6 @@
 id: BP-1200b-1-ii
+components:
+  - build-pipeline
 title: "A pull request whose full suite passes reports a passing test check and is allowed to merge"
 component: build-pipeline
 level: L3

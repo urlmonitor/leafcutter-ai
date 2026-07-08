@@ -1,4 +1,6 @@
 id: ACD-300f-4
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Agent Consumption Protocol defines citation format for overlapping nodes and deduplication warnings"

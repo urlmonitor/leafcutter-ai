@@ -1,4 +1,6 @@
 id: PER-100c-3
+components:
+  - persona-management
 title: "How-to guide for querying capabilities by persona"
 component: persona-management
 level: L2

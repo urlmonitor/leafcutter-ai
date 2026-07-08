@@ -1,4 +1,6 @@
 id: ACD-500
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "A single priority queue answers 'what to build next' across both tickets and ACs"

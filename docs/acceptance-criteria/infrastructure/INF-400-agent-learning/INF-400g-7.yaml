@@ -1,4 +1,6 @@
 id: INF-400g-7
+components:
+  - infrastructure
 title: "ticket-supervisor executes feedback emission on brainstorm escalation (section 3.3)"
 component: infrastructure
 level: L2

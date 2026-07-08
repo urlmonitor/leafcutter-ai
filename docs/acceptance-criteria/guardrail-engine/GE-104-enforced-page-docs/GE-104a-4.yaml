@@ -1,4 +1,6 @@
 id: GE-104a-4
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "A sequence diagram documents the two-layer enforcement flow for new-page documentation"

@@ -1,4 +1,6 @@
 id: INF-100b-2-i
+components:
+  - infrastructure
 title: "DECISION HISTORY entry documents the is_dir-to-exists fix"
 component: infrastructure
 level: L3

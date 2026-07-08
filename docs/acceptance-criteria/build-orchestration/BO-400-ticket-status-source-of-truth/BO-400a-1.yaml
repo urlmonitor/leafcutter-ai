@@ -1,4 +1,6 @@
 id: BO-400a-1
+components:
+  - build-orchestration
 title: "ticket-supervisor sets status to in_progress at drive start"
 component: build-orchestration
 level: L2

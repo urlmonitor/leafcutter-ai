@@ -1,4 +1,6 @@
 id: INF-1100c-1-i
+components:
+  - infrastructure
 title: "A work-location placeholder with no configured value fails compilation loudly"
 component: infrastructure
 level: L3

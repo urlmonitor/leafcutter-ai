@@ -1,4 +1,6 @@
 id: BO-210c-1-iii
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Every bash command in new or edited safety-net templates is a single simple command"

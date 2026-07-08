@@ -1,4 +1,6 @@
 id: TKT-200b-1
+components:
+  - ticket-creation
 title: "Boundary doc states what a component owns and what it does not own"
 component: ticket-creation
 level: L2

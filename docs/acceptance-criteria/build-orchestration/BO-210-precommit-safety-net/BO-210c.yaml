@@ -1,4 +1,6 @@
 id: BO-210c
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Auto-fix re-dispatches the originating coder with its capsule instead of a context-free fixer"

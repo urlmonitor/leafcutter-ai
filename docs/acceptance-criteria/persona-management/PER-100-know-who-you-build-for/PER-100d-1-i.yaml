@@ -1,4 +1,6 @@
 id: PER-100d-1-i
+components:
+  - persona-management
 title: "Persona summary injection gracefully handles zero defined personas"
 component: persona-management
 level: L3

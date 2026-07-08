@@ -1,4 +1,6 @@
 id: GE-101c
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "diff-cover hook warns on stale coverage artifact and degrades gracefully in shallow clones"

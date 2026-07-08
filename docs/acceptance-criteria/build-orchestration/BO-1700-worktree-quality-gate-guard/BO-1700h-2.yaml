@@ -1,4 +1,6 @@
 id: BO-1700h-2
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "A canary run that exceeds its timeout yields a fail-closed verdict"

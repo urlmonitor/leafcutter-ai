@@ -1,4 +1,6 @@
 id: TKT-500f-6-iii-a
+components:
+  - ticket-creation
 readiness: approved
 priority: high
 title: "Generator emits the Test Requirements signal and owns the shared implementation-.py classification helper"

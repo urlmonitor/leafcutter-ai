@@ -1,4 +1,6 @@
 id: ACS-800a-2-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A requirement's UID survives a re-home unchanged"

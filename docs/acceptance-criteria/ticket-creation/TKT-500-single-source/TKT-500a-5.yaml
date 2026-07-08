@@ -1,4 +1,6 @@
 id: TKT-500a-5
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "Sequence diagram: agent dispatch reads AC at source"

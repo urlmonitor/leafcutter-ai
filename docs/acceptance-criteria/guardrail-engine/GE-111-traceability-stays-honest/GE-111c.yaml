@@ -1,4 +1,6 @@
 id: GE-111c
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Only get stopped for links your commit actually touched"

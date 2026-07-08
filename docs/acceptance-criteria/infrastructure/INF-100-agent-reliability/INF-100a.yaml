@@ -1,4 +1,6 @@
 id: INF-100a
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Pull requests are created under the right account with consistent quality"

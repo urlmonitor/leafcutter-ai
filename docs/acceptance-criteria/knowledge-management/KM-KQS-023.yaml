@@ -1,4 +1,6 @@
 id: KM-KQS-023
+components:
+  - knowledge-management
 title: "Surfaces with empty edge_fields gain components and related_docs fields in paths.json"
 component: knowledge-management
 level: L2

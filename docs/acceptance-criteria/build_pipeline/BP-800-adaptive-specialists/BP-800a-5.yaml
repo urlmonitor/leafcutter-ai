@@ -1,4 +1,6 @@
 id: BP-800a-5
+components:
+  - build-pipeline
 title: "How-to guide for technology detection"
 component: build-pipeline
 level: L2

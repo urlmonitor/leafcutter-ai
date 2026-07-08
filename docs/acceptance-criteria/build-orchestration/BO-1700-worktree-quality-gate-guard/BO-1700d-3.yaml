@@ -1,4 +1,6 @@
 id: BO-1700d-3
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Commit-phase gate: the commit driver runs the probe and refuses on failure"

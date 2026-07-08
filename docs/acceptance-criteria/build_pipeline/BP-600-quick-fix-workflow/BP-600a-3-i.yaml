@@ -1,4 +1,6 @@
 id: BP-600a-3-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow permits uncommitted changes in unrelated files"
 component: build-pipeline
 level: L3

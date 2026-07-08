@@ -1,4 +1,6 @@
 id: BO-1400a-2
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Pre-PR review confirms a delivered artifact lands in the deployable package source, not only a build-output tree"

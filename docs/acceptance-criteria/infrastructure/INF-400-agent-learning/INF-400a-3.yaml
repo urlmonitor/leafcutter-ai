@@ -1,4 +1,6 @@
 id: INF-400a-3
+components:
+  - infrastructure
 title: "V3 agents read component-scoped PROJECT_CONTEXT.md files when working in a domain"
 component: infrastructure
 level: L2

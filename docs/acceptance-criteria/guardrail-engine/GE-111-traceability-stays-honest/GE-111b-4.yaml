@@ -1,4 +1,6 @@
 id: GE-111b-4
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Reference doc: the file-vs-symbol resolution model and #symbol anchor contract"
