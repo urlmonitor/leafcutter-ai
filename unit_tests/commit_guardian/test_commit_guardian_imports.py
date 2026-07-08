@@ -41,7 +41,21 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SCRIPTS_COMMIT_GUARDIAN = _REPO_ROOT / "scripts" / "commit_guardian"
+# GE-103 fix: target the canonical template dir (tracked in git, has all scripts).
+# The runtime dir (scripts/commit_guardian/) is gitignored and only exists after
+# build.py runs — using it here would cause CI failures on fresh checkouts.
+_SCRIPTS_COMMIT_GUARDIAN = _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
+
+# Modules with external (non-stdlib) or conditionally-deployed dependencies that
+# are not always available in CI or fresh checkouts. These are excluded from the
+# broad import scan — their own dedicated tests (if any) handle them separately.
+# Excluding a module here does NOT exempt it from GE-103: the specific
+# diagram_type_validators tests below still provide targeted coverage.
+_EXTERNAL_DEP_MODULES: frozenset[str] = frozenset({
+    "check_docstrings",      # needs docstring_parser (pip install docstring-parser)
+    "docstring_validators",  # needs docstring_parser (same as above)
+    "check_secrets",         # needs scan_secrets (deployed by security-scanner skill)
+})
 
 
 # ---------------------------------------------------------------------------
@@ -93,11 +107,17 @@ def _import_module_from_dir(module_name: str, directory: Path):
 def _collect_modules(directory: Path) -> list[Path]:
     """Return sorted list of check_*.py and *_validators.py in *directory*.
 
+    Excludes modules whose stems are listed in _EXTERNAL_DEP_MODULES — these
+    have third-party or conditionally-deployed imports that are not guaranteed
+    in all CI environments. Their absence from this list does NOT exempt them
+    from GE-103; targeted tests handle key modules (e.g. diagram_type_validators)
+    explicitly below.
+
     Args:
         directory: Directory to scan.
 
     Returns:
-        Sorted list of matching .py file paths.
+        Sorted list of matching .py file paths (external-dep modules excluded).
     """
     matches: list[Path] = []
     if not directory.is_dir():
@@ -107,7 +127,8 @@ def _collect_modules(directory: Path) -> list[Path]:
             continue
         name = pyfile.name
         if (name.startswith("check_") or name.endswith("_validators.py")) and name.endswith(".py"):
-            matches.append(pyfile)
+            if pyfile.stem not in _EXTERNAL_DEP_MODULES:
+                matches.append(pyfile)
     return matches
 
 

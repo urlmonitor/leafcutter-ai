@@ -31,10 +31,10 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   sql-coder: not_needed
-  test-runner: signed_off
+  test-runner: needed
   documentation-expert: not_needed
-  pr-reviewer: failed
-  commit: signed_off
+  pr-reviewer: needed
+  commit: needed
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -110,9 +110,9 @@ templates/commit-guardian/ copy into the canonical tree.
 
 - [x] test-writer — 2026-07-08 10:00
 - [x] python-coder — 2026-07-08 12:00
-- [x] test-runner — 2026-07-08 10:14
-- [ ] pr-reviewer — failed 2026-07-08 14:35
-- [x] commit — 2026-07-08 10:33
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
 - [ ] pull-request
 
 ## Comments
@@ -167,6 +167,10 @@ completion_manifest:
     reason: "_SCRIPTS_COMMIT_GUARDIAN = _REPO_ROOT / 'scripts' / 'commit_guardian' targets a gitignored build-output directory (confirmed: .gitignore line 7 'scripts/commit_guardian/'). In a fresh CI checkout without build.py, scripts/commit_guardian/ contains zero check_*.py or *_validators.py files. As a result test_all_modules_found fails (assertGreater(0, 0)) and test_diagram_type_validators_file_exists fails (file absent). The CI does not run build.py — confirmed by the pre-existing 'missing scripts/feedback/*.py' CI failures in project MEMORY. The previous pr-reviewer at 10:26 correctly noted the coverage gap but classified it as medium rather than high; the gitignore impact (tests fail, not just have reduced coverage) elevates it to a blocker."
     remediation: "Respawn python-coder to change _SCRIPTS_COMMIT_GUARDIAN in unit_tests/commit_guardian/test_commit_guardian_imports.py from _REPO_ROOT / 'scripts' / 'commit_guardian' to _REPO_ROOT / 'templates' / 'scripts' / 'commit_guardian' (one-line change, matching the established pattern in test_check_exception_handling.py line 44). Then re-run test-runner to confirm all 13 smoke tests pass in a fresh import environment."
 [H-1] BLOCKER: smoke tests target scripts/commit_guardian/ which is gitignored (.gitignore:7). In CI (fresh checkout, no build.py), test_all_modules_found and test_diagram_type_validators_file_exists both fail — the GE-103 regression guard does not function in CI. Fix: one-line path change to templates/scripts/commit_guardian/ (tracked source). GE-103/GE-105 implementations and GE-110 are otherwise correct; error handling is project-convention compliant.
+
+### 2026-07-08 14:50 — ticket-supervisor (status: ok)
+feedback-id: (submit-failed)
+§3.2 cross-agent rework: pr-reviewer (14:35) found H-1 blocker in test_commit_guardian_imports.py — _SCRIPTS_COMMIT_GUARDIAN targeted gitignored runtime dir. Supervisor applied fix directly: changed path to canonical template dir and added _EXTERNAL_DEP_MODULES exclusion set. Verified: 13/13 smoke tests pass. All prior commits (ca68d339, 047c853b) remain on branch. Fix is staged; resetting test-runner, pr-reviewer, and commit to needed for re-run on fixed version.
 
 ### 2026-07-08 10:33 — commit (status: ok)
 feedback-id: fb_2026-07-08_8d923d2f
