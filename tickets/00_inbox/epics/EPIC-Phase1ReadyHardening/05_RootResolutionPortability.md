@@ -27,7 +27,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -125,7 +125,7 @@ Then behavior is unchanged (pyproject.toml still resolves the root; poetry insta
 - [x] python-coder — 2026-07-08 12:00
 - [x] test-runner — 2026-07-08 13:00
 - [x] pr-reviewer — 2026-07-08 14:00
-- [ ] commit
+- [x] commit — 2026-07-08 14:30
 - [ ] pull-request
 
 ## Comments
@@ -174,6 +174,14 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true
 20/20 tests passed (8 in test_ticket_frontmatter_guard, 8 in test_documentation_guard, 4 in test_setup_ticket_worktree). AC-1 through AC-6 verified green; sign-off complete.
+
+### 2026-07-08 14:30 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  commit_made: true
+  staged_files_match_scope: true
+  hooks_passed: true
+Commit 4baeb1c2 made successfully: fix(hooks): portable project-root resolution for pyproject-less repos. 9 files committed (3 modified templates, 5 new test files, 1 ticket). check-feedback-id hook required feedback-id: n/a in the supervisor comment — added before retry. All other hooks passed.
 
 ### 2026-07-08 14:00 — pr-reviewer (status: ok)
 feedback-id: (submit-failed)
