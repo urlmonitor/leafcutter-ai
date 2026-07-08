@@ -49,6 +49,11 @@ const PLANNER_SCHEMA = {
     ticket_path: { type: 'string' },
     title: { type: 'string' },
     files_touched: { type: 'array', items: { type: 'string' } },
+    // has_test_requirements: true when the ticket's ## Test Requirements
+    // block contains at least one "- name:" entry in the tests: array.
+    // Used by the Test Requirements guard (BO-2000e-2) to block coder
+    // dispatch for code tickets that lack populated Test Requirements.
+    has_test_requirements: { type: 'boolean' },
     ordered_phases: {
       type: 'array',
       items: {
@@ -217,7 +222,7 @@ if (!callerWorktreePath) {
 phase('Planner')
 
 const plannerResult = await agent(
-  `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
+  `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
 )
 
@@ -225,6 +230,17 @@ const plan = plannerResult || {};
 const orderedPhases = plan.ordered_phases || [];
 const filesTouched = plan.files_touched || [];
 const title = plan.title || ticketPath;
+
+// -------------------------------------------------------------------------
+// Test Requirements Guard — extracted from planner data (BO-2000e-2)
+// -------------------------------------------------------------------------
+// has_test_requirements is true only when the ticket's ## Test Requirements
+// section contains at least one "- name:" entry in the tests: YAML array.
+// When absent or false, coder phases are refused with a structured blocker.
+const hasTestRequirements = plan.has_test_requirements === true;
+
+// Agents that produce production code — must NOT run without Test Requirements.
+const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 
 // -------------------------------------------------------------------------
 // Phase 2 — Guard: if no phases are needed, exit cleanly
@@ -258,6 +274,29 @@ for (const currentPhase of neededPhases) {
 
   let phaseResult;
   let retryLoop = true;
+
+  // -----------------------------------------------------------------------
+  // Test Requirements guard (BO-2000e-2): refuse to dispatch a coder phase
+  // when the ticket's ## Test Requirements section is empty or absent.
+  // Surfacing a structured blocker here prevents the phantom-test failure
+  // mode where test-writer self-skips and the coder writes its own tests.
+  // -----------------------------------------------------------------------
+  if (CODER_PHASES.has(phaseName) && !hasTestRequirements) {
+    return {
+      status: "blocked",
+      message:
+        `Structured blocker: the coder phase '${phaseName}' cannot be ` +
+        `dispatched because the ticket's ## Test Requirements section is ` +
+        `empty or absent (BO-2000e-2). ` +
+        `Add at least one test to the tests: array before re-running.`,
+      ticket_path: ticketPath,
+      failing_phase: phaseName,
+      classification: "halt",
+      suggested_action:
+        "Populate ## Test Requirements in the ticket with at least one " +
+        "'- name: ...' entry, then re-run /build-feature.",
+    };
+  }
 
   while (retryLoop) {
     retryLoop = false;
