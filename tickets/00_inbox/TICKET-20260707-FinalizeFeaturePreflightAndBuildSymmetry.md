@@ -23,7 +23,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -124,7 +124,7 @@ All new tests must be RED before implementation and GREEN after.
 - [x] python-coder — 2026-07-08 10:45
 - [x] test-runner — 2026-07-08 11:30
 - [x] pr-reviewer — 2026-07-08 12:00
-- [ ] commit
+- [x] commit — 2026-07-08 12:30
 - [ ] pull-request
 
 ## Comments
@@ -170,3 +170,12 @@ completion_manifest:
   finalize_feature_md_doc_updated: true
   no_unintended_regressions: true
 Both ACs verified in the staged diff. FIN-100g-1: `const targetBranch = args.target_branch || null` is set before the pre-flight agent call; the prompt branches on targetBranch — when provided it instructs `git worktree list --porcelain` to locate the correct worktree, returns a clear branch-named error when no match is found, and falls back to `git branch --show-current` (CWD-based) when absent; the main/master abort fires on the RESOLVED BRANCH, not the ambient CWD. FIN-100a-4: Step 0 Step C and Step 3 both include `python3 scripts/build.py --target-dir` before their respective `pytest` invocations — build precedes test in both blocks as required. `templates/workflows/finalize-feature.md` documents both changes. Minor observation: `unit_tests/workflows/__init__.py` and `conftest.py` are not listed in `files_touched` but were noted in the test-writer sign-off as scaffold files — not a blocker.
+
+### 2026-07-08 12:30 — commit (status: ok)
+feedback-id: fb_2026-07-08_a4919825
+completion_manifest:
+  staged_files_verified: true
+  commit_succeeded: true
+  frontmatter_component_fixed: true
+  all_hooks_passed: true
+Committed 6 files as 88238c62 (feat(finalize): pre-flight target resolution + Step 3 build symmetry). Pre-commit hook `check-doc-frontmatter` initially failed because the ticket's `components` field contained `finalize` (not a registered component); fixed by changing it to `build_pipeline` and re-staging. All subsequent hooks passed on retry. Commit message accurately reflects FIN-100g-1 and FIN-100a-4 as implemented.
