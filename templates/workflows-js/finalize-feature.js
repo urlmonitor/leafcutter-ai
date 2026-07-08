@@ -436,8 +436,11 @@ const baselineResult = await agent(
   `  Run: git -C "${baselineTmpPath}" rev-parse HEAD\n` +
   "  Store as <baseline_sha>.\n" +
   "\n" +
-  "Step C — Run the test suite inside the temp worktree:\n" +
-  `  Run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
+  "Step C — Deploy shims then run the test suite inside the temp worktree (FIN-100a-4):\n" +
+  `  Run: python3 "${baselineTmpPath}/scripts/build.py" --target-dir "${baselineTmpPath}"\n` +
+  "  (Deploys commit_guardian, feedback scripts, and .pre-commit-config.yaml — same build state as production.)\n" +
+  "  If build.py exits non-zero: log a warning but continue (shim deploy failure is non-fatal for baseline).\n" +
+  `  Then run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
   "  Collect each line that matches the pattern '<file>::<test_name> FAILED'.\n" +
   "  Build a list of failing test IDs (strings like 'test_foo.py::test_bar').\n" +
   "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
@@ -667,8 +670,15 @@ const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
 phase('Step 3')
 
+// FIN-100a-4: deploy shims before running the suite, same as Step 0 baseline.
+// Without this, ~13 deploy-dependent tests fail RED in Step 3 while passing
+// in Step 0, causing the triage set-difference to misclassify them as regressions.
 testResult = await agent(
-  "Run the full test suite on the post-merge worktree. " +
+  `First run: python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}" ` +
+  "to deploy shims (same build.py step as the Step 0 baseline — ensures identical build state " +
+  "for commit_guardian, feedback scripts, and .pre-commit-config.yaml). " +
+  "If build.py exits non-zero: log a warning but continue. " +
+  "Then run the full test suite on the post-merge worktree. " +
   "Return a JSON object: { \"passed\": true|false, \"output\": \"<verbatim test output>\", " +
   "\"failing_tests\": [\"<file>::<test_name>\", ...] }\n" +
   `Baseline context: baseline_sha=${JSON.stringify(baselineSha)}, ` +
