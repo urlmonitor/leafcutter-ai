@@ -499,6 +499,47 @@ def _agent_produces_production_code(
         return agent_id in producers
 
 
+def _build_implementation_notes_section(ac: AcRecord) -> str:
+    """Build the ## Implementation Notes section from it_requirements in the AC record.
+
+    Emits a verbatim reproduction of every field in ``it_requirements`` as a
+    YAML code block so that a phase agent can locate and parse the spec without
+    guesswork.  Returns an empty string when ``it_requirements`` is absent from
+    the AC record, so that no empty stub is ever written (AC-2 / BO-2000c-1-i).
+
+    The section is placed consistently in the ticket body just before the
+    ``## Sign-offs`` block so that phase agents can locate it with a simple
+    heading search (AC-3 / BO-2000c-2).
+
+    Args:
+        ac: Parsed AC record.
+
+    Returns:
+        Formatted ``## Implementation Notes`` markdown block, or ``""`` when
+        ``it_requirements`` is absent.
+    """
+    it_req = ac.get("it_requirements")
+    if not it_req:
+        return ""
+    try:
+        spec_yaml = yaml.dump(
+            it_req,
+            default_flow_style=False,
+            allow_unicode=True,
+        ).rstrip()
+    except yaml.YAMLError as exc:
+        logger.warning("Could not serialise it_requirements to YAML: %s", exc)
+        spec_yaml = str(it_req)
+    return "\n".join([
+        "## Implementation Notes",
+        "",
+        "```yaml",
+        spec_yaml,
+        "```",
+        "",
+    ])
+
+
 def _build_signoffs_section(agents: dict[str, str]) -> str:
     """Build the ## Sign-offs section from the agents map.
 
@@ -707,6 +748,10 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
             "```",
             "",
         ])
+
+    impl_notes = _build_implementation_notes_section(ac)
+    if impl_notes:
+        lines.append(impl_notes)
 
     lines.extend([
         signoffs,
@@ -1090,5 +1135,12 @@ DECISION HISTORY
   Performs implemented_by back-write using targeted line replacement (not
   full yaml.dump round-trip) to minimise diff noise. Idempotency guard:
   exits 1 when a ticket with source_ac: <ac_id> already exists.
+- 2026-07-08 [ticket-03 EPIC-PromptAssemblyHardening]: Add ## Implementation Notes emission.
+  Added _build_implementation_notes_section() helper that serialises the
+  it_requirements dict from an AC record to a YAML code block inside a
+  ## Implementation Notes section. Omits the section entirely when
+  it_requirements is absent (no empty stub). Section is placed after
+  ## Test Requirements and before ## Sign-offs for consistent locatability.
+  (AC BO-2000c-1, BO-2000c-1-i, BO-2000c-2)
 ====================================================================
 """

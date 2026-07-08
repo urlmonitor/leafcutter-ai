@@ -263,7 +263,7 @@ for (const currentPhase of neededPhases) {
     retryLoop = false;
 
     phaseResult = await agent(
-      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.`,
+      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.`,
       { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch' }
     )
 
