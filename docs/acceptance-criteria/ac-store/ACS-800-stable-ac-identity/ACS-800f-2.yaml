@@ -37,3 +37,5 @@ notes: |
   Decomposed from ACS-800f. Target surfaces: the product-owner, business-analyst,
   and it-po agent templates (the parent-derivation guidance and the parent covered_by
   update protocol that today references the id-string derivation). llm-expert work.
+change_target: prompt
+risk_surface: internal

@@ -38,3 +38,5 @@ notes: |
   with the old id-string parsing retained only for the migration-window compat path
   (ACS-800e-4-i). Criteria intentionally avoids naming the module/function directly
   to stay behavioral; the affected surface is recorded here in notes.
+change_target: code
+risk_surface: internal

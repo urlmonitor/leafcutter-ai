@@ -50,3 +50,5 @@ notes: |
   Verification behavior (run twice across two config values, compare outcomes) =>
   test-runner, mirroring the determinism edge cases. Confirms config is the sole
   control surface for the rollout stage.
+change_target: code
+risk_surface: internal

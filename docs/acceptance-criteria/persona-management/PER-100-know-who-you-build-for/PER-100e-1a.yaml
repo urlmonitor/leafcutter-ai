@@ -45,3 +45,5 @@ superseded_by: null
 covered_by:
   - PER-100e-1-i
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

@@ -34,3 +34,5 @@ notes: |
   existing /quick-fix O_CREAT|O_EXCL lock pattern documented in ac-schema.md
   (§/quick-fix workflow — ID assignment) — the same atomicity discipline applies
   to UID allocation from the store-wide sequence.
+change_target: code
+risk_surface: internal

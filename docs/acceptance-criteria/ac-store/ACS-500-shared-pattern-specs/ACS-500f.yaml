@@ -47,3 +47,5 @@ amended_by: []
 superseded_by: null
 covered_by: [ACS-500f-1, ACS-500f-1-i, ACS-500f-2, ACS-500f-3, ACS-500f-3-i]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -30,3 +30,5 @@ covered_by:
 implemented_by: []
 documentation_triggers:
   - reference-doc
+change_target: prompt
+risk_surface: contract_boundary

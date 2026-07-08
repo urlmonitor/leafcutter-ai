@@ -46,3 +46,5 @@ superseded_by: null
 covered_by:
   - "unit_tests/commit_guardian/test_check_ac_schema.py::TestOriginAgentAllHistoricalValuePass"
 implemented_by: []
+change_target: code
+risk_surface: internal

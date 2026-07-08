@@ -36,3 +36,5 @@ notes: |
   Edge case of ACS-800d-2: a reference to a non-existent id already present before
   migration. Distinguishes pre-existing breakage (reported, not caused) from
   migration-introduced breakage (forbidden by ACS-800d-3).
+change_target: code
+risk_surface: internal

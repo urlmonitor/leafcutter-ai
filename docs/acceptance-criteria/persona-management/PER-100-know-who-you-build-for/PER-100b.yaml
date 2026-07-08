@@ -30,3 +30,5 @@ covered_by:
   - PER-100b-5
 implemented_by: []
 documentation_triggers: [how-to, reference-doc]
+change_target: schema
+risk_surface: contract_boundary

@@ -30,3 +30,5 @@ implemented_by: []
 it_requirements:
   - "Agent template must not embed criteria text — must read from file"
   - "Template modification must reference AC path variable, not a copied string"
+change_target: prompt
+risk_surface: internal

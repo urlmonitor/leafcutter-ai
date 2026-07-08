@@ -68,3 +68,5 @@ notes: |
   plain clone does not contain. DECIDED (final gate): Approach 1 closes the gap
   via a CI build step plus an install_shims shim_map extension bridging
   .leafcutter/scripts/ -> scripts/.
+change_target: code
+risk_surface: internal

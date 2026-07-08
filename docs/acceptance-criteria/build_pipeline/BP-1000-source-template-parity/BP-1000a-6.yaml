@@ -68,3 +68,5 @@ notes: |
   (build --target-dir into an external project), not only the self-build —
   consistent with the SHARED-CONTRACT validation requirement carried by
   BP-1200a-1.
+change_target: pipeline
+risk_surface: internal

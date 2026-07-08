@@ -35,3 +35,5 @@ notes: |
   Edge case of ACS-800a-2 that demonstrates the immutability guarantee under the
   specific operation ACS-800c specifies (re-home). Verifies the UID is the anchor
   that makes ACS-800c's "no reference cascade" possible.
+change_target: code
+risk_surface: internal

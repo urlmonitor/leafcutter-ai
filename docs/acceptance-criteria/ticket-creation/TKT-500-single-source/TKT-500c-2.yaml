@@ -28,3 +28,5 @@ implemented_by: []
 it_requirements:
   - "Signoff skill must be modified to write to AC YAML instead of ticket"
   - "signoffs field schema: list of {agent: string, timestamp: ISO-8601, artifacts: list[string]}"
+change_target: schema
+risk_surface: contract_boundary

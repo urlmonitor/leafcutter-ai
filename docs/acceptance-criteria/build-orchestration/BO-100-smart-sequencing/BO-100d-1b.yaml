@@ -55,3 +55,5 @@ notes: |
 
   Lineage: repeat of TICKET-20260527-FeedbackSinkPreDriveCheck — warn-only was
   insufficient; this raises the prose gate to a hard block.
+change_target: prompt
+risk_surface: internal

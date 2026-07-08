@@ -36,3 +36,5 @@ notes: |
   from PROJECT_CONTEXT: child_limit_override is scaffolding for ACS-800 and must be
   documented as removable once ACS-800e-1 (metadata child counting) lands. Keeps the
   retirement note from silently becoming permanent.
+change_target: docs
+risk_surface: internal

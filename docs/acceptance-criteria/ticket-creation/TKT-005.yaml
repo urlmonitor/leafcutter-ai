@@ -15,3 +15,5 @@ amended_by: []
 covered_by: []
 implemented_by: []
 origin_agent: "human"
+change_target: schema
+risk_surface: internal

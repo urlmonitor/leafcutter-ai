@@ -43,3 +43,5 @@ covered_by:
   - INF-600k
   - INF-600l
 implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

@@ -26,3 +26,5 @@ superseded_by: null
 covered_by: [BO-300a-1, BO-300a-2, BO-300a-3, BO-300a-4]
 implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
+change_target: code
+risk_surface: contract_boundary

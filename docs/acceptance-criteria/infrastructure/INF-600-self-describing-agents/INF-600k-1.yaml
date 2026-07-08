@@ -52,3 +52,5 @@ notes: |
   brief). This AC documents and locks the behavior so the relaxation is
   traceable and regression-protected. Per BO PROJECT_CONTEXT this refines the
   INF-600g registry-validation family rather than landing under build-orchestration.
+change_target: code
+risk_surface: contract_boundary

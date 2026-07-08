@@ -66,3 +66,5 @@ notes: |
   tests/conftest.py and unit_tests/agents/conftest.py — the plugin/session hook can
   live there or as a packaged pytest plugin; in either case keep it deployable so
   ADR-016's pre-pytest build step makes it present in CI.
+change_target: code
+risk_surface: contract_boundary

@@ -10,3 +10,5 @@ criteria: |
   And no test asserts on v3-suffixed agent names (product-owner-v3, business-analyst-v3, it-po-v3)
   And all tests in test_create_ac_workflow.py pass
 notes: "Authored by /quick-fix. Root cause: test assertions were not updated when create_ac_workflow.py constants were changed from v3 to canonical names."
+change_target: code
+risk_surface: internal

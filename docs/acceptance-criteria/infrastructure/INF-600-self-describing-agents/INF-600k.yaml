@@ -34,3 +34,5 @@ covered_by:
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Internal registry-validation rule refinement -- no user-facing behavior or workflow is introduced; it relaxes a build-time validator to accept legitimate non-agent callers."
+change_target: code
+risk_surface: contract_boundary

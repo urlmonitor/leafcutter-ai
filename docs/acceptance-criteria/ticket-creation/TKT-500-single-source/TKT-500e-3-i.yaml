@@ -26,3 +26,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 it_requirements: []
+change_target: prompt
+risk_surface: internal

@@ -1,0 +1,10 @@
+{
+  "adr_id": "ADR-017",
+  "affected_files": [
+    "scripts/ac_store/generate_ticket_from_ac.py",
+    "config/agent_registry.json",
+    "templates/agents/ticket-supervisor.md",
+    "templates/skills/building-epics/SKILL.md"
+  ],
+  "one_line_summary": "Quality gates become a computed invariant: every change is classified on a change_target/risk_surface axis pair that maps to mandatory guardrail agents, materialized into ticket frontmatter at generation time."
+}

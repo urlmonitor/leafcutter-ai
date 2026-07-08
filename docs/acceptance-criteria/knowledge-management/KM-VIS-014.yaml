@@ -26,3 +26,5 @@ notes: |
   (TestVisualisationProducesGraph) passed throughout, confirming production is
   correct. The fix updates the test mocks to the current contract; production
   code is unchanged.
+change_target: code
+risk_surface: internal

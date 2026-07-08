@@ -67,3 +67,7 @@ notes: |
   the workflow YAML. ADR-016 already mandates `python scripts/build.py
   --target-dir .` runs before pytest in CI, so any deployed conftest/plugin is
   present at test time.
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

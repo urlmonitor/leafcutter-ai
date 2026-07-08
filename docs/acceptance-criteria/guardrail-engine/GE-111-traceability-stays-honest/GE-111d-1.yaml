@@ -57,3 +57,5 @@ notes: |
   mechanism — correctness is "re-run the same pipeline on the re-staged AC".
   Contrast with the CONFIRM route (GE-111d-2), which DOES need a new durable
   record because the code legitimately does not move.
+change_target: code
+risk_surface: internal

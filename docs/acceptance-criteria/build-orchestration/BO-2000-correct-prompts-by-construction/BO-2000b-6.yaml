@@ -1,0 +1,37 @@
+id: BO-2000b-6
+title: "python-coder restates the single-simple-command shell discipline"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the python-coder template,
+  When it describes how to run shell commands,
+  Then it requires each shell command to be a single, simple command (no chaining
+    with &&, ;, ||, pipes to other commands, or cd),
+  So the coder's shell usage stays inside the project's auto-allowed command shape.
+depends_on:
+  - BO-2000b
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The python-coder template must restate the single-simple-command shell discipline (absolute paths; no &&/;/||/pipes/cd)."
+  - "Test coverage: assert the template contains the shell-discipline restatement."
+delivers_to:
+  agent: llm-expert
+  contract: "A shell-discipline restatement clause in the python-coder template"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

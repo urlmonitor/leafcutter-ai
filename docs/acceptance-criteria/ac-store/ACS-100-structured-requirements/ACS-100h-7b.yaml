@@ -55,3 +55,5 @@ notes: |
   generation. The actual limit logic lives in ACS-100h-7a (python); this AC is the
   template-prose change that calls it and blocks. The L3 edge ACS-100h-7-i covers
   the tree-already-at-limit / cannot-auto-split branch of the blocking error.
+change_target: prompt
+risk_surface: internal

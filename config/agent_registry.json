@@ -472,8 +472,8 @@
                 },
                 {
                     "skill_id": "run-tests",
-                    "mode": "always",
-                    "note": "Test execution is performed directly via Bash tool (inline pytest invocation), not by delegating to the test-runner agent"
+                    "mode": "conditional",
+                    "descriptive_only": true
                 }
             ],
             "knowledge_channels": [
@@ -764,7 +764,7 @@
                 {
                     "skill_id": "direct-write",
                     "mode": "conditional",
-                    "condition": "glossary coverage lint — agent writes directly to docs/glossary.md and docs/glossary_blacklist.md for simple glossary updates, without spawning a specialist"
+                    "descriptive_only": true
                 }
             ],
             "behavioral_patterns": [

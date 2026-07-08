@@ -40,3 +40,5 @@ covered_by:
   - GE-101b
   - GE-101c
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

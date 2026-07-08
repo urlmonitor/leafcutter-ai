@@ -47,3 +47,5 @@ notes: |
   Guards the trust property: tolerance for an uncollectable file must NOT degrade
   into tolerance for real regressions. The exit status must still be non-passing
   when a collectable test genuinely fails.
+change_target: code
+risk_surface: internal

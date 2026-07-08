@@ -26,3 +26,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BP-006c-1, BP-006c-2]
 implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

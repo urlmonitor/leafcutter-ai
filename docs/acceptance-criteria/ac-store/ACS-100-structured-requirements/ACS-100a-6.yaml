@@ -48,3 +48,5 @@ implemented_by: []
 # NOTE: ACS-100a-6 is spec-only — no implementation yet. The dangling-reference
 # check is not part of check_ac_limits.py (which handles count limits only).
 # A separate hook (check_ac_dangling_refs.py) needs to be implemented.
+change_target: code
+risk_surface: internal

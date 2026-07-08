@@ -29,3 +29,5 @@ covered_by:
   - TKT-300e-3
   - TKT-300e-4
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

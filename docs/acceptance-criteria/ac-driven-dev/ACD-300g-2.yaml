@@ -48,3 +48,5 @@ covered_by:
   - ACD-300g-2-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/03_TICKET-20260618-ACD-300g-2.md
+change_target: pipeline
+risk_surface: internal

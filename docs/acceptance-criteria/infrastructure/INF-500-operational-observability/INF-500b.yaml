@@ -29,3 +29,7 @@ covered_by:
   - INF-500b-5
   - INF-500b-6
 implemented_by: []
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary

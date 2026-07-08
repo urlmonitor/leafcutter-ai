@@ -51,3 +51,5 @@ covered_by:
   - ACD-1200a-9-i
 implemented_by:
   - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/01_single_location_write_and_backref.md
+change_target: code
+risk_surface: internal

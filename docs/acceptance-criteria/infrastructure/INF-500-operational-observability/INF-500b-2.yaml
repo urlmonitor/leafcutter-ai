@@ -34,3 +34,5 @@ amended_by: []
 superseded_by: null
 covered_by: [INF-500b-2-i, INF-500b-2-ii]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

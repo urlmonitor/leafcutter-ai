@@ -160,6 +160,47 @@ before signing off.
 
 ---
 
+## Complexity-Driven Model Tier Selection
+
+When a ticket's frontmatter contains `complexity: high`, the llm-expert agent
+applies a **challenge gate** before treating the ticket as Opus-tier work.
+
+### Challenge Gate Procedure
+
+1. **Read the `complexity` field** from the ticket frontmatter. If absent or
+   `low` / `medium`, proceed normally (Sonnet).
+2. **If `complexity: high`**, ask:
+   > "Can this ticket scope be simplified to run on Sonnet? (yes — simplify / no — use Opus)"
+3. **User says "yes — simplify"**: work with the user to reduce the scope,
+   rewrite or split acceptance criteria, and re-infer complexity. Update the
+   ticket frontmatter with the revised scope. Do NOT escalate to Opus.
+4. **User says "no — use Opus"**: proceed with Opus-tier reasoning. Record
+   the decision in `## Comments`:
+   ```
+   Challenge gate: user confirmed Opus required for complexity: high ticket.
+   ```
+5. **`complexity_override: force_opus`**: if the ticket frontmatter contains
+   this field, skip the challenge gate entirely and proceed with Opus. Record
+   the override in `## Comments`:
+   ```
+   Challenge gate skipped: complexity_override: force_opus in frontmatter.
+   ```
+
+### Model Tier Mapping
+
+| `complexity` value | Model tier | Challenge gate fires? |
+|---|---|---|
+| `low` | Sonnet | No |
+| `medium` | Sonnet | No |
+| `high` | Opus (after gate) | Yes |
+| any, with `complexity_override: force_opus` | Opus | No (override wins) |
+
+The challenge gate is a one-time dialogue. If the user does not respond within
+the current session, default to Sonnet (conservative) and note the timeout in
+`## Comments`.
+
+---
+
 ## Stop-and-Ask Rule
 
 The `llm-expert` agent MUST defer certain work to `workflow-architect` or to the

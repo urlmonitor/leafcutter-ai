@@ -59,3 +59,5 @@ notes: |
 
   IT-PO enrichment (2026-06-22): pinned first-# split rule and the
   pure-function / no-try-except constraint per the error-handling policy.
+change_target: code
+risk_surface: internal

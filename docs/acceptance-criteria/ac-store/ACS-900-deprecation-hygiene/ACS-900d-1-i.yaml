@@ -44,3 +44,5 @@ notes: |
   IT-PO enrichment (2026-06-22): pinned null/missing/[] normalization to one
   empty-target outcome and forbade special-casing never-claimed vs just-emptied
   (both reduce to zero targets => no block), keeping the logic minimal.
+change_target: code
+risk_surface: internal

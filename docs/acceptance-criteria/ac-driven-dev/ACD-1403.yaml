@@ -9,3 +9,5 @@ criteria: |
   And the orphaned test file test_check_ac_parent_covered_by.py is deleted
   And the bug symptom "40 tests fail with FileNotFoundError" must not occur
 notes: "Authored by /quick-fix. Root cause: scripts/commit_guardian/check_ac_parent_covered_by.py was deleted but its test file unit_tests/commit_guardian/test_check_ac_parent_covered_by.py was not removed."
+change_target: code
+risk_surface: internal

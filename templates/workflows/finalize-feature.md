@@ -1,57 +1,121 @@
 ---
-description: >
-  Orchestrates the hardened post-merge feature finalization sequence with
-  a pre-merge test baseline, merge-first step, triage-driven halt gate,
-  pre-merge ticket/AC closure (step 3.5 — commits status: done and
-  source AC work_status: done on the feature branch before the PR merge),
-  and accurate reporting of untracked pre-existing failures (auto-ticketing
-  is disabled — create-ticket is a workflow, not an agent; operators must
-  run /create-ticket manually to track pre-existing/flaky failures).
-  Requires Claude Code >= 2.1.154 (workflow script support). The legacy
-  LLM agent fallback was removed — see ADR-006.
+description: |
+  Step-map documentation for the finalize-feature.js workflow script.
+  Covers pre-flight target resolution, step-by-step orchestration, and
+  known edge-cases. This is a reference doc — the authoritative source
+  of truth is the JS file itself.
 ---
 
-# finalize-feature workflow
+# finalize-feature — Step Map
 
-## Step map
+Reference for `templates/workflows-js/finalize-feature.js`.  
+The workflow drives the post-merge feature finalization sequence as a flat
+depth-1 agent chain (ADR-006).
 
-| Step | Name | Description | Halt categories |
-|------|------|-------------|-----------------|
-| 0 | `capture_baseline` | Reclaim any stale `/tmp/leafcutter-main-baseline-*` worktrees from prior interrupted runs (AC-1: removes before creating). Create a temporary detached worktree at `origin/main`, run the full test suite, store the list of failing test IDs as the pre-merge baseline, then remove the temp worktree (Step D). `cleanupBaselineWorktree()` is also called on all subsequent halt/success paths to guarantee cleanup even if step D did not run. Graceful on failure — if the baseline cannot be captured the workflow continues with `baseline_failures = null` and triage classifies all post-merge failures conservatively as regressions. | — |
-| 1 | `open_pr` | Probe for an open PR on the current branch. If none exists, dispatch the `pull-request` agent to create one. | — |
-| 2 | `merge_main_into_worktree` | Merge `origin/main` into the feature worktree using `--no-commit --no-ff`. On conflict, run `git merge --abort` and halt. On success the worktree reflects the post-merge tree for test runs. | `merge_conflict` |
-| 3 | `post_merge_tests_and_triage` | Run the full test suite on the post-merge worktree. Collects `failing_tests` list. If no failures, skip triage sub-steps and continue. When failures exist, dispatch `test-failure-triage` with `post_merge_failures`, `baseline_failures`, `baseline_sha`, `feature_branch`, and `changed_files`. If `triage_report.blocks_finalization == true`: hard halt — step 4 (PR merge) is structurally unreachable. If `false`: continue (all failures are pre-existing). | `test_regression` |
-| 3.5 | `pre_merge_ac_closure` | **Runs on the feature branch, before the PR merge.** First resets/aborts the Step 2 `--no-commit --no-ff` test-merge so the closure commit is clean (no premature origin/main content). Then finds in-scope tickets where `status != done`, sets `status: done` in each ticket's frontmatter, and for each ticket with a `source_ac` field invokes `mark_ac_done.py --ticket <path> --ac-root docs/acceptance-criteria/`. Any non-zero `mark_ac_done.py` exit is logged as a WARNING — AC closure is non-fatal and finalize proceeds. Commits all changes as a single `chore(tickets): close tickets and source ACs` commit on the feature branch so the PR merge carries closure to `origin/main` atomically. Idempotent: already-closed tickets and ACs are no-ops; skipped entirely when the closure commit already exists or the PR is already merged. Reports `tickets_closed`, `acs_closed`, `acs_skipped` in the return payload. | — |
-| 4 | `merge_pr` | Prompt gate: only reached when `blocks_finalization === false` (tests passed or all failures are pre-existing). Present branch name and PR number. On `yes` dispatch `pull-request` to merge via `gh pr merge`. A defensive guard returns `status: halted` with `reason: test_regression` if `blocks_finalization` is truthy at this point. | `user_declined_merge` |
-| 5 | `sync_local_main` | `git checkout main` then `git pull`. Reports new HEAD SHA to the user. No commits are made in this step — it is read-only. Pre-commit-config probe is not required (no direct commit path to main exists; all commits reach main through the PR merge gate at step 4). | — |
-| 6 | `report_untracked_failures_and_scope_detect` | For each `pre_existing` or `flaky` triage entry, emit a structured report listing the untracked failure and instructing the operator to run `/create-ticket` manually. **Auto-ticketing is disabled**: `create-ticket` is a workflow (slash command), not a registered agent, and cannot be dispatched via `agent()` (removed from the agent registry in EPIC-AcPipelineConsolidation v2.0.0). No tracking tickets are created automatically; the `untracked_failures` field in the return payload lists each failure. Then dispatch `status-checker` to detect branch scope (single-ticket vs epic) and which tickets were in scope — **informational only, no writes on main**. Ticket closure (`status: done`) and AC closure already happened in step 3.5 on the feature branch (pre-merge). Physical folder moves (`git mv`) and reconciliation commits on `main` were removed (ticket 04, EPIC-FinalizeFeatureHardening): `status:` frontmatter is the sole source of truth for ticket lifecycle (BO-400a-3/4/5, BO-400c-1/2). | — |
-| 7 | `remove_worktree` | Probe `git worktree list`. If the feature worktree still exists, dispatch `worktree-agent remove` (confirmation gate delegated to the agent). | `worktree_conflict_pids` |
+## Pre-flight — Branch and Worktree Resolution
 
-## Halt categories
+Resolves `branch` and `worktree_root` for all downstream steps.
 
-| Category | Halted at | Meaning | Resolution |
-|----------|-----------|---------|------------|
-| `merge_conflict` | Step 2 | `git merge origin/main --no-commit --no-ff` returned a conflict. `git merge --abort` was run automatically. | Resolve conflicts on the feature branch, commit, push, then re-run `/finalize-feature`. |
-| `test_regression` | Step 3 | `triage_report.blocks_finalization == true` — one or more failing tests are classified as regressions introduced by this branch. The PR has NOT been merged. | Fix the regressions on the feature branch (new commits), push, then re-run `/finalize-feature`. |
-| `user_declined_merge` | Step 4 | User answered `no` to the merge prompt. No changes made to main. | Re-run `/finalize-feature` and answer `yes` when ready to merge. |
-| `worktree_conflict_pids` | Step 7 | `worktree-agent` reported conflict PIDs blocking worktree removal. | Terminate or resolve the listed PIDs, then re-run `/finalize-feature`. |
+**Anchors on the epic/ticket argument, not the session CWD
+(TICKET-20260707-Finalize_Preflight_Branch_Detection, PR #231):** when the
+caller passes a target argument (e.g. `/finalize-feature EPIC-FooBar`), the
+pre-flight runs `git worktree list --porcelain` and matches the worktree whose
+branch equals the argument, equals `feature/<argument>`, or contains it as a
+substring (excluding `main`/`master`; shortest match wins on ties). Branch and
+toplevel detection are then anchored with `git -C <worktree_root>`. This lets
+`/finalize-feature` be invoked from anywhere — including the main repo checked
+out on `main` — without a false "must be run from a feature branch" abort.
 
-## Cross-references
+- If a matching worktree is found: `BRANCH` and `WORKTREE_ROOT` are set to that
+  worktree's branch and absolute path.
+- If no matching worktree is found: the workflow returns a clear, actionable
+  error (`No worktree found matching '<argument>'`) rather than silently
+  resolving to the wrong repo.
+- If no argument is provided: falls back to CWD-based detection
+  (`git branch --show-current` + `git rev-parse --show-toplevel`) for
+  backward compatibility.
 
-- How-to guide: `docs/how-to/finalize-feature.md`
-- JS implementation: `templates/workflows-js/finalize-feature.js`
-- Triage agent: `templates/agents/test-failure-triage.md`
+The "must be run from a feature branch" abort fires on the **resolved** branch,
+never on the ambient CWD branch.
 
-# v2.1.154+: deterministic JS workflow (leaf workflow — no nested workflow() calls)
+## Pre-flight 2 — GitHub Account Verification (EMU-aware)
 
-> **Requires Claude Code >= 2.1.154.** If your install does not support the
-> Workflow tool, you will see this error — do not proceed:
->
-> ```
-> Error: /finalize-feature requires Claude Code >= 2.1.154.
-> The legacy LLM agent fallback was removed in EPIC-FinalizeFeatureHardening
-> because the depth-1 sub-agent limit made it non-functional (ADR-006).
-> Please upgrade Claude Code and re-run /finalize-feature.
-> ```
+Reads `gh_target_account` from the worktree's `settings.json`. If set,
+verifies the active `gh` account matches and switches if needed. No-op when
+`gh_target_account` is absent.
 
-Invoke `finalize-feature.js` with: $ARGUMENTS
+## Step 0 — Pre-merge Baseline Test Run
+
+Creates a temporary detached worktree at `origin/main`, captures baseline
+failing tests, then removes the worktree.
+
+**Deploys shims before pytest (FIN-100a-4):** runs `scripts/build.py
+--target-dir <temp-worktree>` before the test suite. This ensures
+`commit_guardian`, `feedback` scripts, and `.pre-commit-config.yaml` are
+deployed in the baseline environment — matching the production build state
+so deploy-dependent tests are not spuriously red in the baseline.
+
+Graceful degradation: if the worktree creation or build/test run fails,
+`baselineFailures` is set to `null` and triage classifies all Step 3
+failures as regressions (conservative).
+
+## Step 1 — Open PR If Missing
+
+Probes `gh pr list --head <BRANCH>`. If no PR exists, dispatches the
+`pull-request` agent to open one. Includes EMU REST fallback when
+`gh_repo` is configured.
+
+## Step 2 — Merge origin/main Into Feature Worktree
+
+Runs `git merge origin/main --no-commit --no-ff` inside the feature worktree
+so Step 3 tests against the post-merge tree. On conflict: aborts the merge
+and halts with `reason: merge_conflict`.
+
+## Step 3 — Post-merge Tests + Triage
+
+**Deploys shims before pytest (FIN-100a-4):** runs `scripts/build.py
+--target-dir <WORKTREE_ROOT>` before the test suite. This is the same
+build step as Step 0, ensuring identical deploy state so that deploy-dependent
+tests cannot fail in one run and pass in the other.
+
+Then runs the full test suite via pytest. If tests pass, skips triage and
+proceeds to Step 4.
+
+If tests fail, dispatches `test-failure-triage` to classify failures as
+`regression | stale_test | pre_existing | flaky`. Halts with
+`reason: test_regression` when `blocks_finalization === true`.
+
+## Step 3.5 — Pre-merge AC Closure
+
+Resets the Step 2 test-merge, finds open tickets introduced by the branch,
+sets `status: done`, closes source ACs via `mark_ac_done.py`, and commits
+on the feature branch — before the PR merges (so the closure commit lands
+on `main` atomically with the feature).
+
+## Step 4 — Merge PR to Main (Confirmation-Gated)
+
+Probes PR state; skips if already merged. Presents a confirmation gate to
+the user, then dispatches the `pull-request` agent to merge.
+
+## Step 5 — Sync Local Main
+
+Runs `git checkout main && git pull` anchored to `WORKTREE_ROOT`.
+
+## Step 6 — Report Pre-existing / Flaky Failures + Scope Detection
+
+Sub-step 6a: logs any pre-existing/flaky triage entries as untracked failures
+(auto-ticketing is disabled — `create-ticket` is a workflow, not an agent).
+Sub-step 6b: scope detection only (reads ticket frontmatter `status:`, no
+writes on `main`).
+
+## Step 7 — Remove Feature Worktree
+
+Probes `git worktree list --porcelain`; delegates removal (with its own
+confirmation gate) to the `worktree-agent`.
+
+## Args Reference
+
+| Arg | Type | Description |
+|-----|------|-------------|
+| `args` (positional string) | `string \| null` | Epic/ticket name to finalize (e.g. `EPIC-FooBar`). When provided, pre-flight resolves branch/worktree_root via `git worktree list --porcelain` (matching the argument against worktree branches) instead of the ambient CWD. |
+| `baseline_ts` | `string \| null` | Timestamp suffix for the temp baseline worktree path. Replaces `Date.now()` (banned in E2). Defaults to `'baseline'` when absent. |

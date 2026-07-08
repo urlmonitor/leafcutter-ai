@@ -62,3 +62,5 @@ notes: |
   and PROJECT_CONTEXT (no detect-and-recover sibling authored here; detection
   lives separately under BO-1600c). Serialization is scoped to the git write
   portion only so parallelism of the non-git work is preserved.
+change_target: infrastructure
+risk_surface: safety

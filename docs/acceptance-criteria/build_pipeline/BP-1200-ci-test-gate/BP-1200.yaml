@@ -28,3 +28,5 @@ covered_by:
   - BP-1200b
   - BP-1200c
 implemented_by: []
+change_target: pipeline
+risk_surface: safety

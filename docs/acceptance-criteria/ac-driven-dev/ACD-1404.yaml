@@ -9,3 +9,5 @@ criteria: |
   And the orphaned test file test_v2_pipeline_ac_store_wiring.py is deleted
   And the bug symptom "5 tests fail referencing removed template" must not occur
 notes: "Authored by /quick-fix. Root cause: templates/agents/business-analyst-v2.md was deleted but its integration test file tests/test_v2_pipeline_ac_store_wiring.py was not removed."
+change_target: code
+risk_surface: internal

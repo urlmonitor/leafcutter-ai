@@ -45,3 +45,5 @@ covered_by:
   - ACS-100i-2-i
 implemented_by:
   - "scripts/commit_guardian/check_ac_parent_covered_by.py"
+change_target: code
+risk_surface: internal

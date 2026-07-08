@@ -46,3 +46,5 @@ implemented_by: []
 notes: |
   Self-expiry is the anti-rot guarantee: an exemption cannot outlive its declared
   expiry. Past-expiry => flagged + failing + no longer exempting.
+change_target: code
+risk_surface: internal

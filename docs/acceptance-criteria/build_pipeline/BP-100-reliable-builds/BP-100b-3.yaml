@@ -33,3 +33,5 @@ covered_by:
   - tests/test_build_artifact_parity.py::TestManagedArtifactDirsCoversAllCategories
 implemented_by:
   - scripts/build_phases.py
+change_target: pipeline
+risk_surface: internal

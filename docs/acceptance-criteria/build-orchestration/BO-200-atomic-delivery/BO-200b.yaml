@@ -25,3 +25,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-200b-1, BO-200b-2, BO-200b-3]
 implemented_by: []
+change_target: code
+risk_surface: safety

@@ -58,3 +58,5 @@ notes: |
   to the required-status-checks list for main); a documentation-expert follow-up
   may own the manual fallback runbook. Requires the non-EMU urlmonitor account
   for the API calls.
+change_target: config
+risk_surface: safety

@@ -38,3 +38,5 @@ notes: |
   complement, not a replacement. The component-diagram trigger captures the
   boundary between the new blocking hook and the existing audit script so a future
   reader sees the two are complementary by design.
+change_target: code
+risk_surface: contract_boundary

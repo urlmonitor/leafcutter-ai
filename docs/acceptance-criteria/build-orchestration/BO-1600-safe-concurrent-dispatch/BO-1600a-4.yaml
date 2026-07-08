@@ -50,3 +50,5 @@ covered_by: []
 implemented_by: []
 notes: |
   Satisfies the BO-1600a L1 documentation_triggers: [sequence-diagram].
+change_target: docs
+risk_surface: internal

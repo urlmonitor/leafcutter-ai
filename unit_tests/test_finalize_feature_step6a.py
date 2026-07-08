@@ -26,6 +26,14 @@ def _js_text() -> str:
 
 
 def _md_text() -> str:
+    """Return the prose workflow template text.
+
+    Returns an empty string when the file has been retired (BP-300d deleted
+    templates/workflows/finalize-feature.md). Tests that previously read this
+    file must either use the empty-string fallback or repoint to _js_text().
+    """
+    if not _MD_PATH.exists():
+        return ""
     return _MD_PATH.read_text(encoding="utf-8")
 
 
@@ -111,18 +119,29 @@ class TestStepMapDoc:
     and MUST describe the accurate untracked-failures reporting behaviour."""
 
     def test_no_stale_dispatch_create_ticket_in_step6(self):
-        """Step 6 row must not say it dispatches create-ticket as an agent."""
-        md = _md_text()
-        # The old text said "dispatch `create-ticket` to produce an inbox tracking ticket"
-        assert "dispatch `create-ticket` to produce an inbox tracking ticket" not in md, (
-            "Step 6 doc must not claim create-ticket is dispatched as an agent"
+        """Step 6 must not claim create-ticket is dispatched as an agent.
+
+        The prose template (templates/workflows/finalize-feature.md) was retired
+        by BP-300d. The live source of truth is now finalize-feature.js. This test
+        guards the JS to ensure the stale dispatch claim was never introduced there.
+        """
+        # MD was retired (BP-300d); guard the live JS instead.
+        js = _js_text()
+        assert "dispatch `create-ticket` to produce an inbox tracking ticket" not in js, (
+            "Step 6 (JS) must not claim create-ticket is dispatched as an agent"
         )
 
     def test_auto_ticketing_disabled_explained_in_doc(self):
-        """Step 6 doc must explain that auto-ticketing is disabled."""
-        md = _md_text()
-        assert "auto-ticketing" in md.lower() or "Auto-ticketing" in md, (
-            "Step 6 in finalize-feature.md must explain that auto-ticketing is disabled"
+        """Step 6 must explain that auto-ticketing is disabled.
+
+        The prose template (templates/workflows/finalize-feature.md) was retired
+        by BP-300d. The live source of truth is now finalize-feature.js, which
+        contains the auto-ticketing explanation in the step 6 log() call.
+        """
+        # MD was retired (BP-300d); guard the live JS instead.
+        js = _js_text()
+        assert "auto-ticketing" in js.lower() or "Auto-ticketing" in js, (
+            "Step 6 in finalize-feature.js must explain that auto-ticketing is disabled"
         )
 
     def test_untracked_failures_field_documented(self):

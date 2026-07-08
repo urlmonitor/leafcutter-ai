@@ -50,3 +50,5 @@ covered_by:
 implemented_by:
   - "templates/scripts/commit_guardian/check_contract_shrinking.py"
   - "templates/commit-guardian/check_contract_shrinking.py"
+change_target: code
+risk_surface: contract_boundary

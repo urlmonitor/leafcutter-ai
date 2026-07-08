@@ -46,3 +46,5 @@ implemented_by: []
 notes: |
   Report-only is the safest stage: full visibility, zero blocking. It is also the
   chosen no-config default (see TQ-100e-1-ii).
+change_target: code
+risk_surface: internal

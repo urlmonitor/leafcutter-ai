@@ -928,6 +928,15 @@ def build_agent_cards(
         fm = _parse_frontmatter(template_text)
         agent_id = fm.get("name") or template_file.stem
 
+        # Fast-path for dry-run: skip the expensive generate_card() call (which
+        # performs multiple os.walk passes over the package tree per agent) and
+        # just print the DRY-RUN intent.  Card content is only materialised when
+        # a real write will follow.
+        if dry_run:
+            print(f"  [DRY-RUN] would write docs/agents/cards/{agent_id}.card.md")
+            written += 1
+            continue
+
         registry_entry = registry_map.get(agent_id, {"id": agent_id})
 
         card_path = cards_dir / f"{agent_id}.card.md"
@@ -945,11 +954,6 @@ def build_agent_cards(
             )
         except Exception as exc:  # noqa: BLE001
             _log.warning("Card generation failed for %s: %s", agent_id, exc)
-            continue
-
-        if dry_run:
-            print(f"  [DRY-RUN] would write docs/agents/cards/{agent_id}.card.md")
-            written += 1
             continue
 
         if not force and card_path.exists():

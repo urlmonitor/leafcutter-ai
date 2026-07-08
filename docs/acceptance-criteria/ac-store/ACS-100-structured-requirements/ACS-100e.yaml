@@ -28,3 +28,5 @@ covered_by:
   - ACS-100e-3
   - ACS-100e-4
 implemented_by: []
+change_target: config
+risk_surface: contract_boundary

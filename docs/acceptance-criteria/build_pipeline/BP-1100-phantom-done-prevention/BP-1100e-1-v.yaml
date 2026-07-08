@@ -1,0 +1,57 @@
+id: BP-1100e-1-v
+readiness: approved
+priority: high
+title: "Declared file lists parse from the ticket store's real YAML serialization forms (column-0 block, indented block, and flow-sequence)"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a done ticket whose frontmatter serializes files_touched (or out_of_scope)
+    as a PyYAML-default column-0 block sequence (dashes at column 0, no indentation),
+    as an indented block sequence, or as an inline flow-sequence files_touched: [a, b]
+  And any declared entry may be single- or double-quoted and may carry a trailing
+    inline YAML comment
+  When the pre-done reconciliation parses the ticket's declared scope
+  Then it extracts the full set of declared paths from whichever serialization form the
+    ticket actually uses — it does NOT silently return an empty declared set on a real
+    column-0 ticket (which would make the check a no-op) nor on a flow-sequence ticket
+  And it strips surrounding quotes and trailing inline comments from each entry so the
+    stored path matches the path reported by the diff
+  And it correctly parses the real on-disk epic tickets (e.g. a ticket declaring its
+    files_touched entries as column-0 dashes yields those paths, not zero)
+depends_on:
+  - BP-1100e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: relates
+    status: exists
+  - path: "templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "_parse_yaml_list_field must match block sequences with ZERO-OR-MORE leading whitespace ([ \\t]* not [ \\t]+) in both the outer field pattern and the item findall, so PyYAML-default column-0 dashes parse. The original [ \\t]+ requirement made the hook a silent no-op on every real ticket (files_touched dumped at column 0)."
+  - "When the block-sequence pattern does not match, fall through to a flow-sequence branch that parses files_touched: [a, b]; split items quote-aware (only on commas outside a quoted span) so a quoted item containing a comma stays one item."
+  - "Strip each parsed item via _strip_yaml_value: remove surrounding matching single/double quotes FIRST (a quoted value's interior is returned verbatim, including a legitimate ' #' inside the quotes), then strip a trailing inline YAML comment (space-hash rule) only for unquoted values."
+  - "PORTABLE SURFACE: this parsing lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; ADR-001 build.py round-trip parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The reconciliation verdict whose declared-scope input this AC guarantees is parsed from the real on-disk serialization, so the check is never a silent no-op on a real ticket."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/01_TICKET-20260706-BP-1100e-1.md
+notes: |
+  Regression-lock authored post-remediation (BP-1100e round 1 D1/D3/D5, round 2 Fix5).
+  Behavior already implemented and test-locked in
+  unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py
+  (real column-0 parsing, flow-list, quote/comment stripping).

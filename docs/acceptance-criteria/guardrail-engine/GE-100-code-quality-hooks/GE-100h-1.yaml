@@ -51,3 +51,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CodeQualityHooks/17_TICKET-20260616-GE-100h-1.md
+change_target: code
+risk_surface: internal

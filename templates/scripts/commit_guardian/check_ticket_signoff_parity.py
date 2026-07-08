@@ -44,6 +44,7 @@ from _signoff_parity_checks import (  # noqa: E402
     VALID_STATUSES,
     _build_signoffs_map,
     _check_done_folder,
+    _check_done_folder_prohibition,
     _check_enum_membership,
     _check_orphans,
     _check_parity,
@@ -70,6 +71,7 @@ __all__ = [
     "VALID_STATUSES",
     "_build_signoffs_map",
     "_check_done_folder",
+    "_check_done_folder_prohibition",
     "_check_enum_membership",
     "_check_orphans",
     "_check_parity",
@@ -111,7 +113,7 @@ def _validate_ticket_content(content: str, ticket_path: str, valid_components: s
     """
     try:
         fm = _parse_frontmatter(content)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return [f"frontmatter parse error: {exc}"]
 
     if fm is None:
@@ -138,6 +140,7 @@ def _validate_ticket_content(content: str, ticket_path: str, valid_components: s
     violations.extend(_check_parity(agents, signoffs))
     violations.extend(_check_orphans(agents, signoffs))
     violations.extend(_check_done_folder(ticket_path, agents))
+    violations.extend(_check_done_folder_prohibition(ticket_path))
 
     # Check #6: signed-off agents with requires_ticket_section: true must have no unchecked tasks.
     _proj_root = find_project_root()
@@ -221,7 +224,7 @@ def main() -> int:
 
         try:
             violations = _validate_ticket(ticket_path, valid_components)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             # Crash-resilient: a completely unexpected error on one ticket
             # emits a warning and continues.
             print(

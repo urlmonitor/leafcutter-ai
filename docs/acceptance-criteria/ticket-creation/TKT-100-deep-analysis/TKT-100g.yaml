@@ -33,3 +33,5 @@ covered_by:
   - TKT-100g-4
   - TKT-100g-5
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

@@ -50,3 +50,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-ACS-500a-1.md
+change_target: schema
+risk_surface: contract_boundary

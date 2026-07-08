@@ -54,6 +54,8 @@ from build_phases import (
     build_workflow_tools,
     build_knowledge_scripts,
     build_template_standalone_scripts,
+    detect_deploy_collisions,
+    _compute_phase_mappings,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -560,7 +562,7 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
                 source_paths.add(f"templates/scripts/feedback/{f.name}")
     # Mirror the RuntimeError from _manifest_feedback_scripts for consistency.
     if not any(p.startswith("templates/scripts/feedback/") for p in source_paths):
-        raise RuntimeError(
+        raise RuntimeError(  # noqa: TRY003
             f"_get_source_paths_for_guard: tracked source directory "
             f"'{src_fb}' is absent or contains no .py files. "
             "Restore templates/scripts/feedback/ from git history."
@@ -740,12 +742,12 @@ def _classify_untracked_sources(
             exc.returncode,
             exc.stderr,
         )
-        raise RuntimeError(
+        raise RuntimeError(  # noqa: TRY003
             f"Cannot determine tracked-ness: 'git ls-files' exited {exc.returncode}"
         ) from exc
     except OSError as exc:
         _log.warning("_classify_untracked_sources: could not run git: %s", exc)
-        raise RuntimeError(
+        raise RuntimeError(  # noqa: TRY003
             "Cannot determine tracked-ness: git executable not found or not runnable"
         ) from exc
 
@@ -930,6 +932,48 @@ def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool)
     else:
         _success(f"wrote {output_path.relative_to(target_root)}")
         return 1
+
+
+def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
+    """Preflight guard: abort the build when deploy-path collisions are detected (BP-100m).
+
+    Enumerates (source_template, resolved_target) pairs for all file-based
+    artifact phases via ``_compute_phase_mappings``, then calls
+    ``detect_deploy_collisions`` to find any target path claimed by two or
+    more distinct source templates.  Runs in both real and dry-run modes
+    because the collision is a build-graph error, not a write-time concern.
+
+    Detection is path-keyed and content-agnostic (BP-100m-1-i): byte-identical
+    source templates still collide.  Cross-platform fan-out (same source →
+    different target paths) is never flagged (BP-100m-2-i).  All colliding
+    sources and the shared target are named in the error output (BP-100m-2).
+
+    Args:
+        output_root: Absolute path to the consolidated output directory
+            (e.g. ``<target>/.leafcutter``).
+        config: Build configuration dict used to resolve active platforms.
+
+    Returns:
+        0 if no collisions detected (build may proceed).
+        1 if one or more collisions found (build must abort).
+    """
+    phase_mappings = _compute_phase_mappings(output_root, config)
+    collisions = detect_deploy_collisions(phase_mappings)
+    if not collisions:
+        return 0
+
+    print(
+        "[COLLISION GUARD] Build aborted: deploy-path collision(s) detected.",
+        file=sys.stderr,
+    )
+    for c in collisions:
+        sources_str = "\n  ".join(str(s) for s in c["sources"])
+        print(
+            f"[COLLISION GUARD]  target:  {c['target']}\n"
+            f"[COLLISION GUARD]  sources:\n  {sources_str}",
+            file=sys.stderr,
+        )
+    return 1
 
 
 def _run_phases(
@@ -1454,6 +1498,13 @@ def main(argv: list[str] | None = None) -> int:
     _heading("Config migration")
     _migrate_skills_config(config_path, target_root, args.dry_run)
     print()
+
+    # Deploy-path collision guard (BP-100m): abort before any writes when two
+    # or more source templates resolve to the same deploy target.  Runs in both
+    # real and dry-run modes — a collision is a build-graph error, not a
+    # write-time concern.
+    if _check_deploy_collision_guard(output_root, config):
+        return 1
 
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
 

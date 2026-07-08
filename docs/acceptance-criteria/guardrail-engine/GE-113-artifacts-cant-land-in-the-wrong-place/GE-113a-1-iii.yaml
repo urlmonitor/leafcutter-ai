@@ -36,3 +36,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Scope-containment edge case: the test guard only governs test files; an ordinary source file outside test_root is none of its business."
+change_target: code
+risk_surface: internal

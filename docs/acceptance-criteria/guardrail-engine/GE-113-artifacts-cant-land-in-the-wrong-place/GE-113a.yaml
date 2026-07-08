@@ -30,3 +30,5 @@ documentation_triggers:
   - how-to
   - sequence-diagram
 notes: "User-authored intent: BrainCandy. Turns silently-skipped/misplaced tests into a hard stop pointing at the test-root config."
+change_target: code
+risk_surface: contract_boundary

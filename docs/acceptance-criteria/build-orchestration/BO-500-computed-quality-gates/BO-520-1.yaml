@@ -43,3 +43,5 @@ amended_by: [it-po-v3]
 superseded_by: BO-610-4
 covered_by: [BO-520-1-i]
 implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

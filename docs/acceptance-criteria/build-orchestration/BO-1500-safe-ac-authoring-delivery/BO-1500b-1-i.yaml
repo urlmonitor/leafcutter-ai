@@ -51,3 +51,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/06_TICKET-20260624-BO-1500b-1-i.md
+change_target: infrastructure
+risk_surface: internal

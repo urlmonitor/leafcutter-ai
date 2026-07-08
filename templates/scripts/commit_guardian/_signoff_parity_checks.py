@@ -69,7 +69,12 @@ def load_components_registry(project_root_path: Path) -> set[str]:
         with open(registry_path, encoding="utf-8") as f:
             data = json.load(f)
         return {comp["id"] for comp in data.get("components", []) if isinstance(comp, dict) and "id" in comp}
-    except Exception:
+    except Exception:  # noqa: BLE001  # fail-open: skip components validation, but surface why
+        print(
+            f"[check-ticket-signoff-parity] WARNING: could not load components registry at "
+            f"{registry_path}; skipping components validation",
+            file=sys.stderr,
+        )
         return set()
 
 
@@ -103,7 +108,7 @@ def load_agent_registry(project_root_path: Path) -> dict[str, bool]:
             for agent in data.get("agents", [])
             if isinstance(agent, dict) and "id" in agent
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         print(
             f"[check-ticket-signoff-parity] WARNING: could not load agent registry at "
             f"{registry_path}; skipping check #6",
@@ -503,6 +508,36 @@ def _check_done_folder(ticket_path: str, agents: dict) -> list[str]:
                 f"still has status '{status}' (must be 'signed_off' or 'not_needed')"
             )
     return violations
+
+
+def _check_done_folder_prohibition(ticket_path: str) -> list[str]:
+    """Report a violation when a ticket is physically located in a done/ subfolder.
+
+    BO-400c-3: Tickets must NOT be moved into done/ subfolders via filesystem
+    moves. Use the frontmatter ``status: done`` field instead. This check fires
+    regardless of agent status — even a fully signed-off ticket must not be
+    placed at a done/ path, because the done/ filesystem convention is superseded
+    by the frontmatter-status convention.
+
+    Handles both forward-slash and backslash path separators so Windows paths
+    work correctly.
+
+    Args:
+        ticket_path: The file path as provided by pre-commit (may use either
+            slash style).
+
+    Returns:
+        A list with one violation string when the path contains ``/done/``;
+        empty list otherwise.
+    """
+    normalised = ticket_path.replace("\\", "/").lower()
+    if "/done/" not in normalised:
+        return []
+    return [
+        f"Prohibited: ticket physically located at a done/ path ('{ticket_path}'). "
+        f"Use frontmatter 'status: done' instead of moving the file into a done/ "
+        f"subfolder (BO-400c-3)."
+    ]
 
 
 def _check_unchecked_tasks(

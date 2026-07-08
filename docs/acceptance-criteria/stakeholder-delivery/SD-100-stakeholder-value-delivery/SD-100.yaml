@@ -29,3 +29,5 @@ amended_by: []
 superseded_by: null
 covered_by: [SD-100a, SD-100b, SD-100c, SD-100d, SD-100e]
 implemented_by: []
+change_target: [code, prompt]
+risk_surface: contract_boundary

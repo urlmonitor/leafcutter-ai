@@ -36,3 +36,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Boundary edge case: a file exactly at test_root (not in a subdir) must not be a false positive."
+change_target: code
+risk_surface: internal

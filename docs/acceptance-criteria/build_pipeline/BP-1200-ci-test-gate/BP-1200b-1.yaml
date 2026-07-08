@@ -68,3 +68,5 @@ notes: |
   IT-PO note: ci.yml already exists with lint (blocking) + typecheck
   (continue-on-error). This AC ADDS a third, blocking test job. The job name is a
   load-bearing contract consumed by BP-1200c-1's branch-protection list.
+change_target: pipeline
+risk_surface: safety

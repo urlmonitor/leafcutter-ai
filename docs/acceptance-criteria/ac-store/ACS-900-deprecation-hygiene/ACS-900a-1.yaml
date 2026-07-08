@@ -57,3 +57,5 @@ notes: |
   (deployed) + templates/commit-guardian/ (package source). delivers_to refined
   to name the status field in the armed-inspection set the downstream check
   consumes. ADR-001 deployed/template parity captured in it_requirements.
+change_target: code
+risk_surface: contract_boundary

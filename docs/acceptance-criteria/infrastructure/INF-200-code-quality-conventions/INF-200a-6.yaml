@@ -38,3 +38,7 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+change_target:
+  - prompt
+  - pipeline
+risk_surface: internal

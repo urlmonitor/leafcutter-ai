@@ -1,0 +1,38 @@
+id: BO-2000b-5
+title: "python-coder spot-checks against the real artifact and bans phantom tests"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the python-coder template,
+  When it describes how to confirm the work is done,
+  Then it requires exercising the changed behavior against the real on-disk artifact
+    it processes (not a hand-authored fixture that reproduces the bug-hiding bias),
+  And it prohibits phantom tests -- tests that pass without actually exercising the
+    behavior they claim to cover.
+depends_on:
+  - BO-2000b
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The python-coder template must require a real-artifact behavioral spot-check and prohibit phantom tests."
+  - "Test coverage: assert the template states both the real-artifact spot-check requirement and the phantom-test prohibition."
+delivers_to:
+  agent: llm-expert
+  contract: "A real-artifact spot-check + phantom-test prohibition clause in the python-coder template"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

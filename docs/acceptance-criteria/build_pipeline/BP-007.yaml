@@ -17,3 +17,5 @@ criteria: |
     install_hooks still surfaces the error and returns "failed" (the loud-failure
     path for real repos is preserved)
 notes: "Authored by /quick-fix. Root cause: install_hooks() guards for pre-commit-not-found and custom core.hooksPath, but has no guard for a non-git target_root; it runs 'pre-commit install' unconditionally and reports the resulting CalledProcessError via _error() as a hard 'failed', producing a misleading [ERROR] on the self-hosting parent-workspace build target."
+change_target: pipeline
+risk_surface: internal

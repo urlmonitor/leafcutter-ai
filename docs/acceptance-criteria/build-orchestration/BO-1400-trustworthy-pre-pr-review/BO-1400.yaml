@@ -32,3 +32,5 @@ covered_by:
   - BO-1400a
 implemented_by: []
 priority: high
+change_target: prompt
+risk_surface: contract_boundary

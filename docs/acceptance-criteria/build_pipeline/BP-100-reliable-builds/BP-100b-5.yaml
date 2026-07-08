@@ -37,3 +37,5 @@ covered_by:
   - BP-100b-5-i
 implemented_by:
   - templates/scripts/commit_guardian/check_output_drift.py
+change_target: code
+risk_surface: internal

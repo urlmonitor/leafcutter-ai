@@ -63,3 +63,5 @@ covered_by:
 implemented_by:
   - templates/scripts/commit_guardian/check_ac_schema.py
 notes: "Authored by /quick-fix. Root cause: in _validate_file, validate_manually() was gated by `if not errors:` so it ran on the jsonschema SUCCESS path rather than only as a fallback when jsonschema was unavailable. Its stricter rules (created_by required, ^[A-Z]{2,6}-[0-9]{3}$ id regex) contradicted the permissive authoritative schema and rejected the bulk of the existing AC store. Companion store-scope bug (whole-store rglob instead of staged-files-only) is tracked separately."
+change_target: code
+risk_surface: internal

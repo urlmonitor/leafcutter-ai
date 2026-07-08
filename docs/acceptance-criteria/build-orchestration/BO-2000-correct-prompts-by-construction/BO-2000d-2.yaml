@@ -1,0 +1,40 @@
+id: BO-2000d-2
+title: "A fictional registration reference is rejected by the schema"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a package-surface AC whose it_requirements names a registration entry or
+    reference file that does not resolve to a real artifact in the repository,
+  When the AC is validated,
+  Then validation fails,
+  And the failure identifies the fictional or unresolvable reference so it cannot be
+    passed off as a valid spec.
+depends_on:
+  - BO-2000d
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The validator must verify referenced artifacts (registration entries, reference files) actually resolve; an unresolvable/fictional reference fails validation."
+  - "Test coverage: an AC citing a non-existent reference file or an unregistered entry fails validation with a message naming the bad reference; a real reference passes."
+delivers_to:
+  agent: it-po
+  contract: "A validator that rejects fictional/unresolvable references in package-surface AC specs"
+expects_from:
+  ac_id: BO-2000d-1
+  contract: "The package-surface validation pass this rule extends"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

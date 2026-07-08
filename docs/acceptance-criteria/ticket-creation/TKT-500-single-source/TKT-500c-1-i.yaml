@@ -28,3 +28,5 @@ implemented_by: []
 it_requirements:
   - "Writes are sequential within a session — true concurrency is not expected"
   - "File-level serialization is sufficient; no cross-process locking needed"
+change_target: code
+risk_surface: internal

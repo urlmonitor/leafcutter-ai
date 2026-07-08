@@ -42,7 +42,14 @@ origin_agent: business-analyst-v3
 created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: python-coder; recorded the ACS-300g-6 reconciliation (already-merged REPO_ROOT git-toplevel fix in check_components_integrity.py; GE-113c-1 = regression coverage + generalize to other guards via ONE shared resolver). Flagged the stale-branch + two-resolver divergence. Criteria unchanged."
+  - reason: "it-po-v3 (technical route, 2026-07-08): extended covered_by with GE-113c-1-iii/-iv/-v — technical-constraint children bringing check_secrets (scripts_dir/import + .security-allowlist read-location) and the cross-guard shared-resolver consolidation under this mandate. A sibling GE-113c-1-ii for check_doc_frontmatter was intentionally NOT authored: that guard was already fixed on origin/main by GE-115/#235 (its _resolve_worktree_root now becomes a consolidation target in GE-113c-1-iv). Criteria and all other fields unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-113c-1-i
+  - GE-113c-1-iii
+  - GE-113c-1-iv
+  - GE-113c-1-v
 implemented_by: []
 notes: "Latent bug class: check-components-integrity resolved REPO_ROOT to the .leafcutter/ subdir in the deployed layout."
+change_target: code
+risk_surface: contract_boundary

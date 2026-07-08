@@ -39,3 +39,5 @@ covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/04_TICKET-20260624-BO-1500a-3.md
 it_requirements: []
+change_target: docs
+risk_surface: internal

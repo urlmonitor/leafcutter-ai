@@ -60,3 +60,5 @@ notes: |
 
   IT-PO enrichment (2026-06-22): config home and key named explicitly in
   it_requirements; absence-of-config must resolve to BLOCK, not warn.
+change_target: code
+risk_surface: internal

@@ -35,3 +35,5 @@ notes: |
   Edge case of ACS-800c-3: a re-home must not create a hierarchy cycle. The
   hierarchy (parent-pointer) DAG invariant is the structural analogue of the
   depends_on DAG that check_ac_circular_deps.py already enforces.
+change_target: code
+risk_surface: internal

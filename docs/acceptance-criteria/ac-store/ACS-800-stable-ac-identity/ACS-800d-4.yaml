@@ -33,3 +33,5 @@ notes: |
   Decomposed from ACS-800d. Idempotency / re-runnability — a second run is a no-op,
   so a partially-applied or repeated migration is safe. Important because this is
   the highest-risk, whole-store operation.
+change_target: code
+risk_surface: internal

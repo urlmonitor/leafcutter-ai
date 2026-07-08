@@ -1,0 +1,40 @@
+id: BO-2000e-1
+title: "A code ticket with an empty Test Requirements section is blocked at authoring"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket that produces code (it has a coding phase agent in its agents map),
+    and its Test Requirements section is empty or absent,
+  When the ticket is authored,
+  Then authoring is blocked with a reason that names the ticket and states the Test
+    Requirements section must be populated for a code ticket,
+  And the ticket is not admitted for dispatch in that state.
+depends_on:
+  - BO-2000e
+doc_links:
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Add an authoring-time guard that blocks a code ticket whose '## Test Requirements' section is empty or absent; the block message names the ticket."
+  - "Determine 'code ticket' by the presence of a coding phase agent (python-coder/sql-coder) in the ticket agents map, mirroring the ADR-004 docs-only skip rule."
+  - "Test coverage: a code ticket with an empty/absent Test Requirements section is blocked with a naming reason; a code ticket with a populated section is admitted."
+delivers_to:
+  agent: business-analyst
+  contract: "An authoring-time guard that blocks code tickets lacking Test Requirements"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000e-1-i
+implemented_by: []

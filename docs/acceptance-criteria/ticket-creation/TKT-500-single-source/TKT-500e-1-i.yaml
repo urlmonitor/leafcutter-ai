@@ -28,3 +28,5 @@ implemented_by: []
 it_requirements:
   - "Crash recovery must read completed AC signoffs to build context summary"
   - "Summary format must be concise enough to fit agent context window"
+change_target: prompt
+risk_surface: internal

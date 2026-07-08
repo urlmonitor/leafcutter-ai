@@ -226,6 +226,16 @@ worktree root) if it exists:
 `python-coder` or `sql-coder` start — this enforces the epic's primary
 must-have: diagrams and ADRs before coding.
 
+**Flow-change pairs (architect + docs before coders):** For tickets generated
+from (change_target, risk_surface) pairs listed in `config/guardrail_gates.yaml`
+`flow_change_gates:` (e.g. `code/production`, `code/all`, `schema/production`,
+`schema/all`), the computed agents map will include both `architect-review`
+(priority 4) and `documentation-expert` (priority 10). The canonical priority
+ordering above ensures these agents are dispatched before `python-coder` (6)
+and `sql-coder` (7) automatically — no special supervisor logic is required.
+This is the machine-readable complement to the flow-change gate registry in
+`config/guardrail_gates.yaml`.
+
 **frontend-coder dispatch (priority 8):**
 Invoke `frontend-coder` when `agents.get("frontend-coder") == "needed"`.
 Dispatch it after `sql-coder` (priority 7) and before `test-runner` (priority 9).
@@ -297,8 +307,30 @@ check is the TICKET-LEVEL rule. The ticket-level rule always wins when it says "
 Before dispatching `test-writer` (priority 5), read the ticket's `## Test Requirements` block.
 Parse the `tests:` YAML array inside that block.
 
-If `tests: []` (empty array) **or** the `## Test Requirements` block is absent entirely:
-- **Skip test-writer**: do NOT spawn it.
+Use the following decision logic:
+
+```
+IF next_agent == "test-writer":
+  READ ticket body. Locate the ## Test Requirements block.
+  IF block is ABSENT entirely:
+    → SKIP test-writer (mark signed_off, append comment, GOTO loop)
+  IF block is PRESENT but tests array is empty (tests: []) AND no agent in the
+     ticket's agents: map has produces: production_code in the registry:
+    → SKIP test-writer
+  OTHERWISE (block present with entries, OR block present with empty array but
+     a production_code agent exists in the ticket):
+    → dispatch test-writer normally
+```
+
+**Important — computed agents map interaction:** For AC-generated tickets where
+`generate_ticket_from_ac.py` computes the agents map, the `## Test Requirements`
+block will always be present for tickets with a production-code agent — but the
+`tests:` array may start empty (test-writer is responsible for filling in concrete
+test specs). Do NOT skip test-writer simply because `tests: []` when the block is
+present and the ticket has a `production_code` agent. The empty array is the expected
+initial state; test-writer populates it as its primary deliverable.
+
+**Skip actions (when skip rule fires):**
 - Mark `agents["test-writer"] = "signed_off"` in frontmatter (via Edit).
 - Append a note to `## Comments`:
   ```
@@ -307,11 +339,14 @@ If `tests: []` (empty array) **or** the `## Test Requirements` block is absent e
   ```
 - Continue to the next pending agent (GOTO step 1 with updated map).
 
-If the `tests:` array has one or more entries, dispatch `test-writer` normally.
+**Dispatch normally** when `tests:` array has one or more entries, OR when the
+`## Test Requirements` block is present and the ticket contains any agent whose
+`produces` trait is `production_code` in `config/agent_registry.json`.
 
 This prevents docs PRs and config-only tickets from stalling at the test-writer phase
-indefinitely. Both the ticket's `agents: test-writer: not_needed` setting AND this runtime
-check are valid skip paths — whichever fires first takes precedence.
+indefinitely, while ensuring that computed agents maps for code-producing tickets are
+not silently undone by this rule. Both the ticket's `agents: test-writer: not_needed`
+setting AND this runtime check are valid skip paths — whichever fires first takes precedence.
 
 ### Post-coder contract-shrinking check (supervisor-side warn, not block)
 

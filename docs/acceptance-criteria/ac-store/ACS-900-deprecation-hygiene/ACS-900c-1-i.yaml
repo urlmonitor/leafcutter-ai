@@ -47,3 +47,5 @@ notes: |
   be a string OR a list of successor ids (AC split into multiple successors) — the
   message must handle both. Pinned single-source-of-truth remedy selection shared
   with ACS-900c-1 to prevent drift.
+change_target: code
+risk_surface: internal

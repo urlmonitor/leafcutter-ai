@@ -39,3 +39,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Edge case: tightening the bypass must not turn it into a false blocker when the artifact is actually placed correctly."
+change_target: code
+risk_surface: internal

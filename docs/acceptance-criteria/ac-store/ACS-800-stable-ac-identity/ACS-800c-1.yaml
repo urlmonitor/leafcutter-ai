@@ -38,3 +38,5 @@ notes: |
   the operation that makes the child_limit_override stopgap on check_ac_limits.py
   retireable once ACS-800e lands — an over-cap branch is rebalanced by moving
   children, not by renaming them.
+change_target: code
+risk_surface: internal

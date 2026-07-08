@@ -78,3 +78,5 @@ notes: |
   are the constraints the mechanism respects.
   IT-PO note: the prior expects_from was null even though BP-1200a-2 explicitly
   delivers_to this AC; repointed for contract continuity.
+change_target: pipeline
+risk_surface: internal

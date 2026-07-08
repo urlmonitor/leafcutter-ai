@@ -1,0 +1,39 @@
+id: BO-2000a-1-i
+title: "Source-layout fallback is used when the consumer skills location is absent"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent following the shared sign-off block,
+    and the deployed consumer skills location does not exist (a fresh worktree or the
+    package source checkout),
+  When the agent resolves the sign-off skill,
+  Then it does not stop or error on the missing consumer location,
+  And it loads the skill from the package source location,
+  And the sign-off completes normally.
+depends_on:
+  - BO-2000a-1
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The fallback branch must be explicit in the sign-off block prose, not implied."
+  - "Test coverage: assert the block instructs the agent to proceed via the source path when the consumer path is missing (no hard failure on the absent consumer directory)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000a-1
+  contract: "The dual-path resolution clause whose fallback branch this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

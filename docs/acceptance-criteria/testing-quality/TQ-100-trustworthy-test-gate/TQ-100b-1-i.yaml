@@ -51,3 +51,5 @@ notes: |
   no-manual-step transition end to end. ID-derived parent is TQ-100b-1 (the
   informational branch where the transition begins); TQ-100b-2 (enforced branch)
   is retained in depends_on as the contract continuity for the done end state.
+change_target: code
+risk_surface: internal

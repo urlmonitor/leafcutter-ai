@@ -62,3 +62,5 @@ notes: |
   done->not-done downgrade) are ID-derived under this L2.
   IT-PO note: the integrity check has three violation classes sharing one loader
   and one pre-pytest entry point — keep them in one module, not three scripts.
+change_target: code
+risk_surface: contract_boundary

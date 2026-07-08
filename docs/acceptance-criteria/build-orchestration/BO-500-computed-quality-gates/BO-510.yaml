@@ -28,3 +28,5 @@ covered_by:
   - BO-510-4
   - BO-510-5
 implemented_by: []
+change_target: config
+risk_surface: contract_boundary

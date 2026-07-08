@@ -35,3 +35,5 @@ covered_by:
   - BO-1100d-6
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BO-1100d.md
+change_target: code
+risk_surface: contract_boundary

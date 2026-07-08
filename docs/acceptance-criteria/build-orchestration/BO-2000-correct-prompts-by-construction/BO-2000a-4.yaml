@@ -1,0 +1,39 @@
+id: BO-2000a-4
+title: "Sign-off self-verifies its write and reports a lost write"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent that has just recorded its sign-off per the sign-off block,
+  When the mandatory self-verify step re-reads the ticket,
+  Then it confirms the frontmatter status, checklist entry, and comment are present
+    as written,
+  And when the re-read shows the sign-off did not actually land, the agent returns a
+    signoff-write-lost result instead of reporting success.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The sign-off block must define a mandatory post-write self-verify that re-reads the ticket and returns the signoff-write-lost token when the recorded sign-off is not present on disk."
+  - "Test coverage: assert the block mandates the self-verify step and the signoff-write-lost return; a behavioral test that drops the write and confirms signoff-write-lost is returned (not success)."
+delivers_to:
+  agent: llm-expert
+  contract: "A mandatory self-verify + signoff-write-lost clause in the sign-off block"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-4-i
+implemented_by: []

@@ -44,3 +44,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "The latent gap let a guard quietly fail to complete its check (an orphan component could not be registered) because it scanned the wrong tree."
+change_target: code
+risk_surface: internal

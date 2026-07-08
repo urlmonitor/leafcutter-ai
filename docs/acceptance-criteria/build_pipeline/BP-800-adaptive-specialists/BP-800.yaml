@@ -36,3 +36,5 @@ covered_by:
   - BP-800d
   - BP-800e
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

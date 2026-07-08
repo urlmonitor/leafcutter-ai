@@ -29,3 +29,5 @@ superseded_by: null
 covered_by: [TKT-500e-1, TKT-500e-2, TKT-500e-3, TKT-500e-4, TKT-500e-5, TKT-500e-6]
 implemented_by: []
 documentation_triggers: [sequence-diagram, component-diagram]
+change_target: prompt
+risk_surface: contract_boundary

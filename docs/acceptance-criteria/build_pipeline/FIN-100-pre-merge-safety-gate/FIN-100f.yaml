@@ -30,3 +30,5 @@ covered_by:
   - FIN-100f-2
 implemented_by:
   - scripts/finalize-feature.js
+change_target: pipeline
+risk_surface: safety

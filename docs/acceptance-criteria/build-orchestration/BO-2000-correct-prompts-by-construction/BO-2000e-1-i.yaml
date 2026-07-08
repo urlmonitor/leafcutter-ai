@@ -1,0 +1,38 @@
+id: BO-2000e-1-i
+title: "A docs-only ticket with no Test Requirements is allowed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket that produces no code (no coding phase agent in its agents map, e.g.
+    a documentation or configuration ticket),
+    and its Test Requirements section is empty or absent,
+  When the ticket is authored,
+  Then authoring is not blocked by the Test Requirements guard,
+  And the ticket proceeds under the documented docs-only skip behavior.
+depends_on:
+  - BO-2000e-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The Test Requirements guard must apply only to code tickets; docs-only/config-only tickets are exempt (ADR-004 docs-only skip parity)."
+  - "Test coverage: a docs-only ticket with empty Test Requirements is admitted without a block."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000e-1
+  contract: "The authoring guard whose docs-only exemption this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

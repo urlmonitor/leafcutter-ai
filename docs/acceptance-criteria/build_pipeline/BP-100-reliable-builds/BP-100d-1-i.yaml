@@ -41,3 +41,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - "unit_tests/commit_guardian/test_check_contract_shrinking.py"
+change_target: code
+risk_surface: internal

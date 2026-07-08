@@ -44,3 +44,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Confirms the bypass keeps its legitimate scope: it acknowledges structural changes but is no longer overloaded to excuse misplaced artifacts."
+change_target: code
+risk_surface: internal

@@ -39,3 +39,5 @@ notes: |
   existing check_ac_schema.py checks). Distinct from ACS-800a-1 (which defines how
   a UID is allocated) — this AC defines the always-true invariant the allocation
   must preserve.
+change_target: code
+risk_surface: internal

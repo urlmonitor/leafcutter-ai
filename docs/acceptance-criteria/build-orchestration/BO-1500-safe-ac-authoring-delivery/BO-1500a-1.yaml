@@ -59,3 +59,5 @@ covered_by:
 - BO-1500a-1-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/01_TICKET-20260624-BO-1500a-1.md
+change_target: infrastructure
+risk_surface: safety

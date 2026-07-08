@@ -10,3 +10,5 @@ criteria: |
   And the string "/create-ac" does not appear as a current command name
   And the bug symptom "diagram shows removed /create-ac command" must not occur
 notes: "Authored by /quick-fix. Root cause: diagram was not updated when the create-ac skill/command was renamed to plan-feature."
+change_target: docs
+risk_surface: internal
