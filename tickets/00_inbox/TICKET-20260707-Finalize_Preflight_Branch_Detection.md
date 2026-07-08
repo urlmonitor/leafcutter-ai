@@ -1,6 +1,6 @@
 ---
 title: "finalize-feature.js pre-flight detects the branch from session CWD, not the epic worktree"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-07
