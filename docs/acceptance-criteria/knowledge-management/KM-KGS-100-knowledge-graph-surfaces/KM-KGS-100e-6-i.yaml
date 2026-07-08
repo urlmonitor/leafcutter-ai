@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
 criteria: |
@@ -42,6 +42,8 @@ created: 2026-07-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - scripts/knowledge_query.py
+  - scripts/ac_store/backfill_components.py
 change_target: code
 risk_surface: internal

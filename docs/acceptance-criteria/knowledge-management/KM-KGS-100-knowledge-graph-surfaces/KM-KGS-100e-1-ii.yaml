@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
 criteria: |
@@ -48,7 +48,12 @@ origin_agent: business-analyst-v3
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/ac_store/test_components_enforcement.py
+implemented_by:
+  - scripts/ac_store/_ac_components.py
+  - scripts/ac_store/validate_ac_schema.py
+  - config/ac_store_schema.json
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
 change_target: code
 risk_surface: contract_boundary
