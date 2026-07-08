@@ -1,0 +1,42 @@
+id: BO-2000b
+components:
+  - build-orchestration
+title: "python-coder carries its own implementation craft in its template"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The coder knows how to behave without being reminded per-ticket.
+
+  The python-coder template itself carries the durable craft rules that a defective
+  invocation had to be hand-told: pre-commit hooks fail open on unexpected errors,
+  source lives under templates/ while scripts/ and .claude/ are generated build
+  outputs, new hooks/agents/skills are registered through their dedicated skills
+  rather than hand-rolled, files are read before they are edited, work is
+  spot-checked against the real artifact and never covered by phantom tests, and
+  shell commands stay single and simple. These rules are portable template content,
+  so they hold on every run regardless of what the dispatch prompt says.
+depends_on: [BO-2000]
+doc_links:
+  - docs/architecture/agent_knowledge_plane.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000b-1
+  - BO-2000b-2
+  - BO-2000b-3
+  - BO-2000b-4
+  - BO-2000b-5
+  - BO-2000b-6
+  - BO-2000b-1-i
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/02_python_coder_craft.md

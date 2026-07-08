@@ -214,6 +214,97 @@ and continue; no error is raised.
 
 ---
 
+## KI-4: `/finalize-feature` does NOT `git push` — unpushed local commits are dropped from the PR merge
+
+**Root cause.** `finalize-feature.js` merges the epic PR via `gh pr merge` against the
+**origin** PR head. It contains no `git push` anywhere. Any commit made locally on the
+feature branch but not pushed to origin — e.g. a post-review fix committed with the
+mistaken assumption that "finalize will handle the push" — is silently excluded from the
+merge to `main`.
+
+Observed during EPIC-TrustworthyTestGate finalization (2026-07-08): a code-review fix
+commit (`2a377f91`) was committed locally but unpushed; had finalize run as-is, the merge
+would have landed the pre-fix tree on `main` and dropped the fix.
+
+**Detection.** Before invoking `/finalize-feature` (or `gh pr merge`), confirm origin and
+local HEAD match:
+
+```bash
+git -C "<WORKTREE>" log HEAD -1 --format="%H"
+git -C "<WORKTREE>" log "origin/<branch>" -1 --format="%H"
+```
+
+Different SHAs (local ahead) means unpushed commits the merge will drop.
+
+**Remedy / prevention.** `git -C "<WORKTREE>" push origin <branch>` before finalize, then
+re-verify the two SHAs match. The `pull-request` phase pushes per-ticket during a normal
+drive, so this bites specifically for commits made *after* the last ticket signed off
+(review fixes, manual edits at finalize time).
+
+---
+
+## KI-5: `/finalize-feature` resolves its target from a plain-STRING arg, not an object
+
+**Root cause.** `finalize-feature.js` reads the target branch only when
+`typeof args === 'string'`. Passing an object (`{branch: "EPIC-Name"}`) leaves the string
+empty, so it falls back to CWD-based detection and — when the session CWD is the workspace
+root or `main` — errors: `"must be run from a feature branch (detected branch: main ...)"`.
+
+**Remedy.** Invoke with the epic name as a bare string:
+
+- Right: `/finalize-feature EPIC-Name`  •  `Workflow("finalize-feature", "EPIC-Name")`
+- Wrong: `Workflow("finalize-feature", { branch: "EPIC-Name" })`
+
+(The slash-command doc's `{ branch: ... }` example is misleading; the script wants a
+string.) Observed EPIC-TrustworthyTestGate finalization, 2026-07-08.
+
+---
+
+## KI-6: Validate a stale feature branch with a full-suite baseline regression diff before merge
+
+**Root cause.** A feature branch far behind `origin/main` (this epic was 115 commits
+behind) can integrate cleanly at the git level yet break unrelated tests once merged. A
+globally-registered artifact is the classic trap: EPIC-TrustworthyTestGate added a root
+`conftest.py` that shadowed `tests/conftest.py`, breaking an unrelated test's
+`from conftest import load_fixture`. Per-ticket tests and the epic's own suite were green;
+only a cross-suite run against a baseline surfaced it.
+
+**Detection / remedy.** After merging `origin/main` into the feature branch, diff a
+full-suite run against an `origin/main` baseline; treat only *new* failures/errors as
+regressions (this repo has a known pre-existing failing set):
+
+```bash
+# Baseline (detached worktree at origin/main):
+git -C "<WORKTREE>" worktree add --detach /tmp/base origin/main
+python -m pytest /tmp/base/tests /tmp/base/unit_tests -q --continue-on-collection-errors
+# Branch (origin/main already merged in):
+python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors
+# Compare the FAILED/ERROR node-id sets; branch-only entries are the regressions.
+```
+
+Run `build.py` in each tree first so deploy-dependent tests don't read as false
+regressions. (Source: EPIC-TrustworthyTestGate finalization, 2026-07-08.)
+
+---
+
+## KI-7: Audit CI pytest flags for interactions that defeat a shipped plugin
+
+**Root cause.** When an epic ships a pytest plugin loaded via `pytest.ini addopts`, the
+plugin's guarantee can be silently defeated by an unrelated flag in the CI invocation.
+EPIC-TrustworthyTestGate shipped collection-error isolation
+(`--continue-on-collection-errors`) but `.github/workflows/ci.yml` ran pytest with `-x`,
+which aborts at the first failure — so CI never realised the isolation guarantee. The
+epic's own subprocess tests didn't pass `-x` and were green (finding H-1).
+
+**Detection / prevention.** Before declaring such an epic done, read the pytest command in
+`.github/workflows/ci.yml` and confirm no flag contradicts the plugin's stated behavior
+(`-x`/`--exitfirst` vs isolation; `-p no:<plugin>`). Ship a regression guard test that
+asserts the CI command does NOT contain the defeating flag (see
+`tests/testing_quality/test_ci_invocation_isolation.py`). (Source: EPIC-TrustworthyTestGate
+H-1 fix, commit `2a377f91`, 2026-07-08.)
+
+---
+
 ## References
 
 - `.claude/commands/build-feature.md` — executable workflow; Step A step 6
@@ -223,3 +314,5 @@ and continue; no error is raised.
 - `docs/retrospectives/EPIC-PortableWorkflowHardening.md` — source of KI-1.
 - `docs/retrospectives/EPIC-ArchitectureDocsEnforcement.md` — source of KI-2
   (stream-watchdog timeout incident during ticket 03 of that epic).
+- `docs/retrospectives/EPIC-TrustworthyTestGate.md` — source of KI-4 through KI-7
+  (finalize no-push, string-arg resolution, stale-branch baseline diff, CI flag audit).

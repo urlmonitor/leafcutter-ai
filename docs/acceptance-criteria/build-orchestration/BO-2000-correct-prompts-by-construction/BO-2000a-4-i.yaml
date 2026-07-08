@@ -1,0 +1,37 @@
+id: BO-2000a-4-i
+title: "A dropped sign-off write returns signoff-write-lost, never success"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent that attempted a sign-off but whose write did not persist
+    (the on-disk ticket still shows the pre-sign-off state),
+  When the mandatory self-verify step re-reads the ticket,
+  Then the re-read detects the missing sign-off,
+  And the agent returns signoff-write-lost,
+  And the agent does not report the phase as signed off.
+depends_on:
+  - BO-2000a-4
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Test coverage: simulate a lost write (staged content differs from expected) and assert the self-verify path returns signoff-write-lost rather than a success verdict."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000a-4
+  contract: "The self-verify step whose lost-write branch this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

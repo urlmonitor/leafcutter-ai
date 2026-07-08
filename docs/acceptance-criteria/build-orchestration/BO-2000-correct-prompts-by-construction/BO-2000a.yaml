@@ -1,0 +1,42 @@
+id: BO-2000a
+components:
+  - build-orchestration
+title: "The shared sign-off protocol is self-contained and portable in the sign-off block"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The full sign-off craft lives in the sign-off block, not in an agent's memory.
+
+  Every phase agent that signs off inherits a complete, portable protocol from the
+  shared sign-off block: it resolves its sign-off skill whether it runs in a
+  deployed consumer project or in the package source/worktree, updates all parts of
+  a sign-off atomically, writes a comment heading the parser can find, degrades
+  safely when the feedback sink is unreachable, verifies its own write actually
+  landed, and captures learnings afterward. Because this knowledge is in the
+  template channel, no agent has to be told these steps in its dispatch prompt.
+depends_on: [BO-2000]
+doc_links:
+  - docs/architecture/agent_knowledge_plane.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-1
+  - BO-2000a-2
+  - BO-2000a-3
+  - BO-2000a-4
+  - BO-2000a-5
+  - BO-2000a-1-i
+  - BO-2000a-2-i
+  - BO-2000a-4-i
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/01_signoff_block_protocol.md

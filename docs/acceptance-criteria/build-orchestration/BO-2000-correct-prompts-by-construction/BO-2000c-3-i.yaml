@@ -1,0 +1,37 @@
+id: BO-2000c-3-i
+title: "An unresolvable reference pattern is surfaced as an authoring error"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC whose reference pattern matches no file (or matches more than one),
+  When a ticket is generated from that AC,
+  Then generation surfaces an authoring error that names the AC id and the
+    unresolvable pattern,
+  And it does not silently emit the raw pattern or a broken path into the ticket body.
+depends_on:
+  - BO-2000c-3
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Resolution failure (zero or multiple matches) must raise a clear authoring error rather than emitting an unresolved path."
+  - "Test coverage: given a reference_pattern with no match and one with multiple matches, assert an error naming the AC id and pattern is raised, and no Implementation Notes path line is emitted."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000c-3
+  contract: "The path-resolution step whose failure branch this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

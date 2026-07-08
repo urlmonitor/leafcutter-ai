@@ -1,0 +1,40 @@
+id: BO-2000d
+components:
+  - build-orchestration
+title: "Package-surface ACs must carry a machine-checkable implementation spec"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A package-surface AC cannot reach a coder without a real, checkable spec.
+
+  For ACs that touch the package surface (assigned to python-coder in the
+  build_pipeline or build-orchestration components), the implementation
+  requirements MUST carry the config-schema fragment, resolved reference-file path,
+  N-location rule, required skills, and post-write commands. A machine-checkable
+  schema enforces this so a thin or fictional entry (for example an unresolvable
+  registration reference) cannot pass, and the IT-PO agent's own template states
+  the obligation. The spec is validated at authoring time, before it can ever be
+  handed to an agent.
+depends_on: [BO-2000]
+doc_links:
+  - docs/architecture/agent_knowledge_plane.md
+  - docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000d-1
+  - BO-2000d-2
+  - BO-2000d-3
+  - BO-2000d-1-i
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/04_package_surface_spec_schema.md

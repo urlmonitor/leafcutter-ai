@@ -1,0 +1,44 @@
+id: BO-2000d-1
+title: "A package-surface AC missing required spec fields fails validation"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC assigned to python-coder in the build_pipeline or build-orchestration
+    component (a package-surface AC),
+    and its it_requirements is missing one or more of the config-schema fragment,
+    the resolved reference-file path, the N-location rule, the required-skills list,
+    or the post-write commands,
+  When the AC is validated,
+  Then validation fails,
+  And the failure names each required spec field that is missing.
+depends_on:
+  - BO-2000d
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Add a machine-checkable validation rule: for ACs where assigned_agent == python-coder AND component in {build_pipeline, build-orchestration}, it_requirements MUST carry the config-schema fragment, resolved reference-file path, N-location rule, required_skills, and post-write commands."
+  - "Test coverage: a package-surface AC missing any of these fields fails validation with a message naming each missing field; a fully-populated one passes."
+delivers_to:
+  agent: it-po
+  contract: "A validator that rejects package-surface ACs lacking the mandatory implementation-spec fields"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000d-1-i
+implemented_by: []

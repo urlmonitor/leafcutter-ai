@@ -1,0 +1,41 @@
+id: BO-2000a-5
+title: "Sign-off block includes the mandatory knowledge-capture step"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent that has completed and verified its sign-off per the sign-off block,
+  When it reaches the end of the sign-off protocol,
+  Then the protocol directs it to run the knowledge-capture step (the sign-off
+    block's section 7),
+  And the capture step is part of the shared block so every signing agent inherits
+    it without a per-ticket instruction.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The sign-off block must contain the section 7 knowledge-capture trigger (route-learning / capture-learning) as a mandatory post-sign-off step."
+  - "Test coverage: assert the compiled sign-off block contains the knowledge-capture (section 7) step."
+delivers_to:
+  agent: llm-expert
+  contract: "A mandatory knowledge-capture (section 7) step in the shared sign-off block"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
