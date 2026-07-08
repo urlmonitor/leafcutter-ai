@@ -1,6 +1,6 @@
 ---
 title: "Feedback config resolution anchoring + phase-agent allowed_writers coverage"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-07
@@ -30,7 +30,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -83,7 +83,7 @@ And no existing allowed_writers entry is removed.
 - [x] test-runner — 2026-07-08 11:17
 - [x] pr-reviewer — 2026-07-08 15:00
 - [x] commit — 2026-07-08 11:32
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 11:42
 
 ## Comments
 
@@ -130,3 +130,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
   commit_sha: 3ff29967a1c7b85808fd40e0c5221d8d9ef39218
+
+### 2026-07-08 11:42 — pull-request (status: ok)
+feedback-id: fb_2026-07-08_32e46b7b
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  ticket_signed_off: true
+Epic branch EPIC-Phase1ReadyHardening pushed to origin; PR #223 already existed and updated with 2 commits (3ff29967 + 6abf8696). All phases signed off. Ticket status: done.
