@@ -14,8 +14,14 @@ manually as an LLM conversation.**
 Invoke the `finalize-feature` workflow script via the Workflow tool:
 
 ```
-Workflow("finalize-feature", { branch: $ARGUMENTS })
+Workflow("finalize-feature", $ARGUMENTS)
 ```
+
+Pass the epic or ticket name as a plain string (e.g. `"EPIC-FooBar"` or
+`"fix/my-branch"`). Do NOT wrap it in an object — the script checks
+`typeof args === 'string'` and the object form silently falls through to
+CWD-based detection, which is usually wrong when invoked from a different
+working directory.
 
 If the Workflow tool is unavailable or the script returns an error, stop
 immediately and report the failure. Do NOT improvise an LLM-mediated

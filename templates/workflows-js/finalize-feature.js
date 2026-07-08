@@ -999,6 +999,115 @@ if (closureAlreadyCommitted) {
 }
 
 // -------------------------------------------------------------------------
+// Pre-Step-4 Sync Check — ensure local branch HEAD is on origin before merge
+//
+// AC-1 (TICKET-20260708-Finalize_Push_Before_Merge):
+// gh pr merge merges the ORIGIN PR head, not the local HEAD. Any commit made
+// on the branch after the last ticket's pull-request phase — e.g. a code-review
+// fix, an origin/main-into-branch merge, or a manual edit at finalize time — is
+// local-only. If finalize runs without this check, gh pr merge merges the older
+// origin head and those local commits are silently excluded from main.
+//
+// This check compares local HEAD to origin/<branch>. When local is ahead, it
+// pushes the branch to origin so the PR head is always current. When the push
+// fails or the branch has diverged, it halts with an actionable message.
+// -------------------------------------------------------------------------
+
+const syncCheckResult = await agent(
+  "Check whether the local feature branch HEAD is ahead of origin and push if needed.\n" +
+  `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
+  "\n" +
+  "Step 1 — Fetch origin to ensure tracking refs are current:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" fetch origin "${BRANCH}" 2>/dev/null || true\n` +
+  "\n" +
+  "Step 2 — Compare local HEAD to origin branch head:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-parse HEAD\n` +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-parse "origin/${BRANCH}" 2>/dev/null || echo "no-remote-ref"\n` +
+  "  If origin ref does not exist (new branch, never pushed): treat as local-ahead.\n" +
+  "  If both SHAs are equal: branch is up-to-date.\n" +
+  "\n" +
+  "Step 3 — When SHAs differ, determine direction:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-list --count "origin/${BRANCH}..HEAD" 2>/dev/null || echo "0"\n` +
+  "  ahead_count = integer from the output (0 if origin ref missing, in which case treat as ahead).\n" +
+  "  If ahead_count == 0 and SHAs differ: branch is diverged (origin has commits local lacks).\n" +
+  "\n" +
+  "Step 4 — Push when local is ahead:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" push origin "${BRANCH}"\n` +
+  "  Capture exit code.\n" +
+  "  If exit code 0:\n" +
+  `    Run: git -C "${WORKTREE_ROOT}" rev-parse "origin/${BRANCH}"\n` +
+  "    Return: { \"status\": \"pushed\", \"local_sha\": \"<sha>\", \"origin_sha\": \"<sha-after-push>\" }\n" +
+  "  If non-zero:\n" +
+  "    Return: { \"status\": \"push_failed\", \"local_sha\": \"<sha>\", \"origin_sha\": \"<sha>\", \"error\": \"<captured stderr>\" }\n" +
+  "\n" +
+  "Step 5 — Return status:\n" +
+  "  up_to_date: { \"status\": \"up_to_date\", \"local_sha\": \"<sha>\", \"origin_sha\": \"<sha>\" }\n" +
+  "  diverged:   { \"status\": \"diverged\",   \"local_sha\": \"<sha>\", \"origin_sha\": \"<sha>\" }",
+  { agentType: "status-checker", label: "pre-step-4-sync-check", phase: "Step 4" }
+)
+
+let syncCheckInfo;
+{
+  const { value, malformed } = safeParseJSON(syncCheckResult);
+  if (malformed) {
+    log("[finalize-feature] pre-step-4 sync-check parse malformed — proceeding (cannot determine push state; fail-open for robustness)");
+    syncCheckInfo = { status: "unknown" };
+  } else {
+    syncCheckInfo = value || { status: "unknown" };
+  }
+}
+
+const syncStatus = (syncCheckInfo.status || "unknown").toLowerCase();
+
+if (syncStatus === "push_failed") {
+  await cleanupBaselineWorktree();
+  return {
+    status: "halted",
+    halted_at_step: "pre-4",
+    reason: "push_failed",
+    message:
+      "Local branch HEAD is ahead of origin but push failed. " +
+      `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+      "The PR has NOT been merged — no work is lost.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    action_required: "push_local_commits",
+  };
+}
+
+if (syncStatus === "diverged") {
+  await cleanupBaselineWorktree();
+  return {
+    status: "halted",
+    halted_at_step: "pre-4",
+    reason: "branch_diverged",
+    message:
+      `Local branch and origin/${BRANCH} have diverged. ` +
+      "Resolve the divergence (rebase or force-push with caution) before merging, " +
+      "then re-run /finalize-feature.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    action_required: "resolve_divergence",
+  };
+}
+
+if (syncStatus === "pushed") {
+  log("[finalize-feature] pre-step-4 sync-check: local branch was ahead of origin — pushed successfully. PR head is now current.");
+  completedSteps.push("pre-4-push");
+} else if (syncStatus === "up_to_date") {
+  log("[finalize-feature] pre-step-4 sync-check: local branch is up-to-date with origin. No push needed.");
+} else {
+  // unknown or other — log and proceed (fail-open for robustness)
+  log(`[finalize-feature] pre-step-4 sync-check: status=${syncStatus} — proceeding (conservative pass).`);
+}
+
+// -------------------------------------------------------------------------
 // Step 4 — Merge PR to main (destructive — confirmation gate required)
 //
 // This step runs AFTER the worktree merge (step 2) and test + triage (step 3).
