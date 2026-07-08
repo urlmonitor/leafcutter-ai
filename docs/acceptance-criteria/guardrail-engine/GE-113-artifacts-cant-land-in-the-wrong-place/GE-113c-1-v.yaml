@@ -1,0 +1,78 @@
+id: GE-113c-1-v
+components:
+  - guardrail-engine
+title: "check-secrets reads the .security-allowlist from the worktree checkout root so worktree-local suppressions are honored"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the check_secrets guard runs in an epic/feature worktree (deployed
+    layout) where the hook scripts are reached via the .leafcutter symlink whose
+    target resolves to the workspace parent,
+  And the worktree's OWN checkout root contains a .security-allowlist with a
+    suppression entry for a staged finding (for example an
+    ENTROPY_HIGH:<path>:<line> entry or an ENTROPY_HIGH:<path>:* glob),
+  When the guard resolves the location of the .security-allowlist in order to
+    decide which findings are suppressed,
+  Then it resolves the .security-allowlist from the actual checkout root (the
+    worktree root) via the SAME shared root helper mandated by GE-113c-1 /
+    GE-113c-1-iv — NOT from the resolved .leafcutter symlink target (the
+    workspace parent),
+  And the suppression in the worktree's own .security-allowlist is honored so
+    the staged finding is not reported, rather than being silently ignored
+    because the hook only read the workspace-root copy,
+  And the verification exercises a REAL worktree with a worktree-local
+    suppression that is currently ignored, asserting it becomes honored after
+    the fix rather than relying on a synthetic fixture.
+depends_on:
+  - GE-113c-1
+  - GE-113c-1-iv
+doc_links:
+  - path: scripts/commit_guardian/check_secrets.py
+    relationship: describes
+    status: exists
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1-iv.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1-iii.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The .security-allowlist must be resolved from the actual checkout root (the worktree root) via the SAME shared _resolve_root helper mandated by GE-113c-1 / GE-113c-1-iv (`git rev-parse --show-toplevel` with a safe fallback) — NOT from the resolved .leafcutter symlink target (the workspace parent). This is the exact symptom documented in CLAUDE.md ('.security-allowlist resolves via the symlink target, not the worktree root'; worktree-local suppressions silently ignored; observed EPIC-AcPatternEnforcementIsMechanically 2026-06-18)."
+  - "Behavioral verification against a REAL worktree: create a suppression in the worktree's OWN .security-allowlist for a staged finding that is CURRENTLY ignored (because the hook reads only the workspace-root copy), and assert the finding becomes honored (not reported) after the fix. Do not rely on a synthetic fixture — this repo has a documented history of synthetic fixtures hiding worktree/path bugs (CLAUDE.md real-artifact spot-check rule). Follow the real-`git worktree add` regression-test precedent set by GE-115 / #235."
+  - "Glob-pattern suppression support must be preserved: an ENTROPY_HIGH:<path>:* glob entry suppresses all findings for that path, and any place that must be kept consistent when adding a suppression follows the ENTROPY_HIGH:<path>:* dual-update rule documented in CLAUDE.md — the fix must not change which entry forms are recognized, only WHERE the allowlist is read from."
+  - "No regression to suppression behavior in the main/source checkout: which findings get suppressed for a given .security-allowlist content must be unchanged when the guard runs from the main repository checkout; both layouts read the allowlist from the correct checkout root through the one shared mechanism."
+  - "Must handle git-unavailable gracefully per the project error handling policy: the git subprocess call is wrapped (no bare except, Ruff E722/BLE001/TRY), warns, and falls back to a safe deterministic resolution via the shared _resolve_root helper — the fallback lives once in the helper, not duplicated here."
+  - "Deployed/template parity (ADR-001): the canonical fix lives under templates/scripts/commit_guardian/check_secrets.py (and templates/skills/security-scanner/scripts/scan_secrets.py if the allowlist read lives there) and is round-tripped to the scripts/ copy via build.py — never edit only one side."
+delivers_to: null
+expects_from:
+  ac_id: GE-113c-1
+  contract: "The single shared project-root resolver from GE-113c-1 (scripts/commit_guardian/_resolve_root.py, returning the checkout top-level Path via `git rev-parse --show-toplevel` with a safe fallback); check_secrets consumes it to locate the worktree-root .security-allowlist rather than the workspace-parent copy reached through the .leafcutter symlink."
+origin_agent: it-po-v3
+created: 2026-07-08
+amended_by:
+  - reason: "Rebased onto origin/main after the stale-local-main PR (#244) was abandoned: cross-referenced GE-115/#235 as the real-worktree regression-test precedent. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Latent bug (sibling of GE-113c-1-iii, split out per user request): check-secrets resolves the .security-allowlist via the .leafcutter symlink target (workspace parent) instead of the worktree checkout root, so a suppression added to the worktree's own .security-allowlist is silently ignored (CLAUDE.md; observed EPIC-AcPatternEnforcementIsMechanically 2026-06-18). Previously de-scoped from GE-113c-1-iii (which covers scripts_dir/import resolution); the user chose to bring it under the same GE-113c-1 / GE-113c-1-iv shared-root mandate here."
+change_target: code
+risk_surface: contract_boundary
