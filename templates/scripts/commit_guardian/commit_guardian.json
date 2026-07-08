@@ -915,6 +915,34 @@
                 "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
             },
             {
+                "id": "check-surface-components-e2",
+                "tier": "judgment",
+                "name": "Check Surface Components — Tickets and Docs (KM-KGS-100e-2)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_surface_components_e2.py",
+                "language": "system",
+                "files": "^(tickets|docs)/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "enabled": false,
+                "_comment": "KM-KGS-100e-2: Blocks commits when a staged ticket or doc .md file with YAML frontmatter lacks a non-empty `components` field. Surfaces derived data-driven from config/paths.json (edge_fields containing 'components'). DISABLED until a cross-surface backfill populates components across all tickets and docs — enabling now would block most commits. Registry-membership validation is deferred (vocabulary mismatch between docs/components.json underscore IDs and AC index.yaml kebab IDs). See module docstring for full rationale."
+            },
+            {
+                "id": "check-surface-components-e3",
+                "tier": "judgment",
+                "name": "Check Surface Components — Agent/Skill/Roadmap Registries (KM-KGS-100e-3)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_surface_components_e3.py",
+                "language": "system",
+                "files": "^(config/agent_registry\\.json|config/skill_registry\\.json|docs/roadmap\\.json)$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "enabled": false,
+                "_comment": "KM-KGS-100e-3: Blocks commits when a staged agent/skill/roadmap registry entry lacks a non-empty `components` field. Glossary surface is automatically exempt (edge_fields: [] in paths.json). DISABLED until a backfill adds `components` to all registry entries — enabling now would block all changes to agent_registry.json, skill_registry.json, and roadmap.json. Registry-membership validation deferred. See module docstring for full rationale."
+            },
+            {
                 "id": "precommit-canary",
                 "tier": "judgment",
                 "name": "Pre-commit canary (PRECOMMIT_CANARY_OK probe)",
