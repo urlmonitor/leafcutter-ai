@@ -992,5 +992,169 @@ class TestEnforcedSetStableAcrossRuns(unittest.TestCase):
             )
 
 
+class TestDoneAcTestIsEnforced(unittest.TestCase):
+    """AC TQ-100b-2: A failing test tagged with a done AC is enforced.
+
+    Verifies the end-to-end behaviour: run pytest on a minimal tmp suite that
+    contains one failing test tagged ``# covers: DONE-001`` where DONE-001's
+    work_status is "done".  The overall pytest exit code must be NON-ZERO
+    (failure is enforced — a done AC's test must remain a real failure), and
+    the result must NOT be reported as xfail (confirming the enforcement plugin
+    did NOT silence the failure).
+    """
+
+    def _run_pytest_subprocess(self, test_dir: Path, ac_store_dir: Path) -> subprocess.CompletedProcess:
+        """Invoke pytest against *test_dir* with an AC store in *ac_store_dir*.
+
+        Uses the repo's own pytest.ini so that any addopts and conftest plugin
+        are loaded.  A failing test tagged with a done AC must remain a real
+        failure — the enforcement plugin must NOT convert it to xfail.
+        """
+        cmd = [
+            sys.executable,
+            "-m",
+            "pytest",
+            str(test_dir),
+            "-v",
+            "--tb=short",
+            "--no-header",
+            f"--rootdir={_REPO_ROOT}",
+            f"--config-file={_REPO_ROOT / 'pytest.ini'}",
+        ]
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env={
+                **__import__("os").environ,
+                # Allow the conftest to discover the AC store root from this env var.
+                "LEAFCUTTER_AC_STORE_ROOT": str(ac_store_dir),
+            },
+        )
+
+    def _build_done_ac_store(self, ac_store_root: Path) -> None:
+        """Create a minimal AC store with one done AC (DONE-001).
+
+        Args:
+            ac_store_root: Temporary directory that will act as the AC store root.
+        """
+        domain_dir = ac_store_root / "done-domain"
+        domain_dir.mkdir(parents=True)
+        ac_yaml = domain_dir / "DONE-001.yaml"
+        ac_yaml.write_text(
+            textwrap.dedent(
+                """\
+                id: DONE-001
+                title: "Stub AC — completed (done)"
+                component: done-domain
+                level: L2
+                status: active
+                work_status: done
+                readiness: approved
+                priority: medium
+                criteria: |
+                  A stub AC used by the test suite to exercise the done (enforced) path.
+                """
+            ),
+            encoding="utf-8",
+        )
+
+    def _build_failing_test_tagged_done(self, test_dir: Path) -> Path:
+        """Write a test file with one failing test that covers a done AC.
+
+        The test is tagged ``# covers: DONE-001`` (work_status: done → enforced).
+        The enforcement plugin must NOT convert this failure to xfail.
+
+        Args:
+            test_dir: Temporary directory for the test file.
+
+        Returns:
+            Path to the newly created test file.
+        """
+        test_file = test_dir / "test_stub_done.py"
+        test_file.write_text(
+            textwrap.dedent(
+                """\
+                def test_stub_fails_but_ac_is_done():
+                    # covers: DONE-001
+                    \"\"\"AC DONE-001 is done — this failure must be enforced (real failure).\"\"\"
+                    assert False, "this test intentionally fails and must NOT be silenced"
+                """
+            ),
+            encoding="utf-8",
+        )
+        return test_file
+
+    def test_done_ac_test_is_enforced(self):
+        # covers: TQ-100b-2
+        """AC TQ-100b-2: A failing test tagged '# covers: <AC>' whose AC work_status
+        is done is enforced — its failure drives the overall run non-passing and is
+        NOT silenced by the enforcement plugin.
+
+        What must be true to make (and keep) this test green:
+          - classify_by_work_status('DONE-001', cache) must return 'enforced'.
+          - The conftest hook must NOT convert the outcome to xfail or skip when
+            the covering AC's work_status is 'done'.
+          - The test failure must appear as a real failure in the output (FAILED or
+            AssertionError), not as xfail/XFAIL.
+          - The overall pytest exit code must be non-zero.
+
+        This test verifies that the enforcement plugin correctly passes through
+        failures on done ACs without silencing them.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            test_dir = tmp / "suite"
+            test_dir.mkdir()
+            ac_store_dir = tmp / "ac_store"
+            ac_store_dir.mkdir()
+
+            self._build_done_ac_store(ac_store_dir)
+            self._build_failing_test_tagged_done(test_dir)
+
+            result = self._run_pytest_subprocess(test_dir, ac_store_dir)
+            output = result.stdout + result.stderr
+
+            # The overall run MUST fail (exit code != 0) because the only failing
+            # test covers a done AC (work_status: done) and must therefore be
+            # treated as enforced — a real failure that drives the run non-passing.
+            self.assertNotEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected pytest exit code != 0 — the failing test covers a "
+                    "done AC (work_status: done, id: DONE-001) and must be treated "
+                    "as enforced, not informational. "
+                    f"Exit code: {result.returncode}. Full output:\n{output}"
+                ),
+            )
+
+            # The failure must NOT be reported as xfail/xfailed (that would mean
+            # the enforcement plugin incorrectly silenced it as if it were informational).
+            silenced_markers = ("xfailed", "XFAIL")
+            for marker in silenced_markers:
+                self.assertNotIn(
+                    marker,
+                    output,
+                    msg=(
+                        f"Found '{marker}' in output — the test was incorrectly converted "
+                        "to xfail but it covers a done AC and must be a real enforced failure. "
+                        f"Full output:\n{output}"
+                    ),
+                )
+
+            # The test failure must appear explicitly in the output as a real failure.
+            failure_markers = ("FAILED", "AssertionError", "assert False")
+            self.assertTrue(
+                any(m in output for m in failure_markers),
+                msg=(
+                    "Expected an explicit test failure to appear in the output "
+                    f"(one of {failure_markers}), but none were found. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
