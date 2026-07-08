@@ -1,0 +1,43 @@
+id: KM-KGS-100e
+readiness: draft
+priority: high
+title: "Ask for a component and get a complete, trustworthy answer — never an empty one"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Stand on any component and see everything that belongs to it — complete, not empty.
+
+  Every knowledge item — your requirements, agents, skills, docs, tickets, and the
+  roadmap — says which part of the product it belongs to, so when you or an agent asks
+  the map "show me everything for this component", the answer is complete and accurate
+  instead of empty. Saying which component an item belongs to is expected of everything
+  that joins the map, and items that already existed are brought up to the same standard,
+  so the picture is trustworthy for the whole project — not only for new work. The payoff:
+  standing on a component, you can see its requirements and, through them, the code and
+  tests that deliver it.
+depends_on:
+  - KM-KGS-100
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+documentation_triggers:
+  - how-to
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
