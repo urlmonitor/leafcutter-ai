@@ -1,0 +1,46 @@
+id: BO-2000b-1-i
+title: "A build target that resolves inside the active worktree is refused, same as the worktree root"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a request to exercise the build,
+    and the build is invoked with a target directory that resolves to a path
+    inside the active worktree (a subdirectory of the worktree root, not an
+    external disposable location),
+  When the build is invoked,
+  Then it is treated the same as targeting the worktree root itself and the run
+    is refused with a message identifying the target as inside the active worktree,
+  And no build output is written anywhere inside the active worktree,
+  And the in-progress changes in the worktree are unchanged.
+depends_on:
+  - BO-2000b-1
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: simple
+it_requirements:
+  - "Extend the BO-2000b-1 guard in scripts/build.py: a target that resolves to a subdirectory inside the active worktree root is treated the same as the root itself and refused, with a message identifying the target as inside the active worktree."
+  - "Comparison must be on resolved/real paths (resolve symlinks and relative components) so a symlinked or relative target that lands inside the worktree is still caught."
+  - "On the refusal path no output may be written inside the worktree and in-progress changes must be left unchanged."
+  - "Keep scripts/build.py and its deployed copy in parity per ADR-001 (build.py round-trip)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000b-1
+  contract: "The worktree-root detection + refusal guard in scripts/build.py that this edge case extends to also cover subdirectories resolving inside the worktree."
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

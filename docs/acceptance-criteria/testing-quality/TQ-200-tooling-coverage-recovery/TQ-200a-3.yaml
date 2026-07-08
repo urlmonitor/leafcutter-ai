@@ -1,0 +1,58 @@
+id: TQ-200a-3
+title: "Registry injection into templates is covered by tests"
+component: testing-quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a valid registry and a template that declares a registry-injection
+    placeholder,
+  When the injection builder in injection_builders.py produces the injection
+    payload and template_compiler.py compiles the template,
+  Then the compiled output contains the registry-derived content in place of the
+    placeholder and the placeholder token no longer appears in the output.
+
+  Given a template that declares no registry-injection placeholder,
+  When template_compiler.py compiles it,
+  Then the output is unchanged and no registry content is injected.
+
+  Given a registry-injection placeholder that references registry data which is
+    absent or empty,
+  When the injection builder runs,
+  Then it fails with an error naming the missing registry section rather than
+    emitting an empty or partially rendered injection.
+depends_on:
+  - TQ-200a
+doc_links:
+  - path: scripts/injection_builders.py
+    relationship: verifies
+    status: exists
+  - path: scripts/template_compiler.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: standard
+it_requirements:
+  - "Author fresh unit tests in tests/test_registry_injection.py (new file). Source PR is closed — write from scratch and verify run-to-green before sign-off. Note tests/test_config_driven_build_paths.py already covers the project_paths placeholder; do not duplicate it."
+  - "Functions under test: injection_builders.build_per_agent_spawn_table / build_registry_block, and template_compiler.compile_agent_template together with its _apply_registry_injection placeholder resolution. Import both by bare module name after adding scripts/ to sys.path."
+  - "Assert that a template containing a registry-injection placeholder (e.g. {{my_spawn_allowlist}}) compiles to output that contains the registry-derived table AND that the placeholder token no longer appears in the output."
+  - "Assert that a template declaring no registry-injection placeholder compiles unchanged (no registry content injected)."
+  - "API NUANCE for the absent/empty scenario: only some injection types raise. build_per_agent_spawn_table raises ValueError on an unknown/missing agent (surfaced by _apply_registry_injection as a wrapped ValueError), but build_registry_block and build_per_agent_skills_table return an empty string by design when the registry section is absent/empty rather than raising. Target the ValueError path (spawn table with an unknown agent id) for the 'fails with an error' assertion; the empty-string degradation cases will not raise."
+  - "Use tmp_path template files plus an on-disk registry fixture; do not depend on the live package registry."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

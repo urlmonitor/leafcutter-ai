@@ -1,0 +1,46 @@
+id: BO-2000a-3
+title: "Sequence diagram of the recorded-evidence self-hosting non-regression flow"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the recorded-evidence self-hosting non-regression flow -- claim
+    submission, gate evaluation of the recorded command and its captured output,
+    and the accept or reject outcome,
+  When the sequence diagram for this flow is produced,
+  Then it shows the ordered interactions from claim submission through the
+    fulfillment gate / validator evidence check to the accept and reject outcomes,
+  And it distinguishes the evidence-present-with-zero-new-violations acceptance
+    path from the bare-claim and incomplete-evidence rejection paths.
+depends_on:
+  - BO-2000a
+  - BO-2000a-1
+  - BO-2000a-2
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: simple
+it_requirements:
+  - "Author a Mermaid sequence diagram of the recorded-evidence flow: claim submission -> fulfillment gate / validator evidence check -> outcome. Depict the acceptance path (evidence bundle present with zero new violations) distinctly from the two rejection paths: bare claim (no command/output) and incomplete evidence (command present, output missing / output reports new violations)."
+  - "Keep the depicted decision points consistent with the prompt rules authored in BO-2000a-1, BO-2000a-1-i, BO-2000a-2, and BO-2000a-2-i so the diagram matches enforced behavior."
+  - "Place the diagram where the build-orchestration architecture docs live and follow the write-c4-diagram / diagram conventions."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000a-1
+  contract: "The accept/reject decision points and evidence-bundle checks of the recorded-evidence self-hosting non-regression flow (as authored into the gate/validator templates) that the sequence diagram must depict."
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

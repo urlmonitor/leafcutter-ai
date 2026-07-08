@@ -1,0 +1,57 @@
+id: TQ-200c-1
+title: "Ticket prioritization, including parked-ticket handling, is covered by tests"
+component: testing-quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a set of tickets with depends_on relationships where some predecessors
+    are not yet done,
+  When prioritize ranks the tickets,
+  Then only tickets whose dependencies are all satisfied appear in the ready set,
+    and blocked tickets are excluded.
+
+  Given several ready tickets with differing priority values,
+  When prioritize ranks them,
+  Then the returned order is sorted with the highest-priority ticket first.
+
+  Given a ticket whose frontmatter status marks it as parked,
+  When prioritize builds the ready set,
+  Then the parked ticket is excluded from the ready set even if all of its
+    dependencies are satisfied.
+
+  Given a set of tickets containing a dependency cycle,
+  When prioritize processes them,
+  Then it reports the cycle and identifies the tickets involved rather than
+    surfacing an arbitrary ticket as ready.
+depends_on:
+  - TQ-200c
+doc_links:
+  - path: templates/skills/ticket-prioritizer/scripts/prioritize.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: standard
+it_requirements:
+  - "Author fresh unit tests in tests/test_prioritize.py (new file). Source PR is closed — write from scratch and verify run-to-green before sign-off. prioritize.py lives under templates/skills/ticket-prioritizer/scripts/ — import it via sys.path.insert of that scripts directory (see tests/test_pick_next_with_acs.py for the sys.path pattern)."
+  - "API MISMATCH: there is no single function named prioritize. Map 'prioritize ranks the tickets' to the pipeline discover_tickets -> build_graph -> detect_cycle -> compute_ready. Assert compute_ready returns (ready, blocked) with blocked tickets excluded from the ready set and ready sorted highest-priority-first (PRIORITY_ORDER: critical<high<medium<low)."
+  - "Assert detect_cycle returns the cycle node path (and main() exits non-zero) for a dependency cycle, rather than surfacing an arbitrary ticket as ready."
+  - "API GAP: parked-ticket handling does NOT exist — _is_done treats only status 'done'/'deferred' as done, so a status: parked ticket is currently surfaced as ready. The parked-exclusion scenario cannot be authored run-to-green against the current code; flag to the BA/coder that 'parked' handling must be added first."
+  - "Use tmp_path ticket .md fixtures carrying real frontmatter (status, priority, depends_on) since discovery is filesystem-driven (discover_tickets rglob's *.md)."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

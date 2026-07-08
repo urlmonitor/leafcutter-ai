@@ -1,0 +1,42 @@
+id: BO-2000a-2-i
+title: "A claim with a recorded command but missing captured output is rejected as incomplete evidence"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a self-hosting non-regression claim that includes the recorded command
+    that was run but is missing the captured output of that run,
+  When the fulfillment gate / validator evaluates the claim,
+  Then the claim is rejected as incomplete evidence,
+  And the rejection message states that the recorded output is missing and that
+    both the command and its captured zero-new-violations output are required,
+  And the claim is not marked as a passing self-hosting non-regression result.
+depends_on:
+  - BO-2000a-2
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: simple
+it_requirements:
+  - "Add a prompt rule to templates/agents/ac-fulfillment-gate.md and templates/agents/ac-validator.md: a claim that includes the recorded command but is missing the captured output is rejected as incomplete evidence, with a message stating the recorded output is missing and that both the command and its captured zero-new-violations output are required."
+  - "The claim must not be recorded as a passing self-hosting non-regression result on this rejection path."
+  - "Reuse the evidence-bundle shape defined by BO-2000a-1 (this is the 'command present, output absent' partial-bundle case)."
+  - "Edit the templates/ source and keep the deployed .claude/agents/*.md copies in parity per ADR-001 (build.py round-trip)."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,57 @@
+id: TQ-200a-1
+title: "Registry loading and top-level validation are covered by tests"
+component: testing-quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a well-formed agent_registry.json on disk,
+  When load_registry reads it,
+  Then it returns the parsed registry object with all agent entries intact.
+
+  Given a registry file path that does not exist or contains malformed JSON,
+  When load_registry is called,
+  Then it fails with an error naming the unreadable or unparseable file
+    rather than returning a partial or empty registry.
+
+  Given a parsed registry in which every agent entry has the required fields,
+  When validate_agent_registry runs,
+  Then it reports no errors.
+
+  Given a registry entry that is missing a required field (for example an agent
+    with no id or no role) or that declares a duplicate agent id,
+  When validate_agent_registry runs,
+  Then it returns at least one error that names the offending agent and the
+    specific violation, and does not report the registry as valid.
+depends_on:
+  - TQ-200a
+doc_links:
+  - path: scripts/registry_validator.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: standard
+it_requirements:
+  - "Author fresh unit tests in tests/test_registry_validator.py (new file). The original source PR is closed, so the tests must be written from scratch and verified run-to-green (python -m unittest / pytest on tests/test_registry_validator.py) before sign-off — do not assume any prior test scaffolding exists."
+  - "Functions under test (scripts/registry_validator.py): load_registry(package_root), _load_agents(package_root), validate_agent_registry(package_root). Import by bare module name after adding scripts/ to sys.path (matches the existing tests/test_verification_block.py convention)."
+  - "Assert load_registry returns the parsed agents list (list[dict]) with every agent entry present for a well-formed registry fixture."
+  - "API MISMATCH: load_registry does NOT raise on a missing/malformed file — it silently returns []. The 'fails with an error naming the unreadable/unparseable file' behavior lives in _load_agents (returns an errors list) and is surfaced by validate_agent_registry. Assert the error-naming behavior against _load_agents / validate_agent_registry, not load_registry, or coordinate a criteria amendment with the BA."
+  - "API GAP: registry_validator has NO check for a missing required field (id/role) or a duplicate agent id — a missing id currently raises KeyError rather than returning an error, and duplicates are never detected. The missing-field / duplicate-id scenarios cannot be authored run-to-green against the current code; flag to the BA/coder that this validation must be added before the test can pass."
+  - "Use a self-contained on-disk fixture package (tmp_path with config/agent_registry.json plus templates/) so the template-path / orphan-template / produces checks inside validate_agent_registry do not fire spuriously; do not assert against the live package registry."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

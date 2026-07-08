@@ -1,0 +1,58 @@
+id: TQ-200b-2
+title: "Selection-criteria evaluation and its DSL are covered by tests"
+component: testing-quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a selection-criteria expression that a candidate fully satisfies,
+  When evaluate runs against that candidate,
+  Then it returns a positive match result.
+
+  Given a selection-criteria expression that a candidate does not satisfy,
+  When evaluate runs against that candidate,
+  Then it returns a negative (non-match) result.
+
+  Given DSL expressions that combine conditions (for example AND, OR, and
+    negation of individual criteria),
+  When evaluate resolves them,
+  Then the boolean outcome follows the declared logical composition for each
+    combination.
+
+  Given a criterion that cannot be resolved deterministically and requires a
+    model judgement,
+  When evaluate encounters it,
+  Then it raises LLMEvaluationRequired rather than silently returning a match or
+    non-match.
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: scripts/selection_criteria_evaluator.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: simple
+it_requirements:
+  - "Author fresh unit tests in tests/test_selection_criteria_evaluator.py (new file). Source PR is closed — write from scratch and verify run-to-green before sign-off."
+  - "Functions under test (scripts/selection_criteria_evaluator.py): evaluate(trigger_condition, ticket_context) and the LLMEvaluationRequired exception. A condition is a dict {type: 'dsl'|'llm', expression: str}; the 'candidate' is the ticket_context dict (keys: files_touched, title, description, components). Import by bare module name after adding scripts/ to sys.path."
+  - "Assert a satisfied DSL expression returns True and an unsatisfied one returns False."
+  - "Assert AND / OR composition yields the declared boolean outcome (AND binds tighter than OR)."
+  - "API GAP: the DSL grammar supports only the AND/OR combinators and the operators contains/equals/matches — there is NO negation/NOT operator. The 'negation of individual criteria' sub-case cannot be authored run-to-green against the current evaluator; cover AND/OR and flag the negation gap to the BA/coder rather than asserting unsupported syntax."
+  - "Assert evaluate raises LLMEvaluationRequired for a condition with type 'llm'."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

@@ -1,0 +1,52 @@
+id: TQ-200b-3
+title: "Agent diagram generation is covered by tests"
+component: testing-quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a valid agent registry,
+  When generate_agent_diagram produces the agent map,
+  Then the output contains one node for every agent in the registry and one edge
+    for every declared spawn relationship.
+
+  Given a registry with a spawn relationship between two agents,
+  When the diagram is generated,
+  Then the resulting diagram text contains an edge connecting exactly those two
+    agents in the declared direction.
+
+  Given an empty registry with no agents,
+  When generate_agent_diagram runs,
+  Then it produces a well-formed but empty diagram rather than raising an
+    unhandled error.
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: scripts/generate_agent_diagram.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: simple
+it_requirements:
+  - "Author fresh unit tests in tests/test_generate_agent_diagram.py (new file). Source PR is closed — write from scratch and verify run-to-green before sign-off."
+  - "API MISMATCH: there is no function named generate_agent_diagram. Map the criteria's 'generate_agent_diagram' to generate_spawn_graph(agents) in scripts/generate_agent_diagram.py (emits one node line per agent and a 'parent --> child' edge per spawn_allowlist entry, with the __ticket_phase_agents__ macro expanded). Import by bare module name after adding scripts/ to sys.path."
+  - "Assert the generated spawn-graph text contains one node per agent and one edge per declared spawn relationship."
+  - "Assert a spawn relationship produces an edge connecting exactly those two agents in the declared direction (parent --> child, with ids hyphen-to-underscore normalised)."
+  - "Assert generate_spawn_graph([]) returns a well-formed but empty diagram (just the 'graph TD' header) and does not raise."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

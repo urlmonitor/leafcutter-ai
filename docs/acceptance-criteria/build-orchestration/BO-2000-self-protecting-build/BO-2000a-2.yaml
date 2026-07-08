@@ -1,0 +1,42 @@
+id: BO-2000a-2
+title: "A bare self-hosting-verified claim with no recorded command or output is rejected with an actionable message"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a self-hosting non-regression claim that asserts "self-hosting verified"
+    with no recorded command and no recorded output attached to it,
+  When the fulfillment gate / validator evaluates the claim,
+  Then the claim is rejected,
+  And the rejection message is actionable: it states that a recorded command and
+    its captured zero-new-violations output are required to substantiate the claim,
+    and that a bare assertion is not accepted as evidence.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: simple
+it_requirements:
+  - "Add a prompt rule to templates/agents/ac-fulfillment-gate.md and templates/agents/ac-validator.md: a claim asserting 'self-hosting verified' with no recorded command and no captured output is rejected with an actionable message stating that a recorded command plus its captured zero-new-violations output are required, and that a bare assertion is not accepted as evidence."
+  - "Reuse the evidence-bundle shape defined by BO-2000a-1 so the 'what is missing' message names the same required fields."
+  - "Edit the templates/ source and keep the deployed .claude/agents/*.md copies in parity per ADR-001 (build.py round-trip)."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-2-i
+implemented_by: []

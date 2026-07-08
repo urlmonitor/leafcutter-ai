@@ -1,0 +1,50 @@
+id: BO-2000b-3
+title: "How-to guide for exercising the build without overwriting in-progress work"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a contributor who needs to see what a build produces without risking
+    the changes they have open in the active worktree,
+  When the how-to guide for safely exercising the build is produced,
+  Then it states that the build must never be run against the active worktree
+    root or any path inside it, that a disposable target directory outside the
+    worktree must be used instead, and that dual-tree files are edited in the
+    package source and reconciled by comparison rather than synced by a build,
+  And it gives the concrete ordered steps a contributor follows to exercise the
+    build safely and confirm their in-progress work is untouched afterward.
+depends_on:
+  - BO-2000b
+  - BO-2000b-1
+  - BO-2000b-2
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: simple
+it_requirements:
+  - "Author a how-to (diataxis how-to genre) under docs/ giving the concrete ordered steps to exercise the build safely: never target the worktree root or any path inside it, use a disposable target directory outside the worktree, edit dual-tree files in the package source and reconcile by comparison rather than syncing by a build, and confirm in-progress work is untouched afterward."
+  - "Reproduce the exact refusal message/behavior from BO-2000b-1 and the dual-tree-edit rule from BO-2000b-2 so the guide matches enforced behavior rather than restating intent."
+  - "Cross-link ADR-001 (self-hosting boundary) as the rationale source."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000b-1
+  contract: "The refusal message text and the deploy-to-a-disposable-target-outside-the-worktree rule (from the build.py guard) that the how-to teaches; the dual-tree rule from BO-2000b-2 is a secondary input captured via depends_on."
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

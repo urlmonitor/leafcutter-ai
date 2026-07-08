@@ -1,0 +1,43 @@
+id: BO-2000
+title: "The build never destroys your work and proves its own correctness claims"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A build that protects itself -- it never wipes work in progress, and "still correct" is proven, not promised.
+
+  When the project builds itself, two guarantees hold. First, running the build
+  can never delete or overwrite the work you have open right now -- your
+  in-progress changes survive untouched, so a routine build can no longer quietly
+  eat an afternoon of edits. Second, any claim that the project still passes its
+  own standards after a change is only believed when it is backed by evidence you
+  can see -- a claim with nothing to show for it is rejected outright. Together
+  these keep the build honest: it protects what you are working on, and it refuses
+  to mark itself healthy on trust alone.
+
+  This goal is distinct from its neighbours. BO-1700 governs whether the quality
+  checks FIRE at all inside a throwaway workspace; BO-1500 governs how authoring
+  requirements stays out of your way and lands safely on main. BO-2000 is a
+  narrower, different promise: the build not destroying work in progress, and
+  self-health claims being backed by recorded evidence rather than assertion.
+depends_on: []
+doc_links:
+  - templates/agents/python-coder.md
+  - templates/agents/ac-fulfillment-gate.md
+  - templates/agents/ac-validator.md
+  - scripts/build.py
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: [BO-2000a, BO-2000b]
+implemented_by: []

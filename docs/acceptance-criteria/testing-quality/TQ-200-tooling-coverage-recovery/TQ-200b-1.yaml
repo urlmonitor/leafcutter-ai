@@ -1,0 +1,58 @@
+id: TQ-200b-1
+title: "The package audit and its report formatting are covered by tests"
+component: testing-quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package layout with a known mix of compliant and non-compliant items,
+  When run_audit executes,
+  Then it returns audit findings that include every non-compliant item and omits
+    items that comply.
+
+  Given an audit item of a known kind (for example an undocumented agent or an
+    orphaned skill),
+  When _classify_item is called on it,
+  Then it returns the expected classification category for that item.
+
+  Given a classified audit item,
+  When _suggest_action is called on it,
+  Then it returns the remediation action that matches that classification.
+
+  Given a set of audit findings,
+  When format_markdown renders them,
+  Then the output is a Markdown report that lists each finding with its category
+    and suggested action, and rendering an empty findings set produces a report
+    that explicitly states no issues were found.
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: scripts/package_audit.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: standard
+it_requirements:
+  - "Author fresh unit tests in tests/test_package_audit.py (new file). Source PR is closed — write from scratch and verify run-to-green before sign-off."
+  - "Functions under test (scripts/package_audit.py): run_audit(project_root, package_root, boundary_config_path), _classify_item(filename, items_map), _suggest_action(classification, in_template), format_markdown(audit). Import by bare module name after adding scripts/ to sys.path."
+  - "Build a tmp_path fixture with live/template directory pairs plus a package_boundary.json describing sections and items; run_audit is filesystem-driven and reads that config."
+  - "Assert run_audit findings include every non-compliant (portable, missing-from-template) item and omit compliant items; total_missing counts only action=='move' items."
+  - "Assert _classify_item returns the expected category from items_map (portable / project-specific / unknown), and _suggest_action returns 'move' / 'mark-boundary' / 'none' matching classification + in_template."
+  - "Assert format_markdown lists each finding with its category and action, and that an empty AuditReport renders the explicit 'No package gap detected' no-issues line."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

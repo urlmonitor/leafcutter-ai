@@ -1,0 +1,38 @@
+id: BO-2000b
+title: "Your open work is never overwritten by a build regenerating over it"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Never build on top of the work you have open -- try the build out somewhere disposable, so nothing in progress is lost.
+
+  When someone needs to see what a build produces, that build is exercised in a
+  throwaway location, never on top of the workspace holding your current changes.
+  Generated output is regenerated only where it is safe to discard, so a build run
+  can never delete or rewrite the edits you have in flight and can never muddy the
+  set of changes you are about to review.
+depends_on: [BO-2000]
+doc_links:
+  - templates/agents/python-coder.md
+  - scripts/build.py
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000b-1
+  - BO-2000b-1-i
+  - BO-2000b-2
+  - BO-2000b-3
+implemented_by: []
+documentation_triggers:
+  - how-to

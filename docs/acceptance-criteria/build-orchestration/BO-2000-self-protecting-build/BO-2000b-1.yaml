@@ -1,0 +1,47 @@
+id: BO-2000b-1
+title: "Building against an active worktree is prohibited; deploy is exercised against a disposable target outside it"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given someone needs to exercise what the build produces while the active
+    worktree holds in-progress changes,
+  When the build is invoked to deploy its output,
+  Then running the build against the active worktree root is prohibited and the
+    run is refused with a message identifying the worktree root as an unsafe target,
+  And the deploy is exercised only against a disposable target directory located
+    outside the active worktree,
+  And after the run the in-progress changes in the worktree are unchanged.
+depends_on:
+  - BO-2000b
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: standard
+it_requirements:
+  - "Add a guard to scripts/build.py in the --target-dir handling (around the target_root resolution, ~line 1378): resolve the target to a real/absolute path and refuse the run when it equals the active worktree root, emitting an actionable message that identifies the worktree root as an unsafe target. This deterministic refusal is the authoritative, testable behavior."
+  - "On the refusal path no build output may be written anywhere inside the active worktree, and the in-progress changes in the worktree must be left unchanged."
+  - "Reinforce with a standing rule in templates/agents/python-coder.md (an llm-expert surface) instructing the coder never to run build.py against the active worktree and to always deploy to a disposable target outside it -- defense-in-depth for the deterministic guard. SPLIT CANDIDATE: build.py guard = python-coder; python-coder.md standing rule = llm-expert (see caveats)."
+  - "Follow the project error handling policy (wrap external I/O, name specific exceptions, no silent swallow) per CLAUDE.md."
+  - "Keep scripts/build.py and its deployed copy in parity per ADR-001 (build.py round-trip); edit the tracked source, never the deployed copy alone."
+delivers_to:
+  agent: documentation-expert
+  contract: "The exact refusal message text and the deploy-to-a-disposable-target-outside-the-worktree rule that the BO-2000b-3 how-to must reproduce so the guide matches enforced behavior."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000b-1-i
+implemented_by: []

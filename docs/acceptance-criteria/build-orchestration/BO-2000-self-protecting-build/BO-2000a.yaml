@@ -1,0 +1,39 @@
+id: BO-2000a
+title: "A self-health claim is only believed when the evidence is on the table"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  "Still passes its own standards" must come with the receipt -- the command run and what it showed, zero new violations.
+
+  When a change claims the project still holds itself to its own standards, that
+  claim is only accepted when it is backed by the actual check that was run and
+  the result it produced, showing nothing new broke. A bare "verified" with
+  nothing to show is turned away instead of waved through, so a hollow assurance
+  can never masquerade as a passing result.
+depends_on: [BO-2000]
+doc_links:
+  - templates/agents/ac-fulfillment-gate.md
+  - templates/agents/ac-validator.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-1
+  - BO-2000a-1-i
+  - BO-2000a-2
+  - BO-2000a-2-i
+  - BO-2000a-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

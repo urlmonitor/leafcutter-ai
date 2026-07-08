@@ -1,0 +1,42 @@
+id: BO-2000a-1-i
+title: "Recorded evidence that reports new violations is rejected, not accepted"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a self-hosting non-regression claim accompanied by a recorded evidence
+    bundle that contains both the command that was run and its captured output,
+    and the captured output reports one or more new standards violations,
+  When the fulfillment gate / validator evaluates the claim,
+  Then the claim is rejected,
+  And the rejection message names the new violations found in the recorded output,
+  And the claim is not marked as a passing self-hosting non-regression result.
+depends_on:
+  - BO-2000a-1
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: simple
+it_requirements:
+  - "Add a prompt rule to templates/agents/ac-fulfillment-gate.md and templates/agents/ac-validator.md: when the captured output in the evidence bundle reports one or more new standards violations, the claim is rejected and the rejection message names the specific new violations found in the recorded output."
+  - "The claim must not be recorded as a passing self-hosting non-regression result on the rejection path."
+  - "Reuse the same evidence-bundle shape defined by BO-2000a-1 so accept and reject paths stay consistent."
+  - "Edit the templates/ source and keep the deployed .claude/agents/*.md copies in parity per ADR-001 (build.py round-trip)."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

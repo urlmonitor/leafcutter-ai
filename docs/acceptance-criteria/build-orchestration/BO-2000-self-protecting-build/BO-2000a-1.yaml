@@ -1,0 +1,47 @@
+id: BO-2000a-1
+title: "A self-hosting non-regression claim backed by a recorded command and zero-new-violations output is accepted"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a self-hosting non-regression claim submitted for evaluation,
+    and the claim is accompanied by a recorded evidence bundle that contains
+    both the exact command that was run to check the project against its own
+    standards and the captured output of that run,
+    and the captured output reports zero new standards violations,
+  When the fulfillment gate / validator evaluates the claim,
+  Then the claim is accepted as a valid self-hosting non-regression result,
+  And the accepted result retains a reference to the command and the captured
+    output that backed it, so the evidence remains inspectable after acceptance.
+depends_on:
+  - BO-2000a
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: simple
+it_requirements:
+  - "Implement as prompt rules in templates/agents/ac-fulfillment-gate.md and templates/agents/ac-validator.md: the gate/validator accepts a self-hosting non-regression claim only when an evidence bundle is present containing (a) the exact command run and (b) its captured output, and the output reports zero new standards violations."
+  - "Define the required evidence-bundle shape once and reference it consistently across both templates so the accept path here and the reject paths (BO-2000a-1-i, BO-2000a-2, BO-2000a-2-i) agree on the same required fields."
+  - "The accepted result must retain an inspectable reference to the command and its captured output; evidence must not be discarded on acceptance."
+  - "Edit the templates/ source and keep the deployed agent copies (.claude/agents/ac-fulfillment-gate.md, .claude/agents/ac-validator.md) in parity per ADR-001 (build.py round-trip); never edit the deployed copy alone."
+delivers_to:
+  agent: architecture-diagram-author
+  contract: "The accept/reject decision points of the recorded-evidence self-hosting non-regression flow (evidence-present + zero-new-violations -> accept) that BO-2000a-3 must depict in the sequence diagram."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000a-1-i
+implemented_by: []

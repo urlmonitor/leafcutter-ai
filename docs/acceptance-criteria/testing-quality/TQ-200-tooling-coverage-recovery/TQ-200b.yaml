@@ -1,0 +1,41 @@
+id: TQ-200b
+title: "The package audit, selection rules, and agent map keep working as intended"
+component: testing-quality
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Tests protect the audit report, the agent-selection rules, and the agent
+  diagram from silent breakage.
+
+  The tools that run the package audit and format its report, evaluate the
+  selection criteria that decide which agent fits a task, and generate the agent
+  map are covered by tests. A change that corrupts the audit output, mis-evaluates
+  a selection rule, or breaks the diagram is caught by a failing test rather than
+  discovered by surprise later.
+depends_on:
+  - TQ-200
+doc_links:
+  - scripts/package_audit.py
+  - scripts/selection_criteria_evaluator.py
+  - scripts/generate_agent_diagram.py
+  - tests/README.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200b-1
+  - TQ-200b-2
+  - TQ-200b-3
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test-coverage recovery for existing tooling — no new user-facing command, workflow, or behavior is introduced, so no how-to or diagram adds value."

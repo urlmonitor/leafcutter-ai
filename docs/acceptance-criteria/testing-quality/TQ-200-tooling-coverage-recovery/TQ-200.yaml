@@ -1,0 +1,39 @@
+id: TQ-200
+title: "The package's own tooling can't break in silence — it's guarded by tests"
+component: testing-quality
+level: L0
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Regressions in the package's behind-the-scenes tooling get caught by tests
+  instead of shipping unnoticed.
+
+  A cluster of internal tools does real work every drive — it checks that the
+  agent registry is wired correctly, audits the package, ranks the next ticket
+  to build, scans for leaked secrets, and draws the agent map. Today those tools
+  ship with no automated coverage at all, so a change that quietly breaks one of
+  them slips through unseen and only surfaces later as a confusing failure mid-run.
+  After this goal, each of these tools is backed by focused tests that fail the
+  moment its behavior regresses, making the package self-protecting against its
+  own tooling breaking. This complements TQ-100 (which decides WHICH tests gate
+  main) by ensuring the tooling those gates depend on is itself tested.
+depends_on: []
+doc_links:
+  - tests/README.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200a
+  - TQ-200b
+  - TQ-200c
+implemented_by: []
