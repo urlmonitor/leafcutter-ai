@@ -1,8 +1,8 @@
 ---
 title: "finalize-feature: resolve pre-flight target from input + build/deploy symmetry between baseline and post-merge test runs"
-status: todo
+status: in_progress
 components:
-  - finalize
+  - build_pipeline
 created: 2026-07-07
 origin_agent: BrainCandy
 depends_on: []
@@ -17,12 +17,12 @@ files_touched:
   - unit_tests/workflows/test_finalize_feature_preflight.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -120,11 +120,53 @@ All new tests must be RED before implementation and GREEN after.
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-07-08 09:15
+- [x] python-coder — 2026-07-08 10:45
+- [x] test-runner — 2026-07-08 11:30
+- [x] pr-reviewer — 2026-07-08 12:00
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-08 09:15 — test-writer (status: ok)
+feedback-id: fb_2026-07-08_b5bffd6e
+completion_manifest:
+  test_file_created: true
+  all_tests_red: true
+  fin_100g1_coverage: true
+  fin_100a4_coverage: true
+  workflows_dir_scaffolded: true
+Created `unit_tests/workflows/test_finalize_feature_preflight.py` with 9 failing tests covering FIN-100g-1 (5 tests: pre-flight reads `args.target_branch`, uses `git worktree list --porcelain`, handles no-worktree error, falls back to CWD, abort anchored to resolved target) and FIN-100a-4 (4 tests: Step 0 and Step 3 both contain build.py, symmetry guard, ordering guard). All 9 tests confirmed RED (exit code 1) against the current `finalize-feature.js`. Also scaffolded `unit_tests/workflows/__init__.py` and `unit_tests/workflows/conftest.py`.
+
+### 2026-07-08 10:45 — python-coder (status: ok)
+feedback-id: fb_2026-07-08_6c48f954
+completion_manifest:
+  fin_100g1_preflight_target_resolution: true
+  fin_100a4_step0_build_py: true
+  fin_100a4_step3_build_py: true
+  fin_100a4_ordering_guard: true
+  step_map_doc_created: true
+  all_9_tests_green: true
+Updated `templates/workflows-js/finalize-feature.js` with two fixes: (1) FIN-100g-1 — pre-flight now reads `args.target_branch`; when provided, uses `git worktree list --porcelain` to locate the correct worktree, returns a clear "no worktree for branch" error when the branch is not checked out, and falls back to CWD-based `git branch --show-current` detection when no target is given; the main/master abort fires on the resolved target, not the ambient CWD; (2) FIN-100a-4 — Step 0 (Step C) and Step 3 both now include a `scripts/build.py --target-dir` instruction before the test suite, with build.py ordered before pytest in Step 3's prompt text. Created `templates/workflows/finalize-feature.md` as the step-map documentation file. All 9 tests confirmed GREEN.
+
+### 2026-07-08 11:30 — test-runner (status: ok)
+feedback-id: fb_2026-07-08_39471c47
+completion_manifest:
+  all_9_tests_green: true
+  no_regressions_in_workflows_suite: true
+All 9 tests in `unit_tests/workflows/test_finalize_feature_preflight.py` passed GREEN: 5 FIN-100g-1 tests (pre-flight reads args.target_branch, uses git worktree list --porcelain, handles no-worktree error, falls back to CWD, abort anchored to resolved target) and 4 FIN-100a-4 tests (Step 0 and Step 3 both contain build.py, symmetry guard, ordering guard). The broader `unit_tests/workflows/` suite also ran clean with no regressions (9/9 passed, this is the only file in the directory).
+
+### 2026-07-08 12:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-08_4c0aaef7
+completion_manifest:
+  fin_100g1_targetbranch_read_from_args: true
+  fin_100g1_worktree_list_porcelain_in_prompt: true
+  fin_100g1_no_worktree_error_returned: true
+  fin_100g1_cwd_fallback_present: true
+  fin_100g1_abort_fires_on_resolved_target: true
+  fin_100a4_step0_build_py_before_pytest: true
+  fin_100a4_step3_build_py_before_pytest: true
+  finalize_feature_md_doc_updated: true
+  no_unintended_regressions: true
+Both ACs verified in the staged diff. FIN-100g-1: `const targetBranch = args.target_branch || null` is set before the pre-flight agent call; the prompt branches on targetBranch — when provided it instructs `git worktree list --porcelain` to locate the correct worktree, returns a clear branch-named error when no match is found, and falls back to `git branch --show-current` (CWD-based) when absent; the main/master abort fires on the RESOLVED BRANCH, not the ambient CWD. FIN-100a-4: Step 0 Step C and Step 3 both include `python3 scripts/build.py --target-dir` before their respective `pytest` invocations — build precedes test in both blocks as required. `templates/workflows/finalize-feature.md` documents both changes. Minor observation: `unit_tests/workflows/__init__.py` and `conftest.py` are not listed in `files_touched` but were noted in the test-writer sign-off as scaffold files — not a blocker.

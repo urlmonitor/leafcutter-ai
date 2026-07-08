@@ -128,11 +128,34 @@ function safeParseJSON(raw) {
   }
 }
 
+// FIN-100g-1: Resolve target branch from explicit input (args.target_branch),
+// not the ambient CWD. When the caller provides a target branch, use
+// git worktree list --porcelain to locate the correct worktree rather than
+// resolving against the current working directory.
+const targetBranch = args.target_branch || null;
+
 const preflightResult = await agent(
-  "Run these shell commands and return the results as a JSON object:\n" +
-  "1. `git branch --show-current` — current branch name\n" +
-  "2. `git rev-parse --show-toplevel` — absolute path to the worktree root\n" +
-  "Return ONLY: { \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }",
+  "Resolve the feature branch and worktree root for this finalize run.\n" +
+  "\n" +
+  (targetBranch
+    ? "Target branch provided: \"" + targetBranch + "\"\n" +
+      "Step 1 — Locate the worktree where this branch is checked out:\n" +
+      "  Run: git worktree list --porcelain\n" +
+      "  Parse each worktree block (separated by blank lines). Each block has fields:\n" +
+      "    worktree <absolute-path>\n" +
+      "    HEAD <sha>\n" +
+      "    branch refs/heads/<branch-name>  (or 'detached' for detached HEADs)\n" +
+      "  Find the block whose branch line ends with '/" + targetBranch + "'.\n" +
+      "  If found: extract the worktree path from that block and return:\n" +
+      "    { \"branch\": \"" + targetBranch + "\", \"worktree_root\": \"<absolute-path>\" }\n" +
+      "  If not found: return a clear branch-named error:\n" +
+      "    { \"error\": \"no worktree for branch " + targetBranch + " — ensure the branch is checked out as a git worktree\",\n" +
+      "      \"branch\": \"" + targetBranch + "\", \"worktree_root\": null }\n"
+    : "No target_branch provided — fall back to CWD-based detection (backward compatible):\n" +
+      "  Run: git branch --show-current\n" +
+      "  Run: git rev-parse --show-toplevel\n" +
+      "  Return: { \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }\n"
+  ),
   { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
 )
 
@@ -147,9 +170,23 @@ let preflightInfo;
   }
 }
 
+// FIN-100g-1: If the agent returned a no-worktree error, halt early with a
+// clear, branch-named message rather than silently resolving to the wrong repo.
+if (preflightInfo.error) {
+  return {
+    status: "error",
+    message: String(preflightInfo.error),
+    action_required: "ensure_worktree_exists_for_branch",
+    branch: preflightInfo.branch || targetBranch,
+  };
+}
+
 const BRANCH = (preflightInfo.branch || "").trim();
 const WORKTREE_ROOT = (preflightInfo.worktree_root || "").trim();
 
+// FIN-100g-1: The abort condition fires on the RESOLVED target branch,
+// not on the ambient CWD branch. When targetBranch is provided, BRANCH is
+// set to the resolved worktree branch — never to the CWD branch.
 if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
   return {
     status: "error",
@@ -363,8 +400,11 @@ const baselineResult = await agent(
   `  Run: git -C "${baselineTmpPath}" rev-parse HEAD\n` +
   "  Store as <baseline_sha>.\n" +
   "\n" +
-  "Step C — Run the test suite inside the temp worktree:\n" +
-  `  Run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
+  "Step C — Deploy shims then run the test suite inside the temp worktree (FIN-100a-4):\n" +
+  `  Run: python3 "${baselineTmpPath}/scripts/build.py" --target-dir "${baselineTmpPath}"\n` +
+  "  (Deploys commit_guardian, feedback scripts, and .pre-commit-config.yaml — same build state as production.)\n" +
+  "  If build.py exits non-zero: log a warning but continue (shim deploy failure is non-fatal for baseline).\n" +
+  `  Then run: python3 -m pytest "${baselineTmpPath}" --tb=no -q 2>&1\n` +
   "  Collect each line that matches the pattern '<file>::<test_name> FAILED'.\n" +
   "  Build a list of failing test IDs (strings like 'test_foo.py::test_bar').\n" +
   "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
@@ -594,8 +634,15 @@ const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
 phase('Step 3')
 
+// FIN-100a-4: deploy shims before running the suite, same as Step 0 baseline.
+// Without this, ~13 deploy-dependent tests fail RED in Step 3 while passing
+// in Step 0, causing the triage set-difference to misclassify them as regressions.
 testResult = await agent(
-  "Run the full test suite on the post-merge worktree. " +
+  `First run: python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}" ` +
+  "to deploy shims (same build.py step as the Step 0 baseline — ensures identical build state " +
+  "for commit_guardian, feedback scripts, and .pre-commit-config.yaml). " +
+  "If build.py exits non-zero: log a warning but continue. " +
+  "Then run the full test suite via pytest on the post-merge worktree. " +
   "Return a JSON object: { \"passed\": true|false, \"output\": \"<verbatim test output>\", " +
   "\"failing_tests\": [\"<file>::<test_name>\", ...] }\n" +
   `Baseline context: baseline_sha=${JSON.stringify(baselineSha)}, ` +
