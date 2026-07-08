@@ -29,8 +29,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 04: Package-surface ACs must carry a machine-checkable implementation spec
@@ -99,8 +99,8 @@ tests:
 - [x] python-coder — 2026-07-08 10:30
 - [x] test-runner — 2026-07-08 10:45
 - [x] pr-reviewer — 2026-07-08 11:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-07-08 11:15
+- [x] pull-request — 2026-07-08 11:20
 
 ## Comments
 
@@ -153,6 +153,21 @@ completion_manifest:
   error_handling_compliant: true
   ruff_clean: true
 All 4 ACs are implemented and tested. Schema if/then conditional is backward-compatible. validate_ac.py uses specific exception types and proper error reporting. it-po.md obligation section is clear and actionable. No blockers — approved.
+
+### 2026-07-08 11:15 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  staged_correct_files: true
+  commit_created: true
+  lock_released: true
+Committed 5 files as 8b7d7349 on branch EPIC-PromptAssemblyHardening. Staged: config/ac_store_schema.json, scripts/ac_store/validate_ac.py, templates/agents/it-po.md, unit_tests/prompt_assembly/test_package_surface_spec.py, tickets/.../04_package_surface_spec_schema.md. Commit lock acquired and released cleanly.
+
+### 2026-07-08 11:20 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed commit 8b7d7349 to origin/EPIC-PromptAssemblyHardening; PR #242 (feat(prompt-assembly): ...) updated with ticket 04 implementation changes.
 
 ## Implementation Tasks
 
