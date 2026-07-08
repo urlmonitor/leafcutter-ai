@@ -37,7 +37,18 @@ origin_agent: product-owner-v3
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - KM-KGS-100e-1
+  - KM-KGS-100e-1-i
+  - KM-KGS-100e-1-ii
+  - KM-KGS-100e-2
+  - KM-KGS-100e-3
+  - KM-KGS-100e-4
+  - KM-KGS-100e-5
+  - KM-KGS-100e-5-i
+  - KM-KGS-100e-6
+  - KM-KGS-100e-6-i
+  - KM-KGS-100e-7
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -1,0 +1,44 @@
+id: KM-KGS-100e-1
+readiness: draft
+priority: high
+title: "An acceptance criterion cannot be committed without declaring its component"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given one acceptance-criterion file whose frontmatter declares no component
+    membership, and one acceptance-criterion file whose frontmatter declares
+    components: ["knowledge-management"]
+  When each file is validated at commit time
+  Then the file that declares no component membership is rejected and its commit
+    is blocked
+  And the rejection message names that file and states that a component membership
+    must be declared
+  And the file that declares components: ["knowledge-management"] passes validation
+depends_on:
+  - KM-KGS-100e
+doc_links:
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: docs/components.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

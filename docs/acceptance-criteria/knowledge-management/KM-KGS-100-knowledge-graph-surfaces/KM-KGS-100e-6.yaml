@@ -1,0 +1,46 @@
+id: KM-KGS-100e-6
+readiness: draft
+priority: high
+title: "Querying a component returns its criteria and, through them, its code and tests"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given the store has component membership populated on its criteria and the
+    knowledge map has been built from it
+  When a specific component that has at least one criterion is queried through the
+    knowledge map
+  Then the result includes that component's acceptance criteria
+  And, by following each returned criterion's implementing and covering links, the
+    result reaches the source files and test files that deliver that component
+  And the result for that component is not empty
+depends_on:
+  - KM-KGS-100e
+  - KM-KGS-100e-5
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-5
+  contract: "A store in which every criterion declares its component membership so a component query returns a populated, connected result"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
