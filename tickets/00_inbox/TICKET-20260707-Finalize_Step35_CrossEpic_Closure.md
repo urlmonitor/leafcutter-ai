@@ -1,6 +1,6 @@
 ---
 title: "finalize-feature.js step 3.5 closes tickets/ACs from unrelated epics (cross-epic scope explosion)"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-07
@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_coverage: 0/2
 ---
 
@@ -76,7 +76,7 @@ complete on main — the exact phantom-done failure BP-1100 exists to prevent.
 - [x] test-runner — 2026-07-08 12:15
 - [x] pr-reviewer — 2026-07-08 13:00
 - [x] commit — 2026-07-08 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 14:30
 
 ## Comments
 
@@ -113,6 +113,13 @@ completion_manifest:
   medium_findings_surfaced: true
   escalation_required: false
 Reviewed the staged diff (311 lines across 3 files) against AC-1 and AC-2. SCOPE_PREFIX derivation from BRANCH is correct; git-diff-only discovery replaces the global-scan instruction; the SCOPE GUARD correctly aborts on violation with git reset HEAD and surfaces out_of_scope_paths. No high-confidence blockers. Three medium-confidence findings surfaced: (M-1) scope violation logs but does not halt the finalize workflow; (M-2) docs/acceptance-criteria/ is unconditionally allowed by the guard, creating a gap for misrouted foreign AC paths; (M-3) TestBugRegressionBaseline docstring opening sentence contradicts the clarification paragraph. None of these are blockers against the AC text as written.
+
+### 2026-07-08 14:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-08_db41f36c
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #232 opened at https://github.com/urlmonitor/leafcutter-ai/pull/232. Branch feature/finalize-step35-crossepic-closure pushed to origin. Relay-approval deadlock bypassed per §3.5 interim protocol — push and gh pr create performed directly from ticket-supervisor main loop with user authorization from parent conversation.
 
 ### 2026-07-08 14:00 — commit (status: ok)
 feedback-id: fb_2026-07-08_cm000001
