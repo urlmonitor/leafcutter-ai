@@ -194,6 +194,20 @@ For deeper explanation of the Ruff rules, see:
 - [BLE001](https://docs.astral.sh/ruff/rules/blind-exception/) — blind exception catch
 - [TRY](https://docs.astral.sh/ruff/rules/#tryceratops-try) — tryceratops family
 
+## Implementation Conventions
+
+### Function Signature Extension — Call-Site Audit Required
+
+When a ticket extends the signature of an existing function (adds required or optional keyword arguments), the implementing agent must:
+
+1. **Grep for ALL existing call sites** in the codebase before declaring done.
+2. **Verify each call site** passes the new arguments (or explicitly documents why an old-argument call is an intentional backward-compat path).
+3. **Include call-site updates in the same commit** as the signature change.
+
+A function whose signature is extended but whose callers still use the old signature silently exercises the legacy code path. This is not catchable by tests that test the function directly — the tests pass against the function in isolation while every real call path uses the old signature.
+
+(Source: EPIC-ComputedQualityGates FP-1, 2026-07-07.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -262,6 +276,17 @@ run. 23 `submit-failed` events occurred without detection — the drive complete
 telemetry was captured, making the retrospective impossible.
 (Root cause ticket: TICKET-20260527-FeedbackSinkPreDriveCheck)
 
+**Also verify `feedback_categories.yaml` is accessible.** The `submit_feedback.py` script requires this file in the worktree's `.leafcutter/` directory. When absent, all agent feedback calls fail silently with `(submit-failed)`, making the retrospective's quantitative category breakdown unavailable.
+
+Check:
+```
+ls <worktree-root>/.leafcutter/feedback_categories.yaml
+```
+If the command fails (`No such file or directory`), the file is missing.
+
+Fix: symlink or copy from the main tree's `.leafcutter/` alongside the `.pre-commit-config.yaml` fix in the section below.
+(Source: EPIC-ComputedQualityGates FP-5, 2026-07-07.)
+
 ### Worktree pre-commit config (MANDATORY for worktree-based drives)
 
 Worktrees do not inherit `.pre-commit-config.yaml` from the main working tree.
@@ -300,6 +325,20 @@ suppression for a worktree-local false positive, add it to the workspace-root
 `.security-allowlist` (or duplicate it to both) — a suppression placed only in the
 worktree's `.security-allowlist` is silently ignored when the hook runs via the symlink path.
 (Observed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
+
+### Security Allowlist — Use Glob Patterns for Test Files
+
+When `check-secrets` flags false-positive `ENTROPY_HIGH` patterns in test files (e.g., keyword-argument strings such as `guardrail_config_path=_GUARDRAIL_CONFIG` that look like secret patterns), do **NOT** add per-line suppressions. Per-line entries (`ENTROPY_HIGH:<path>:<lineno>`) break as the test file grows — new lines shift existing line numbers, invalidating suppressions silently.
+
+Instead, use a single glob entry:
+
+```
+ENTROPY_HIGH:<path>:*
+```
+
+This is supported by `scan_secrets.py _is_suppressed` (checks `lineno == "*"`). Add the glob to **BOTH** the worktree-root and workspace-root `.security-allowlist` per the dual-update rule (the `check-secrets` hook resolves the allowlist from the workspace-root symlink target, not the worktree's own copy — a suppression placed only in the worktree's `.security-allowlist` is silently ignored).
+
+(Source: EPIC-ComputedQualityGates ticket 10 AC-5, 2026-07-07.)
 
 ### Land the scaffold commit on origin/main before creating the epic worktree
 

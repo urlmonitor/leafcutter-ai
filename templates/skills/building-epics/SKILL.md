@@ -1224,6 +1224,36 @@ and the file remains at its original path. The parity guard will block any
 
 ---
 
+## §9 Integration Quality Gates
+
+The following two rules govern quality gates that must be applied at the **epic design phase** — before tickets are authored — and enforced at the final ticket in any multi-ticket chain. Both emerged from EPIC-ComputedQualityGates (PR #201, 2026-07-07), where 41 tests were green and all phases were signed off while the feature was entirely inactive on real inputs.
+
+### Cross-Ticket Integration Gate (anti-phantom-done)
+
+When an epic delivers a feature across multiple tickets each implementing one layer of the same system (function body in ticket A, config data in ticket B, call-site wiring in ticket C), the **final ticket in the chain must include a real-store end-to-end test** that:
+
+1. Exercises the **REAL call path** through the feature (not an isolated unit function call).
+2. Reads **REAL data** from the on-disk store (not hard-coded synthetic values).
+3. Asserts the **observable OUTPUT** (file written, frontmatter emitted, API response) contains the expected computed result.
+
+This gate is **mandatory** when `files_touched` across two or more tickets in the epic share a Python module. A per-ticket unit test targeting the module's internal function directly does NOT satisfy this requirement.
+
+**Reference failure:** EPIC-ComputedQualityGates (PR #201, 2026-07-01) — 41 tests green, all phases signed off, feature entirely inactive on real inputs; caught only by a post-drive `--dry-run` behavioral spot-check.
+
+### Cross-Component Vocabulary Contract Test
+
+When two or more independently maintained components must share the same enum vocabulary (e.g., a guard hook, a YAML config, and a JSON schema all enumerate the same `change_target` values), author a **vocabulary-contract test** when the **first component is written**. The test must:
+
+1. Assert the key/value sets are **set-equal** (`set(A) == set(B)`, not subset) across all sources.
+2. Live in a **permanent CI-run test file** (not a one-off migration script).
+3. Be part of the standard test suite and remain green permanently.
+
+Without this test, independent edits to each component will silently diverge to disjoint vocabularies. Pattern: `test_ac3_change_target_enum_identical_across_sources` in `unit_tests/commit_guardian/test_check_ac_schema.py`.
+
+(Source: EPIC-ComputedQualityGates, 2026-07-07.)
+
+---
+
 ## §8 References
 
 - [`signoff` skill](../signoff/SKILL.md) — canonical status enum (`not_needed | needed | signed_off | failed`), atomic sign-off Edit recipe (`§2`), comment-append recipe with parser-strict heading schema (`§3`), failed-path protocol (`§4`), validator rules enforced by the parity guard (`§5`). **All status mutation lives there; this skill never duplicates it.**
