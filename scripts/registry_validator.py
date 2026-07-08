@@ -14,7 +14,9 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     check_skills_invoked_xref(package_root) cross-references each agent's
     skills_invoked registry array against skill references found in its
     template body, emitting advisory warnings for both directions of mismatch
-    (AC INF-600g-3).
+    (AC INF-600g-3). Entries with descriptive_only: true are excluded from the
+    cross-reference check — they document inline capabilities and have no
+    corresponding skill directory or template body reference by design (M-1).
 """
 
 from __future__ import annotations
@@ -830,6 +832,16 @@ def check_skills_invoked_xref(package_root: Path) -> list[str]:
         "<agent-id>: skills_invoked declares '<skill-id>' but no reference
          found in template body"
 
+    **Descriptive-only exclusion (M-1):**
+    Entries with ``descriptive_only: True`` are excluded from both ``declared_ids``
+    and the Direction 2 check entirely.  These entries document inline capabilities
+    (e.g. ``run-tests`` for python-coder, ``direct-write`` for documentation-expert)
+    that have no deployed skill directory and no template body reference by design.
+    Excluding them prevents spurious advisory warnings for intentional, marked entries
+    while preserving warnings for all unmarked entries.  The exclusion uses a strict
+    ``is True`` identity test — the same guard as ``validate_agent_self_description``
+    — so only the boolean literal ``True`` triggers the skip (not strings or integers).
+
     Both warnings are advisory (printed, not returned as hard errors) because
     skill references may be present as prose that does not match the extraction
     patterns, or the skill may be loaded implicitly.
@@ -854,8 +866,14 @@ def check_skills_invoked_xref(package_root: Path) -> list[str]:
 
         agent_id = agent.get("id", "<unknown>")
         skills_invoked_entries: list[dict[str, Any]] = agent.get("skills_invoked") or []
+        # Exclude descriptive_only entries (strict is-True check, mirroring
+        # validate_agent_self_description): they document inline capabilities
+        # with no deployed skill dir or template body reference — no xref warning
+        # should be emitted for them (M-1 consistency fix).
         declared_ids: set[str] = {
-            e["skill_id"] for e in skills_invoked_entries if "skill_id" in e
+            e["skill_id"]
+            for e in skills_invoked_entries
+            if "skill_id" in e and e.get("descriptive_only") is not True
         }
 
         template_path_str: str = agent.get("template_path") or ""
@@ -985,4 +1003,19 @@ if __name__ == "__main__":
 #   and not flagged. Registry change: added brainstorm-lead to
 #   ticket-supervisor.spawn_allowlist alongside __ticket_phase_agents__,
 #   confirming the scenario is structurally supported and warning-free.
+# - 2026-07-08 [python-coder/TICKET-20260708-BP-1300a-descriptive-skills/M-1]: (#TICKET-20260708-BP-1300a-descriptive-skills)
+#   check_skills_invoked_xref: exclude descriptive_only: true entries from
+#   declared_ids (and therefore from Direction 2 warnings). PR-reviewer M-1
+#   advisory: run-tests (python-coder) and direct-write (documentation-expert)
+#   were marked descriptive_only: true in config/agent_registry.json by the
+#   BP-1300a fix, but check_skills_invoked_xref still emitted advisory
+#   "[WARNING] <agent>: skills_invoked declares '<id>' but no reference found
+#   in template body" for both entries because they legitimately have no
+#   template-body reference (inline capabilities, not deployed skills). Fix:
+#   added `e.get("descriptive_only") is not True` guard to the declared_ids set
+#   comprehension, using the same strict is-True identity test as
+#   validate_agent_self_description. Descriptive-only entries are now fully
+#   transparent to the xref check — no warning is emitted in either direction.
+#   Consistent behavior: an entry marked descriptive_only is neither expected
+#   to resolve to a skill dir NOR to appear in the template body.
 # ====================================================================

@@ -1617,6 +1617,12 @@ def validate_agent_self_description(
     ``.claude/skills/`` (project-local). An unresolvable skill_id produces a
     problem entry naming which lookup location was checked.
 
+    Entries marked ``descriptive_only: true`` document intentional inline
+    capabilities that have no deployed skill directory by design. The validator
+    skips skill-dir resolution for these entries entirely (the marker is the
+    canonical pass signal). Unmarked unresolvable entries continue to fail.
+    See INF-600d-1 and TICKET-20260708-BP-1300a-descriptive-skills.
+
     ``knowledge_channels`` entries are validated: ``channel`` must be an
     integer in the range 1-11 inclusive.
 
@@ -1652,6 +1658,14 @@ def validate_agent_self_description(
     #   A project-local-only skill passes validation without error.
     #   Only when neither path resolves is an error emitted.
     #   (#EPIC-SelfDescribingAgentsCorrections/05)
+    # - 2026-07-08 [python-coder/TICKET-20260708-BP-1300a-descriptive-skills]:
+    #   Added descriptive_only: true support per INF-600d-1. When a skills_invoked
+    #   entry carries "descriptive_only": true, the validator skips skill-dir
+    #   resolution (the entry documents an inline capability — no deployed
+    #   templates/skills/<id>/ exists by design). The strict ``is True`` identity
+    #   test prevents accidental skipping when the key holds a string, int, or None.
+    #   Unmarked unresolvable entries continue to fail (guardrail preserved).
+    #   (#TICKET-20260708-BP-1300a-descriptive-skills)
     """
     agents_template_dir = target_root / "templates" / "agents"
     registry_path = target_root / "config" / "agent_registry.json"
@@ -1743,6 +1757,8 @@ def validate_agent_self_description(
                             skill_id = inv.get("skill_id") if isinstance(inv, dict) else None
                             if not skill_id:
                                 continue
+                            if inv.get("descriptive_only") is True:
+                                continue  # Intentional inline-capability entry (INF-600d-1) — no deployed skill dir required
                             in_package = (package_skills_dir / skill_id).exists()
                             in_project = (project_skills_dir / skill_id).exists()
                             if not in_package and not in_project:
