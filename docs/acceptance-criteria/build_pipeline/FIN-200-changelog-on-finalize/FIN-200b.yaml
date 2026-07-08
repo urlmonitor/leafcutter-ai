@@ -1,0 +1,36 @@
+id: FIN-200b
+title: "The changelog entry lands atomically with the work it describes"
+component: finalize
+level: L1
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+criteria: |
+  The changelog entry reaches main together with the feature's own commits —
+  never as a later follow-up.
+
+  Given a feature or epic branch is being finalized,
+  When the changelog entry has been generated,
+  Then it is committed on the feature branch before the pull request is merged,
+  And it reaches main in the same merge as the feature's own commits,
+  And no separate follow-up change is needed to add the entry after the feature
+  has shipped.
+depends_on:
+  - FIN-200
+parent: FIN-200
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-200b-1
+  - FIN-200b-2
+  - FIN-200b-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+change_target: pipeline
+risk_surface: contract_boundary

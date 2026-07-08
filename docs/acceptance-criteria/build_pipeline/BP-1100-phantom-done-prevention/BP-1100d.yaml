@@ -35,3 +35,5 @@ covered_by:
   - BP-1100d-1
   - BP-1100d-2
 implemented_by: []
+change_target: pipeline
+risk_surface: safety

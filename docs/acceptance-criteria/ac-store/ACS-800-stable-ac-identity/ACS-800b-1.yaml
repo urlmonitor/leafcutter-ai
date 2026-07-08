@@ -40,3 +40,5 @@ notes: |
   added to config/ac_store_schema.json, which is currently additionalProperties:false
   and does NOT yet carry this field). The pointer holds the parent's stable UID from
   ACS-800a, replacing today's derive_parent_id() id-string parsing.
+change_target: schema
+risk_surface: internal

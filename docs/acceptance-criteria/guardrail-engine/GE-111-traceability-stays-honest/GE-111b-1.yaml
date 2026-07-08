@@ -71,3 +71,5 @@ notes: |
   spine all of GE-111a/b/c/d/e exchange) and the staged-tree resolution +
   git rename-detection mechanics, while leaving the exact data structures to
   python-coder. This is the load-bearing contract referenced by every sibling.
+change_target: code
+risk_surface: contract_boundary

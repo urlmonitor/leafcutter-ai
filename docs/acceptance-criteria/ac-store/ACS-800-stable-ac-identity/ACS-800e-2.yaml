@@ -35,3 +35,5 @@ notes: |
   Decomposed from ACS-800e. Updates check_ac_parent_covered_by.py to verify the
   parent link via the parent-pointer field rather than derive_parent_id() id-string
   parsing.
+change_target: code
+risk_surface: internal

@@ -31,3 +31,5 @@ it_requirements:
   - "May require SendMessage to inject next AC into running agent"
   - "Must respect ADR-006 depth-1 constraint"
   - "If Agent SDK does not support keep-alive, use supervisor-loops-to-single-agent pattern"
+change_target: prompt
+risk_surface: internal

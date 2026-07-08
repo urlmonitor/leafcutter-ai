@@ -1,0 +1,38 @@
+id: KM-KQS-041
+readiness: draft
+priority: low
+title: "knowledge_query CLI lists declared surfaces via --list-surfaces"
+component: knowledge-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given config/paths.json declares a set of knowledge surfaces,
+  When the reader runs `python scripts/knowledge_query.py --list-surfaces`
+    (optionally with --project-root pointing at a project),
+  Then the command prints each declared surface name and exits 0 without
+    running the full node+edge traversal,
+  And the documented verification step in
+    docs/how-to/declare-a-knowledge-surface.md works as written
+    (the bug symptom "unrecognized arguments: --list-surfaces" must not occur).
+depends_on: []
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/declare-a-knowledge-surface.md
+    relationship: context
+    status: exists
+assigned_agent: null
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

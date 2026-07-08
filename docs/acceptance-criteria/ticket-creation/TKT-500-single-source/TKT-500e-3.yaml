@@ -27,3 +27,5 @@ covered_by: [TKT-500e-3-i]
 implemented_by: []
 it_requirements:
   - "Agent termination must be clean — no dangling processes"
+change_target: prompt
+risk_surface: internal

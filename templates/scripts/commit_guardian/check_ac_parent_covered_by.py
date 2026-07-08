@@ -56,6 +56,17 @@ DECISION HISTORY:
     except OSError to except (OSError, ValueError) in both functions. The
     _load_file_yaml warning message now includes the exception class name for
     observability. (AC: ACS-100i-2-i)
+  - 2026-06-29 [python-coder/perf-fix]: Index-once performance fix. Replaced
+    per-call full-store rglob walk in _resolve_parent_file with a single
+    _build_parent_index() call in main(). The index (dict[str, str] mapping
+    AC id -> absolute file path) is built once and threaded through _check_file
+    and _resolve_parent_file as an explicit parameter. Cost drops from
+    O(staged_files × store_files) to O(store_files + staged_files).
+  - 2026-06-30 [python-coder/TICKET-20260629-AC_Hook_Store_Index]: Replaced the
+    per-invocation _build_parent_index store walk in main() with a call to
+    _ac_store_index.get_ac_index(). The rich id->dict index is used to derive the
+    id->abs_path mapping that _build_parent_index previously built. The O(store_size)
+    walk is now shared across all four AC guardrail hooks via the mtime cache.
 """
 
 from __future__ import annotations
@@ -65,6 +76,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from _ac_store_index import get_ac_index  # type: ignore[import]
+    _AC_STORE_INDEX_AVAILABLE = True
+except ImportError:
+    _AC_STORE_INDEX_AVAILABLE = False
 
 _HOOK_PREFIX = "[check-ac-parent-covered-by]"
 _AC_STORE_DIR = "docs/acceptance-criteria"
@@ -255,24 +271,68 @@ def _extract_covered_by(data: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_parent_file(child_path: str, parent_id: str, project_root: Path | None) -> str | None:
-    """Locate the YAML file for parent_id relative to the child file's directory tree.
+def _build_parent_index(ac_store_root: Path) -> dict[str, str]:
+    """Walk the AC store once and build an id -> absolute_path index.
 
-    Search strategy:
-    1. Walk the AC store directory tree (docs/acceptance-criteria/ under
-       project_root, or cwd if project_root is None) looking for a .yaml file
-       whose ``id`` field matches parent_id.
-    2. Returns the first match found (depth-first).
-    3. Returns None when no matching file is found.
+    Reads every .yaml file under ac_store_root exactly once. Files that cannot
+    be read or parsed are silently skipped (fail-open: hook must not block on
+    unreadable store files). First occurrence of each id wins (depth-first).
+
+    Args:
+        ac_store_root: Root Path of the AC store directory.
+
+    Returns:
+        Dict mapping AC id strings to their absolute file path strings.
+        Returns an empty dict when ac_store_root is not a directory.
+    """
+    if not ac_store_root.is_dir():
+        return {}
+
+    index: dict[str, str] = {}
+    for yaml_file in ac_store_root.rglob("*.yaml"):
+        try:
+            content = yaml_file.read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            continue
+        data = _load_yaml_safe(content, source_label=str(yaml_file))
+        if data is None:
+            continue
+        file_id = str(data.get("id", "")).strip()
+        if file_id and file_id not in index:
+            index[file_id] = str(yaml_file.resolve())
+    return index
+
+
+def _resolve_parent_file(
+    child_path: str,
+    parent_id: str,
+    project_root: Path | None,
+    parent_index: dict[str, str] | None = None,
+) -> str | None:
+    """Locate the YAML file for parent_id in the AC store.
+
+    When a pre-built index is provided (preferred), performs an O(1) dict
+    lookup and avoids any filesystem walk.  When no index is provided (legacy
+    / direct-call path), falls back to the original exhaustive rglob walk so
+    that callers that do not thread the index continue to work correctly.
 
     Args:
         child_path: Absolute or relative path to the child AC YAML file.
         parent_id: The parent AC ID string to find (e.g. "ACS-300h").
         project_root: Resolved project root Path, or None.
+        parent_index: Optional pre-built id->path mapping from
+            _build_parent_index(). When provided, the AC store is NOT walked.
 
     Returns:
         Absolute path string to the parent YAML file, or None if not found.
     """
+    # Fast path: use the pre-built index when available.
+    if parent_index is not None:
+        return parent_index.get(parent_id)
+
+    # Slow path (fallback): walk the AC store.  Used when the function is
+    # called directly without a pre-built index (e.g. from older tests or
+    # external callers that have not been updated).
     if project_root:
         ac_store_root = project_root / _AC_STORE_DIR
     else:
@@ -282,9 +342,6 @@ def _resolve_parent_file(child_path: str, parent_id: str, project_root: Path | N
         # AC store absent — nothing to search.
         return None
 
-    # Search exhaustively: walk the entire AC store for a file whose id field
-    # matches parent_id. This is O(n) in the number of YAML files but acceptable
-    # for pre-commit (AC stores are typically <10 000 files and usually <1 000).
     for yaml_file in ac_store_root.rglob("*.yaml"):
         try:
             content = yaml_file.read_text(encoding="utf-8")
@@ -373,7 +430,12 @@ def _get_derive_parent_id():
 # ---------------------------------------------------------------------------
 
 
-def _check_file(file_path: str, derive_parent_id) -> list[str]:
+def _check_file(
+    file_path: str,
+    derive_parent_id,
+    parent_index: dict[str, str] | None = None,
+    ac_store_index: dict[str, dict] | None = None,
+) -> list[str]:
     """Run the parent covered_by check for a single staged AC YAML file.
 
     Algorithm:
@@ -382,13 +444,22 @@ def _check_file(file_path: str, derive_parent_id) -> list[str]:
     3. For each entry in depends_on, derive the parent ID using derive_parent_id().
        (The depends_on list may contain direct parent IDs or grandparent IDs;
        we check each one independently.)
-    4. Locate the parent YAML file on disk.
-    5. Load the parent file and extract its covered_by list.
+    4. Locate the parent AC data — via ac_store_index (O(1) dict lookup) when
+       available, or via parent_index id->path + disk read as a fallback.
+    5. Load the parent's covered_by list.
     6. Verify the child's ID appears in covered_by.
 
     Args:
         file_path: Absolute path to the staged AC YAML file.
         derive_parent_id: The derive_parent_id callable from ac_parent_id module.
+        parent_index: Optional pre-built id->path mapping from
+            _build_parent_index(). When provided and ac_store_index is None,
+            parent resolution is O(1) instead of a full AC store walk.
+            Pass None to use the legacy per-call walk (backward-compatible).
+        ac_store_index: Optional pre-built id->full-dict mapping from
+            _ac_store_index.get_ac_index(). When provided, parent data is
+            fetched directly from the index without any filesystem read.
+            Takes precedence over parent_index when both are non-None.
 
     Returns:
         List of human-readable violation strings. Empty list = no violations.
@@ -439,27 +510,41 @@ def _check_file(file_path: str, derive_parent_id) -> list[str]:
     if immediate_parent_id not in depends_on_list:
         return []
 
-    # Locate the parent file on disk
-    parent_file_path = _resolve_parent_file(file_path, immediate_parent_id, project_root)
-    if parent_file_path is None:
-        # Parent file not found on disk — cannot enforce; fail-open
-        print(
-            f"{_HOOK_PREFIX} WARNING: parent file for ID '{immediate_parent_id}' "
-            f"not found on disk; skipping covered_by check for '{child_id}'",
-            file=sys.stderr,
+    # Fetch parent AC data.
+    # Fast path: use the shared ac_store_index (no disk I/O needed).
+    if ac_store_index is not None:
+        parent_data = ac_store_index.get(immediate_parent_id)
+        if parent_data is None:
+            # Parent not in index — cannot enforce; fail-open
+            print(
+                f"{_HOOK_PREFIX} WARNING: parent AC '{immediate_parent_id}' "
+                f"not found in index; skipping covered_by check for '{child_id}'",
+                file=sys.stderr,
+            )
+            return []
+        parent_file_label = immediate_parent_id  # no path available
+    else:
+        # Slow path: locate parent file on disk via parent_index or rglob walk.
+        parent_file_path = _resolve_parent_file(
+            file_path, immediate_parent_id, project_root, parent_index
         )
-        return []
+        if parent_file_path is None:
+            print(
+                f"{_HOOK_PREFIX} WARNING: parent file for ID '{immediate_parent_id}' "
+                f"not found on disk; skipping covered_by check for '{child_id}'",
+                file=sys.stderr,
+            )
+            return []
 
-    # Load parent file and check covered_by
-    parent_data = _load_file_yaml(parent_file_path)
-    if parent_data is None:
-        # Cannot parse parent — fail-open
-        print(
-            f"{_HOOK_PREFIX} WARNING: cannot parse parent file {parent_file_path}; "
-            f"skipping covered_by check for '{child_id}'",
-            file=sys.stderr,
-        )
-        return []
+        parent_data = _load_file_yaml(parent_file_path)
+        if parent_data is None:
+            print(
+                f"{_HOOK_PREFIX} WARNING: cannot parse parent file {parent_file_path}; "
+                f"skipping covered_by check for '{child_id}'",
+                file=sys.stderr,
+            )
+            return []
+        parent_file_label = parent_file_path
 
     covered_by = _extract_covered_by(parent_data)
 
@@ -467,8 +552,8 @@ def _check_file(file_path: str, derive_parent_id) -> list[str]:
         violations.append(
             f"child AC '{child_id}' is staged but parent AC '{immediate_parent_id}' "
             f"does not include '{child_id}' in its covered_by field. "
-            f"Parent file: {parent_file_path}. "
-            f"Add '{child_id}' to covered_by in {parent_file_path} and stage the parent file."
+            f"Parent file: {parent_file_label}. "
+            f"Add '{child_id}' to covered_by in {parent_file_label} and stage the parent file."
         )
 
     return violations
@@ -534,6 +619,20 @@ def main() -> int:
     if not staged_paths:
         return 0
 
+    # Build the parent lookup index ONCE for the entire batch.
+    # When the shared mtime-cached index is available, use it to get full parsed
+    # AC dicts directly — no additional rglob walk needed. The ac_store_index
+    # (id->dict) is passed to _check_file, which uses it to look up the parent
+    # AC's covered_by field by ID without requiring a file path.
+    # When the index module is unavailable, fall back to the original
+    # _build_parent_index() rglob walk to get id->abs_path.
+    if _AC_STORE_INDEX_AVAILABLE:
+        ac_store_index = get_ac_index(str(ac_store))
+        parent_index: dict[str, str] | None = None  # not needed with index
+    else:
+        ac_store_index = None
+        parent_index = _build_parent_index(ac_store)
+
     # Resolve absolute paths for disk reads
     all_violations: list[str] = []
     for staged_path in staged_paths:
@@ -541,7 +640,9 @@ def main() -> int:
         if not Path(staged_path).is_absolute():
             if project_root:
                 abs_path = str(project_root / staged_path)
-        file_violations = _check_file(abs_path, derive_parent_id)
+        file_violations = _check_file(
+            abs_path, derive_parent_id, parent_index, ac_store_index=ac_store_index
+        )
         all_violations.extend(file_violations)
 
     if not all_violations:

@@ -27,3 +27,5 @@ covered_by: [TKT-500d-2-i]
 implemented_by: []
 it_requirements:
   - "Must handle mixed L1/L2 children — done requires ALL leaves, not just direct children"
+change_target: code
+risk_surface: internal

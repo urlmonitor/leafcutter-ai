@@ -4,7 +4,7 @@ description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-06-10"
+last_updated: "2026-07-07"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -1598,6 +1598,380 @@ terminates cleanly after printing the summary.
 
 ---
 
+## 6. Detail View: Isolated-Authoring Worktree Lifecycle (`BO-1500a-3`)
+
+The isolated-authoring workflow guarantees that AC/ticket authoring never mutates the
+user's original checkout or any concurrent worktree. When the workflow starts, it creates a
+**fresh, dedicated worktree** with its own branch cut from `origin/main`, and every authoring
+stage writes exclusively into that isolated worktree. This is the architectural counterpart
+to the lesson recorded in the MEMORY note "AC authoring needs isolated worktree": a shared
+main checkout can be reset or branch-deleted by concurrent finalize flows mid-session, so
+authoring must run in isolation.
+
+The sequence below shows the ordered interactions from workflow start, through worktree and
+branch creation off `origin/main`, to the first authoring stage writing into the isolated
+worktree. The `Note over` block makes the isolation invariant explicit: **no interaction in
+this sequence targets the user's original checkout or any concurrent worktree** — the only
+read of shared state is the `origin/main` ref fetch that seeds the new branch.
+
+```mermaid
+sequenceDiagram
+    actor User as User
+    participant WF as Authoring Workflow
+    participant Git as git
+    participant Main as origin/main
+    participant WT as Authoring Worktree
+
+    User->>WF: Start authoring workflow
+    activate WF
+
+    Note over WF,Main: Phase 1 — seed isolation from origin/main only
+    WF->>Git: fetch origin
+    Git->>Main: read latest ref
+    Main-->>Git: origin/main commit SHA
+    Git-->>WF: fetch complete
+
+    Note over WF,WT: Phase 2 — create isolated worktree + branch off origin/main
+    WF->>Git: worktree add <isolated-path> -b <authoring-branch> origin/main
+    Git->>Main: resolve base commit
+    Main-->>Git: base commit
+    Git->>WT: materialise worktree at base commit on new branch
+    WT-->>Git: worktree ready
+    Git-->>WF: worktree + branch created
+
+    Note over WF,WT: Phase 3 — first authoring stage writes into the isolated worktree
+    WF->>WT: run first authoring stage (write AC / ticket files)
+    WT-->>WF: files written into isolated worktree
+
+    deactivate WF
+
+    Note over User,WT: Isolation invariant — no interaction in this sequence<br/>targets the user's original checkout or any concurrent<br/>worktree. The only shared-state access is the read-only<br/>origin/main fetch that seeds the new branch.
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-view-epic--ticket-supervisor-flow-build-feature)
+
+> [!IMPORTANT]
+> **Isolation invariant.** The workflow communicates with exactly five participants: the
+> **User** (who starts it), the **Authoring Workflow** (the orchestrating depth-0 context),
+> **git** (the tooling that performs all repository operations), **origin/main** (read only,
+> to seed the new branch), and the **Authoring Worktree** (the dedicated, freshly created
+> directory that all authoring stages write into). The user's original checkout and any
+> concurrent worktree are deliberately absent from the topology — they are never read from
+> nor written to.
+
+---
+
+## 7. Detail View: Resumable Per-Stage Authoring Lifecycle (`BO-1500b-4`)
+
+The durable, resumable authoring pipeline advances through three authoring stages — **PO**
+(Product Owner, L0/L1 ACs), **BA** (Business Analyst, L2/L3 decomposition), and **IT-PO**
+(IT Product Owner, technical enrichment) — before reaching the terminal `delivered` state.
+Each stage is modelled as a pair of states: a `pending` state (work in progress, nothing
+durably persisted yet) and a `committed` state (the stage's output has been committed to the
+isolated authoring worktree and is therefore durable on disk).
+
+The state machine below makes two durability guarantees explicit:
+
+1. **Crash durability of committed stages.** Each `committed` state carries a self-loop
+   labelled `crash → restored`. A crash that occurs while the workflow is in a `committed`
+   state returns to that same `committed` state on restart — the persisted output is not
+   lost. The committed work survives the crash.
+
+2. **Resume to the first not-yet-committed stage.** An interruption (crash or manual halt)
+   while a stage is `pending` discards only that in-flight, uncommitted work and, on resume,
+   re-enters the **first stage whose commit has not yet landed**. Because earlier stages are
+   already `committed` (and durable per guarantee 1), resume never re-runs completed stages —
+   it always lands on the earliest `pending` stage, which is the first not-yet-committed stage.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PO_pending : start authoring
+
+    PO_pending --> PO_committed : PO commits L0/L1 ACs
+    PO_committed --> BA_pending : advance to BA
+
+    BA_pending --> BA_committed : BA commits L2/L3 ACs
+    BA_committed --> ITPO_pending : advance to IT-PO
+
+    ITPO_pending --> ITPO_committed : IT-PO commits enrichment
+    ITPO_committed --> delivered : finalise delivery
+
+    delivered --> [*]
+
+    %% --- Crash durability of committed stages ---
+    %% A crash while in a committed state restores to the SAME committed state.
+    PO_committed --> PO_committed : crash → restored (durable)
+    BA_committed --> BA_committed : crash → restored (durable)
+    ITPO_committed --> ITPO_committed : crash → restored (durable)
+
+    %% --- Interruption returns to the first not-yet-committed stage on resume ---
+    %% Uncommitted in-flight work is discarded; resume re-enters the earliest
+    %% stage whose commit has not yet landed.
+    PO_pending --> PO_pending : interrupt → resume at first uncommitted (PO)
+    BA_pending --> BA_pending : interrupt → resume at first uncommitted (BA)
+    ITPO_pending --> ITPO_pending : interrupt → resume at first uncommitted (IT-PO)
+
+    state "PO pending" as PO_pending
+    state "PO committed" as PO_committed
+    state "BA pending" as BA_pending
+    state "BA committed" as BA_committed
+    state "IT-PO pending" as ITPO_pending
+    state "IT-PO committed" as ITPO_committed
+    state "delivered" as delivered
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)
+
+> [!IMPORTANT]
+> **Resume semantics.** On resume after any interruption, the workflow inspects which stage
+> commits have landed in the isolated authoring worktree and re-enters the **first**
+> `pending` stage whose `committed` state has not been reached. If PO is committed but BA is
+> not, resume lands in `BA pending`; if no stage is committed, resume lands in `PO pending`.
+> A `committed` stage is durable across a crash — its output persists on disk, so resume
+> never re-runs a stage that already committed.
+
+---
+
+## 8. Detail View: Approval-to-PR Delivery Flow (`BO-1500c-5`)
+
+Once authoring is complete inside the isolated worktree (see §6) and every stage has been
+committed (see §7), the work is delivered for review through a **pull request** — never by
+committing directly onto `main`. This is the safety counterpart to the isolation invariant:
+isolation keeps authoring off the user's checkout, and the PR-only delivery flow keeps the
+authored AC files off `main` until a reviewer (and the required CI checks) have approved them.
+
+The sequence below shows the ordered interactions from the user's **final approval** through
+to the **PR reference returning to the user**. The five participants are the **User**, the
+**Authoring Workflow** (the orchestrating depth-0 context), **Git** (local repository
+operations), **Origin** (the remote tracking host of the authoring branch), and **GitHub**
+(which opens the PR against `main` and runs the required CI checks). The `Note over` block
+makes the delivery invariant explicit: **no step commits AC files directly onto `main`** —
+the authoring branch is pushed to `Origin` and a PR is opened *against* `main`, so `main`
+only changes later, through a reviewed-and-merged PR that is outside this sequence.
+
+```mermaid
+sequenceDiagram
+    actor User as User
+    participant WF as Authoring Workflow
+    participant Git as Git
+    participant Origin as Origin
+    participant GitHub as GitHub
+
+    Note over User,GitHub: Delivery invariant — no step below commits AC files<br/>directly onto main. Work reaches main ONLY via the<br/>reviewed PR opened against main, never by a direct push.
+
+    Note over User,WF: Step 1 — final approval
+    User->>WF: Approve ticket / AC for delivery
+    activate WF
+
+    Note over WF,Origin: Step 2 — push the authoring branch to origin
+    WF->>Git: push <authoring-branch> (NOT main)
+    Git->>Origin: git push origin <authoring-branch>
+    Origin-->>Git: branch pushed (main untouched)
+    Git-->>WF: push complete
+
+    Note over WF,GitHub: Step 3 — open the PR to main
+    WF->>GitHub: open PR (head: <authoring-branch>, base: main)
+    GitHub-->>WF: PR created (#NNN) — main not yet modified
+
+    Note over GitHub,GitHub: Step 4 — required CI checks run
+    GitHub->>GitHub: run required CI checks (e.g. Lint (ruff))
+    GitHub-->>WF: CI status reported on the PR
+
+    Note over WF,User: Step 5 — PR reference returns to the user
+    WF-->>User: return PR reference (#NNN / URL)
+
+    deactivate WF
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)
+
+> [!IMPORTANT]
+> **No direct-to-`main` commits.** Every write in this flow targets the **authoring branch**,
+> not `main`. The push in Step 2 pushes `<authoring-branch>` to `Origin`; the PR in Step 3 is
+> opened *against* `main` as its base but does not modify it; and the required CI checks in
+> Step 4 run on the PR head. `main` changes only when a reviewer merges the PR — a step that
+> lives outside this sequence. This is also enforced mechanically: `main` is PR-only (the
+> branch-protection `Lint (ruff)` gate rejects a direct `git push origin main`).
+
+---
+
+## 9. Installed-Copy Path Resolution (`BO-1500e-2`)
+
+When leafcutter-ai is deployed into a consumer project as a subdirectory (e.g.
+`my-project/leafcutter-ai/`), the authoring workflows (`/create-ac`,
+`/plan-feature`) must resolve the repository root and the AC store location from
+the **actual installed layout** rather than assuming the dev workspace paths.
+
+`setup_ticket_worktree.py` performs this detection automatically via
+`_resolve_installed_layout()`. The function probes the parent directory of the
+leafcutter-ai git root and returns `(repo_root, worktrees_base)`:
+
+| Layout | Detection signal | `repo_root` | `worktrees_base` | Worktrees created at |
+|--------|-----------------|-------------|-----------------|----------------------|
+| **Dev** (self-hosting) | `leafcutter_repo.parent` is NOT a git repo | `leafcutter-ai/` git root | workspace parent directory | `<workspace>/worktrees/<slug>` |
+| **Consumer / installed** | `leafcutter_repo.parent` IS its own git repo | Consumer project root | Consumer project root | `<consumer_root>/worktrees/<slug>` |
+
+### Dev layout (no change to existing behaviour)
+
+```
+leafcutter/               <- workspace (NOT a git repo)
+  leafcutter-ai/          <- git root  ← repo_root
+  worktrees/              ← worktrees_base / "worktrees"
+```
+
+The parent (`leafcutter/`) is not a git repository, so `_resolve_installed_layout()`
+returns `(leafcutter_repo, leafcutter_repo.parent)`. Worktrees go at
+`leafcutter/worktrees/<slug>` — identical to the former behaviour.
+
+### Consumer / installed layout (new)
+
+```
+my-project/               <- consumer project root  ← repo_root + worktrees_base
+  leafcutter-ai/          <- leafcutter submodule
+  tickets/
+  worktrees/              ← worktrees_base / "worktrees"
+```
+
+The parent (`my-project/`) is its own git repository, so `_resolve_installed_layout()`
+detects this (via `git rev-parse --show-toplevel` on the parent) and returns
+`(consumer_root, consumer_root)`. Worktrees go at `<consumer_root>/worktrees/<slug>`.
+
+The AC store inside the authoring worktree resolves to:
+
+```
+<consumer_root>/worktrees/<session>/docs/acceptance-criteria/
+```
+
+This path is emitted as `ac_store_path` in the `create-ac-worktree` JSON payload so
+that callers (`/create-ac`, `/plan-feature`) know exactly where to write AC YAML files
+regardless of the layout they are running in.
+
+### Detection sequence
+
+```mermaid
+flowchart TD
+    classDef decision fill:#fde68a,stroke:#ca8a04,stroke-width:2px;
+    classDef result fill:#d1fae5,stroke:#059669,stroke-width:2px;
+
+    A["_git_toplevel() → leafcutter_repo"]
+    B{"git rev-parse --show-toplevel\nfrom leafcutter_repo.parent\nsuccessful AND result ≠ leafcutter_repo?"}:::decision
+    C["Consumer layout\nrepo_root = consumer_root\nworktrees_base = consumer_root"]:::result
+    D["Dev layout\nrepo_root = leafcutter_repo\nworktrees_base = leafcutter_repo.parent"]:::result
+
+    A --> B
+    B -->|Yes| C
+    B -->|No / error| D
+```
+
+### Isolation invariant preserved
+
+The isolation invariant from §6 applies in both layouts: the authoring worktree is
+always a fresh, isolated directory created from `origin/main`. In the consumer layout
+the worktree is created at `<consumer_root>/worktrees/<session>` rather than at the
+workspace sibling, but the isolation guarantee — no writes to the user's original
+checkout — is unchanged.
+
+---
+
+## 10. Files-Touched Reconciliation Flow (post-change, pre-done)
+
+This flow shows the **BP-1100e** declared-vs-actual reconciliation: the check that runs
+**after** a ticket's work is complete and its gates are green, but **before** the ticket is
+allowed to reach `status: done`. Its job is to catch *phantom-done* drift — a ticket that
+passes every gate yet delivered nothing in the right place, because the source files it
+actually changed do not match the scope it declared in `files_touched` (for example, it
+edited documentation when its behaviour belonged in the code that runs).
+
+The five participants are `ticket-supervisor` (the depth-0 orchestrator), the ordered
+`phase-agents` (architect-review … commit), `commit-guardian` (the pre-commit hook runner),
+`check_files_touched_reconciliation.py` (the new BP-1100e reconciliation hook), and the
+`Ticket` (the frontmatter whose `status:` transitions to `done`). The reconciliation hook
+computes the set of source files (`.py`/`.sql`/`.ts`/`.tsx`/`.js`) that were *actually*
+changed via `git diff --name-only`, then compares that set against the ticket's declared
+`files_touched UNION out_of_scope`. Any changed source file absent from that union is an
+undeclared-scope mismatch.
+
+The `alt` block shows the enforcement-strength policy from **BP-1100e-2**: the
+`files_touched_reconciliation` section in `commit_guardian.json` drives three states:
+`enabled:true` + `strict:false` (the shipped default) is **advisory** — it names the
+undeclared source files and warns, but does not block, so the ticket still reaches
+`done`; the guard is active out of the box rather than shipping dormant.
+`enabled:false` turns the check **off** — no output, exit 0.
+`enabled:true` + `strict:true` (opt-in) **blocks** the commit and stops the `done`
+transition until the scope is reconciled. If the hook itself errors while computing the
+diff or reading frontmatter, it **fails open** (never blocks on its own failure,
+regardless of the strict setting).
+
+```mermaid
+sequenceDiagram
+    participant TS as ticket-supervisor
+    participant PA as phase-agents
+    participant CG as commit-guardian
+    participant RH as check_files_touched_reconciliation.py
+    participant TK as Ticket
+
+    Note over TS,TK: BP-1100e reconciliation is POST-change and PRE-done —<br/>it runs AFTER work is complete and gates are green,<br/>and BEFORE the ticket is marked status: done.<br/>Distinct from the BP-1100a PRE-dispatch scope check,<br/>which runs BEFORE any phase agent is dispatched.
+
+    Note over TS,PA: Step 1 — work completes, gates pass
+    TS->>PA: dispatch ordered phases (…→ test-runner → commit)
+    activate PA
+    PA-->>TS: all phases signed off (tests green, sign-offs complete)
+    deactivate PA
+
+    Note over TS,RH: Step 2 — pre-done reconciliation fires (before status: done)
+    TS->>CG: run commit / pre-commit hooks
+    activate CG
+    CG->>RH: invoke reconciliation hook
+    activate RH
+
+    Note over RH: Step 3 — compute actually-changed source files
+    RH->>RH: git diff --name-only (filter to .py/.sql/.ts/.tsx/.js)
+
+    Note over RH,TK: Step 4 — compare against declared scope
+    RH->>TK: read declared files_touched UNION out_of_scope
+    TK-->>RH: declared scope set
+    RH->>RH: changed-source − (files_touched ∪ out_of_scope) = undeclared set
+
+    Note over CG,TK: Step 5 — verdict: advise (default) / off / block (strict)
+    alt enabled:true, strict:false (default — advisory, fail-open)
+        RH-->>CG: warn: names undeclared source files (does NOT block)
+        CG-->>TS: hooks pass (advisory recorded)
+        TS->>TK: mark status: done
+    else enabled:false (check is off, no output)
+        RH-->>CG: exit 0, no output (check is off)
+        CG-->>TS: hooks pass
+        TS->>TK: mark status: done
+    else enabled:true, strict:true (opt-in — block)
+        RH-->>CG: block: undeclared source files must be reconciled
+        CG-->>TS: commit blocked — status stays not-done
+        TS-->>TS: halt; scope must be reconciled before done
+    else reconciliation errors internally
+        RH-->>CG: fail open (report to stderr, do NOT block)
+        CG-->>TS: hooks pass
+        TS->>TK: mark status: done
+    end
+    deactivate RH
+    deactivate CG
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-view-epic--ticket-supervisor-flow-build-feature)
+
+> [!IMPORTANT]
+> **Two bookends, not one check.** BP-1100e is the *post-change* counterpart to the
+> **BP-1100a** *pre-dispatch* scope check — they guard opposite ends of the ticket lifecycle
+> and must not be confused:
+>
+> | Check | When it runs | What it compares | Question it answers |
+> |---|---|---|---|
+> | **BP-1100a** (pre-dispatch) | **BEFORE** any phase agent is dispatched | Declared `files_touched` vs. whether it names an executable/source target | "Did the ticket declare the *right kind* of scope up front?" |
+> | **BP-1100e** (post-change, pre-done) | **AFTER** work + gates, **BEFORE** `status: done` | *Actually-changed* source files vs. declared `files_touched UNION out_of_scope` | "Did what actually changed match what was declared?" |
+>
+> BP-1100a catches a declared scope missing its executable target *before* work starts;
+> BP-1100e catches the opposite drift — the real change and the declared scope having parted
+> ways — *after* work is done, before `done` can mask missing work.
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
@@ -1605,6 +1979,7 @@ terminates cleanly after printing the summary.
 3. **Escalating Adjudication:** When a worker encounters a blocker, `ticket-supervisor` attempts mechanical retries before calling an Opus-level brainstormer or bothering the user.
 4. **Single Source of Truth:** User-facing slash commands (`/sql-coder`, `/pr-review`) map directly to their underlying orchestration agents, decoupling UX from complex internal routing.
 5. **Current-Worktree-First for Known Bugs:** The `/quick-fix` workflow stays in the current worktree and branch. Speed and quality discipline are not in tension — the same phase agents run inline without a branch switch (ADR-006; AC BP-600a-1).
+6. **Layout-Aware Path Resolution:** `setup_ticket_worktree.py` detects the dev vs consumer layout at runtime and places worktrees, the AC store, and bootstrap outputs relative to the correct project root (§9; AC BO-1500e-2).
 
 ---
 
@@ -1618,6 +1993,11 @@ terminates cleanly after printing the summary.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-07-07 [architecture-diagram-author]: Added §10 Files-Touched Reconciliation Flow (post-change, pre-done) sequence diagram (sequenceDiagram) showing the five participants (ticket-supervisor, phase-agents, commit-guardian, check_files_touched_reconciliation.py, Ticket) and the ordered interactions: work completes + gates pass → commit-guardian invokes the reconciliation hook → hook computes actually-changed source files via git diff --name-only → compares against declared files_touched UNION out_of_scope → alt-branch verdict advises (default, fail-open) or blocks (strict opt-in) or fails open on internal error, before the ticket is marked status: done. Includes a Note making the check explicitly POST-change and PRE-done, and a bookend comparison table distinguishing it from the BP-1100a pre-dispatch scope check. (#EPIC-PhantomDoneFilesTouched/07 BP-1100e-3)
+- 2026-06-24 [EPIC-SafeAcAuthoring/18/python-coder]: Added §9 Installed-Copy Path Resolution (AC BO-1500e-2). Documents the _resolve_installed_layout() detection logic in setup_ticket_worktree.py: dev layout (parent of leafcutter-ai/ is not a git repo → worktrees at workspace/worktrees/) vs consumer layout (parent is its own git repo → worktrees at <consumer_root>/worktrees/). Includes layout comparison table, directory tree examples for both layouts, Mermaid detection-sequence flowchart, and isolation-invariant preservation note. Updated Key Design Principles to add item 6 (layout-aware path resolution).
+- 2026-06-24 [architecture-diagram-author]: Added §8 approval-to-PR delivery flow sequence diagram (sequenceDiagram) showing the five participants (User, Authoring Workflow, Git, Origin, GitHub) and the ordered interactions from final approval, through pushing the authoring branch to origin, opening the PR to main, the required CI checks running, to the PR reference returning to the user, with an explicit delivery invariant note that no step commits AC files directly onto main (main changes only via the reviewed/merged PR). (#EPIC-SafeAcAuthoring/15 BO-1500c-5)
+- 2026-06-24 [architecture-diagram-author]: Added §7 resumable per-stage authoring lifecycle state diagram (stateDiagram-v2) showing the seven authoring states (PO pending/committed, BA pending/committed, IT-PO pending/committed, delivered) and their transitions, crash-durability self-loops on each committed state, and interruption→resume self-loops on each pending state documenting that resume re-enters the first not-yet-committed stage. (#EPIC-SafeAcAuthoring/09 BO-1500b-4)
+- 2026-06-24 [architecture-diagram-author]: Added §6 isolated-authoring worktree lifecycle sequence diagram showing the five participants (User, Authoring Workflow, git, origin/main, Authoring Worktree), the ordered interactions from workflow start through worktree+branch creation off origin/main to the first authoring stage writing into the isolated worktree, and an explicit isolation-invariant note that no interaction targets the user's original checkout or a concurrent worktree. (#EPIC-SafeAcAuthoring/04 BO-1500a-3)
 - 2026-06-10 14:05 [BrainCandy]: Added §5 frontend-coder dispatch topology showing unified agent at priority 8, PROJECT_CONTEXT.md design system override relationship, and optional webapp-testing skill detection. Updated §4 phase-agent dispatch order to include frontend-coder. Removed frontend-design as a separate topology node (design principles are now embedded in the agent template per ADR-005). (#EPIC-Oneagenthandlesboththelookandthecodefor/05)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-4 quick-fix close phase section: Gherkin contract, push contract, PR update contract, ticket lifecycle close contract, ordering invariant, push failure halt message, depth-0 rationale, and contrast table with build-single-ticket Step 4b. (#EPIC-QuickFixWorkflow/13)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-3 commit-agent dispatch section: Gherkin contract, dispatch contract table, staged-files constraint table, commit message format, rationale for agent-dispatch over direct git commit, and ordering invariant. (#EPIC-QuickFixWorkflow/12)

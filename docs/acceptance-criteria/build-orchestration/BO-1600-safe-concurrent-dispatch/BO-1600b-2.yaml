@@ -53,3 +53,5 @@ notes: |
   serialization guard would otherwise introduce if a holder dies mid-commit —
   recording the cross-reference so the IT-PO wires guard ownership to the
   cleanup routine.
+change_target: infrastructure
+risk_surface: safety

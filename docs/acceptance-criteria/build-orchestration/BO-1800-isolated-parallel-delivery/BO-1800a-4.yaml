@@ -1,0 +1,47 @@
+id: BO-1800a-4
+readiness: approved
+priority: medium
+title: "Component diagram of the per-drive isolated-clone topology"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800a.yaml"
+criteria: |
+  Given the per-drive isolation topology from ADR-018 is implemented,
+  When a reader opens the build-orchestration architecture documentation,
+  Then a component diagram shows the hub (authoritative `origin`), the warm local
+    clone/cache, and two or more independent drive clones each with its OWN object
+    store,
+  And the diagram makes explicit that drive clones do NOT share an object store or
+    ref namespace with each other or with the hub,
+  And it shows the create path (reflink / reference+dissociate / plain clone) and
+    the `origin`-points-at-hub relationship.
+depends_on: [BO-1800a, BO-1800a-1, BO-1800a-2]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Satisfies the component-diagram documentation_trigger on BO-1800a."
+  - "C4-style component view grounded in ADR-018 Decision §1; MUST show the hub (authoritative origin), the warm local clone/cache, and two or more independent drive clones each with its OWN object store, and MUST make explicit that drive clones share no object store or ref namespace with each other or the hub."
+  - "MUST show the create path (reflink / reference+dissociate / plain clone) and the origin-points-at-hub relationship."
+  - "Diagram source MUST live under docs/architecture/ per the write-c4-diagram skill routing."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800a-1
+  contract: "The isolated-clone topology this diagram documents."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/07_TICKET-20260707-BO-1800a-4.md

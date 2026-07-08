@@ -306,15 +306,6 @@
       "description": "AC store scanner and ticket generator. Wraps scan_ac_store.py (queries the AC YAML store for ready leaf-level ACs) and generate_ticket_from_ac.py (generates a fully-wired ticket file from a single AC YAML record and writes the implemented_by back-reference). Used by the /build-ac command to drive the AC-first build loop."
     },
     {
-      "id": "create-ac",
-      "name": "Create AC",
-      "portable": true,
-      "domain": null,
-      "template_path": "leafcutter/templates/skills/create-ac/",
-      "dependencies": [],
-      "description": "Entry-point skill for the /create-ac workflow. Drives AC authoring through a three-stage agent pipeline (product-owner-v3 -> business-analyst-v3 -> it-po-v3), committing AC YAML files after each stage approval. Begins with a Partial-Run Recovery pre-flight that detects and resolves uncommitted AC files left over from a prior crashed session."
-    },
-    {
       "id": "build-ac",
       "name": "Build AC",
       "portable": true,

@@ -26,5 +26,7 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [TKT-200a, TKT-200b, TKT-200c, TKT-200d]
+covered_by: [TKT-200a, TKT-200b, TKT-200c, TKT-200d, TKT-200e, TKT-200f]
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

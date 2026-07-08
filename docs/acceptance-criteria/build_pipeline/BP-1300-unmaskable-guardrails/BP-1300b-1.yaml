@@ -1,0 +1,41 @@
+id: BP-1300b-1
+title: "A guardrail resolves its inputs from canonical source and catches a source-only defect"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build or authoring guardrail whose subject is present as a defect in the canonical
+    source tree but where the deployed working copy is clean (an older, correct copy),
+  When the guardrail runs,
+  Then it reads the subject from the canonical source and detects the defect,
+  And it fails with a message naming the defective canonical-source artifact,
+  And the clean deployed copy does not suppress the failure.
+depends_on:
+  - BP-1300b
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Guardrails must resolve what they validate from the canonical source tree, not the deployed working copy."
+  - "A defect present only in the canonical source must still be caught when the deployed copy is clean."
+  - "This is the general form of BP-1300a (skill registry); keep the skill-specific behavior in BP-1300a and the general source-resolution rule here."
+delivers_to:
+  agent: python-coder
+  contract: "A canonical-source resolution rule shared by build and authoring guardrails"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by:
+  - BP-1300b-1-i
+implemented_by: []

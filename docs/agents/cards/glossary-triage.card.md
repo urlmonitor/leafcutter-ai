@@ -1,9 +1,10 @@
 ---
 agent_id: glossary-triage
 title: "Agent Card: glossary-triage"
+description: "Pinned-haiku agent that classifies a jargon candidate term and returns a structured JSON decision. Accepts a candidate term plus up to 5 context windows from glossary_detector.py and returns one of three actions: add_to_glossary, add_to_blacklist, or false_positive. Never modifies files — only returns decisions. Invoked by glossary-bootstrap, check_glossary_coverage pre-commit hook, and documentation-expert coverage-lint step."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # glossary-triage
@@ -29,8 +30,13 @@ card_version: "generated"
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -51,7 +57,19 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `action` | structured_response | Output field: action |
+| `reason` | structured_response | Output field: reason |
+| `draft_entry` | structured_response | Output field: draft_entry |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -74,4 +92,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | `action == "add_to_glossary"` | provide a complete markdown | `None` |
+| Conditional Behavior | classifying `add_to_glossary` | write `draft_entry` as: | `None` |

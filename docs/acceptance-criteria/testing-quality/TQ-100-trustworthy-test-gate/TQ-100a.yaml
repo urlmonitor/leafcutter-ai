@@ -29,3 +29,7 @@ superseded_by: null
 covered_by:
   - TQ-100a-1
 implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

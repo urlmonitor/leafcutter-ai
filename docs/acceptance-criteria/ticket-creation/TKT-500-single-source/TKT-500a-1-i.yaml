@@ -28,3 +28,5 @@ covered_by: []
 implemented_by: []
 it_requirements:
   - "Error must include the expected path and the specific OS error"
+change_target: pipeline
+risk_surface: internal

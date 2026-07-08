@@ -51,3 +51,5 @@ notes: |
   L1 under ACS-100, precisely because ACS-100 is already over the 7-child cap — the
   saturation this capability cures. Placement in the ac-store component is correct:
   this is the store's own structural-identity concern.
+change_target: schema
+risk_surface: contract_boundary

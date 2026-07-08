@@ -39,3 +39,5 @@ notes: |
   property. The child-list update reuses the existing parent covered_by update
   protocol (ac-schema.md §Authoring agents), now keyed on UID instead of a derived
   parent id.
+change_target: code
+risk_surface: internal

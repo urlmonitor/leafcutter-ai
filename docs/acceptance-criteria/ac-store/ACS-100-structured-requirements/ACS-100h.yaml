@@ -55,3 +55,5 @@ notes: |
   Note: covered_by previously listed only h-1..h-5; h-6 (approved 2026-06-22) was
   added to covered_by in the same edit so the parent-child link is recorded from the
   parent's direction.
+change_target: prompt
+risk_surface: contract_boundary

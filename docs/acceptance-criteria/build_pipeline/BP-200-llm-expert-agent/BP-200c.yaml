@@ -28,3 +28,5 @@ covered_by:
 implemented_by:
   - "config/agent_registry.json"
   - "docs/agents/README.md"
+change_target: config
+risk_surface: contract_boundary

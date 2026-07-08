@@ -1,9 +1,10 @@
 ---
 title: "Agent Documentation — Front Door"
+description: "Reference index for all leafcutter agents: registry, spawn graph, conventions, and model-tier assignments."
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-13
+last_updated: 2026-06-29
 components:
   - "infrastructure"
 related_docs:
@@ -443,6 +444,28 @@ PROJECT_CONTEXT.md not found for <agent-name>; running template-only
 ```
 
 **Reference**: [ADR-025 — Portable Agent PROJECT_CONTEXT Layout](../architecture/adrs/ADR-025-portable-agent-project-context-layout.md)
+
+### Spawn Graph Consistency Validation
+
+The build system enforces bidirectional consistency of the spawn graph at two levels:
+
+**Build-time (registry_validator.py):** Every build run calls `validate_agent_registry()` which checks that:
+- For each agent A with `spawn_allowlist` entry B: B's `spawned_by` must include A.
+- For each agent A with `spawned_by` entry B: B's `spawn_allowlist` must include A.
+
+Violations are reported using the `"asymmetric spawn:"` prefix to clearly name both agents involved:
+```
+asymmetric spawn: A.spawn_allowlist includes B, but B.spawned_by does not include A
+asymmetric spawn: A.spawned_by includes B, but B.spawn_allowlist does not include A
+```
+
+**Commit-time (check-agent-spawn-consistency hook):** When `config/agent_registry.json` is staged, the `check-agent-spawn-consistency` pre-commit hook runs the same bidirectional check and exits 1 with named-pair errors before a bad registry state can be committed.
+
+Exemptions:
+- `__ticket_phase_agents__` special token in `spawn_allowlist` is silently skipped.
+- External callers (`user`, `finalize-feature.js`) in `spawned_by` are silently skipped.
+
+**Reference**: AC INF-600g-1 — Build validates that spawned_by entries are reciprocal with spawn_allowlist entries.
 
 ## §5 Agent Inventory
 

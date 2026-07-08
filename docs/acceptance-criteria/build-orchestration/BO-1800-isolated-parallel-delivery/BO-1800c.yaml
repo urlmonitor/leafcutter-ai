@@ -1,0 +1,33 @@
+id: BO-1800c
+title: "Run as many features in parallel as your machine allows"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Parallelism scales with your machine -- only the crowd on a single feature is capped.
+
+  There is no arbitrary limit on how many independent features run at the same
+  time; that is bounded only by the resources of your machine. The only thing
+  capped is how many agents pile onto one feature, where extra hands stop
+  helping and start getting in each other's way.
+depends_on: [BO-1800]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800c-1
+  - BO-1800c-2
+  - BO-1800c-3
+  - BO-1800c-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc

@@ -26,3 +26,7 @@ amended_by: []
 superseded_by: null
 covered_by: [INF-300a-1, INF-300a-2]
 implemented_by: []
+change_target:
+  - docs
+  - prompt
+risk_surface: contract_boundary

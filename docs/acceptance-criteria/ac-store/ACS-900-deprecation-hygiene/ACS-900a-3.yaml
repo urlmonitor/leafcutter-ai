@@ -57,3 +57,5 @@ notes: |
   embedded diagram and fragment one coherent deliverable. Both documentation_triggers
   on ACS-900a ([how-to, sequence-diagram]) are satisfied by this single AC — S7b
   documentation gate PASSES for ACS-900a.
+change_target: docs
+risk_surface: internal

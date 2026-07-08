@@ -63,3 +63,5 @@ notes: |
   fail clearly ("split first") rather than silently proceed or attempt an unsafe
   auto-rename. child_limit_override is the documented temporary stopgap (ACS-100h-6
   scenario 3), to be retired once ACS-800e lands.
+change_target: prompt
+risk_surface: internal

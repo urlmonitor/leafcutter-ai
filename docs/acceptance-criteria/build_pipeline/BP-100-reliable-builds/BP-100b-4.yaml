@@ -34,3 +34,5 @@ covered_by:
   - tests/test_build_artifact_parity.py::TestSourceManifestsCoversAllCategories
 implemented_by:
   - scripts/build.py
+change_target: pipeline
+risk_surface: internal

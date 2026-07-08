@@ -1,0 +1,56 @@
+id: BP-300d-1
+title: "On a supported runtime, the deployed /build-feature command invokes its deterministic workflow, not the prose flow"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+criteria: |
+  Given a build for a supported Claude Code runtime (config workflows enabled)
+    where two source templates define the /build-feature command:
+    - templates/commands/build-feature.md (the workflow-invoking command body)
+    - templates/workflows/build-feature.md (the 21KB stale prose flow)
+  When build.py deploys the command set for the supported runtime,
+  Then the deployed commands/build-feature.md is the workflow-invoking body
+    (it hands off to the deterministic build-feature workflow),
+  And the deployed commands/build-feature.md is NOT the 21KB prose flow from
+    templates/workflows/build-feature.md.
+depends_on:
+  - BP-300d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/commands/build-feature.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows/build-feature.md
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "On a supported runtime the deployed command file for build-feature must originate from the workflow-invoking templates/commands/build-feature.md, not from the prose templates/workflows/build-feature.md. Assert against the deployed file content, not the source name alone."
+  - "Determine 'supported runtime' from the same runtime/version and config.workflows.enabled signals build.py already uses to decide workflow deployment; do not introduce a new runtime-detection path."
+  - "This is the routing complement of BP-100m (collision-fatal) and BP-900g (target reachability). Do not re-derive the collision-detection or reachability mechanism here — this AC asserts the WINNING deployed body only."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300d-1-i
+implemented_by: []

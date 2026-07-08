@@ -4,7 +4,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -40,3 +40,5 @@ superseded_by: null
 covered_by: [INF-600g-2-i]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-INF-600g-2.md
+change_target: code
+risk_surface: contract_boundary

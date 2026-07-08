@@ -43,3 +43,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-ACS-500b-2.md
+change_target: docs
+risk_surface: internal

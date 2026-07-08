@@ -39,3 +39,5 @@ documentation_triggers:
   - how-to
   - sequence-diagram
   - component-diagram
+change_target: code
+risk_surface: contract_boundary

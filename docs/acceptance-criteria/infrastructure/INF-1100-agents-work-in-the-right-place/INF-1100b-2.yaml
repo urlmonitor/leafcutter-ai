@@ -39,3 +39,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Override alone is not enough — the contradiction must be visible so the stale hand-off field gets fixed at its source."
+change_target: prompt
+risk_surface: contract_boundary

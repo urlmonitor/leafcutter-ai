@@ -1,0 +1,57 @@
+id: BO-570-4-ii
+title: "Ruff tooling unavailable in the worktree surfaces clearly and never silently passes"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+criteria: |
+  Given a ticket whose changed surface includes Python files,
+    and the ruff tooling needed to lint them is not available in the worktree
+    (for example ruff is not installed, or the repository ruff configuration
+    cannot be located from the worktree root),
+  When the sign-off gate attempts the repo-ruff check,
+  Then the gate does NOT record the ruff check as passed,
+  And it records the check as inconclusive, naming the reason the lint could
+    not be performed (tooling or config unavailable),
+  And the sign-off cannot reach an "ok" verdict on Python files that were
+    never actually linted,
+  And the inconclusive outcome is surfaced to the supervisor for resolution
+    rather than being swallowed silently.
+depends_on: [BO-570-4]
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Ruff-tooling-unavailable is a THIRD outcome (inconclusive), distinct from pass and from a genuine lint failure; it must never be collapsed into a silent pass. This maps to the repo-ruff runner's tooling-unavailable verdict state (BO-570-3)."
+  - "Worktrees historically lack some hook/tooling wiring (the worktree pre-commit gap is the originating motivation), so the tooling/config-unavailable path is a real, expected branch the gate must handle explicitly with a named reason."
+  - "An inconclusive ruff check blocks an 'ok' sign-off on the Python surface and is escalated to the supervisor (consistent with the inconclusive-not-pass pattern used by BO-1400a-1-i)."
+delivers_to: null
+expects_from:
+  ac_id: BO-570-4
+  contract: "The repo-ruff sign-off gate whose tooling-unavailable branch this edge case specifies; the gate consumes the repo-ruff runner's tooling-unavailable verdict (BO-570-3) and must surface it as inconclusive, never pass"
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-v3 re-point after parent split"
+    note: "Parent BO-530-5 was split; depends_on/expects_from re-pointed from the superseded BO-530-5 to the surviving sign-off-gate-behavior child BO-530-5b (llm-expert). The tooling/config-unavailable detection is produced by BO-530-5a (the runner's third verdict state); this edge case scopes how the gate (BO-530-5b) surfaces that state."
+  - reason: "transitive rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-5-ii. Moved transitively with its parent gate (was BO-530-5b, now BO-570-4) into the new local-verification-gate L1 BO-570. RENAMED BO-530-5-ii -> BO-570-4-ii. depends_on/expects_from re-pointed to BO-570-4; in-prose runner reference BO-530-5a -> BO-570-3; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LocalSignoffGates/09_TICKET-20260624-BO-570-4-ii.md
+change_target: prompt
+risk_surface: internal

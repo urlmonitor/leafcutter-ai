@@ -1,0 +1,47 @@
+id: BO-1700e-4
+readiness: approved
+priority: medium
+title: "In a plain clone (not a worktree) the guard enforces without a false chain-broken verdict"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700e.yaml"
+criteria: |
+  Given a normal clone where the shared git dir equals the repository's own `.git`
+    (not a linked worktree),
+  When the probe runs against a correctly configured, firing hook chain,
+  Then all four checks pass, the probe exits 0, and it does not report a
+    "chain broken" or unresolved-shared-dir verdict.
+  And a genuinely broken chain in a plain clone still fails as it would in a
+    worktree.
+depends_on: [BO-1700e]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Shared-git-dir resolution (BO-1700e-2) must handle the case where git-common-dir
+  equals .git (plain clone) as well as the linked-worktree case, WITHOUT treating
+  the equality as an anomaly (no false chain-broken verdict). A genuinely broken
+  chain still fails uniformly. Implemented over the shared resolver (BO-1700e-2) and
+  the probe (BO-1700a-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700e-2
+  contract: "The shared-git-dir resolution (handling common-dir == .git) this AC exercises for the plain-clone case."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

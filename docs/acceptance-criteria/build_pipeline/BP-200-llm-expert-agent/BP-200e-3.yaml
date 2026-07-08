@@ -37,3 +37,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - "templates/skills/prompt-audit/SKILL.md"
+change_target: prompt
+risk_surface: internal

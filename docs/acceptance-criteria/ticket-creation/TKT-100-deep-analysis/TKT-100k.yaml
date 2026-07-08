@@ -34,3 +34,5 @@ covered_by:
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Split of existing L1 — no new user-facing behavior introduced."
+change_target: prompt
+risk_surface: contract_boundary

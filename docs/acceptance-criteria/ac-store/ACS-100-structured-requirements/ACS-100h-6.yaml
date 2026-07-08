@@ -70,3 +70,5 @@ notes: |
   depends_on (GE-106), so a covered_by-only Pattern C split did not reduce the
   overcrowded L1's ID-derived count and the commit stayed blocked. This AC makes
   the corrected (rename-based) procedure a tracked, testable requirement.
+change_target: prompt
+risk_surface: internal

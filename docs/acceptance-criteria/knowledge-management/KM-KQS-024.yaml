@@ -37,3 +37,5 @@ superseded_by: null
 amended_by: []
 covered_by: []
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -38,3 +38,5 @@ notes: |
   in-migration rewrite, with dual-key resolution during the window. Leaves the
   choice of mechanism to IT-PO/python-coder; the observable guarantee is "no
   reference dangles, by either key".
+change_target: code
+risk_surface: internal

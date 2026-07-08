@@ -46,3 +46,5 @@ superseded_by: null
 covered_by:
   - PER-100c-1-i
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

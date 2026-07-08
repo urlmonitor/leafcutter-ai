@@ -29,3 +29,5 @@ superseded_by: null
 covered_by:
   - GE-104a
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

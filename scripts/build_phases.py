@@ -17,12 +17,12 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``build_rules``, ``build_ticket_lifecycle``, ``build_commit_guardian``,
     ``build_precommit_config`` (imported from build_precommit.py),
     ``build_doc_compliance``, ``build_antigravity_instructions``.
-    ``build_ac_store`` deploys the six AC pipeline scripts
+    ``build_ac_store`` deploys the seven AC pipeline scripts
     (scan_ac_store, generate_ticket_from_ac, ac_prioritizer, mark_ac_done,
-    build_ac_mode_detection, goal_to_epic) from their source locations into
-    ``templates/scripts/ac_store/`` and then to
-    ``<target_root>/scripts/ac_store/``, making ``portable: true`` AC-pipeline
-    skills functional on consumer installs (ADR-013).
+    scan_ac_orphans, build_ac_mode_detection, goal_to_epic) from their source
+    locations directly to ``<target_root>/scripts/ac_store/``, making
+    ``portable: true`` AC-pipeline skills functional on consumer installs
+    (ADR-013).
     All functions share the same signature (target_root, config, dry_run, force)
     and return a file-written count. File-write helpers come from build.py's
     ``write_file`` and ``should_overwrite``. The ``force`` parameter defaults
@@ -32,6 +32,12 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``_files_content_identical`` does the same for binary files via SHA-256.
     Skipped files are counted in module-level ``_uptodate_count`` and surfaced
     by main() via ``reset_uptodate_count`` / ``get_uptodate_count``.
+    ``detect_deploy_collisions`` is a pure function that accepts a flat list of
+    (source_template_path, resolved_target_path) pairs and returns every target
+    path claimed by two or more distinct source templates (BP-100m guardrail).
+    ``_compute_phase_mappings`` enumerates those pairs for all file-based
+    artifact phases so build.py can run detect_deploy_collisions before any
+    file write occurs.
 """
 
 from __future__ import annotations
@@ -67,6 +73,170 @@ from build_precommit import (  # noqa: E402, F401  # re-exported for callers
     _find_decision_history_index,
     _build_output_lines,
 )
+
+
+# ---------------------------------------------------------------------------
+# Deploy-path collision detection (BP-100m guardrail)
+# ---------------------------------------------------------------------------
+
+def detect_deploy_collisions(
+    phase_mappings: list[tuple[Path, Path]],
+) -> list[dict]:
+    """Return one entry per distinct target path claimed by >=2 distinct source templates.
+
+    Collision detection is path-keyed and content-agnostic: two (source, target)
+    entries share the same target Path if and only if their target Path values
+    compare equal, regardless of whether the source files have identical content
+    (BP-100m-1-i). A single source template fanned out to multiple distinct target
+    paths (e.g. cross-platform deployment) is NOT a collision (BP-100m-2-i).
+    Detection is ordering-independent: the result is the same regardless of the
+    order of entries in phase_mappings (BP-100m-3).
+
+    This is a pure function — it performs no file I/O. Per the project Error
+    Handling Policy (Rule 4), no try/except is used here.
+
+    Args:
+        phase_mappings: Flat list of (source_template_path, resolved_target_path)
+            pairs across ALL artifact phases, in phase order.
+
+    Returns:
+        List of collision dicts, one per colliding target:
+            {
+                "target":  Path — the shared deployed output path,
+                "sources": list[Path] — every source template that maps to it
+                    (in first-seen order across phase_mappings),
+            }
+        Empty list means no collisions detected (build may proceed).
+    """
+    target_to_sources: dict[Path, list[Path]] = {}
+    for source, target in phase_mappings:
+        if target not in target_to_sources:
+            target_to_sources[target] = []
+        if source not in target_to_sources[target]:
+            target_to_sources[target].append(source)
+
+    return [
+        {"target": target, "sources": sources}
+        for target, sources in target_to_sources.items()
+        if len(sources) >= 2
+    ]
+
+
+def _per_platform_mappings(
+    template_dir: Path,
+    output_root: Path,
+    platforms: dict[str, bool],
+    platform_dirs: dict[str, str | None],
+    glob_pattern: str,
+) -> list[tuple[Path, Path]]:
+    """Return (source, target) pairs for one template directory deployed per-platform.
+
+    Pure helper for ``_compute_phase_mappings``: iterates the template directory
+    and produces one pair per (template_file, active_platform_with_output_dir)
+    combination.  Files whose names start with ``_`` are skipped.
+
+    Args:
+        template_dir: Directory containing template source files.
+        output_root: Root of the consolidated output directory.
+        platforms: Dict of platform name → is_active flag from config.
+        platform_dirs: Dict of platform name → output subpath (None = skip).
+        glob_pattern: Glob pattern selecting which files to include (e.g. ``"*.md"``).
+
+    Returns:
+        Flat list of (source_path, resolved_target_path) pairs.
+    """
+    result: list[tuple[Path, Path]] = []
+    if not template_dir.exists():
+        return result
+    for f in sorted(template_dir.glob(glob_pattern)):
+        if f.name.startswith("_"):
+            continue
+        for platform, is_active in platforms.items():
+            if not is_active:
+                continue
+            subpath = platform_dirs.get(platform)
+            if subpath:
+                result.append((f, output_root / subpath / f.name))
+    return result
+
+
+def _compute_phase_mappings(
+    output_root: Path,
+    config: dict[str, Any],
+) -> list[tuple[Path, Path]]:
+    """Enumerate (source_template, resolved_target) pairs for all file-based artifact phases.
+
+    Does not perform any write I/O — only iterates directories. Used by
+    build.py's collision guard to enumerate would-be deploy paths before any
+    write occurs. The ordering mirrors the artifact_phases list in
+    build.py's _run_phases().
+
+    Covers the phases that deploy per-filename template files and are therefore
+    susceptible to target-path collisions: agents, commands, workflows, hooks.
+    Phases that deploy to unique canonical paths (ac_store scripts, workflow JS
+    scripts, etc.) are omitted because they have no cross-phase collision risk.
+
+    Args:
+        output_root: Absolute path to the consolidated output directory
+            (e.g. ``<target>/.leafcutter``).
+        config: Build configuration dict; reads ``config["platforms"]``.
+
+    Returns:
+        Flat list of (source_template_path, resolved_target_path) pairs,
+        in artifact phase order.
+    """
+    platforms: dict[str, bool] = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False,
+    })
+
+    _agents_pdirs: dict[str, str | None] = {
+        "claude": "agents",
+        "antigravity": "gemini/agents",
+        "cursor": None,
+        "copilot": None,
+        "cline": None,
+    }
+    _workflows_pdirs: dict[str, str | None] = {
+        "claude": "commands",
+        "antigravity": "gemini/workflows",
+        "cursor": "cursor/rules",
+        "copilot": "copilot-instructions",
+        "cline": "cline/rules",
+    }
+    _hooks_pdirs: dict[str, str | None] = {
+        "claude": "hooks",
+        "antigravity": "gemini/hooks",
+        "cursor": None,
+        "copilot": None,
+        "cline": None,
+    }
+
+    # build_agents: templates/agents/*.md → per-platform agent directories
+    mappings = _per_platform_mappings(
+        TEMPLATES_DIR / "agents", output_root, platforms, _agents_pdirs, "*.md"
+    )
+
+    # build_commands: templates/commands/*.md → output_root/commands/ (single target)
+    commands_src = TEMPLATES_DIR / "commands"
+    if commands_src.exists():
+        for f in sorted(commands_src.glob("*.md")):
+            mappings.append((f, output_root / "commands" / f.name))
+
+    # build_workflows: templates/workflows/*.md → per-platform workflow directories
+    mappings.extend(_per_platform_mappings(
+        TEMPLATES_DIR / "workflows", output_root, platforms, _workflows_pdirs, "*.md"
+    ))
+
+    # build_hooks: templates/hooks/*.py → per-platform hook directories
+    mappings.extend(_per_platform_mappings(
+        TEMPLATES_DIR / "hooks", output_root, platforms, _hooks_pdirs, "*.py"
+    ))
+
+    return mappings
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +434,46 @@ def build_agents(target_root: Path, config: dict[str, Any],
     return written
 
 
+def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
+    """Return engine-specific bytes for a canonical E2 workflow source.
+
+    The build pipeline is E2-only. Only ``"e2"`` and ``"auto"`` are supported
+    (``"auto"`` is resolved to ``"e2"`` upstream by ``build_workflow_scripts``
+    before this function is invoked, but ``"auto"`` is also accepted here for
+    callers that invoke this function directly).
+
+    Requesting ``"e1"`` raises ``ValueError``. The E1 wrap was fundamentally
+    broken — it prepended ``export async function run`` over a top-level body
+    that contains a bare ``return`` statement, producing an ESM module that
+    throws ``SyntaxError: Illegal return statement`` on import. It has been
+    removed per the decision recorded in
+    EPIC-DualEngineWorkflowSupport ticket 09 (2026-07-06).
+
+    Args:
+        raw: Raw bytes of the canonical E2 workflow script.
+        engine: Target engine identifier. ``"e2"`` and ``"auto"`` produce the
+            identity transform (raw bytes returned unchanged). ``"e1"`` raises
+            ``ValueError`` (unsupported — see above). Any other unknown value
+            also returns raw bytes unchanged (safe identity default).
+
+    Returns:
+        Transformed bytes ready to write to the output directory.
+
+    Raises:
+        ValueError: When ``engine`` is ``"e1"`` — E1 is not supported.
+    """
+    if engine == "e1":
+        raise ValueError(  # noqa: TRY003
+            "E1 workflow engine is not supported. "
+            "Use engine='e2' or engine='auto' (resolves to e2). "
+            "The E1 wrap was removed in EPIC-DualEngineWorkflowSupport/09 "
+            "because it produced an unloadable ESM module."
+        )
+    # "e2", "auto", and any unknown value all return raw bytes unchanged.
+    # (The identity transform is the correct E2 contract.)
+    return raw
+
+
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
@@ -274,18 +484,30 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
        Default is ``False`` — workflows are experimental. If absent or ``False``,
        the phase skips silently with a "skipped (not enabled" message.
 
-    2. **Version check**: detects Claude Code version via the
+    2. **Version check (floor only)**: detects Claude Code version via the
        ``CLAUDE_CODE_VERSION`` environment variable, then ``claude --version``
        subprocess (2-second timeout), then treats version as unknown.
        - Below minimum (``2.1.154``): warn and skip file copying.
        - Unknown: warn and install (fail-open, since CI may lack Claude Code).
+       The version check is a **floor gate only** — it does NOT influence which
+       engine is selected. Engine selection is determined solely by
+       ``config["workflows"]["engine"]``.
+
+    **Engine resolution**: ``config["workflows"]["engine"]`` is resolved before
+    any file is written. The value ``"auto"`` resolves to ``"e2"`` (the
+    deterministic E2 top-level-body engine, per ADR-017 and ticket 09). The
+    resolved engine is passed to ``_emit_workflow_variant``. Only ``"e2"`` and
+    ``"auto"`` are supported; ``"e1"`` raises ``ValueError`` (the E1 wrap was
+    removed in EPIC-DualEngineWorkflowSupport ticket 09 — it produced an
+    unloadable ESM module).
 
     Applies the compare-before-write guard so that identical files are skipped
     on subsequent runs, satisfying the idempotency requirement.
 
     Args:
         target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``.
+        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``
+            and ``config["workflows"]["engine"]``.
         dry_run: When True, logs intent but writes nothing.
         force: When True, overwrites existing files.
 
@@ -303,6 +525,11 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     # ------------------------------------------------------------------
     workflows_config = config.get("workflows", {})
     enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
+    _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
+    # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
+    # Engine selection is purely config-driven; the version check below is a
+    # floor gate only and must NOT influence which engine is selected (ADR-017).
+    engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
         return 0
@@ -364,6 +591,16 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         dest = output_dir / js_file.name
         content = js_file.read_bytes()
 
+        try:
+            emitted = _emit_workflow_variant(content, engine)
+        except UnicodeDecodeError as exc:
+            _log.warning(
+                "Skipping %s: workflow transform failed (non-UTF-8 source): %s",
+                js_file.name,
+                exc,
+            )
+            continue
+
         if not _should_overwrite(dest, force):
             continue
 
@@ -371,7 +608,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
-            new_digest = _hashlib.sha256(content).hexdigest()
+            new_digest = _hashlib.sha256(emitted).hexdigest()
             if existing_digest == new_digest:
                 global _uptodate_count  # noqa: PLW0603
                 _uptodate_count += 1
@@ -383,7 +620,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
             written += 1
         else:
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(content)
+            dest.write_bytes(emitted)
             written += 1
 
     if not dry_run:
@@ -396,7 +633,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy AC pipeline scripts to ``<output_root>/scripts/ac_store/``.
 
-    Copies the six AC-pipeline Python scripts from their source locations in
+    Copies the seven AC-pipeline Python scripts from their source locations in
     the package tree and deploys them to ``<output_root>/scripts/ac_store/``
     (i.e. ``.leafcutter/scripts/ac_store/`` on a default consumer build).
     This makes the ``portable: true`` skills ``ac-scanner`` and ``build-ac``
@@ -410,7 +647,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     script paths like ``{{config.output_root}}/scripts/ac_store/<name>.py``
     correctly reference the deployed scripts on consumer installs.
 
-    The six source → destination mappings are:
+    The seven source → destination mappings are:
 
     - ``scripts/ac_store/scan_ac_store.py``
       → ``<output_root>/scripts/ac_store/scan_ac_store.py``
@@ -420,6 +657,8 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
       → ``<output_root>/scripts/ac_store/ac_prioritizer.py``
     - ``scripts/ac_store/mark_ac_done.py``
       → ``<output_root>/scripts/ac_store/mark_ac_done.py``
+    - ``scripts/ac_store/scan_ac_orphans.py``
+      → ``<output_root>/scripts/ac_store/scan_ac_orphans.py``
     - ``scripts/build_ac_mode_detection.py``
       → ``<output_root>/scripts/ac_store/build_ac_mode_detection.py``
     - ``scripts/goal_to_epic.py``
@@ -447,12 +686,13 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
     scripts_src = PACKAGE_ROOT / "scripts"
 
-    # The six files to deploy: (source_path, destination_filename)
+    # The seven files to deploy: (source_path, destination_filename)
     deploy_map = [
         (ac_store_src / "scan_ac_store.py",            "scan_ac_store.py"),
         (ac_store_src / "generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
         (ac_store_src / "ac_prioritizer.py",            "ac_prioritizer.py"),
         (ac_store_src / "mark_ac_done.py",              "mark_ac_done.py"),
+        (ac_store_src / "scan_ac_orphans.py",           "scan_ac_orphans.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
@@ -922,10 +1162,21 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
 
 def build_commit_guardian(target_root: Path, config: dict[str, Any],
                           dry_run: bool, force: bool) -> int:
-    """Copy commit guardian files to ``<target_root>/scripts/commit_guardian/``.
+    """Copy commit guardian files to the consumer directory structure.
+
+    Deploys all files from ``templates/scripts/commit_guardian/`` to
+    ``<target_root>/scripts/commit_guardian/``, then additionally copies the
+    manifest ``commit_guardian.json`` to ``<target_root>/config/commit_guardian/``
+    (BO-1700f-1-ii — manifest at canonical config path).
 
     Text files (``.json``, ``.py``, ``.yaml``, ``.yml``, ``.md``) have config
     placeholders injected; all other file types are copied verbatim.
+
+    The manifest is deployed to both locations so that:
+    - ``scripts/commit_guardian/commit_guardian.json`` serves the hook runner.
+    - ``config/commit_guardian/commit_guardian.json`` serves as the authoritative
+      "guardian installed" indicator for ``check_guardian_scripts_complete()``
+      (BO-1700e-5 — no-config detection).
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -971,6 +1222,30 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
                 shutil.copy2(template_file, output_path)
                 print(f"  scripts/commit_guardian/{rel}")
                 written += 1
+
+    # Deploy manifest to config/commit_guardian/ (BO-1700f-1-ii).
+    # The manifest is the authoritative hook registry; deploying it to config/
+    # separates configuration from scripts and enables the authoritative
+    # "no config" detection check_guardian_scripts_complete() in
+    # verify_precommit_active.py (BO-1700e-5).
+    manifest_src = cg_dir / "commit_guardian.json"
+    if manifest_src.exists():
+        config_guardian_dir = target_root / "config" / "commit_guardian"
+        config_dest = config_guardian_dir / "commit_guardian.json"
+        try:
+            raw = manifest_src.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning(
+                "build_commit_guardian: cannot read manifest source %s: %s",
+                manifest_src,
+                exc,
+            )
+        else:
+            text = inject_config(raw, config)
+            if _write(config_dest, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print("  config/commit_guardian/commit_guardian.json")
 
     return written
 
@@ -1087,9 +1362,16 @@ def build_feedback(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy feedback scripts and config to ``<target_root>/scripts/feedback/`` and ``<target_root>/config/``.
 
-    Copies the write-path scripts (submit_feedback.py, emit_hook_finding.py,
-    list_tags.py) and feedback_categories.yaml so the signoff skill's feedback
-    emission actually works from a deployed consumer project.
+    Reads feedback scripts from ``templates/scripts/feedback/`` (the canonical
+    tracked source, per ADR-016) so that a fresh clone with no gitignored build
+    outputs still produces a correct deployment. This mirrors the pattern used
+    by ``build_commit_guardian``, which reads from
+    ``templates/scripts/commit_guardian/``.
+
+    All ``.py`` and text files have config placeholders injected via
+    ``inject_config``; the directory is scanned with ``rglob`` so that any
+    sub-directories are also handled. ``feedback_categories.yaml`` is deployed
+    from ``config/feedback_categories.yaml`` in the package root.
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -1100,7 +1382,7 @@ def build_feedback(target_root: Path, config: dict[str, Any],
     Returns:
         Count of files written (or that would be written in dry-run mode).
     """
-    feedback_src = PACKAGE_ROOT / "scripts" / "feedback"
+    feedback_src = TEMPLATES_DIR / "scripts" / "feedback"
     config_src = PACKAGE_ROOT / "config" / "feedback_categories.yaml"
     if not feedback_src.exists():
         return 0
@@ -1108,26 +1390,34 @@ def build_feedback(target_root: Path, config: dict[str, Any],
     output_dir = target_root / "scripts" / "feedback"
     written = 0
 
-    deploy_scripts = [
-        "submit_feedback.py",
-        "emit_hook_finding.py",
-        "list_tags.py",
-        # Class B resolution: aggregate.py and resolve_feedback.py are referenced in
-        # templates (retrospective-agent.md, feedback-review/SKILL.md, ticket-wiring/SKILL.md)
-        # but were not deployed by this phase. Added to close the deploy gap.
-        "aggregate.py",
-        "resolve_feedback.py",
-    ]
-    for script_name in deploy_scripts:
-        src_file = feedback_src / script_name
-        if not src_file.is_file():
+    for template_file in sorted(feedback_src.rglob("*")):
+        if not template_file.is_file():
             continue
-        output_path = output_dir / script_name
-        text = inject_config(src_file.read_text(encoding="utf-8"), config)
-        if _write(output_path, text, dry_run, force):
-            written += 1
-            if not dry_run:
-                print(f"  feedback/{script_name}")
+        rel = template_file.relative_to(feedback_src)
+        output_path = output_dir / rel
+
+        if template_file.suffix in (".py", ".yaml", ".yml", ".json", ".md"):
+            text = inject_config(template_file.read_text(encoding="utf-8"), config)
+            if _write(output_path, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print(f"  feedback/{rel}")
+        else:
+            if not _should_overwrite(output_path, force):
+                continue
+            if _files_content_identical(template_file, output_path):
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                continue
+            if dry_run:
+                print(f"  [DRY-RUN] would copy scripts/feedback/{rel}")
+                written += 1
+            else:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                import shutil as _shutil
+                _shutil.copy2(template_file, output_path)
+                print(f"  scripts/feedback/{rel}")
+                written += 1
 
     if config_src.is_file():
         config_output = target_root / "config" / "feedback_categories.yaml"
@@ -1327,6 +1617,12 @@ def validate_agent_self_description(
     ``.claude/skills/`` (project-local). An unresolvable skill_id produces a
     problem entry naming which lookup location was checked.
 
+    Entries marked ``descriptive_only: true`` document intentional inline
+    capabilities that have no deployed skill directory by design. The validator
+    skips skill-dir resolution for these entries entirely (the marker is the
+    canonical pass signal). Unmarked unresolvable entries continue to fail.
+    See INF-600d-1 and TICKET-20260708-BP-1300a-descriptive-skills.
+
     ``knowledge_channels`` entries are validated: ``channel`` must be an
     integer in the range 1-11 inclusive.
 
@@ -1355,6 +1651,21 @@ def validate_agent_self_description(
     #   and knowledge_channels range (1-11). Aggregated output. Two severity
     #   modes: 'warning' returns (0, N); 'error' returns (N, 0).
     #   (#EPIC-SelfDescribingAgents/04)
+    # - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/05]:
+    #   Confirmed two-path resolution order per INF-600g-3-i:
+    #   1. templates/skills/{skill_id}/SKILL.md (package-level)
+    #   2. .claude/skills/{skill_id}/SKILL.md (project-local)
+    #   A project-local-only skill passes validation without error.
+    #   Only when neither path resolves is an error emitted.
+    #   (#EPIC-SelfDescribingAgentsCorrections/05)
+    # - 2026-07-08 [python-coder/TICKET-20260708-BP-1300a-descriptive-skills]:
+    #   Added descriptive_only: true support per INF-600d-1. When a skills_invoked
+    #   entry carries "descriptive_only": true, the validator skips skill-dir
+    #   resolution (the entry documents an inline capability — no deployed
+    #   templates/skills/<id>/ exists by design). The strict ``is True`` identity
+    #   test prevents accidental skipping when the key holds a string, int, or None.
+    #   Unmarked unresolvable entries continue to fail (guardrail preserved).
+    #   (#TICKET-20260708-BP-1300a-descriptive-skills)
     """
     agents_template_dir = target_root / "templates" / "agents"
     registry_path = target_root / "config" / "agent_registry.json"
@@ -1446,6 +1757,8 @@ def validate_agent_self_description(
                             skill_id = inv.get("skill_id") if isinstance(inv, dict) else None
                             if not skill_id:
                                 continue
+                            if inv.get("descriptive_only") is True:
+                                continue  # Intentional inline-capability entry (INF-600d-1) — no deployed skill dir required
                             in_package = (package_skills_dir / skill_id).exists()
                             in_project = (project_skills_dir / skill_id).exists()
                             if not in_package and not in_project:
@@ -1991,4 +2304,33 @@ def clean_stale_artifacts(
 #   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
 #   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
 #   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-07-02 [python-coder/EPIC-DualEngineWorkflowSupport/07]:
+#   build_workflow_scripts(): resolved "auto" → "e2" explicitly before
+#   calling _emit_workflow_variant (ADR-017: E2 is the default deterministic
+#   engine). Version check remains a floor gate only — it warns/skips when
+#   the Claude Code version is below the minimum but does NOT influence engine
+#   selection. Updated _emit_workflow_variant docstring to reflect that "auto"
+#   is resolved upstream and no longer reaches the transform function.
+#   (#EPIC-DualEngineWorkflowSupport/07)
+# - 2026-07-06 [python-coder/EPIC-DualEngineWorkflowSupport/09]:
+#   Removed _E1_SHIM constant and the E1-wrap branch from
+#   _emit_workflow_variant. "e1" now raises ValueError("E1 workflow engine is
+#   not supported") — no file is ever written for e1. The E1 wrap was
+#   fundamentally broken: it prepended `export async function run` over a
+#   top-level body containing a bare `return` statement, producing an ESM
+#   module that throws SyntaxError: Illegal return statement on import.
+#   "e2" and "auto" both return raw bytes unchanged (identity transform).
+#   Updated build_workflow_scripts docstring to reflect E1 is unsupported.
+#   Ruff F401 clean: hashlib and json remain used elsewhere in this module.
+#   (#EPIC-DualEngineWorkflowSupport/09)
+# - 2026-07-07 [python-coder/TICKET-20260707-BP-100m-1]:
+#   Added deploy-path collision guardrail (BP-100m). Three new symbols:
+#   detect_deploy_collisions() — pure function; groups (source, target) pairs
+#   by target; any target with >=2 distinct sources is a collision.
+#   _per_platform_mappings() — extracted helper to iterate one template dir
+#   across all active platforms; reduces complexity of _compute_phase_mappings
+#   from 20 to 3. _compute_phase_mappings() — enumerates would-be deploy pairs
+#   for the four file-based artifact phases (agents, commands, workflows, hooks).
+#   Also suppressed pre-existing TRY003 violation in _emit_workflow_variant
+#   (#TICKET-20260707-BP-100m-1)
 # ====================================================================

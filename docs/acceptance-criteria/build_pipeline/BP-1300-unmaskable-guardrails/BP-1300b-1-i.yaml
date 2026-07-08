@@ -1,0 +1,41 @@
+id: BP-1300b-1-i
+title: "A guardrail that cannot locate the canonical source fails closed"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build or authoring guardrail whose canonical source path is absent or cannot be
+    resolved,
+  When the guardrail runs,
+  Then it fails with a message stating it could not locate the canonical source,
+  And it does NOT silently fall back to validating the deployed working copy,
+  And the exit is non-zero.
+depends_on:
+  - BP-1300b-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An unresolvable canonical source must fail closed, never fall back to the deployed copy."
+  - "The failure message must name the missing canonical source path."
+delivers_to:
+  agent: python-coder
+  contract: "Fail-closed behavior when the canonical source cannot be located"
+expects_from:
+  ac_id: BP-1300b-1
+  contract: "The canonical-source resolution whose missing-source path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -56,3 +56,5 @@ notes: |
   IT-PO enrichment (2026-06-22): documentation-expert retained. it_requirements
   bind the confirm-route documentation to the GE-111d-2 amended_by mechanism so
   the docs cannot drift from the implementation.
+change_target: docs
+risk_surface: internal

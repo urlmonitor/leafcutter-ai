@@ -95,6 +95,10 @@ _MAX_CHILDREN = {
     "L1": _MAX_L2_PER_L1,
 }
 
+# ACS-100c-6: statuses that are excluded from the child-count cap.
+# Children with these statuses are retained on disk but do not consume cap slots.
+_SUPERSEDED_STATUSES: frozenset[str] = frozenset({"superseded_by", "superseded"})
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -114,6 +118,10 @@ class AcNode:
             child cap for THIS parent only. Must be >= the default cap
             to have any effect; if lower the default is preserved and a
             no-op warning is emitted. None means no override is set.
+        status: Lifecycle status from the YAML ``status`` field. Defaults to
+            ``"active"`` when the field is absent. Children whose status is
+            ``"superseded_by"`` or the legacy ``"superseded"`` are excluded
+            from the child-count cap (ACS-100c-6).
     """
 
     ac_id: str
@@ -121,6 +129,7 @@ class AcNode:
     depends_on: list[str] = field(default_factory=list)
     source_path: Path | None = None
     child_limit_override: int | None = None
+    status: str = "active"
 
 
 @dataclass
@@ -312,6 +321,7 @@ def _load_ac_store(ac_store_dir: Path) -> list[AcNode]:
         child_limit_override = _parse_child_limit_override(
             data.get("child_limit_override")
         )
+        status = str(data.get("status", "active"))
         nodes.append(
             AcNode(
                 ac_id=str(ac_id),
@@ -319,6 +329,7 @@ def _load_ac_store(ac_store_dir: Path) -> list[AcNode]:
                 depends_on=depends_on,
                 source_path=yaml_file,
                 child_limit_override=child_limit_override,
+                status=status,
             )
         )
     return nodes
@@ -379,8 +390,10 @@ def _get_staged_ac_paths() -> list[str]:
 # via run_hook.py with a sys.path that does not guarantee the scripts/ package
 # is importable at hook runtime.  Replicating the two patterns keeps the hook
 # self-contained without any fragile path manipulation.
-_ID_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3})$")
-_ID_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3})([a-z]+)$")
+# Digit run is {3,} (not {3}) so four-digit-hundred L0s like BO-1700 and their
+# children (BO-1700a) derive correctly. Mirrors ac_parent_id.py.
+_ID_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3,})$")
+_ID_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3,})([a-z]+)$")
 
 
 def _derive_parent_id(ac_id: str) -> str | None:
@@ -503,7 +516,10 @@ def _check_limits(
             continue  # Only L0 and L1 can be parents with hard caps
 
         children = children_map.get(node.ac_id, [])
-        child_count = len(children)
+        # ACS-100c-6: exclude superseded_by (and legacy superseded) children
+        # from the count — they are kept on disk but do not consume cap slots.
+        active_children = [c for c in children if c.status not in _SUPERSEDED_STATUSES]
+        child_count = len(active_children)
         default_limit = _MAX_CHILDREN[node.level]
         child_level = _PARENT_CHILD[node.level]
 

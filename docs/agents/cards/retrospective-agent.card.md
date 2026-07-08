@@ -1,9 +1,10 @@
 ---
 agent_id: retrospective-agent
 title: "Agent Card: retrospective-agent"
+description: "Automated epic retrospective agent. Reads all completed tickets in an epic folder (including done/ subfolder), parses ## Comments sections for retry patterns and blockers, optionally reads telemetry JSONL for quantitative data, and generates a structured retrospective artifact. Proposes Knowledge Item entries and rule updates as diffs for user approval — never auto-applies. Use when: user invokes /retro EPIC-Name; after an epic closes and all tickets are in done/, or when epic-supervisor auto-invokes at the end of a run."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # retrospective-agent
@@ -36,8 +37,11 @@ are in done/, or when epic-supervisor auto-invokes at the end of a run.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -60,7 +64,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -85,4 +99,8 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | the epic has < 3 completed tickets | note this and produce a lightweight retro | `None` |

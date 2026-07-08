@@ -35,3 +35,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-700c-1-i]
 implemented_by: []
+change_target: code
+risk_surface: internal

@@ -48,3 +48,5 @@ notes: |
   IT-PO enrichment (2026-06-22): enumerated the four legitimate-pass paths the
   guide must cover and the intact-file-after-re-point clarification. Satisfies
   ACS-900d documentation_triggers [how-to] — S7b gate PASSES for ACS-900d.
+change_target: docs
+risk_surface: internal

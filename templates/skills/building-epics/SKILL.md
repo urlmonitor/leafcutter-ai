@@ -76,6 +76,54 @@ retrospective. This pre-flight step closes that gap.
 
 ---
 
+### §1.0.1 Pre-Commit Hook Probe Pre-flight (runs after §1.0)
+
+Before entering the main epic loop (§1.1), verify that the pre-commit hooks
+are active and wired up in the epic worktree. This prevents the scenario where
+a hook silently skips for the entire drive because the config was lost between
+the worktree bootstrap and the drive start.
+
+**Check (POSIX):**
+
+```bash
+python3 scripts/commit_guardian/verify_precommit_active.py --json 2>/tmp/probe_pre_drive.txt
+```
+
+Parse the JSON stdout: `{"all_pass": bool, "failing_checks": [...], "results": {...}}`.
+
+**Failure behaviour (surface-and-offer, not hard-halt):**
+
+If `all_pass` is `false` OR the script exits non-zero:
+
+1. Emit the structured warning block to the user, listing each failing check:
+   ```
+   ## Warning: Pre-commit hook probe failed
+   Worktree: <worktree_root>
+   Failing checks: <list>
+   Pre-commit hooks may silently skip during this drive.
+   ```
+2. Offer the user **three options**:
+   a. **Fix and retry** — resolve the config/hooks issue (the probe describes what to fix), then re-invoke `/build-feature`. Typical fix: `build.py` wasn't run, or `.pre-commit-config.yaml` is absent.
+   b. **Investigate** — inspect `probe_pre_drive.txt` and the worktree hook installation manually before deciding.
+   c. **Override** — proceed despite the failing probe, accepting the risk that hooks may silently skip. This requires an explicit confirmation: "I understand hooks may skip — proceed".
+3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
+4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
+
+Do NOT silently continue when `all_pass` is false — the warning must be surfaced.
+
+If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
+```
+INFO: verify_precommit_active.py not found — probe skipped (incomplete guardian install).
+```
+and continue to §1.1 without blocking.
+
+**Why this gate exists:** A worktree bootstrap can succeed (config file copied/symlinked)
+but the hooks can still fail to fire if the binary is missing, the hook is not installed,
+or the config is malformed. This probe checks all four conditions simultaneously.
+(Source: EPIC-WorktreeQualityGateGuard, BO-1700d-2)
+
+---
+
 ### §1.1 Pseudocode
 
 ```
@@ -359,6 +407,25 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
 
 ### §2.1 Pseudocode
 
+> **§2.1-R1 — Synchronous phase dispatch (MANDATORY).** Every `Agent(...)` call
+> that spawns a phase agent is BLOCKING: the ticket-supervisor MUST wait for the
+> call to return and parse its result before doing anything else. The
+> supervisor's turn MUST NOT end while a phase agent is still running. Dispatching
+> a phase agent "in the background" and returning — or describing a dispatch and
+> stopping — leaves the ticket half-driven and forces a re-drive.
+> (Source: EPIC-WorktreeQualityGateGuard retrospective KI-1, 2026-07-06 — ticket 07's
+> first supervisor ended its turn with test-writer still running.)
+>
+> **§2.1-R2 — Commit phase required for code-producing tickets (MANDATORY).** Any
+> ticket whose `files_touched` includes source files (`.py`, `.sql`, `.js`, `.ts`,
+> config, etc.) MUST list `commit: needed` in its `agents` map so the commit phase
+> runs inside the drive — where the pre-commit hooks fire and the staged set is
+> validated. When `commit` is absent from the map, changes are left staged and the
+> caller must commit them out-of-band, bypassing the hook path. Docs-only /
+> AC-only tickets may omit `commit`.
+> (Source: EPIC-WorktreeQualityGateGuard retrospective KI-2, 2026-07-06 — 6 of 8
+> tickets lacked `commit:` in their map, forcing per-ticket main-loop commits.)
+
 ```
 1.  READ ticket frontmatter `agents` map.
     LET pending = [ name for name, status in agents
@@ -421,16 +488,27 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     IF next_agent == "test-writer":
       READ ticket body. Locate the `## Test Requirements` block (if present).
       Parse the `tests:` YAML array inside that block.
-      IF tests array is EMPTY (`tests: []`) OR the `## Test Requirements`
-         block is absent entirely:
+      IF the `## Test Requirements` block is absent entirely:
         → SKIP test-writer: do NOT spawn it.
            Mark agents["test-writer"] = "signed_off" in frontmatter.
            Append comment to `## Comments`:
              ### <today> <time> — ticket-supervisor (status: ok)
              test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
            GOTO top of loop (pick next pending agent from updated map).
-    # If tests: [] or block absent, proceed directly to next needed agent.
-    # Otherwise (tests array has entries), dispatch test-writer normally.
+      IF block is PRESENT but tests array is EMPTY (`tests: []`):
+        LET has_code_producer = any agent in ticket agents: map whose
+            produces trait (from config/agent_registry.json) is "production_code"
+        IF NOT has_code_producer:
+          → SKIP test-writer (same actions as absent block above).
+          GOTO top of loop.
+        # If has_code_producer is true: do NOT skip — block is present and
+        # test-writer is expected to fill in the tests array as its deliverable.
+      # For computed-map tickets generated by generate_ticket_from_ac.py:
+      # the ## Test Requirements block will always be present for production_code
+      # agent tickets (even if tests: [] initially). The empty array is the expected
+      # initial state; dispatching test-writer normally lets it populate the specs.
+    # If tests array has entries, dispatch test-writer normally.
+    # If block is present with empty tests but a code producer exists, dispatch normally.
 
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
     The agent invokes the `signoff` skill as its final action;
@@ -553,6 +631,16 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 11.7 | `ac-fulfillment-gate` | AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) |
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |
+
+**Flow-change pair ordering note:** For tickets generated from (change_target,
+risk_surface) pairs listed in `config/guardrail_gates.yaml` `flow_change_gates:`
+(e.g. `code/production`, `code/all`, `schema/production`, `schema/all`),
+the computed agents map will include both `architect-review` (priority 4) and
+`documentation-expert` (priority 10). This table's ordering guarantees that
+architect-review (4) and documentation-expert (10) are dispatched before
+python-coder (6) and sql-coder (7) — satisfying the flow-change requirement
+that design review and doc planning precede implementation. No special
+supervisor logic is needed beyond this priority ordering.
 
 ### §2.2 Routing table
 
@@ -925,6 +1013,28 @@ interactive confirmation gate and record the token in its sign-off comment inste
 token is implemented in the agent templates for `commit`, `worktree-agent`, and
 `finalize-feature`, the interim protocol above applies.
 
+### §5.8 --no-verify Override Policy (BO-1700b-3)
+
+`git commit --no-verify` is a **last-resort emergency override only**. It is NOT a
+routine escape hatch for fixing hook failures.
+
+**Trade-off**: `--no-verify` skips ALL pre-commit hooks simultaneously. This disables
+the WorktreeQualityGateGuard canary, feedback-id checks, doc compliance hooks, and every
+other quality gate in one command. Commits that bypass hooks may contain:
+- Missing feedback-id entries (breaking retrospective tooling)
+- Un-validated test contracts (allowing regression)
+- Security suppressions bypassed
+
+**Recommended resolution path** (in priority order):
+1. Fix the hook failure (preferred — hooks exist to catch real problems).
+2. Suppress the specific hook for this commit: `SKIP=<hook-id> git commit`.
+3. Use `--no-verify` ONLY when: hook infrastructure itself is broken (not the code
+   being committed), AND the commit is strictly chore/emergency, AND the bypass is
+   documented in the commit message with `[NO-HOOKS-OVERRIDE: <reason>]`.
+
+**The `commit` agent enforces this policy** — it refuses `--no-verify` absent explicit
+user authorization in the current conversation (relayed approval does not count).
+
 ---
 
 ## §6 User Escalation Contract
@@ -1111,6 +1221,36 @@ guard reads the **staged** content, not the working-tree content.
 subfolder. The `set_ticket_status.py` script updates the frontmatter in place
 and the file remains at its original path. The parity guard will block any
 `git mv` into a `done/` subfolder (BO-400c-3).
+
+---
+
+## §9 Integration Quality Gates
+
+The following two rules govern quality gates that must be applied at the **epic design phase** — before tickets are authored — and enforced at the final ticket in any multi-ticket chain. Both emerged from EPIC-ComputedQualityGates (PR #201, 2026-07-07), where 41 tests were green and all phases were signed off while the feature was entirely inactive on real inputs.
+
+### Cross-Ticket Integration Gate (anti-phantom-done)
+
+When an epic delivers a feature across multiple tickets each implementing one layer of the same system (function body in ticket A, config data in ticket B, call-site wiring in ticket C), the **final ticket in the chain must include a real-store end-to-end test** that:
+
+1. Exercises the **REAL call path** through the feature (not an isolated unit function call).
+2. Reads **REAL data** from the on-disk store (not hard-coded synthetic values).
+3. Asserts the **observable OUTPUT** (file written, frontmatter emitted, API response) contains the expected computed result.
+
+This gate is **mandatory** when `files_touched` across two or more tickets in the epic share a Python module. A per-ticket unit test targeting the module's internal function directly does NOT satisfy this requirement.
+
+**Reference failure:** EPIC-ComputedQualityGates (PR #201, 2026-07-01) — 41 tests green, all phases signed off, feature entirely inactive on real inputs; caught only by a post-drive `--dry-run` behavioral spot-check.
+
+### Cross-Component Vocabulary Contract Test
+
+When two or more independently maintained components must share the same enum vocabulary (e.g., a guard hook, a YAML config, and a JSON schema all enumerate the same `change_target` values), author a **vocabulary-contract test** when the **first component is written**. The test must:
+
+1. Assert the key/value sets are **set-equal** (`set(A) == set(B)`, not subset) across all sources.
+2. Live in a **permanent CI-run test file** (not a one-off migration script).
+3. Be part of the standard test suite and remain green permanently.
+
+Without this test, independent edits to each component will silently diverge to disjoint vocabularies. Pattern: `test_ac3_change_target_enum_identical_across_sources` in `unit_tests/commit_guardian/test_check_ac_schema.py`.
+
+(Source: EPIC-ComputedQualityGates, 2026-07-07.)
 
 ---
 

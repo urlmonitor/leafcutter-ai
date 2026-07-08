@@ -23,3 +23,5 @@ amended_by:
 superseded_by: null
 covered_by: [BP-100f-1, BP-100f-2, BP-100f-3]
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

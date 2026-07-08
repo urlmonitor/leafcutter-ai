@@ -1,9 +1,10 @@
 ---
 agent_id: sql-coder
 title: "Agent Card: sql-coder"
+description: "Standards-enforcing SQL implementation agent. Reads PROJECT_CONTEXT.md for project-specific database conventions, runs the postgres skill, dispatches to specialist sub-agents (sql-table-creator, sql-index-creator, sql-procedure-creator, sql-function-creator, sql-view-creator) by artifact type, and gates \"done\" on local-DB deploy + sql-test pass. Use when: user types /sql-coder; asks to write a SQL procedure/function/view/ index/table; asks to refactor SQL or apply a SQL change to the local DB."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-coder
@@ -35,8 +36,13 @@ index/table; asks to refactor SQL or apply a SQL change to the local DB.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -75,7 +81,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -93,7 +109,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -103,4 +119,11 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Halt immediately. | `None` |
+| Delegation to research-agent | task requiring research-agent capabilities | Delegates to research-agent via Agent tool | `research-agent` |
+| Conditional Behavior | the file is absent | log one debug line: | `None` |
+| Conditional Behavior | no helpers are listed | or the script does not exist, skip this step silently | `None` |

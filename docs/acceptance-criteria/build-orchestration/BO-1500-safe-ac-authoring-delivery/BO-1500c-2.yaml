@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
 criteria: |
   Given the authoring pull request has been opened against main,
@@ -43,3 +43,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/12_TICKET-20260624-BO-1500c-2.md
+change_target: pipeline
+risk_surface: internal

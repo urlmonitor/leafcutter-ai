@@ -25,3 +25,5 @@ covered_by:
   - INF-100a-3
   - INF-100a-4
 implemented_by: []
+change_target: prompt
+risk_surface: auth

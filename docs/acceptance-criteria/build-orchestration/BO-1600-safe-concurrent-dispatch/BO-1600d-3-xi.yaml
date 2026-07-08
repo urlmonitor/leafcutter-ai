@@ -1,0 +1,48 @@
+id: BO-1600d-3-xi
+readiness: approved
+priority: high
+title: "Every step failure surfaces as an operator-facing stop-and-report, never a raw traceback"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given a recovery step fails during execution (a git subprocess error, or a BLOCKED or
+    unrecoverable step)
+  When the plan is executed
+  Then recovery stops at the failed step and prints an operator-facing "Recovery halted"
+    report that names the failure
+  And it does not emit a raw Python traceback and does not continue to the next step on a
+    partially-repaired store
+depends_on:
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Plan execution MUST wrap step execution so that RecoveryError, subprocess.CalledProcessError, ValueError, and RuntimeError (including BLOCKED / unrecoverable steps) surface as an operator-facing 'Recovery halted' report naming the failing step — never a raw Python traceback. Execution stops at the failed step; later steps do not run on a partially-repaired store."
+  - "This is the operator-experience guarantee behind BO-1600d-3's 'a failed step stops recovery with a clear report' it_requirement — pinned here as a testable behavioral criterion rather than prose."
+  - "PORTABLE SURFACE: lives in the same standalone recovery script (templates/scripts/git_recovery.py); ADR-001 deployed/template parity applies."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The plan-execution path whose failure-reporting behavior this edge case pins."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_step_failure_reported_not_raised"
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_no_origin_repo_blocks_removal_without_crashing"
+implemented_by:
+  - "templates/scripts/git_recovery.py"
+notes: |
+  Added 2026-07-07 during the post-epic hardening remediation. The stop-and-report
+  guarantee lived only in it_requirements prose on BO-1600d-2/-3, which is not a
+  covered_by traceability surface — the root cause of the AC/test drift. Pinned
+  here as behavioral criteria with covering tests.

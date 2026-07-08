@@ -1,0 +1,46 @@
+id: BO-1600d-3-ix
+readiness: approved
+priority: high
+title: "A failing read-only status probe is non-fatal — recovery keeps planning when HEAD is corrupt"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given the current branch HEAD points at a corrupt commit, so the read-only status
+    probe fails
+  When the recovery entry point runs
+  Then the failed probe is reported as an expected corruption signal rather than a fatal
+    abort, and recovery continues to compute the plan, making no repository change during
+    planning
+  And the computed plan still contains the repair actions for the detected corruption
+depends_on:
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The entry point's read-only status probe can fail precisely because the store is corrupt (e.g. a corrupt current-branch tip makes 'git status' exit non-zero). A failed probe MUST be treated as a corruption signal — report it and continue to planning — NOT as a fatal abort. Planning is read-only and makes no repository change."
+  - "PORTABLE SURFACE: lives in the same standalone recovery script (templates/scripts/git_recovery.py); ADR-001 deployed/template parity applies."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The plan-computation path that must still run after a probe failure."
+origin_agent: BrainCandy
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_corrupt_head_probe_nonfatal_planning_continues"
+implemented_by:
+  - "templates/scripts/git_recovery.py"
+notes: |
+  Added 2026-07-07 during the post-epic hardening remediation. The original
+  entry point aborted when the read-only probe failed, which prevented recovery
+  from ever running against the very corruption (a corrupt HEAD) it exists to
+  repair. Covered by an unmocked real-git regression test.

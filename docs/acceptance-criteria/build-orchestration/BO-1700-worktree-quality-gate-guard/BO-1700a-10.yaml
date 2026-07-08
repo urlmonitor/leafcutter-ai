@@ -1,0 +1,43 @@
+id: BO-1700a-10
+readiness: approved
+priority: medium
+title: "How-to guide: proving pre-commit protection is live in a worktree"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700a.yaml"
+criteria: |
+  Given a reader wants to confirm a worktree's quality gates actually fire,
+  When they open the how-to guide,
+  Then it explains the four checks (binary, config, shared git hook, canary
+    token), shows the command to run the probe against a worktree with the JSON
+    output, and shows how to read the `failing_checks` list and the exit code.
+  And it explains the silent-skip failure mode the probe defends against (a
+    gitignored config symlink absent in a fresh worktree so pre-commit runs zero
+    hooks) and how a FAIL verdict surfaces it.
+depends_on: [BO-1700a, BO-1700a-1]
+doc_links:
+  - path: docs/how-to/verify-precommit-active.md
+    relationship: creates
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements: |
+  The how-to must document the probe's actual output contract (the JSON keys and
+  the A-B-C-D failing_checks ordering) as produced by BO-1700a-1 — teach the exact
+  labels and exit semantics the probe emits, so the doc and the tool cannot drift.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe behavior and JSON output shape {binary, config, git_hook, canary, failing_checks[]} this guide documents."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

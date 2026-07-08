@@ -54,3 +54,5 @@ notes: |
   explicitly de-scoped successor-claim verification (avoids coupling to cross-AC
   reconciliation). This is the single most likely false-positive source, so the
   scoping is stated as a hard it_requirement.
+change_target: code
+risk_surface: internal

@@ -36,3 +36,5 @@ covered_by:
 implemented_by:
   - templates/commit-guardian/commit_guardian.json
   - templates/scripts/commit_guardian/commit_guardian.json
+change_target: config
+risk_surface: internal

@@ -33,3 +33,5 @@ covered_by:
   - tests/test_build_artifact_parity.py::TestOutputDriftCoversAllShimmedDirs
 implemented_by:
   - templates/scripts/commit_guardian/check_output_drift.py
+change_target: code
+risk_surface: internal

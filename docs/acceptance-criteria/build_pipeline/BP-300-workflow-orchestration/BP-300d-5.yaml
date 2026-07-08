@@ -1,0 +1,49 @@
+id: BP-300d-5
+title: "Sequence diagram: runtime-aware routing of a primary delivery command to workflow vs prose fallback"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+criteria: |
+  Given the BP-300d behavior is implemented (BP-300d-1 through BP-300d-4),
+  When the sequence diagram for primary-delivery-command routing is authored,
+  Then it shows the runtime-support decision branch: on a supported runtime the
+    deployed command hands off to its deterministic workflow, and on an
+    unsupported runtime the deployed command falls back to the prose body,
+  And it shows build.py deploying the winning command body and the guardrail that
+    fails the build if the prose body would deploy on a supported runtime,
+  And the diagram is linked from the BP-300d feature area so a reader can trace
+    which template becomes the deployed command in each runtime case.
+depends_on:
+  - BP-300d
+  - BP-300d-1
+  - BP-300d-3
+  - BP-300d-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Documentation AC produced because BP-300d declares documentation_triggers: [sequence-diagram]. The diagram must depict the runtime-support branch and the two deployed outcomes (workflow invocation vs prose fallback) plus the supported-runtime regression guardrail."
+delivers_to: null
+expects_from:
+  ac_id: BP-300d-1
+  contract: "The implemented runtime-aware routing behavior that the sequence diagram documents."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

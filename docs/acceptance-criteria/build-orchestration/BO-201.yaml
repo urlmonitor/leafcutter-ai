@@ -43,3 +43,5 @@ implemented_by:
   - "config/agent_registry.json"
 covered_by:
   - "tests/test_ac_fulfillment_gate.py"
+change_target: prompt
+risk_surface: internal

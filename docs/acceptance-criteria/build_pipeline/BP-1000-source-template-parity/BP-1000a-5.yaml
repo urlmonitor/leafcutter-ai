@@ -1,0 +1,87 @@
+id: BP-1000a-5
+title: "The build reads the feedback deployable-script source from the tracked templates mirror, not the gitignored working copy"
+component: build-pipeline
+level: L2
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given a fresh checkout in which the only feedback deployable-script source that
+    is committed to version control lives under the tracked templates mirror
+    directory templates/scripts/feedback/ (mirroring the existing
+    templates/scripts/commit_guardian/ pattern)
+  And the gitignored working-tree directory scripts/feedback/ is empty or absent
+    (it holds no committed source on a fresh checkout)
+  When the build resolves the set of feedback scripts it will deploy (the step
+    that today is performed by the feedback manifest builder and the feedback
+    deploy phase)
+  Then the build sources every feedback script from templates/scripts/feedback/
+  And the set of feedback scripts the build deploys is non-empty and matches the
+    files present under templates/scripts/feedback/
+  And the build does not require any file under the gitignored scripts/feedback/
+    directory to be present in order to determine what to deploy
+depends_on:
+  - BP-1000a
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/build.py"
+    relationship: implements
+    status: exists
+  - path: "scripts/build_phases.py"
+    relationship: implements
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Relocate the CANONICAL feedback deployable-script source into the tracked templates mirror templates/scripts/feedback/, mirroring the templates/scripts/commit_guardian/ pattern that _manifest_commit_guardian_scripts() already scans. The feedback manifest builder (_manifest_feedback_scripts in scripts/build.py) and the feedback deploy phase (build_feedback / feedback_src in scripts/build_phases.py) must READ from templates/scripts/feedback/, not from the gitignored working-tree scripts/feedback/."
+  - "After relocation the build's feedback source resolution must contain no dependency on the gitignored scripts/feedback/ working copy: a fresh clone with that directory absent must still resolve a non-empty feedback script set. The resolution must be a function of tracked files only (git-tracked templates/scripts/feedback/), so the result never depends on leftover working-tree files."
+  - "Preserve the ADR-001 self-hosting boundary: the DEPLOYED feedback output directory (scripts/feedback/ in a target / the self-build) remains a build output and stays gitignored. This AC changes only the build's READ source-of-truth to a tracked home; it must NOT commit build outputs into source control and must NOT change where the build WRITES feedback scripts."
+  - "Maintain build.py round-trip parity per ADR-001/ADR-013: the relocated source under templates/scripts/feedback/ is the package source that the build deploys and shims; never split the canonical source across both the gitignored scripts/feedback/ and the tracked mirror. The single canonical home after this change is templates/scripts/feedback/."
+  - "The relocation must not change the deployable feedback script SET or its shimming behavior (that no-regression guarantee is asserted by BP-1000a-6): the same feedback scripts the pre-relocation build resolved must be resolved from the tracked mirror."
+  - "Wrap any filesystem enumeration of the source directory per the project error-handling policy (CLAUDE.md Rules 1-3): a missing/empty tracked source must surface as a clear, loud failure (the feedback set must be non-empty), not a silent empty deploy."
+delivers_to:
+  agent: python-coder
+  contract: "The resolved feedback deployable-script set, sourced from tracked templates/scripts/feedback/ (repo-root-relative POSIX paths), is the input both to the downstream deploy+shim step asserted by BP-1000a-6 and to the fresh-clone/tracked-only build assertions in BP-1000a-5-i and BP-1200a-1-iii."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements pinning the relocation mechanism (canonical source -> tracked templates/scripts/feedback/, mirroring _manifest_commit_guardian_scripts; repoint _manifest_feedback_scripts in build.py and feedback_src/build_feedback in build_phases.py), the tracked-only / fresh-clone independence, the ADR-001 deployed-output-stays-gitignored boundary, the ADR-001/013 build.py round-trip parity, the BP-1000a-6 no-regression coupling, and the error-handling-policy non-empty-set guard. Added delivers_to naming the resolved-feedback-set contract consumed by BP-1000a-6 / BP-1000a-5-i / BP-1200a-1-iii. Promoted scripts/build.py and scripts/build_phases.py doc_links to relationship: implements and ADR-013 doc_link added. Criteria unchanged; assigned_agent (python-coder) and complexity (M) validated and kept."
+    by: it-po
+superseded_by: [BP-1200a-1-ii]
+covered_by:
+  - BP-1000a-5-i
+implemented_by: []
+notes: |
+  Root cause: commit 83737a44 (#164) git-untracked scripts/feedback/ without
+  relocating its canonical source to a tracked templates/ home. The feedback
+  manifest builder and the feedback deploy phase still read the gitignored
+  scripts/feedback/, so a fresh clone / CI has no feedback source and the
+  build's broken-reference preflight aborts. This AC moves the canonical source
+  to the tracked templates/scripts/feedback/ mirror, matching commit_guardian
+  (tracked templates/scripts/commit_guardian/) and doc_compliance (tracked
+  templates/doc-compliance/).
+  SCOPE BOUNDARY (do not conflate): this is about the build's READ source-of-
+  truth for feedback. It is distinct from BP-1200a-1, whose Approach 1 keeps the
+  DEPLOYED build-output directory scripts/feedback/ gitignored and bridges it to
+  tests via a shim. Source-of-truth (tracked, templates/scripts/feedback/) and
+  deployed output (gitignored, scripts/feedback/) are different directories with
+  different lifecycles; no contradiction with BP-1200a-1.
+change_target: pipeline
+risk_surface: contract_boundary

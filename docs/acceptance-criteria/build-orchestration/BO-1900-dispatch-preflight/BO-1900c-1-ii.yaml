@@ -1,0 +1,45 @@
+id: BO-1900c-1-ii
+title: "A registry entry with no charter description fails the check closed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose assigned agent exists in the registry but whose registry entry has
+    no charter/description text to match against,
+  When the preflight charter check runs before spawn,
+  Then the check cannot establish fit and returns an unfit verdict,
+  And the held-back reason states that the assigned agent has no charter to verify fit
+    against,
+  And no phase agent is spawned.
+depends_on:
+  - BO-1900c-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A missing or empty charter/description on a registry entry must produce an unfit verdict (fail closed), never a default pass."
+  - "The reason must name the agent whose registry entry lacks a charter."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "Fail-closed behavior when the assigned agent's registry entry has no charter"
+expects_from:
+  ac_id: BO-1900c-1
+  contract: "The charter-vs-verb check whose missing-charter path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

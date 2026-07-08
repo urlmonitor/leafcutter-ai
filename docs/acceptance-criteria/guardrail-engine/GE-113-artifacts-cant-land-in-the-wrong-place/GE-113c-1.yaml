@@ -43,6 +43,9 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: python-coder; recorded the ACS-300g-6 reconciliation (already-merged REPO_ROOT git-toplevel fix in check_components_integrity.py; GE-113c-1 = regression coverage + generalize to other guards via ONE shared resolver). Flagged the stale-branch + two-resolver divergence. Criteria unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-113c-1-i
 implemented_by: []
 notes: "Latent bug class: check-components-integrity resolved REPO_ROOT to the .leafcutter/ subdir in the deployed layout."
+change_target: code
+risk_surface: contract_boundary

@@ -1,0 +1,46 @@
+id: TKT-200e-1
+title: "A motivating claim missing its command or result is flagged before the ticket leaves the inbox"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose body states a motivating factual claim ("build X fails")
+    but does not pair it with both an exact reproduction command and an observed result,
+  When the premise-capture check runs on the ticket before it may leave the inbox,
+  Then the check flags the ticket,
+  And the violation quotes the claim text and states whether the reproduction command,
+    the observed result, or both are missing,
+  And the ticket is not cleared to leave the inbox until the capture is completed.
+depends_on:
+  - TKT-200e
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The check must identify motivating factual claims in the ticket and, for each, require a paired reproduction command and observed result."
+  - "A claim missing either element must produce a violation that quotes the claim and names the missing element(s)."
+  - "The check must gate the inbox-exit step; a flagged ticket cannot advance."
+delivers_to:
+  agent: create-ticket
+  contract: "A premise-capture completeness check that flags claims lacking a command and observed result"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by:
+  - TKT-200e-1-i
+  - TKT-200e-1-ii
+implemented_by: []

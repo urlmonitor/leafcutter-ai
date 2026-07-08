@@ -54,3 +54,5 @@ covered_by:
   - BP-700d-1-i
   - BP-700d-1-ii
 implemented_by: []
+change_target: pipeline
+risk_surface: internal

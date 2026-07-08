@@ -1,0 +1,32 @@
+id: SD-100a
+readiness: draft
+priority: medium
+title: "Turn approved value into a presentation deck you can show right now"
+component: stakeholder-delivery
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  On request, the approved value becomes a polished slide deck a stakeholder
+  could be shown directly -- no manual slide-building.
+
+  When you ask for it, the delivery partner reads the value you have already
+  approved and renders it into a finished, presentation-ready deck, the kind of
+  artifact you would put on screen in a stakeholder meeting.
+depends_on: [SD-100]
+documentation_triggers: [how-to, sequence-diagram]
+doc_links:
+  - docs/presentations/ac-driven-orchestration.html
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

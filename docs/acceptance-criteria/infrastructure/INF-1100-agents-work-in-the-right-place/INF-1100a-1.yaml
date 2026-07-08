@@ -38,6 +38,9 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: surface=test-writer.md prose (llm-expert per the 'what an agent should DO/SAY' rule); the deterministic test_root substitution is owned by the INF-1100c compiler, consumed here via expects_from. Criteria unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-1100a-1-i
 implemented_by: []
 notes: "Real config today: skills_config.json test_root is tests/. Behavior: the agent must read this, not assume a default."
+change_target: prompt
+risk_surface: contract_boundary

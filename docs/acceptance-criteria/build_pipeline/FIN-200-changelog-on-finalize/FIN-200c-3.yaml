@@ -1,0 +1,72 @@
+id: FIN-200c-3
+title: "When configured as required, a capture failure halts before the merge"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200c
+criteria: |
+  Given the project has configured the changelog entry as required for finalize
+    (changelog-blocks-merge is enabled)
+  And the changelog step encounters an actual error while attempting to generate
+    or commit the entry for a branch that had commits to record
+  When the changelog step finishes
+  Then finalize halts before the PR merge gate with a reason identifying the
+    changelog capture failure
+  And the PR is not merged while the changelog entry is missing
+  And re-running finalize after the cause is fixed allows it to proceed
+depends_on:
+  - FIN-200c
+  - FIN-200c-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: M
+it_requirements: |
+  - The required-vs-warn behavior must be driven by a new config flag (suggested
+    key changelog_blocks_merge, boolean, default false) added to
+    config/skills_config.default.json beside the existing changelog_folder /
+    changelog_categories_path keys, with a matching entry in
+    config/skills_config.schema.json — do NOT hard-code the toggle
+  - Per ADR-001 self-hosting parity, the config default + schema and any deployed
+    copy must round-trip via build.py (edit canonical source, never one side only)
+  - When the flag is enabled AND a genuine capture failure occurs for a
+    commit-bearing range, finalize must halt BEFORE the merge_pr gate (4) with a
+    structured reason naming the changelog capture failure — add this as a new opt-in
+    halt category distinct from the default warn (FIN-200c-1); mirror the existing
+    Step 3 structural-halt pattern so step 4 is unreachable when the halt fires
+  - The PR must not be merged while the entry is missing (flag enabled)
+  - The halt must be re-runnable: after the cause is fixed, a re-run proceeds
+    (idempotent, like the step-3 regression halt) — no sticky state blocks a clean retry
+  - The flag must NOT halt on the empty-range no-op (FIN-200c-1-i) — only on a real
+    capture error for a range that had commits to record
+delivers_to: null
+expects_from:
+  - agent: changelog-agent
+    contract: "signals an error result that the configured-required path can act on"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Halt categories table — add an opt-in changelog-required halt distinct from default warn"
+  - path: "config/skills_config.default.json"
+    relationship: amends
+    status: exists
+    relevance: "Config home for the new changelog_blocks_merge flag (beside changelog_folder)"
+  - path: "config/skills_config.schema.json"
+    relationship: amends
+    status: exists
+    relevance: "Schema entry for the new changelog_blocks_merge flag"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "Structural halt (mirror Step 3) inserted before merge_pr when the flag is enabled"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

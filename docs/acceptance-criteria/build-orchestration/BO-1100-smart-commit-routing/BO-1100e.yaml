@@ -28,3 +28,5 @@ superseded_by: null
 covered_by: [BO-1100e-1, BO-1100e-2, BO-1100e-3, BO-1100e-4]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BO-1100e.md
+change_target: code
+risk_surface: cost

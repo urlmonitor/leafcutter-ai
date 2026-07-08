@@ -5,24 +5,50 @@ GOAL: Single-pass traversal of all knowledge surfaces defined in paths.json.
 BUSINESS CONTEXT: Gives agents and humans a one-command answer to
     "show me everything related to X" across all leafcutter knowledge surfaces.
     Reads paths.json for surface discovery, traverses tickets, ADRs, docs,
-    agents, skills, components, roadmap, glossary, and feedback in a single
-    pass, extracts a one-line description for every node, follows cross-surface
-    edges, and dumps a flat index in both human-readable text and JSON format.
-ARCHITECTURE: Three public functions (load_surfaces, extract_nodes,
-    extract_edges) and a CLI entry point. Surface discovery driven by paths.json;
-    no surface path is hardcoded. All file I/O wrapped in try/except with
-    specific exception types (repo error-handling policy). Stdlib-only: no
-    third-party dependencies.
+    agents, skills, components, roadmap, glossary, acs, and feedback in a
+    single pass, extracts a one-line description for every node, follows
+    cross-surface edges, and dumps a flat index in both human-readable text
+    and JSON format.
+ARCHITECTURE: Seven public functions (load_surfaces, load_surfaces_with_meta,
+    build_knowledge_map, validate_knowledge_map, validate_edges_integrity,
+    extract_nodes, extract_edges) and a CLI entry point.
+    build_knowledge_map() is the primary API for callers that need both the
+    graph data and surface-completeness audit metadata (declared_surfaces,
+    contributing_surfaces). validate_knowledge_map() verifies each declared
+    surface produces only the edge relationship kinds it declares in paths.json
+    — the check is fully data-driven, so adding or removing a surface in
+    paths.json changes the validated set without any code edit.
+    validate_edges_integrity() validates edges in a KnowledgeMap using a
+    two-tier policy (AC KM-KGS-100d-2-i): edges whose target node is absent
+    are silently **dropped** (logged at DEBUG; recorded in
+    ``EdgeIntegrityResult.dropped_edges``) rather than flagged as integrity
+    violations — the build must not fail solely because a relationship named
+    a missing target.  Only edges whose source node is absent are treated as
+    true integrity failures.  Exempt edge types (those pointing to file paths
+    rather than node IDs) are derived purely from ``file_path_fields`` entries
+    in paths.json — no hardcoded allow-list of target IDs or edge types is
+    consulted. Surface discovery driven by paths.json; no surface path,
+    edge_fields list, or
+    phantom-filter-exempt field name is hardcoded — adding a new surface only
+    requires a new entry in paths.json. Surfaces that declare edge fields
+    pointing to file paths (not node IDs) use the optional ``file_path_fields``
+    attribute in their paths.json entry; those edge types are automatically
+    exempt from phantom-edge filtering. All file I/O wrapped in try/except with
+    specific exception types (repo error-handling policy).
+    Stdlib-only: no third-party dependencies.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, NamedTuple
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +93,11 @@ class EdgeRecord(NamedTuple):
 # Surface-specific edge fields
 # ---------------------------------------------------------------------------
 
+# NOTE: _SURFACE_EDGE_FIELDS is kept only as a legacy fallback for callers
+# that invoke extract_edges() without passing edge_fields explicitly.
+# The authoritative source of edge_fields is the ``edge_fields`` array in each
+# surface entry of paths.json (loaded by load_surfaces_with_meta).
+# Do NOT add new surfaces here — declare them in paths.json instead.
 _SURFACE_EDGE_FIELDS: dict[str, list[str]] = {
     "agents": ["spawn_allowlist", "spawned_by", "skills_used", "components"],
     "skills": ["dependencies", "components"],
@@ -83,6 +114,35 @@ _COMPONENT_FIELDS: frozenset[str] = frozenset({"components"})
 
 # Fields whose values may be file paths that need stem resolution
 _PATH_FIELDS: frozenset[str] = frozenset({"depends_on"})
+
+# Canonical outbound edge types produced by the ``acs`` surface.
+#
+# When a reader collects the outbound edges of an AC node (e.g. KM-EX-010),
+# ONLY these four edge-type labels may appear — no other relationship kind is
+# produced.  This is enforced by the ``edge_fields`` list in the ``acs``
+# surface entry of paths.json, which is the single configuration point that
+# controls which YAML fields are traversed.  The mapping from raw field name
+# to edge-type label is:
+#
+#   implemented_by  → "implemented_by"   (source files that deliver the AC)
+#   covered_by      → "covered_by"       (test files that prove the AC)
+#   depends_on      → "depends_on"       (other criteria this AC depends on)
+#   components      → "component_membership"  (component hub the AC belongs to)
+#
+# If future AC YAML schemas add new relationship fields, they MUST also be
+# added to this constant so that callers (including downstream tools such as
+# the graph visualiser and how-to queries) have a single, authoritative
+# definition to validate against.
+_AC_EDGE_TYPES: frozenset[str] = frozenset(
+    {"implemented_by", "covered_by", "depends_on", "component_membership"}
+)
+
+# Edge types that point to file-path targets (not knowledge-graph node IDs).
+# These must be exempt from the phantom-edge filter in _collect_all so that
+# edges to non-node targets (e.g. "scripts/foo.py") are never silently dropped.
+_PHANTOM_FILTER_EXEMPT_EDGE_TYPES: frozenset[str] = frozenset(
+    {"implemented_by", "covered_by"}
+)
 
 # ---------------------------------------------------------------------------
 # Frontmatter parser (stdlib only, mirrors roadmap_query.py pattern)
@@ -107,11 +167,14 @@ def _find_frontmatter_end(lines: list[str]) -> int:
 def _parse_scalar_value(raw: str) -> Any:
     """Parse an inline scalar YAML value string.
 
+    Handles booleans, null, quoted strings, empty flow sequences (``[]``),
+    and simple non-nested flow sequences (``[item1, item2]``).
+
     Args:
         raw: Trimmed right-hand side of a ``key: value`` YAML line.
 
     Returns:
-        True, False, None, or a string.
+        True, False, None, a list (for flow-sequence syntax), or a string.
     """
     lower = raw.lower()
     if lower == "true":
@@ -122,6 +185,14 @@ def _parse_scalar_value(raw: str) -> Any:
         return None
     if len(raw) >= 2 and raw[0] in ('"', "'") and raw[-1] == raw[0]:
         return raw[1:-1]
+    # Handle inline YAML flow sequences: [] or [item1, item2, ...]
+    # Only handles simple non-nested cases (sufficient for AC YAML files).
+    if len(raw) >= 2 and raw[0] == "[" and raw[-1] == "]":
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        items = [item.strip().strip('"\'') for item in inner.split(",")]
+        return [item for item in items if item]
     return raw
 
 
@@ -182,6 +253,77 @@ def _parse_frontmatter(text: str) -> dict[str, Any]:
         fm[key] = _parse_scalar_value(raw)
         i += 1
     return fm
+
+
+def _parse_yaml_file(text: str) -> dict[str, Any]:
+    """Parse a plain YAML file (no ``---`` delimiters) and return a flat field dict.
+
+    Handles only the scalar and block-list syntax used by AC YAML files:
+    - ``key: value`` scalar lines at column 0
+    - ``key: |`` multiline block scalars (value collected as-is)
+    - ``key:`` bare lines followed by indented ``- item`` list lines
+
+    This is intentionally minimal — it covers the AC YAML schema and nothing
+    more. It does not support nested mappings, anchors, or flow scalars.
+    Stdlib-only: no third-party imports (PyYAML is explicitly excluded by the
+    project's stdlib-only policy and by the AC test suite's forbidden-imports
+    check).
+
+    Args:
+        text: Full text content of a YAML file (no frontmatter delimiters).
+
+    Returns:
+        Dict of field names to parsed values.  Empty dict on empty input.
+    """
+    lines = text.splitlines()
+    total = len(lines)
+    result: dict[str, Any] = {}
+    i = 0
+    while i < total:
+        line = lines[i]
+        # Skip blank lines and comment lines
+        if not line.strip() or line.strip().startswith("#"):
+            i += 1
+            continue
+        # Skip indented lines at the top level (they belong to a prior block)
+        if line.startswith("  ") or line.startswith("\t"):
+            i += 1
+            continue
+        m = re.match(r"^(\w[\w_-]*):\s*(.*)", line)
+        if not m:
+            i += 1
+            continue
+        key = m.group(1)
+        raw = m.group(2).strip()
+        # Block scalar indicator ``|`` or ``>``
+        if raw in ("|", ">"):
+            # Collect all indented lines following as a single string
+            block_lines: list[str] = []
+            i += 1
+            while i < total and (lines[i].startswith("  ") or lines[i].startswith("\t") or lines[i].strip() == ""):
+                block_lines.append(lines[i])
+                i += 1
+            # Dedent by 2 spaces if applicable, then join
+            dedented = []
+            for bl in block_lines:
+                if bl.startswith("  "):
+                    dedented.append(bl[2:])
+                elif bl.startswith("\t"):
+                    dedented.append(bl[1:])
+                else:
+                    dedented.append(bl)
+            result[key] = "\n".join(dedented).rstrip()
+            continue
+        # Bare key — may be followed by block list items
+        if raw == "":
+            children, i = _parse_block_children(lines, i + 1, total)
+            if children:
+                result[key] = children
+            continue
+        # Inline scalar value
+        result[key] = _parse_scalar_value(raw)
+        i += 1
+    return result
 
 
 def _extract_frontmatter_end_line(text: str) -> int:
@@ -245,6 +387,38 @@ def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
     Raises:
         SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
     """
+    meta = load_surfaces_with_meta(project_root, paths_json)
+    return {name: info["path"] for name, info in meta.items()}
+
+
+def load_surfaces_with_meta(
+    project_root: Path, paths_json: Path
+) -> dict[str, dict[str, Any]]:
+    """Load surface paths and edge_fields from paths.json.
+
+    Reads paths.json, resolves each surface's root path relative to
+    project_root, and captures the ``edge_fields`` list from each surface
+    entry. Silently skips surfaces marked ``_optional: true`` when the path
+    does not exist.
+
+    This is the preferred loader for code that needs both paths and edge
+    metadata. ``load_surfaces`` delegates to this function and strips the
+    extra metadata for backward compatibility.
+
+    Args:
+        project_root: Absolute path to the project root directory.
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        Dict mapping surface name (str) to ``{"path": Path, "edge_fields":
+        list[str], "file_path_fields": list[str]}``.  The ``file_path_fields``
+        entry lists edge fields whose values are file-path strings rather than
+        node IDs; these are exempt from phantom-edge filtering in
+        ``_collect_all``.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
+    """
     if not paths_json.exists():
         print(
             f"ERROR: {paths_json.name} not found at {paths_json}.",
@@ -265,7 +439,7 @@ def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
         sys.exit(1)
 
     surfaces_cfg = data.get("surfaces", {})
-    result: dict[str, Path] = {}
+    result: dict[str, dict[str, Any]] = {}
 
     for name, cfg in surfaces_cfg.items():
         if not isinstance(cfg, dict):
@@ -279,9 +453,382 @@ def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
             if optional:
                 continue
             # Non-optional but missing: include anyway; extract_nodes will handle
-        result[name] = resolved
+        edge_fields: list[str] = cfg.get("edge_fields", [])
+        if not isinstance(edge_fields, list):
+            edge_fields = []
+        file_path_fields: list[str] = cfg.get("file_path_fields", [])
+        if not isinstance(file_path_fields, list):
+            file_path_fields = []
+        result[name] = {
+            "path": resolved,
+            "edge_fields": edge_fields,
+            "file_path_fields": file_path_fields,
+        }
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Public API: build_knowledge_map
+# ---------------------------------------------------------------------------
+
+
+class KnowledgeMap(NamedTuple):
+    """Result of a full-graph traversal against all declared surfaces.
+
+    This is the primary return type for ``build_knowledge_map()``.  It carries
+    both the graph data and audit metadata so callers can assert completeness
+    without re-reading paths.json.
+
+    Attributes:
+        nodes: All NodeRecords collected across every contributing surface.
+        edges: All filtered EdgeRecords (phantom edges removed).
+        declared_surfaces: The set of surface names that were declared in
+            paths.json **and** whose path exists on disk (optional absent
+            surfaces are excluded from this set, matching the behaviour of
+            ``load_surfaces_with_meta``).
+        contributing_surfaces: The subset of ``declared_surfaces`` that
+            produced at least one NodeRecord.  For a well-formed project
+            every element of ``declared_surfaces`` should appear here.
+    """
+
+    nodes: list[NodeRecord]
+    edges: list[EdgeRecord]
+    declared_surfaces: frozenset[str]
+    contributing_surfaces: frozenset[str]
+
+
+def build_knowledge_map(
+    project_root: Path,
+    paths_json: Path,
+    surface_filter: str | None = None,
+) -> KnowledgeMap:
+    """Build the full knowledge map and return graph data plus surface audit metadata.
+
+    Traverses every surface declared in paths.json (skipping optional absent
+    surfaces), collects all NodeRecords and EdgeRecords, applies phantom-edge
+    filtering, and returns a :class:`KnowledgeMap` that includes both the graph
+    data and the ``declared_surfaces`` / ``contributing_surfaces`` audit sets.
+
+    The caller can assert completeness without knowing which surfaces are
+    declared by testing::
+
+        assert km.contributing_surfaces == km.declared_surfaces
+
+    This assertion is expressed against the *declared set itself*, not against
+    any hardcoded surface name list.  If a surface is declared but its path
+    produces zero nodes (e.g. the directory is empty), it will appear in
+    ``declared_surfaces`` but not in ``contributing_surfaces``.
+
+    Args:
+        project_root: Absolute path to the project root directory.
+        paths_json: Absolute path to the paths.json configuration file.
+        surface_filter: When non-None, restrict traversal to this surface only.
+
+    Returns:
+        A :class:`KnowledgeMap` with nodes, edges, declared_surfaces, and
+        contributing_surfaces.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
+    """
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
+    declared: set[str] = set()
+    contributing: set[str] = set()
+
+    all_nodes: list[NodeRecord] = []
+    all_edges: list[EdgeRecord] = []
+
+    for surface_name, surface_info in surfaces_meta.items():
+        if surface_filter and surface_name != surface_filter:
+            continue
+        declared.add(surface_name)
+
+    # Delegate to _collect_all for the actual traversal so the collection
+    # logic lives in one place.  We re-read surfaces_meta once more inside
+    # _collect_all, but that is an in-memory JSON parse that completes in
+    # microseconds and is acceptable for the sake of keeping _collect_all
+    # self-contained.
+    all_nodes, all_edges = _collect_all(project_root, paths_json, surface_filter)
+
+    # Determine which declared surfaces actually contributed primary nodes
+    # (exclude synthetic hub nodes that _collect_all injects for components).
+    # We identify "synthetic" nodes by checking whether their surface name is
+    # "components" AND their path is the generic fallback Path used in
+    # _collect_all (not a real file discovered from the directory).  A more
+    # reliable signal is: a node contributed by a surface only if the surface
+    # appears in the declared set.
+    for node in all_nodes:
+        if node.surface in declared:
+            contributing.add(node.surface)
+
+    return KnowledgeMap(
+        nodes=all_nodes,
+        edges=all_edges,
+        declared_surfaces=frozenset(declared),
+        contributing_surfaces=frozenset(contributing),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public API: validate_knowledge_map
+# ---------------------------------------------------------------------------
+
+
+class SurfaceValidationResult(NamedTuple):
+    """Validation result for a single declared surface.
+
+    Attributes:
+        surface: The name of the surface (e.g. 'agents', 'tickets').
+        declared_edge_fields: The relationship kinds declared in paths.json for
+            this surface.  An empty list means the surface claims to contribute
+            no edges.
+        unexpected_edge_types: Edge types found in the graph for nodes from
+            this surface that are NOT in ``declared_edge_fields``.  An empty
+            set means the surface is valid.
+        valid: ``True`` when ``unexpected_edge_types`` is empty (the surface
+            produced only the relationship kinds it declared, or declared none
+            and produced none).
+    """
+
+    surface: str
+    declared_edge_fields: list[str]
+    unexpected_edge_types: frozenset[str]
+    valid: bool
+
+
+def validate_knowledge_map(
+    knowledge_map: KnowledgeMap,
+    project_root: Path,
+    paths_json: Path,
+) -> list[SurfaceValidationResult]:
+    """Validate each declared surface against the edge_fields it promises.
+
+    For every surface declared in paths.json (and present in
+    ``knowledge_map.declared_surfaces``), this function:
+
+    1. Reads the ``edge_fields`` the surface declared in paths.json.
+    2. Collects all edge types emitted by nodes belonging to that surface in
+       the knowledge map.
+    3. Computes the unexpected edge types (emitted but not declared).
+    4. Returns a :class:`SurfaceValidationResult` per surface.
+
+    A surface that declares an empty ``edge_fields`` list is treated as
+    promising no edges.  If such a surface produces zero edges (or only
+    phantom-filter-exempt edges) it is valid.
+
+    The iteration is fully data-driven: the function reads the declared
+    surfaces from paths.json at call time, so adding or removing a surface
+    in paths.json automatically changes the set of surfaces validated without
+    any edit to this function.
+
+    Args:
+        knowledge_map: A :class:`KnowledgeMap` produced by
+            ``build_knowledge_map()``.
+        project_root: Absolute path to the project root directory (used to
+            locate paths.json).
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        A list of :class:`SurfaceValidationResult`, one per surface in
+        ``knowledge_map.declared_surfaces``.  The list is sorted by surface
+        name for stable ordering.
+    """
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
+
+    # Index edges by source-node surface for efficient lookup.
+    # Build a mapping: surface_name -> set of edge_types produced by that surface.
+    node_surface: dict[str, str] = {n.id: n.surface for n in knowledge_map.nodes}
+    edges_by_surface: dict[str, set[str]] = {}
+    for edge in knowledge_map.edges:
+        surface_name = node_surface.get(edge.source_id)
+        if surface_name is None:
+            continue
+        edges_by_surface.setdefault(surface_name, set()).add(edge.edge_type)
+
+    results: list[SurfaceValidationResult] = []
+
+    for surface_name in sorted(knowledge_map.declared_surfaces):
+        surface_info = surfaces_meta.get(surface_name, {})
+        declared_edge_fields: list[str] = surface_info.get("edge_fields", [])
+
+        # Allowed edge types: the declared edge_fields plus any remapped names.
+        # The 'components' field is remapped to 'component_membership' in extract_edges,
+        # so 'components' in declared_edge_fields implicitly allows 'component_membership'.
+        allowed_types: set[str] = set(declared_edge_fields)
+        if "components" in allowed_types:
+            allowed_types.add("component_membership")
+
+        actual_types: set[str] = edges_by_surface.get(surface_name, set())
+        unexpected: frozenset[str] = frozenset(actual_types - allowed_types)
+
+        results.append(
+            SurfaceValidationResult(
+                surface=surface_name,
+                declared_edge_fields=declared_edge_fields,
+                unexpected_edge_types=unexpected,
+                valid=len(unexpected) == 0,
+            )
+        )
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Public API: validate_edges_integrity
+# ---------------------------------------------------------------------------
+
+
+class EdgeIntegrityResult(NamedTuple):
+    """Result of edge integrity validation for a knowledge map.
+
+    Edges whose target_id is absent from the node set are **silently dropped**
+    (see ``dropped_edges``) rather than flagged as integrity failures.  Only
+    edges whose source_id is absent are treated as true integrity violations and
+    appear in ``invalid_edges``.  This satisfies AC KM-KGS-100d-2-i: a
+    relationship naming a missing target is dropped, not rendered as a dead end,
+    and does not cause the build to fail.
+
+    Attributes:
+        valid: ``True`` when every non-exempt, non-dropped edge has its
+            source_id present in the full node set.  A missing target alone
+            does not set this to ``False`` — those edges are dropped instead.
+        invalid_edges: List of ``(EdgeRecord, reason)`` tuples for every edge
+            whose *source* node is absent from the node set.  Empty when
+            ``valid`` is ``True``.
+        dropped_edges: List of ``EdgeRecord`` instances that were silently
+            dropped because their target_id was absent from the node set.
+            Callers may inspect this field for diagnostic purposes.  The build
+            must not fail solely because this list is non-empty.
+        validated_edges: The subset of the input edges that survived validation
+            — i.e. edges in the original map minus those in ``dropped_edges``
+            and minus those in ``invalid_edges``.  Exempt edges (file-path
+            targets) are included as-is.
+        node_ids: The full node-ID set derived from
+            ``knowledge_map.nodes`` and used for the validation.
+        exempt_edge_types: The set of edge types that are exempt from the
+            node-existence check because their targets are file paths rather
+            than knowledge-graph node IDs.  Derived purely from
+            ``file_path_fields`` entries in paths.json — no hardcoded
+            allow-list of edge types is used.
+    """
+
+    valid: bool
+    invalid_edges: list
+    dropped_edges: list
+    validated_edges: list
+    node_ids: frozenset
+    exempt_edge_types: frozenset
+
+
+def validate_edges_integrity(
+    knowledge_map: KnowledgeMap,
+    project_root: Path,
+    paths_json: Path,
+) -> "EdgeIntegrityResult":
+    """Validate edges, dropping those whose target node is absent from the map.
+
+    For every edge in ``knowledge_map.edges`` this function checks that both
+    ``source_id`` and ``target_id`` are present in the set of node IDs derived
+    from ``knowledge_map.nodes``, with the following two-tier policy:
+
+    * **Missing target** (AC KM-KGS-100d-2-i): an edge whose ``target_id``
+      is not in the node set is **dropped silently** — logged at DEBUG level
+      and recorded in ``result.dropped_edges``, but NOT added to
+      ``invalid_edges`` and does NOT cause ``valid`` to be ``False``.  The
+      build must not fail solely because a relationship named a missing target.
+    * **Missing source**: an edge whose ``source_id`` is not in the node set
+      is treated as a true integrity violation — it IS added to
+      ``invalid_edges`` and causes ``valid`` to be ``False``.
+
+    Edges whose ``edge_type`` appears in the ``file_path_fields`` list of any
+    surface in paths.json are **exempt** from the check because those edges
+    intentionally point to file-path targets (e.g. ``implemented_by`` and
+    ``covered_by`` in the ``acs`` surface).  The exempt set is built
+    data-driven from paths.json — no hardcoded allow-list of edge types or
+    target IDs is used.  This satisfies the AC requirement that the check
+    works "checked against the full node set rather than a hand-maintained
+    allow-list of target ids".
+
+    This function works for edges contributed by any declared surface,
+    including the ``acs`` surface, because it operates on the assembled
+    ``KnowledgeMap`` and consults paths.json only to determine which
+    edge types are file-path edges.
+
+    Args:
+        knowledge_map: A :class:`KnowledgeMap` produced by
+            ``build_knowledge_map()``.
+        project_root: Absolute path to the project root directory (used to
+            locate paths.json).
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        An :class:`EdgeIntegrityResult` whose ``valid`` field is ``True`` when
+        no non-exempt edge has a missing source node.  Edges with missing
+        target nodes are dropped (see ``dropped_edges``) rather than causing
+        ``valid`` to be ``False``.  ``validated_edges`` contains the surviving
+        edge set after drops are applied.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON
+            (propagated from ``load_surfaces_with_meta``).
+    """
+    # Build the full node-ID set from the map nodes.
+    node_ids: frozenset[str] = frozenset(n.id for n in knowledge_map.nodes)
+
+    # Build the exempt edge-type set purely from file_path_fields in paths.json.
+    # No hardcoded constant (_PHANTOM_FILTER_EXEMPT_EDGE_TYPES) is consulted here
+    # so that the validation is fully data-driven: any surface can declare its
+    # file-path edge fields in paths.json and they will be automatically exempt.
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
+    exempt_types: set[str] = set()
+    for surface_info in surfaces_meta.values():
+        for fpf in surface_info.get("file_path_fields", []):
+            exempt_types.add(fpf)
+    exempt_edge_types: frozenset[str] = frozenset(exempt_types)
+
+    # Classify each edge using the two-tier policy:
+    #   - exempt edge types: pass through unchanged.
+    #   - missing source: true integrity violation → invalid_edges.
+    #   - missing target: silently drop → dropped_edges (AC KM-KGS-100d-2-i).
+    #   - both present: survives → validated_edges.
+    invalid_edges: list[tuple[EdgeRecord, str]] = []
+    dropped_edges: list[EdgeRecord] = []
+    validated_edges: list[EdgeRecord] = []
+
+    for edge in knowledge_map.edges:
+        if edge.edge_type in exempt_edge_types:
+            # File-path edges are always preserved in the validated set.
+            validated_edges.append(edge)
+            continue
+        if edge.source_id not in node_ids:
+            invalid_edges.append(
+                (edge, f"source_id '{edge.source_id}' not in node set")
+            )
+        elif edge.target_id not in node_ids:
+            # AC KM-KGS-100d-2-i: drop the edge; do NOT set valid=False.
+            # Log at DEBUG so the information is observable without being
+            # noisy in normal operation.  The build must not fail solely
+            # because a relationship named a missing target.
+            logger.debug(
+                "Edge dropped: %s -[%s]-> %s — target node '%s' not in map",
+                edge.source_id,
+                edge.edge_type,
+                edge.target_id,
+                edge.target_id,
+            )
+            dropped_edges.append(edge)
+        else:
+            validated_edges.append(edge)
+
+    return EdgeIntegrityResult(
+        valid=len(invalid_edges) == 0,
+        invalid_edges=invalid_edges,
+        dropped_edges=dropped_edges,
+        validated_edges=validated_edges,
+        node_ids=node_ids,
+        exempt_edge_types=exempt_edge_types,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -405,25 +952,29 @@ def _extract_nodes_from_md_file(surface: str, path: Path) -> Generator[NodeRecor
 
 
 def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
-    """Yield nodes from all markdown files in a directory tree.
+    """Yield nodes from all markdown and YAML files in a directory tree.
 
-    Skips ``Master_Plan.md`` and ``README.md``.
+    Skips ``Master_Plan.md``, ``README.md``, and ``index.yaml``.
+    For ``.md`` files, description falls back to the first non-blank body line.
+    For ``.yaml`` files, description falls back to empty string (no body text).
 
     Args:
         surface: Surface name.
         path: Path to the directory.
 
     Yields:
-        NodeRecord for each markdown file found.
+        NodeRecord for each markdown or YAML file found.
     """
-    _SKIP = {"Master_Plan.md", "README.md"}
+    _SKIP_MD = {"Master_Plan.md", "README.md"}
+    _SKIP_YAML = {"index.yaml"}
+
     try:
         md_files = sorted(path.glob("**/*.md"))
     except OSError:
         return
 
     for md_file in md_files:
-        if md_file.name in _SKIP:
+        if md_file.name in _SKIP_MD:
             continue
         try:
             text = md_file.read_text(encoding="utf-8")
@@ -441,6 +992,38 @@ def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, N
             title=title,
             description=description,
             path=md_file,
+        )
+
+    try:
+        yaml_files = sorted(path.glob("**/*.yaml"))
+    except OSError:
+        return
+
+    for yaml_file in yaml_files:
+        if yaml_file.name in _SKIP_YAML:
+            continue
+        try:
+            text = yaml_file.read_text(encoding="utf-8")
+        except OSError as exc:
+            logger.warning("Skipping unreadable YAML file %s: %s", yaml_file, exc)
+            continue
+        fields = _parse_yaml_file(text)
+        raw_id = fields.get("id")
+        if not raw_id:
+            logger.warning(
+                "Skipping YAML file %s: no 'id' field found (file may be non-criterion or unparseable)",
+                yaml_file,
+            )
+            continue
+        node_id = str(raw_id)
+        title = str(fields.get("title") or yaml_file.stem)
+        description = str(fields.get("description") or "")
+        yield NodeRecord(
+            id=node_id,
+            surface=surface,
+            title=title,
+            description=description,
+            path=yaml_file,
         )
 
 
@@ -467,7 +1050,10 @@ def _resolve_depends_on_target(value: str) -> str:
 
 
 def extract_edges(
-    surface: str, record: NodeRecord, raw_data: dict[str, Any]
+    surface: str,
+    record: NodeRecord,
+    raw_data: dict[str, Any],
+    edge_fields: list[str] | None = None,
 ) -> Generator[EdgeRecord, None, None]:
     """Yield EdgeRecords from a node's raw data.
 
@@ -486,11 +1072,18 @@ def extract_edges(
         record: The source NodeRecord.
         raw_data: Dict of raw data for the node (e.g. a registry entry or
             frontmatter dict). May contain edge fields as strings or lists.
+        edge_fields: Explicit list of field names to treat as edges. When
+            ``None``, falls back to the legacy ``_SURFACE_EDGE_FIELDS`` lookup
+            keyed by ``surface``. Callers that load surface metadata from
+            paths.json (via ``load_surfaces_with_meta``) should pass the
+            ``edge_fields`` value from that metadata so that no new surface
+            requires a corresponding change in this module.
 
     Yields:
         EdgeRecord for each outbound edge.
     """
-    edge_fields = _SURFACE_EDGE_FIELDS.get(surface, [])
+    if edge_fields is None:
+        edge_fields = _SURFACE_EDGE_FIELDS.get(surface, [])
     for field in edge_fields:
         value = raw_data.get(field)
         if value is None:
@@ -532,9 +1125,15 @@ def _collect_all(
     1. Creates synthetic hub NodeRecords for each unique component value seen in
        component_membership edges that doesn't already exist as a node. These
        hubs have surface="components".
-    2. Filters edges to keep only those where both source_id and target_id exist
-       in the full node set (including synthetic hubs). This removes phantom
-       edge targets without using a hardcoded blocklist.
+    2. Builds an effective phantom-filter-exempt set by unioning the legacy
+       ``_PHANTOM_FILTER_EXEMPT_EDGE_TYPES`` constant with all edge-type names
+       declared in ``file_path_fields`` entries across all surfaces in paths.json.
+       This means any surface can exempt its file-path edge fields by declaring
+       them in paths.json — no code change required.
+    3. Filters edges to keep only those where both source_id and target_id exist
+       in the full node set (including synthetic hubs), OR where the edge type is
+       in the effective exempt set. Exempt edge types point to file-path targets
+       that are intentionally not knowledge-graph nodes and must not be dropped.
 
     Args:
         project_root: Absolute path to the project root.
@@ -544,11 +1143,26 @@ def _collect_all(
     Returns:
         Tuple of (nodes_list, edges_list).
     """
-    surfaces = load_surfaces(project_root, paths_json)
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
     all_nodes: list[NodeRecord] = []
     all_edges: list[EdgeRecord] = []
 
-    for surface_name, surface_path in surfaces.items():
+    # Build the phantom-filter-exempt edge-type set dynamically from paths.json
+    # file_path_fields declarations, so that any surface declaring file-path edge
+    # fields is automatically exempt without a code change.  This replaces the
+    # previous hardcoded _PHANTOM_FILTER_EXEMPT_EDGE_TYPES constant, which was
+    # a code-level special-case for the acs surface.
+    dynamic_exempt: set[str] = set()
+    for _si in surfaces_meta.values():
+        for _fpf in _si.get("file_path_fields", []):
+            dynamic_exempt.add(_fpf)
+    # Merge with the legacy constant so that any hardcoded exemptions remain
+    # honoured even for surfaces that predate the file_path_fields convention.
+    effective_exempt: frozenset[str] = _PHANTOM_FILTER_EXEMPT_EDGE_TYPES | frozenset(dynamic_exempt)
+
+    for surface_name, surface_info in surfaces_meta.items():
+        surface_path: Path = surface_info["path"]
+        surface_edge_fields: list[str] = surface_info["edge_fields"]
         if surface_filter and surface_name != surface_filter:
             continue
         # Collect nodes
@@ -577,7 +1191,9 @@ def _collect_all(
                     if isinstance(entry, dict):
                         entry_id = str(entry.get("id") or entry.get("name") or "")
                         if entry_id == node.id:
-                            for edge in extract_edges(surface_name, node, entry):
+                            for edge in extract_edges(
+                                surface_name, node, entry, surface_edge_fields
+                            ):
                                 all_edges.append(edge)
             elif surface_path.is_dir() or (surface_path.is_file() and surface_path.suffix == ".md"):
                 # For markdown nodes, try to extract edges from frontmatter
@@ -587,7 +1203,20 @@ def _collect_all(
                     except OSError:
                         continue
                     fm = _parse_frontmatter(text)
-                    for edge in extract_edges(surface_name, node, fm):
+                    for edge in extract_edges(
+                        surface_name, node, fm, surface_edge_fields
+                    ):
+                        all_edges.append(edge)
+                # For YAML nodes (e.g. acs surface), extract edges from parsed fields
+                elif node.path.is_file() and node.path.suffix == ".yaml":
+                    try:
+                        text = node.path.read_text(encoding="utf-8")
+                    except OSError:
+                        continue
+                    fields = _parse_yaml_file(text)
+                    for edge in extract_edges(
+                        surface_name, node, fields, surface_edge_fields
+                    ):
                         all_edges.append(edge)
 
     # Post-processing step 1: create synthetic hub nodes for component values
@@ -613,12 +1242,34 @@ def _collect_all(
             existing_ids.add(component_name)
 
     # Post-processing step 2: filter phantom edges — keep only edges where both
-    # source and target exist in the node set (no hardcoded blocklist).
+    # source and target exist in the node set, OR where the edge type is in the
+    # effective_exempt set (derived dynamically from file_path_fields in paths.json,
+    # merged with the legacy _PHANTOM_FILTER_EXEMPT_EDGE_TYPES constant).
+    # Exempt edge types point to file-path targets that are intentionally not
+    # knowledge-graph nodes and must not be dropped by the phantom-edge check.
+    # Per AC KM-KGS-100d-2-i: a relationship whose target is absent is dropped
+    # (not rendered as a dead end) and logged at DEBUG level so the drop is
+    # observable without causing a build failure.
     node_ids = existing_ids
-    filtered_edges = [
-        e for e in all_edges
-        if e.source_id in node_ids and e.target_id in node_ids
-    ]
+    filtered_edges: list[EdgeRecord] = []
+    for e in all_edges:
+        if e.source_id not in node_ids:
+            logger.debug(
+                "Edge dropped (missing source): %s -[%s]-> %s",
+                e.source_id,
+                e.edge_type,
+                e.target_id,
+            )
+            continue
+        if e.target_id not in node_ids and e.edge_type not in effective_exempt:
+            logger.debug(
+                "Edge dropped (missing target): %s -[%s]-> %s",
+                e.source_id,
+                e.edge_type,
+                e.target_id,
+            )
+            continue
+        filtered_edges.append(e)
 
     return all_nodes, filtered_edges
 
@@ -754,6 +1405,7 @@ def main(argv: list[str] | None = None) -> int:
             "  knowledge_query.py --format json\n"
             "  knowledge_query.py --edges\n"
             "  knowledge_query.py --project-root /path/to/project\n"
+            "  knowledge_query.py --list-surfaces\n"
         ),
     )
     parser.add_argument(
@@ -787,12 +1439,39 @@ def main(argv: list[str] | None = None) -> int:
         metavar="DIR",
         help="Root of the project to scan. Defaults to the current working directory.",
     )
+    parser.add_argument(
+        "--list-surfaces",
+        action="store_true",
+        help="List the knowledge surfaces declared in config/paths.json and exit.",
+    )
     args = parser.parse_args(argv)
 
     project_root = (
         Path(args.project_root).resolve() if args.project_root else Path.cwd()
     )
     paths_json = project_root / "config" / "paths.json"
+
+    if args.list_surfaces:
+        if not paths_json.exists():
+            print(
+                f"ERROR: {paths_json.name} not found at {paths_json}.",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            raw = paths_json.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"ERROR: Cannot read {paths_json}: {exc}", file=sys.stderr)
+            return 1
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            print(f"ERROR: {paths_json.name} is not valid JSON: {exc}", file=sys.stderr)
+            return 1
+        surfaces_cfg = data.get("surfaces", {})
+        for name in surfaces_cfg:
+            print(name)
+        return 0
 
     nodes, edges = _collect_all(project_root, paths_json, surface_filter=args.surface)
 
@@ -819,5 +1498,93 @@ DECISION HISTORY
   (AC-7). NodeRecord/EdgeRecord NamedTuples. CLI flags: --query, --surface,
   --format, --edges, --project-root. Stdlib-only (AC-1). Clean error when
   paths.json absent (AC-6). render_text and render_json as separate functions.
+- 2026-06-22 [03_TICKET-20260622-KM-KGS-100a-2-i]: Skip YAML files with no id field in _extract_nodes_from_dir. (#03_TICKET-20260622-KM-KGS-100a-2-i)
+  Added import logging and a module-level logger. Updated _extract_nodes_from_dir to skip
+  YAML files where _parse_yaml_file returns no 'id' field — covers both "file with no id
+  field" and "unparseable file" cases (both yield an empty or id-less dict). Emits a
+  logger.warning per skipped file. Valid criterion files with an id field are unaffected.
+  Also tightened the OSError except block in the YAML read path to log the exception
+  instead of silently continuing (error handling policy compliance).
+- 2026-06-22 [02_TICKET-20260622-KM-KGS-100a-2]: AC YAML node extraction in _extract_nodes_from_dir. (#02_TICKET-20260622-KM-KGS-100a-2)
+  Added _parse_yaml_file() — a stdlib-only plain-YAML parser (no --- delimiters) that
+  handles scalar values, block-scalar (|/>), and block-list items. Updated
+  _extract_nodes_from_dir() to glob **/*.yaml after **/*.md, skipping index.yaml, and
+  yield NodeRecords with id/title/description taken from parsed YAML fields (fallback to
+  stem). Updated _collect_all() to also extract edges from .yaml nodes via _parse_yaml_file
+  + extract_edges, mirroring the existing .md frontmatter path. PyYAML is intentionally
+  excluded (forbidden by AC test suite stdlib-only check).
+- 2026-06-22 [01_TICKET-20260622-KM-KGS-100a-1]: Added acs surface + dynamic edge_fields loading. (#01_TICKET-20260622-KM-KGS-100a-1)
+  Added "acs" surface entry to config/paths.json (path: docs/acceptance-criteria/,
+  edge_fields: implemented_by, covered_by, depends_on, components). Introduced
+  load_surfaces_with_meta() to return both path and edge_fields per surface.
+  Updated _collect_all() to use load_surfaces_with_meta and pass surface_edge_fields
+  to extract_edges, removing the need to update _SURFACE_EDGE_FIELDS for new
+  surfaces. extract_edges() gains an optional edge_fields parameter; falls back
+  to legacy _SURFACE_EDGE_FIELDS when None for backward compatibility.
+- 2026-06-22 [06_TICKET-20260622-KM-KGS-100b-1]: Named constant _AC_EDGE_TYPES for the four AC outbound edge types; fixed inline flow-sequence parsing. (#06_TICKET-20260622-KM-KGS-100b-1)
+  Added _AC_EDGE_TYPES frozenset documenting the canonical four edge types produced
+  by the acs surface: implemented_by, covered_by, depends_on, component_membership.
+  Satisfies AC KM-KGS-100b-1: "no extra outbound relationship kind is returned beyond
+  these four". The constraint is enforced by edge_fields in paths.json acs entry;
+  _AC_EDGE_TYPES is the single authoritative constant for downstream tools to
+  validate against. Updated templates/skills/knowledge-query/SKILL.md acs row to
+  state "exactly four outbound edge types and no others" with per-type descriptions.
+  Also fixed _parse_scalar_value to handle inline YAML flow sequences ([] and
+  [item1, item2]) — previously [] was returned as the string "[]", causing phantom
+  edges with target_id="[]" to slip through phantom filtering. The fix returns an
+  empty list for [] and a list of stripped items for non-empty inline sequences.
+  Fixed unit_tests/test_knowledge_query.py TestEdgeCountIntegration to exempt
+  implemented_by and covered_by from the "no phantom targets" assertion — these
+  edge types intentionally point to file paths not in the node set.
+- 2026-06-22 [10_TICKET-20260622-KM-KGS-100c-1]: Added build_knowledge_map() public API for surface-completeness assertions. (#10_TICKET-20260622-KM-KGS-100c-1)
+  Introduced KnowledgeMap NamedTuple (nodes, edges, declared_surfaces,
+  contributing_surfaces) and build_knowledge_map() public function. Satisfies
+  AC KM-KGS-100c-1: "the build asserts against the declared set itself, not a
+  fixed expected number of surfaces." The KnowledgeMap carries both the graph
+  data and audit metadata so callers can write:
+      assert km.contributing_surfaces == km.declared_surfaces
+  without enumerating any specific surface name. declared_surfaces is derived
+  dynamically from paths.json via load_surfaces_with_meta(); contributing_surfaces
+  is the subset that actually produced at least one primary NodeRecord. Tests in
+  unit_tests/test_knowledge_query.py (TestSurfaceContributionCompleteness) validate
+  the AC behavior using parametric assertions against the declared set.
+- 2026-06-22 [11_TICKET-20260622-KM-KGS-100c-2]: Data-driven phantom-filter-exempt via file_path_fields in paths.json. (#11_TICKET-20260622-KM-KGS-100c-2)
+  Added optional ``file_path_fields`` attribute to paths.json surface entries. When
+  present, these field names are automatically added to the phantom-edge-filter-exempt
+  set in _collect_all(), removing the code-level special-case of hardcoding
+  ``implemented_by`` and ``covered_by`` in ``_PHANTOM_FILTER_EXEMPT_EDGE_TYPES``.
+  Updated ``load_surfaces_with_meta()`` to capture ``file_path_fields`` from each
+  surface entry. Updated ``_collect_all()`` to build ``effective_exempt`` dynamically
+  by unioning the legacy constant with all ``file_path_fields`` values from
+  paths.json. Added ``file_path_fields: [implemented_by, covered_by]`` to the ``acs``
+  surface entry in config/paths.json. Any new surface that declares file-path edge
+  fields now only needs a paths.json entry — no code change is required. Satisfies
+  AC KM-KGS-100c-2: "no special-casing for acs that other surfaces do not also receive."
+- 2026-06-22 [13_TICKET-20260622-KM-KGS-100d-1]: Data-driven surface edge_fields validation via validate_knowledge_map(). (#13_TICKET-20260622-KM-KGS-100d-1)
+  Added SurfaceValidationResult NamedTuple (surface, declared_edge_fields,
+  unexpected_edge_types, valid) and validate_knowledge_map() public function.
+  Satisfies AC KM-KGS-100d-1: "for every declared surface, the validation checks
+  that surface against the exact edge_fields it declares — not against a fixed
+  expected list of relationship kinds." The validation iterates over
+  knowledge_map.declared_surfaces (derived from paths.json) so adding or removing
+  a surface changes the validated set without any code edit. Surfaces that declare
+  an empty edge_fields list are accepted as valid when they produce no edges.
+  The 'components' field is transparently remapped to 'component_membership' in
+  allowed_types so the validation accounts for the canonical edge-type rename
+  applied by extract_edges(). Updated module docstring ARCHITECTURE field to list
+  six public functions (validate_knowledge_map added).
+- 2026-06-24 [15_TICKET-20260622-KM-KGS-100d-2-i]: Drop missing-target edges in validate_edges_integrity; log dropped edges in _collect_all. (#15_TICKET-20260622-KM-KGS-100d-2-i)
+  Satisfies AC KM-KGS-100d-2-i: "a relationship pointing at a missing target is
+  dropped, not rendered as a dead end." Updated EdgeIntegrityResult NamedTuple to
+  add two new fields: dropped_edges (list of EdgeRecords silently dropped because
+  their target node was absent) and validated_edges (the surviving edge set after
+  drops). Changed validate_edges_integrity() to use a two-tier policy: missing-
+  target edges are dropped (logged at DEBUG) rather than flagged as valid=False;
+  only missing-source edges trigger valid=False. Updated _collect_all() phantom-
+  edge filter from a list comprehension to an explicit loop that emits a
+  logger.debug() for each dropped edge (missing source or missing target), so
+  drops are observable without being noisy. Updated module docstring ARCHITECTURE
+  to describe the two-tier policy. The build does not fail solely because a
+  relationship named a missing target (Gherkin clause 3 of the AC).
 ====================================================================
 """

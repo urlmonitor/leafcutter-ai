@@ -1,0 +1,32 @@
+id: FIN-200
+title: "Every shipped feature leaves a record of what changed"
+component: finalize
+level: L0
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+criteria: |
+  As a developer, I want a changelog record of what shipped to be captured as
+  part of finalizing a feature, so that the release history is always complete
+  without a separate manual step after the merge.
+
+  When a feature or epic is finalized, finalizing it produces a changelog entry
+  describing what changed — automatically, as an inherent part of the workflow.
+  No one has to remember to run a separate changelog step afterward, and no
+  finalized feature ever reaches main without a corresponding record of what it
+  delivered. The release history stays trustworthy and complete by default.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-200a
+  - FIN-200b
+  - FIN-200c
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

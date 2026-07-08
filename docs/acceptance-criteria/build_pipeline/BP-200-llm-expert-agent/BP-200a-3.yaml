@@ -39,3 +39,5 @@ superseded_by: null
 covered_by: [BP-200a-3-i]
 implemented_by:
   - "templates/agents/llm-expert.md"
+change_target: prompt
+risk_surface: internal

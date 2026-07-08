@@ -1,0 +1,37 @@
+id: BO-1900
+title: "Every ticket is proven fit to dispatch before an agent is spawned"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Catch a bad ticket before it burns a run -- fitness is checked at the dispatch moment.
+
+  When a supervisor is about to spawn a phase agent for a ticket, a fast fitness
+  check runs first. It confirms the ticket's stated premises still hold, that the
+  agent about to receive the work is the right one for it, and that the hand-off
+  carries only a safe, minimal pointer. Tickets that fail the check are held back
+  with a clear reason instead of being dispatched, running, and then failing. You
+  stop paying for doomed runs and retry loops caused by problems that were visible
+  before the first token was spent. This stage sits between reading a ticket and
+  spawning its agent -- distinct from BO-100 (which only decides the ORDER tickets
+  run in), BP-300b (which keeps the planner on fresh sign-off state), and BO-100d
+  (which checks the telemetry sink once per drive).
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: [BO-1900a, BO-1900b, BO-1900c, BO-1900d]
+implemented_by: []

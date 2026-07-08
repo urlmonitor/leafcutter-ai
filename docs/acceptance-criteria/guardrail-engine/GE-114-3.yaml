@@ -1,0 +1,25 @@
+id: "GE-114-3"
+title: "The ac_limit_override escape hatch and the structured JSON payload work for the v1-flat path"
+component: guardrail-engine
+status: active
+level: L2
+readiness: draft
+work_status: done
+priority: high
+criteria: |
+  Given a staged v1-flat ticket that exceeds 20 flat ACs
+  When the ticket frontmatter contains `ac_limit_override: true`
+  Then the commit is not blocked and a warn-only message is emitted
+  And given the same ticket without the override
+  When the hook blocks the commit
+  Then the stderr JSON payload has shape
+    {"hook": "check_ac_limits", "fix_agent": "it-po", "violations": [{"type": "total", "count": N, "limit": 20}]}
+  And no per-agent violation entries appear in the payload for the flat path
+  So that precommit-autofix routing is preserved.
+origin_agent: "business-analyst-v2"
+created: 2026-07-06
+created_by_ticket: "tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md"
+covered_by:
+  - "unit_tests/commit_guardian/test_check_ac_count_limits.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/hooks/check_ac_limits.py"

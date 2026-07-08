@@ -1,9 +1,10 @@
 ---
 agent_id: feedback-analyst
 title: "Agent Card: feedback-analyst"
+description: "Read-only analyst agent that loads the feedback-analysis skill, invokes trend_report.py against the full feedback corpus (or a filtered date window), interprets findings across all nine feedback categories, and returns a structured Markdown report with prioritized recommendations. Never modifies any file. Never creates tickets automatically — all recommendations are presented as a list for the user to act on. Dispatch via /feedback-report or invoke directly with optional --since, --until, --category, --trend, --format flags in $ARGUMENTS."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # feedback-analyst
@@ -29,8 +30,11 @@ card_version: "generated"
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -51,7 +55,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -66,7 +80,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `feedback-analysis` | — | — |
+| `feedback-analysis` | always | — |
 ---
 
 ## Configuration
@@ -76,4 +90,8 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | no output at all | report the error and stop | `None` |

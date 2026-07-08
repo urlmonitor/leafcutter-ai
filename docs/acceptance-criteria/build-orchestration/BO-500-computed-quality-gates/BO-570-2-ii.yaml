@@ -1,0 +1,57 @@
+id: BO-570-2-ii
+title: "Render tooling unavailable in the worktree surfaces clearly and never silently passes"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+criteria: |
+  Given a ticket whose changed surface includes frontend files,
+    and the tooling needed to perform the dev/route render is not available
+    in the worktree (for example the render runner cannot start or its
+    dependencies are not installed),
+  When the sign-off gate attempts the dev-render smoke check,
+  Then the gate does NOT record the smoke check as passed,
+  And it records the check as inconclusive, naming the reason the render could
+    not be performed (tooling unavailable),
+  And the sign-off cannot reach an "ok" verdict on a frontend surface whose
+    render was never actually exercised,
+  And the inconclusive outcome is surfaced to the supervisor for resolution
+    rather than being swallowed silently.
+depends_on: [BO-570-2]
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/webapp-testing/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Render-tooling-unavailable is a THIRD outcome (inconclusive), distinct from pass and from a genuine render failure; it must never be collapsed into a silent pass. This maps to the render-smoke runner's tooling-unavailable verdict state (BO-570-1)."
+  - "Worktrees historically lack some hook/tooling wiring, so the tooling-unavailable path is a real, expected branch the gate must handle explicitly with a named reason."
+  - "An inconclusive frontend render blocks an 'ok' sign-off on that surface and is escalated to the supervisor (consistent with the inconclusive-not-pass pattern used by BO-1400a-1-i)."
+delivers_to: null
+expects_from:
+  ac_id: BO-570-2
+  contract: "The dev-render smoke-check sign-off gate whose tooling-unavailable branch this edge case specifies; the gate consumes the render-smoke runner's tooling-unavailable verdict (BO-570-1) and must surface it as inconclusive, never pass"
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-v3 re-point after parent split"
+    note: "Parent BO-530-4 was split; depends_on/expects_from re-pointed from the superseded BO-530-4 to the surviving sign-off-gate-behavior child BO-530-4b (llm-expert). The tooling-unavailable detection is produced by BO-530-4a (the runner's third verdict state); this edge case scopes how the gate (BO-530-4b) surfaces that state."
+  - reason: "transitive rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-4-ii. Moved transitively with its parent gate (was BO-530-4b, now BO-570-2) into the new local-verification-gate L1 BO-570. RENAMED BO-530-4-ii -> BO-570-2-ii. depends_on/expects_from re-pointed to BO-570-2; in-prose runner references BO-530-4a -> BO-570-1; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LocalSignoffGates/04_TICKET-20260624-BO-570-2-ii.md
+change_target: prompt
+risk_surface: internal

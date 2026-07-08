@@ -1,0 +1,45 @@
+id: BO-1700e-3
+readiness: approved
+priority: medium
+title: "A partial deploy missing a guard script is detected and fails closed"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700e.yaml"
+criteria: |
+  Given a build was interrupted so that not all three guard scripts are present at
+    their target paths,
+  When the guard runs,
+  Then it detects the incomplete deployment, fails closed, and its error names the
+    missing guard script,
+  And it does not silently proceed as if the guard were fully installed.
+depends_on: [BO-1700e]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Presence of all THREE deployed scripts is checked before relying on them; a
+  missing artifact is a FAIL-CLOSED condition (BO-1700b-1), naming the absent file.
+  Never fail open on an incomplete guard install. Implemented over the deployment
+  producer (BO-1700e-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700e-1
+  contract: "The deployed script set (all three guard scripts) whose completeness this AC verifies."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

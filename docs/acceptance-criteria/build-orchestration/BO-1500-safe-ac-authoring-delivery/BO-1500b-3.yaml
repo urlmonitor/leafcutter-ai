@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
 criteria: |
   Given a prior authoring run left uncommitted AC YAML files in the authoring
@@ -55,3 +55,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/08_TICKET-20260624-BO-1500b-3.md
+change_target: prompt
+risk_surface: internal

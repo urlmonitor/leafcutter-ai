@@ -1,44 +1,50 @@
 ---
 agent_id: it-po
 title: "Agent Card: it-po"
+description: "IT Product Owner — technical enrichment agent for the AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links to architecture documents.  Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work.  Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work.  This agent operates on AC YAML files directly."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # it-po
 
-**IT Product Owner (Opus-tier). Translates business ACs from the business-analyst
-into per-agent technical contracts with explicit "Delivers to" / "Depends on"
-blocks. Reads architecture-level documentation only — never raw source files.
-Requires at least one clarifying question before producing contracts.
-Activates only when >1 coder agent is needed; falls through to refinement otherwise.
-Handles oversized-ticket splits via §7 Split Protocol when check_ac_limits fires.
-Use when: create-ticket routes a multi-coder ticket to the IT PO phase.**
+**IT Product Owner — technical enrichment agent for the AC pipeline. Operates
+AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
+fields: assigned_agent, it_requirements, estimated_complexity,
+delivers_to/expects_from contracts, and doc_links to architecture documents.
+
+Does NOT create tickets. Does NOT modify the BA's criteria field. Uses
+architecture docs, component registries, and agent registries to understand
+the technical landscape. Splits ACs when technical boundaries reveal
+multi-agent work.
+
+Use when: the BA has produced L2/L3 AC files and the pipeline needs technical
+enrichment before implementation agents can begin work.
+
+This agent operates on AC YAML files directly.**
 
 | Field | Value |
 |-------|-------|
 | Model | opus |
 | Tier | utility |
-| Priority | 3.5 |
+| Priority | — |
 | Portable | Yes |
-| Sign-off capable | Yes |
+| Sign-off capable | No |
 
 ---
 
 ## When to Use
-
-### Spawned By
-
-- `create-ticket`
-- `create-ticket-v2`
-- `ticket-supervisor`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -50,35 +56,41 @@ flowchart TD
     classDef utility fill:#f3f4f6,stroke:#4b5563,stroke-width:2px
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
-    create_ticket["create-ticket\n(phase tier)"]:::phase
-    create_ticket_v2["create-ticket-v2\n(phase tier)"]:::phase
-    ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
-    it_po["it-po\n(utility tier, priority 3.5)"]:::target
+    it_po["it-po\n(utility tier, priority ?)"]:::target
 
-    create_ticket -->|dispatches| it_po
-    create_ticket_v2 -->|dispatches| it_po
-    ticket_supervisor -->|dispatches| it_po
 ```
 ---
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
 
 | Tool |
 |------|
-| `Bash` |
 | `Read` |
+| `Write` |
+| `Bash` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `knowledge-query` | — | — |
 ---
 
 ## Configuration
@@ -88,4 +100,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | you need to understand implementation details to assign work | the architecture | `None` |
+| Conditional Behavior | a file is absent | unreadable, binary, or exceeds 50 KB | `None` |

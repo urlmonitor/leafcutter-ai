@@ -33,3 +33,5 @@ notes: |
   Edge case of ACS-800b-4: the level/parent mismatch rejection. Ensures metadata
   cannot encode an impossible hierarchy now that level is declared rather than
   derived.
+change_target: code
+risk_surface: internal

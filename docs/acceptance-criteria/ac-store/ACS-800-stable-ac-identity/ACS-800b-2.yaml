@@ -37,3 +37,5 @@ notes: |
   (level: L0..L3) but is today redundant with the id-string shape; this AC makes
   the field the AUTHORITATIVE source of level, so tooling stops inferring level
   from the id string (see ACS-800e).
+change_target: schema
+risk_surface: internal

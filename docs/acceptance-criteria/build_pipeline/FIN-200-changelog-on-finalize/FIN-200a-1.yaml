@@ -1,0 +1,90 @@
+id: FIN-200a-1
+title: "Finalize invokes the existing changelog generator, which writes the entry into changelogs/"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200a
+criteria: |
+  Given the finalize-feature workflow is running on a feature branch that has at
+    least one commit not yet on main
+  And the project already has a changelog generation capability that writes
+    per-file changelog entries into a changelogs directory over a git ref range
+  When finalize reaches its changelog step
+  Then finalize dispatches that existing changelog generation capability rather
+    than computing, formatting, or writing changelog content itself
+  And finalize passes the changelog generator the ref range describing the work
+    being finalized
+  And a new per-file changelog entry exists in the changelogs directory used by
+    that capability
+  And the entry is a newly created file, not an edit to the frozen legacy
+    CHANGELOG.md
+  And no separate manual changelog command has to be run by the developer for
+    the entry to appear there
+depends_on:
+  - FIN-200a
+assigned_agent: finalize-feature-workflow
+estimated_complexity: M
+it_requirements: |
+  - The new changelog step lives in templates/workflows-js/finalize-feature.js as
+    a deterministic workflow step; reuse the existing changelog capability
+    (templates/agents/changelog-agent.md, which funnels writes through
+    scripts/changelog/emit_entry.py) rather than computing, formatting, or writing
+    any changelog content inline in finalize
+  - Must invoke the reused capability with an explicit git ref range argument (the
+    changelog-agent Step 1 already accepts a caller-supplied range); finalize must
+    NOT fall back to the default last-deploy-tag..HEAD range
+  - No changelog categorization, frontmatter assembly, slug/filename generation,
+    or file writing may be reimplemented in finalize — that logic stays owned by
+    emit_entry.py / changelog-agent (single-source-of-truth, no duplication)
+  - The entry must be written into the configured changelog folder (config key
+    changelog_folder, default changelogs/) via the existing emit_entry.py path —
+    finalize must not hardcode an alternate location
+  - The frozen legacy CHANGELOG.md must never be created, edited, or appended to
+    by this step (an explicit non-negotiable of changelog-agent)
+  - emit_entry.py creates the changelogs/ folder if absent — finalize must NOT
+    pre-create or assume the directory exists
+  - On the successful path the step requires no human interaction and no separate
+    slash command — it runs inline as part of the finalize sequence
+  - The per-file entry must carry a finalize-appropriate type frontmatter value
+    accepted by emit_entry.py (e.g. feature/ticket_completion/manual), not
+    deploy_tag (no deployment tag is created during finalize)
+  - Must follow the project error handling policy for the dispatch/subprocess
+    boundary (wrap external invocation; log failures at WARNING or higher; never
+    silently swallow — CLAUDE.md Rules 1-3)
+  - Per ADR-001 self-hosting parity: edits to finalize-feature.js source and its
+    deployed counterpart must round-trip via build.py (never edit one side only)
+delivers_to:
+  - agent: changelog-agent
+    contract: "provides the ref range (base..feature-HEAD) for the work being finalized"
+expects_from:
+  - agent: changelog-agent
+    contract: "writes a per-file entry into the configured changelogs/ folder via the existing emit mechanism, or a no-op when the range is empty"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Step map — the changelog step is added before the merge_pr step (4)"
+  - path: "templates/agents/changelog-agent.md"
+    relationship: describes
+    status: exists
+    relevance: "Existing changelog generation capability finalize must reuse; Step 7 writes into changelog_folder and never touches legacy CHANGELOG.md"
+  - path: "scripts/changelog/emit_entry.py"
+    relationship: describes
+    status: exists
+    relevance: "The single emit helper all changelog writes funnel through — reuse target, creates changelogs/ if absent, never touches CHANGELOG.md"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "Deterministic workflow source where the new changelog step is added"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

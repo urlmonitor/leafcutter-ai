@@ -39,3 +39,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - "docs/agents/README.md"
+change_target: docs
+risk_surface: internal

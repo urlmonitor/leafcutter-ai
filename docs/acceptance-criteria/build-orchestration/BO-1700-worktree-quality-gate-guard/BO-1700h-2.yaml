@@ -1,0 +1,44 @@
+id: BO-1700h-2
+readiness: approved
+priority: high
+title: "A canary run that exceeds its timeout yields a fail-closed verdict"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700h.yaml"
+criteria: |
+  Given the canary invocation for Check D does not complete within its bounded
+    time limit,
+  When the probe runs,
+  Then the probe terminates the canary invocation, Check D fails, `canary` is
+    false in the JSON result, the probe exits non-zero, and stderr states that
+    the canary timed out.
+  And a timeout is never treated as a pass or as "assume OK".
+depends_on: [BO-1700h, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Check D runs the canary with a bounded timeout; on expiry the invocation is
+  killed and the verdict is FAIL. A timeout is an internal-indeterminate outcome
+  and must fail CLOSED, never fail open (BO-1700b-1). Implemented in the shared
+  probe helper (BO-1700a-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check D invocation, bounded by a timeout."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: "split: renamed BO-1700a-7 -> BO-1700h-2 (BO-1700a intermediate split), 2026-07-02"
+superseded_by: null
+covered_by: []
+implemented_by: []

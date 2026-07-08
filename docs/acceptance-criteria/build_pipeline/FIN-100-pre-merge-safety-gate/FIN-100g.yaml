@@ -1,0 +1,37 @@
+id: FIN-100g
+title: "Pre-flight resolves the target branch and worktree from explicit input, not ambient CWD"
+component: finalize
+level: L1
+status: active
+criteria: |
+  The finalize workflow determines which branch and worktree it operates on from
+  explicit, caller-provided input — never from whatever directory the process
+  happens to be running in.
+
+  Given finalize-feature is invoked with a target feature branch,
+  When the pre-flight resolves the branch name and worktree root,
+  Then resolution is anchored on the target the caller named (and the worktree in
+  which that branch is checked out), not on the ambient process CWD,
+  And invoking finalize from the main repository — or any directory that is not the
+  target worktree — does not cause the pre-flight to misresolve the branch to "main"
+  and abort with "must be run from a feature branch",
+  And the not-a-feature-branch guard fires only when the resolved TARGET branch is
+  main/master,
+  So that finalize can be driven for a feature branch regardless of the caller's
+  current directory, and the whole pre-merge safety gate always operates on the
+  branch the user actually intends to finalize.
+depends_on:
+  - FIN-100
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Pre-flight branch + worktree_root resolution and the main/master abort guard"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map pre-flight row — branch + worktree resolution"
+origin_agent: "BrainCandy"
+created: 2026-07-07
+created_by_ticket: "tickets/00_inbox/TICKET-20260707-restore-ci-test-baseline.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100g-1
+implemented_by: []

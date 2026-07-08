@@ -1,0 +1,40 @@
+id: BO-1700d-3-i
+readiness: approved
+priority: medium
+title: "A shared-hook mutation between the pre-drive gate and commit is caught at commit"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700d.yaml"
+criteria: |
+  Given the pre-drive gate passed, but the shared hook or resolved config is then
+    mutated so the chain would no longer fire before the commit phase runs,
+  When the commit-phase gate runs the probe,
+  Then the probe returns a non-zero verdict and the commit is refused,
+  And the commit-phase gate's verification is independent of the earlier
+    pre-drive result (it re-runs the probe rather than trusting the prior pass).
+depends_on: [BO-1700d-3]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements: |
+  The commit-phase gate must RE-RUN the probe (no caching of the pre-drive verdict)
+  so a between-gates mutation is caught at the last safe moment — this is why the
+  guard verifies twice (create/pre-drive AND commit). Template-prose surface
+  (templates/agents/commit.md, same as BO-1700d-3); reuses the shared probe helper
+  (BO-1700a-1). Proceed only on exit 0 + empty failing_checks (BO-1700b-1).
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe re-run at commit time (independent of the pre-drive result) this edge case exercises."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,9 +1,10 @@
 ---
 agent_id: brainstorm-worker
 title: "Agent Card: brainstorm-worker"
+description: "Internal-only single-perspective analyst. Spawned exclusively by `brainstorm-lead` (never by the user, never by a supervisor, never by any other agent) as part of the design-escalation tier from `building-epics` §3.3. Receives a design question plus a single perspective parameter (e.g. `simplicity`, `robustness`, `reversibility`, `performance`, `usability`, `maintainability`) and reasons about the question through that lens only. Returns a strictly structured `{perspective, recommendation, rationale, risks}` block — the parent lead parses on these keys. Does NOT spawn sub-agents; this is a single-shot read-only analyst."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # brainstorm-worker
@@ -38,8 +39,11 @@ is a single-shot read-only analyst.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -60,7 +64,24 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `question` | string | Design question to reason about |
+| `perspective` | string | Single reasoning lens (simplicity, robustness, etc.) |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -73,7 +94,10 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `building-epics` | always | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -83,4 +107,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | refuse
+politely and point them at `brainstorm-lead`. | `None` |
+| Conditional Behavior | either field is missing or unparseable | return the malformed-input | `None` |

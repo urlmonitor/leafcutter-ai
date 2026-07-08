@@ -35,3 +35,7 @@ covered_by:
   - TQ-100d
   - TQ-100e
 implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary

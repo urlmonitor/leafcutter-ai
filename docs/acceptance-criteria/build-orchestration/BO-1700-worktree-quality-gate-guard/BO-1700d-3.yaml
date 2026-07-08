@@ -1,0 +1,41 @@
+id: BO-1700d-3
+readiness: approved
+priority: medium
+title: "Commit-phase gate: the commit driver runs the probe and refuses on failure"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700d.yaml"
+criteria: |
+  Given the commit phase is about to run `git commit`,
+  When the commit driver executes,
+  Then it runs the probe against the worktree before the commit, and if the probe
+    returns a non-zero verdict the commit is refused with a message naming the
+    failing check,
+  And the commit only proceeds when the probe returns a passing verdict.
+depends_on: [BO-1700d, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements: |
+  Gate 3 lives in templates/agents/commit.md PROSE (llm-expert surface) and runs in
+  the commit driver path BEFORE git commit, so it executes even when --no-verify
+  would skip the pre-commit hook (ties to BO-1700b-3, same commit.md surface).
+  REUSES the shared probe helper (BO-1700a-1) — does NOT reimplement the checks.
+  Proceed only on exit 0 + empty failing_checks (BO-1700b-1); refuse with a message
+  naming the failing check on any other outcome.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The structured probe result (exit 0 + empty failing_checks == pass) the commit-phase gate evaluates."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700d-3-i]
+implemented_by: []

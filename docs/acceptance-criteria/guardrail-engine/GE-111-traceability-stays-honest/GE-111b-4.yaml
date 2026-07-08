@@ -62,3 +62,5 @@ notes: |
   IT-PO enrichment (2026-06-22): documentation-expert retained. it_requirements
   require the reference to reflect the IT-PO-resolved resolver model (AST-default,
   fail-open ladder) rather than implying jcodemunch is callable from a hook.
+change_target: docs
+risk_surface: internal

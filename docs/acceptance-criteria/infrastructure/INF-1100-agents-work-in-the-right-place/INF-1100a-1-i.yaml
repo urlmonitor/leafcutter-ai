@@ -40,3 +40,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Edge case: missing config must degrade to a single documented default, never to an arbitrary guess."
+change_target: prompt
+risk_surface: internal

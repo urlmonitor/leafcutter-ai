@@ -58,3 +58,5 @@ notes: |
   templates/scripts/commit_guardian/check_exception_handling.py under AC GE-110
   (the copy build.py actually deploys); implemented_by now points at the canonical
   tree to match this AC's doc_links. See GE-110 for the canonical-tree coverage.
+change_target: code
+risk_surface: internal

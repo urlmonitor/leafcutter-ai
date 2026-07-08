@@ -30,3 +30,5 @@ covered_by:
   - ACD-1100a-2
   - ACD-1100a-3
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

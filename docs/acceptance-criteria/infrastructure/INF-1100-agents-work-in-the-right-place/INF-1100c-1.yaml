@@ -43,6 +43,9 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: surface=build.py/template_compiler.py {{config.*}} threading (python-coder); this AC is the PRODUCER of the resolved placeholder that INF-1100a/b consume. delivers_to wired to llm-expert template ACs. Criteria unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-1100c-1-i
 implemented_by: []
 notes: "Explicit user requirement (INF-1100c notes): cover prompt-path resolution with tests. This behavior is the assertion under test."
+change_target: pipeline
+risk_surface: contract_boundary

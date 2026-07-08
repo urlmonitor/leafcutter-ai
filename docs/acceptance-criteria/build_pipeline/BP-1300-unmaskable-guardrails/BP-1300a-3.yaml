@@ -1,0 +1,47 @@
+id: BP-1300a-3
+title: "Reference doc specifies canonical-source skill-pointer resolution for the build"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the build resolves skill pointers against the canonical source rather than the
+    deployed tree,
+  When the documentation step runs for this feature,
+  Then a reference document is produced that specifies: which sources are canonical
+    (templates/skills plus the registry), that the deployed .claude/skills tree is never
+    consulted, the failure message format for a dangling skill_id, and the guarantee of an
+    identical local and CI verdict,
+  And a reader can determine, for a given registry, whether a skill pointer would resolve.
+depends_on:
+  - BP-1300a
+  - BP-1300a-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: reference-author
+estimated_complexity: S
+it_requirements:
+  - "Must name the canonical sources and explicitly exclude the deployed .claude/skills tree."
+  - "Must document the dangling-skill_id failure format and the local==CI determinism guarantee."
+delivers_to:
+  agent: reference-author
+  contract: "A reference document specifying canonical-source skill-pointer resolution"
+expects_from:
+  ac_id: BP-1300a-1
+  contract: "The implemented canonical-source resolution behavior to document"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -29,3 +29,5 @@ covered_by:
   - BP-200a-5
 implemented_by:
   - "templates/agents/llm-expert.md"
+change_target: prompt
+risk_surface: contract_boundary

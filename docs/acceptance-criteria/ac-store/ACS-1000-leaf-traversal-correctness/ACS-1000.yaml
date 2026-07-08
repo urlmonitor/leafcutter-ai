@@ -25,3 +25,5 @@ notes: |
   scripts/build_ac_mode_detection.py, and consumed by scripts/goal_to_epic.py.
   ACD-1200a-1 no longer exists in the AC store. The fix updates the stale tests
   to assert the current production contract; the implementation is unchanged.
+change_target: code
+risk_surface: internal

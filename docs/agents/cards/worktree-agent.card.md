@@ -1,9 +1,10 @@
 ---
 agent_id: worktree-agent
 title: "Agent Card: worktree-agent"
+description: "Manages git worktree lifecycle — creates a new worktree for a feature branch or reuses the existing epic worktree for an in-flight epic ticket; removes a worktree after a branch merges. Create is non-destructive (no confirmation required). Remove is destructive and requires an explicit \"yes\" after displaying the safety-check report. Use when: user types /worktree; asks to create a worktree for a branch or ticket; asks to remove or close a worktree after a PR merges."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # worktree-agent
@@ -32,13 +33,18 @@ ticket; asks to remove or close a worktree after a PR merges.**
 
 - `user`
 - `epic-supervisor`
-- `finalize-feature`
+- `finalize-feature.js`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 9 | agent memory store | — | — |
 ---
 
 ## Spawn and Dependency
@@ -52,18 +58,35 @@ flowchart TD
 
     user["user\n(phase tier)"]:::phase
     epic_supervisor["epic-supervisor\n(supervisor tier)"]:::supervisor
-    finalize_feature["finalize-feature\n(phase tier)"]:::phase
+    finalize_feature.js["finalize-feature.js\n(phase tier)"]:::phase
     worktree_agent["worktree-agent\n(utility tier, priority ?)"]:::target
 
     user -->|dispatches| worktree_agent
     epic_supervisor -->|dispatches| worktree_agent
-    finalize_feature -->|dispatches| worktree_agent
+    finalize_feature.js -->|dispatches| worktree_agent
 ```
 ---
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.worktree-agent to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the worktree-agent checkbox with timestamp |
 ---
 
 ## Tools Available
@@ -76,7 +99,10 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `feature` | conditional | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -86,4 +112,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed to Phase 4. | `None` |
+| Conditional Behavior | the script exits non-zero | surface stderr verbatim and abort | `None` |
+| Conditional Behavior | an existing epic worktree is reused (Epic Workflow branch) | report which worktree was reused and the branch it is on | `None` |

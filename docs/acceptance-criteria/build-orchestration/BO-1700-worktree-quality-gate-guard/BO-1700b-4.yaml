@@ -1,0 +1,45 @@
+id: BO-1700b-4
+readiness: approved
+priority: high
+title: "Deleting the canary from the manifest cannot turn Check D into a silent pass"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700b.yaml"
+criteria: |
+  Given the canary hook entry has been deleted from the resolved config so no
+    canary hook is registered,
+  When the probe runs Check D,
+  Then the probe distinguishes "canary hook absent from config" from "canary hook
+    ran but produced no token", reports FAIL in either case, and stderr states
+    which of the two conditions occurred.
+  And removing the canary entry cannot cause Check D to be skipped or to report a
+    pass.
+depends_on: [BO-1700b]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Check D must FIRST confirm the canary hook is registered in the resolved config;
+  an absent registration is a distinct, named FAIL — never a no-op skip that reads
+  as a pass. Implemented in the shared probe helper (BO-1700a-1); fail closed
+  (BO-1700b-1); ADR-001 deployed/template parity applies (manifest canonical source
+  is the templates/scripts/commit_guardian/ copy).
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check D registration + execution assertion."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

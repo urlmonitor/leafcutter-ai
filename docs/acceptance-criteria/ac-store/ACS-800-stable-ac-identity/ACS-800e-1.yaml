@@ -38,3 +38,5 @@ notes: |
   approach). PERMANENT-FIX cross-reference: once this counts children from metadata,
   a re-home reduces the count without a rename, which is precisely what makes the
   child_limit_override stopgap retireable (retirement guidance lands in ACS-800f).
+change_target: code
+risk_surface: internal

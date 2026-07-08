@@ -60,3 +60,5 @@ notes: |
   'warn' tier for the real-violation case so the user-confirmed posture is not
   silently relaxed. delivers_to refined to a concrete record shape carrying the
   status + superseded_by the message formatter (ACS-900c-1 / ACS-900c-1-i) needs.
+change_target: code
+risk_surface: contract_boundary

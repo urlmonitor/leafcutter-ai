@@ -1,0 +1,45 @@
+id: ACS-100c-6-i
+readiness: approved
+priority: medium
+title: "A parent whose children are all superseded has an effective count of zero"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100c.yaml
+criteria: |
+  Given an L1 AC "ACS-100a" has 6 L2 child AC files in its feature folder,
+  And every one of those 6 child files has status "superseded_by",
+  And the default L1 child-count cap is 5,
+  When the check-ac-tree-limits hook counts the parent's children for the
+    ACS-100c cap,
+  Then the effective child count is 0,
+  And 0 does not exceed the cap of 5,
+  And the hook passes without requiring a child_limit_override on the parent,
+  And all 6 superseded child files remain present on disk in the feature folder.
+depends_on: [ACS-100c-6]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The all-superseded case must yield an effective count of 0 and pass; the count exclusion must not underflow, error, or divide-by-count anywhere"
+  - "No superseded child file is deleted or moved even when every child is superseded"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100c-6
+  contract: "The status-filtered child-count rule that this edge case exercises at the zero-active boundary"
+origin_agent: business-analyst
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

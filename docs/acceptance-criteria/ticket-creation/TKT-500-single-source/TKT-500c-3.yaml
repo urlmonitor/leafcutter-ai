@@ -25,3 +25,5 @@ superseded_by: null
 covered_by: [TKT-500c-3-i]
 implemented_by: []
 it_requirements: []
+change_target: code
+risk_surface: contract_boundary

@@ -52,3 +52,5 @@ notes: |
   sibling of the BO-1600a prevention guarantee (per PROJECT_CONTEXT, recovery is
   not in scope — this halts, it does not repair). The probe is the spine the
   message and the no-continue guarantee both consume.
+change_target: infrastructure
+risk_surface: safety

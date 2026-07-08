@@ -59,3 +59,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/03_apostrophe_safe_epic_names.md
+change_target: code
+risk_surface: internal

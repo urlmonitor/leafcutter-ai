@@ -30,3 +30,5 @@ covered_by:
   - UXP-100a-1-i
 implemented_by: []
 documentation_triggers: [how-to, component-diagram]
+change_target: prompt
+risk_surface: contract_boundary

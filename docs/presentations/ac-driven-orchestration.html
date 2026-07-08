@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AC-Driven Delivery — The Requirement IS the Work Order</title>
+<style>
+  :root{
+    --bg:#0b1220; --bg2:#0f1729; --panel:#131e33; --panel2:#0e1830;
+    --ink:#e9eef8; --muted:#93a4bd; --faint:#5d6f8c;
+    --accent:#46d39a; --accent-dim:#2a8c66; --accent2:#f5b454; --danger:#f4717f; --blue:#6ea8fe;
+    --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 800px at 80% -10%,#16233f 0%,transparent 55%),
+               radial-gradient(900px 700px at -10% 110%,#10241d 0%,transparent 50%),
+               var(--bg);
+    color:var(--ink); font-family:var(--sans); overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:none;
+    padding:clamp(28px,5vw,90px);
+    flex-direction:column;justify-content:center;
+    opacity:0;transform:translateY(14px);transition:opacity .45s ease,transform .45s ease;
+  }
+  .slide.active{display:flex;opacity:1;transform:none}
+  .wrap{width:100%;max-width:1180px;margin:0 auto}
+  .kicker{font-family:var(--mono);font-size:.78rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:18px;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--accent);display:inline-block;border-radius:2px}
+  h1{font-size:clamp(2.1rem,5.6vw,4.2rem);line-height:1.04;letter-spacing:-.02em;font-weight:800}
+  h2{font-size:clamp(1.6rem,3.6vw,2.7rem);line-height:1.08;letter-spacing:-.015em;font-weight:750;margin-bottom:8px}
+  h3{font-size:1.02rem;font-weight:700;letter-spacing:-.01em}
+  .lede{font-size:clamp(1.05rem,1.9vw,1.45rem);color:var(--muted);max-width:60ch;line-height:1.5;margin-top:18px}
+  p{line-height:1.55;color:var(--muted)}
+  .accent{color:var(--accent)} .amber{color:var(--accent2)} .blue{color:var(--blue)} .danger{color:var(--danger)}
+  .ink{color:var(--ink)}
+  code,.mono{font-family:var(--mono)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:.72rem;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--panel2)}
+  .grid{display:grid;gap:16px;margin-top:30px}
+  .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .card h3{margin-bottom:8px}
+  .card p{font-size:.92rem}
+  .card .tag{font-family:var(--mono);font-size:.7rem;color:var(--faint);text-transform:uppercase;letter-spacing:.12em}
+  ul.clean{list-style:none;margin-top:26px;display:grid;gap:14px}
+  ul.clean li{display:flex;gap:14px;align-items:flex-start;font-size:clamp(1rem,1.6vw,1.18rem);color:var(--ink);line-height:1.45}
+  ul.clean li::before{content:"";flex:0 0 9px;height:9px;margin-top:.55em;border-radius:3px;background:var(--accent);box-shadow:0 0 14px var(--accent-dim)}
+  ul.clean li b{color:var(--ink)} ul.clean li span{color:var(--muted)}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:34px}
+  .node{flex:1;min-width:120px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 14px;text-align:center}
+  .node .t{font-weight:700;font-size:.98rem} .node .s{font-family:var(--mono);font-size:.72rem;color:var(--faint);margin-top:6px}
+  .node.hot{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-dim),0 10px 30px -12px var(--accent-dim)}
+  .node.warn{border-color:rgba(244,113,127,.5)}
+  .arrow{display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:1.4rem;padding:0 6px;min-width:30px}
+  .arrow.drop{color:var(--danger)}
+  table{width:100%;border-collapse:collapse;margin-top:26px;font-size:.92rem}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line2)}
+  th{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  td .fld{font-family:var(--mono);color:var(--accent);font-size:.86rem}
+  td.s-yes{color:var(--accent);font-weight:600} td.s-no{color:var(--danger);font-weight:600} td.s-part{color:var(--accent2);font-weight:600}
+  .big-num{font-size:clamp(3rem,9vw,7rem);font-weight:850;letter-spacing:-.04em;line-height:1;background:linear-gradient(180deg,#fff, #8fb7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .two{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center}
+  .quote{font-size:clamp(1.4rem,3vw,2.2rem);line-height:1.3;font-weight:650;letter-spacing:-.01em}
+  .quote .src{display:block;font-size:.85rem;font-weight:500;font-family:var(--mono);color:var(--faint);margin-top:22px;letter-spacing:.04em}
+  .stage{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:30px}
+  .stage .st{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .stage .st .n{font-family:var(--mono);font-size:.72rem;color:var(--accent)}
+  .stage .st h3{margin:8px 0 6px;font-size:1rem} .stage .st p{font-size:.84rem}
+  .legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:22px;font-size:.82rem;color:var(--muted);font-family:var(--mono)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:middle}
+  .footer{position:fixed;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-family:var(--mono);font-size:.72rem;color:var(--faint);pointer-events:none}
+  .progress{position:fixed;left:0;top:0;height:3px;background:var(--accent);box-shadow:0 0 12px var(--accent-dim);transition:width .4s ease;z-index:10}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;color:var(--muted)}
+  .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--accent);transform:rotate(45deg);box-shadow:0 0 12px var(--accent-dim)}
+  .hint{position:fixed;right:22px;bottom:54px;font-family:var(--mono);font-size:.68rem;color:var(--faint);opacity:.6}
+  .meta-loop{margin-top:28px;padding:18px 22px;border-left:3px solid var(--accent2);background:linear-gradient(90deg,rgba(245,180,84,.08),transparent);border-radius:0 12px 12px 0}
+  .roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:30px}
+  .ph{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:18px;position:relative;overflow:hidden}
+  .ph .bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .ph.now .bar{background:var(--accent)} .ph.next .bar{background:var(--accent2)} .ph.later .bar{background:var(--faint)}
+  .ph .lvl{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .ph h3{margin:8px 0 8px;font-size:1.05rem}
+  .ph p{font-size:.85rem}
+  .status{font-family:var(--mono);font-size:.74rem;padding:3px 9px;border-radius:6px;border:1px solid var(--line)}
+  .status.done{color:var(--accent);border-color:var(--accent-dim)}
+  .status.flight{color:var(--accent2);border-color:rgba(245,180,84,.4)}
+  .status.gap{color:var(--danger);border-color:rgba(244,113,127,.4)}
+  .checklist{display:grid;gap:12px;margin-top:24px}
+  .checklist .row{display:flex;align-items:center;gap:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px 18px}
+  .checklist .row .badge{font-family:var(--mono);font-size:.72rem;padding:3px 9px;border-radius:6px;flex:0 0 auto}
+  .b-done{background:rgba(70,211,154,.15);color:var(--accent)} .b-gap{background:rgba(244,113,127,.14);color:var(--danger)} .b-flight{background:rgba(245,180,84,.14);color:var(--accent2)}
+  .checklist .row .txt{font-size:.96rem;color:var(--ink)} .checklist .row .txt span{color:var(--muted)}
+  .end h1{font-size:clamp(2.4rem,7vw,5rem)}
+  @media(max-width:760px){.two{grid-template-columns:1fr;gap:24px}.g2,.g3,.g4,.stage,.roadmap{grid-template-columns:1fr}.flow{flex-direction:column}.arrow{transform:rotate(90deg);padding:4px 0}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 — TITLE -->
+  <section class="slide active">
+    <div class="wrap">
+      <div class="kicker">Leafcutter · Concept Map · v0.1</div>
+      <h1>AC-Driven Delivery<br><span class="accent">The requirement IS the work order.</span></h1>
+      <p class="lede">How acceptance criteria can graduate from <em>specs the supervisor reads</em> into <em>scripts that dispatch and wire the agent team</em> — and a new <span class="ink">presentation agent</span> that turns the PO's value propositions into decks today and emails tomorrow.</p>
+      <div style="margin-top:34px;display:flex;gap:10px;flex-wrap:wrap">
+        <span class="pill">Part 1 · The orchestration architecture</span>
+        <span class="pill">Part 2 · The presentation agent</span>
+        <span class="pill">→ Author it as ACs</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 — PART 1 DIVIDER / TODAY VS VISION -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 1 — Where we are vs. where we're going</div>
+      <h2>Today the AC <span class="muted">feeds</span> a ticket. The vision: the AC <span class="accent">is</span> the orchestration.</h2>
+      <div class="two" style="margin-top:30px">
+        <div>
+          <div class="tag mono" style="color:var(--faint);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase">Today</div>
+          <div class="flow" style="margin-top:14px">
+            <div class="node"><div class="t">AC</div><div class="s">yaml store</div></div>
+            <div class="arrow">→</div>
+            <div class="node"><div class="t">Ticket</div><div class="s">generated</div></div>
+            <div class="arrow">→</div>
+            <div class="node hot"><div class="t">agents:</div><div class="s">supervisor</div></div>
+          </div>
+          <p style="margin-top:16px;font-size:.9rem">A ticket is an intermediate artifact. The AC contributes <span class="ink">one coder name + a file footprint</span>; the rest of the pipeline is identical for every ticket.</p>
+        </div>
+        <div>
+          <div class="tag mono" style="color:var(--accent);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase">Vision</div>
+          <div class="flow" style="margin-top:14px">
+            <div class="node hot"><div class="t">AC</div><div class="s">work order</div></div>
+            <div class="arrow accent">→</div>
+            <div class="node hot"><div class="t">Agent team</div><div class="s">wired by contracts</div></div>
+          </div>
+          <p style="margin-top:16px;font-size:.9rem">"Supervisors walk the AC hierarchy directly, <span class="ink">without an intermediate ticket layer</span>." The AC's own fields select, sequence, and wire the agents.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 — WHAT AN AC ALREADY CONTAINS -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 1 — The data model is already ~80% there</div>
+      <h2>An approved AC already carries most of a work order.</h2>
+      <table>
+        <thead><tr><th>Work-order element</th><th>Field</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Which agent implements it</td><td><span class="fld">assigned_agent</span></td><td class="s-yes">in use</td></tr>
+          <tr><td>Inter-agent contracts</td><td><span class="fld">delivers_to / expects_from</span></td><td class="s-yes">1,547 files</td></tr>
+          <tr><td>Architecture / ADR docs touched</td><td><span class="fld">doc_links</span></td><td class="s-yes">in use</td></tr>
+          <tr><td>Which doc artifacts required</td><td><span class="fld">documentation_triggers</span></td><td class="s-yes">in use</td></tr>
+          <tr><td>Component / surface targeting</td><td><span class="fld">component</span></td><td class="s-yes">in use</td></tr>
+          <tr><td>Complexity & constraints</td><td><span class="fld">estimated_complexity · it_requirements</span></td><td class="s-yes">in use</td></tr>
+          <tr><td>Exact files touched</td><td><span class="fld">files_touched</span></td><td class="s-no">on ticket only</td></tr>
+          <tr><td>Embedded test plan</td><td><span class="fld">test_requirements</span></td><td class="s-no">on ticket only</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:18px;font-size:.9rem">Authored by the <span class="accent">PO → BA → IT-PO</span> pipeline. The gap to a fully self-contained work order is exact file targeting + an embedded test plan — both currently materialize only at ticket generation.</p>
+    </div>
+  </section>
+
+  <!-- 4 — WHAT CONTROLS DISPATCH TODAY -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 1 — The control surface is thin</div>
+      <h2>Only <span class="accent">three fields</span> actually steer the agents. The rest is hardcoded.</h2>
+      <div class="grid g3">
+        <div class="card"><div class="tag">steers</div><h3 class="accent mono">assigned_agent</h3><p>Picks the single coder phase that runs.</p></div>
+        <div class="card"><div class="tag">steers</div><h3 class="accent mono">depends_on</h3><p>Inter-ticket ordering + dependency edges of the batch graph.</p></div>
+        <div class="card"><div class="tag">steers</div><h3 class="accent mono">doc_links → files_touched</h3><p>Physical-disjointness edges → what may run in parallel.</p></div>
+      </div>
+      <div class="grid g3" style="margin-top:14px">
+        <div class="card" style="opacity:.6"><div class="tag">hardcoded</div><h3 class="danger">support agent set</h3><p>test-writer, test-runner, pr-reviewer, commit, pull-request — a constant.</p></div>
+        <div class="card" style="opacity:.6"><div class="tag">hardcoded</div><h3 class="danger">phase ordering</h3><p>A fixed <span class="mono">phaseOrder</span> table in the supervisor / build-ticket.js.</p></div>
+        <div class="card" style="opacity:.6"><div class="tag">hardcoded</div><h3 class="danger">handoff routing</h3><p>ok / handoff / blocker / question — fixed control flow.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 — THE UNUSED ASSET -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 1 — The gap, in one number</div>
+      <div class="two">
+        <div>
+          <div class="big-num">1,547</div>
+          <p class="lede" style="margin-top:14px">AC files already carry a <span class="mono ink">delivers_to</span> contract.</p>
+        </div>
+        <div>
+          <h2 style="font-size:clamp(1.4rem,3vw,2.2rem)">Authored, then dropped.</h2>
+          <p style="margin-top:14px;font-size:1.02rem">The richest collaboration data the system produces — who hands what interface to whom — is <span class="danger">discarded at ticket-generation time</span>.</p>
+          <div class="flow" style="margin-top:24px">
+            <div class="node"><div class="t">AC contracts</div><div class="s">delivers_to / expects_from</div></div>
+            <div class="arrow drop">✕</div>
+            <div class="node warn"><div class="t">generate_ticket</div><div class="s">reads only assigned_agent</div></div>
+          </div>
+          <p style="margin-top:18px;font-size:.88rem">It survives only as a <span class="ink">post-hoc check</span> for the <span class="mono">ac-validator</span> gate — never as wiring the dispatcher reads.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 — THE HIGHEST-LEVERAGE CHANGE -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 1 — The one move that unlocks both questions</div>
+      <h2>Stop dropping the contracts. <span class="accent">Wire them.</span></h2>
+      <p class="lede">A single transform maps each AC's <span class="mono ink">assigned_agent + delivers_to/expects_from</span> into a multi-agent <span class="mono ink">agents:</span> map with explicit handoff edges — which the supervisor consumes instead of the hardcoded phase table.</p>
+      <div class="flow" style="margin-top:36px">
+        <div class="node"><div class="t">AC tree</div><div class="s">+ contracts</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node hot"><div class="t">contract→graph<br>transform</div><div class="s">the missing link</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node"><div class="t">agents: map</div><div class="s">with handoff edges</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node"><div class="t">supervisor</div><div class="s">runs the team</div></div>
+      </div>
+      <p style="margin-top:26px;font-size:.92rem">Turns 1,547 dead contracts into live orchestration. The AC <span class="ink">content</span> now selects and sequences the team — instead of naming one coder and inheriting a fixed pipeline.</p>
+    </div>
+  </section>
+
+  <!-- 7 — ARE WE ON TRACK -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 1 — Are we on track?</div>
+      <h2>Foundations laid. The dispatch step is the unbuilt half.</h2>
+      <div class="checklist">
+        <div class="row"><span class="badge b-done">✓ done</span><div class="txt">AC store is the authoritative source of truth <span>— ADR-010</span></div></div>
+        <div class="row"><span class="badge b-done">✓ done</span><div class="txt">Deterministic JS workflows dispatch agents by data <span>— build-ticket.js / build-epic.js</span></div></div>
+        <div class="row"><span class="badge b-done">✓ done</span><div class="txt">Topological dependency engine <span>— goal_to_epic.py</span></div></div>
+        <div class="row"><span class="badge b-done">✓ done</span><div class="txt">Contract vocabulary authored at scale <span>— it-po · delivers_to / expects_from</span></div></div>
+        <div class="row"><span class="badge b-gap">✕ gap</span><div class="txt">Transform: AC contracts → agents map with handoff edges <span>— not built</span></div></div>
+        <div class="row"><span class="badge b-flight">◐ draft</span><div class="txt">Run unattended: priority-driven queue, parallel builds, blocker save/resume <span>— ACD-1300 (readiness: draft)</span></div></div>
+      </div>
+      <p style="margin-top:20px;font-size:.92rem"><span class="accent">Verdict:</span> on the roadmap, foundations in place — the AC-as-dispatch-program step is the next build.</p>
+    </div>
+  </section>
+
+  <!-- 8 — PART 2 DIVIDER -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 2 — The proposal</div>
+      <h2>The PO already produces <span class="accent">value propositions</span>. They deserve a delivery surface.</h2>
+      <p class="lede">L0/L1 ACs are written in deliberate customer language — taglines and value narratives, no engineering jargon. Today they sit as YAML in the store. A stakeholder never sees them.</p>
+      <div class="meta-loop">
+        <p style="color:var(--ink);font-size:1.05rem"><span class="amber">The idea:</span> a <b>presentation agent</b> that pairs with the PO — it takes the value propositions the PO authors and renders them as stakeholder-ready presentations now, and emails later.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 — THE NEW AGENT FLOW -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 2 — How it works</div>
+      <h2>PO authors the value. The presentation agent <span class="accent">delivers</span> it.</h2>
+      <div class="flow" style="margin-top:32px">
+        <div class="node hot"><div class="t">/po</div><div class="s">value propositions (L0/L1)</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node hot"><div class="t">presentation-agent</div><div class="s">render &amp; package</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node"><div class="t">stakeholder deck</div><div class="s">self-contained .html</div></div>
+      </div>
+      <div class="grid g3" style="margin-top:30px">
+        <div class="card"><div class="tag">input</div><h3>Value propositions</h3><p>Reads approved L0/L1 ACs straight from the store — the PO's customer-language narrative.</p></div>
+        <div class="card"><div class="tag">renders</div><h3>A polished deck</h3><p>Typography, diagrams, framing — the kind of artifact you'd put in front of a stakeholder. <span class="accent">(This very deck is the reference output.)</span></p></div>
+        <div class="card"><div class="tag">later</div><h3>Emails</h3><p>Same value-prop source, different surface: a tailored stakeholder email / update.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — WHERE IT FITS -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 2 — Where it fits in the registry</div>
+      <h2>A new <span class="accent">delivery / communication</span> agent class.</h2>
+      <p class="lede">Sits alongside the existing authoring &amp; documentation agents — but its audience is <span class="ink">stakeholders</span>, not the build pipeline.</p>
+      <div class="grid g2" style="margin-top:26px">
+        <div class="card">
+          <div class="tag">exists</div>
+          <h3>documentation-expert</h3>
+          <p>Routes how-tos, ADRs, references, diagrams. Audience: <span class="ink">engineers</span>. Surface: the docs tree.</p>
+        </div>
+        <div class="card" style="border-color:var(--accent)">
+          <div class="tag" style="color:var(--accent)">proposed</div>
+          <h3 class="accent">presentation-agent</h3>
+          <p>Renders PO value propositions into decks &amp; emails. Audience: <span class="ink">stakeholders</span>. Surface: presentations / outbound comms.</p>
+        </div>
+      </div>
+      <p style="margin-top:22px;font-size:.9rem">Pairs with <span class="mono">/po</span> the way <span class="mono">it-po</span> pairs with the BA — a downstream specialist that consumes one stage's output and produces a new artifact class.</p>
+    </div>
+  </section>
+
+  <!-- 11 — THE META LOOP -->
+  <section class="slide">
+    <div class="wrap" style="text-align:center">
+      <div class="kicker" style="justify-content:center">Part 2 — Proof by construction</div>
+      <h2>You're looking at the output.</h2>
+      <p class="lede" style="margin:18px auto 0">This deck is exactly what the presentation agent would emit from a set of value propositions. We're using the capability to pitch building the capability — then recording it as an AC so the platform can build it for real.</p>
+      <div class="flow" style="margin-top:40px;max-width:900px;margin-left:auto;margin-right:auto">
+        <div class="node"><div class="t">value props</div><div class="s">this concept</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node hot"><div class="t">this deck</div><div class="s">hand-built POC</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node"><div class="t">/create-ac</div><div class="s">note the agent down</div></div>
+        <div class="arrow accent">→</div>
+        <div class="node"><div class="t">platform builds it</div><div class="s">the loop closes</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 — ROADMAP FOR THE AGENT -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Part 2 — A maturity path for the agent</div>
+      <h2>Decks first. Emails next. Auto-triggered last.</h2>
+      <div class="roadmap">
+        <div class="ph now"><span class="bar"></span><div class="lvl">Phase 1 · now</div><h3>Value-prop decks</h3><p>On request, render approved L0/L1 ACs into a self-contained stakeholder deck. Manual invocation.</p></div>
+        <div class="ph next"><span class="bar"></span><div class="lvl">Phase 2 · next</div><h3>Stakeholder emails</h3><p>Same value-prop source → a tailored email / update for a named audience &amp; tone.</p></div>
+        <div class="ph later"><span class="bar"></span><div class="lvl">Phase 3 · later</div><h3>Auto-triggered</h3><p>Fires when the PO marks a value proposition approved — delivery becomes a pipeline step, not a chore.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 — NEXT STEPS -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="kicker">Next steps</div>
+      <h2>What we do right after this deck.</h2>
+      <ul class="clean">
+        <li><b>Author the presentation-agent as ACs</b> <span>— drive /po → BA → IT-PO into the AC store (the mechanism we just proposed, used on itself).</span></li>
+        <li><b>Capture the value propositions</b> <span>— L0 "stakeholders see the value, not the YAML"; L1 decks, then emails.</span></li>
+        <li><b>Draft ADR: contract-driven dispatch</b> <span>— the Part 1 transform that turns 1,547 contracts into live wiring.</span></li>
+        <li><b>Sequence against ACD-1300</b> <span>— the autonomous-delivery epic that lets it all run unattended.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 14 — END -->
+  <section class="slide end">
+    <div class="wrap" style="text-align:center">
+      <div class="brand" style="justify-content:center;margin-bottom:26px"><span class="dot"></span> Leafcutter</div>
+      <h1>The requirement IS<br>the <span class="accent">work order.</span></h1>
+      <p class="lede" style="margin:24px auto 0">Map it. Present it. Then let the platform build the thing that builds the things.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  <span class="brand"><span class="dot"></span> AC-Driven Delivery</span>
+  <span><span id="cur">1</span> / <span id="tot">14</span></span>
+</div>
+<div class="hint">← → / space to navigate</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const tot=slides.length; let i=0;
+  document.getElementById('tot').textContent=tot;
+  function show(n){
+    i=Math.max(0,Math.min(tot-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    document.getElementById('cur').textContent=i+1;
+    document.getElementById('progress').style.width=((i+1)/tot*100)+'%';
+    location.hash=i+1;
+  }
+  function next(){show(i+1)} function prev(){show(i-1)}
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();next()}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev()}
+    else if(e.key==='Home'){show(0)} else if(e.key==='End'){show(tot-1)}
+  });
+  document.addEventListener('click',e=>{ if(e.clientX < window.innerWidth*0.32) prev(); else next(); });
+  const start=parseInt(location.hash.replace('#',''))||1;
+  show(start-1);
+  document.getElementById('progress').style.width=(1/tot*100)+'%';
+</script>
+</body>
+</html>

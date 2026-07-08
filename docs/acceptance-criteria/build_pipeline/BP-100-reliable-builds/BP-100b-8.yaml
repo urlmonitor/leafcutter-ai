@@ -32,3 +32,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - docs/build-pipeline.md
+change_target: docs
+risk_surface: internal

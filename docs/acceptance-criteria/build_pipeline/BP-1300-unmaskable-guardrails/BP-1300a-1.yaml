@@ -1,0 +1,46 @@
+id: BP-1300a-1
+title: "A dangling registry skill pointer fails the build against the canonical source"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the registry references a skill_id in a skills_invoked entry, and no skill with
+    that id exists in the canonical source (templates/skills plus the registry),
+  When the build's skill-pointer check runs,
+  Then the build fails with a non-zero exit,
+  And the failure names the dangling skill_id and the registry entry that referenced it,
+  And the verdict is the same whether the build runs locally or in CI.
+depends_on:
+  - BP-1300a
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The check must resolve each skills_invoked skill_id against the canonical source (templates/skills + registry), not the deployed .claude/skills tree."
+  - "An unresolvable skill_id must fail the build with a non-zero exit and a message naming the skill_id and the referencing entry."
+  - "The verdict must be deterministic and environment-independent (identical local and CI)."
+  - "Resolution must extend the build's existing skill-pointer handling in scripts/build.py / scripts/build_phases.py, keeping a single source of truth for skill resolution rather than adding a parallel checker."
+delivers_to:
+  agent: python-coder
+  contract: "A build-time skill-pointer resolution check that fails deterministically on a dangling skill_id"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by:
+  - BP-1300a-1-i
+  - BP-1300a-1-ii
+implemented_by: []

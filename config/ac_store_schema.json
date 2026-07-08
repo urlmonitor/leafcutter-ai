@@ -413,6 +413,57 @@
                     "type": "null"
                 }
             ]
+        },
+        "change_target": {
+            "description": "Classification of what kind of artifact this AC targets. Used by the computed quality-gates pipeline to look up mandatory guardrail agents. Accepts either a single value (string) or a list of values (array of strings). Enum is the ADR-017 blast-radius vocabulary: 10 canonical change-target labels. Optional — absent when the AC predates the computed-gates pipeline (ticket 10 will backfill).",
+            "anyOf": [
+                {
+                    "type": "string",
+                    "enum": [
+                        "code",
+                        "schema",
+                        "ui",
+                        "infrastructure",
+                        "pipeline",
+                        "prompt",
+                        "model",
+                        "config",
+                        "docs",
+                        "dependency"
+                    ]
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "code",
+                            "schema",
+                            "ui",
+                            "infrastructure",
+                            "pipeline",
+                            "prompt",
+                            "model",
+                            "config",
+                            "docs",
+                            "dependency"
+                        ]
+                    },
+                    "minItems": 1
+                }
+            ]
+        },
+        "risk_surface": {
+            "description": "Classification of the blast-radius / risk exposure of this AC. Used by the computed quality-gates pipeline alongside change_target to select mandatory guardrail agents. Enum is the ADR-017 blast-radius vocabulary: 6 canonical risk-surface labels. Optional — absent when the AC predates the computed-gates pipeline (ticket 10 will backfill).",
+            "type": "string",
+            "enum": [
+                "internal",
+                "contract_boundary",
+                "auth",
+                "privacy",
+                "safety",
+                "cost"
+            ]
         }
     }
 }

@@ -1,0 +1,66 @@
+id: ACS-100c-6
+readiness: approved
+priority: medium
+title: "Superseded children do not count toward the child-count cap"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100c.yaml
+criteria: |
+  Given an L1 AC "ACS-100a" has 6 L2 child AC files in its feature folder,
+  And 1 of those child files has status "superseded_by" (its superseded_by
+    field naming the replacement child),
+  And the default L1 child-count cap is 5,
+  When the check-ac-tree-limits hook counts the parent's children for the
+    ACS-100c cap,
+  Then it counts only the 5 children whose status is not "superseded_by"
+    (children with status "active" or any non-superseded status are counted),
+  And it excludes the 1 superseded child from the count,
+  And the effective child count is 5, which does not exceed the cap of 5,
+  And the hook passes without requiring a child_limit_override on the parent,
+  And the superseded child file remains present on disk in the feature folder
+    (it is omitted from the count only, not deleted or moved).
+depends_on: [ACS-100c, ACS-100c-1, ACS-100h-7a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: specifies
+    status: exists
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When counting a parent's children for the ACS-100c cap, exclude every child whose status field equals 'superseded_by' (and the equivalent legacy 'superseded' form); count all children with any other status"
+  - "Apply the exclusion in the single shared child-counting callable (ACS-100h-7a) so the pre-commit hook and any scaffold-time caller compute the same effective count; do not add a second independent traversal"
+  - "The exclusion changes only the COUNT — superseded child files must not be deleted, moved, or renamed by this check (AC-permanence convention)"
+  - "Edit the canonical template copy and rebuild via build.py to sync the deployed/built copy (config/template parity per ADR-001); never edit one side only"
+  - "Must handle errors gracefully per the project error handling policy (fail-open on internal error: exit 0 with a stderr warning)"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-7a
+  contract: "The shared child-counting callable whose count this AC filters by status"
+origin_agent: business-analyst
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100c-6-i
+  - ACS-100c-6-ii
+implemented_by:
+- tickets/00_inbox/TICKET-20260701-ACS-100c-6.md
+notes: |
+  Motivated by BP-1000a: an L1 parent had 6 L2 children of which 2 were
+  superseded, and the hook counted all 6 (over the cap of 5), forcing a
+  child_limit_override waiver even though only 4 children were active. Excluding
+  superseded children from the count frees the slot that superseding a redundant
+  child is supposed to free, so the override is not needed. This is the count
+  rule; the child_limit_override escape hatch (ACS-100h-7a) still layers on top
+  and is exercised in ACS-100c-6-ii.
+change_target: code
+risk_surface: internal

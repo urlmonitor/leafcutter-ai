@@ -1,0 +1,48 @@
+id: BP-1100e-1-iii
+readiness: approved
+priority: high
+title: "A docs-only or config-only ticket with legitimately narrow scope is not false-flagged"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a ticket whose declared files_touched are documentation-only
+    (e.g. ["docs/how-to/recovery.md"]) or config-only (e.g. ["config/paths.json"])
+  And its actual changes touch only those same declared documentation/config files
+    and no source file with a .py/.sql/.ts/.tsx/.js extension
+  When the pre-done reconciliation runs
+  Then it does NOT flag the ticket — a legitimately narrow docs-only or config-only
+    change whose actual diff matches its declared scope is a clean pass, not a mismatch
+  And the reconciliation only ever flags on an actually-changed SOURCE file that is
+    undeclared, so a ticket that changed no undeclared source file is never flagged
+depends_on:
+  - BP-1100e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The flag condition is 'an actually-changed SOURCE file (.py/.sql/.ts/.tsx/.js) absent from files_touched UNION out_of_scope'. A ticket whose real diff contains no such undeclared source file (docs-only, config-only, or fully-declared) must pass cleanly — narrow scope is not itself a violation."
+  - "Do NOT infer 'this ticket should have touched source' from the AC text here (that inference is BP-1100a's pre-dispatch concern); BP-1100e only reconciles actual-vs-declared, so a docs-only ticket that only changed docs is not a BP-1100e mismatch."
+  - "PORTABLE SURFACE: this narrow-scope non-false-positive guard lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; ADR-001 build.py round-trip parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The reconciliation verdict this AC constrains to avoid false positives on legitimately narrow docs/config-only tickets."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned shared-hook portable surface (check_files_touched_reconciliation.py, ADR-001 parity). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/04_TICKET-20260706-BP-1100e-1-iii.md

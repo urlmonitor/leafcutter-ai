@@ -1,0 +1,42 @@
+id: BP-1300
+title: "Every guardrail gives the same verdict everywhere -- a green local run can't hide a real break"
+component: build-pipeline
+level: L0
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Checks can't be fooled by a dirty local tree -- broken is broken, in CI and on your machine.
+
+  A check that passes on your machine but fails in CI (or the reverse) is worse
+  than no check at all, because it teaches you to trust a false green. This goal
+  makes the build and authoring guardrails judge the real, canonical source rather
+  than whatever happens to be deployed locally, so a genuinely broken registry, a
+  missing artifact, or a skipped sign-off looks broken everywhere. It also makes
+  the checks that matter block during automated drives instead of emitting a
+  warning nobody sees. You get one honest verdict you can rely on, no matter where
+  or how the check runs.
+depends_on: []
+doc_links:
+  - docs/reference/ac-schema.md
+  - docs/how-to/managing-pre-commit-hooks.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: [BP-1300a, BP-1300b, BP-1300c]
+implemented_by: []
+notes: |
+  Systemic gap 5. Placed as a new build-pipeline L0 rather than under BP-100
+  (reliable-builds, already over its child cap with child_limit_override: 13) or
+  guardrail-engine (pre-commit hooks only). BP-100 governs artifact PRESENCE and
+  PLACEMENT; this goal governs a distinct property -- that build AND authoring
+  guardrails give a deterministic, environment-independent verdict that a dirty
+  local deployment cannot mask.

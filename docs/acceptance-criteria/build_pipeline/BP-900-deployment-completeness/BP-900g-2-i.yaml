@@ -1,0 +1,45 @@
+id: BP-900g-2-i
+title: "A command referencing a Skill by name that is actually deployed passes — no false positive"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-2.yaml"
+criteria: |
+  Given a deployed command whose handoff references a Skill by name, such as
+    Skill("signoff"),
+  And a skill named "signoff" is present in the deployed skill set of a consumer
+    install,
+  When build.py runs its command-reference reachability check,
+  Then the build succeeds with a zero exit status for that reference,
+  And the guardrail does NOT flag the Skill reference, because it resolves to a
+    real deployed skill.
+depends_on:
+  - BP-900g-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-2.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Skill-by-name resolution must consult the actually-deployed skill set. A name that is present must pass with no false positive; only a name (or path) that is absent post-deploy fails."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-2
+  contract: "The aggregated reachability resolver, exercised here for a Skill-by-name reference that must resolve cleanly."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

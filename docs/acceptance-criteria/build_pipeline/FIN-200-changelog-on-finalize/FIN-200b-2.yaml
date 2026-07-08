@@ -1,0 +1,55 @@
+id: FIN-200b-2
+title: "The committed entry reaches main in the same merge as the feature commits"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200b
+criteria: |
+  Given the changelog entry has been committed on the feature branch before the
+    PR merge step
+  When the PR merge step merges the feature branch into main
+  Then the merge that lands on main includes the changelog entry commit together
+    with the feature's own commits
+  And after the merge, main contains the changelog entry for the feature
+  And finalize does not create or require any separate follow-up commit or
+    second PR to add the entry to main after the feature has shipped
+depends_on:
+  - FIN-200b
+  - FIN-200b-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: S
+it_requirements: |
+  - No new merge mechanism is introduced — the existing merge_pr step (4, gh pr
+    merge) must carry ALL feature-branch commits including the pre-merge changelog
+    commit to origin/main atomically (same path step 3.5's closure commit rides)
+  - finalize must NOT open a second PR, push a separate commit to main, or run any
+    post-merge follow-up to land the entry — the single PR merge is the only path
+  - This AC asserts a property of the existing atomic merge, not new code: verify
+    the changelog commit is an ancestor of the merge commit on main after merge_pr
+  - The merge gate ordering constraint from FIN-200b-1 (changelog committed before
+    merge_pr) is the precondition this AC depends on
+delivers_to: null
+expects_from:
+  - agent: finalize-feature-workflow
+    contract: "the PR merge step (step 4) merges the feature branch, carrying the pre-merge changelog commit to main"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Step 4 merge_pr carries all feature-branch commits (incl. changelog) to main atomically"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "merge_pr step (4) — the single atomic merge path that carries the changelog commit"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

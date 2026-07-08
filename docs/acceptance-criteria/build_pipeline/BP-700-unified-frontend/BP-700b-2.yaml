@@ -43,3 +43,5 @@ superseded_by: null
 covered_by:
   - BP-700b-2-i
 implemented_by: []
+change_target: config
+risk_surface: internal

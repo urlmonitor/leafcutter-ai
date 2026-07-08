@@ -44,3 +44,5 @@ superseded_by: null
 covered_by: [BP-900c-1-1]
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900c-1.md
+change_target: pipeline
+risk_surface: internal

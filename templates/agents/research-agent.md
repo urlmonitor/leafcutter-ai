@@ -137,6 +137,7 @@ right tool:
 | Which Python files import a specific symbol | `.claude/skills/import-scanner/SKILL.md` — invoke via `Bash` |
 | The latest 1-minute candle near a price level (find-context-candle) | `.claude/skills/find-context-candle/SKILL.md` — invoke via `Bash` |
 | Why a trade fired, what triggered the signal | `.claude/skills/trade-analysis/SKILL.md` — invoke via `Bash` |
+| Cross-surface knowledge graph queries (nodes, edges, surfaces) | load the `knowledge-query` skill via `.claude/skills/knowledge-query/SKILL.md` |
 
 These skills encapsulate domain-specific query logic that would take longer to
 reconstruct with raw Grep/Glob. Use them.

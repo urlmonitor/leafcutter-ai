@@ -50,3 +50,5 @@ covered_by:
   - scripts/onboard_hook_opt_in.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100g-1.md
+change_target: code
+risk_surface: internal

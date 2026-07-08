@@ -43,3 +43,5 @@ notes: |
   superseded_by, or amended_by entries on completely unrelated AC files. The
   skill must require a before-and-after store-wide grep of each old ID so no
   stale reference survives the rename.
+change_target: prompt
+risk_surface: internal

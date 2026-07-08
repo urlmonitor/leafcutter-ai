@@ -27,3 +27,5 @@ covered_by:
   - BP-200e-2
   - BP-200e-3
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

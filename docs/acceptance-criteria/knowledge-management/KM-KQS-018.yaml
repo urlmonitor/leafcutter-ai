@@ -43,3 +43,5 @@ superseded_by: KM-KGS-100d
 amended_by: []
 covered_by: []
 implemented_by: []
+change_target: config
+risk_surface: internal

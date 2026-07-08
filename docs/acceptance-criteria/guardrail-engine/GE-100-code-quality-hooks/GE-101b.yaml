@@ -55,3 +55,5 @@ covered_by:
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100e.md
 - tickets/00_inbox/epics/EPIC-CodeQualityHooks/10_TICKET-20260616-GE-100e.md
+change_target: code
+risk_surface: internal

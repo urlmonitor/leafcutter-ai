@@ -1,0 +1,43 @@
+id: BP-1300c-1-i
+title: "A drive with no violation present is not blocked by the escalated checks"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an automated drive in which every artifact has its required self-description and
+    every ticket's sign-off parity holds,
+  When the escalated self-description and sign-off-parity checks run during the drive,
+  Then both checks pass with a zero exit,
+  And the drive is not blocked,
+  And no failure is reported on these axes.
+depends_on:
+  - BP-1300c-1
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "With no violation present the escalated checks must pass during a drive, avoiding false positives that would halt a clean drive."
+delivers_to:
+  agent: python-coder
+  contract: "No-false-positive behavior for the escalated drive-time checks"
+expects_from:
+  ac_id: BP-1300c-1
+  contract: "The escalated self-description/sign-off checks whose clean-drive path this scenario exercises"
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

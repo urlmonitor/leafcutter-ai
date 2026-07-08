@@ -47,3 +47,5 @@ notes: |
       id-string parent-derivation; becomes a metadata lookup).
     - config/ac_store_schema.json — id regex no longer carries hierarchy meaning.
   This is python-coder work across multiple scripts; estimated_complexity L.
+change_target: code
+risk_surface: contract_boundary

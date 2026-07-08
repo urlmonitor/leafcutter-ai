@@ -31,3 +31,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - .claude/commands/ba.md
+change_target: prompt
+risk_surface: internal

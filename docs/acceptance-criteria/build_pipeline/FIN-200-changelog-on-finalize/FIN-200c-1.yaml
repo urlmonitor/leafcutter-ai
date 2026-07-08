@@ -1,0 +1,64 @@
+id: FIN-200c-1
+title: "Changelog capture failure warns clearly but does not block the merge by default"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200c
+criteria: |
+  Given finalize is running with the default configuration (changelog is not
+    marked as required-to-block)
+  And the changelog step encounters an actual error while attempting to generate
+    or commit the entry (for example, the generation tool exits non-zero)
+  When the changelog step finishes
+  Then finalize emits a warning that appears in the finalize output and names the
+    changelog step as the thing that failed
+  And finalize continues to the PR merge gate rather than halting
+  And the merge is not blocked solely because the changelog entry could not be
+    captured
+depends_on:
+  - FIN-200c
+  - FIN-200a-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: M
+it_requirements: |
+  - Default behavior is warn-and-continue: a genuine changelog capture error must
+    emit a developer-visible warning that names the changelog step as the failing
+    step, then finalize proceeds to the merge_pr gate (4) — changelog failure is
+    NOT a halt category by default
+  - The warning must be logged at WARNING severity per the project error handling
+    policy (catch the specific subprocess/IO failure; log; do not silently swallow;
+    do not crash the whole finalize run)
+  - The merge must not be blocked solely because the changelog entry could not be
+    captured (default config) — distinct from the configured-required halt path
+    (FIN-200c-3), which is the same error signal routed by config
+  - The error path must be distinguishable from the empty-range no-op
+    (see FIN-200c-1-i): only a non-zero/raised result triggers the warning; a clean
+    empty-range exit must not
+  - The default-warn intent is deliberate and must not be silently upgraded to a
+    hard block (the hard block is opt-in via FIN-200c-3 config only)
+delivers_to: null
+expects_from:
+  - agent: changelog-agent
+    contract: "signals a non-zero/error result distinguishable from a clean empty-range no-op"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Step map / halt categories — changelog failure is non-fatal warn by default, not a halt category"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "Result-handling region where the changelog warn-and-continue branch is added"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-200c-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

@@ -36,3 +36,5 @@ covered_by:
   - ACD-300g-3
   - ACD-300g-4
 implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

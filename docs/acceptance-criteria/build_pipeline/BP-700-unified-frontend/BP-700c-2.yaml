@@ -48,3 +48,5 @@ superseded_by: null
 covered_by: [BP-700c-2-i]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-700c-2.md
+change_target: prompt
+risk_surface: internal

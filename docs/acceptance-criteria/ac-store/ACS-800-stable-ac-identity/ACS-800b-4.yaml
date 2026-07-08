@@ -37,3 +37,5 @@ notes: |
   level-consistency invariant (child level = parent level + 1). This is the
   metadata-expressed equivalent of the structural guarantee that today is implied
   by the id-string shape.
+change_target: code
+risk_surface: internal

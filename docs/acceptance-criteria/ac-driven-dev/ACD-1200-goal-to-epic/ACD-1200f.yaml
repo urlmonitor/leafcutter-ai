@@ -31,3 +31,5 @@ covered_by:
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Leaf-collection traversal is an internal engine surfaced through ACD-1200a's user-facing epic command and documented there (ACD-1200g); no separate user-facing workflow to document."
+change_target: code
+risk_surface: contract_boundary

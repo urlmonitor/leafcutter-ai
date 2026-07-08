@@ -27,6 +27,26 @@ REQUIRED_FIELDS = ("title", "status", "components", "created", "depends_on")
 ALLOWED_STATUSES = ("todo", "in_progress", "blocked", "done", "deferred")
 ALLOWED_TYPES = ("epic",)
 ALLOWED_AGENT_STATUSES = ("not_needed", "needed", "signed_off", "failed")
+ALLOWED_CHANGE_TARGETS = (
+    "code",
+    "schema",
+    "ui",
+    "infrastructure",
+    "pipeline",
+    "prompt",
+    "model",
+    "config",
+    "docs",
+    "dependency",
+)
+ALLOWED_RISK_SURFACES = (
+    "internal",
+    "contract_boundary",
+    "auth",
+    "privacy",
+    "safety",
+    "cost",
+)
 
 import json as _json
 from pathlib import Path as _Path
@@ -46,10 +66,11 @@ def _load_doc_types() -> dict:
         try:
             with open(_DOC_TYPES_JSON, encoding="utf-8") as f:
                 data = _json.load(f)
-            _DOC_TYPES_CACHE = data.get("doc_types", {})
-            return _DOC_TYPES_CACHE
         except (ValueError, OSError):
             pass
+        else:
+            _DOC_TYPES_CACHE = data.get("doc_types", {})
+            return _DOC_TYPES_CACHE
     # fallback: accept any string (no blocking on missing file)
     _DOC_TYPES_CACHE = {}
     return _DOC_TYPES_CACHE
@@ -95,7 +116,7 @@ def parse_frontmatter(content: str) -> dict | None:
         return None
     try:
         parsed = yaml.safe_load(raw)
-    except Exception:
+    except (ValueError, TypeError, yaml.YAMLError):
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -214,8 +235,79 @@ def _extract_agent_status(raw_value: object) -> str | None:
 
 def _check_bool_field(fm, f):
     v = fm.get(f)
-    if v is None or isinstance(v, bool): return []
+    if v is None or isinstance(v, bool):
+        return []
     return [f"'{f}' must be bool (true/false); got {type(v).__name__} {v!r}"]
+
+
+def _check_change_target(fm: dict) -> list[str]:
+    """Report a ``change_target`` value that is not in the allowed enum.
+
+    ``change_target`` is optional; when present it must be one of the 10
+    allowed values, or a list of such values (mixed-valid lists report only
+    the invalid entries). Absent field passes without error (backward
+    compatibility for existing tickets authored before this field was
+    introduced).
+
+    Args:
+        fm: Parsed frontmatter mapping.
+
+    Returns:
+        One error per invalid entry. Empty when field is absent or all valid.
+    """
+    value = fm.get("change_target")
+    if value is None:
+        return []
+    if isinstance(value, list):
+        errors = []
+        for entry in value:
+            if not isinstance(entry, str) or entry not in ALLOWED_CHANGE_TARGETS:
+                errors.append(
+                    f"Invalid change_target entry {entry!r}. "
+                    f"Valid values: {', '.join(ALLOWED_CHANGE_TARGETS)}"
+                )
+        return errors
+    if value in ALLOWED_CHANGE_TARGETS:
+        return []
+    return [
+        f"Invalid change_target {value!r}. "
+        f"Valid values: {', '.join(ALLOWED_CHANGE_TARGETS)}"
+    ]
+
+
+def _check_risk_surface(fm: dict) -> list[str]:
+    """Report a ``risk_surface`` value that is not in the allowed enum.
+
+    ``risk_surface`` is optional; when present it must be one of the 6
+    allowed values, or a list of such values (mixed-valid lists report only
+    the invalid entries). Absent field passes without error (backward
+    compatibility for existing tickets authored before this field was
+    introduced).
+
+    Args:
+        fm: Parsed frontmatter mapping.
+
+    Returns:
+        One error per invalid entry. Empty when field is absent or all valid.
+    """
+    value = fm.get("risk_surface")
+    if value is None:
+        return []
+    if isinstance(value, list):
+        errors = []
+        for entry in value:
+            if not isinstance(entry, str) or entry not in ALLOWED_RISK_SURFACES:
+                errors.append(
+                    f"Invalid risk_surface entry {entry!r}. "
+                    f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
+                )
+        return errors
+    if value in ALLOWED_RISK_SURFACES:
+        return []
+    return [
+        f"Invalid risk_surface {value!r}. "
+        f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
+    ]
 
 
 def _check_required_tristate(fm: dict, field: str) -> list[str]:
@@ -399,6 +491,8 @@ def validate(fm: dict, ticket_path: Path) -> list[str]:
     errors.extend(_check_required_tristate(fm, "requires_adr"))
     errors.extend(_check_requires_documentation(fm))
     errors.extend(_check_agents(fm))
+    errors.extend(_check_change_target(fm))
+    errors.extend(_check_risk_surface(fm))
     return errors
 
 
@@ -458,7 +552,7 @@ def _resolve_ticket_path(payload: dict) -> tuple[Path, str] | None:
         return None
     try:
         file_path = Path(raw).resolve()
-    except Exception:
+    except (ValueError, OSError):
         return None
     if file_path.suffix.lower() != ".md" or file_path.name.lower() == "readme.md":
         return None
@@ -541,7 +635,7 @@ def main() -> None:
     """Entry point. Reads the PostToolUse payload from stdin and emits a decision."""
     try:
         payload = json.loads(sys.stdin.read() or "{}")
-    except Exception:
+    except (ValueError, OSError):
         sys.exit(0)
 
     resolved = _resolve_ticket_path(payload)
@@ -551,7 +645,7 @@ def main() -> None:
 
     try:
         content = file_path.read_text(encoding="utf-8")
-    except Exception:
+    except OSError:
         sys.exit(0)
 
     fm = parse_frontmatter(content)
@@ -607,5 +701,16 @@ DECISION HISTORY
   explicit confirmation that the guard is forward-compatible with the adr-author dispatch logic
   introduced in building-epics §2.1 and ticket-wiring skill.
   (#EPIC-DocTraceability/05) (ADR-033)
+- 2026-07-01 00:00 [EPIC-ComputedQualityGates/02]: Added ALLOWED_CHANGE_TARGETS (10 values)
+  and ALLOWED_RISK_SURFACES (6 values) constants. Added _check_change_target() and
+  _check_risk_surface() validators; both wired into validate(). Both fields are OPTIONAL
+  (absent = pass, backward-compatible). Present+invalid = block with allowed values listed.
+  AC-BO-610-1, AC-BO-610-2, AC-BO-610-3, AC-BO-610-4.
+- 2026-07-01 10:30 [EPIC-ComputedQualityGates/02 rework]: AC-BO-610-5 fixes:
+  (1) Both _check_change_target and _check_risk_surface updated to handle list-value
+  input (iterate, report only invalid entries; valid entries pass silently).
+  (2) Error message wording changed from "Allowed:" to "Valid values:" in both validators.
+  (3) Pre-existing BLE001/TRY300 ruff violations in _load_doc_types, parse_frontmatter,
+  _resolve_ticket_path, and main() corrected to use specific exception types.
 ====================================================================
 """

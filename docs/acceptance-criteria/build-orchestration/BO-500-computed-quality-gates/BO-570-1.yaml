@@ -1,0 +1,78 @@
+id: BO-570-1
+title: "Deterministic render-smoke runner helper for the frontend sign-off gate"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+criteria: |
+  Given a ticket whose changed surface includes one or more frontend files
+    (e.g. a route/page or component the user can see),
+  When the render-smoke runner is invoked against that changed frontend surface,
+  Then it performs a real dev/route render of the affected surface locally
+    (a dev/route render, not a static or lint check),
+  And it returns a deterministic verdict that classifies the outcome as one of:
+    render-success, render-error (a render-time-only defect was hit at route
+    render time — e.g. a component with server-side rendering disabled that
+    only throws at render), or tooling-unavailable (the render runner could
+    not start / its dependencies are not installed),
+  And on render-error the verdict names the render failure as the blocking
+    reason so the sign-off gate that consumes it can record a failure,
+  And on tooling-unavailable the verdict is reported as a distinct third state
+    naming the reason (never collapsed into render-success),
+  And the verdict carries the surface that was rendered so the consuming
+    sign-off gate can record auditable evidence of what was checked.
+depends_on: [BO-570]
+doc_links:
+  - path: templates/skills/webapp-testing/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The runner must exercise a real render of the changed surface (dev/route render), not a static/type/lint check — a render-time-only misconfiguration (e.g. ssr:false) must be reachable by the runner."
+  - "The verdict must be a deterministic, machine-readable three-state outcome (render-success | render-error | tooling-unavailable); tooling-unavailable must NEVER be reported as render-success."
+  - "The runner must follow the project error-handling policy (CLAUDE.md Rules 1-4): wrap the subprocess/render-launch I/O in a specific except, log at WARNING or higher, and classify a launch/dependency failure as tooling-unavailable rather than swallowing it."
+  - "The verdict must include the surface/route that was rendered and a human-readable reason on the non-success states, so the consuming sign-off gate can record auditable evidence."
+  - "Mirror the webapp-testing skill's Playwright-not-installed precedent: an absent render runner degrades to the explicit tooling-unavailable state, it does not crash the caller."
+delivers_to:
+  agent: llm-expert
+  contract: |
+    A render-smoke runner the frontend sign-off gate invokes, returning a
+    three-state verdict object:
+    { check: "dev-render-smoke",
+      outcome: "render-success" | "render-error" | "tooling-unavailable",
+      surface: <the changed frontend route/surface that was rendered>,
+      reason: <human-readable detail; required on render-error and
+               tooling-unavailable, null on render-success> }.
+    render-error and tooling-unavailable both forbid an "ok" sign-off on that
+    surface; only render-success permits "ok" on this criterion.
+expects_from: null
+origin_agent: it-po-v3
+created: 2026-06-24
+amended_by:
+  - reason: "re-parent + rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-4a (split from BO-530-4 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-4a -> BO-570-1 because check_ac_limits attributes children by id-derivation, not depends_on; keeping the old id would leave BO-530 over the L2 cap. id, criteria, delivers_to/expects_from preserved verbatim; only id/created_by/depends_on re-pointed to BO-570."
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LocalSignoffGates/01_TICKET-20260624-BO-570-1.md
+notes: |
+  Originally BO-530-4a, created by IT-PO v3 from BO-530-4 (split). BO-530-4 mixed
+  a deterministic helper-script surface (python-coder) with the sign-off-gate
+  behavior surface (llm-expert template/skill prose) — a hard owner boundary the
+  .py helper cannot live inside an .md template. This child owns the deterministic
+  render-smoke runner (python-coder, producer); sibling BO-570-2 (was BO-530-4b)
+  owns the sign-off-gate behavior that consumes the verdict (llm-expert, consumer).
+  User-originated (BrainCandy) process fix: motivated by a real escape, an
+  ssr:false render bug that only fails at route render time and reached PR/CI.
+  Re-parented + renamed to BO-570-1 in the Pattern C split that moved the local
+  verification gates out of BO-530 into the new sibling L1 BO-570.
+change_target: code
+risk_surface: contract_boundary

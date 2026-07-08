@@ -37,3 +37,5 @@ notes: |
   the re-home behaviors (ACS-800c-1 single-field move, ACS-800c-2 no cascade) being
   the truth the guidance must now describe. llm-expert (prose/skill body), not
   python-coder.
+change_target: prompt
+risk_surface: internal

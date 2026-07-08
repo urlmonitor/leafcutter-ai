@@ -65,3 +65,5 @@ notes: |
   never checks SOURCE-file existence — so the source-presence + #anchor logic is
   genuinely new and correctly NOT a duplication. See caveats in the run summary about
   the extraction surface being a coder decision.
+change_target: code
+risk_surface: contract_boundary

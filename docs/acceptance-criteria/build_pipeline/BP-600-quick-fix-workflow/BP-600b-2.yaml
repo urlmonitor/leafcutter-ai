@@ -43,8 +43,11 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-600b-2-i
 implemented_by:
   - "docs/reference/ac-schema.md#quick-fix-workflow-id-assignment"
   - "docs/acceptance-criteria/index.yaml"
   - "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md#ac-bp-600b-2"
+change_target: pipeline
+risk_surface: internal

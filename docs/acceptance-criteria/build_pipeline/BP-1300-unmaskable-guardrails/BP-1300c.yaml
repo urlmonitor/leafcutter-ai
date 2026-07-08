@@ -1,0 +1,34 @@
+id: BP-1300c
+title: "During automated drives, guardrails block instead of whispering"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  No more warn-only checks that pass unseen in a drive -- the ones that matter fail.
+
+  Guardrails that default to warnings today (self-description enforcement, ticket
+  sign-off parity outside the done state) enforce as failures during automated
+  drives, so a real problem stops the drive and gets acted on instead of scrolling
+  past invisibly in the logs.
+depends_on: [BP-1300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300c-1
+  - BP-1300c-2
+  - BP-1300c-3
+  - BP-1300c-1-i
+  - BP-1300c-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc

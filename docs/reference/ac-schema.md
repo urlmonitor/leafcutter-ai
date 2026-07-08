@@ -64,6 +64,8 @@ Each AC file is a single YAML document with the following fields.
 | `pattern_slots` | list of strings or null | no | List of `{word}` placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs — ACs that other ACs reference via `implements_pattern`. Each entry is a placeholder matching a named placeholder in the `criteria` field (e.g. `"{columns}"`, `"{default_sort}"`). Consuming ACs must supply a value for every slot via `pattern_bindings`. The `check_ac_schema.py` hook derives required slots from this list (falling back to scanning `criteria` for `{word}` placeholders when `pattern_slots` is absent). |
 | `documentation_triggers` | list of enums or null | no | Documentation types required for this feature. Valid on L1 ACs only. Values: `how-to`, `sequence-diagram`, `state-diagram`, `component-diagram`, `reference-doc`. Empty array = no docs needed (provide `documentation_rationale`). |
 | `documentation_rationale` | string or null | no | Explains why no documentation is needed when `documentation_triggers` is empty on an L1 AC. |
+| `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline (`_build_agents_map`) to look up mandatory guardrail agents. Accepts a single value OR a list when the AC spans multiple targets. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs that predate the computed-gates pipeline (ticket 10 will backfill). |
+| `risk_surface` | string | no | Classification of the blast-radius / risk exposure of this AC (ADR-017 blast-radius vocabulary). Combined with `change_target` to select mandatory guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
 
 ### Full example
 
@@ -614,6 +616,50 @@ The parent AC's `covered_by` update protocol (see §Authoring agents above) also
 applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
 is updated to include the child AC ID (this was already done by `build-ac` during
 AC creation). The test-writer only updates the child AC's `covered_by` field.
+
+### python-coder — AC Assignments section in generated card (INF-600b-2)
+
+When `generate_agent_cards.py` (called by `build.py`) generates a card for
+an agent, it now scans `docs/acceptance-criteria/` recursively for AC YAML
+files whose `assigned_agent` field equals the card's agent ID and whose
+`status` is `"active"`. The matching ACs are passed to `generate_card()` as
+`ac_assignments` and rendered as a `## AC Assignments` section at the end of
+the card:
+
+```markdown
+## AC Assignments
+
+### python-coder
+- INF-600g-1: spawned_by/spawn_allowlist reciprocity validation
+- INF-600g-2: __ticket_phase_agents__ redundancy detection
+```
+
+This section is omitted entirely when no active ACs are assigned to the agent.
+
+**`ac_traceability` frontmatter field → per-agent grouping**
+
+When a ticket has `ac_traceability: [INF-600g-1, INF-600g-2, INF-600g-3]`
+frontmatter referencing multiple L2/L3 AC YAML files, each of which has an
+`assigned_agent` field, the generated agent card groups those ACs by their
+`assigned_agent`. The grouping allows each agent to identify exactly which
+ACs it is responsible for without inspecting ACs assigned to other agents,
+and enables agents to implement one AC at a time rather than attempting all
+ticket work at once.
+
+**Data flow:**
+
+1. `build_agent_cards()` calls `_scan_ac_assignments(agent_id, target_root)`.
+2. `_scan_ac_assignments()` walks `docs/acceptance-criteria/**/*.yaml` and
+   collects dicts `{id, title, assigned_agent}` for all active ACs whose
+   `assigned_agent` equals the card agent.
+3. Results are passed to `generate_card(..., ac_assignments=results)`.
+4. `generate_card()` calls `render_ac_assignments(agent_id, ac_list)` which
+   produces the `## AC Assignments` section or returns `""` for an empty list.
+
+**Error handling:** `_scan_ac_assignments()` wraps file reads in
+`try/except OSError` and YAML parsing in `try/except yaml.YAMLError`. On
+error, a WARNING is emitted and the file is skipped — card generation
+continues without failing the build.
 
 ### triage agent (glossary-triage, debug)
 

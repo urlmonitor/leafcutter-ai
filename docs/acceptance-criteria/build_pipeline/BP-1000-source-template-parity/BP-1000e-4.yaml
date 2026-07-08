@@ -52,3 +52,5 @@ notes: |
   "name-matched pair present on both sides" pairing rule is the open design point
   the IT-PO should pin concretely (a workflow script becomes in-scope by gaining
   a mirror counterpart) -- see open question in the report.
+change_target: pipeline
+risk_surface: internal

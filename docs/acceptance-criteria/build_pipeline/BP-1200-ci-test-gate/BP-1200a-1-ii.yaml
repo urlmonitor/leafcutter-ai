@@ -59,7 +59,8 @@ amended_by:
     by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260629-BP-1200a-1-ii.md
 notes: |
   Root cause being guarded: ~36 tests fail at import/file-open on a clean
   checkout because they depend on gitignored build outputs
@@ -67,3 +68,5 @@ notes: |
   plain clone does not contain. DECIDED (final gate): Approach 1 closes the gap
   via a CI build step plus an install_shims shim_map extension bridging
   .leafcutter/scripts/ -> scripts/.
+change_target: code
+risk_surface: internal

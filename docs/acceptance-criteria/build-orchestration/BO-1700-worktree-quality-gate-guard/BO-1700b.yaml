@@ -1,0 +1,30 @@
+id: BO-1700b
+readiness: approved
+priority: medium
+title: "A workspace with unrunnable checks stops the work instead of waving it through"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  When the quality checks cannot be made to run, the workspace fails closed --
+  the work stops rather than proceeding unprotected.
+
+  You are never able to commit through a gap: if the gates cannot fire, nothing
+  slips past them.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: []
+documentation_rationale: "Fail-closed behavior is the enforcement expression of the guard documented under BO-1700a and BO-1700c; no separate user-facing documentation artifact is needed."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700b-1, BO-1700b-2, BO-1700b-3, BO-1700b-4]
+implemented_by: []

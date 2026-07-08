@@ -155,6 +155,53 @@ depends_on: []                     # epics are top-level
 | `advances_current_outcome` | optional | Boolean (`true` / `false`). Set `true` when this ticket directly advances the current must-achieve outcome in `docs/roadmap.json`. The hook prints a **warning** (not a block) when the value is not a boolean. Omit when not applicable. |
 | `artifact_checklist` | optional | Per-agent checklist overrides. Map of agent-name → list of item names. Merges with agent's default_artifact_checklist; ticket items extend defaults, same key overrides. |
 | `ac_coverage` | optional | Machine-readable AC completion ratio. Format: `N/M` where M = total AC count and N = number of validated ACs. Default `0/M` when first added. Updated by agents or the supervisor as ACs are confirmed green. Example: `ac_coverage: 3/6`. |
+| `change_target` | optional | What the change physically touches. One of: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Used by the computed quality gates system to derive the agent map. The hook blocks if present with an invalid value; absent field passes (backward-compatible). |
+| `risk_surface` | optional | Where the blast radius lands. One of: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Used alongside `change_target` to classify the two-axis risk profile of the ticket. The hook blocks if present with an invalid value; absent field passes (backward-compatible). |
+| `test_constraints` | optional | Constrains the types of tests test-writer should produce. String or list of strings. Common values: `unit_only` (only unit tests, no integration), `integration_required` (integration tests mandatory), `no_db_tests` (no tests that hit the database), `no_integration` (skip integration-level suggestions). Inferred by `generate_ticket_from_ac.py` from the AC's `test_constraints` field; may be set manually. |
+| `complexity` | optional | Inferred complexity label for this ticket. Enum: `low` / `medium` / `high`. Computed by `generate_ticket_from_ac.py` from the AC's `estimated_complexity` field (S → low, M → medium, L/XL → high) or from criteria line count when `estimated_complexity` is absent (1-2 lines → low, 3-6 → medium, 7+ → high). Drives model tier selection: `low`/`medium` → Sonnet, `high` → challenge gate before Opus. Override with `complexity_override: force_opus` in the AC to skip the challenge gate. |
+
+### test_constraints Examples
+
+The `test_constraints` field (optional) constrains which types of tests the
+`test-writer` agent will suggest or generate for this ticket.
+
+Common values:
+- `unit_only` — only unit tests; no integration tests
+- `integration_required` — integration tests are mandatory
+- `no_db_tests` — do not generate any tests that require a database connection
+- `no_integration` — alias for `unit_only` (recognized by test-writer)
+
+The field accepts a single string or a list of strings:
+
+```yaml
+# Single constraint:
+test_constraints: unit_only
+
+# Multiple constraints:
+test_constraints:
+  - unit_only
+  - no_db_tests
+```
+
+### complexity Field
+
+The `complexity` field (optional, enum: `low` / `medium` / `high`) drives the
+model tier used by llm-expert when processing the ticket:
+
+- `low` / `medium` → Sonnet (default)
+- `high` → challenge gate fires; user decides whether to simplify or escalate to Opus
+
+`generate_ticket_from_ac.py` infers this field automatically from the AC record:
+- `estimated_complexity: S` → `low`
+- `estimated_complexity: M` → `medium`
+- `estimated_complexity: L` or `XL` → `high`
+- Fallback (when `estimated_complexity` is absent): counted from criteria lines
+
+To force Opus without the challenge gate, set:
+
+```yaml
+complexity_override: force_opus
+```
 
 ### `depends_on` Resolution
 

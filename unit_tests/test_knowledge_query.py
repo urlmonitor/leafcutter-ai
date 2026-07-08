@@ -25,10 +25,13 @@ sys.path.insert(0, str(_SCRIPTS_DIR))
 # all tests in this file are collected as errors (valid RED state).
 # -----------------------------------------------------------------------
 from knowledge_query import (  # noqa: E402
+    KnowledgeMap,
     NodeRecord,
+    build_knowledge_map,
     extract_edges,
     extract_nodes,
     load_surfaces,
+    load_surfaces_with_meta,
 )
 
 
@@ -373,7 +376,7 @@ class TestPathsJsonSurfacesKey:
             "paths.json must have a top-level 'surfaces' key (KM-KQS-015)"
         )
         surfaces = data["surfaces"]
-        required_names = {"agents", "skills", "tickets", "docs", "adrs", "components", "roadmap", "glossary"}
+        required_names = {"agents", "skills", "tickets", "docs", "adrs", "components", "roadmap", "glossary", "acs"}
         actual_names = set(surfaces.keys())
         assert actual_names == required_names, (
             f"surfaces must have exactly {required_names}; got {actual_names}"
@@ -875,12 +878,17 @@ class TestEdgeCountIntegration:
         assert len(edges) >= 600, (
             f"Expected >= 600 edges after all improvements; got {len(edges)} (KM-KQS-025)"
         )
-        # All edge targets must be known node IDs (no phantoms)
+        # All edge targets must be known node IDs (no phantoms), EXCEPT for
+        # edge types that are intentionally exempt from phantom filtering
+        # (implemented_by and covered_by — these target file paths, not nodes).
         node_ids = {n["id"] for n in data.get("nodes", [])}
+        _PHANTOM_EXEMPT = {"implemented_by", "covered_by"}
         for edge in edges:
+            if edge["type"] in _PHANTOM_EXEMPT:
+                continue
             assert edge["target"] in node_ids, (
-                f"Edge target '{edge['target']}' is not in node set — "
-                f"phantom filtering must be applied (KM-KQS-025)"
+                f"Edge target '{edge['target']}' (type: {edge['type']!r}) is not in node set — "
+                f"phantom filtering must be applied for non-exempt edge types (KM-KQS-025)"
             )
         # Must contain at least one component_membership edge
         cm_edges = [e for e in edges if e["type"] == "component_membership"]
@@ -932,4 +940,272 @@ class TestPathsJsonEdgeFields:
             assert "related_docs" in edge_fields, (
                 f"Surface '{surface_name}' edge_fields must include 'related_docs' (KM-KQS-023); "
                 f"got {edge_fields}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# AC KM-KGS-100c-1: Surface contribution completeness
+# Every declared surface contributes nodes; assertion is against the declared
+# set itself, not a fixed expected number.
+# ---------------------------------------------------------------------------
+
+
+class TestSurfaceContributionCompleteness:
+    """KM-KGS-100c-1: Every declared surface contributes its nodes to the map.
+
+    The assertion is derived from the declared set in paths.json itself — no
+    surface name or surface count is hardcoded in these tests.  When a new
+    surface is added to paths.json the tests automatically cover it.
+    """
+
+    def test_build_knowledge_map_returns_knowledge_map_type(self):
+        # covers: KM-KGS-100c-1
+        """KM-KGS-100c-1: build_knowledge_map returns a KnowledgeMap with the required fields."""
+        km = build_knowledge_map(_REPO_ROOT, _REAL_PATHS_JSON)
+        assert isinstance(km, KnowledgeMap), (
+            "build_knowledge_map must return a KnowledgeMap instance"
+        )
+        assert isinstance(km.nodes, list), "KnowledgeMap.nodes must be a list"
+        assert isinstance(km.edges, list), "KnowledgeMap.edges must be a list"
+        assert isinstance(km.declared_surfaces, frozenset), (
+            "KnowledgeMap.declared_surfaces must be a frozenset"
+        )
+        assert isinstance(km.contributing_surfaces, frozenset), (
+            "KnowledgeMap.contributing_surfaces must be a frozenset"
+        )
+
+    def test_declared_surfaces_match_paths_json(self):
+        # covers: KM-KGS-100c-1
+        """KM-KGS-100c-1: declared_surfaces reflects exactly the present surfaces in paths.json."""
+        km = build_knowledge_map(_REPO_ROOT, _REAL_PATHS_JSON)
+        # Load surfaces with meta to get the authoritative present set
+        surfaces_meta = load_surfaces_with_meta(_REPO_ROOT, _REAL_PATHS_JSON)
+        expected_declared = frozenset(surfaces_meta.keys())
+        assert km.declared_surfaces == expected_declared, (
+            f"declared_surfaces must exactly match the present surfaces from paths.json; "
+            f"declared={km.declared_surfaces}, expected={expected_declared}"
+        )
+
+    def test_every_declared_surface_contributes_nodes(self):
+        # covers: KM-KGS-100c-1
+        """KM-KGS-100c-1: every present declared surface contributes at least one node."""
+        km = build_knowledge_map(_REPO_ROOT, _REAL_PATHS_JSON)
+        missing = km.declared_surfaces - km.contributing_surfaces
+        assert not missing, (
+            f"The following declared surfaces are present but contributed zero nodes: "
+            f"{sorted(missing)}.  Every present declared surface must contribute "
+            f"at least one node (KM-KGS-100c-1)."
+        )
+
+    def test_contributing_surfaces_subset_of_declared(self):
+        # covers: KM-KGS-100c-1
+        """KM-KGS-100c-1: no surface contributes nodes unless it was declared in paths.json."""
+        km = build_knowledge_map(_REPO_ROOT, _REAL_PATHS_JSON)
+        undeclared_contributors = km.contributing_surfaces - km.declared_surfaces
+        assert not undeclared_contributors, (
+            f"Nodes from undeclared surfaces were included in the map: "
+            f"{sorted(undeclared_contributors)}.  Only declared surfaces may "
+            f"contribute nodes (KM-KGS-100c-1)."
+        )
+
+    def test_optional_absent_surfaces_excluded_from_declared(self, tmp_path):
+        # covers: KM-KGS-100c-1
+        """KM-KGS-100c-1: optional surfaces whose path is absent are excluded from declared_surfaces."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        # A registry with one present surface and one optional-absent surface
+        registry = {
+            "agents": [
+                {
+                    "id": "test-agent",
+                    "name": "Test Agent",
+                    "description": "For testing.",
+                }
+            ]
+        }
+        (config_dir / "agent_registry.json").write_text(
+            json.dumps(registry), encoding="utf-8"
+        )
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": [],
+                },
+                "optional_ghost": {
+                    "path": "does/not/exist/",
+                    "edge_fields": [],
+                    "_optional": True,
+                },
+            }
+        }
+        paths_file = config_dir / "paths.json"
+        paths_file.write_text(json.dumps(paths_data), encoding="utf-8")
+
+        km = build_knowledge_map(tmp_path, paths_file)
+        assert "optional_ghost" not in km.declared_surfaces, (
+            "Optional absent surface must not appear in declared_surfaces "
+            "(KM-KGS-100c-1)"
+        )
+        assert "agents" in km.declared_surfaces, (
+            "Present surface must appear in declared_surfaces"
+        )
+
+    def test_assertion_uses_declared_set_not_fixed_count(self, tmp_path):
+        # covers: KM-KGS-100c-1
+        """KM-KGS-100c-1: the completeness assertion works for any number of surfaces.
+
+        This test verifies that contributing_surfaces == declared_surfaces holds
+        dynamically for a custom paths.json with an arbitrary set of surfaces —
+        proving that the assertion is parameterised on the declared set, not a
+        hardcoded surface count or name list.
+        """
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+
+        # Create two surfaces with different names (not the real ones)
+        registry_a = {"widgets": [{"id": "widget-alpha", "name": "Widget Alpha", "description": "Alpha."}]}
+        registry_b = {"gadgets": [{"id": "gadget-beta", "name": "Gadget Beta", "description": "Beta."}]}
+        (config_dir / "registry_a.json").write_text(json.dumps(registry_a), encoding="utf-8")
+        (config_dir / "registry_b.json").write_text(json.dumps(registry_b), encoding="utf-8")
+
+        paths_data = {
+            "surfaces": {
+                "widgets": {
+                    "path": "config/registry_a.json",
+                    "edge_fields": [],
+                },
+                "gadgets": {
+                    "path": "config/registry_b.json",
+                    "edge_fields": [],
+                },
+            }
+        }
+        paths_file = config_dir / "paths.json"
+        paths_file.write_text(json.dumps(paths_data), encoding="utf-8")
+
+        km = build_knowledge_map(tmp_path, paths_file)
+        # Both surfaces were declared and both have nodes
+        assert km.declared_surfaces == frozenset({"widgets", "gadgets"}), (
+            f"declared_surfaces must equal the set of surfaces in paths.json; "
+            f"got {km.declared_surfaces}"
+        )
+        # The assertion is against declared_surfaces, not a hardcoded count
+        assert km.contributing_surfaces == km.declared_surfaces, (
+            "Every declared surface must contribute nodes; "
+            "assertion is against declared set, not a fixed count (KM-KGS-100c-1)"
+        )
+
+
+# ---------------------------------------------------------------------------
+# KM-KQS-041: --list-surfaces flag lists declared surface names then exits 0
+# These tests are RED until python-coder adds the --list-surfaces argument to
+# main()'s argparse parser in scripts/knowledge_query.py.
+# ---------------------------------------------------------------------------
+
+
+class TestListSurfaces:
+    """KM-KQS-041: knowledge_query CLI --list-surfaces flag.
+
+    The --list-surfaces flag must:
+      (a) be accepted by argparse without raising SystemExit(2)
+      (b) print each declared surface name (one per line) to stdout
+      (c) exit with return code 0
+      (d) NOT run the full node+edge traversal (so it works without a
+          populated surface directory, as long as paths.json is present)
+
+    Before implementation, argparse raises SystemExit(2) with
+    "unrecognized arguments: --list-surfaces".  That is the expected RED state.
+    """
+
+    def test_ac_km_kqs_041_list_surfaces_exit_zero(self, tmp_path):
+        # covers: KM-KQS-041
+        """KM-KQS-041: --list-surfaces exits 0 when paths.json declares surfaces."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        # Minimal paths.json: two surfaces so we can verify both names appear.
+        # Surface directories/files do NOT need to exist — --list-surfaces must
+        # not run the traversal.
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": ["spawn_allowlist", "spawned_by", "skills_used"],
+                },
+                "skills": {
+                    "path": "templates/skills/",
+                    "edge_fields": ["dependencies"],
+                    "_optional": True,
+                },
+            }
+        }
+        (config_dir / "paths.json").write_text(
+            __import__("json").dumps(paths_data), encoding="utf-8"
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--list-surfaces",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"--list-surfaces must exit 0; returncode={result.returncode}; "
+            f"stderr: {result.stderr!r}; stdout: {result.stdout!r} "
+            f"(KM-KQS-041 — flag likely missing from argparse parser)"
+        )
+
+    def test_ac_km_kqs_041_list_surfaces_prints_declared_names(self, tmp_path):
+        # covers: KM-KQS-041
+        """KM-KQS-041: --list-surfaces prints each declared surface name to stdout."""
+        import json as _json
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        declared_surfaces = ["agents", "skills"]
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": ["spawn_allowlist"],
+                    "_optional": True,
+                },
+                "skills": {
+                    "path": "templates/skills/",
+                    "edge_fields": ["dependencies"],
+                    "_optional": True,
+                },
+            }
+        }
+        (config_dir / "paths.json").write_text(
+            _json.dumps(paths_data), encoding="utf-8"
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--list-surfaces",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        # If the flag is not recognised argparse emits returncode=2; we assert
+        # both exit-0 AND content here so coders see both failures at once.
+        assert result.returncode == 0, (
+            f"--list-surfaces must exit 0; returncode={result.returncode}; "
+            f"stderr: {result.stderr!r} (KM-KQS-041)"
+        )
+        stdout_lines = result.stdout.splitlines()
+        for name in declared_surfaces:
+            assert any(name in line for line in stdout_lines), (
+                f"Surface name '{name}' not found in --list-surfaces stdout; "
+                f"got: {result.stdout!r} (KM-KQS-041)"
             )

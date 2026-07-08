@@ -26,3 +26,5 @@ amended_by: []
 superseded_by: null
 covered_by: [ACS-400a, ACS-400b, ACS-400c, ACS-400d, ACS-400e]
 implemented_by: []
+change_target: code
+risk_surface: auth

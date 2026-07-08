@@ -1,0 +1,67 @@
+id: FIN-200c-1-i
+title: "Empty/zero-commit result is a clean no-op, not a capture failure"
+component: finalize
+level: L3
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200c-1
+criteria: |
+  Given the changelog step runs on a branch whose feature ref range contains
+    zero commits not already on main
+  When the changelog generation returns an empty/zero-commit result (no entry
+    file created, no error raised)
+  Then finalize classifies this as a successful no-op
+  And finalize does NOT emit a changelog-failure warning
+  And finalize does NOT record a missing-entry condition
+  And finalize does NOT halt, regardless of whether changelog-blocks-merge is
+    enabled
+
+  Given instead the changelog step returns an actual error (non-zero exit or a
+    raised failure) for a branch that had commits to record
+  When finalize evaluates the result
+  Then finalize treats it as a capture failure (the warn path of FIN-200c-1, or
+    the halt path of FIN-200c-3 when configured as required)
+  And finalize does not confuse this error with the empty-range no-op above
+depends_on:
+  - FIN-200c-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: S
+it_requirements: |
+  - finalize must discriminate three changelog-step outcomes from the capability's
+    own signals: (a) entry-written = exit 0 with a created file; (b) empty-range
+    no-op = exit 0 with no file (changelog-agent Step 2 prints a message, raises
+    nothing); (c) capture failure = non-zero exit or raised error
+  - The empty-range no-op (b) must NOT emit a failure warning, must NOT record a
+    missing-entry condition, and must NOT halt — even when changelog-blocks-merge
+    is enabled (the required-config halt of FIN-200c-3 is gated on a real error,
+    never on emptiness)
+  - The capture-failure (c) for a branch that HAD commits to record must route to
+    the warn path (FIN-200c-1) or the halt path (FIN-200c-3) per config — never be
+    misread as the no-op
+  - The discriminator must rely on the capability's existing exit-code/file-written
+    signals (do not re-derive emptiness with a parallel commit-count check that
+    could disagree with the capability)
+delivers_to: null
+expects_from:
+  - agent: changelog-agent
+    contract: "an empty range exits 0 with no file; an error exits non-zero — the two are distinguishable to finalize"
+doc_links:
+  - path: "templates/agents/changelog-agent.md"
+    relationship: describes
+    status: exists
+    relevance: "Step 2 — empty range prints a message and exits without creating a file (the no-op signal)"
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Changelog step result handling — branch on no-op vs error"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

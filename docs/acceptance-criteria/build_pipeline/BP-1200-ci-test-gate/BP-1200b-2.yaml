@@ -62,3 +62,5 @@ notes: |
   IT-PO note: the next free C2 diagram number is c2-007 (existing diagrams run
   c2-001..c2-006). The diagram's test-check name must match the ci.yml job name
   fixed in BP-1200b-1.
+change_target: docs
+risk_surface: internal

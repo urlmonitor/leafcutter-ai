@@ -59,3 +59,5 @@ notes: |
   parent-link + complexity constraints, and the read-only-vs-write capability
   labelling. Satisfies ACS-900e documentation_triggers [component-diagram] —
   S7b gate PASSES for ACS-900e.
+change_target: docs
+risk_surface: internal

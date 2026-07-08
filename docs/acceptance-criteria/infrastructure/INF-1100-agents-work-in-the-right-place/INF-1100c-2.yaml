@@ -45,3 +45,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Satisfies the 'proven by tests' part of INF-1100c: a regression that reintroduces a wrong or empty path must fail this test."
+change_target: code
+risk_surface: internal

@@ -50,3 +50,5 @@ notes: |
   (what each stage does, how to set it), consulted at promotion time. ID-derived
   parent is TQ-100e (the L1 carrying the documentation_trigger); the behavioral L2
   it documents (TQ-100e-1) is retained in depends_on.
+change_target: docs
+risk_surface: internal

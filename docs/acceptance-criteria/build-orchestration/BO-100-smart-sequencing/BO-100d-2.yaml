@@ -37,3 +37,5 @@ covered_by:
   - BO-100d-2a
   - BO-100d-2b
 implemented_by: []
+change_target: pipeline
+risk_surface: internal

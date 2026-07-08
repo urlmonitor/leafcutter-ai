@@ -82,3 +82,5 @@ notes: |
   for the file's language" phrasing in the criteria is satisfied by AST for .py
   and degrades to fail-open (GE-111b-2-i) for any language the resolver does not
   cover. This is the precise unavailability boundary the BA deferred to IT-PO.
+change_target: code
+risk_surface: contract_boundary

@@ -11,3 +11,5 @@ criteria: |
   And on confirmation it continues the normal phase sequence,
   And on rejection it halts cleanly without changes.
 notes: "Authored by /quick-fix. Root cause: guard unconditionally rejects main/master instead of prompting user for confirmation."
+change_target: pipeline
+risk_surface: safety

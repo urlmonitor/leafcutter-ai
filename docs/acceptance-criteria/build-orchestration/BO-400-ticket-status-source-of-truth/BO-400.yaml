@@ -33,3 +33,5 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-400a, BO-400b, BO-400c]
 implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

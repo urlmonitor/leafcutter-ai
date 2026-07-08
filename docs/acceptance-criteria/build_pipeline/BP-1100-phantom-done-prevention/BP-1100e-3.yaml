@@ -1,0 +1,54 @@
+id: BP-1100e-3
+readiness: approved
+priority: high
+title: "A sequence diagram shows where the declared-vs-actual reconciliation sits before done"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a reader who wants to understand when the post-change reconciliation runs
+    relative to the ticket lifecycle
+  When they view the sequence diagram for this flow
+  Then the diagram shows the ordered interaction: the ticket's work completes and its
+    gates pass, the pre-done reconciliation computes the actually-changed source files
+    and compares them against declared files_touched UNION out_of_scope, and the
+    verdict either advises (default) or blocks (strict) before the ticket is marked done
+  And the diagram makes visible that this check is POST-change and pre-done, distinct
+    from the BP-1100a pre-dispatch scope check
+depends_on:
+  - BP-1100e
+  - BP-1100e-1
+  - BP-1100e-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a sequence diagram (Mermaid sequenceDiagram) of gates-pass -> compute-changed-source-files -> compare-against-declared-scope -> advise-or-block -> mark-done, with the reconciliation positioned before the status: done transition."
+  - "The diagram must distinguish this post-change/pre-done check from the BP-1100a pre-dispatch check so the two bookends are not confused."
+  - "The diagram lives in the component architecture documentation (docs/architecture/, e.g. agent_delivery_workflows.md or a linked component doc) and satisfies the BP-1100e documentation_trigger (sequence-diagram); follow project diagram conventions (see write-c4-diagram skill)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-2
+  contract: "The advisory/strict reconciliation flow the diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Repointed the planned docs/architecture/ doc_link to the concrete agent_delivery_workflows.md (status exists) and added an it_requirement naming the diagram's documentation home + write-c4-diagram convention. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/07_TICKET-20260706-BP-1100e-3.md
+notes: |
+  Satisfies the BP-1100e documentation_trigger: sequence-diagram.

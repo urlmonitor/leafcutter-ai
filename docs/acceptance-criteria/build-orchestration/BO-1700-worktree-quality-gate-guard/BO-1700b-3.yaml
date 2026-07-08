@@ -1,0 +1,46 @@
+id: BO-1700b-3
+readiness: approved
+priority: high
+title: "A commit made with --no-verify is still refused where the main repo has gates"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700b.yaml"
+criteria: |
+  Given a commit is attempted with `--no-verify` in a worktree whose main tree
+    has a pre-commit config,
+  When the commit driver path runs,
+  Then the probe runs in the commit driver OUTSIDE the skippable pre-commit hook,
+    the probe FAILs because the hook chain did not fire, and the commit is
+    refused with a message stating the gate cannot be bypassed with --no-verify.
+  And a commit only proceeds when the probe returns a passing verdict, regardless
+    of whether --no-verify was passed.
+depends_on: [BO-1700b]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements: |
+  Dual-surface gate: the commit-phase check lives in the commit driver
+  (templates/agents/commit.md prose that runs the probe BEFORE git commit) so it
+  executes even when --no-verify skips the pre-commit hook — this is the whole
+  point (a hook-stage-only gate is bypassable, a commit-driver gate is not). This
+  AC owns wiring the commit-driver refusal into the commit agent template PROSE
+  (llm-expert surface); it does NOT reimplement the checks. The probe invocation
+  itself is the shared python-coder helper (BO-1700a-1), consumed here via
+  expects_from. Proceed only on exit 0 + empty failing_checks (BO-1700b-1). Gate
+  placement is coordinated with BO-1700d-3 (same commit.md surface).
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The shared probe (exit 0 + empty failing_checks == pass) the commit driver runs outside the skippable pre-commit hook."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

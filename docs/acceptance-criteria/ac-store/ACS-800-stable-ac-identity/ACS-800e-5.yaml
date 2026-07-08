@@ -43,3 +43,5 @@ notes: |
   definitions to the schema. NOTE the schema is currently additionalProperties:false
   and does NOT yet contain the parent-pointer or order fields — adding them is part of
   this AC. Depends on the field-defining ACs ACS-800a-1, ACS-800b-1/2/3.
+change_target: schema
+risk_surface: internal

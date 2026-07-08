@@ -54,3 +54,5 @@ notes: |
   per-I/O-boundary localized fail-open (return-None-on-failure) so the python-coder
   reproduces the sanctioned pattern rather than improvising. stdout-clean-on-error
   pinned so an internal error is never mistaken for a violation downstream.
+change_target: code
+risk_surface: internal

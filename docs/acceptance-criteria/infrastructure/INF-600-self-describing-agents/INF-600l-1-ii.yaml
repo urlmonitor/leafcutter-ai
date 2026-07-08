@@ -1,0 +1,47 @@
+id: INF-600l-1-ii
+readiness: approved
+priority: high
+title: "When the agent registry is absent, the mirror check no-ops instead of false-failing"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+criteria: |
+  Given a project that does not use the leafcutter agent system at all -- there is no
+    agent registry present
+  When the build runs the extended consistency check
+  Then the card<->registry mirror comparison no-ops: with no registry there is nothing
+    to mirror against, so it does NOT report a mismatch and does NOT fail the build
+  And it emits an advisory note (to stderr / log) that the check was skipped because
+    no agent registry was found, so the skip is visible rather than silent
+  And a project without the agent subsystem is never blocked or errored by this check
+depends_on:
+  - INF-600l-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When no agent registry is present, SKIP the entire mirror comparison (fail-open no-op) -- a project that does not use the agent subsystem must never be false-failed by this check."
+  - "The skip must be observable (advisory note that no registry was found); this is the registry-absent counterpart to the card-absent fail-open (INF-600l-1-i), consistent with the opt-in scoping in INF-600l-2."
+  - "PORTABLE SURFACE: this registry-absent fail-open lives in the same EXISTING hook (templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py) extended in INF-600l-1; the registry-absent no-op is what keeps the deployed hook harmless in a consumer that does not use the leafcutter agent subsystem at all. ADR-001 build.py round-trip parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: INF-600l-1
+  contract: "The card<->registry mirror-consistency verdict this AC guards with a fail-open no-op when the registry is absent."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned the existing-hook portable surface (check_agent_spawn_consistency.py, ADR-001 parity) and tied the registry-absent no-op to consumer portability. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCardMirror/03_TICKET-20260706-INF-600l-1-ii.md

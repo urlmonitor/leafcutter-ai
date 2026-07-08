@@ -54,3 +54,5 @@ notes: |
   Fail-safe direction: an unknown/typo'd AC id must never become an accidental
   off-switch. Unlinked == enforced; the dangling tag is also reported to the
   integrity check (TQ-100c-2 family) so it gets fixed.
+change_target: code
+risk_surface: contract_boundary

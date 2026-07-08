@@ -28,3 +28,5 @@ covered_by:
   - INF-400a-3
   - INF-400a-4
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

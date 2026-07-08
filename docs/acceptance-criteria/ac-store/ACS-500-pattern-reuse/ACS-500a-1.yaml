@@ -27,3 +27,5 @@ covered_by: []
 implemented_by:
   - "config/ac_store_schema.json"
   - "docs/reference/ac-schema.md"
+change_target: schema
+risk_surface: contract_boundary

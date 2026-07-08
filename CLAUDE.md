@@ -44,6 +44,21 @@ git commit -m "some message"
 # Agent tool → commit agent → dispatches COMMIT_AGENT_MODE=1 git commit internally
 ```
 
+### Commit messages must match the diff — MANDATORY
+
+Every factual claim in a commit message ("Added X", "Fixed Y", "Now logs a WARNING
+in Z") must be verifiable in `git diff --staged`. Do NOT describe an intended change
+that is not actually in the staged hunks. A message that claims work the diff does not
+contain is the same phantom-done failure mode this repo exists to prevent, one level up:
+it makes a reviewer (and future you) believe a change landed when it did not.
+
+**Why this matters:** During EPIC-PhantomDoneFilesTouched (2026-07-07) a remediation
+commit message stated a WARNING log had been added to a helper, but the diff contained
+no such change — the log was only added in a later round. The claim survived until a
+code-review agent grepped the actual file. Before committing, re-read your message against
+the staged diff and delete any claim you cannot point to a hunk for.
+(Source: EPIC-PhantomDoneFilesTouched retrospective KI-4, 2026-07-07.)
+
 ## Repository Structure
 
 This repo IS the leafcutter-ai package. Origin: `git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git`
@@ -76,6 +91,21 @@ Consult it for project-specific terms when reading code or docs.
   terms in staged files and dispatches the `glossary-triage` agent automatically.
 - **Do NOT hand-edit to add entries** — always use the triage flow so the blacklist
   stays consistent. Manual edits are only for correcting existing entries.
+
+## Knowledge & Memory Capture — MANDATORY
+
+When the user asks you to "remember this", "capture this", "write this down",
+"save this for later", or otherwise store a learning or memory, do NOT write
+directly to a memory file, the glossary, a doc, or a config value. First invoke
+the `route-knowledge` skill, which classifies the request and returns a
+structured `{ target_surface, path, rationale }` routing decision. Persist the
+knowledge to the surface it names.
+
+This prevents defaulting every learning to a memory file: `route-knowledge`
+distinguishes memory (session-spanning working context) from the glossary
+(project terminology), documentation surfaces (how-tos, references, ADRs,
+explanations), and config values. It is also the required pre-flight gate before
+dispatching `documentation-expert`.
 
 <!-- roadmap-phase:start — AUTO-GENERATED from docs/roadmap.json; edits between these markers are overwritten on next render -->
 
@@ -179,6 +209,20 @@ For deeper explanation of the Ruff rules, see:
 - [BLE001](https://docs.astral.sh/ruff/rules/blind-exception/) — blind exception catch
 - [TRY](https://docs.astral.sh/ruff/rules/#tryceratops-try) — tryceratops family
 
+## Implementation Conventions
+
+### Function Signature Extension — Call-Site Audit Required
+
+When a ticket extends the signature of an existing function (adds required or optional keyword arguments), the implementing agent must:
+
+1. **Grep for ALL existing call sites** in the codebase before declaring done.
+2. **Verify each call site** passes the new arguments (or explicitly documents why an old-argument call is an intentional backward-compat path).
+3. **Include call-site updates in the same commit** as the signature change.
+
+A function whose signature is extended but whose callers still use the old signature silently exercises the legacy code path. This is not catchable by tests that test the function directly — the tests pass against the function in isolation while every real call path uses the old signature.
+
+(Source: EPIC-ComputedQualityGates FP-1, 2026-07-07.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -247,6 +291,17 @@ run. 23 `submit-failed` events occurred without detection — the drive complete
 telemetry was captured, making the retrospective impossible.
 (Root cause ticket: TICKET-20260527-FeedbackSinkPreDriveCheck)
 
+**Also verify `feedback_categories.yaml` is accessible.** The `submit_feedback.py` script requires this file in the worktree's `.leafcutter/` directory. When absent, all agent feedback calls fail silently with `(submit-failed)`, making the retrospective's quantitative category breakdown unavailable.
+
+Check:
+```
+ls <worktree-root>/.leafcutter/feedback_categories.yaml
+```
+If the command fails (`No such file or directory`), the file is missing.
+
+Fix: symlink or copy from the main tree's `.leafcutter/` alongside the `.pre-commit-config.yaml` fix in the section below.
+(Source: EPIC-ComputedQualityGates FP-5, 2026-07-07.)
+
 ### Worktree pre-commit config (MANDATORY for worktree-based drives)
 
 Worktrees do not inherit `.pre-commit-config.yaml` from the main working tree.
@@ -285,6 +340,20 @@ suppression for a worktree-local false positive, add it to the workspace-root
 `.security-allowlist` (or duplicate it to both) — a suppression placed only in the
 worktree's `.security-allowlist` is silently ignored when the hook runs via the symlink path.
 (Observed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
+
+### Security Allowlist — Use Glob Patterns for Test Files
+
+When `check-secrets` flags false-positive `ENTROPY_HIGH` patterns in test files (e.g., keyword-argument strings such as `guardrail_config_path=_GUARDRAIL_CONFIG` that look like secret patterns), do **NOT** add per-line suppressions. Per-line entries (`ENTROPY_HIGH:<path>:<lineno>`) break as the test file grows — new lines shift existing line numbers, invalidating suppressions silently.
+
+Instead, use a single glob entry:
+
+```
+ENTROPY_HIGH:<path>:*
+```
+
+This is supported by `scan_secrets.py _is_suppressed` (checks `lineno == "*"`). Add the glob to **BOTH** the worktree-root and workspace-root `.security-allowlist` per the dual-update rule (the `check-secrets` hook resolves the allowlist from the workspace-root symlink target, not the worktree's own copy — a suppression placed only in the worktree's `.security-allowlist` is silently ignored).
+
+(Source: EPIC-ComputedQualityGates ticket 10 AC-5, 2026-07-07.)
 
 ### Land the scaffold commit on origin/main before creating the epic worktree
 
@@ -335,3 +404,48 @@ Do NOT use `COMMIT_AGENT_MODE=1` outside of a human-supervised batch drive.
 
 (Source: EPIC-Oneagenthandlesboththelookandthecodefor retrospective, 2026-06-22,
 Friction point #3.)
+
+### Full test suite + ruff at epic-finalize (before merge)
+
+**What to check:** Per-ticket sign-offs run only that ticket's own tests (often via
+`unittest discover` on a subdir), so cross-cutting breakage and lint violations slip
+through — especially when the worktree pre-commit hooks are not established. Before
+merging any epic PR, run the FULL suite and ruff from the worktree root:
+
+```bash
+python -m pytest <worktree-root>/unit_tests/ -q
+ruff check <worktree-root>/scripts <worktree-root>/tests <worktree-root>/unit_tests
+```
+
+Fix everything they surface on the branch before merge. Treat the pre-existing
+non-required pytest failures (the registry self-description build-guard) as the known
+baseline — but any NEW failure or any ruff violation is a merge blocker (ruff is a
+required CI gate).
+
+**Why this matters:** During EPIC-WorktreeQualityGateGuard (2026-07-06), two defects
+passed per-ticket sign-off but were caught only by the full run: (1) idempotency tests
+that read every deployed file as UTF-8 crashed on `__pycache__/*.pyc` under `pytest`
+though they passed under `unittest discover`; (2) `ruff F401/F841` unused-import/variable
+violations in new test files that the (unestablished) worktree ruff hook never ran. Both
+forced extra fix commits at finalize.
+(Source: EPIC-WorktreeQualityGateGuard retrospective KI-3, 2026-07-06.)
+
+### Real-artifact behavioral spot-check before declaring done
+
+**What to check:** Before an epic is called done (and ideally before the `pr-reviewer`
+phase signs off), exercise the changed component against the ACTUAL on-disk artifact it
+processes — not a hand-authored fixture — in a fresh process, and assert the observable
+behavior. For a parser/validator/matcher, feed it the real ticket / config / YAML exactly
+as the tool that writes it produces (e.g. `yaml.safe_dump`, PyYAML column-0 block lists),
+never an indented literal you typed.
+
+**Why this matters:** During EPIC-PhantomDoneFilesTouched (2026-07-07), all 7 tickets
+passed green phase sign-offs while the core hook was a **complete no-op on every real
+ticket**: real `files_touched` lists serialize with dashes at column 0, but the parser
+regex required indented dashes. The synthetic unit fixtures reproduced the indented bias,
+so the tests passed on a feature that did nothing. Even the first behavioral spot-check
+during remediation reused indented fixtures and missed it — only running the parser
+against a real on-disk ticket file caught the defect. Green sign-offs prove the code runs;
+they do not prove it works on the real data format.
+(Source: EPIC-PhantomDoneFilesTouched retrospective KI-1, 2026-07-07.
+See also user-memory feedback_spotcheck_real_data_format.)

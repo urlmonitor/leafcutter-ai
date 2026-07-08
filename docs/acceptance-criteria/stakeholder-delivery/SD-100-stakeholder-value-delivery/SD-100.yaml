@@ -1,0 +1,33 @@
+id: SD-100
+title: "Stakeholders see the value of what you are building, not raw requirements"
+component: stakeholder-delivery
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Product decisions become shareable -- the value you have committed to is told
+  to stakeholders in their own language, not left buried as internal files.
+
+  Today the value of every feature is captured the moment the Product Owner
+  approves it, but it never leaves the building -- it sits where only the team
+  can see it. This goal closes that gap. A dedicated delivery partner turns the
+  approved value into stakeholder-ready material: a polished deck you can present,
+  a tailored update you can send, and -- over time -- material that arrives
+  automatically the moment a decision is approved. Stakeholders always see what
+  is being built and why it matters, without anyone translating it by hand.
+depends_on: []
+doc_links:
+  - docs/presentations/ac-driven-orchestration.html
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [SD-100a, SD-100b, SD-100c, SD-100d, SD-100e]
+implemented_by: []
+change_target: [code, prompt]
+risk_surface: contract_boundary

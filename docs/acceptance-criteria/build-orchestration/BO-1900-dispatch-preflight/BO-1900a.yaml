@@ -1,0 +1,34 @@
+id: BO-1900a
+title: "A fit-to-dispatch check runs before any agent is spawned"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  No agent starts on a ticket that hasn't passed a fitness check first.
+
+  Between reading a ticket and spawning its phase agent, a preflight validation
+  stage runs. If the ticket is not fit to dispatch, the agent is never spawned and
+  you are told exactly why -- so a bad ticket can no longer burn a full run before
+  revealing the problem.
+depends_on: [BO-1900]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900a-1
+  - BO-1900a-2
+  - BO-1900a-1-i
+  - BO-1900a-1-ii
+  - BO-1900a-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

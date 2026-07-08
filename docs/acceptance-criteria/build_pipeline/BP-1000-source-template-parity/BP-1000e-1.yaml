@@ -66,3 +66,5 @@ notes: |
   Distinct from BP-100k (compiled-workflow-output drift via hash manifests at
   pre-commit on .claude/workflows/): this is source<->mirror byte diff at the
   merge gate. Reuse, do not re-invent, the BP-1000a-1 diff-runner approach.
+change_target: pipeline
+risk_surface: contract_boundary

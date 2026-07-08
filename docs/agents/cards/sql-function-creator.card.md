@@ -1,9 +1,10 @@
 ---
 agent_id: sql-function-creator
 title: "Agent Card: sql-function-creator"
+description: "Specialist for creating new SQL functions. Produces the .sql file, a matching unit test, and a design-decision record. Reads PROJECT_CONTEXT.md for project-specific paths, how-tos, and conventions. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-function-creator
@@ -32,8 +33,13 @@ for project-specific paths, how-tos, and conventions.
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -56,7 +62,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -72,7 +88,9 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -82,4 +100,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed to Step 3 until all four are determined. | `None` |
+| Conditional Behavior | ANY of the following are true | stop immediately and | `None` |
+| Conditional Behavior | the request clearly describes a function (returns a value | called inside a | `None` |

@@ -1,9 +1,10 @@
 ---
 agent_id: changelog-agent
 title: "Agent Card: changelog-agent"
+description: "Automated changelog entry agent. Reads git log since the last deployment tag, categorizes commits by file path and conventional-commit prefixes, and writes a new per-file changelog entry with YAML frontmatter via emit_entry.py. Also invoked standalone for on-demand changelog generation between arbitrary git refs. Does NOT modify the legacy CHANGELOG.md. Use when: /prod-deploy completes successfully; user invokes /changelog; or epic-supervisor needs a manual entry. Call site 1 (standalone /changelog and /prod-deploy tail). (internal — Call site 2 is handled directly by epic-supervisor Step 2.)"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-07-01
 card_version: "generated"
 ---
 # changelog-agent
@@ -37,8 +38,12 @@ manual entry. Call site 1 (standalone /changelog and /prod-deploy tail).
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 5 | skills_config.json config_keys | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -61,7 +66,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -88,4 +103,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | no `deploy-*` tag exists yet | use the initial commit as the start of the range | `None` |
+| Conditional Behavior | git log returns no commits (range is empty) | print a message and exit without | `None` |

@@ -1,0 +1,44 @@
+id: BP-300d-3-i
+title: "The unsupported-runtime prose fallback deploys without error — fallback is not treated as a build failure"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d-3.yaml"
+criteria: |
+  Given a build for an unsupported Claude Code runtime where the prose body is
+    the intended deployed body for the primary delivery commands,
+  When build.py completes the command-deployment phase,
+  Then the build succeeds with a zero exit status,
+  And the supported-runtime routing guardrail (BP-300d-4) does NOT fire against
+    the prose bodies, because deploying prose on an unsupported runtime is the
+    documented fallback rather than a regression.
+depends_on:
+  - BP-300d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d-3.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The routing guardrail must be runtime-aware: prose deployed on an unsupported runtime is a pass; prose deployed on a supported runtime is a failure (BP-300d-4). The distinguishing input is the runtime-support decision, not the deployed body alone."
+delivers_to: null
+expects_from:
+  ac_id: BP-300d-3
+  contract: "The unsupported-runtime deployment outcome, asserted here to complete cleanly and to be exempt from the supported-runtime regression guardrail."
+origin_agent: business-analyst
+created: 2026-07-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,41 @@
+id: BO-1800a-1-i
+readiness: approved
+priority: medium
+title: "A drive killed mid-commit cannot corrupt any other drive's object store"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800a.yaml"
+criteria: |
+  Given drive A and drive B are running concurrently in their own independent clones,
+  When drive A's process is killed part-way through writing a commit (leaving a
+    half-written or zero-length loose object in drive A's own object store),
+  Then drive B's object store, refs, and index remain intact and usable, and drive B
+    can continue committing and complete its work with no error.
+  And any damage is confined to drive A's own object store (which is discarded when
+    that drive is removed), so no shared store shared with drive B is affected.
+depends_on: [BO-1800a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A drive killed mid-commit MUST confine all damage to its own object store; a sibling drive's object store, refs, and index MUST remain byte-for-byte usable and able to keep committing (blast-radius boundary, not a recovery path — recovery is BO-1600d, de-prioritised)."
+  - "The isolation guarantee MUST hold with no manual repair of any shared store."
+  - "Verifiable by simulating a killed writer in one clone (leaving a half-written/zero-length loose object) and asserting the sibling clone completes its work with no error."
+delivers_to: null
+expects_from:
+  ac_id: BO-1800a-1
+  contract: "The independent per-drive object store whose isolation this edge case exercises under a crash."
+origin_agent: it-po
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/02_TICKET-20260707-BO-1800a-1-i.md

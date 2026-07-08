@@ -1,0 +1,45 @@
+id: BO-1700c-1-iv
+readiness: approved
+priority: medium
+title: "Self-heal is atomic and idempotent under concurrent commits"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c.yaml"
+criteria: |
+  Given two commits run concurrently in the same worktree and both trigger the
+    self-healing hook,
+  When the hook re-materializes the config,
+  Then it writes to a temporary path and renames into place, so that a concurrent
+    racer that loses the race observes either the prior state or a complete valid
+    config, never an empty or partially-written config file.
+  And given the hook is run a second time when the config already resolves,
+    Then it makes no change and the resulting config content is byte-identical to
+      the first run (idempotent).
+depends_on: [BO-1700c-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Write-temp-then-atomic-rename for the copy fallback; the symlink path is
+  create-or-noop. No observer ever sees a truncated config. Re-running yields
+  byte-identical state (idempotent). Implemented in the self-healing hook
+  (BO-1700c-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700c-1
+  contract: "The self-healing hook's write path this edge case constrains."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
