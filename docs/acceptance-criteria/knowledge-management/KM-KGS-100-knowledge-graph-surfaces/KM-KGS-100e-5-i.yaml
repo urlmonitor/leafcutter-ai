@@ -1,0 +1,40 @@
+id: KM-KGS-100e-5-i
+readiness: draft
+priority: high
+title: "An item whose component cannot be inferred is reported for review, never guessed"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given the store contains an item lacking component membership whose correct
+    component cannot be determined from its content or its location
+  When the backfill is run
+  Then the item is reported for human review rather than assigned a guessed component
+  And the item's frontmatter is left unchanged
+  And the report names the item and states why its component could not be inferred
+depends_on:
+  - KM-KGS-100e-5
+doc_links:
+  - path: config/paths.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-5
+  contract: "The backfill pass over items that lack a component membership"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

@@ -1,0 +1,50 @@
+id: KM-KGS-100e-3
+readiness: draft
+priority: high
+title: "Registry-declared items (agents, skills, roadmap) must declare a component too"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given knowledge-map surfaces that are declared through registries — the agent
+    registry, the skill registry, and the roadmap — each of which declares a
+    component-membership relationship, and one surface (the glossary) that declares
+    no component-membership relationship
+  When an entry in a membership-declaring surface is added or changed while its
+    component membership is absent or empty
+  Then that change is flagged and blocked with a message naming the entry and
+    stating that a component membership must be declared
+  And an entry in a membership-declaring surface whose component membership names a
+    component present in the registry passes
+  And a change to the glossary surface, which declares no component-membership
+    relationship, is not subject to this rule
+depends_on:
+  - KM-KGS-100e
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: config/agent_registry.json
+    relationship: context
+    status: exists
+  - path: docs/roadmap.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

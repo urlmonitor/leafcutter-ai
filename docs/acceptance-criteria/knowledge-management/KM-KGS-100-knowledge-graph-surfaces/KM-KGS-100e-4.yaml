@@ -1,0 +1,54 @@
+id: KM-KGS-100e-4
+readiness: draft
+priority: high
+title: "Every criterion produced by the authoring agents already carries its component"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given the acceptance-criterion store contains criteria whose recorded author is
+    the product-owner authoring agent, the business-analyst authoring agent, or the
+    IT-product-owner authoring agent
+  When the store is scanned for the criteria produced by those authoring agents
+  Then every such criterion declares a component-membership field that is a
+    non-empty list
+  And every value in that list names a component present in the project's component
+    registry
+  And a criterion authored by one of those agents that declares no component
+    membership is reported as a violation
+depends_on:
+  - KM-KGS-100e
+  - KM-KGS-100e-1
+doc_links:
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/product-owner.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The rule that a non-empty, registry-valid component membership is required on every acceptance criterion"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
