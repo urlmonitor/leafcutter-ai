@@ -8,6 +8,7 @@
         "id",
         "title",
         "component",
+        "components",
         "status",
         "criteria"
     ],
@@ -390,11 +391,27 @@
             "minLength": 1
         },
         "components": {
-            "description": "Additional component names this AC spans beyond the primary 'component' field. Rarely used; only when an AC genuinely belongs to multiple components.",
+            "description": "Authoritative component-membership list. This is the field the knowledge graph reads to build component_membership edges (config/paths.json 'acs' surface edge_fields), so it must be present and non-empty. Every value must be a component id declared in docs/acceptance-criteria/index.yaml. The scalar 'component' is retained for backward compatibility; 'components' is the field enforcement and the graph rely on.",
             "type": "array",
+            "minItems": 1,
             "items": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "enum": [
+                    "finalize",
+                    "ticket-creation",
+                    "build-pipeline",
+                    "build-orchestration",
+                    "infrastructure",
+                    "ux-prototyping",
+                    "persona-management",
+                    "ac-store",
+                    "guardrail-engine",
+                    "knowledge-management",
+                    "testing-quality",
+                    "stakeholder-delivery",
+                    "ac-driven-dev"
+                ]
             }
         },
         "scope": {

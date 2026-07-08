@@ -25,6 +25,10 @@ from pathlib import Path
 
 import yaml
 
+# _ac_components lives alongside this script; sys.path[0] is the script dir when
+# invoked as `python scripts/ac_store/validate_ac_schema.py ...`.
+from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Validation constants
@@ -59,8 +63,14 @@ _FIELD_HELP: dict[str, str] = {
 }
 
 
-def _validate_file(path: Path) -> list[str]:
-    """Validate a single YAML file for required readiness/priority fields.
+def _validate_file(path: Path, registry_ids: set[str] | None = None) -> list[str]:
+    """Validate a single YAML file for required readiness/priority/components fields.
+
+    Args:
+        path: YAML file to validate.
+        registry_ids: Valid component ids from index.yaml. When None, the
+            registry is loaded lazily (per-call) — callers validating many files
+            should load it once and pass it in.
 
     Returns a list of error strings. Empty list = valid.
     """
@@ -107,6 +117,13 @@ def _validate_file(path: Path) -> list[str]:
             f"Valid values: {sorted(_PRIORITY_VALUES)}."
         )
 
+    # --- Validate components (required non-empty registry-valid list) ---
+    # KM-KGS-100e-1 / -1-i / -1-ii: the `components` LIST is the field the
+    # knowledge graph reads to build component_membership edges.
+    if registry_ids is None:
+        registry_ids = load_registry_ids()
+    errors.extend(components_field_errors(data, registry_ids))
+
     # --- Validate documentation_triggers (optional, but enum-constrained) ---
     if "documentation_triggers" in data and data["documentation_triggers"] is not None:
         triggers = data["documentation_triggers"]
@@ -146,6 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     all_errors: list[str] = []
     files_checked = 0
 
+    # Load the component registry once for the whole run.
+    registry_ids = load_registry_ids()
+
     for arg in args:
         path = Path(arg)
         if not path.exists():
@@ -153,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if path.suffix not in {".yaml", ".yml"}:
             continue  # Skip non-YAML files silently
-        errors = _validate_file(path)
+        errors = _validate_file(path, registry_ids)
         all_errors.extend(errors)
         files_checked += 1
 

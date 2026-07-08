@@ -30,7 +30,7 @@ Each AC file is a single YAML document with the following fields.
 |---|---|---|---|
 | `id` | string | **yes** | Stable AC identifier. Format: `PREFIX-NNN` (see ID Format below). Never changes after creation. |
 | `title` | string | **yes** | One-line human-readable description of the criterion. |
-| `component` | string | **yes** | Component name matching an `id` key in `docs/acceptance-criteria/index.yaml`. |
+| `component` | string | **yes** | Primary component name matching an `id` key in `docs/acceptance-criteria/index.yaml`. Retained for backward compatibility; the knowledge graph reads the `components` **list** (below), not this scalar. Keep both in sync. |
 | `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, `superseded_by`, or `superseded`. (`superseded_by` is canonical; `superseded` is accepted for older records.) |
 | `criteria` | string | **yes** | Multi-line Gherkin scenario body (`Given`/`When`/`Then`/`And`). |
 | `created` | date or string | no | Date this AC was created (`YYYY-MM-DD`). Most records use this field (92 %). YAML bare dates are parsed as native date objects; both forms are accepted. |
@@ -56,7 +56,7 @@ Each AC file is a single YAML document with the following fields.
 | `roadmap_phase` | string | no | Roadmap phase this AC belongs to (e.g. `phase_1`). Matches a phase key in `docs/roadmap.json`. |
 | `notes` | string | no | Free-form contextual notes — authorship context, post-implementation findings, or rationale that does not belong in `criteria`. |
 | `parent` | string | no | Explicit parent AC ID. Used when the structural parent cannot be mechanically derived from the ID format. Prefer the id-based derivation algorithm where possible. |
-| `components` | list of strings | no | Additional component names this AC spans beyond the primary `component` field. Rarely used. |
+| `components` | list of strings | **yes** | Authoritative component-membership list — **this is the field the knowledge graph reads** to build `component_membership` edges (see `config/paths.json` `acs` surface `edge_fields`). Must be present and non-empty, and every value must be an `id` from `docs/acceptance-criteria/index.yaml`. The scalar `component` (below) is retained for backward compatibility, but `components` is what enforcement and the graph rely on. Most single-component ACs set `components: [<same value as component>]`. Existing records were brought up to standard by `scripts/ac_store/backfill_components.py`. |
 | `scope` | string | no | Scope qualifier (e.g. `standing` for standing/permanent requirements that persist across sprints). |
 | `child_limit_override` | integer or null | no | **Temporary escape hatch.** Raises (never lowers) the default child count hard cap for this parent AC. When set to `N`, the `check-ac-tree-limits` hook uses `max(default_cap, N)` as the effective cap. An override below the default is silently ignored (fail-open). An `OVERRIDE ACTIVE` audit line is emitted to stderr (non-blocking) when the override is active and `child_count` exceeds the default. Only meaningful on L0 and L1 ACs. **Must be removed once the structural reorganisation (e.g. AC-UID-decoupling) is complete.** |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |

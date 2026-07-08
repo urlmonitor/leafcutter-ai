@@ -84,6 +84,10 @@ components:
     prefix: SD
     description: "ACs for stakeholder-facing delivery of product value: the presentation-agent that renders the Product Owner's approved value propositions into self-contained HTML decks (now) and tailored stakeholder emails (later). A delivery/communication agent class with a stakeholder audience, distinct from the engineer-facing documentation-expert."
     owner: null
+  - id: ac-driven-dev
+    prefix: ACD
+    description: "ACs for the AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog"
+    owner: null
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #
