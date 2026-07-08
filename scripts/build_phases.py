@@ -32,6 +32,12 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``_files_content_identical`` does the same for binary files via SHA-256.
     Skipped files are counted in module-level ``_uptodate_count`` and surfaced
     by main() via ``reset_uptodate_count`` / ``get_uptodate_count``.
+    ``detect_deploy_collisions`` is a pure function that accepts a flat list of
+    (source_template_path, resolved_target_path) pairs and returns every target
+    path claimed by two or more distinct source templates (BP-100m guardrail).
+    ``_compute_phase_mappings`` enumerates those pairs for all file-based
+    artifact phases so build.py can run detect_deploy_collisions before any
+    file write occurs.
 """
 
 from __future__ import annotations
@@ -67,6 +73,170 @@ from build_precommit import (  # noqa: E402, F401  # re-exported for callers
     _find_decision_history_index,
     _build_output_lines,
 )
+
+
+# ---------------------------------------------------------------------------
+# Deploy-path collision detection (BP-100m guardrail)
+# ---------------------------------------------------------------------------
+
+def detect_deploy_collisions(
+    phase_mappings: list[tuple[Path, Path]],
+) -> list[dict]:
+    """Return one entry per distinct target path claimed by >=2 distinct source templates.
+
+    Collision detection is path-keyed and content-agnostic: two (source, target)
+    entries share the same target Path if and only if their target Path values
+    compare equal, regardless of whether the source files have identical content
+    (BP-100m-1-i). A single source template fanned out to multiple distinct target
+    paths (e.g. cross-platform deployment) is NOT a collision (BP-100m-2-i).
+    Detection is ordering-independent: the result is the same regardless of the
+    order of entries in phase_mappings (BP-100m-3).
+
+    This is a pure function — it performs no file I/O. Per the project Error
+    Handling Policy (Rule 4), no try/except is used here.
+
+    Args:
+        phase_mappings: Flat list of (source_template_path, resolved_target_path)
+            pairs across ALL artifact phases, in phase order.
+
+    Returns:
+        List of collision dicts, one per colliding target:
+            {
+                "target":  Path — the shared deployed output path,
+                "sources": list[Path] — every source template that maps to it
+                    (in first-seen order across phase_mappings),
+            }
+        Empty list means no collisions detected (build may proceed).
+    """
+    target_to_sources: dict[Path, list[Path]] = {}
+    for source, target in phase_mappings:
+        if target not in target_to_sources:
+            target_to_sources[target] = []
+        if source not in target_to_sources[target]:
+            target_to_sources[target].append(source)
+
+    return [
+        {"target": target, "sources": sources}
+        for target, sources in target_to_sources.items()
+        if len(sources) >= 2
+    ]
+
+
+def _per_platform_mappings(
+    template_dir: Path,
+    output_root: Path,
+    platforms: dict[str, bool],
+    platform_dirs: dict[str, str | None],
+    glob_pattern: str,
+) -> list[tuple[Path, Path]]:
+    """Return (source, target) pairs for one template directory deployed per-platform.
+
+    Pure helper for ``_compute_phase_mappings``: iterates the template directory
+    and produces one pair per (template_file, active_platform_with_output_dir)
+    combination.  Files whose names start with ``_`` are skipped.
+
+    Args:
+        template_dir: Directory containing template source files.
+        output_root: Root of the consolidated output directory.
+        platforms: Dict of platform name → is_active flag from config.
+        platform_dirs: Dict of platform name → output subpath (None = skip).
+        glob_pattern: Glob pattern selecting which files to include (e.g. ``"*.md"``).
+
+    Returns:
+        Flat list of (source_path, resolved_target_path) pairs.
+    """
+    result: list[tuple[Path, Path]] = []
+    if not template_dir.exists():
+        return result
+    for f in sorted(template_dir.glob(glob_pattern)):
+        if f.name.startswith("_"):
+            continue
+        for platform, is_active in platforms.items():
+            if not is_active:
+                continue
+            subpath = platform_dirs.get(platform)
+            if subpath:
+                result.append((f, output_root / subpath / f.name))
+    return result
+
+
+def _compute_phase_mappings(
+    output_root: Path,
+    config: dict[str, Any],
+) -> list[tuple[Path, Path]]:
+    """Enumerate (source_template, resolved_target) pairs for all file-based artifact phases.
+
+    Does not perform any write I/O — only iterates directories. Used by
+    build.py's collision guard to enumerate would-be deploy paths before any
+    write occurs. The ordering mirrors the artifact_phases list in
+    build.py's _run_phases().
+
+    Covers the phases that deploy per-filename template files and are therefore
+    susceptible to target-path collisions: agents, commands, workflows, hooks.
+    Phases that deploy to unique canonical paths (ac_store scripts, workflow JS
+    scripts, etc.) are omitted because they have no cross-phase collision risk.
+
+    Args:
+        output_root: Absolute path to the consolidated output directory
+            (e.g. ``<target>/.leafcutter``).
+        config: Build configuration dict; reads ``config["platforms"]``.
+
+    Returns:
+        Flat list of (source_template_path, resolved_target_path) pairs,
+        in artifact phase order.
+    """
+    platforms: dict[str, bool] = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False,
+    })
+
+    _agents_pdirs: dict[str, str | None] = {
+        "claude": "agents",
+        "antigravity": "gemini/agents",
+        "cursor": None,
+        "copilot": None,
+        "cline": None,
+    }
+    _workflows_pdirs: dict[str, str | None] = {
+        "claude": "commands",
+        "antigravity": "gemini/workflows",
+        "cursor": "cursor/rules",
+        "copilot": "copilot-instructions",
+        "cline": "cline/rules",
+    }
+    _hooks_pdirs: dict[str, str | None] = {
+        "claude": "hooks",
+        "antigravity": "gemini/hooks",
+        "cursor": None,
+        "copilot": None,
+        "cline": None,
+    }
+
+    # build_agents: templates/agents/*.md → per-platform agent directories
+    mappings = _per_platform_mappings(
+        TEMPLATES_DIR / "agents", output_root, platforms, _agents_pdirs, "*.md"
+    )
+
+    # build_commands: templates/commands/*.md → output_root/commands/ (single target)
+    commands_src = TEMPLATES_DIR / "commands"
+    if commands_src.exists():
+        for f in sorted(commands_src.glob("*.md")):
+            mappings.append((f, output_root / "commands" / f.name))
+
+    # build_workflows: templates/workflows/*.md → per-platform workflow directories
+    mappings.extend(_per_platform_mappings(
+        TEMPLATES_DIR / "workflows", output_root, platforms, _workflows_pdirs, "*.md"
+    ))
+
+    # build_hooks: templates/hooks/*.py → per-platform hook directories
+    mappings.extend(_per_platform_mappings(
+        TEMPLATES_DIR / "hooks", output_root, platforms, _hooks_pdirs, "*.py"
+    ))
+
+    return mappings
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +463,7 @@ def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
         ValueError: When ``engine`` is ``"e1"`` — E1 is not supported.
     """
     if engine == "e1":
-        raise ValueError(
+        raise ValueError(  # noqa: TRY003
             "E1 workflow engine is not supported. "
             "Use engine='e2' or engine='auto' (resolves to e2). "
             "The E1 wrap was removed in EPIC-DualEngineWorkflowSupport/09 "
@@ -2137,4 +2307,14 @@ def clean_stale_artifacts(
 #   Updated build_workflow_scripts docstring to reflect E1 is unsupported.
 #   Ruff F401 clean: hashlib and json remain used elsewhere in this module.
 #   (#EPIC-DualEngineWorkflowSupport/09)
+# - 2026-07-07 [python-coder/TICKET-20260707-BP-100m-1]:
+#   Added deploy-path collision guardrail (BP-100m). Three new symbols:
+#   detect_deploy_collisions() — pure function; groups (source, target) pairs
+#   by target; any target with >=2 distinct sources is a collision.
+#   _per_platform_mappings() — extracted helper to iterate one template dir
+#   across all active platforms; reduces complexity of _compute_phase_mappings
+#   from 20 to 3. _compute_phase_mappings() — enumerates would-be deploy pairs
+#   for the four file-based artifact phases (agents, commands, workflows, hooks).
+#   Also suppressed pre-existing TRY003 violation in _emit_workflow_variant
+#   (#TICKET-20260707-BP-100m-1)
 # ====================================================================
