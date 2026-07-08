@@ -1,6 +1,6 @@
 ---
 title: "A code ticket cannot be authored or dispatched without a Test Requirements section"
-status: in_progress
+status: done
 components:
   - ticket_creation_pipeline
   - supervisor_system
@@ -29,8 +29,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 05: A code ticket cannot be authored or dispatched without a Test Requirements section
@@ -98,8 +98,8 @@ tests:
 - [x] python-coder — 2026-07-08 12:17
 - [x] test-runner — 2026-07-08 12:19
 - [x] pr-reviewer — 2026-07-08 12:20
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-07-08 12:22
+- [x] pull-request — 2026-07-08 12:23
 
 ## Comments
 
@@ -177,6 +177,21 @@ completion_manifest:
   error_handling_correct: true
   ruff_clean: true
 All 3 ACs satisfied. AC-1: guard correctly blocks code tickets with empty/absent Test Requirements and returns actionable reason. AC-2: non-code tickets (docs-only, config-only) pass through without blocking. AC-3: build-ticket.js CODER_PHASES guard returns structured blocker (status: "blocked", classification: "halt") before dispatching coder phase. Error handling in main() wraps OSError per repo convention. Ruff clean. Approving for commit.
+
+### 2026-07-08 12:22 — commit (status: ok)
+feedback-id: fb_2026-07-08_b4cf80ba
+completion_manifest:
+  staged_files_match_files_touched: true
+  commit_created: true
+  pre_commit_hooks_passed: true
+Committed SHA 8d8b465e on branch EPIC-PromptAssemblyHardening. 4 files, 674 insertions(+), 16 deletions(-). All pre-commit hooks passed.
+
+### 2026-07-08 12:23 — pull-request (status: ok)
+feedback-id: fb_2026-07-08_4b209a29
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed branch EPIC-PromptAssemblyHardening to origin. PR #242 updated with commit 8d8b465e. PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/242
 
 ## Implementation Tasks
 
