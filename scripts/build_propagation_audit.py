@@ -101,6 +101,20 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     # build_template_standalone_scripts), so it is legitimately absent from the
     # _manifest_template_standalone_scripts scan of templates/scripts/.
     "scripts/onboard_hook_opt_in.py",
+    # scripts/feedback/{submit_feedback,aggregate,resolve_feedback}.py — the
+    # feedback subsystem scripts were untracked in #164 ("untrack previously-
+    # committed real files (now .gitignore'd build-output symlinks)") and are
+    # supplied to consumer projects via the install_shims() shim_map rather than
+    # committed to the package tree. They are referenced by feedback agents/skills
+    # (epic-supervisor, ticket-supervisor, retrospective-agent, user-surface-smoker,
+    # build-single-ticket, signoff, feedback-review, ticket-wiring) but are absent
+    # from a fresh clone, so the reference guard blocked every fresh-clone build.
+    # Allowlisted so the guard does not block; the feedback subsystem degrades
+    # gracefully when the scripts are absent. A follow-up should add a proper
+    # deploy phase (build_phases.py) so feedback works out of the box.
+    "scripts/feedback/submit_feedback.py",
+    "scripts/feedback/aggregate.py",
+    "scripts/feedback/resolve_feedback.py",
 ])
 
 # Regex to extract script basename from entries like:
