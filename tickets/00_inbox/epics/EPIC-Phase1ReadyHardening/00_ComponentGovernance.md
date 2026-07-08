@@ -1,6 +1,6 @@
 ---
 title: "Component-registry governance validation + AC-hook UTF-8 fail-open"
-status: in_progress
+status: done
 components:
   - ac-store
 created: 2026-07-07
@@ -38,7 +38,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -147,7 +147,7 @@ And the commit is NOT blocked by this hook.
 - [x] test-runner — 2026-07-08 08:51
 - [x] pr-reviewer — 2026-07-08 10:30
 - [x] commit — 2026-07-08 09:07
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 10:45
 
 ## Comments
 
@@ -262,6 +262,14 @@ completion_manifest:
   new_high_confidence_blockers: false
   escalated_to_opus: false
 Second-pass review confirmed H-1 fixed: validate_component_minimum_schema, validate_agent_affinity, validate_exposed_interfaces, and validate_depends_on are all called inside the added_keys loop in main(); all_component_ids computed once before loop. M-2 fixed: snake_case regex (r'^[a-z][a-z0-9_]*$') present; import re added. One medium finding surfaced: doc_path.exists() in validate_component_minimum_schema is unwrapped I/O — violates error-handling Rule 1 and the fail-open design intent; low practical risk (pre-existing pattern in sibling code), not a blocker. Medium count 1 (below escalation threshold of 3). No new high-confidence blockers. Signing off status: ok.
+
+### 2026-07-08 10:45 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: false — PR #223 already existed; push-only mode as instructed
+  pr_body_complete: true
+Branch EPIC-Phase1ReadyHardening pushed to origin (4385a000..1769b073). Existing epic PR #223 updated with the new commits. Status flipped to done (last needed agent signed off).
 
 ### 2026-07-08 09:07 — commit (status: ok)
 feedback-id: (submit-failed)
