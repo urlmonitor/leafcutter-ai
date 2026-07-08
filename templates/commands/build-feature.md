@@ -14,7 +14,7 @@ manually as an LLM conversation.**
 Invoke the `build-feature` workflow script via the Workflow tool:
 
 ```
-Workflow("scripts/workflows/build-feature.js", { target: $ARGUMENTS })
+Workflow("build-feature", { target: $ARGUMENTS })
 ```
 
 If the Workflow tool is unavailable or the script returns an error, stop

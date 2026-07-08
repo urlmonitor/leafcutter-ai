@@ -14,7 +14,7 @@ manually as an LLM conversation.**
 Invoke the `finalize-feature` workflow script via the Workflow tool:
 
 ```
-Workflow("scripts/workflows/finalize-feature.js", { branch: $ARGUMENTS })
+Workflow("finalize-feature", { branch: $ARGUMENTS })
 ```
 
 If the Workflow tool is unavailable or the script returns an error, stop
