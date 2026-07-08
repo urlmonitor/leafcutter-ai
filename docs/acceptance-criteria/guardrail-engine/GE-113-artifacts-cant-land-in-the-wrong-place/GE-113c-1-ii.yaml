@@ -1,0 +1,75 @@
+id: GE-113c-1-ii
+components:
+  - guardrail-engine
+title: "check-doc-frontmatter resolves the project root correctly and validates staged docs from both a worktree and the main checkout"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the check_doc_frontmatter guard is invoked by git to validate a staged
+    ticket .md or docs/*.md file, in BOTH the deployed epic/feature worktree
+    layout (where it runs via the .leafcutter symlink whose target resolves to
+    the workspace parent) AND the source/main checkout layout,
+  When the guard resolves its project root in order to open() and validate the
+    staged file's frontmatter,
+  Then the resolved project root is the actual checkout root (the worktree root,
+    or the repository root in the main checkout) as reported by
+    `git rev-parse --show-toplevel`, not the workspace parent reached by
+    following the .leafcutter symlink,
+  And the guard opens and validates the staged file successfully rather than
+    dying at open() on a path built from the wrong root,
+  And the frontmatter gate actually runs and reports genuine frontmatter
+    violations rather than being bypassed with SKIP=check-doc-frontmatter,
+  And the verification exercises the REAL worktree failure path — the guard is
+    run from an actual git worktree checkout against a real staged ticket/doc
+    file exactly as the ticket tooling / PyYAML writes it, not a synthetic
+    in-repo fixture.
+depends_on:
+  - GE-113c-1
+  - GE-113c-1-iv
+doc_links:
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300g-6.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Derive the project root via `git rev-parse --show-toplevel` through the ONE shared _resolve_root helper mandated by GE-113c-1 — NOT Path(__file__).resolve().parents[N], and NOT by following the .leafcutter symlink to the workspace parent. This is the exact false-fail class recorded in CLAUDE.md (in an epic/feature worktree, check-doc-frontmatter resolves the staged path against the workspace parent and dies at open())."
+  - "The frontmatter gate must ACTUALLY VALIDATE after the fix: a green commit result must mean the staged file's frontmatter was checked, never that check-doc-frontmatter was skipped via SKIP=. Do not leave the SKIP= bypass as the de-facto path."
+  - "Behavioral verification must exercise a REAL worktree against a REAL on-disk artifact, not a synthetic fixture: run the guard from an actual git worktree checkout against a staged ticket .md / docs/*.md file serialized exactly as the ticket tooling and PyYAML produce it (column-0 block style), asserting open() succeeds and genuine violations are reported. This repo has a documented history of synthetic fixtures reproducing the bug-hiding bias and passing while the real worktree path stays broken (CLAUDE.md real-artifact spot-check rule; user-memory feedback_spotcheck_real_data_format)."
+  - "No regression for the source/main checkout: the guard must resolve the project root and validate frontmatter identically when run from the main repository checkout, mirroring the GE-113c-1-i no-regression guarantee — both layouts resolve correctly through the one shared mechanism."
+  - "Must handle git-unavailable gracefully per the project error handling policy: the shared helper wraps the git subprocess call (no bare except, Ruff E722/BLE001/TRY), warns, and falls back to a safe deterministic resolution (the ACS-300g-6 __file__-relative fallback precedent)."
+  - "Deployed/template parity (ADR-001): the canonical fix lives under templates/scripts/commit_guardian/check_doc_frontmatter.py and the scripts/ copy is a build output — edit the template and round-trip via build.py; never edit only one side."
+  - "The root-resolution call must complete in <100ms (mirror ACS-300g-6)."
+delivers_to: null
+expects_from:
+  ac_id: GE-113c-1
+  contract: "The single shared project-root resolver from GE-113c-1 (scripts/commit_guardian/_resolve_root.py, returning the checkout top-level Path via `git rev-parse --show-toplevel` with a safe fallback); check_doc_frontmatter consumes it as the base path for opening and validating the staged ticket/doc file."
+origin_agent: it-po-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Latent quality hole: check-doc-frontmatter false-fails in epic/feature worktrees when committing a ticket .md or docs/*.md because it resolves the project root by following the .leafcutter symlink to the workspace parent and dies at open(); the standing workaround is SKIP=check-doc-frontmatter, which bypasses the frontmatter gate entirely (CLAUDE.md; user-memory project_worktree_docfrontmatter_pathbase / project_worktree_checkdocfrontmatter_falsefail). Brought under the GE-113c-1 root-resolution mandate."
+change_target: code
+risk_surface: contract_boundary

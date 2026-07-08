@@ -1,0 +1,67 @@
+id: GE-113c-1-iv
+components:
+  - guardrail-engine
+title: "Every guard obtains the project root through one shared resolver so the wrong-root bug class cannot recur"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given multiple pre-commit guards each need the project root, and a single
+    shared root-resolution helper (scripts/commit_guardian/_resolve_root.py,
+    resolving via `git rev-parse --show-toplevel` with a documented safe
+    fallback) exists per GE-113c-1,
+  When check_doc_frontmatter, check_secrets, and any future guard obtain the
+    project root,
+  Then each guard obtains the project root exclusively through that one shared
+    helper,
+  And no guard re-derives the project root via
+    Path(__file__).resolve().parents[N] or by following the .leafcutter symlink
+    to the workspace parent,
+  And a new guard added later that needs the project root reuses the same
+    shared helper rather than introducing its own resolution mechanism, so this
+    wrong-root bug class cannot recur.
+depends_on:
+  - GE-113c-1
+doc_links:
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300g-6.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Single shared helper mandate: every guard under scripts/commit_guardian/ that needs the project root must obtain it through the ONE shared _resolve_root helper (the GE-113c-1 shared resolver). Forbid per-guard Path(__file__).resolve().parents[N] root literals and any resolution that follows the .leafcutter symlink to the workspace parent."
+  - "Consolidate the two currently-divergent mechanisms flagged in GE-113c-1 — the ACS-300g-6 _repo_root() inside check_components_integrity.py and the separate _resolve_root.find_project_root() — into ONE, so a guard cannot regress to a wrong-root literal. Migrate existing guards (at minimum check_components_integrity.py, check_doc_frontmatter.py, check_secrets.py) onto the shared helper."
+  - "Regression-proofing as a testable invariant: no guard in the commit_guardian guard set derives the project root by any mechanism other than the shared helper. State the WHAT (e.g. a meta-test or repo assertion that finds no residual parents[N]/symlink-following root derivation across the guard set) and let python-coder choose the HOW."
+  - "The git-unavailable graceful fallback (wrap the subprocess, no bare except, warn, safe deterministic fallback per the project error handling policy and ACS-300g-6) lives ONCE in the shared helper, not duplicated per guard."
+  - "Deployed/template parity (ADR-001): the shared helper and every migrated guard are edited under templates/scripts/commit_guardian/ and round-tripped to scripts/ via build.py — never edit only one side."
+delivers_to:
+  agent: python-coder
+  contract: "The consolidation guarantee: check_components_integrity.py, check_doc_frontmatter.py, check_secrets.py, and any future commit_guardian guard obtain the project root exclusively through the single shared _resolve_root helper (git rev-parse --show-toplevel + safe fallback), with no per-guard parents[N] literal or .leafcutter-symlink-following resolution remaining in the guard set."
+expects_from:
+  ac_id: GE-113c-1
+  contract: "The single shared project-root resolver produced by GE-113c-1 (scripts/commit_guardian/_resolve_root.py); this AC generalizes its adoption across all guards and forbids alternative per-guard mechanisms."
+origin_agent: it-po-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Architectural constraint reinforcing GE-113c-1's shared-resolver mandate: rather than each guard re-deriving the project root (the recurring source of the deployed-layout .leafcutter false-fail / ModuleNotFoundError bug class), all guards route through one corrected helper so the class cannot recur. IT-PO recommends the shared helper (it already exists as _resolve_root.py); this AC makes its universal adoption an explicit, testable constraint."
+change_target: code
+risk_surface: contract_boundary
