@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_coverage: 0/1
 ---
 
@@ -110,6 +110,13 @@ completion_manifest:
   component_name_fixed: true
 Committed 3 files (templates/workflows-js/finalize-feature.js, the ticket, unit_tests/test_finalize_feature_preflight_branch_detection.py) under SHA 203520c0. Two pre-commit fixups were needed: the ticket's component name was corrected from `build-pipeline` to `build_pipeline`, and a `feedback-id: (submit-failed)` placeholder was added to the ticket-supervisor phase-skip comment (ticket-supervisor is not an allowed feedback writer). All 38 pre-commit checks passed on the retry.
 
+### 2026-07-08 09:12 — pull-request (status: ok)
+feedback-id: fb_2026-07-08_feb4ff63
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+PR #231 created: https://github.com/urlmonitor/leafcutter-ai/pull/231. Branch `feature/finalize-preflight-branch-detection` pushed to origin and PR opened against `main` with the worktree-anchored pre-flight fix. No existing PR was found before creation.
+
 ## Implementation Tasks
 - [x] In `finalize-feature.js`, derive the target worktree from the epic `args`
   (resolve via `git worktree list` matching branch `EPIC-<name>` / ticket branch).
@@ -128,4 +135,4 @@ Committed 3 files (templates/workflows-js/finalize-feature.js, the ticket, unit_
 - [x] test-runner — 2026-07-08 08:59
 - [x] pr-reviewer — 2026-07-08 09:10
 - [x] commit — 2026-07-08 09:09
-- [ ] pull-request
+- [x] pull-request — 2026-07-08 09:12
