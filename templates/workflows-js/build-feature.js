@@ -35,16 +35,10 @@
 export const meta = {
   name: "build-feature",
   description:
-    "Resolve a build target (epic folder or single ticket file) and drive it to completion. " +
-    "Dispatches a status-checker to determine epic-vs-single-ticket and set up the worktree. " +
-    "For epics: runs the planner then dispatches each ticket's phases individually through the " +
-    "flattened per-phase driver via parallel(). " +
-    "For single tickets: dispatches each needed phase as a flat depth-1 agent() call. " +
-    "No workflow() call — E2 leaf-invariant preserved.",
+    "Resolve a build target (epic folder or single ticket file) and drive it to completion. Dispatches a status-checker to determine epic-vs-single-ticket and set up the worktree. For epics: runs the planner then dispatches each ticket's phases individually through the flattened per-phase driver via parallel(). For single tickets: dispatches each needed phase as a flat depth-1 agent() call. No workflow() call — E2 leaf-invariant preserved.",
   phases: [
     "resolve-target: status-checker determines epic vs single-ticket + worktree path",
-    "build: planner + parallel batch dispatch (epic) or direct dispatch (single), " +
-      "both using the flattened per-phase driver (agentType: phaseName per phase)",
+    "build: planner + parallel batch dispatch (epic) or direct dispatch (single), both using the flattened per-phase driver (agentType: phaseName per phase)",
   ],
 };
 
