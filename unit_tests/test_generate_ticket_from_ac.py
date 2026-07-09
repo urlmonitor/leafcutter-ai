@@ -1627,6 +1627,17 @@ class TestTestRequirementsDerivedFromAC:
         assert len(descriptors) == 1
         assert descriptors[0]["name"] == "test_bp_900_satisfies_criteria"
 
+    def test_colliding_then_clauses_yield_unique_names(self):
+        # Slugs that collide after the disambiguation suffix must not silently
+        # produce two descriptors with the same name (one test would be lost).
+        ac = {
+            "assigned_agent": "python-coder",
+            "criteria": "Given a\nWhen b\nThen x 2\nThen x\nThen x",
+        }
+        descriptors = _derive_tests_from_criteria(ac, "ZZ-100")
+        names = [d["name"] for d in descriptors]
+        assert len(names) == len(set(names)), f"duplicate test names: {names}"
+
     def test_test_required_false_omits_section(self):
         ac = {
             "assigned_agent": "llm-expert",

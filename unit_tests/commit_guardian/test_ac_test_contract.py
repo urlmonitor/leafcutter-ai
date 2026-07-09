@@ -46,8 +46,19 @@ def test_test_spec_satisfies_contract():
     ) == []
 
 
-def test_test_required_false_satisfies_contract():
-    assert validate_test_contract(_P, _ac(test_required=False)) == []
+def test_non_code_ac_test_required_false_ok():
+    # test_required: false is valid ONLY for a non-code AC.
+    assert validate_test_contract(
+        _P,
+        _ac(assigned_agent="documentation-expert", change_target="docs", test_required=False),
+    ) == []
+
+
+def test_code_ac_test_required_false_is_blocked():
+    # A code AC cannot opt out of tests — the generated ticket would be blocked
+    # by the check-ticket-test-requirements guard, so reject it at the AC level.
+    errors = validate_test_contract(_P, _ac(test_required=False))
+    assert errors and "test_required: false on a code AC" in errors[0]
 
 
 def test_contradiction_spec_and_required_false():
