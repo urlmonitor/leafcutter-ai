@@ -910,6 +910,14 @@ if (closureAlreadyCommitted) {
       { agentType: "status-checker", label: "step-3.5-reset-merge", phase: "Step 3.5" }
     )
 
+    // Derive the epic scope prefix from the branch name.
+    // For EPIC-* branches the closure is restricted to that epic's own ticket folder.
+    // For single-ticket branches (no EPIC- prefix) SCOPE_PREFIX is empty — git diff
+    // already limits discovery to files the branch changed, so no folder filter is needed.
+    const SCOPE_PREFIX = BRANCH.startsWith("EPIC-")
+      ? `tickets/00_inbox/epics/${BRANCH}/`
+      : "";
+
     // Sub-step B + C + D + E: find in-scope tickets, close them, close ACs, commit.
     const closureResult = await agent(
       "Close in-scope tickets and their source ACs on the feature branch.\n" +
@@ -917,15 +925,22 @@ if (closureAlreadyCommitted) {
       "=== CONTEXT ===\n" +
       `Feature branch: ${BRANCH}\n` +
       `Worktree root: ${WORKTREE_ROOT}\n` +
+      `SCOPE_PREFIX: '${SCOPE_PREFIX}'\n` +
+      "(SCOPE_PREFIX is non-empty for EPIC-* branches — only paths under it are eligible.)\n" +
       "\n" +
       "=== SUB-STEP B: FIND IN-SCOPE TICKETS ===\n" +
-      "Find all ticket .md files that this branch introduced or modified:\n" +
+      "CRITICAL: Only close tickets that this branch explicitly changed via git.\n" +
+      "DO NOT walk the whole ticket store — that causes cross-epic contamination.\n" +
+      "\n" +
+      "B1. List ticket files changed by this branch (git-only — no worktree walk):\n" +
       `  Run: git -C ${WORKTREE_ROOT} diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
-      "  Also include any ticket file in the worktree that has status != done:\n" +
       `  Run: git -C ${WORKTREE_ROOT} log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
       "  Combine both lists; deduplicate. Exclude Master_Plan.md.\n" +
-      "  For each file, read its frontmatter `status:` field.\n" +
-      "  Collect only files where status != 'done' (skip already-done tickets — AC-5 idempotency).\n" +
+      `  If SCOPE_PREFIX ('${SCOPE_PREFIX}') is non-empty: discard every path that does NOT start with SCOPE_PREFIX.\n` +
+      "  Log: 'SCOPE_PREFIX=<value>; in-scope ticket candidates from git diff: <count>'\n" +
+      "\n" +
+      "B2. For each remaining file, read its frontmatter `status:` field.\n" +
+      "  Collect only files where status != 'done' (skip already-done tickets — idempotency).\n" +
       "  Call this list OPEN_TICKETS.\n" +
       "  If OPEN_TICKETS is empty: log 'No open tickets to close.' and skip to REPORTING.\n" +
       "\n" +
@@ -951,11 +966,35 @@ if (closureAlreadyCommitted) {
       `  Run: git -C ${WORKTREE_ROOT} add tickets/\n` +
       `  Run: git -C ${WORKTREE_ROOT} add docs/acceptance-criteria/ 2>/dev/null || true\n` +
       `  Run: git -C ${WORKTREE_ROOT} diff --cached --name-only\n` +
-      "  If staged files exist:\n" +
-      `    Run: git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
-      "    Log: 'Closure commit created on feature branch.'\n" +
-      "  Else:\n" +
-      "    Log: 'Nothing staged after edits — all tickets were already done.'\n" +
+      "  Capture the list as STAGED_PATHS.\n" +
+      "\n" +
+      "  SCOPE GUARD — verify every staged path is within the epic scope:\n" +
+      "  A path is allowed when ANY of these hold:\n" +
+      "    - It starts with 'docs/acceptance-criteria/' (AC closure files).\n" +
+      `    - SCOPE_PREFIX ('${SCOPE_PREFIX}') is non-empty AND the path starts with SCOPE_PREFIX.\n` +
+      "    - SCOPE_PREFIX is empty AND the path is in the OPEN_TICKETS list.\n" +
+      "  Any path that does not satisfy one of these conditions is a SCOPE VIOLATION.\n" +
+      "\n" +
+      "  If any SCOPE VIOLATION is found:\n" +
+      `    Run: git -C ${WORKTREE_ROOT} reset HEAD\n` +
+      "    Log: 'ABORT: closure commit aborted — staged paths fall outside epic scope.'\n" +
+      "    For each violating path log: 'OUT-OF-SCOPE: <path>'\n" +
+      "    Return:\n" +
+      "    {\n" +
+      '      "tickets_closed": [],\n' +
+      '      "acs_closed": 0,\n' +
+      '      "acs_skipped": 0,\n' +
+      '      "commit_made": false,\n' +
+      '      "scope_violation": true,\n' +
+      '      "out_of_scope_paths": ["<violating path 1>", ...]\n' +
+      "    }\n" +
+      "\n" +
+      "  If all staged paths pass the scope guard:\n" +
+      "    If staged files exist:\n" +
+      `      Run: git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
+      "      Log: 'Closure commit created on feature branch.'\n" +
+      "    Else:\n" +
+      "      Log: 'Nothing staged after edits — all tickets were already done.'\n" +
       "\n" +
       "=== REPORTING ===\n" +
       "Return a JSON object:\n" +
@@ -963,7 +1002,9 @@ if (closureAlreadyCommitted) {
       '  "tickets_closed": ["<path1>", ...],\n' +
       '  "acs_closed": <integer>,\n' +
       '  "acs_skipped": <integer>,\n' +
-      '  "commit_made": true|false\n' +
+      '  "commit_made": true|false,\n' +
+      '  "scope_violation": false,\n' +
+      '  "out_of_scope_paths": []\n' +
       "}",
       { agentType: "status-checker", label: "step-3.5-closure", phase: "Step 3.5" }
     )
@@ -973,10 +1014,25 @@ if (closureAlreadyCommitted) {
       const { value, malformed } = safeParseJSON(closureResult);
       if (malformed) {
         log("[finalize-feature] step 3.5 closure parse malformed — assuming zero tickets/ACs closed");
-        closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false };
+        closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
       } else {
-        closureInfo = value || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false };
+        closureInfo = value || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
       }
+    }
+
+    // Surface any scope violation clearly so the operator can investigate.
+    // A scope violation means the agent staged paths outside the epic's own folder
+    // and the guard correctly aborted the commit (no closure commit was made).
+    if (closureInfo.scope_violation) {
+      const offendingPaths = Array.isArray(closureInfo.out_of_scope_paths)
+        ? closureInfo.out_of_scope_paths
+        : [];
+      log(
+        "[finalize-feature] step 3.5 SCOPE VIOLATION: closure commit aborted — " +
+        "staged paths fall outside epic scope (" + (SCOPE_PREFIX || "branch-diff-derived") + ").\n" +
+        "Offending paths:\n" +
+        offendingPaths.map(p => `  - ${p}`).join("\n")
+      );
     }
 
     // Accumulate counts into workflow-level variables.
