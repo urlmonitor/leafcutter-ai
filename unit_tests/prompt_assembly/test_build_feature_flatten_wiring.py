@@ -23,7 +23,6 @@ Red baseline (pre-implementation):
   test_bo2000f4i passes immediately (synthetic-snippet guard probe).
 """
 
-import os
 import pathlib
 import re
 import unittest
