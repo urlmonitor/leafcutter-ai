@@ -54,6 +54,10 @@ DECISION HISTORY:
     call to _ac_store_index.get_ac_index(). The git cat-file --batch optimization
     from PR #185 is preserved unchanged. The shared mtime-keyed cached index is
     parsed exactly once per commit across all four AC guardrail hooks.
+  - 2026-07-08 [feature/ac-source-of-truth-test-spec]: Wired validate_test_contract()
+    into the per-file validation pass so a staged leaf code AC must declare a test
+    contract (test_spec or test_required: false). ACs are the source of truth for
+    what test-writer must test. (AC BO-2000e)
 """
 
 from __future__ import annotations
@@ -68,7 +72,8 @@ from typing import Any
 from _ac_schema_validators import (  # noqa: E402
     load_yaml, load_yaml_from_string, load_yaml_manual,
     validate_criteria_not_pattern_duplicate, validate_deprecated_pattern_reference,
-    validate_manually, validate_pattern_bindings_completeness, validate_with_jsonschema,
+    validate_manually, validate_pattern_bindings_completeness, validate_test_contract,
+    validate_with_jsonschema,
 )
 
 try:
@@ -557,6 +562,11 @@ def _validate_file(
 
     if not schema_validated:
         errors.extend(validate_manually(data))
+
+    # Test-contract gate (single-file, semantic): a leaf code AC must declare a
+    # test_spec or an explicit test_required: false. ACs are the source of truth
+    # for what test-writer must test.
+    errors.extend(validate_test_contract(path, data))
 
     if all_ac_data is not None:
         errors.extend(validate_pattern_bindings_completeness(path, data, all_ac_data))

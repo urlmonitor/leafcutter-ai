@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -540,6 +541,181 @@ def _build_implementation_notes_section(ac: AcRecord) -> str:
     ])
 
 
+def _slugify_for_test(text: str, max_words: int = 8) -> str:
+    """Convert free text into a snake_case identifier fragment for a test name.
+
+    Args:
+        text: Source text (e.g. a Gherkin Then clause or an AC id).
+        max_words: Cap on the number of words retained.
+
+    Returns:
+        A lowercase snake_case fragment safe for a Python test function name.
+    """
+    words = re.findall(r"[A-Za-z0-9]+", text.lower())
+    if not words:
+        return "criterion"
+    return "_".join(words[:max_words])
+
+
+def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
+    """Derive best-effort test descriptors from an AC's Gherkin criteria.
+
+    Fallback used only when the AC carries no explicit ``test_spec``. Each
+    ``Then`` clause in the criteria becomes one test descriptor, so the derived
+    ticket still tells test-writer what to assert straight from the criteria —
+    the AC remains the source of truth. When no ``Then`` clause is present a
+    single generic descriptor is emitted so the ticket is never left with an
+    empty test contract.
+
+    Args:
+        ac: Parsed AC record.
+        ac_id: The AC id.
+
+    Returns:
+        List of test descriptor dicts (name / file / covers / asserts).
+    """
+    criteria = str(ac.get("criteria") or "")
+    slug = _slugify_for_test(ac_id)
+    then_clauses = [
+        m.group(1).strip()
+        for m in re.finditer(r"^\s*Then\b(.*)$", criteria, re.MULTILINE | re.IGNORECASE)
+        if m.group(1).strip()
+    ]
+    file_path = f"unit_tests/test_{slug}.py"
+    if not then_clauses:
+        return [{
+            "name": f"test_{slug}_satisfies_criteria",
+            "file": file_path,
+            "covers": [ac_id],
+            "asserts": "Derived from AC criteria — replace with a concrete assertion.",
+        }]
+    tests: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for clause in then_clauses:
+        name = f"test_{slug}_{_slugify_for_test(clause)}"
+        if name in seen:
+            # Disambiguate until unique — a fixed suffix can still collide with an
+            # earlier clause's slug, which would silently drop a test.
+            suffix = len(tests)
+            candidate = f"{name}_{suffix}"
+            while candidate in seen:
+                suffix += 1
+                candidate = f"{name}_{suffix}"
+            name = candidate
+        seen.add(name)
+        tests.append({
+            "name": name,
+            "file": file_path,
+            "covers": [ac_id],
+            "asserts": clause,
+        })
+    return tests
+
+
+def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
+    """Build test descriptors from the AC's explicit ``test_spec`` field.
+
+    ``test_spec`` is the source-of-truth test contract authored on the AC by
+    it-po. Each entry is normalised into the ticket ``## Test Requirements``
+    shape (name / file / covers / asserts, plus optional framework / type /
+    requires_db). The ``file`` path is derived from ``target_dir`` and the AC id
+    when the entry does not already point at a ``.py`` file.
+
+    Args:
+        ac: Parsed AC record.
+        ac_id: The AC id.
+
+    Returns:
+        List of test descriptor dicts. Empty when ``test_spec`` is absent or
+        contains no usable entries.
+    """
+    test_spec = ac.get("test_spec")
+    if not isinstance(test_spec, list) or not test_spec:
+        return []
+    slug = _slugify_for_test(ac_id)
+    descriptors: list[dict[str, Any]] = []
+    for item in test_spec:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not name:
+            continue
+        target_dir = str(item.get("target_dir") or "").rstrip("/")
+        if target_dir.endswith(".py"):
+            file_path = target_dir
+        elif target_dir:
+            file_path = f"{target_dir}/test_{slug}.py"
+        else:
+            file_path = f"unit_tests/test_{slug}.py"
+        entry: dict[str, Any] = {
+            "name": name,
+            "file": file_path,
+            "covers": item.get("covers") or [ac_id],
+        }
+        if item.get("description"):
+            entry["asserts"] = item["description"]
+        if item.get("framework"):
+            entry["framework"] = item["framework"]
+        if item.get("type"):
+            entry["type"] = item["type"]
+        if item.get("requires_db"):
+            entry["requires_db"] = True
+        descriptors.append(entry)
+    return descriptors
+
+
+def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
+    """Build the ## Test Requirements section, derived from the AC.
+
+    Source-of-truth order:
+      1. explicit ``test_spec`` on the AC (authored by it-po) — preferred;
+      2. otherwise derive stubs from the Gherkin ``criteria`` Then-clauses.
+
+    Either way the tests are derived from the AC — never a hardcoded ``tests: []``
+    stub — so the ticket-level Test Requirements guard passes by construction and
+    test-writer receives a real, AC-derived contract. Returns an empty string
+    only when the AC explicitly sets ``test_required: false`` (genuinely
+    test-free), in which case the caller omits the section.
+
+    Args:
+        ac: Parsed AC record.
+        ac_id: The AC id.
+
+    Returns:
+        Formatted ``## Test Requirements`` markdown block, or ``""`` when the AC
+        is explicitly marked test-free.
+    """
+    if ac.get("test_required") is False:
+        return ""
+
+    descriptors = _test_descriptors_from_spec(ac, ac_id)
+    if not descriptors:
+        descriptors = _derive_tests_from_criteria(ac, ac_id)
+
+    try:
+        # sort_keys=False is REQUIRED: 'name' must stay the first key in each test
+        # item so check_ticket_test_requirements._TESTS_ENTRY_RE ("- name: \\S+")
+        # and the --verify guard-equivalence regex both match. Do not enable sorting.
+        block = yaml.dump(
+            {"tests": descriptors},
+            default_flow_style=False,
+            allow_unicode=True,
+            sort_keys=False,
+        ).rstrip()
+    except yaml.YAMLError as exc:
+        logger.warning("Could not serialise derived test descriptors to YAML: %s", exc)
+        return ""
+
+    return "\n".join([
+        "## Test Requirements",
+        "",
+        "```yaml",
+        block,
+        "```",
+        "",
+    ])
+
+
 def _build_signoffs_section(agents: dict[str, str]) -> str:
     """Build the ## Sign-offs section from the agents map.
 
@@ -740,14 +916,12 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     ]
 
     if has_code_producer:
-        lines.extend([
-            "## Test Requirements",
-            "",
-            "```yaml",
-            "tests: []",
-            "```",
-            "",
-        ])
+        # Derive the Test Requirements from the AC (test_spec first, else the
+        # Gherkin criteria) — never a hardcoded empty stub. The AC is the source
+        # of truth for what test-writer must test.
+        test_requirements = _build_test_requirements_section(ac, ac_id)
+        if test_requirements:
+            lines.append(test_requirements)
 
     impl_notes = _build_implementation_notes_section(ac)
     if impl_notes:
@@ -982,6 +1156,105 @@ def _ticket_filename(ac_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _build_verification_report(
+    ac: AcRecord,
+    ac_id: str,
+    agents: dict[str, str],
+    ticket_body: str,
+    files_touched: list[str],
+) -> tuple[str, bool]:
+    """Build a readiness report answering "can agents work from this AC alone?".
+
+    Verifies that the AC (the source of truth) carries enough for a coder to
+    build and a test-writer to test purely by following the generated ticket's
+    pointers. Each line is tagged PASS / WARN / FAIL. Returns the formatted
+    report and a boolean indicating whether any FAIL was recorded.
+
+    Args:
+        ac: Parsed AC record.
+        ac_id: The AC id.
+        agents: The computed agents map.
+        ticket_body: The generated ticket body (for guard-equivalence checks).
+        files_touched: Local paths extracted from doc_links.
+
+    Returns:
+        ``(report_text, has_fail)``.
+    """
+    lines: list[str] = []
+    has_fail = False
+
+    def record(status: str, message: str) -> None:
+        nonlocal has_fail
+        if status == "FAIL":
+            has_fail = True
+        lines.append(f"  [{status}] {message}")
+
+    is_code_ac = _computed_map_has_production_code_producer(agents)
+    criteria = str(ac.get("criteria") or "").strip()
+    test_spec = ac.get("test_spec")
+    has_spec = isinstance(test_spec, list) and len(test_spec) > 0
+    test_required = ac.get("test_required")
+
+    # 1. Criteria present — a coder and test-writer both need it.
+    if criteria:
+        record("PASS", "criteria present (behavioural source of truth)")
+    else:
+        record("FAIL", "criteria is empty — nothing for a coder or test-writer to work from")
+
+    # 2. Assigned agent.
+    if ac.get("assigned_agent"):
+        record("PASS", f"assigned_agent: {ac.get('assigned_agent')}")
+    else:
+        record("WARN", "assigned_agent absent — generator defaults to python-coder")
+
+    # 3. Test contract (only meaningful for code ACs).
+    if is_code_ac:
+        if has_spec:
+            record("PASS", f"test_spec authored ({len(test_spec)} test(s)) — precise test contract")
+        elif test_required is False:
+            record("WARN", "test_required: false on a code AC — no tests will be authored (confirm this is intentional)")
+        elif criteria:
+            record(
+                "WARN",
+                "no test_spec — Test Requirements will be DERIVED from criteria "
+                "Then-clauses (author test_spec on the AC for a precise contract)",
+            )
+        else:
+            record("FAIL", "code AC with neither test_spec nor derivable criteria — test-writer has nothing to write")
+    else:
+        record("PASS", "non-code AC — no test contract required")
+
+    # 4. Generated Test Requirements would pass the ticket-level guard.
+    if is_code_ac and test_required is not False:
+        if re.search(r"^\s*-\s+name:\s+\S+", ticket_body, re.MULTILINE):
+            record("PASS", "generated ## Test Requirements has >=1 test entry (ticket guard passes)")
+        else:
+            record("FAIL", "generated ## Test Requirements has no test entry — ticket guard would block dispatch")
+
+    # 5. Implementation constraints for the coder.
+    if is_code_ac:
+        if ac.get("it_requirements"):
+            record("PASS", "it_requirements present — coder gets an Implementation Notes section")
+        else:
+            record("WARN", "no it_requirements — coder has only the criteria to work from")
+
+    # 6. File scope.
+    if files_touched:
+        record("PASS", f"files_touched has {len(files_touched)} path(s) from doc_links")
+    else:
+        record("WARN", "files_touched is empty — coder has no file-scope signal (add doc_links to the AC)")
+
+    # 7. Scanner eligibility.
+    if ac.get("readiness") == "approved":
+        record("PASS", "readiness: approved (scanner-eligible)")
+    else:
+        record("WARN", f"readiness: {ac.get('readiness')!r} — the AC scanner only surfaces approved ACs")
+
+    verdict = "BLOCKED" if has_fail else ("READY" if all("[WARN]" not in ln for ln in lines) else "READY (with warnings)")
+    header = f"=== Ticket readiness report for {ac_id}: {verdict} ==="
+    return "\n".join([header, *lines]), has_fail
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Build and return the CLI argument parser.
 
@@ -1015,6 +1288,16 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="dry_run",
         help="Print the ticket body to stdout without writing.",
+    )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        dest="verify",
+        help=(
+            "Print the ticket that WOULD be generated plus a readiness report "
+            "checking whether the AC provides enough for a coder to build and a "
+            "test-writer to test. Implies --dry-run. Exits non-zero on any FAIL."
+        ),
     )
     return parser
 
@@ -1053,8 +1336,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     ac_path, ac = result
 
-    # Dry-run: print and exit
-    if args.dry_run:
+    # Dry-run / verify: build the ticket in memory, print it, and (for --verify)
+    # append a readiness report. Neither path writes a file.
+    if args.dry_run or args.verify:
         files_touched = _extract_local_paths(ac.get("doc_links") or [])
         assigned_agent = ac.get("assigned_agent", "python-coder")
         change_targets = _normalize_change_target(ac)
@@ -1069,6 +1353,13 @@ def main(argv: list[str] | None = None) -> int:
         print(frontmatter)
         print()
         print(body)
+        if args.verify:
+            report, has_fail = _build_verification_report(
+                ac, ac_id, agents, body, files_touched
+            )
+            print()
+            print(report)
+            return 2 if has_fail else 0
         return 0
 
     # Idempotency guard: check for existing ticket
@@ -1142,5 +1433,15 @@ DECISION HISTORY
   it_requirements is absent (no empty stub). Section is placed after
   ## Test Requirements and before ## Sign-offs for consistent locatability.
   (AC BO-2000c-1, BO-2000c-1-i, BO-2000c-2)
+- 2026-07-08 [feature/ac-source-of-truth-test-spec]: Derive ## Test Requirements
+  from the AC (source of truth) instead of emitting a hardcoded tests: [] stub.
+  Added _build_test_requirements_section() + _test_descriptors_from_spec()
+  (from the AC's test_spec) with a _derive_tests_from_criteria() fallback
+  (Gherkin Then-clauses). The derived block always carries >=1 populated test
+  entry so the check-ticket-test-requirements guard passes by construction;
+  omitted only when the AC sets test_required: false. Added a --verify flag +
+  _build_verification_report() that prints the would-be ticket plus a PASS/WARN/
+  FAIL readiness report (exits non-zero on FAIL) so an author can confirm the AC
+  gives a coder enough to build and test-writer enough to test. (AC BO-2000e)
 ====================================================================
 """
