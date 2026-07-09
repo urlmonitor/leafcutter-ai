@@ -498,6 +498,25 @@ async function driveTicketPhases(worktreeTicketPath) {
       const resultStatus =
         phaseResult && (phaseResult.status || phaseResult.result_status);
 
+      // Null / empty-status guard: agent() returns null when a phase agent dies
+      // on a terminal error or is skipped mid-run. Without this guard a null
+      // result falls through the blocker/failed check below and the phase is
+      // silently recorded as completed — letting the driver proceed to commit /
+      // pull-request on incomplete work. Treat an absent result or unrecognized
+      // status as a halt so the ticket stops rather than shipping half-done.
+      if (!phaseResult || !resultStatus) {
+        return {
+          status: "blocked",
+          message:
+            `Phase '${phaseName}' returned no usable result (agent died, was ` +
+            `skipped, or returned an empty status). Halting to avoid proceeding ` +
+            `on incomplete work.`,
+          ticket_path: worktreeTicketPath,
+          failing_phase: phaseName,
+          classification: "halt",
+        };
+      }
+
       if (resultStatus === "blocker" || resultStatus === "failed") {
         const classifyResult = await agent(
           `Classify this blocker for ticket ${worktreeTicketPath}, failing phase ${phaseName}. ` +

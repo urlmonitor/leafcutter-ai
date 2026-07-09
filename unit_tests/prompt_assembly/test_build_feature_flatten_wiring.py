@@ -132,6 +132,15 @@ class TestBuildFeatureFlattenWiring(unittest.TestCase):
             "(agentType: phaseName). The epic-batch path requires a flattened "
             "per-phase loop matching build-ticket.js semantics (BO-2000f-1).",
         )
+        # Path-specific (M-1): the EPIC path must fan out via parallel() and drive
+        # each ticket through driveTicketPhases. A regression that rewired only the
+        # single-ticket path would still pass the shared checks above but fail here.
+        self.assertRegex(
+            self.source,
+            r"parallel\([\s\S]*?driveTicketPhases\(",
+            "The epic-batch path must fan out via parallel() and drive each ready "
+            "ticket through driveTicketPhases (BO-2000f-1).",
+        )
 
     # ------------------------------------------------------------------
     # BO-2000f-2: single-ticket path routes phases through flattened driver
@@ -160,6 +169,15 @@ class TestBuildFeatureFlattenWiring(unittest.TestCase):
             "build-feature.js does not contain the per-phase dispatch pattern "
             "(agentType: phaseName). The single-ticket path requires the "
             "flattened driver (BO-2000f-2).",
+        )
+        # Path-specific (M-1): the SINGLE-TICKET branch must call driveTicketPhases
+        # directly. A regression that rewired only the epic path would still pass
+        # the shared checks above but fail here.
+        self.assertRegex(
+            self.source,
+            r"Single-ticket path[\s\S]*?driveTicketPhases\(",
+            "The single-ticket path must call driveTicketPhases directly "
+            "(BO-2000f-2).",
         )
 
     # ------------------------------------------------------------------
@@ -350,6 +368,30 @@ class TestBuildFeatureFlattenWiring(unittest.TestCase):
             "build-feature.js does not contain the per-phase dispatch pattern "
             "(agentType: phaseName). The rewire must implement flattened dispatch "
             "while preserving depends_on dependency ordering (BO-2000f-5-i).",
+        )
+
+
+    # ------------------------------------------------------------------
+    # Hardening (code-review M-3): null / empty phase result must halt
+    # ------------------------------------------------------------------
+
+    def test_null_phase_result_halts_not_completes(self):
+        # covers: code-review M-3 (hardens BO-2000f-1 / BO-2000f-2)
+        """
+        A phase agent returning null (agent died / was skipped) or an empty status
+        must HALT the driver, not be silently recorded as a completed phase — which
+        would let the driver proceed to commit / pull-request on incomplete work.
+
+        Asserts driveTicketPhases guards the phase result before the blocker/failed
+        check (the `if (!phaseResult || !resultStatus)` guard).
+        """
+        self.assertRegex(
+            self.source,
+            r"if\s*\(\s*!phaseResult\s*\|\|\s*!resultStatus\s*\)",
+            "build-feature.js does not guard against a null / empty phase result. "
+            "driveTicketPhases must halt (not record as completed) when a phase "
+            "agent returns null or an empty status, so the driver never proceeds "
+            "to commit on incomplete work (code-review M-3).",
         )
 
 

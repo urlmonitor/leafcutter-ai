@@ -1,10 +1,11 @@
 ---
 description: |
-  User-facing entry point to the supervisor system. Resolves an epic name,
-  an epic folder path, or a single standalone-ticket file path under tickets/,
-  then dispatches ticket-supervisor directly (for epics) or the
-  build-single-ticket sub-skill (for standalone tickets) to drive it to
-  completion.
+  User-facing entry point to the build system. Resolves an epic name, an epic
+  folder path, or a single standalone-ticket file path under tickets/, sets up
+  the worktree, then drives each ready ticket's phases through the flattened
+  per-phase driver (each needed phase dispatched as its own depth-1 agent under
+  its template) — for epics via a planner + parallel batch loop, for single
+  tickets directly. No ticket-supervisor agent is dispatched for phase execution.
 ---
 
 **This command requires the Workflow tool. If the Workflow tool is not available
