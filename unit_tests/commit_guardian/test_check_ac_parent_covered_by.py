@@ -437,5 +437,95 @@ class TestModuleImport(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# ACS-100i-2-i: Hook fails open on non-UTF-8 staged YAML files
+# ---------------------------------------------------------------------------
+
+
+@_requires_import
+class TestBinaryContentFailOpenAcs100i2i(unittest.TestCase):
+    """ACS-100i-2-i: hook exits 0 and logs a WARNING for non-UTF-8 YAML files.
+
+    When a staged .yaml file under docs/acceptance-criteria/ contains binary
+    (non-UTF-8) content, the hook must:
+      1. Log a WARNING naming the file path and the decode error.
+      2. Return exit code 0 (do NOT block the commit).
+    """
+
+    def _run_main_with_binary_file(
+        self, tmp: Path
+    ) -> tuple[int, str]:
+        """Create a binary .yaml file, run main(), capture exit code and stderr.
+
+        Args:
+            tmp: Temporary directory to use as project root.
+
+        Returns:
+            Tuple of (returncode, captured_stderr_text).
+        """
+        ac_store = tmp / _AC_STORE_REL
+        ac_store.mkdir(parents=True, exist_ok=True)
+
+        # Write a binary file that is NOT valid UTF-8.
+        binary_file = ac_store / "binary_test.yaml"
+        binary_file.write_bytes(b"\xff\xfe\x00This is not valid UTF-8\x80\x81")
+
+        import io
+
+        captured_stderr = io.StringIO()
+        old_env = os.environ.copy()
+        os.environ["HOOK_ROOT"] = str(tmp)
+        os.environ["HOOK_TEST_FILES"] = str(binary_file)
+        os.environ.pop("HOOK_NO_GIT", None)
+
+        old_stderr = sys.stderr
+        sys.stderr = captured_stderr
+        try:
+            returncode = _main()
+        finally:
+            sys.stderr = old_stderr
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        return returncode, captured_stderr.getvalue()
+
+    def test_binary_file_does_not_block_hook(self) -> None:
+        """A staged YAML file with binary content must not cause exit code 1 (ACS-100i-2-i)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            returncode, _ = self._run_main_with_binary_file(Path(tmpdir))
+
+        self.assertEqual(
+            returncode,
+            0,
+            "ACS-100i-2-i: hook must exit 0 when the only staged file has "
+            "non-UTF-8 content. Commit must not be blocked by a binary file.",
+        )
+
+    def test_binary_file_logs_warning(self) -> None:
+        """A staged binary YAML file must produce a WARNING on stderr (ACS-100i-2-i)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _, stderr_text = self._run_main_with_binary_file(Path(tmpdir))
+
+        self.assertIn(
+            "WARNING",
+            stderr_text,
+            "ACS-100i-2-i: hook must log a WARNING when it encounters a "
+            "non-UTF-8 staged file. "
+            f"Captured stderr: {stderr_text!r}",
+        )
+
+    def test_warning_names_file_path(self) -> None:
+        """The WARNING message must name the file path of the binary file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _, stderr_text = self._run_main_with_binary_file(Path(tmpdir))
+
+        self.assertIn(
+            "binary_test.yaml",
+            stderr_text,
+            "ACS-100i-2-i: the WARNING message must include the file path. "
+            f"Captured stderr: {stderr_text!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
