@@ -1,9 +1,13 @@
 ---
-title: "Glossary Blacklist"
-description: "Terms excluded from the project glossary, managed automatically by the check_glossary_coverage hook and glossary-triage agent to suppress false-positive jargon candidates."
-type: "reference"
+title: Glossary Blacklist
+description: Terms excluded from the project glossary, managed automatically by the
+  check_glossary_coverage hook and glossary-triage agent to suppress false-positive
+  jargon candidates.
+type: reference
+created: '2026-07-09'
+last_updated: '2026-07-09'
+status: active
 ---
-
 # Glossary Blacklist
 
 Terms in this table are excluded from the glossary. Managed automatically by
@@ -66,3 +70,5 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | nSets | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
 | nSort | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
 | nWrites | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| agentType | JavaScript named parameter in agent() call syntax, not a standalone domain concept | 2026-07-09 |
+| phaseName | JavaScript named parameter placeholder in agent() call syntax, not a standalone domain concept | 2026-07-09 |
