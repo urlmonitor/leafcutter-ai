@@ -1,0 +1,59 @@
+id: BO-2000f-5
+components:
+  - build-orchestration
+title: "Rewiring /build-feature to the flattened driver preserves worktree guard, batching, ordering, and failure adjudication"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given /build-feature has been rewired to route phase execution through the flattened driver,
+  When it drives an epic,
+  Then the existing worktree quality-gate guard still runs before the drive proceeds,
+  And the planner still groups ready tickets into batches,
+  And tickets are still driven in dependency order,
+  And phase failures are still adjudicated by the existing failure-classification path
+    (mechanical failures retried, cross-agent blockers skipped, design/halt blockers surfaced).
+depends_on:
+  - BO-2000f
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the rewired build-feature.js must retain the surrounding orchestration (worktree guard, batching, ordering, adjudication)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "node --check templates/workflows-js/build-feature.js"
+  notes: |
+    The inlined flattened driver must NOT drop the pre-drive worktree quality-gate
+    guard, the planner batching step, the dependency-ordering step, or the
+    failure-classification/adjudication path already present in build-feature.js.
+delivers_to:
+  agent: python-coder
+  contract: "A rewired build-feature drive that retains worktree guard, batching, ordering, and failure adjudication"
+expects_from:
+  ac_id: BO-2000f-1
+  contract: "The flattened-driver rewiring whose surrounding orchestration this AC constrains to stay intact"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000f-5-i
+implemented_by: []

@@ -1,0 +1,52 @@
+id: BO-2000f-5-i
+components:
+  - build-orchestration
+title: "A ticket is still held until its dependency predecessors complete under the rewired driver"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic driven via the rewired /build-feature contains ticket B that depends_on ticket A,
+    and A has not yet completed successfully,
+  When /build-feature reaches the point where it would drive B,
+  Then B is not dispatched to the flattened driver,
+  And B is only driven after A has completed successfully,
+  So dependency ordering is preserved despite the switch to per-phase flattened dispatch.
+depends_on:
+  - BO-2000f-5
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the dependency-ordering gate in build-feature.js that must survive the rewire"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "node --check templates/workflows-js/build-feature.js"
+  notes: |
+    The rewired build-feature.js must still gate a ticket's drive on completion of its
+    depends_on predecessors before handing it to the flattened driver (B depends_on A:
+    B not driven until A completes successfully).
+delivers_to: null
+expects_from:
+  ac_id: BO-2000f-5
+  contract: "The preserved dependency-ordering step this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

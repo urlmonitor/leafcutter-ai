@@ -1,0 +1,51 @@
+id: BO-2000f
+components:
+  - build-orchestration
+title: "The /build-feature path drives phases through the flattened script driver, so phase-agent templates are actually applied"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Hardening a phase-agent template actually changes what /build-feature does.
+
+  When a user drives work through /build-feature, each ready ticket's needed phases
+  are executed by dispatching each phase as its own phase agent under that phase's
+  template -- exactly the flattened script-driver semantics -- instead of handing the
+  whole ticket to a single inline supervisor agent that runs every phase itself. This
+  holds for both the epic-batch path and the single-ticket path. Because each phase
+  runs under its own template, the TDD separation (test-writer produces the failing
+  baseline before the coder writes code) and the phantom-test / real-artifact guards
+  those templates carry are actually in force on the /build-feature path. A structural
+  regression check keeps the flattened driver wired in and blocks any reintroduction
+  of whole-ticket inline phase execution. The rewiring preserves the existing
+  worktree guard, planner batching, dependency ordering, and failure adjudication.
+  This sits at how /build-feature executes a ticket's phases -- distinct from BO-2000c
+  (what the dispatch string carries) and BO-2000e (whether a code ticket may reach the
+  coder at all).
+depends_on: [BO-2000]
+doc_links:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+  - docs/architecture/agent_delivery_workflows.md
+  - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000f-1
+  - BO-2000f-2
+  - BO-2000f-3
+  - BO-2000f-4
+  - BO-2000f-5
+  - BO-2000f-4-i
+  - BO-2000f-5-i
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/06_buildfeature_flatten_wiring.md

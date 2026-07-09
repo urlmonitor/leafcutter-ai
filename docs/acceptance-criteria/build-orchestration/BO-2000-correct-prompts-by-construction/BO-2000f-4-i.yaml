@@ -1,0 +1,53 @@
+id: BO-2000f-4-i
+components:
+  - build-orchestration
+title: "The structural check fails if /build-feature reintroduces whole-ticket inline phase execution"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a variant of /build-feature that dispatches a single ticket-supervisor agent to run
+    a ticket's phases inline (the pre-rewire anti-pattern) instead of routing through the
+    flattened build-ticket driver,
+  When the structural regression check runs against it,
+  Then the check fails,
+  And the failure names that per-ticket phase execution must route through the flattened driver
+    and must not be delegated to a single inline supervisor agent.
+depends_on:
+  - BO-2000f-4
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: unit_tests/prompt_assembly/test_build_feature_flatten_wiring.py
+  n_location_rule: "1 -- the negative-case test that feeds the guard a synthetic inline-supervisor variant"
+  required_skills:
+    - test-writer
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_build_feature_flatten_wiring.py"
+  notes: |
+    Prove the guard is not a tautology: feed it a synthetic build-feature snippet that
+    dispatches a whole-ticket agentType: 'ticket-supervisor' and assert the guard FLAGS
+    it (fails), naming the required flattened-driver routing.
+delivers_to: null
+expects_from:
+  ac_id: BO-2000f-4
+  contract: "The structural guard whose negative (regression-detection) path this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
