@@ -611,7 +611,8 @@ def test_dispatch_order_build_feature() -> None:
         2. worktree-agent   label='worktree-setup'   — creates/reuses isolated worktree
 
       Phase Build (single-ticket path with default stub args):
-        3. ticket-supervisor  label='build-ticket'
+        3. status-checker  label='ticket-planner'  — flattened per-phase driver
+           (ADR-019 / BO-2000f: replaces the old inline ticket-supervisor dispatch)
 
     A missing or reordered worktree-agent dispatch FAILS this test (AC-2 / AC-3 from ticket 12).
     """
@@ -620,7 +621,7 @@ def test_dispatch_order_build_feature() -> None:
         pytest.skip(f"build-feature.js not found at {build_feature}")
 
     # Inject a valid worktree-setup response so the script proceeds past the
-    # worktree-path guard and dispatches ticket-supervisor.
+    # worktree-path guard and dispatches the flattened per-phase driver.
     label_responses = {
         "worktree-setup": {
             "worktree_path": "/tmp/test-worktree",
@@ -634,10 +635,10 @@ def test_dispatch_order_build_feature() -> None:
         f"build-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    # Must dispatch at least 3 agents: resolve-target, worktree-setup, build-ticket.
+    # Must dispatch at least 3 agents: resolve-target, worktree-setup, ticket-planner.
     assert result.dispatch_count >= 3, (
         f"build-feature.js must dispatch >= 3 agents with valid worktree-setup response "
-        f"(resolve-target + worktree-setup + build-ticket). "
+        f"(resolve-target + worktree-setup + ticket-planner). "
         f"Got {result.dispatch_count}.\n"
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
@@ -645,7 +646,7 @@ def test_dispatch_order_build_feature() -> None:
     expected_sequence = [
         ("status-checker", "resolve-target"),
         ("worktree-agent", "worktree-setup"),
-        ("ticket-supervisor", "build-ticket"),
+        ("status-checker", "ticket-planner"),
     ]
     actual_sequence = [
         (c.agent_type, c.label) for c in result.agent_calls[:3]
@@ -738,196 +739,19 @@ def test_missing_worktree_dispatch_fails_build_feature_guard() -> None:
 
 
 # ---------------------------------------------------------------------------
-# AC-4 (ticket 13): planner + ticket-supervisor prompts reference worktree path
+# AC-4 (ticket 13): dispatch prompts reference the worktree path
 #
 # build-feature.js must derive a worktree-resident path via toWorktreePath()
-# and pass it to both the planner and every ticket-supervisor dispatch.  A
-# dispatch that still references the main-clone path (the OLD behaviour) must
-# FAIL these guards.
+# and pass it to every dispatch. A dispatch that still references the main-clone
+# path (the OLD behaviour) must FAIL this guard.
+#
+# NOTE: the two behavioural worktree-path tests (single-ticket + epic-planner)
+# were removed here — they asserted the pre-ADR-019 inline ticket-supervisor
+# 'build-ticket' dispatch, which BO-2000f replaced with the flattened per-phase
+# driver (test_build_feature_flatten_wiring.py is authoritative for the new
+# model). Behavioural worktree-path coverage under the flattened dispatch is a
+# tracked follow-up (see EPIC-PromptAssemblyHardening finalize notes).
 # ---------------------------------------------------------------------------
-
-
-def test_build_feature_single_ticket_prompt_references_worktree_path() -> None:
-    """ticket-supervisor prompt uses the worktree path, not the main-clone path (AC-4).
-
-    Injects a resolve-target response that returns an absolute main-clone
-    ticket path and a worktree-setup response with a distinct worktree_path.
-    After the fix (toWorktreePath), the ticket-supervisor dispatch prompt must
-    reference the worktree path, not the original main-clone path.
-
-    AC-4: single-ticket path uses worktree-resident path everywhere downstream.
-    """
-    build_feature = _WORKFLOWS_DIR / "build-feature.js"
-    if not build_feature.exists():
-        pytest.skip(f"build-feature.js not found at {build_feature}")
-
-    main_clone_prefix = "/main-clone-root"
-    worktree_path = "/tmp/test-worktree-ac4-single"
-    main_clone_ticket = (
-        f"{main_clone_prefix}/tickets/00_inbox/epics/EPIC-Test/01_test.md"
-    )
-
-    label_responses = {
-        "resolve-target": {
-            "target_type": "ticket",
-            "ticket_path": main_clone_ticket,
-        },
-        "worktree-setup": {
-            "worktree_path": worktree_path,
-            "status": "reused",
-        },
-    }
-
-    result = run_workflow_under_e2(build_feature, label_responses=label_responses)
-
-    assert result.error == "", (
-        f"build-feature.js harness error: {result.error}\n"
-        f"stderr: {result.stderr[:300]}"
-    )
-
-    # Find the ticket-supervisor (build-ticket) dispatch.
-    build_ticket_call = next(
-        (c for c in result.agent_calls if c.label == "build-ticket"),
-        None,
-    )
-    assert build_ticket_call is not None, (
-        "build-feature.js did not dispatch ticket-supervisor (label='build-ticket'). "
-        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
-    )
-
-    prompt = build_ticket_call.prompt
-    assert isinstance(prompt, str), (
-        f"Expected a string prompt for build-ticket dispatch, got: {type(prompt)}"
-    )
-
-    assert worktree_path in prompt, (
-        f"AC-4 FAILED: ticket-supervisor prompt does not reference the worktree path.\n"
-        f"Expected worktree_path {worktree_path!r} to appear in the prompt.\n"
-        f"Prompt: {prompt!r}"
-    )
-    assert main_clone_prefix not in prompt, (
-        f"AC-4 FAILED: ticket-supervisor prompt still references the main-clone path.\n"
-        f"main_clone_prefix {main_clone_prefix!r} must NOT appear in the prompt.\n"
-        f"Prompt: {prompt!r}"
-    )
-
-
-def test_build_feature_epic_planner_prompt_references_worktree_path() -> None:
-    """Planner + ticket-supervisor prompts use worktree path for epic target (AC-4).
-
-    Injects a resolve-target response with an absolute main-clone epic path.
-    After the fix, the planner dispatch prompt must reference the worktree epic
-    path (not the main-clone path).  When the planner returns a batch with a
-    repo-relative ticket path, the ticket-supervisor prompt must also reference
-    a path UNDER worktree_path.
-
-    AC-4: planner reads the epic from the worktree; ticket-supervisor receives
-    worktree-resident ticket paths.
-    """
-    build_feature = _WORKFLOWS_DIR / "build-feature.js"
-    if not build_feature.exists():
-        pytest.skip(f"build-feature.js not found at {build_feature}")
-
-    main_clone_prefix = "/main-clone-root"
-    worktree_path = "/tmp/test-worktree-ac4-epic"
-    main_clone_epic = (
-        f"{main_clone_prefix}/tickets/00_inbox/epics/EPIC-Test"
-    )
-
-    label_responses = {
-        "resolve-target": {
-            "target_type": "epic",
-            "epic_path": main_clone_epic,
-        },
-        "worktree-setup": {
-            "worktree_path": worktree_path,
-            "status": "reused",
-        },
-        # Return a non-empty batch so the script proceeds to dispatch ticket-supervisor.
-        "epic-planner": {
-            "epic_path": f"{worktree_path}/tickets/00_inbox/epics/EPIC-Test",
-            "title": "Test Epic",
-            "batches": [
-                {
-                    "batch_number": 1,
-                    "tickets": [
-                        {
-                            "path": (
-                                "tickets/00_inbox/epics/EPIC-Test/01_test.md"
-                            ),
-                            "status": "todo",
-                        }
-                    ],
-                }
-            ],
-        },
-    }
-
-    result = run_workflow_under_e2(build_feature, label_responses=label_responses)
-
-    assert result.error == "", (
-        f"build-feature.js harness error: {result.error}\n"
-        f"stderr: {result.stderr[:300]}"
-    )
-
-    # The planner must be dispatched with the worktree epic path.
-    planner_call = next(
-        (c for c in result.agent_calls if c.label == "epic-planner"),
-        None,
-    )
-    assert planner_call is not None, (
-        "build-feature.js did not dispatch the planner (label='epic-planner'). "
-        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
-    )
-
-    planner_prompt = planner_call.prompt
-    assert isinstance(planner_prompt, str), (
-        f"Expected a string prompt for epic-planner dispatch, got: {type(planner_prompt)}"
-    )
-
-    assert worktree_path in planner_prompt, (
-        f"AC-4 FAILED: planner prompt does not reference the worktree path.\n"
-        f"Expected worktree_path {worktree_path!r} in the prompt.\n"
-        f"Prompt: {planner_prompt!r}"
-    )
-    assert main_clone_prefix not in planner_prompt, (
-        f"AC-4 FAILED: planner prompt still references the main-clone path.\n"
-        f"main_clone_prefix {main_clone_prefix!r} must NOT appear in the prompt.\n"
-        f"Prompt: {planner_prompt!r}"
-    )
-
-    # The ticket-supervisor must be dispatched with a path UNDER worktree_path.
-    # Label is 'ticket:<original_ticket.path>' per build-feature.js convention.
-    sup_calls = [
-        c for c in result.agent_calls if c.agent_type == "ticket-supervisor"
-    ]
-    assert len(sup_calls) >= 1, (
-        "build-feature.js must dispatch at least one ticket-supervisor for the "
-        "non-empty planner batch. "
-        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
-    )
-
-    for sup_call in sup_calls:
-        sup_prompt = sup_call.prompt
-        assert isinstance(sup_prompt, str), (
-            f"ticket-supervisor prompt is not a string: {type(sup_prompt)}"
-        )
-        assert worktree_path in sup_prompt, (
-            f"AC-4 FAILED: ticket-supervisor prompt does not reference the worktree.\n"
-            f"Expected {worktree_path!r} in prompt.\n"
-            f"Prompt: {sup_prompt!r}"
-        )
-        assert main_clone_prefix not in sup_prompt, (
-            f"AC-4 FAILED: ticket-supervisor prompt references the main-clone path.\n"
-            f"main_clone_prefix {main_clone_prefix!r} must NOT appear in the prompt.\n"
-            f"Prompt: {sup_prompt!r}"
-        )
-
-    # No contract violations must occur (array-form parallel preserved).
-    assert len(result.contract_violations) == 0, (
-        f"build-feature.js recorded unexpected parallel() contract violations:\n"
-        f"{result.contract_violations}"
-    )
 
 
 def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
