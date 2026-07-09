@@ -48,8 +48,8 @@ def _load_marker_files(hook_path: Path, module_name: str) -> list[str] | None:
         sys.modules[module_name] = mod
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
         return list(mod.MARKER_FILES)
-    except (FileNotFoundError, AttributeError, ImportError, SyntaxError) as exc:
-        return None  # noqa: F841 — caller handles None via pytest.skip
+    except (FileNotFoundError, AttributeError, ImportError, SyntaxError):
+        return None  # caller handles None via pytest.skip
 
 
 # ---------------------------------------------------------------------------
