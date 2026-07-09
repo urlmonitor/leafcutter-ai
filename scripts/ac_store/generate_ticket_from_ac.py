@@ -594,7 +594,14 @@ def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
     for clause in then_clauses:
         name = f"test_{slug}_{_slugify_for_test(clause)}"
         if name in seen:
-            name = f"{name}_{len(tests)}"
+            # Disambiguate until unique — a fixed suffix can still collide with an
+            # earlier clause's slug, which would silently drop a test.
+            suffix = len(tests)
+            candidate = f"{name}_{suffix}"
+            while candidate in seen:
+                suffix += 1
+                candidate = f"{name}_{suffix}"
+            name = candidate
         seen.add(name)
         tests.append({
             "name": name,
@@ -686,6 +693,9 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
         descriptors = _derive_tests_from_criteria(ac, ac_id)
 
     try:
+        # sort_keys=False is REQUIRED: 'name' must stay the first key in each test
+        # item so check_ticket_test_requirements._TESTS_ENTRY_RE ("- name: \\S+")
+        # and the --verify guard-equivalence regex both match. Do not enable sorting.
         block = yaml.dump(
             {"tests": descriptors},
             default_flow_style=False,

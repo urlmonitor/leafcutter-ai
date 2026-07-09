@@ -497,21 +497,31 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
             f"test_required is false — remove test_required: false or clear test_spec"
         )
 
-    # Missing contract on an approved, not-yet-built leaf code AC.
+    # Contract requirement on an approved, not-yet-built leaf code AC.
     if (
         data.get("readiness") == "approved"
         and data.get("work_status") != "done"
         and _is_code_ac(data)
         and _is_leaf_ac(data)
-        and not has_spec
-        and test_required is not False
     ):
-        errors.append(
-            f"{path}: approved code AC must declare a test contract — add a "
-            f"non-empty test_spec (what test-writer should author, derived from "
-            f"the Gherkin criteria) or set test_required: false for a genuinely "
-            f"test-free AC. ACs are the source of truth for tests; the generated "
-            f"ticket's Test Requirements is derived from test_spec."
-        )
+        if test_required is False:
+            # A code AC with test_required: false would generate a ticket that the
+            # check-ticket-test-requirements guard blocks — keep the two layers in
+            # agreement by rejecting it at the AC (source-of-truth) level.
+            errors.append(
+                f"{path}: test_required: false on a code AC — a code AC always "
+                f"needs tests. Author a non-empty test_spec, or reclassify the AC "
+                f"as non-code (change_target docs/prompt with a non-coder "
+                f"assigned_agent). A code AC with test_required: false generates a "
+                f"ticket that the check-ticket-test-requirements guard blocks."
+            )
+        elif not has_spec:
+            errors.append(
+                f"{path}: approved code AC must declare a test contract — add a "
+                f"non-empty test_spec (what test-writer should author, derived from "
+                f"the Gherkin criteria). If this AC is genuinely test-free, "
+                f"reclassify it as non-code (change_target docs/prompt with a "
+                f"non-coder assigned_agent). ACs are the source of truth for tests."
+            )
 
     return errors
