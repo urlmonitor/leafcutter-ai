@@ -1,8 +1,8 @@
 ---
 title: "Self-description validation: descriptive_only skills_invoked entries (BP-1300a)"
-status: todo
+status: done
 components:
-- build-pipeline
+- build_pipeline
 created: '2026-07-08'
 depends_on: []
 priority: high

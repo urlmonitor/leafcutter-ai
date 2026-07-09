@@ -926,6 +926,20 @@
                 "always_run": true,
                 "pass_filenames": false,
                 "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
+            },
+            {
+                "id": "check-hook-parity",
+                "name": "Check Hook Parity (leafcutter)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_parity.py",
+                "language": "system",
+                "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "script": "check_hook_parity.py",
+                "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
+                "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
             }
         ]
     },
@@ -1007,5 +1021,18 @@
         "coverage_xml_path": "coverage.xml",
         "compare_branch": "origin/main",
         "max_age_seconds": 3600
+    },
+    "hook_parity": {
+        "_comment": "check_hook_parity.py — Parity enforcement across runtime dir, canonical template dir, legacy template dir, and deployed output dir. All paths are relative to the project root.",
+        "runtime_dir": "scripts/commit_guardian",
+        "canonical_template_dir": "templates/scripts/commit_guardian",
+        "legacy_template_dir": "templates/commit-guardian",
+        "deployed_output_dir": ".leafcutter/scripts/commit_guardian",
+        "manifests": {
+            "canonical": "templates/scripts/commit_guardian/commit_guardian.json",
+            "legacy": "templates/commit-guardian/commit_guardian.json"
+        },
+        "excluded_scripts": [],
+        "hook_script_patterns": ["check_*.py", "run_hook.py", "regenerate_*.py"]
     }
 }

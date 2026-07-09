@@ -1,0 +1,85 @@
+id: GE-113c-1-iii
+components:
+  - guardrail-engine
+title: "check-secrets resolves its scripts_dir and project root so scan_secrets imports and runs in a fresh worktree from both layouts"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the check_secrets guard is invoked by git in a freshly created
+    epic/feature worktree (deployed layout) where build.py has deployed the
+    hook scripts under .leafcutter/ and the scan_secrets module ships under the
+    security-scanner skill, AND separately in the source/main checkout layout,
+  When the guard resolves its scripts_dir and project root in order to import
+    scan_secrets and run the secret scan over the staged files,
+  Then the project root that scan_secrets' scripts_dir (project_root /
+    SECURITY_SCANNER_SCRIPTS_DIR) is resolved against is the actual checkout
+    root (via `git rev-parse --show-toplevel` with a safe fallback), not the
+    workspace parent reached by find_project_root() following the .leafcutter
+    symlink,
+  And scan_secrets imports successfully with no ModuleNotFoundError,
+  And the secret scan runs to completion in both the fresh-worktree deployed
+    layout and the source/main checkout layout,
+  And the verification exercises a REAL fresh worktree created from origin/main,
+    not a synthetic fixture that pre-populates the import path.
+depends_on:
+  - GE-113c-1
+  - GE-113c-1-iv
+doc_links:
+  - path: scripts/commit_guardian/check_secrets.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: governs
+    status: exists
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1-v.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-115.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300g-6.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The DEFECT is the project ROOT, not the scripts_dir name. On origin/main check_secrets.py does `project_root = find_project_root()` (the _resolve_root.py __file__-relative walk-up, which resolves through the .leafcutter symlink to the workspace parent), then builds `_SKILL_SCRIPTS = project_root / SECURITY_SCANNER_SCRIPTS_DIR` and `sys.path.insert(0, str(_SKILL_SCRIPTS))` before `from scan_secrets import scan_files`. The scripts_dir sub-path (SECURITY_SCANNER_SCRIPTS_DIR, sourced from the config module) is already parameterized and correct — it is simply joined to the WRONG root, so scan_secrets is not on sys.path. Fix the ROOT resolution (route the find_project_root() call through the shared `git rev-parse --show-toplevel` helper mandated by GE-113c-1 / GE-113c-1-iv); do NOT change the scripts_dir value. This is the ModuleNotFoundError(scan_secrets) class recorded in CLAUDE.md / user-memory (project_worktree_checksecrets_scriptsdir) that breaks check-secrets in fresh worktrees."
+  - "scan_secrets must import successfully with no ModuleNotFoundError in a fresh worktree in BOTH the deployed (.leafcutter) layout and the source/main checkout layout; the secret scan must then run to completion."
+  - "Deployed/template parity (ADR-001): the fix is in check_secrets.py's root resolution (the find_project_root() call), which lives in templates/scripts/commit_guardian/check_secrets.py and is round-tripped to the scripts/ copy via build.py — never edit only one side. The scripts_dir CONFIG value (SECURITY_SCANNER_SCRIPTS_DIR / commit_guardian.json) is NOT the defect and must be left unchanged."
+  - "Must handle git-unavailable gracefully per the project error handling policy: wrap the git subprocess call (no bare except, Ruff E722/BLE001/TRY), warn, and fall back to a safe deterministic resolution (ACS-300g-6 precedent) via the shared _resolve_root helper mandated by GE-113c-1 / GE-113c-1-iv."
+  - "Behavioral verification must exercise a REAL fresh worktree created from origin/main (mirror the actual failure conditions in CLAUDE.md's worktree pre-commit section), not a synthetic sys.path fixture that pre-imports scan_secrets — asserting the import resolves and the scan runs end-to-end. Follow the real-`git worktree add` regression-test precedent set by GE-115 / #235 for check_doc_frontmatter."
+  - "No regression to the actual secret-scanning verdicts: this AC's scope is scripts_dir/import/root RESOLUTION only; the set of findings scan_secrets produces on given inputs must be unchanged."
+  - "Scope boundary: the .security-allowlist resolution defect (check-secrets reads the allowlist from the .leafcutter symlink target / workspace root rather than the worktree checkout root, so worktree-local suppressions are silently ignored — CLAUDE.md) is a SEPARATE, SIBLING concern covered by GE-113c-1-v. Keep this AC scoped to scripts_dir/import resolution and do not conflate it with the allowlist read-location fix; the two share the GE-113c-1 / GE-113c-1-iv shared-root mandate but are independently testable."
+delivers_to: null
+expects_from:
+  ac_id: GE-113c-1
+  contract: "The single shared project-root resolver from GE-113c-1 (scripts/commit_guardian/_resolve_root.py, returning the checkout top-level Path via `git rev-parse --show-toplevel` with a safe fallback); check_secrets consumes it to derive its scripts_dir / project root so scan_secrets can be located and imported in the deployed layout."
+origin_agent: it-po-v3
+created: 2026-07-08
+amended_by:
+  - reason: "it-po-v3 (technical route, user follow-up): updated the scope-boundary it_requirement and added a doc_links cross-reference now that the .security-allowlist resolution concern is in scope as sibling GE-113c-1-v (previously marked simply out of scope). Criteria and all other fields unchanged."
+  - reason: "Rebased onto origin/main after the stale-local-main PR (#244) was abandoned: pinned the current origin/main check_secrets.py behaviour (project_root = find_project_root()), and cross-referenced GE-115/#235 as the check_doc_frontmatter precedent for the real-worktree fix + regression test. Criteria unchanged."
+  - reason: "Corrected an inaccurate root-cause description found by verifying against the actual origin/main check_secrets.py: the code does NOT hardcode a `.claude` scripts_dir in commit_guardian.json (that framing came from an older memory note). The scripts_dir sub-path (SECURITY_SCANNER_SCRIPTS_DIR from the config module) is already parameterized; the real defect is that it is joined to project_root = find_project_root() (the symlink-following wrong root). Re-pointed the criteria, it_requirements, and notes at the root resolution; the fix target is check_secrets.py's find_project_root() call, not the scripts_dir config value."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Latent bug: check-secrets resolves its project root via find_project_root() (the _resolve_root.py walk-up that follows the .leafcutter symlink to the workspace parent) and joins the (correctly parameterized) scan_secrets scripts_dir sub-path to that wrong root, so scan_secrets is never on sys.path, causing ModuleNotFoundError (scan_secrets) in fresh worktrees (CLAUDE.md; user-memory project_worktree_checksecrets_scriptsdir). Brought under the GE-113c-1 root-resolution mandate. The related .security-allowlist read-location defect is covered by sibling GE-113c-1-v. Sibling GE-113c-1-ii (check_doc_frontmatter) was dropped from this set because that guard was already fixed on origin/main by GE-115/#235."
+change_target: code
+risk_surface: contract_boundary

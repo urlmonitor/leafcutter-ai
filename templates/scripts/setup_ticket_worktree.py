@@ -589,32 +589,50 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
 
 
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
-    """Symlink .env and copy .mcp.json into *worktree_path*, then run poetry install.
+    """Bootstrap a fresh worktree with config files, deps, and pre-commit hooks.
 
-    `.env` is created as a symlink so that updates to the main repo's `.env`
-    are automatically visible inside every worktree — no manual re-copy needed.
-    On Windows without symlink privilege (OSError / WinError 1314 / EPERM),
-    the function falls back to ``shutil.copy`` and prints a warning to stderr.
+    Steps performed in order:
 
-    `.mcp.json` is always copied (never symlinked) because its content is set
-    once at bootstrap time and is not expected to change after worktree creation.
+    1. **``.env`` symlink** (copy fallback): symlinks the main repo's ``.env``
+       into the worktree.  Falls back to ``shutil.copy`` on Windows or NTFS
+       mounts where ``os.symlink`` is not available.
 
-    Missing source files are silently skipped (FileNotFoundError → no action).
+    2. **``.mcp.json`` copy**: always copies (never symlinks) because its
+       content is fixed at bootstrap time.
 
-    After the build step, ``_establish_pre_commit_config`` actively ensures
-    ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in the worktree
-    root (symlink-first, copy-fallback, warn-and-continue if neither source
-    exists in main repo).  Following that, an AC-5 fail-fast probe checks
-    that EITHER ``.leafcutter`` OR ``.pre-commit-config.yaml`` exists — if
-    both are still absent (step 4 warn-and-continue was reached), a
-    ``BootstrapError`` is raised so the drive never proceeds with hooks
-    silently disabled.  The error message identifies the root cause: build
-    failure (when build_exc is set) or general absence (when build.py was
-    not found or install_shims failed silently).
+    3. **Submodule initialisation**: runs ``git submodule update --init`` in
+       the worktree to populate any registered git submodules.
+
+    4. **Dependency install** (best-effort): detects the project's packaging
+       style — ``pyproject.toml`` → ``poetry install --no-root``;
+       ``requirements-dev.txt`` → ``pip install -r requirements-dev.txt``;
+       neither → skips with a WARNING.  A failure prints a warning and
+       continues because deps are often already present in the active
+       environment (AC-4).
+
+    5. **``build.py`` run**: materialises ``.leafcutter/`` (workflows, agents,
+       skills, hooks, and the pre-commit config shim).  Probes both the
+       consumer layout (``leafcutter-ai/scripts/build.py``) and the
+       self-hosted layout (``scripts/build.py``).
+
+    6. **Pre-commit config safety net** (``_establish_pre_commit_config``):
+       ensures ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in
+       the worktree root even if step 5 was skipped or failed.
+
+    Missing source files are silently skipped (``FileNotFoundError`` → no
+    action) for steps 1–2.  Steps 3–5 treat failures as warnings so that a
+    single failing step does not prevent the worktree from being usable.
+
+    After ``_establish_pre_commit_config`` runs, an unconditional AC-5
+    fail-fast probe checks that EITHER ``.leafcutter`` OR
+    ``.pre-commit-config.yaml`` is present in the worktree root.  This
+    converts the warn-and-continue step 4 of ``_establish_pre_commit_config``
+    into a hard ``BootstrapError`` so the drive never proceeds with hooks
+    silently disabled.
 
     Args:
         main_repo: Absolute Path to the main repository root where source
-            ``.env`` and ``.mcp.json`` reside.
+            ``.env``, ``.mcp.json``, and ``.leafcutter/`` reside.
         worktree_path: Absolute Path to the worktree being bootstrapped.
 
     Raises:

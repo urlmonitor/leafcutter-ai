@@ -56,6 +56,12 @@ DECISION HISTORY:
     except OSError to except (OSError, ValueError) in both functions. The
     _load_file_yaml warning message now includes the exception class name for
     observability. (AC: ACS-100i-2-i)
+  - 2026-07-07 [python-coder/ACS-100i-2-i]: Narrowed _load_file_yaml exception
+    handling to separate UnicodeDecodeError from OSError. UnicodeDecodeError now
+    emits "WARNING: <filepath> -- non-UTF-8 content, skipping: <error>" (the
+    canonical format from the AC spec). OSError retains its own message.
+    Behaviour is identical (fail-open, return None); only the message format
+    changes. Tests added in test_check_ac_parent_covered_by.py.
   - 2026-06-29 [python-coder/perf-fix]: Index-once performance fix. Replaced
     per-call full-store rglob walk in _resolve_parent_file with a single
     _build_parent_index() call in main(). The index (dict[str, str] mapping
@@ -212,6 +218,10 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
 def _load_file_yaml(file_path: str) -> dict | None:
     """Read and parse a YAML file from disk.
 
+    Fails open on UnicodeDecodeError (binary content): logs a WARNING naming
+    the file path and the decode error, then returns None so the hook
+    continues without blocking the commit (ACS-100i-2-i).
+
     Args:
         file_path: Absolute or repo-relative path to the YAML file.
 
@@ -221,9 +231,15 @@ def _load_file_yaml(file_path: str) -> dict | None:
     path = Path(file_path)
     try:
         content = path.read_text(encoding="utf-8")
-    except (OSError, ValueError) as exc:
+    except UnicodeDecodeError as exc:
         print(
-            f"{_HOOK_PREFIX} WARNING: cannot read file {file_path}: {type(exc).__name__}: {exc}",
+            f"{_HOOK_PREFIX} WARNING: {file_path} -- non-UTF-8 content, skipping: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    except OSError as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: cannot read file {file_path}: {exc}",
             file=sys.stderr,
         )
         return None

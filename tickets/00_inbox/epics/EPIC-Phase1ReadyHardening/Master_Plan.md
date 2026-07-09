@@ -33,6 +33,7 @@ only by parent-in-`depends_on` hierarchy modeling, substantively ready). Total: 
 | 02 | GuardrailEngineFixes | guardrail-engine | GE-103, GE-105, GE-110 | 3 |
 | 03 | InfrastructureFixes | infrastructure | INF-100c-1, INF-100c-3 | 2 |
 | 04 | HookParityCheck | build_pipeline | BP-100i-1..5, BP-100i-1-i, BP-100i-1-ii, BP-100i-2-i, BP-100i-3-i | 9 |
+| 05 | RootResolutionPortability | guardrail-engine, build_pipeline | inline (pyproject.toml root-marker + poetry bootstrap portability; found mid-drive) | 6 |
 
 ## Execution notes
 

@@ -156,18 +156,39 @@ _BLOCKING_FLIGHT_LEVELS = {"L1-Context", "L2-Container", "L3-Component"}
 # ---------------------------------------------------------------------------
 
 
-def find_project_root() -> Path:
-    """Walk up from this script to find the project root (pyproject.toml).
+# Project-root markers checked in order of preference.  Any one of these
+# suffices to identify a project root.  Both hooks (ticket_frontmatter_guard
+# and documentation_guard) use this identical list so a future addition is a
+# one-line change in both files (AC-5).
+MARKER_FILES = [".git", "CLAUDE.md", "pyproject.toml", "requirements-dev.txt"]
+
+
+def find_project_root(start: Path | None = None) -> Path | None:
+    """Walk up from *start* to find the project root by portable markers.
+
+    Checks for ``.git``, ``CLAUDE.md``, ``pyproject.toml``, or
+    ``requirements-dev.txt``.  Returns the first ancestor directory containing
+    **any** of these markers, walking up to 15 levels.  When *start* is not
+    supplied, uses the directory that contains this hook script.  The optional
+    *start* parameter enables unit testing without monkeypatching ``__file__``
+    (AC-1, AC-5).
+
+    Args:
+        start: Path to begin the search from.  Defaults to the directory
+            containing this file.
 
     Returns:
-        Absolute Path to the project root directory.
+        Absolute Path to the project root directory, or None when no marker
+        is found within 15 levels.
     """
-    current = Path(__file__).resolve().parent
-    for _ in range(10):
-        if (current / "pyproject.toml").exists():
+    current = start if start is not None else Path(__file__).resolve().parent
+    for _ in range(15):
+        if any((current / marker).exists() for marker in MARKER_FILES):
             return current
+        if current.parent == current:
+            return None
         current = current.parent
-    return Path(__file__).resolve().parent.parent.parent
+    return None
 
 
 def get_related_docs(rel_path: str, project_root: Path) -> list[str]:
@@ -337,7 +358,7 @@ def main() -> None:
     try:
         raw = sys.stdin.read()
         data = json.loads(raw)
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         sys.exit(0)
 
     tool_input = data.get("tool_input", {})
@@ -347,6 +368,14 @@ def main() -> None:
 
     file_path = Path(file_path_str).resolve()
     project_root = find_project_root()
+    if project_root is None:
+        print(
+            "[documentation_guard] WARNING: could not determine project root "
+            "(no .git, CLAUDE.md, pyproject.toml, or requirements-dev.txt found). "
+            "Skipping documentation check.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
 
     if file_path.suffix.lower() not in (".py", ".sql"):
         sys.exit(0)
