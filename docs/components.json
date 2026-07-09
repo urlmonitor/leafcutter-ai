@@ -1,40 +1,5 @@
 {
   "components": {
-    "sync_platforms": {
-      "id": "sync_platforms",
-      "name": "Sync Platforms",
-      "type": "utility",
-      "description": "Synchronization workflows between platforms.",
-      "detail_ref": "docs/workflows/sync_platforms.md",
-      "status": "reviewed",
-      "primary_code": [
-        "templates/scripts/sync_platforms/",
-        "tests/test_sync_platforms.py"
-      ]
-    },
-    "build_pipeline": {
-      "id": "build_pipeline",
-      "name": "Build Pipeline",
-      "type": "infrastructure",
-      "description": "Orchestrates the compilation of templates into platform-specific outputs.",
-      "detail_ref": "docs/build-pipeline.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/build.py",
-        "scripts/build_phases.py"
-      ]
-    },
-    "config_loader": {
-      "id": "config_loader",
-      "name": "Config Loader",
-      "type": "utility",
-      "description": "Loads and validates skills_config.json.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "scripts/config_loader.py"
-      ]
-    },
     "ac_store": {
       "id": "ac_store",
       "name": "AC Store",
@@ -48,18 +13,6 @@
         "config/ac_store_schema.json"
       ]
     },
-    "commit_guardian": {
-      "id": "commit_guardian",
-      "name": "Commit Guardian",
-      "type": "infrastructure",
-      "description": "Pre-commit hook system enforcing code quality, ADR coverage, and structural integrity before every commit.",
-      "detail_ref": "docs/architecture/components/commit-guardian.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/commit_guardian/",
-        ".claude/hooks/"
-      ]
-    },
     "agent_registry": {
       "id": "agent_registry",
       "name": "Agent Registry",
@@ -70,98 +23,6 @@
       "primary_code": [
         "config/agent_registry.json",
         "scripts/registry_validator.py"
-      ]
-    },
-    "feedback_collector": {
-      "id": "feedback_collector",
-      "name": "Feedback Collector",
-      "type": "analysis",
-      "description": "Structured feedback collection and aggregation system for tracking agent quality signals.",
-      "detail_ref": "docs/architecture/components/feedback-collector.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/feedback/"
-      ]
-    },
-    "changelog": {
-      "id": "changelog",
-      "name": "Changelog",
-      "type": "documentation",
-      "description": "Automated changelog entry management and emission for tracking feature delivery history.",
-      "detail_ref": "docs/architecture/components/changelog.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/changelog/"
-      ]
-    },
-    "knowledge_system": {
-      "id": "knowledge_system",
-      "name": "Knowledge System",
-      "type": "analysis",
-      "description": "Knowledge harvesting and context file maintenance for cross-session learning persistence.",
-      "detail_ref": "docs/architecture/components/knowledge-system.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/knowledge/"
-      ]
-    },
-    "worktree_manager": {
-      "id": "worktree_manager",
-      "name": "Worktree Manager",
-      "type": "infrastructure",
-      "description": "Git worktree lifecycle management for isolated epic and ticket branch environments.",
-      "detail_ref": "docs/architecture/components/worktree-manager.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/worktree/"
-      ]
-    },
-    "glossary": {
-      "id": "glossary",
-      "name": "Glossary",
-      "type": "documentation",
-      "description": "Project terminology registry with automated coverage checks and triage workflows.",
-      "detail_ref": "docs/architecture/components/glossary.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/build_glossary.py",
-        "docs/glossary.md"
-      ]
-    },
-    "roadmap": {
-      "id": "roadmap",
-      "name": "Roadmap",
-      "type": "analysis",
-      "description": "Phase-based roadmap tracking outcomes, exit criteria, and ticket advancement state.",
-      "detail_ref": "docs/architecture/components/roadmap.md",
-      "status": "active",
-      "primary_code": [
-        "docs/roadmap.json",
-        "scripts/roadmap_query.py"
-      ]
-    },
-    "ticket_lifecycle": {
-      "id": "ticket_lifecycle",
-      "name": "Ticket Lifecycle",
-      "type": "orchestration",
-      "description": "End-to-end ticket management from inbox to done including status transitions and sign-offs.",
-      "detail_ref": "docs/architecture/components/ticket-lifecycle.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/set_ticket_status.py",
-        "scripts/ticket_prioritizer.py"
-      ]
-    },
-    "template_compiler": {
-      "id": "template_compiler",
-      "name": "Template Compiler",
-      "type": "infrastructure",
-      "description": "Compiles Jinja-style agent and skill templates into deployed artifacts during the build phase.",
-      "detail_ref": "docs/architecture/components/template-compiler.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/template_compiler.py",
-        "scripts/build_phases.py"
       ]
     },
     "agent_telemetry": {
@@ -187,6 +48,52 @@
         "build-self.sh"
       ]
     },
+    "build_pipeline": {
+      "id": "build_pipeline",
+      "name": "Build Pipeline",
+      "type": "infrastructure",
+      "description": "Orchestrates the compilation of templates into platform-specific outputs.",
+      "detail_ref": "docs/build-pipeline.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/build.py",
+        "scripts/build_phases.py"
+      ]
+    },
+    "changelog": {
+      "id": "changelog",
+      "name": "Changelog",
+      "type": "documentation",
+      "description": "Automated changelog entry management and emission for tracking feature delivery history.",
+      "detail_ref": "docs/architecture/components/changelog.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/changelog/"
+      ]
+    },
+    "commit_guardian": {
+      "id": "commit_guardian",
+      "name": "Commit Guardian",
+      "type": "infrastructure",
+      "description": "Pre-commit hook system enforcing code quality, ADR coverage, and structural integrity before every commit.",
+      "detail_ref": "docs/architecture/components/commit-guardian.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/commit_guardian/",
+        ".claude/hooks/"
+      ]
+    },
+    "config_loader": {
+      "id": "config_loader",
+      "name": "Config Loader",
+      "type": "utility",
+      "description": "Loads and validates skills_config.json.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "scripts/config_loader.py"
+      ]
+    },
     "doc_compliance": {
       "id": "doc_compliance",
       "name": "Doc Compliance",
@@ -197,126 +104,6 @@
       "primary_code": [
         "scripts/doc_compliance/",
         "scripts/commit_guardian/check_doc_coverage.py"
-      ]
-    },
-    "release_manager": {
-      "id": "release_manager",
-      "name": "Release Manager",
-      "type": "infrastructure",
-      "description": "Semantic version computation and schema diff checking for structured release management.",
-      "detail_ref": "docs/architecture/components/release-manager.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/release/"
-      ]
-    },
-    "skill_registry": {
-      "id": "skill_registry",
-      "name": "Skill Registry",
-      "type": "infrastructure",
-      "description": "Registry of all available skills with metadata on usage context and allowed-tools scope.",
-      "detail_ref": "docs/architecture/components/skill-registry.md",
-      "status": "active",
-      "primary_code": [
-        "config/skill_registry.json"
-      ]
-    },
-    "injection_builder": {
-      "id": "injection_builder",
-      "name": "Injection Builder",
-      "type": "orchestration",
-      "description": "Assembles context injection payloads delivered to agents at invocation time via the knowledge plane.",
-      "detail_ref": "docs/architecture/components/injection-builder.md",
-      "status": "active",
-      "primary_code": [
-        "scripts/injection_builders.py"
-      ]
-    },
-    "supervisor_system": {
-      "id": "supervisor_system",
-      "name": "Supervisor System",
-      "type": "orchestration",
-      "description": "Ticket and epic supervisor agents that drive phase agents through the ticket lifecycle, handle failure adjudication, and enforce canonical phase ordering.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/ticket-supervisor.md",
-        "templates/agents/epic-supervisor.md",
-        ".claude/skills/building-epics/SKILL.md"
-      ]
-    },
-    "ticket_creation_pipeline": {
-      "id": "ticket_creation_pipeline",
-      "name": "Ticket Creation Pipeline",
-      "type": "orchestration",
-      "description": "Pipeline for creating, refining, and planning epic tickets from AC store entries through business-analyst and refinement agents.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/business-analyst.md",
-        "templates/agents/refinement.md",
-        "scripts/set_ticket_status.py"
-      ]
-    },
-    "python_coding": {
-      "id": "python_coding",
-      "name": "Python Coding",
-      "type": "coding",
-      "description": "Standards-enforcing Python implementation subsystem covering the python-coder agent and associated TDD, doc-enforcer, and complexity-reduction workflows.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/python-coder.md",
-        "templates/workflows/python-coder.md"
-      ]
-    },
-    "sql_coding": {
-      "id": "sql_coding",
-      "name": "SQL Coding",
-      "type": "coding",
-      "description": "SQL implementation subsystem covering the sql-coder and sql-query agents for database schema changes and ad-hoc queries.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/sql-coder.md",
-        "templates/agents/sql-query.md"
-      ]
-    },
-    "frontend_coding": {
-      "id": "frontend_coding",
-      "name": "Frontend Coding",
-      "type": "coding",
-      "description": "Frontend implementation subsystem covering the frontend-coder agent with webapp-testing and frontend-design skill integrations.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/frontend-coder.md"
-      ]
-    },
-    "testing_quality": {
-      "id": "testing_quality",
-      "name": "Testing and Quality",
-      "type": "infrastructure",
-      "description": "Test authoring and execution subsystem covering test-writer, test-runner, and ac-validator agents ensuring TDD discipline and AC coverage.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/test-writer.md",
-        "templates/agents/test-runner.md",
-        "templates/agents/ac-validator.md"
-      ]
-    },
-    "review_system": {
-      "id": "review_system",
-      "name": "Review System",
-      "type": "review",
-      "description": "Code and architecture review subsystem covering pr-reviewer, architect-review, and change-scope-reviewer agents.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/pr-reviewer.md",
-        "templates/agents/architect-review.md",
-        "templates/agents/change-scope-reviewer.md"
       ]
     },
     "documentation_system": {
@@ -333,6 +120,28 @@
         "templates/agents/reference-author.md"
       ]
     },
+    "feedback_collector": {
+      "id": "feedback_collector",
+      "name": "Feedback Collector",
+      "type": "analysis",
+      "description": "Structured feedback collection and aggregation system for tracking agent quality signals.",
+      "detail_ref": "docs/architecture/components/feedback-collector.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/feedback/"
+      ]
+    },
+    "frontend_coding": {
+      "id": "frontend_coding",
+      "name": "Frontend Coding",
+      "type": "coding",
+      "description": "Frontend implementation subsystem covering the frontend-coder agent with webapp-testing and frontend-design skill integrations.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/frontend-coder.md"
+      ]
+    },
     "git_vcs_operations": {
       "id": "git_vcs_operations",
       "name": "Git VCS Operations",
@@ -346,16 +155,62 @@
         "scripts/epic_lock.py"
       ]
     },
-    "research_analysis": {
-      "id": "research_analysis",
-      "name": "Research and Analysis",
+    "glossary": {
+      "id": "glossary",
+      "name": "Glossary",
+      "type": "documentation",
+      "description": "Project terminology registry with automated coverage checks and triage workflows.",
+      "detail_ref": "docs/architecture/components/glossary.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/build_glossary.py",
+        "docs/glossary.md"
+      ]
+    },
+    "injection_builder": {
+      "id": "injection_builder",
+      "name": "Injection Builder",
+      "type": "orchestration",
+      "description": "Assembles context injection payloads delivered to agents at invocation time via the knowledge plane.",
+      "detail_ref": "docs/architecture/components/injection-builder.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/injection_builders.py"
+      ]
+    },
+    "knowledge-management": {
+      "id": "knowledge-management",
+      "name": "Knowledge Management",
       "type": "analysis",
-      "description": "Research and analysis subsystem covering research-agent for cross-file lookups, blast-radius queries, and knowledge graph traversal.",
+      "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.",
+      "detail_ref": "docs/architecture/components/knowledge-management.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/knowledge_query.py",
+        "scripts/visualise_knowledge_graph.py",
+        "templates/skills/knowledge-query/"
+      ]
+    },
+    "knowledge_system": {
+      "id": "knowledge_system",
+      "name": "Knowledge System",
+      "type": "analysis",
+      "description": "Knowledge harvesting and context file maintenance for cross-session learning persistence.",
+      "detail_ref": "docs/architecture/components/knowledge-system.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/knowledge/"
+      ]
+    },
+    "llm_authoring": {
+      "id": "llm_authoring",
+      "name": "LLM Authoring",
+      "type": "coding",
+      "description": "LLM prompt authoring subsystem covering the llm-expert agent for writing, evaluating, and iterating on prompt artifacts.",
       "detail_ref": null,
       "status": "active",
       "primary_code": [
-        "templates/agents/research-agent.md",
-        "scripts/knowledge_query.py"
+        "templates/agents/llm-expert.md"
       ]
     },
     "onboarding": {
@@ -384,17 +239,6 @@
         "templates/scripts/commit_guardian/"
       ]
     },
-    "llm_authoring": {
-      "id": "llm_authoring",
-      "name": "LLM Authoring",
-      "type": "coding",
-      "description": "LLM prompt authoring subsystem covering the llm-expert agent for writing, evaluating, and iterating on prompt artifacts.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/agents/llm-expert.md"
-      ]
-    },
     "product_ownership": {
       "id": "product_ownership",
       "name": "Product Ownership",
@@ -404,6 +248,77 @@
       "status": "active",
       "primary_code": [
         "templates/agents/it-po.md"
+      ]
+    },
+    "python_coding": {
+      "id": "python_coding",
+      "name": "Python Coding",
+      "type": "coding",
+      "description": "Standards-enforcing Python implementation subsystem covering the python-coder agent and associated TDD, doc-enforcer, and complexity-reduction workflows.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/python-coder.md",
+        "templates/workflows/python-coder.md"
+      ]
+    },
+    "release_manager": {
+      "id": "release_manager",
+      "name": "Release Manager",
+      "type": "infrastructure",
+      "description": "Semantic version computation and schema diff checking for structured release management.",
+      "detail_ref": "docs/architecture/components/release-manager.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/release/"
+      ]
+    },
+    "research_analysis": {
+      "id": "research_analysis",
+      "name": "Research and Analysis",
+      "type": "analysis",
+      "description": "Research and analysis subsystem covering research-agent for cross-file lookups, blast-radius queries, and knowledge graph traversal.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/research-agent.md",
+        "scripts/knowledge_query.py"
+      ]
+    },
+    "review_system": {
+      "id": "review_system",
+      "name": "Review System",
+      "type": "review",
+      "description": "Code and architecture review subsystem covering pr-reviewer, architect-review, and change-scope-reviewer agents.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/pr-reviewer.md",
+        "templates/agents/architect-review.md",
+        "templates/agents/change-scope-reviewer.md"
+      ]
+    },
+    "roadmap": {
+      "id": "roadmap",
+      "name": "Roadmap",
+      "type": "analysis",
+      "description": "Phase-based roadmap tracking outcomes, exit criteria, and ticket advancement state.",
+      "detail_ref": "docs/architecture/components/roadmap.md",
+      "status": "active",
+      "primary_code": [
+        "docs/roadmap.json",
+        "scripts/roadmap_query.py"
+      ]
+    },
+    "skill_registry": {
+      "id": "skill_registry",
+      "name": "Skill Registry",
+      "type": "infrastructure",
+      "description": "Registry of all available skills with metadata on usage context and allowed-tools scope.",
+      "detail_ref": "docs/architecture/components/skill-registry.md",
+      "status": "active",
+      "primary_code": [
+        "config/skill_registry.json"
       ]
     },
     "skills_system": {
@@ -417,6 +332,104 @@
         "config/skill_registry.json",
         "templates/skills/",
         ".claude/skills/"
+      ]
+    },
+    "sql_coding": {
+      "id": "sql_coding",
+      "name": "SQL Coding",
+      "type": "coding",
+      "description": "SQL implementation subsystem covering the sql-coder and sql-query agents for database schema changes and ad-hoc queries.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/sql-coder.md",
+        "templates/agents/sql-query.md"
+      ]
+    },
+    "supervisor_system": {
+      "id": "supervisor_system",
+      "name": "Supervisor System",
+      "type": "orchestration",
+      "description": "Ticket and epic supervisor agents that drive phase agents through the ticket lifecycle, handle failure adjudication, and enforce canonical phase ordering.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/ticket-supervisor.md",
+        "templates/agents/epic-supervisor.md",
+        ".claude/skills/building-epics/SKILL.md"
+      ]
+    },
+    "sync_platforms": {
+      "id": "sync_platforms",
+      "name": "Sync Platforms",
+      "type": "utility",
+      "description": "Synchronization workflows between platforms.",
+      "detail_ref": "docs/workflows/sync_platforms.md",
+      "status": "reviewed",
+      "primary_code": [
+        "templates/scripts/sync_platforms/",
+        "tests/test_sync_platforms.py"
+      ]
+    },
+    "template_compiler": {
+      "id": "template_compiler",
+      "name": "Template Compiler",
+      "type": "infrastructure",
+      "description": "Compiles Jinja-style agent and skill templates into deployed artifacts during the build phase.",
+      "detail_ref": "docs/architecture/components/template-compiler.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/template_compiler.py",
+        "scripts/build_phases.py"
+      ]
+    },
+    "testing_quality": {
+      "id": "testing_quality",
+      "name": "Testing and Quality",
+      "type": "infrastructure",
+      "description": "Test authoring and execution subsystem covering test-writer, test-runner, and ac-validator agents ensuring TDD discipline and AC coverage.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/test-writer.md",
+        "templates/agents/test-runner.md",
+        "templates/agents/ac-validator.md"
+      ]
+    },
+    "ticket_creation_pipeline": {
+      "id": "ticket_creation_pipeline",
+      "name": "Ticket Creation Pipeline",
+      "type": "orchestration",
+      "description": "Pipeline for creating, refining, and planning epic tickets from AC store entries through business-analyst and refinement agents.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/business-analyst.md",
+        "templates/agents/refinement.md",
+        "scripts/set_ticket_status.py"
+      ]
+    },
+    "ticket_lifecycle": {
+      "id": "ticket_lifecycle",
+      "name": "Ticket Lifecycle",
+      "type": "orchestration",
+      "description": "End-to-end ticket management from inbox to done including status transitions and sign-offs.",
+      "detail_ref": "docs/architecture/components/ticket-lifecycle.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/set_ticket_status.py",
+        "scripts/ticket_prioritizer.py"
+      ]
+    },
+    "worktree_manager": {
+      "id": "worktree_manager",
+      "name": "Worktree Manager",
+      "type": "infrastructure",
+      "description": "Git worktree lifecycle management for isolated epic and ticket branch environments.",
+      "detail_ref": "docs/architecture/components/worktree-manager.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/worktree/"
       ]
     }
   }
