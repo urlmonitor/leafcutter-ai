@@ -1,6 +1,6 @@
 ---
 title: "Package-surface ACs must carry a machine-checkable implementation spec"
-status: todo
+status: done
 components:
   - ac_store
   - product_ownership
@@ -15,7 +15,7 @@ change_target: schema
 risk_surface: contract_boundary
 test_constraints: unit_only
 complexity: medium
-ac_coverage: 0/4
+ac_coverage: 4/4
 files_touched:
   - config/ac_store_schema.json
   - scripts/ac_store/validate_ac.py
@@ -23,14 +23,14 @@ files_touched:
   - unit_tests/prompt_assembly/test_package_surface_spec.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 04: Package-surface ACs must carry a machine-checkable implementation spec
@@ -88,21 +88,93 @@ tests:
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | | |
-| AC-2 | | | |
-| AC-3 | | | |
-| AC-4 | | | |
+| AC-1 | test_package_surface_spec.py:test_schema_requires_impl_fields_for_package_surface_ac | Added if/then conditional to ac_store_schema.json requiring object it_requirements for package-surface ACs | |
+| AC-2 | test_package_surface_spec.py:test_schema_requires_impl_fields_for_package_surface_ac | Same schema if/then: non-package-surface ACs unaffected (fields remain optional) | |
+| AC-3 | test_package_surface_spec.py:test_validator_rejects_fictional_reference, test_validator_rejects_registration_entry_missing_required_keys | Created scripts/ac_store/validate_ac.py with validate_package_surface_spec() rejecting fictional paths and missing keys | |
+| AC-4 | test_package_surface_spec.py:test_it_po_template_states_obligation | Added Package-surface AC obligation section to templates/agents/it-po.md §2.3 | |
+
+## Sign-offs
+
+- [x] test-writer — 2026-07-08 10:00
+- [x] python-coder — 2026-07-08 10:30
+- [x] test-runner — 2026-07-08 10:45
+- [x] pr-reviewer — 2026-07-08 11:00
+- [x] commit — 2026-07-08 11:15
+- [x] pull-request — 2026-07-08 11:20
 
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-07-08 10:00 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_file_created: true
+  tests_red_verified: true
+  ac_coverage_table_filled: true
+red_baseline:
+  - test_name: test_schema_requires_impl_fields_for_package_surface_ac
+    file: unit_tests/prompt_assembly/test_package_surface_spec.py
+    error: "AssertionError: Expected schema to reject a package-surface AC with thin it_requirements, but no validation error was produced. The schema conditional enforcement is not yet implemented."
+  - test_name: test_validator_rejects_fictional_reference
+    file: unit_tests/prompt_assembly/test_package_surface_spec.py
+    error: "ImportError: cannot import name 'validate_package_surface_spec' from 'scripts.ac_store.validate_ac'"
+  - test_name: test_validator_rejects_registration_entry_missing_required_keys
+    file: unit_tests/prompt_assembly/test_package_surface_spec.py
+    error: "ImportError: cannot import name 'validate_package_surface_spec' from 'scripts.ac_store.validate_ac'"
+  - test_name: test_it_po_template_states_obligation
+    file: unit_tests/prompt_assembly/test_package_surface_spec.py
+    error: "AssertionError: it-po.md must contain the term 'package-surface' as part of the obligation to populate impl fields. The obligation statement is not yet present."
+Created unit_tests/prompt_assembly/test_package_surface_spec.py with 4 failing test stubs covering all 4 ACs; verified RED (4 FAILED without AC enforcement plugin). AC enforcement plugin converts to XFAIL correctly. Red baseline captured above for python-coder handoff.
+
+### 2026-07-08 10:30 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  schema_conditional_added: true
+  validate_ac_created: true
+  it_po_obligation_added: true
+  all_tests_green: true
+  ruff_clean: true
+Extended config/ac_store_schema.json with if/then conditional (AC-1, AC-2): package-surface ACs now require a structured it_requirements object with 5 required fields; non-package-surface ACs are unaffected. Created scripts/ac_store/validate_ac.py with validate_package_surface_spec() that rejects fictional reference_file_path and missing required keys (AC-3). Added Package-surface AC obligation section to templates/agents/it-po.md §2.3 with explicit reference to package-surface, it_requirements, and reference_file_path (AC-4). All 4 tests now PASSED; ruff clean.
+
+### 2026-07-08 10:45 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  target_tests_green: true
+  no_regressions: true
+Ran unit_tests/prompt_assembly/ (19 tests, 19 passed, 0 failed) and unit_tests/ac_store/ (279 passed, 1 skipped, 0 failed). All 4 new ticket tests pass without enforcement plugin. No regressions from schema changes.
+
+### 2026-07-08 11:00 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac1_covered: true
+  ac2_covered: true
+  ac3_covered: true
+  ac4_covered: true
+  backward_compatible: true
+  error_handling_compliant: true
+  ruff_clean: true
+All 4 ACs are implemented and tested. Schema if/then conditional is backward-compatible. validate_ac.py uses specific exception types and proper error reporting. it-po.md obligation section is clear and actionable. No blockers — approved.
+
+### 2026-07-08 11:15 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  staged_correct_files: true
+  commit_created: true
+  lock_released: true
+Committed 5 files as 8b7d7349 on branch EPIC-PromptAssemblyHardening. Staged: config/ac_store_schema.json, scripts/ac_store/validate_ac.py, templates/agents/it-po.md, unit_tests/prompt_assembly/test_package_surface_spec.py, tickets/.../04_package_surface_spec_schema.md. Commit lock acquired and released cleanly.
+
+### 2026-07-08 11:20 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed commit 8b7d7349 to origin/EPIC-PromptAssemblyHardening; PR #242 (feat(prompt-assembly): ...) updated with ticket 04 implementation changes.
 
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Extend the AC store schema (`config/ac_store_schema.json`) to require the impl fields for package-surface ACs (conditional on assigned_agent python-coder + build_pipeline/build-orchestration component). Read the schema fully first.
-- [ ] Extend the AC validator to reject an unresolvable reference-file path / registration entry missing required keys.
-- [ ] Add the obligation statement to `templates/agents/it-po.md`.
+- [x] Extend the AC store schema (`config/ac_store_schema.json`) to require the impl fields for package-surface ACs (conditional on assigned_agent python-coder + build_pipeline/build-orchestration component). Read the schema fully first.
+- [x] Extend the AC validator to reject an unresolvable reference-file path / registration entry missing required keys.
+- [x] Add the obligation statement to `templates/agents/it-po.md`.
 
 ## Risk & Safety
 

@@ -157,21 +157,43 @@ that coders must satisfy.
 architect-review → test-writer → python-coder → sql-coder → test-runner
 ```
 
-### Docs-only / config-only skip rule
+### Skip rule — decide on the AGENT MAP, not the Test Requirements block
 
-If `## Test Requirements` is absent from the ticket body, OR if the `tests`
-array inside that block is empty (`tests: []`), skip immediately:
+The decision to skip is based on whether the ticket dispatches a
+production-code agent (`python-coder`, `sql-coder`, or `frontend-coder` set to
+`needed` in the frontmatter `agents:` map) — **NOT** on the mere presence or
+emptiness of a `## Test Requirements` block. An absent/empty block on a code
+ticket is a defect to surface, never a licence to silently skip.
+
+**Non-code ticket** (no coder agent is `needed`): skip immediately.
 
 1. Write zero test files.
 2. Append this comment to `## Comments`:
    ```
    ### YYYY-MM-DD HH:MM — test-writer (status: ok)
-   test_requirements empty — skipping test-writer phase (docs/config-only ticket)
+   no production-code agent in this ticket — no tests required (non-code ticket)
    ```
 3. Sign off `agents.test-writer: signed_off` and stop.
 
-Do NOT append any `red_baseline` block when skipping — the block is only
-meaningful when tests were actually written.
+**Code ticket** (a coder agent is `needed`): you MUST write tests. Do NOT skip.
+The `## Test Requirements` block is derived from the source AC's `test_spec`
+(or, failing that, its Gherkin `criteria`) by `generate_ticket_from_ac.py`, and
+the `check-ticket-test-requirements` guard blocks any code ticket that reaches
+authoring with an empty block. If you nonetheless encounter a code ticket whose
+`## Test Requirements` is empty or absent:
+
+1. Do NOT silently sign off, and do NOT emit a "docs-only / config-only" reason
+   — that string misclassifies real code work as test-free (the historical bug
+   this rule exists to prevent).
+2. Derive the failing tests from the AC directly (the AC is the source of
+   truth): read the `source_ac` frontmatter field, load that AC's YAML from the
+   store, and use its `test_spec` (preferred) or its `criteria` Gherkin
+   Then-clauses as the test contract.
+3. If the AC itself has neither a usable `test_spec` nor `criteria`, append a
+   `(status: blocker)` comment naming the AC and stop — do not fabricate tests.
+
+Do NOT append any `red_baseline` block when a non-code skip applies — the block
+is only meaningful when tests were actually written.
 
 ## Source-of-Truth Discipline
 
@@ -254,9 +276,10 @@ Before writing any file:
    | test_foo_bar | unit | unit_tests/live_trader/ | FooBar.process() |
    ```
 
-   If `## Test Requirements` is absent or the `tests` array is empty, apply
-   the **Docs-only / config-only skip rule** above — sign off immediately
-   with `test_requirements empty` comment, zero file writes, stop.
+   Apply the **Skip rule** above: if NO production-code agent is `needed`, skip
+   (non-code ticket). If a coder IS `needed` but `## Test Requirements` is
+   absent or empty, do NOT skip — fall through to the AC Store pre-flight
+   (step 5) and derive the tests from the `source_ac` directly.
 
 2. **Load testing context** — in priority order:
    1. `.claude/skills_config.json` → `testing_context` key.
@@ -271,27 +294,35 @@ Before writing any file:
    `__init__.py` file before writing tests.
 
 5. **AC Store pre-flight (run before writing any test function):**
+   The AC is the source of truth for what to test — always resolve it.
    1. Check whether `docs/acceptance-criteria/` exists in the repo root
       (via `Bash ls docs/acceptance-criteria/`).
-   2. If the directory exists, scan the ticket body for AC ID references using
-      the regex `AC-[A-Z]{2,6}-[0-9]{3}` (e.g. `AC-FIN-001`, `AC-AUTH-007`).
-   3. For each matched AC ID, read the corresponding YAML file at
-      `docs/acceptance-criteria/<domain>/<ID>.yaml` where `<domain>` is the
-      lowercase component prefix (e.g. `FIN` → `finalize`, or match by searching
-      the directory tree for a file named `<ID>.yaml`).
-   4. Load the `id`, `status`, and `criteria` fields from each YAML.
+   2. **Primary — follow the deterministic pointer:** read the ticket's
+      `source_ac` frontmatter field (written by `generate_ticket_from_ac.py`).
+      This is the authoritative AC id for the ticket. Locate its YAML by
+      searching the store for a file named `<source_ac>.yaml`
+      (e.g. `Bash find docs/acceptance-criteria -name '<source_ac>.yaml'`).
+   3. **Secondary — scan the body:** additionally scan the ticket body and the
+      `covers:` fields of the `## Test Requirements` block for AC IDs matching
+      the real store pattern `[A-Z]{2,6}(-[A-Z]{2,6})?-\d+[a-z\d-]*`
+      (e.g. `GE-114-1`, `ACD-1100b-3`, `BP-811`, `INF-100c`). There is **no**
+      `AC-` prefix in this store — do not require one.
+   4. For each AC id found, load the `id`, `status`, `criteria`, and `test_spec`
+      fields from its YAML.
    5. **Skip deprecated / superseded ACs:** if `status` is `deprecated` or
       starts with `superseded_by`, do NOT write a test for that AC. Log a
       warning in `## Comments`:
       ```
       AC <ID> is deprecated — skipping test generation for this AC
       ```
-   6. Use the `criteria` field from each non-skipped AC YAML as the primary
-      source for the test scenario (authoritative over the Gherkin in the ticket
-      body). The ticket body Gherkin remains for human readability only.
-   7. **If the AC store does not exist** or the ticket references no AC IDs:
-      fall back to the existing Gherkin-from-ticket-body approach. In this
-      fallback case, use `# covers: UNKNOWN` as the tag (see Step 2i below).
+   6. Use the AC's `test_spec` (preferred) or `criteria` field from each
+      non-skipped AC YAML as the authoritative source for the test scenarios —
+      authoritative over the derived Gherkin/Test Requirements in the ticket
+      body (which is itself derived from the AC and kept for readability).
+   7. **If the AC store does not exist** or no AC id can be resolved (no
+      `source_ac` and no body match): fall back to the Gherkin-from-ticket-body
+      approach. In this fallback case, use `# covers: UNKNOWN` as the tag
+      (see Step 2i below).
 
 ## Step 2 — Write Test Files
 

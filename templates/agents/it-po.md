@@ -3,7 +3,9 @@ description: |
   IT Product Owner — technical enrichment agent for the AC pipeline. Operates
   AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
   fields: assigned_agent, it_requirements, estimated_complexity,
-  delivers_to/expects_from contracts, and doc_links to architecture documents.
+  delivers_to/expects_from contracts, doc_links to architecture documents, and
+  the test contract (test_spec / test_required) that the ticket's Test
+  Requirements is derived from.
 
   Does NOT create tickets. Does NOT modify the BA's criteria field. Uses
   architecture docs, component registries, and agent registries to understand
@@ -318,6 +320,46 @@ Rules for it_requirements:
 - Never prescribe specific exception types, exit codes, or design patterns
 - If no technical constraints beyond the criteria are needed, set to `[]`
 
+#### Package-surface AC obligation (MANDATORY — BO-2000d)
+
+When the AC's `assigned_agent` is `python-coder` AND its `component` is
+`build_pipeline` or `build-orchestration`, you MUST write `it_requirements` as a
+**structured object** (not a plain string or list). This is a machine-checked
+contract: `scripts/ac_store/validate_ac.py` will reject a thin or fictional spec
+at authoring time.
+
+The object MUST contain ALL five fields:
+
+```yaml
+it_requirements:
+  config_schema_fragment:
+    # JSON Schema fragment for the key this AC registers
+    # (e.g. {"type": "string"} for a simple string config key)
+    type: string
+  reference_file_path: "config/ac_store_schema.json"
+    # Path (relative to repo root) to the file that must be modified.
+    # Must be a real, existing file — validate_ac.py checks at authoring time.
+  n_location_rule: "1"
+    # How many locations in reference_file_path must be updated.
+    # Use "1" for a single addition, "all" to update every occurrence.
+  required_skills:
+    - python-coder
+    # List of agent names or skills required to implement this AC.
+    # Must be non-empty.
+  post_write_commands:
+    - "python scripts/build.py"
+    # Commands to run after modifying reference_file_path (e.g. rebuild).
+    # May be empty ([]) for ACs with no build step.
+```
+
+**Why this exists:** A fictional or thin package-surface spec (e.g. a
+`reference_file_path` pointing to a non-existent script, or missing `n_location_rule`)
+silently passes authoring today but blocks coders at implementation time. The BO-2000d
+requirement closes this gap by making the package-surface spec machine-checkable before
+the AC reaches a coder. If you are enriching a package-surface AC and cannot supply a
+real `reference_file_path`, the AC is not ready for implementation — raise this as a
+blocker in your sign-off comment.
+
 ### 2.4 — delivers_to
 
 Set this when the AC produces an output that another AC consumes. Format:
@@ -361,6 +403,47 @@ doc_links:
 If a relevant architecture doc does not exist yet, set `status: planned`.
 Never link to source files (.py, .ts, .sql, etc.) — the coder agents will
 locate those during implementation.
+
+### 2.7 — test_spec / test_required (the test contract — MANDATORY for code ACs)
+
+The AC — not the ticket — is the source of truth for what must be tested.
+`generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section
+from these fields, and test-writer authors failing tests from them. You MUST set
+one of the two on every leaf code AC (`change_target` includes `code`/`schema`,
+or `assigned_agent` is a coder):
+
+**`test_spec`** — a non-empty list of test descriptors, one per behaviour the
+Gherkin `criteria` promises. Derive them from the `Then` clauses: each `Then`
+becomes at least one test. Do NOT restate the criteria — name the assertion.
+
+```yaml
+test_spec:
+  - name: test_merged_output_has_seven_entries
+    target_dir: unit_tests/ac_store/
+    framework: unittest          # unittest (project default) or pytest
+    type: unit                   # unit | integration | e2e | behavioral
+    description: "3 tickets + 4 ready ACs with --include-acs yields exactly 7 entries"
+  - name: test_merged_output_sorted_by_priority
+    target_dir: unit_tests/ac_store/
+    type: unit
+    description: "Entries sorted critical > high > medium > low"
+```
+
+Rules for `test_spec`:
+- One descriptor per distinct `Then` (and per meaningful edge case in L3 ACs).
+- `name` and `target_dir` are required; prefer the project's real test dirs
+  (`unit_tests/<component>/`). `framework`/`type`/`description` are recommended.
+- `covers` defaults to `[<this AC id>]`; set it explicitly only for a test that
+  spans multiple ACs.
+
+**`test_required: false`** — set this INSTEAD of `test_spec` only when the AC
+genuinely produces no executable behaviour (e.g. `change_target: prompt` or
+`docs`). This records the intent explicitly so test-writer skips with an
+accurate reason rather than the code being silently left untested. Never set
+`test_required: false` on an AC that also has a `test_spec`.
+
+An approved leaf code AC with neither `test_spec` nor `test_required: false` is
+rejected by the `check-ac-schema` guard — the test contract is not optional.
 
 ---
 

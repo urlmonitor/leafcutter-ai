@@ -1,9 +1,13 @@
 ---
-title: "Project Glossary"
-description: "Authoritative glossary of leafcutter-ai project jargon and terminology, seeded by /glossary-bootstrap and maintained by the check_glossary_coverage pre-commit hook."
-type: "reference"
+title: Project Glossary
+description: Authoritative glossary of leafcutter-ai project jargon and terminology,
+  seeded by /glossary-bootstrap and maintained by the check_glossary_coverage pre-commit
+  hook.
+type: reference
+created: '2026-07-09'
+last_updated: '2026-07-09'
+status: active
 ---
-
 <!--
 GLOSSARY AUTHORING GUIDE (invisible in rendered docs)
 
@@ -48,3 +52,6 @@ A `build.py` deployment phase (`build_ac_store()` in `scripts/build_phases.py`) 
 
 ### io_boundary_calls
 A configuration field in `commit_guardian.json` under `exception_handling` that specifies the set of external I/O function calls (e.g., `subprocess.run`, `requests.get`, `cursor.execute`, `open()`) that must be wrapped in typed `try/except` blocks in production code. The code table in `check_exception_handling.py` and this JSON spec must be kept in parity; see ADR-014 Decision 1.
+
+### driveTicketPhases
+A JavaScript loop function that orchestrates phase-dispatching for each ticket in a batch. Originally defined in `templates/workflows-js/build-ticket.js`, it dispatches each needed phase as a depth-1 `agent(agentType: phaseName)` call. In the current architecture (ADR-019), `driveTicketPhases` is inlined into `build-feature.js` to enable ticket batching at depth 0, replacing the prior pattern of dispatching a separate `ticket-supervisor` agent per ticket. `build-ticket.js` is the canonical twin and retains the reference implementation of the loop.

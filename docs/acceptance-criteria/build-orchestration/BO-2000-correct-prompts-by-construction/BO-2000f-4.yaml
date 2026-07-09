@@ -1,0 +1,61 @@
+id: BO-2000f-4
+components:
+  - build-orchestration
+title: "A structural check keeps the flattened driver wired into /build-feature and blocks whole-ticket inline execution"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the /build-feature workflow definition,
+  When the structural regression check runs against it,
+  Then it asserts the flattened build-ticket driver is reachable and invoked from /build-feature
+    (build-ticket is not orphaned),
+  And it asserts /build-feature routes per-ticket phase execution through that driver
+    rather than executing all phases inline in a single supervisor agent,
+  And the check passes for a correctly wired /build-feature.
+depends_on:
+  - BO-2000f
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: unit_tests/prompt_assembly/test_build_feature_flatten_wiring.py
+  n_location_rule: "1 -- the structural guard test asserting build-feature.js routes phases through the flattened per-phase driver"
+  required_skills:
+    - test-writer
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_build_feature_flatten_wiring.py"
+  notes: |
+    Structural (source-text) assertion, since the depth cap makes inline-vs-delegated
+    execution un-unit-testable at runtime: assert build-feature.js drives per-phase
+    (agentType: <phaseName>) and does NOT dispatch a whole-ticket
+    agentType: 'ticket-supervisor'. Passes against the correctly rewired file.
+delivers_to:
+  agent: python-coder
+  contract: "A structural regression guard asserting /build-feature routes phases through the flattened build-ticket driver"
+expects_from:
+  ac_id: BO-2000f-1
+  contract: "The rewired build-feature.js whose flattened-driver wiring this guard asserts"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2000f-4-i
+implemented_by: []

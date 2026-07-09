@@ -1,0 +1,58 @@
+id: BO-2000f-2
+components:
+  - build-orchestration
+title: "The /build-feature single-ticket path runs the ticket's phases through the flattened driver, not an inline supervisor"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given /build-feature resolves its argument to a single standalone ticket (not part of an epic),
+  When it drives that ticket,
+  Then it executes the ticket's phases through the flattened script-driver semantics
+    -- each needed phase is dispatched as its own phase agent under that phase's template
+    (build-ticket driver semantics),
+  And it does NOT hand the whole ticket to a single agent that runs every phase inline.
+depends_on:
+  - BO-2000f
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the single-ticket dispatch site in build-feature.js (shares the same flattened driver as the epic-batch path)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "node --check templates/workflows-js/build-feature.js"
+  notes: |
+    The single-ticket path must call the SAME inlined flattened driver
+    (driveTicketPhases) as the epic-batch path, dispatching each needed phase as its
+    own agentType: <phaseName> call, and must NOT dispatch a whole-ticket
+    agentType: 'ticket-supervisor'.
+delivers_to:
+  agent: python-coder
+  contract: "A single-ticket drive that routes phase execution through the flattened build-ticket driver"
+expects_from:
+  ac_id: BO-2000f-1
+  contract: "The flattened build-ticket driver invocation shared with the epic-batch path"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

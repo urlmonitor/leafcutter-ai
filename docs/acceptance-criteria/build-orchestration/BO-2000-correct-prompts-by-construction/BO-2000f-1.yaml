@@ -1,0 +1,57 @@
+id: BO-2000f-1
+components:
+  - build-orchestration
+title: "The /build-feature epic-batch path runs each ticket's phases through the flattened driver, not an inline supervisor"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given /build-feature resolves its argument to an epic with one or more ready tickets,
+  When it drives a ready ticket in a batch,
+  Then it executes that ticket's phases through the flattened script-driver semantics
+    -- each needed phase is dispatched as its own phase agent under that phase's template
+    (build-ticket driver semantics),
+  And it does NOT hand the whole ticket to a single agent that runs every phase inline.
+depends_on:
+  - BO-2000f
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the epic-batch dispatch site and the single-ticket dispatch site in build-feature.js"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "node --check templates/workflows-js/build-feature.js"
+  notes: |
+    Inline build-ticket.js's flattened phase loop into build-feature.js so each ready
+    epic ticket's needed phases are dispatched as their own agentType: <phaseName>
+    calls (depth-1, ADR-006). Do NOT call workflow('build-ticket') -- the Workflow tool
+    permits only depth-1 nesting (E2 leaf-invariant). Remove the whole-ticket
+    agentType: 'ticket-supervisor' dispatch on the epic-batch path.
+delivers_to:
+  agent: python-coder
+  contract: "An epic-batch drive that routes per-ticket phase execution through the flattened build-ticket driver"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

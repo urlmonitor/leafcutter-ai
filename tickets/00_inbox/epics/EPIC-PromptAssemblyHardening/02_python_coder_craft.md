@@ -1,6 +1,6 @@
 ---
 title: "python-coder template carries its durable implementation craft"
-status: todo
+status: done
 components:
   - llm_authoring
   - python_coding
@@ -21,14 +21,14 @@ files_touched:
   - unit_tests/prompt_assembly/test_python_coder_template.py
 agents:
   architect-review: not_needed
-  test-writer: needed
+  test-writer: signed_off
   python-coder: not_needed
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: python-coder template carries its durable implementation craft
@@ -101,14 +101,62 @@ tests:
 | AC-5 | | done | |
 | AC-6 | | done | |
 
+## Sign-offs
+
+- [x] test-writer — 2026-07-08 11:44
+- [x] test-runner — 2026-07-08 11:45
+- [x] pr-reviewer — 2026-07-08 11:46
+- [x] commit — 2026-07-08 11:49
+- [x] pull-request — 2026-07-08 11:51
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
 
+### 2026-07-08 11:44 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  tests_written: true
+  tests_verified_green: true
+  task_checkbox_flipped: true
+  signoff_appended: true
+Wrote unit_tests/prompt_assembly/test_python_coder_template.py with 8 tests across 4 test classes covering BO-2000b-1 through BO-2000b-6. All 8 tests pass green (implementation already present in templates/agents/python-coder.md). A red result in future runs indicates a template regression. Created unit_tests/prompt_assembly/__init__.py for package discovery.
+
+### 2026-07-08 11:45 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Ran unit_tests/prompt_assembly/ suite: 12 passed, 4 xfailed (xfails are from ticket 04 — expected). Command: python3 -m pytest unit_tests/prompt_assembly/ -v. Exit code: 0.
+
+### 2026-07-08 11:46 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  diff_reviewed: true
+  acs_covered: true
+  no_high_confidence_findings: true
+Reviewed diff for ticket 02: 8 new tests in unit_tests/prompt_assembly/test_python_coder_template.py plus __init__.py. All tests assert template content strings (no flaky assertions). ACs 1-6 covered: fail-open carve-out, path awareness, delegation skills, read-before-Edit, real-artifact spot-check, and shell discipline. All 8 tests passed green. No production code changes. No high-confidence findings.
+
+### 2026-07-08 11:49 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  staged_set_verified: true
+  pre_commit_hooks_passed: true
+  commit_created: true
+Committed SHA 56bd8234 on branch EPIC-PromptAssemblyHardening. 3 files changed, 208 insertions, 5 deletions. Pre-commit hooks passed. Staged set was exact: ticket + test file + __init__.py (unstaged ticket 01 artifacts that leaked in from parallel drive).
+
+### 2026-07-08 11:51 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_push_verified: true
+  pr_status_checked: true
+Signed off pull-request phase for ticket 02. Per epic convention (one PR per epic), the PR for EPIC-PromptAssemblyHardening is managed at the epic finalization level. Branch EPIC-PromptAssemblyHardening has commits 56bd8234 (ticket 02) and a217de6a (ticket 01) ahead of origin/main.
+
 ## Implementation Tasks
 
 ### test-writer
-- [ ] Write the four tests above; they read `templates/agents/python-coder.md` and assert the required content. Expect GREEN on first run (implementation already landed); a red test means the template edit regressed.
+- [x] Write the four tests above; they read `templates/agents/python-coder.md` and assert the required content. Expect GREEN on first run (implementation already landed); a red test means the template edit regressed.
 
 ## Risk & Safety
 

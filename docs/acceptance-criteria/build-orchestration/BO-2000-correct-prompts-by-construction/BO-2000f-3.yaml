@@ -1,0 +1,58 @@
+id: BO-2000f-3
+components:
+  - build-orchestration
+title: "A code ticket driven via /build-feature runs test-writer and coder as separate phase agents"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a code ticket (it has a coding phase agent in its agents map) driven via /build-feature,
+  When its phases are executed through the flattened driver,
+  Then the test-writer phase is dispatched as its own agent that produces the failing test baseline first,
+  And the coder phase is dispatched as a separate agent afterward,
+  So neither phase is collapsed into one agent that writes both the tests and the code
+    (preserving the TDD separation and the phantom-test guards carried by those templates).
+depends_on:
+  - BO-2000f
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the shared per-phase dispatch loop (driveTicketPhases) that iterates the ticket's ordered phases"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "node --check templates/workflows-js/build-feature.js"
+  notes: |
+    Consequence of the flattened loop: because driveTicketPhases dispatches each needed
+    phase as its own agent in canonical order, test-writer (priority 5) and the coder
+    (priority 6) run as two distinct depth-1 agents under their own templates -- never
+    one agent writing both tests and code.
+delivers_to:
+  agent: test-writer
+  contract: "A /build-feature drive in which test-writer and the coder are separate phase agents (TDD separation preserved)"
+expects_from:
+  ac_id: BO-2000f-1
+  contract: "The flattened per-phase dispatch that makes separate test-writer and coder phases possible"
+origin_agent: BrainCandy
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

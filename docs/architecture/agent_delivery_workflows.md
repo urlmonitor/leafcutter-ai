@@ -4,7 +4,7 @@ description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-07-07"
+last_updated: "2026-07-09"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -107,7 +107,7 @@ flowchart TD
 
     %% Top-Level Agents
     subgraph Primary_Agents ["Top-Level Agents"]
-        epicSup["epic-supervisor"]:::orchestrator
+        buildFeat["build-feature.js<br/>(inline batching + per-phase<br/>depth-1 dispatch — ADR-019)"]:::orchestrator
         createTick["create-ticket"]:::orchestrator
         quickFixAgt["ticket-supervisor (inline,<br/>current worktree — no branch switch)"]:::orchestrator
         pyCoder["python-coder"]:::worker
@@ -121,7 +121,7 @@ flowchart TD
     end
 
     %% Mappings
-    cmdBuild --> epicSup
+    cmdBuild --> buildFeat
     cmdTicket --> createTick
     cmdQuickFix --> quickFixAgt
     cmdPy --> pyCoder
@@ -221,9 +221,24 @@ flowchart LR
 
 ---
 
-## 4. Detail View: Epic & Ticket Supervisor Flow (`/build-feature`)
+## 4. Detail View: build-feature.js Inline Phase-Dispatch Flow (`/build-feature`)
 
-This flow illustrates how `epic-supervisor` automates parallel delivery by calculating physical dependencies (`files_touched`), and how `ticket-supervisor` distributes work to phase agents based on the ticket's frontmatter. It also outlines the adjudication ladder for blockers.
+> **Topology corrected — 2026-07-09 (ADR-019).** `build-feature.js` no longer dispatches a
+> `ticket-supervisor` agent per ticket. Doing so placed `ticket-supervisor` at depth 1 and
+> phase agents at depth 2 — beyond Claude Code's hard depth-1 Agent-tool nesting limit —
+> so all phase dispatches were silently dropped and no implementation work occurred.
+> `workflow('build-ticket')` is also prohibited (E2 leaf-invariant: a workflow script cannot
+> invoke another workflow script). The correct topology is described below.
+
+`build-feature.js` is the depth-0 executing context. It inlines both the epic-level batching
+loop and the per-ticket phase-dispatch loop (`driveTicketPhases`, mirrored from
+`build-ticket.js`). Each needed phase agent is dispatched as a direct depth-1
+`agent(agentType: phaseName)` call. No `ticket-supervisor` agent is involved in phase
+execution.
+
+`build-ticket.js` is the **canonical twin**: it carries the same `driveTicketPhases` loop
+with a TWIN comment referencing `build-feature.js`. It is the correct entry point for
+standalone single-ticket invocations. Any change to the loop must be applied to both files.
 
 The canonical phase-agent dispatch order is:
 `architect-review → python-coder → sql-coder → frontend-coder → test-writer → test-runner → documentation-expert → pr-reviewer → commit → pull-request`
@@ -243,64 +258,52 @@ flowchart TD
 
     %% Data Inputs
     MP["Master_Plan.md<br/>+ Ticket Files"]:::input
-    
-    %% Epic Supervisor
-    subgraph Epic_Supervisor_Layer ["Epic Supervisor (Sonnet)"]
-        ES_Read["Read Master_Plan & sub-tickets"]:::orchestrator
-        ES_Graph["Build Dependency Graph<br/>(depends_on + files_touched)"]:::orchestrator
-        ES_Batch{"Compute next ready batch<br/>(disjoint files)"}:::decision
-        ES_Spawn["Spawn N × ticket-supervisor<br/>(parallel)"]:::orchestrator
-        
-        MP --> ES_Read
-        ES_Read --> ES_Graph
-        ES_Graph --> ES_Batch
-        ES_Batch -->|Batch Ready| ES_Spawn
-        ES_Batch -->|All Done| ES_Finish((Finish))
+
+    %% build-feature.js (depth 0 — inline batching + phase dispatch)
+    subgraph Build_Feature_Layer ["build-feature.js (JS workflow, depth 0 — inline)"]
+        BF_Read["Read Master_Plan & sub-tickets"]:::orchestrator
+        BF_Graph["Build Dependency Graph<br/>(depends_on + files_touched)"]:::orchestrator
+        BF_Batch{"Compute next ready batch<br/>(disjoint files, topological order)"}:::decision
+        BF_Drive["Drive ticket phases inline<br/>(driveTicketPhases loop)"]:::orchestrator
+        BF_Phase["agent(agentType: phaseName)<br/>→ each phase at depth 1"]:::orchestrator
+
+        MP --> BF_Read
+        BF_Read --> BF_Graph
+        BF_Graph --> BF_Batch
+        BF_Batch -->|Batch Ready| BF_Drive
+        BF_Batch -->|All Done| BF_Finish((Finish))
+        BF_Drive --> BF_Phase
+        BF_Phase -. "next ticket" .-> BF_Batch
     end
-    
-    %% Ticket Supervisor
-    subgraph Ticket_Supervisor_Layer ["Ticket Supervisor (Sonnet)"]
-        TS_Start(("Start Ticket"))
-        TS_ReadFront["Read frontmatter 'agents' map"]:::orchestrator
-        TS_FindNext{"Find next 'needed' agent"}:::decision
-        TS_SpawnAgent["Spawn Phase Agent<br/>(e.g., python-coder)"]:::orchestrator
-        
-        ES_Spawn -. "invokes" .-> TS_Start
-        TS_Start --> TS_ReadFront
-        TS_ReadFront --> TS_FindNext
-        TS_FindNext -->|Agent Needed| TS_SpawnAgent
-        TS_FindNext -->|No More Needed| TS_Done(("Mark Ticket Done"))
-        TS_Done -. "returns" .-> ES_Batch
-    end
-    
+
     %% Agent Execution & Signoff
-    subgraph Phase_Execution ["Phase Agent Execution (ordered)"]
+    subgraph Phase_Execution ["Phase Agent Execution (depth 1 — ordered)"]
         AgentRun["Agent Does Work<br/>(e.g. architect-review, python-coder,<br/>sql-coder, frontend-coder,<br/>test-writer, test-runner,<br/>documentation-expert, ...)"]:::worker
         AgentSignoff["Agent invokes signoff skill<br/>(Appends to ## Comments)"]:::worker
-        
-        TS_SpawnAgent --> AgentRun
+
+        BF_Phase --> AgentRun
         AgentRun --> AgentSignoff
     end
-    
+
     %% Comment Adjudication
-    subgraph Adjudication_Ladder ["Comment Parsing & Adjudication"]
+    subgraph Adjudication_Ladder ["Comment Parsing & Adjudication (depth 0 — inline in build-feature.js)"]
         TS_Parse{"Parse Comment<br/>Status Tag"}:::decision
-        
+
         AgentSignoff --> TS_Parse
-        
-        TS_Parse -->|ok / handoff| TS_ReadFront
+
+        TS_Parse -->|ok / handoff| BF_Drive
         TS_Parse -->|question| TS_HaltUser["Halt & Ask User"]:::error
-        
+
         %% Blocker ladder
         TS_Parse -->|blocker| TS_Blocker{"Blocker Adjudication Ladder"}:::decision
-        
+
         TS_Blocker -->|1. Mechanical Error| TS_Respawn["Respawn sibling<br/>with error comment"]:::worker
         TS_Blocker -->|2. Cross-Agent Rework| TS_Respawn
         TS_Blocker -->|3. Design Choice| B_Lead["Spawn brainstorm-lead (Opus)"]:::gatekeeper
         TS_Blocker -->|4. Exhausted| TS_Fail["Halt & Surface to User"]:::error
-        
+
         TS_Respawn -. "retries phase" .-> AgentRun
-        
+
         %% Brainstorming
         B_Worker["N × brainstorm-worker (parallel)"]:::worker
         B_Lead --> B_Worker
@@ -308,6 +311,13 @@ flowchart TD
         B_Merge --> TS_HaltUser
     end
 ```
+
+> [!NOTE]
+> **Depth constraint summary (ADR-019):**
+> - `build-feature.js` is the depth-0 executing context. It never calls `agent('ticket-supervisor')` for phase execution.
+> - Phase agents (`python-coder`, `test-writer`, etc.) are each dispatched as `agent(agentType: phaseName)` at depth 1 — within the hard limit.
+> - `workflow('build-ticket')` is never called from `build-feature.js` (E2 leaf-invariant: workflow scripts cannot nest).
+> - `build-ticket.js` is the canonical twin. Its `driveTicketPhases` function is the reference implementation for the loop inlined in `build-feature.js`; changes to the loop must be applied to both files.
 
 ---
 
