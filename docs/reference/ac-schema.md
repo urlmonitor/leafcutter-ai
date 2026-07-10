@@ -735,17 +735,21 @@ Assign `ID = PREFIX + "-" + zero_pad(max_seen + 1, width=3)`.
 
 ID allocation MUST be atomic with respect to concurrent `/quick-fix` invocations.
 Implement atomicity using a file-based lock at
-`docs/acceptance-criteria/<component-id>/.quick-fix-lock` before the scan
+`${TMPDIR:-/tmp}/leafcutter-quickfix-<component-id>.lock` before the scan
 (step 2) and release it after the file is written. Use `O_CREAT | O_EXCL` for
 lock acquisition. Release the lock unconditionally in all exit paths (success
 and error).
+
+The lock file MUST live outside the tracked working tree (a system-temp or
+otherwise gitignored path) so it can never be accidentally staged or committed.
+Never place it under `docs/` or any other version-controlled directory.
 
 If the lock cannot be acquired within 5 seconds, surface an error to the user:
 
 ```
 Error: AC store for '<component-id>' is locked by another process.
 Retry after the concurrent quick-fix completes, or manually remove
-docs/acceptance-criteria/<component-id>/.quick-fix-lock if the process
+${TMPDIR:-/tmp}/leafcutter-quickfix-<component-id>.lock if the process
 is no longer running.
 ```
 
