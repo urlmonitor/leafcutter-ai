@@ -1,0 +1,53 @@
+{
+  "id": "pipeline/report-export",
+  "label": "Fern & Fig — export sales report as PDF",
+  "_note": "Hand-authored example that defines how each agent's Mock prompt should look. `shared` fills every agent; add a `perAgent` entry per agent id to override slots for that agent — the goal is one authored bundle per pipeline agent.",
+  "shared": {
+    "label": "Fern & Fig — export sales report as PDF",
+    "user_request": "Let shop owners export their monthly sales report as a downloadable PDF.",
+    "ac": {
+      "id": "REP-420b-2",
+      "title": "Owner exports the monthly sales report as a PDF",
+      "level": "L2",
+      "component": "reporting",
+      "priority": "high",
+      "complexity": "M",
+      "readiness": "approved",
+      "work_status": "todo",
+      "assigned_agent": "python-coder",
+      "depends_on": ["REP-420b-1"],
+      "criteria": "Scenario: Owner downloads the monthly sales report as a PDF\n  Given a shop owner is viewing the Reports screen for a closed month\n  And the month has at least one completed order\n  When they click \"Export as PDF\"\n  Then a PDF is generated containing the report title, month, per-product rows, and the grand total\n  And the file downloads with the name \"sales-<month>.pdf\"",
+      "it_requirements": "Render server-side with the existing report aggregation service. Reuse ReportTotals; do not re-query orders. PDF generation must stream (no full in-memory buffer for reports over 500 rows). Fail closed with a 422 when the month is not yet closed."
+    },
+    "ticket": {
+      "slug": "TICKET-20260710-ExportSalesReportPdf",
+      "path": "tickets/00_inbox/TICKET-20260710-ExportSalesReportPdf.md",
+      "title": "Export monthly sales report as PDF",
+      "epic": null,
+      "components": ["reporting"],
+      "files_touched": [
+        "src/reporting/pdf_export.py",
+        "src/reporting/routes.py"
+      ],
+      "test_requirements": "- test_export_pdf_contains_totals — asserts grand total row present\n- test_export_pdf_filename — asserts Content-Disposition filename is sales-<month>.pdf\n- test_export_open_month_returns_422 — asserts a not-yet-closed month is rejected"
+    },
+    "config": {
+      "testing_context": "pytest under unit_tests/; fixtures in unit_tests/conftest.py; no network in tests",
+      "test_command_live_trader": "python -m pytest unit_tests/ -q",
+      "test_output_dir": "/tmp/leafcutter-test-out"
+    }
+  },
+  "perAgent": {
+    "test-writer": {
+      "label": "Fern & Fig — PDF export (test-first slice)",
+      "ticket": {
+        "slug": "TICKET-20260710-ExportSalesReportPdf",
+        "path": "tickets/00_inbox/TICKET-20260710-ExportSalesReportPdf.md",
+        "title": "Export monthly sales report as PDF",
+        "components": ["reporting"],
+        "files_touched": ["src/reporting/pdf_export.py", "src/reporting/routes.py"],
+        "test_requirements": "tests:\n  - name: test_export_pdf_contains_totals\n    file: unit_tests/reporting/test_pdf_export.py\n    asserts: grand-total row is present in the rendered PDF text layer\n  - name: test_export_pdf_filename\n    file: unit_tests/reporting/test_pdf_export.py\n    asserts: Content-Disposition filename equals sales-<month>.pdf\n  - name: test_export_open_month_returns_422\n    file: unit_tests/reporting/test_routes.py\n    asserts: exporting a not-yet-closed month returns HTTP 422"
+      }
+    }
+  }
+}

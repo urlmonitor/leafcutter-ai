@@ -302,6 +302,113 @@ export interface FlowAppearance {
   stepLabel: string;
 }
 
+/* ---------- Agent prompt inspector (Pipeline view) ---------- */
+
+/** One declared input slot from an agent template's `inputs:` frontmatter. */
+export interface PromptSlot {
+  name: string;
+  type: string;
+  required: boolean;
+  description: string;
+}
+
+/** One `pre_flight_reads:` entry — a file/dir the agent reads at flight time. */
+export interface PromptPreFlightRead {
+  source: string;
+  required: boolean;
+  condition: string | null;
+}
+
+/** One `config_keys:` entry — a skills_config.json value the agent consumes. */
+export interface PromptConfigKey {
+  key: string;
+  required: boolean;
+  description: string;
+}
+
+/** One `skills_used:` entry — a skill the agent is allowed to load, + rationale. */
+export interface PromptSkill {
+  name: string;
+  note: string;                 // inline rationale comment from the template, if any
+}
+
+/**
+ * A parsed agent template (templates/agents/<id>.md): its frontmatter contract
+ * plus the markdown body, which IS the agent's system prompt.
+ */
+export interface AgentTemplate {
+  id: string;
+  name: string;
+  model: string | null;
+  produces: string | null;
+  signoff: boolean;
+  tools: string[];
+  description: string;
+  systemPrompt: string;         // the markdown body verbatim
+  inputs: PromptSlot[];
+  preFlightReads: PromptPreFlightRead[];
+  configKeys: PromptConfigKey[];
+  skills: PromptSkill[];
+}
+
+/** A trimmed AC used as an example when rendering a prompt. */
+export interface PromptExampleAc {
+  id: string;
+  title: string;
+  level: string;
+  component: string;
+  criteria: string;
+  priority: string;
+  complexity: string;
+  itRequirements: string;
+  assignedAgent: string | null;
+  dependsOn: string[];
+  readiness: string;
+  workStatus: string;
+}
+
+/** A trimmed ticket used as an example when rendering a prompt. */
+export interface PromptExampleTicket {
+  slug: string;
+  path: string;                 // repo-relative ticket path (fills ticket_path slots)
+  title: string;
+  epic: string | null;
+  components: string[];
+  filesTouched: string[];
+  testRequirements: string;
+}
+
+/** The concrete values a single example provides to fill prompt slots. */
+export interface PromptExampleBundle {
+  label: string;
+  ac: PromptExampleAc | null;
+  ticket: PromptExampleTicket | null;
+  userRequest: string;
+  config: Record<string, string>;
+}
+
+/**
+ * A named example (mock or real). `shared` fills every agent's prompt; `perAgent`
+ * holds optional overrides — the target is one authored bundle per agent.
+ */
+export interface PromptExample {
+  id: string;
+  label: string;
+  source: FlowSource;           // "mock" | "real"
+  shared: PromptExampleBundle;
+  perAgent: Record<string, Partial<PromptExampleBundle>>;
+}
+
+/** One resolved input row for the Inputs view. */
+export interface ResolvedInput {
+  kind: "input" | "pre_flight" | "config";
+  name: string;
+  detail: string;               // slot type / condition / "config key"
+  required: boolean;
+  value: string;                // resolved display value, or an "(unresolved)" marker
+  resolved: boolean;
+}
+
 /* ---------- Aggregate snapshot ---------- */
 
 export interface Counts {

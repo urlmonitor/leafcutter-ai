@@ -1,10 +1,13 @@
 import { Workflow, Waypoints, ListTree, Users } from "lucide-react";
 import { getAtlas } from "@/lib/data/atlas";
+import { loadAgentTemplates, getPromptExample, buildRealExample } from "@/lib/data/prompts";
 import { PageHeader, Panel, SectionHeader, StatCard } from "@/components/ui/kit";
 import { StageFlow } from "@/components/pipeline/stage-flow";
+import { STAGES } from "@/components/pipeline/shared";
 import { PhaseChain, type ChainTicket } from "@/components/pipeline/phase-chain";
 import { Constellation } from "@/components/pipeline/constellation";
 import { Roster } from "@/components/pipeline/roster";
+import type { FlowSource, PromptExample } from "@/lib/data/types";
 
 /** Rich, representative DONE tickets to showcase the real phase chain. */
 function pickChainTickets(atlas: ReturnType<typeof getAtlas>): ChainTicket[] {
@@ -29,6 +32,17 @@ export default function PipelinePage() {
     0,
   );
   const chainTickets = pickChainTickets(atlas);
+
+  // Prompt-inspector data: templates for the four-stage flow agents + the two
+  // example bundles the drawer toggles between.
+  const stageAgentIds = Array.from(
+    new Set(STAGES.flatMap((s) => s.agents.map((a) => a.id))),
+  );
+  const templates = loadAgentTemplates(stageAgentIds);
+  const examples: Record<FlowSource, PromptExample> = {
+    mock: getPromptExample(),
+    real: buildRealExample(),
+  };
 
   return (
     <div className="animate-fade-in space-y-12">
@@ -56,9 +70,9 @@ export default function PipelinePage() {
         <SectionHeader
           eyebrow="The 60-second version"
           title="Four stages, end to end"
-          description="An idea becomes acceptance criteria, a ranked AC becomes a ticket, the ticket is built through a TDD phase chain, then the feature is merged, verified, and archived."
+          description="An idea becomes acceptance criteria, a ranked AC becomes a ticket, the ticket is built through a TDD phase chain, then the feature is merged, verified, and archived. Click any agent to inspect the prompt it would generate — toggle raw template, resolved inputs, and the assembled prompt for a mock or real example."
         />
-        <StageFlow agents={agents} />
+        <StageFlow agents={agents} templates={templates} examples={examples} />
       </section>
 
       {/* 2 — ticket phase chain */}

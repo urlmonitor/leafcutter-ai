@@ -3,8 +3,14 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { Sprout, ListChecks, Hammer, PackageCheck, ArrowRight } from "lucide-react";
-import type { AgentDef } from "@/lib/data/types";
+import type {
+  AgentDef,
+  AgentTemplate,
+  FlowSource,
+  PromptExample,
+} from "@/lib/data/types";
 import { STAGES, agentLabel, type Stage } from "./shared";
+import { PromptDrawer } from "./prompt-drawer";
 
 const STAGE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   plan: Sprout,
@@ -57,10 +63,12 @@ function StageCard({
   stage,
   agents,
   delay,
+  onSelectAgent,
 }: {
   stage: Stage;
   agents: AgentDef[];
   delay: number;
+  onSelectAgent: (id: string) => void;
 }) {
   const Icon = STAGE_ICON[stage.key] ?? Sprout;
   return (
@@ -121,14 +129,16 @@ function StageCard({
       <div className="mt-auto">
         <div className="mb-1.5 flex flex-wrap gap-1">
           {stage.agents.map((sa) => (
-            <span
+            <button
               key={sa.id}
-              title={sa.note}
-              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium text-foreground/80"
+              type="button"
+              onClick={() => onSelectAgent(sa.id)}
+              title={`${sa.note ? sa.note + " — " : ""}click to inspect ${agentLabel(agents, sa.id)}'s prompt`}
+              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium text-foreground/80 transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
             >
               <span className="h-1 w-1 rounded-full" style={{ background: `hsl(${stage.hsl})` }} />
               {agentLabel(agents, sa.id)}
-            </span>
+            </button>
           ))}
         </div>
         <p
@@ -142,14 +152,25 @@ function StageCard({
   );
 }
 
-export function StageFlow({ agents }: { agents: AgentDef[] }) {
+export function StageFlow({
+  agents,
+  templates,
+  examples,
+}: {
+  agents: AgentDef[];
+  templates: Record<string, AgentTemplate | null>;
+  examples: Record<FlowSource, PromptExample>;
+}) {
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const selectedAgent = selectedId ? agents.find((a) => a.id === selectedId) ?? null : null;
+
   return (
     <div>
       {/* Desktop: horizontal flow with animated connectors */}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
         {STAGES.map((stage, i) => (
           <React.Fragment key={stage.key}>
-            <StageCard stage={stage} agents={agents} delay={i * 0.08} />
+            <StageCard stage={stage} agents={agents} delay={i * 0.08} onSelectAgent={setSelectedId} />
             {i < STAGES.length - 1 && (
               <>
                 <Connector
@@ -164,6 +185,13 @@ export function StageFlow({ agents }: { agents: AgentDef[] }) {
           </React.Fragment>
         ))}
       </div>
+
+      <PromptDrawer
+        agent={selectedAgent}
+        template={selectedId ? templates[selectedId] ?? null : null}
+        examples={examples}
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   );
 }
