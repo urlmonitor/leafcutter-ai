@@ -8,7 +8,7 @@ last_updated: 2026-06-24
 components:
   - build_pipeline
   - build_orchestration
-  - knowledge_system
+  - knowledge_management
 related_docs:
   - docs/reference/ac-schema.md
   - docs/acceptance-criteria/README.md

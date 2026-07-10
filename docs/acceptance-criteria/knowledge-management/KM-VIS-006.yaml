@@ -1,6 +1,6 @@
 id: KM-VIS-006
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Project-root flag passed through to knowledge_query.py"

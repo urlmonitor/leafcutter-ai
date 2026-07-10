@@ -1,6 +1,6 @@
 id: KM-KGS-100d-2-i
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: approved
 priority: high
 title: "A relationship pointing at a missing target is dropped, not rendered as a dead end"

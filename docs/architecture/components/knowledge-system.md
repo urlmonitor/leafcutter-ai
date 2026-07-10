@@ -9,7 +9,6 @@ created: 2026-06-08
 last_updated: 2026-06-22
 components:
   - knowledge_system
-  - knowledge_system
 ---
 
 # Knowledge System

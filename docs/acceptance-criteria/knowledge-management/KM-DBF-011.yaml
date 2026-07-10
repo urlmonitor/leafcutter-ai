@@ -1,6 +1,6 @@
 id: KM-DBF-011
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Tests fail RED before implementation and pass GREEN after"

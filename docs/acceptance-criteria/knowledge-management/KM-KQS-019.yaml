@@ -1,6 +1,6 @@
 id: KM-KQS-019
 components:
-  - knowledge_system
+  - knowledge_management
 title: "paths.json surfaces section does not break check_paths_integrity.py"
 component: knowledge-management
 level: L3

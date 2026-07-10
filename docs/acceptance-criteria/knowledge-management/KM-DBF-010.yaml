@@ -1,6 +1,6 @@
 id: KM-DBF-010
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Hook unit tests cover pass, fail, and exclusion cases"

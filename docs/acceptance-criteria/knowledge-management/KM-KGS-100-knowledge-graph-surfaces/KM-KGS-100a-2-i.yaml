@@ -1,6 +1,6 @@
 id: KM-KGS-100a-2-i
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: approved
 priority: high
 title: "Non-criterion and unparseable files under the acs surface produce no spurious nodes"

@@ -1,6 +1,6 @@
 id: KM-KQS-033
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: draft
 priority: medium
 title: "Agent Protocol specifies zero-result and empty-graph handling as non-error conditions"

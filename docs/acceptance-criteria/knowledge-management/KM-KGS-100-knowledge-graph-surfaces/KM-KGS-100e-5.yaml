@@ -4,7 +4,7 @@ priority: high
 title: "Pre-existing items are backfilled with a component, and re-running changes nothing"
 component: knowledge-management
 components:
-  - knowledge_system
+  - knowledge_management
 level: L2
 status: active
 req_status: draft

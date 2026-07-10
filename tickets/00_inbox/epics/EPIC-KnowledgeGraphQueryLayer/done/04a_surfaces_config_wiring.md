@@ -2,7 +2,7 @@
 title: "Wire surfaces section into config/paths.json for knowledge graph scripts"
 status: done
 components:
-  - knowledge_system
+  - knowledge_management
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/done/01a_knowledge_query_script_core.md

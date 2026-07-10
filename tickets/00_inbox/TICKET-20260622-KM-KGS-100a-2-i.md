@@ -10,7 +10,7 @@ agents:
   test-runner: needed
   test-writer: needed
 components:
-- knowledge-management
+- knowledge_management
 created: '2026-06-22'
 depends_on:
 - KM-KGS-100a-2

@@ -59,7 +59,7 @@ MIGRATION_MAP: dict[str, str] = {
     "build-pipeline": "build_pipeline",
     "ac-store": "ac_store",
     "testing-quality": "testing_quality",
-    "knowledge-management": "knowledge_system",
+    "knowledge-management": "knowledge_management",
     "guardrail-engine": "commit_guardian",
     "ticket-creation": "ticket_creation_pipeline",
     "finalize": "finalize",

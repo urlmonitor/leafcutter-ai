@@ -1,6 +1,6 @@
 id: KM-KGS-100a-1
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: approved
 priority: high
 title: "The acceptance-criteria store is a declared surface in the surfaces config"

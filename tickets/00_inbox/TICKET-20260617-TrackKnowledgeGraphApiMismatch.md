@@ -2,7 +2,7 @@
 title: "Track: knowledge-graph API mismatch causes TDD red-baseline failures"
 status: todo
 components:
-  - knowledge_system
+  - knowledge_management
   - testing_quality
 created: 2026-06-17
 depends_on: []

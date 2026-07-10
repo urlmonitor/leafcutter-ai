@@ -4,7 +4,7 @@ priority: high
 title: "Querying a component returns its criteria and, through them, its code and tests"
 component: knowledge-management
 components:
-  - knowledge_system
+  - knowledge_management
 level: L2
 status: active
 req_status: draft

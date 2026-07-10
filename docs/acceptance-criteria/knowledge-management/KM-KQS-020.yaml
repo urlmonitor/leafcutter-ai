@@ -1,6 +1,6 @@
 id: KM-KQS-020
 components:
-  - knowledge_system
+  - knowledge_management
 title: "knowledge_query.py produces zero nodes gracefully for an empty surface directory"
 component: knowledge-management
 level: L3

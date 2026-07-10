@@ -1,6 +1,6 @@
 id: KM-KQS-003
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Query filter returns matching nodes case-insensitively across all surfaces"

@@ -4,7 +4,7 @@ priority: high
 title: "A component name that is not a real component is rejected, not silently accepted"
 component: knowledge-management
 components:
-  - knowledge_system
+  - knowledge_management
 level: L3
 status: active
 req_status: draft

@@ -1,6 +1,6 @@
 id: KM-KQS-031
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: draft
 priority: medium
 title: "Agents know how and when to invoke the knowledge query"

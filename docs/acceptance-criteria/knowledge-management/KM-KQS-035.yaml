@@ -1,6 +1,6 @@
 id: KM-KQS-035
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: draft
 priority: medium
 title: "Agent Protocol specifies citation and deduplication formats for knowledge-graph findings"
