@@ -1055,6 +1055,237 @@ if (closureAlreadyCommitted) {
 }
 
 // -------------------------------------------------------------------------
+// Pre-Step-4 Sync Check — ensure local branch HEAD is on origin before merge
+//
+// AC-1 (TICKET-20260708-Finalize_Push_Before_Merge):
+// gh pr merge merges the ORIGIN PR head, not the local HEAD. Any commit made
+// on the branch after the last ticket's pull-request phase — e.g. a code-review
+// fix, an origin/main-into-branch merge, or a manual edit at finalize time — is
+// local-only. If finalize runs without this check, gh pr merge merges the older
+// origin head and those local commits are silently excluded from main.
+//
+// This check compares local HEAD to origin/<branch>. When local is ahead, it
+// pushes the branch to origin so the PR head is always current. When the push
+// fails or the branch has diverged, it halts with an actionable message.
+// -------------------------------------------------------------------------
+
+const syncCheckResult = await agent(
+  "Check whether the local feature branch HEAD is ahead of origin and push if needed.\n" +
+  `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
+  "\n" +
+  "Step 1 — Fetch origin to ensure tracking refs are current:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" fetch origin "${BRANCH}"\n` +
+  "  Capture the exit code. If non-zero, also capture stderr.\n" +
+  "  If the fetch exits non-zero: return immediately with NO further steps:\n" +
+  "    { \"status\": \"fetch_failed\", \"error\": \"<captured stderr>\" }\n" +
+  "  ONLY proceed to Step 2 when fetch exit code is 0.\n" +
+  "\n" +
+  "Step 2 — Compare local HEAD to origin branch head:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-parse HEAD\n` +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-parse "origin/${BRANCH}" 2>/dev/null || echo "no-remote-ref"\n` +
+  "  local_sha = the HEAD sha.\n" +
+  "  origin_sha = the origin ref sha (or \"no-remote-ref\" if branch has never been pushed).\n" +
+  "  If origin ref does not exist: treat as local-ahead (ahead_count > 0, behind_count = 0) and go to Step 4.\n" +
+  "  If both SHAs are equal: return up_to_date immediately (go to Step 5).\n" +
+  "\n" +
+  "Step 3 — When SHAs differ and origin ref exists, determine direction:\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-list --count "origin/${BRANCH}..HEAD"\n` +
+  "  ahead_count = integer from the output.\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" rev-list --count "HEAD..origin/${BRANCH}"\n` +
+  "  behind_count = integer from the output.\n" +
+  "  Classification rules (MUST follow exactly — no exceptions):\n" +
+  "    - ahead_count > 0 AND behind_count == 0 => push path (proceed to Step 4)\n" +
+  "    - ahead_count > 0 AND behind_count > 0  => return { \"status\": \"diverged\", ... }\n" +
+  "    - ahead_count == 0 AND behind_count > 0 => return { \"status\": \"diverged\", ... }\n" +
+  "    - ahead_count == 0 AND behind_count == 0 => impossible here (SHAs would be equal, handled in Step 2)\n" +
+  "\n" +
+  "Step 4 — Push when local is ahead (ahead_count > 0, behind_count == 0):\n" +
+  `  Run: git -C "${WORKTREE_ROOT}" push origin "${BRANCH}"\n` +
+  "  Capture exit code.\n" +
+  "  If exit code 0:\n" +
+  `    Run: git -C "${WORKTREE_ROOT}" rev-parse "origin/${BRANCH}"\n` +
+  "    (Re-reads origin_sha after push to get the updated remote ref.)\n" +
+  "    Return: { \"status\": \"pushed\", \"ahead_count\": <N>, \"behind_count\": 0, \"local_sha\": \"<local-sha>\", \"origin_sha\": \"<sha-after-push>\" }\n" +
+  "  If non-zero:\n" +
+  "    Return: { \"status\": \"push_failed\", \"ahead_count\": <N>, \"behind_count\": 0, \"local_sha\": \"<local-sha>\", \"origin_sha\": \"<origin-sha-before-push>\", \"error\": \"<captured stderr>\" }\n" +
+  "\n" +
+  "Step 5 — Return status for non-push outcomes:\n" +
+  "  up_to_date: { \"status\": \"up_to_date\", \"ahead_count\": 0, \"behind_count\": 0, \"local_sha\": \"<sha>\", \"origin_sha\": \"<sha>\" }\n" +
+  "  diverged:   { \"status\": \"diverged\",   \"ahead_count\": <N>, \"behind_count\": <N>, \"local_sha\": \"<sha>\", \"origin_sha\": \"<sha>\" }\n" +
+  "IMPORTANT: Return ONLY valid JSON with no prose. The 'status' field must be exactly one of:\n" +
+  "  fetch_failed, push_failed, diverged, pushed, up_to_date",
+  { agentType: "status-checker", label: "pre-step-4-sync-check", phase: "Step 4" }
+)
+
+let syncCheckInfo;
+{
+  const { value, malformed } = safeParseJSON(syncCheckResult);
+  // H-1: Fail closed — malformed parse or null/missing value cannot be trusted.
+  // Refusing to merge an unverified head is safer than proceeding on unknown state.
+  if (malformed || value === null || value === undefined) {
+    await cleanupBaselineWorktree();
+    return {
+      status: "halted",
+      halted_at_step: "pre-4",
+      reason: "sync_check_indeterminate",
+      message:
+        "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
+        `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+        "The PR has NOT been merged — no work is lost.",
+      branch: BRANCH,
+      pr_number: prNumber,
+      pr_url: prUrl,
+      completed_steps: completedSteps,
+      skipped_steps: skippedSteps,
+      action_required: "verify_and_push",
+    };
+  }
+  syncCheckInfo = value;
+}
+
+// H-1: Explicit known-status gate — any status outside this set is indeterminate → HALT.
+// There must be NO code path where an unknown/unrecognised status falls through to Step 4.
+const KNOWN_SYNC_STATUSES = new Set(["fetch_failed", "push_failed", "diverged", "pushed", "up_to_date"]);
+const syncStatus = (typeof syncCheckInfo.status === "string" ? syncCheckInfo.status : "").toLowerCase();
+
+if (!KNOWN_SYNC_STATUSES.has(syncStatus)) {
+  await cleanupBaselineWorktree();
+  return {
+    status: "halted",
+    halted_at_step: "pre-4",
+    reason: "sync_check_indeterminate",
+    message:
+      "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
+      `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+      "The PR has NOT been merged — no work is lost.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    action_required: "verify_and_push",
+  };
+}
+
+// M-2: fetch_failed → HALT; tracking refs could not be updated so sync state is unknown.
+if (syncStatus === "fetch_failed") {
+  await cleanupBaselineWorktree();
+  return {
+    status: "halted",
+    halted_at_step: "pre-4",
+    reason: "fetch_failed",
+    message:
+      `Could not update tracking refs for origin/${BRANCH} (fetch failed). ` +
+      "Sync state is unknown — refusing to merge a head that may be stale. " +
+      "Verify network / remote access and re-run /finalize-feature. " +
+      "The PR has NOT been merged — no work is lost.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    action_required: "retry_after_fetch",
+  };
+}
+
+if (syncStatus === "push_failed") {
+  await cleanupBaselineWorktree();
+  return {
+    status: "halted",
+    halted_at_step: "pre-4",
+    reason: "push_failed",
+    message:
+      "Local branch HEAD is ahead of origin but push failed. " +
+      `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+      "The PR has NOT been merged — no work is lost.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    action_required: "push_local_commits",
+  };
+}
+
+// M-1: diverged — covers genuine divergence (ahead+behind) AND origin-strictly-ahead case.
+// User must integrate origin (rebase/pull) before merging — a plain push would be rejected.
+if (syncStatus === "diverged") {
+  await cleanupBaselineWorktree();
+  return {
+    status: "halted",
+    halted_at_step: "pre-4",
+    reason: "branch_diverged",
+    message:
+      `Local branch and origin/${BRANCH} have diverged ` +
+      `(local ahead: ${syncCheckInfo.ahead_count ?? 0}, origin ahead: ${syncCheckInfo.behind_count ?? 0} commit(s)). ` +
+      "Integrate origin changes before merging: " +
+      `git -C "${WORKTREE_ROOT}" pull --rebase origin ${BRANCH}. ` +
+      "Resolve any conflicts, verify tests pass, then re-run /finalize-feature. " +
+      "Do NOT use plain 'git push' — that would be rejected or would silently drop origin commits. " +
+      "The PR has NOT been merged — no work is lost.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    action_required: "resolve_divergence",
+  };
+}
+
+// H-2: pushed — verify SHAs in JS; agent's self-reported status word is not trusted alone.
+if (syncStatus === "pushed") {
+  const localSha = (typeof syncCheckInfo.local_sha === "string" ? syncCheckInfo.local_sha : "").trim();
+  const originSha = (typeof syncCheckInfo.origin_sha === "string" ? syncCheckInfo.origin_sha : "").trim();
+  if (!localSha || !originSha || localSha !== originSha) {
+    await cleanupBaselineWorktree();
+    return {
+      status: "halted",
+      halted_at_step: "pre-4",
+      reason: "push_not_confirmed",
+      message:
+        "Push was reported as successful but SHA verification failed: " +
+        "local and origin SHAs do not match or are missing. " +
+        `Verify with: git -C "${WORKTREE_ROOT}" rev-parse HEAD "origin/${BRANCH}", ` +
+        `then push manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+        "The PR has NOT been merged — no work is lost.",
+      branch: BRANCH,
+      pr_number: prNumber,
+      pr_url: prUrl,
+      completed_steps: completedSteps,
+      skipped_steps: skippedSteps,
+      action_required: "verify_and_push",
+    };
+  }
+  log(`[finalize-feature] pre-step-4 sync-check: pushed and SHA-verified (sha=${localSha.slice(0, 8)}). PR head is now current.`);
+  completedSteps.push("pre-4-push");
+} else if (syncStatus === "up_to_date") {
+  // H-2: up_to_date — verify SHAs in JS; agent's status word alone is not trusted.
+  const localSha = (typeof syncCheckInfo.local_sha === "string" ? syncCheckInfo.local_sha : "").trim();
+  const originSha = (typeof syncCheckInfo.origin_sha === "string" ? syncCheckInfo.origin_sha : "").trim();
+  if (!localSha || !originSha || localSha !== originSha) {
+    await cleanupBaselineWorktree();
+    return {
+      status: "halted",
+      halted_at_step: "pre-4",
+      reason: "sync_check_indeterminate",
+      message:
+        "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
+        `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+        "The PR has NOT been merged — no work is lost.",
+      branch: BRANCH,
+      pr_number: prNumber,
+      pr_url: prUrl,
+      completed_steps: completedSteps,
+      skipped_steps: skippedSteps,
+      action_required: "verify_and_push",
+    };
+  }
+  log(`[finalize-feature] pre-step-4 sync-check: up-to-date and SHA-verified (sha=${localSha.slice(0, 8)}). No push needed.`);
+}
+// At this point syncStatus is either "pushed" (SHA-verified, pre-4-push recorded) or
+// "up_to_date" (SHA-verified). Both are safe to proceed to Step 4.
+
+// -------------------------------------------------------------------------
 // Step 4 — Merge PR to main (destructive — confirmation gate required)
 //
 // This step runs AFTER the worktree merge (step 2) and test + triage (step 3).
