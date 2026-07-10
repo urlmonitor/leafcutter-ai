@@ -1,0 +1,64 @@
+id: BO-1000a-2-i
+components:
+  - build_orchestration
+title: "The intermediate closure step and early pre-flight aborts do not break the X-of-N counting"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize sequence contains an intermediate closure step that runs
+    between the tests step and the PR-merge step,
+  When the start-of-step positions are announced,
+  Then that intermediate step is announced with a position that fits the
+    "Step X of N" scheme without breaking the monotonic ordering and without
+    making the announced N inconsistent with the other steps' N,
+  And when the run aborts during pre-flight before the first numbered step
+    begins, no start-of-step line claims a position for a step that never
+    started.
+depends_on: [BO-1000a-2]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Policy constraints:
+    - The intermediate closure step (between the tests step and the PR-merge
+      step) must be included in the single declared step sequence so it receives
+      a monotonic position and does not perturb N for the other steps.
+    - Pre-flight aborts occur BEFORE the first numbered step: no start-of-step
+      line may be emitted for a step that never began. Numbered narration must
+      start only once the numbered sequence starts; pre-flight failures use a
+      distinct non-numbered message.
+    - Reuse the same declared-sequence source of truth as BO-1000a-2 (do not
+      introduce a second counter for the closure step).
+    - No new config key. ADR-001 build.py round-trip parity.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements + doc_links; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

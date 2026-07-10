@@ -1,0 +1,52 @@
+id: BO-1000c-2
+components:
+  - build_orchestration
+title: "Surfaced progress reflects the in-flight step, arriving over time rather than only at the end"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow is running in the background over several
+    steps,
+  When progress is surfaced into the main conversation,
+  Then a progress line for a step appears in the conversation while the run is
+    still in flight — before the run has finished — reflecting the step
+    currently underway,
+  And multiple distinct progress updates arrive in the conversation over the
+    course of the run, rather than a single batch delivered only after the run
+    completes.
+depends_on: [BO-1000c, BO-1000c-1a, BO-1000c-1b]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface: the /finalize-feature launch contract (templates/commands/finalize-feature.md + main-loop poll/relay instruction) — the observable 'updates arrive in the conversation over time' is produced by the launcher relaying incrementally, so this is llm-expert prose, not a finalize-feature.js edit."
+  - "The relay must deliver a progress line for the in-flight step BEFORE the run finishes — the launcher surfaces new journal lines as they appear rather than waiting for run completion."
+  - "Multiple distinct updates must reach the conversation across the run (at least one per executed/skipped step that emits a line), not a single end-of-run batch. Poll cadence and dedup must ensure over-time delivery without repeating already-relayed lines."
+  - "This behavior depends on BO-1000c-1a writing the journal incrementally (append-as-you-go) and BO-1000c-1b's poll/relay loop; do not re-implement the journal or the relay here — this AC asserts their combined over-time delivery guarantee."
+  - "Keep the /finalize-feature command doc and its deployed copy in parity via build.py (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1000c-1a
+  contract: "The incrementally-written, order-preserving run-progress journal (from BO-1000c-1a) which, when polled/relayed by BO-1000c-1b, yields in-flight progress lines arriving in the conversation over the course of the run."
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Re-assigned to llm-expert (relay/launch-contract surface; over-time delivery in the conversation is the launcher's job, not a workflow-body edit). Added it_requirements, doc_links, expects_from and repointed depends_on to the split children BO-1000c-1a/1b. Criteria unchanged."
+superseded_by: null
+covered_by: [BO-1000c-2-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

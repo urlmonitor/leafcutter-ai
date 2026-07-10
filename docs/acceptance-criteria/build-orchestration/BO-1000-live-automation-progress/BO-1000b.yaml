@@ -1,0 +1,32 @@
+id: BO-1000b
+components:
+  - build_orchestration
+title: "Every step reports its outcome, composing a genuinely useful end-of-run recap"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A one-line result after each step builds an informative end-of-run summary.
+
+  As each step finishes it reports how it went in a single clear line, and those
+  results add up to a final summary that actually tells you what happened across
+  the whole run — not a bare "done".
+depends_on: [BO-1000]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-1000b-1, BO-1000b-2, BO-1000b-3]
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Text progress and summary output with no new user-facing command, multi-actor flow, or state machine — no diagram or how-to adds understanding beyond the Gherkin."
+change_target: pipeline
+risk_surface: internal

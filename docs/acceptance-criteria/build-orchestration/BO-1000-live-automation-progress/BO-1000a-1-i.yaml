@@ -1,0 +1,62 @@
+id: BO-1000a-1-i
+components:
+  - build_orchestration
+title: "The in-flight step is identifiable from the start line even when its sub-agent errors"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step's sub-agent returns an error or a malformed result partway
+    through the finalize run,
+  When the failure surfaces,
+  Then the start-of-step progress line for that step was already emitted before
+    the failure occurred, so the step that was in flight at the moment of
+    failure is identifiable from the progress output alone,
+  And identifying the in-flight step does not depend on the error branch
+    emitting its own separate diagnostic line.
+depends_on: [BO-1000a-1]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    This is the ordering guarantee of BO-1000a-1 stated as an edge case; same
+    surface (templates/workflows-js/finalize-feature.js), same python-coder owner.
+    Policy constraints:
+    - The start-of-step line must be flushed/emitted before the step dispatches
+      its sub-agent, so a subsequent error or malformed-result return cannot
+      pre-empt it. The in-flight step must be recoverable from the progress
+      stream WITHOUT relying on the error branch printing its own line.
+    - Applies to every step that dispatches a sub-agent or otherwise can fail,
+      including the intermediate closure step (see BO-1000a-2-i).
+    - No new config key. ADR-001 build.py round-trip parity.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements + doc_links; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

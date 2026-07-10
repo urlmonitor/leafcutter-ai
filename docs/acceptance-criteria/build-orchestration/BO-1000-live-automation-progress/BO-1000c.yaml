@@ -1,0 +1,33 @@
+id: BO-1000c
+components:
+  - build_orchestration
+title: "Automation progress reaches me in the conversation live"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Step-by-step progress appears in the chat as it happens — no separate view needed.
+
+  While a background run is in flight, its progress surfaces directly in your
+  conversation the moment it happens, so you stay informed where you already are
+  instead of having to open and watch a separate view.
+depends_on: [BO-1000]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-split-covered-by-update
+    note: "Appended split children BO-1000c-1a, BO-1000c-1b to covered_by (BO-1000c-1 superseded by IT-PO). Composite L1 otherwise unenriched."
+superseded_by: null
+covered_by: [BO-1000c-1, BO-1000c-2, BO-1000c-3, BO-1000c-1a, BO-1000c-1b]
+implemented_by: []
+documentation_triggers: [sequence-diagram]
+change_target: pipeline
+risk_surface: internal

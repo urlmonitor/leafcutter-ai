@@ -1,0 +1,70 @@
+id: BO-1000c-1a
+components:
+  - build_orchestration
+title: "Background finalize appends each progress line to a durable, pollable run-progress journal as it happens"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow is running in the background while the
+    user remains in the main conversation,
+  When the workflow emits a start-of-step or per-step-outcome progress line,
+  Then that same line is appended, at the moment it is emitted, to a durable
+    run-progress record for the run that a caller outside the background run can
+    read while the run is still in flight,
+  And the record preserves the emission order of the lines and is written
+    incrementally over the run rather than only flushed once at the end.
+depends_on: [BO-1000c, BO-1000a-1, BO-1000b-1]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Surface: the .js workflow body (templates/workflows-js/finalize-feature.js) —
+    python-coder per repo precedent (BP-1000). This is the producer half of the
+    split from BO-1000c-1; the launcher/relay half is BO-1000c-1b (llm-expert).
+    Policy constraints (state WHAT, coder picks HOW):
+    - Every start-of-step (BO-1000a-1) and per-step-outcome (BO-1000b-1) line
+      must be appended to a durable run-progress journal at the SAME point it is
+      emitted — append-as-you-go, not a single end-of-run flush — so an external
+      poller sees lines while the run is in flight.
+    - The journal must live at a path the launcher can locate deterministically
+      for THIS run (e.g. keyed by worktree/run id), be append-only, and preserve
+      emission order (line ordering is the contract BO-1000c-1b relays).
+    - Journal writes must follow the project error-handling policy for file I/O
+      and must never take down the finalize run: a journal-write failure degrades
+      to best-effort (log at WARNING) rather than aborting the workflow.
+    - No new config key is introduced by this AC beyond the journal path
+      convention. ADR-001 build.py round-trip parity on the template workflow.
+delivers_to:
+  agent: llm-expert
+  contract: "A durable append-only run-progress journal for the run at a launcher-locatable path (keyed by worktree/run id). Each entry is one human-readable progress line (a start-of-step or per-step-outcome line) in emission order, written incrementally while the run is in flight. Consumed by BO-1000c-1b (poll + relay), BO-1000c-2 (over-time delivery), and BO-1000c-2-i (halting-step line)."
+expects_from:
+  ac_id: BO-1000b-1
+  contract: "The start-of-step (BO-1000a-1) and per-step-outcome (BO-1000b-1) lines as they are emitted, which this AC also appends to the journal."
+origin_agent: it-po-v3
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
