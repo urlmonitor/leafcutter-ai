@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Prompt-Assembly Hardening — phase agents get correct prompts by construction"
 type: epic
-status: in_progress
+status: done
 components:
   - supervisor_system
   - ticket_creation_pipeline
@@ -54,11 +54,11 @@ tree. Tickets 01 and 02 add the test coverage that verifies those edits. **Layer
 
 | # | File | Covers | Layer | Status |
 |---|------|--------|-------|--------|
-| 01 | [01_signoff_block_protocol.md](./01_signoff_block_protocol.md) | BO-2000a (+ 8 leaves) | A (impl done) | `[ ]` |
-| 02 | [02_python_coder_craft.md](./02_python_coder_craft.md) | BO-2000b (+ 7 leaves) | A (impl done) | `[ ]` |
-| 03 | [03_implementation_notes_emission.md](./03_implementation_notes_emission.md) | BO-2000c (+ 6 leaves) | B | `[ ]` |
-| 04 | [04_package_surface_spec_schema.md](./04_package_surface_spec_schema.md) | BO-2000d (+ 4 leaves) | B | `[ ]` |
-| 05 | [05_test_requirements_guard.md](./05_test_requirements_guard.md) | BO-2000e (+ 3 leaves) | B | `[ ]` |
+| 01 | [01_signoff_block_protocol.md](./01_signoff_block_protocol.md) | BO-2000a (+ 8 leaves) | A (impl done) | `[x]` |
+| 02 | [02_python_coder_craft.md](./02_python_coder_craft.md) | BO-2000b (+ 7 leaves) | A (impl done) | `[x]` |
+| 03 | [03_implementation_notes_emission.md](./03_implementation_notes_emission.md) | BO-2000c (+ 6 leaves) | B | `[x]` |
+| 04 | [04_package_surface_spec_schema.md](./04_package_surface_spec_schema.md) | BO-2000d (+ 4 leaves) | B | `[x]` |
+| 05 | [05_test_requirements_guard.md](./05_test_requirements_guard.md) | BO-2000e (+ 3 leaves) | B | `[x]` |
 
 ## Out of Scope
 
