@@ -16,6 +16,7 @@ tools: Bash, Read
 portable: true
 signoff: true
 domain: null
+produces: test_artifact
 config_keys: {}
 conditional: true
 conditional_field: live_surface_test
@@ -29,7 +30,7 @@ adopter_notes: |
   Priority 11.8 — after user-surface-smoker (11.5), before commit (12).
   Requires scripts/port_registry.py (EPIC-LiveSurfaceTesting ticket 04).
   Playwright is optional; if unavailable the agent emits (status: skipped).
-  See ADR-007 for full architectural rationale.
+  See ADR-020 for full architectural rationale.
 ---
 
 <!--
