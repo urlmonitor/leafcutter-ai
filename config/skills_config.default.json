@@ -67,6 +67,16 @@
     "exception_handling_hook": ".claude/hooks/check_exception_handling_hook.py"
   },
 
+  "_comment_live_surface_testing": "Optional: set enabled to true for projects with a running HTTP server. Safe default is false — pure library or CLI projects must not accidentally spin up servers during ticket lifecycle. See docs/architecture/adrs/ADR-020-live-surface-tester.md.",
+  "live_surface_testing": {
+    "enabled": false,
+    "startup_command": "python -m uvicorn app.main:app --host 0.0.0.0 --port {port}",
+    "health_check_path": "/health",
+    "startup_timeout_seconds": 30,
+    "port_range_start": 8200,
+    "port_range_end": 8299
+  },
+
   "testing_context": {
     "test_root": "unit_tests/",
     "readme_path": "unit_tests/README.md",
