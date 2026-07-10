@@ -1,4 +1,6 @@
 id: BO-2100d-3
+components:
+  - build_orchestration
 title: "Startup and finalize resolve the deployed scripts from the real deployed dir in a worktree"
 component: build-orchestration
 level: L2

@@ -1,4 +1,6 @@
 id: BO-2100b-4
+components:
+  - build_orchestration
 title: "How-to guide for turning live-app testing on for a project and a feature"
 component: build-orchestration
 level: L2

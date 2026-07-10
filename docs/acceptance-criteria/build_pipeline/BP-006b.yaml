@@ -1,4 +1,6 @@
 id: BP-006b
+components:
+  - build_pipeline
 title: "test_install_hooks.py sys.path allows build_helpers to import build_colors"
 component: build_pipeline
 level: L1

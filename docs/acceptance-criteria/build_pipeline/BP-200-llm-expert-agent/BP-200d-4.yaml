@@ -1,4 +1,6 @@
 id: BP-200d-4
+components:
+  - build_pipeline
 title: "Prompt-audit skill never modifies the files it audits"
 component: build_pipeline
 level: L2

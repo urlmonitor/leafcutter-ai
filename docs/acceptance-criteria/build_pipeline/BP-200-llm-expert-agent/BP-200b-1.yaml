@@ -1,4 +1,6 @@
 id: BP-200b-1
+components:
+  - build_pipeline
 title: "PROJECT_CONTEXT.md contains all six required knowledge sections in order"
 component: build_pipeline
 level: L2

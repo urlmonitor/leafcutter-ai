@@ -1,4 +1,6 @@
 id: BO-2000c-1
+components:
+  - build_orchestration
 title: "Ticket generation emits an Implementation Notes section when the AC has it_requirements"
 component: build-orchestration
 level: L2

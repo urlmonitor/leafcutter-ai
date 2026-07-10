@@ -1,4 +1,6 @@
 id: BP-200d-2-ii
+components:
+  - build_pipeline
 title: "Audit check 2 reports overly permissive allowlist as warning, not error"
 component: build_pipeline
 level: L3

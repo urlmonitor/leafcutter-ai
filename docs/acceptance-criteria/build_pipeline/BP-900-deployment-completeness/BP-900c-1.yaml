@@ -1,4 +1,6 @@
 id: BP-900c-1
+components:
+  - build_pipeline
 title: "Each broken-reference entry names the missing script, the referencing template, and a suggested action"
 component: build_pipeline
 level: L2

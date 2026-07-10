@@ -1,6 +1,6 @@
 id: BO-2100e
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The capability is proven by actually running, not just green tests"
 component: build-orchestration
 level: L1

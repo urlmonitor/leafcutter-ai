@@ -1,6 +1,6 @@
 id: BO-2000f
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The /build-feature path drives phases through the flattened script driver, so phase-agent templates are actually applied"
 component: build-orchestration
 level: L1

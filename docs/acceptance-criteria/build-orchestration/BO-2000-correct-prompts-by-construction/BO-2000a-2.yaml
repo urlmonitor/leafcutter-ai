@@ -1,4 +1,6 @@
 id: BO-2000a-2
+components:
+  - build_orchestration
 title: "Sign-off updates frontmatter, checklist, and comment as one atomic edit"
 component: build-orchestration
 level: L2

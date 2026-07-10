@@ -7,7 +7,7 @@ last_updated: "2026-06-05"
 flight_level: "L2-Container"
 diagram_type: agent_flow
 components:
-  - "agent-infrastructure"
+  - agent_registry
   - knowledge_system
 related_agents:
   - ".claude/skills/route-learning/SKILL.md"

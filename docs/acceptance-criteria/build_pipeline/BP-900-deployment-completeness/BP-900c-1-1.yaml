@@ -1,4 +1,6 @@
 id: BP-900c-1-1
+components:
+  - build_pipeline
 title: "Multiple templates referencing the same missing script produce a consolidated entry"
 component: build_pipeline
 level: L3

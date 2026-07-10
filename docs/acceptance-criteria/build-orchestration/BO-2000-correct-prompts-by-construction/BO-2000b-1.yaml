@@ -1,4 +1,6 @@
 id: BO-2000b-1
+components:
+  - build_orchestration
 title: "python-coder-authored hooks fail open on unexpected errors"
 component: build-orchestration
 level: L2

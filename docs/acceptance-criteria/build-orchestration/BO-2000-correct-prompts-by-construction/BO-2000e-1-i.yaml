@@ -1,4 +1,6 @@
 id: BO-2000e-1-i
+components:
+  - build_orchestration
 title: "A docs-only ticket with no Test Requirements is allowed"
 component: build-orchestration
 level: L3

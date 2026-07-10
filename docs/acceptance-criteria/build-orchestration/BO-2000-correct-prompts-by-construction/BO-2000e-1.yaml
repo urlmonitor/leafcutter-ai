@@ -1,4 +1,6 @@
 id: BO-2000e-1
+components:
+  - build_orchestration
 title: "A code ticket with an empty Test Requirements section is blocked at authoring"
 component: build-orchestration
 level: L2

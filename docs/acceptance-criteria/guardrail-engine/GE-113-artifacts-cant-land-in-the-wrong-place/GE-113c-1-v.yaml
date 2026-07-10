@@ -1,6 +1,6 @@
 id: GE-113c-1-v
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "check-secrets reads the .security-allowlist from the worktree checkout root so worktree-local suppressions are honored"
 component: guardrail-engine
 level: L3

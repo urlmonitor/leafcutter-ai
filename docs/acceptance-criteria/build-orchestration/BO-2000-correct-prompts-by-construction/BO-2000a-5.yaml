@@ -1,4 +1,6 @@
 id: BO-2000a-5
+components:
+  - build_orchestration
 title: "Sign-off block includes the mandatory knowledge-capture step"
 component: build-orchestration
 level: L2

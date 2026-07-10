@@ -1,4 +1,6 @@
 id: BP-006a-2
+components:
+  - build_pipeline
 title: "test_no_orphaned_directories passes with no unregistered skill directories"
 component: build_pipeline
 level: L2

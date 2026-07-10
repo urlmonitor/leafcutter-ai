@@ -1,4 +1,6 @@
 id: BO-2000b-6
+components:
+  - build_orchestration
 title: "python-coder restates the single-simple-command shell discipline"
 component: build-orchestration
 level: L2

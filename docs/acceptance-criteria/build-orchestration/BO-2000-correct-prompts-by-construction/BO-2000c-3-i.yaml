@@ -1,4 +1,6 @@
 id: BO-2000c-3-i
+components:
+  - build_orchestration
 title: "An unresolvable reference pattern is surfaced as an authoring error"
 component: build-orchestration
 level: L3

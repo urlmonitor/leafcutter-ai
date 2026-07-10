@@ -1,4 +1,6 @@
 id: BP-900a-3
+components:
+  - build_pipeline
 title: "Deployed ac_store scripts are importable via the paths agent templates use"
 component: build_pipeline
 level: L2

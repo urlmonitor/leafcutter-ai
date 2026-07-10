@@ -1,4 +1,6 @@
 id: BO-2000b-2
+components:
+  - build_orchestration
 title: "python-coder treats templates as source and generated dirs as build outputs"
 component: build-orchestration
 level: L2

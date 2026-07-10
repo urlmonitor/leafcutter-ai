@@ -1,4 +1,6 @@
 id: BO-2100a-4
+components:
+  - build_orchestration
 title: "building-epics canonical dispatch order documents live-surface-tester at 11.8"
 component: build-orchestration
 level: L2

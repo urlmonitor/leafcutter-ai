@@ -1,4 +1,6 @@
 id: BP-900b-3
+components:
+  - build_pipeline
 title: "Build exits non-zero when broken references are found"
 component: build_pipeline
 level: L2

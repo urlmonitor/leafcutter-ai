@@ -1,4 +1,6 @@
 id: BP-900a-2
+components:
+  - build_pipeline
 title: "build.py deploys standalone scripts goal_to_epic.py and build_ac_mode_detection.py"
 component: build_pipeline
 level: L2

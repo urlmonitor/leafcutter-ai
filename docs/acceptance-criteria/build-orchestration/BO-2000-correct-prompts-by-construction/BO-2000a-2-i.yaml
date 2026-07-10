@@ -1,4 +1,6 @@
 id: BO-2000a-2-i
+components:
+  - build_orchestration
 title: "Sign-off comment heading uses an em-dash so the parser can find it"
 component: build-orchestration
 level: L3

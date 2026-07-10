@@ -1,4 +1,6 @@
 id: BP-200c-1-i
+components:
+  - build_pipeline
 title: "Registry default_status prevents automatic dispatch on existing tickets"
 component: build_pipeline
 level: L3

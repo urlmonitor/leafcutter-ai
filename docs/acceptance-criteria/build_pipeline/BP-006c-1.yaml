@@ -1,4 +1,6 @@
 id: BP-006c-1
+components:
+  - build_pipeline
 title: "build_workflow_scripts() output directory is target_root/.claude/workflows/"
 component: build_pipeline
 level: L2

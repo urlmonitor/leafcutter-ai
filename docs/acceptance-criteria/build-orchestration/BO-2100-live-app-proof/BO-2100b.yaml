@@ -1,6 +1,6 @@
 id: BO-2100b
 components:
-  - build-orchestration
+  - build_orchestration
 title: "You decide when live-app checks run — off by default"
 component: build-orchestration
 level: L1

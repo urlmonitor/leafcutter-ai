@@ -1,6 +1,6 @@
 id: BO-2000
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A phase agent is never dispatched with a prompt missing the knowledge it needs"
 component: build-orchestration
 level: L0

@@ -1,4 +1,6 @@
 id: BO-2000d-3
+components:
+  - build_orchestration
 title: "The IT-PO template states the package-surface spec obligation"
 component: build-orchestration
 level: L2

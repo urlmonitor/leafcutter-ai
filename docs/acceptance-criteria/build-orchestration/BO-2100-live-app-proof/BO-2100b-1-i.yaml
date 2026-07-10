@@ -1,4 +1,6 @@
 id: BO-2100b-1-i
+components:
+  - build_orchestration
 title: "Absent live_surface_testing block is treated as disabled (default false)"
 component: build-orchestration
 level: L3

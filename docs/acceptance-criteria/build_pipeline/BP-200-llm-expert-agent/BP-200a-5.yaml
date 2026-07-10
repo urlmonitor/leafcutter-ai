@@ -1,4 +1,6 @@
 id: BP-200a-5
+components:
+  - build_pipeline
 title: "Agent template declares exactly three skills with invocation conditions"
 component: build_pipeline
 level: L2

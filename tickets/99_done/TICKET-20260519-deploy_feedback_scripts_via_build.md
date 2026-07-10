@@ -2,8 +2,8 @@
 title: "Deploy feedback scripts to consumer projects via build.py"
 status: done
 components:
-  - build_system
-  - feedback
+  - build_pipeline
+  - feedback_collector
 created: 2026-05-19
 depends_on: []
 priority: high

@@ -1,4 +1,6 @@
 id: BO-2000b-5
+components:
+  - build_orchestration
 title: "python-coder spot-checks against the real artifact and bans phantom tests"
 component: build-orchestration
 level: L2

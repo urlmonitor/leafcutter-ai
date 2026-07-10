@@ -1,6 +1,6 @@
 id: BO-2000f-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The /build-feature single-ticket path runs the ticket's phases through the flattened driver, not an inline supervisor"
 component: build-orchestration
 level: L2

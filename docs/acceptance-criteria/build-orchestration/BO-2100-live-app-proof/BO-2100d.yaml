@@ -1,6 +1,6 @@
 id: BO-2100d
 components:
-  - build-orchestration
+  - build_orchestration
 title: "If a live-app check can't run, it says so loudly"
 component: build-orchestration
 level: L1

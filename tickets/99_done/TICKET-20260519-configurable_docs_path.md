@@ -2,7 +2,7 @@
 title: "Make docs directory path configurable in skills_config.json"
 status: done
 components:
-  - build_system
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 priority: medium

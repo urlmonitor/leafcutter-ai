@@ -1,6 +1,6 @@
 id: BO-2000f-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A structural check keeps the flattened driver wired into /build-feature and blocks whole-ticket inline execution"
 component: build-orchestration
 level: L2

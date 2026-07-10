@@ -2,7 +2,7 @@
 title: "Scaffold all ticket lifecycle folders from manifest"
 status: done
 components:
-  - build_system
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 priority: medium

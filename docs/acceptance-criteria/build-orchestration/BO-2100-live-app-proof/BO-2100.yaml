@@ -1,6 +1,6 @@
 id: BO-2100
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Prove a feature works in your real running app before it ships"
 component: build-orchestration
 level: L0

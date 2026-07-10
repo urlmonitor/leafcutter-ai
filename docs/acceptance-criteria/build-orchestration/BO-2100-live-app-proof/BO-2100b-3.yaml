@@ -1,4 +1,6 @@
 id: BO-2100b-3
+components:
+  - build_orchestration
 title: "Both toggles on means the check runs"
 component: build-orchestration
 level: L2

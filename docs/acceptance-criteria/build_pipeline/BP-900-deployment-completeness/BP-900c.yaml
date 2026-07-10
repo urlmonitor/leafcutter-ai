@@ -1,4 +1,6 @@
 id: BP-900c
+components:
+  - build_pipeline
 title: "Broken-reference errors name the file, the referencing template, and the fix"
 component: build_pipeline
 level: L1

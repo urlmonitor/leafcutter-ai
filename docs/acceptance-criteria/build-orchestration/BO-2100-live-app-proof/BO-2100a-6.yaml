@@ -1,4 +1,6 @@
 id: BO-2100a-6
+components:
+  - build_orchestration
 title: "Component diagram of the live-surface-testing pieces and their links"
 component: build-orchestration
 level: L2

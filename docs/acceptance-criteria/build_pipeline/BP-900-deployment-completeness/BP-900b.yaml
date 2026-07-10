@@ -1,4 +1,6 @@
 id: BP-900b
+components:
+  - build_pipeline
 title: "Build catches broken script references before they reach consumer projects"
 component: build_pipeline
 level: L1

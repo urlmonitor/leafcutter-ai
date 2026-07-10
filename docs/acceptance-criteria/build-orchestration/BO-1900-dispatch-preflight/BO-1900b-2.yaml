@@ -1,6 +1,6 @@
 id: BO-1900b-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A premise that still reproduces at dispatch passes the freshness re-check"
 component: build-orchestration
 level: L2

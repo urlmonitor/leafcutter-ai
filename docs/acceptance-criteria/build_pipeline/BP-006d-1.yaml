@@ -1,4 +1,6 @@
 id: BP-006d-1
+components:
+  - build_pipeline
 title: "test_setup_ticket_worktree.py bootstrap mocks return valid JSON so json.loads() succeeds"
 component: build-pipeline
 level: L2

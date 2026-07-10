@@ -1,4 +1,6 @@
 id: BP-900c-3-i
+components:
+  - build_pipeline
 title: "When the source directory itself is absent, the suggested action still points to a deploy phase, not to committing source"
 component: build_pipeline
 level: L3

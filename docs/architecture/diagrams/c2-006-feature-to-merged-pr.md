@@ -12,7 +12,7 @@ components:
   - ac_store
   - ticket_creation_pipeline
   - build_orchestration
-  - phase-agents
+  - supervisor_system
 related_docs:
   - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
   - docs/architecture/diagrams/c2-004-build-ac-flow.md

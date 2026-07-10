@@ -1,4 +1,6 @@
 id: BP-900c-2
+components:
+  - build_pipeline
 title: "Error report is emitted to stderr in a structured, parseable format with non-zero exit"
 component: build_pipeline
 level: L2
