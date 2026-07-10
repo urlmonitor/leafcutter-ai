@@ -1,0 +1,50 @@
+id: BO-1000c-1b
+components:
+  - build_orchestration
+title: "The /finalize-feature launcher polls the run-progress journal and relays it into the main conversation"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow is running in the background and appending
+    progress lines to the run-progress journal as they happen,
+  When the /finalize-feature launcher has started that background run,
+  Then the launcher polls the run-progress journal while the run is in flight and
+    relays each new progress line into the main conversation where the user
+    already is,
+  And the user receives the progress in the conversation without having to open
+    or watch the separate live-workflows view.
+depends_on: [BO-1000c, BO-1000c-1a]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface: the /finalize-feature launch contract — templates/commands/finalize-feature.md (the command doc) plus the instruction to the invoking main loop to poll and relay. This is prose/launch-contract work (llm-expert), NOT a finalize-feature.js edit: a background workflow cannot inject into the main conversation, so the relay must be driven by the launcher/main loop."
+  - "The command doc must instruct the launcher: after starting the background finalize run, poll the run-progress journal (the path/convention delivered by BO-1000c-1a) at a bounded interval while the run is in flight, and surface each new line into the main conversation in emission order."
+  - "Relay must be incremental (new lines only, no duplicates) and must stop cleanly when the run terminates (success or halt), then present the end-of-run recap."
+  - "The relay must not require the user to open the separate live-workflows view; the live-workflows view remains available but is not the delivery path."
+  - "Locate the journal exactly as BO-1000c-1a delivers it (same path convention / run key); do not invent a second location. If the journal is absent or unreadable, degrade gracefully (report that live progress is unavailable) rather than erroring the launch."
+  - "Keep the /finalize-feature command doc and its deployed copy in parity via build.py (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1000c-1a
+  contract: "The durable append-only run-progress journal (launcher-locatable path keyed by worktree/run id; one progress line per entry in emission order, written incrementally in flight) that this launcher polls and relays into the main conversation."
+origin_agent: it-po-v3
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

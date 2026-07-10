@@ -1,0 +1,67 @@
+id: BO-1000b-3
+components:
+  - build_orchestration
+title: "Step outcomes and the recap carry concrete result data, never a content-free 'done'"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finalize step performed work that produced measurable results (counts,
+    identifiers, or decisions such as tickets closed, source ACs closed and
+    skipped, pre-existing failure counts, the pull request number, or the merge
+    result),
+  When that step's outcome line and the final recap are emitted,
+  Then the outcome text states the concrete result data for the step rather than
+    a content-free acknowledgement,
+  And a step that did real work never reports its outcome as only "ok" or "done"
+    without the accompanying result data.
+depends_on: [BO-1000b]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Policy constraints:
+    - Each step that returns measurable results must surface the concrete data in
+      its outcome text (e.g. pre-existing-failure count, PR number, tickets/ACs
+      closed and skipped counts, merge result); a step that did real work must
+      never record its outcome as only "ok"/"done".
+    - Capture the result values from each step's own return payload (not a static
+      string), so the outcome and the recap (BO-1000b-2) reflect what actually
+      happened this run.
+    - This is an invariant over BO-1000b-1's outcome text and BO-1000b-2's recap;
+      implement it as a shared expectation on the outcome record, not per-step
+      duplicated string logic.
+    - No new config key. ADR-001 build.py round-trip parity.
+delivers_to: null
+expects_from:
+  ac_id: BO-1000b-1
+  contract: "The per-step outcome record from BO-1000b-1; each entry's outcome text must be populated with the concrete result data this AC requires."
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements, expects_from, doc_links; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

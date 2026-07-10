@@ -1,0 +1,70 @@
+id: BO-1000b-1
+components:
+  - build_orchestration
+title: "Each finalize step emits a one-line outcome result after its work, on the success path"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow runs a step to completion on the success
+    path,
+  When the step finishes its work,
+  Then a one-line outcome result is emitted for that step describing what the
+    step actually did (for example: baseline captured with the count of
+    pre-existing failures, pull request opened with its number, mainline merged
+    cleanly, tests passed with counts, tickets and source ACs closed with
+    counts, pull request merged, local mainline synced, worktree removed),
+  And this outcome line is distinct from, and additional to, the start-of-step
+    announcement for the same step,
+  And an outcome line is produced for every non-error step, not only for steps
+    that hit an error branch.
+depends_on: [BO-1000b]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Policy constraints:
+    - Each step emits an outcome line AFTER its work completes, distinct from and
+      additional to the BO-1000a-1 start-of-step line (two lines per step, not a
+      merged one).
+    - An outcome line is mandatory for every non-error step (coverage independent
+      of the error branch).
+    - The per-step outcome should be captured in a structured, in-order record
+      (not only printed) so BO-1000b-2 can compose the end-of-run summary from it
+      and BO-1000c-1a can relay it. Emitting-and-recording is one responsibility.
+    - Outcome text must carry the step's concrete result data, not a bare "done"
+      (this is the general rule that BO-1000b-3 asserts as an invariant).
+    - No new config key. ADR-001 build.py round-trip parity.
+delivers_to:
+  agent: python-coder
+  contract: "An in-order per-step outcome record — one entry per step with {position, step name, outcome text carrying concrete result data, executed|skipped} — consumed by BO-1000b-2 (end-of-run summary) and BO-1000c-1a (live journal relay)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements, delivers_to (per-step outcome record), doc_links; criteria unchanged."
+superseded_by: null
+covered_by: [BO-1000b-1-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

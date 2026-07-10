@@ -1,0 +1,51 @@
+id: BO-1000a-4
+components:
+  - build_orchestration
+title: "Sequence diagram of the start-of-step narration emission path"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature start-of-step narration behavior (BO-1000a-1 to
+    BO-1000a-3) is implemented,
+  When the documentation required by the BO-1000a sequence-diagram trigger is
+    produced,
+  Then a sequence diagram is authored that shows how a start-of-step progress
+    line travels from the beginning of each workflow step, through the workflow
+    narration channel, to the live progress view,
+  And the diagram identifies each participant in that emission path and depicts
+    the ordering of the start-of-step signal relative to the step's own work.
+depends_on: [BO-1000a, BO-1000a-1]
+doc_links:
+  - path: docs/architecture/diagrams/finalize-progress-narration-sequence.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author the diagram as a Mermaid sequenceDiagram under docs/architecture/diagrams/, matching the existing *-sequence.md convention (e.g. gates-sequence.md, probe-sequence.md)."
+  - "Participants must include: the finalize workflow step, the shared narration helper / progress channel, and the live progress view — the emission path end to end."
+  - "The diagram must show the start-of-step signal emitted BEFORE the step's own work is dispatched (the ordering guaranteed by BO-1000a-1 / BO-1000a-1-i)."
+  - "Reflect the 'Step X of N' framing and the skip-still-narrates case (BO-1000a-3) at least in a note, so the diagram matches the implemented behavior rather than an idealized path."
+delivers_to: null
+expects_from:
+  ac_id: BO-1000a-1
+  contract: "The implemented start-of-step narration path in finalize-feature.js (workflow step -> narration channel -> live progress view), including the before-work emission ordering, which the diagram documents."
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Added estimated_complexity, it_requirements, doc_links (planned sequence diagram), expects_from; kept BA's architecture-diagram-author assignment; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

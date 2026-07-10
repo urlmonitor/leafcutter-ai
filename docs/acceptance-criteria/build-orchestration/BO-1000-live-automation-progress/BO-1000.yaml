@@ -1,0 +1,38 @@
+id: BO-1000
+components:
+  - build_orchestration
+title: "See automation working in real time — never wonder if it stalled"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Real-time visibility into long-running background automation — you always know
+  it's working and where it is.
+
+  When automation runs on your behalf over several minutes, today you see almost
+  nothing until it finishes, and it's easy to think it has frozen. This goal makes
+  such automation observable while it runs: every step announces what it's doing
+  and reports how it went, and that progress reaches you as it happens. At any
+  moment you know it's actively working, which step it's on, and that nothing has
+  silently stalled. This is distinct from BO-300, which gives a post-completion
+  recap of what was built and what to run next; BO-1000 is IN-FLIGHT visibility
+  WHILE the automation is still running.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-1000a, BO-1000b, BO-1000c]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

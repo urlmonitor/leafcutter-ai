@@ -1,0 +1,72 @@
+id: BO-1000a-1
+components:
+  - build_orchestration
+title: "Every non-error finalize step emits a start-of-step progress line on the success path"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow is run to completion with no step
+    encountering an error,
+  When each numbered step of the sequence begins its work (baseline capture,
+    open PR, merge the mainline in, run tests, close tickets and source ACs,
+    merge the PR, sync the local mainline, report untracked failures, remove
+    the worktree),
+  Then a human-readable progress line is emitted at the start of that step, on
+    the success path, before the step's work is dispatched — naming the step,
+    its position in the form "Step X of N", and what the step is about to do,
+  And such a start-of-step line is emitted for every non-error step, not only
+    for steps that enter an error or malformed-result branch.
+depends_on: [BO-1000a]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Surface: the finalize-feature workflow IS the .js workflow-body
+    (templates/workflows-js/finalize-feature.js). Per repo precedent (BP-1000,
+    ".js workflow body + Python glue = python-coder"; the finalize-feature agent
+    is is_ticket_phase:false so there is no prose surface to split out for the
+    workflow-body edit), this is python-coder work, not llm-expert.
+    Policy constraints (state WHAT, coder picks HOW):
+    - The start-of-step line must be emitted BEFORE the step's work is dispatched
+      (ordering is load-bearing for BO-1000a-1-i), not after it returns.
+    - Emit through the workflow's existing narration/progress channel so the line
+      reaches the live progress view; do not use a side channel that bypasses it.
+    - A start-of-step line is mandatory for EVERY non-error step — coverage must
+      not depend on a step entering an error/malformed-result branch.
+    - Prefer a single shared narration helper invoked at each step's entry over
+      per-step ad-hoc strings, so format and the "Step X of N" scheme stay
+      uniform (shared with BO-1000a-2's N/counter and BO-1000b-1's outcome line).
+    - ADR-001 self-hosting: the template workflow source is the canonical edit;
+      re-run build.py so the deployed copy stays in parity. No new config key.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements + doc_links; criteria unchanged."
+superseded_by: null
+covered_by: [BO-1000a-1-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
