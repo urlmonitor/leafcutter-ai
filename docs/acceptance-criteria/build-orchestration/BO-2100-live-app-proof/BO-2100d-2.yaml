@@ -1,4 +1,6 @@
 id: BO-2100d-2
+components:
+  - build_orchestration
 title: "Enabled with empty or missing startup_command is rejected as a config error"
 component: build-orchestration
 level: L2

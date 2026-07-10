@@ -1,4 +1,6 @@
 id: BP-200a-3
+components:
+  - build_pipeline
 title: "Agent template defines stop-and-ask boundaries deferring infrastructure edits"
 component: build_pipeline
 level: L2

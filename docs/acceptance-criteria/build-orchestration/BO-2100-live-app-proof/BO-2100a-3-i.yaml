@@ -1,4 +1,6 @@
 id: BO-2100a-3-i
+components:
+  - build_orchestration
 title: "Relative phase order 11.5 < 11.8 < 12 is preserved after insertion"
 component: build-orchestration
 level: L3

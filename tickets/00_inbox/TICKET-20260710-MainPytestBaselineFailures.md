@@ -2,7 +2,7 @@
 title: "Investigate and fix the pre-existing pytest baseline failing on main"
 status: todo
 components:
-  - build-orchestration
+  - build_orchestration
 created: '2026-07-10'
 depends_on: []
 priority: high

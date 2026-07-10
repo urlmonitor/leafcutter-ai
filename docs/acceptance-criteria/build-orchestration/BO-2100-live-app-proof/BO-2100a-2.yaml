@@ -1,4 +1,6 @@
 id: BO-2100a-2
+components:
+  - build_orchestration
 title: "ticket-supervisor Spawn Allowlist permits live-surface-tester"
 component: build-orchestration
 level: L2

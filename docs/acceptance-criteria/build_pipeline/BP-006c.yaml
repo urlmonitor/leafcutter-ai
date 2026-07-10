@@ -1,4 +1,6 @@
 id: BP-006c
+components:
+  - build_pipeline
 title: "build_workflow_scripts() writes compiled workflows to .claude/workflows/, not workflows/"
 component: build_pipeline
 level: L1

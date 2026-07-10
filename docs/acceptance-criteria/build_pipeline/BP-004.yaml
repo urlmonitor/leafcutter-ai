@@ -1,4 +1,6 @@
 id: BP-004
+components:
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "test_resolve_precommit_cmd_skips_nonexecutable_known_path covers broken known-path"

@@ -1,4 +1,6 @@
 id: BO-2100b-1
+components:
+  - build_orchestration
 title: "Project toggle off means the check never runs, even when the ticket opts in"
 component: build-orchestration
 level: L2

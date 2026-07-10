@@ -1,6 +1,6 @@
 id: BO-2000a
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The shared sign-off protocol is self-contained and portable in the sign-off block"
 component: build-orchestration
 level: L1

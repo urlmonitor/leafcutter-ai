@@ -1,4 +1,6 @@
 id: BO-2000b-3
+components:
+  - build_orchestration
 title: "python-coder registers new hooks, agents, and skills through their skills"
 component: build-orchestration
 level: L2

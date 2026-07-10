@@ -2,7 +2,7 @@
 title: "it-po-v3: emit structured it_requirements for package-surface ACs"
 status: todo
 components:
-  - build-orchestration
+  - build_orchestration
 created: '2026-07-10'
 depends_on: []
 priority: medium

@@ -1,4 +1,6 @@
 id: BO-2100a-1-i
+components:
+  - build_orchestration
 title: "live-surface-tester is absent from the agents map unless both toggles are on"
 component: build-orchestration
 level: L3

@@ -1,4 +1,6 @@
 id: BP-1200a-1-iv
+components:
+  - build_pipeline
 title: "On a fresh clone / in CI the commit_guardian deploy-dependent tests resolve their scripts via the build+shim and do not error"
 component: build-pipeline
 level: L3

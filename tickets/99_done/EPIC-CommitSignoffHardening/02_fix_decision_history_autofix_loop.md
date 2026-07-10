@@ -2,8 +2,8 @@
 title: "Eliminate DECISION HISTORY HH:MM + TICKETLESS tail-tag autofix loop"
 status: done
 components:
-  - build_system
-  - agents
+  - build_pipeline
+  - agent_registry
 created: 2026-05-22
 depends_on: []
 priority: high

@@ -1,4 +1,6 @@
 id: BP-200d-2
+components:
+  - build_pipeline
 title: "Prompt-audit skill implements six distinct detection checks"
 component: build_pipeline
 level: L2

@@ -1,4 +1,6 @@
 id: BO-2100c-4
+components:
+  - build_orchestration
 title: "Sequence diagram of server startup, PID recording, and teardown"
 component: build-orchestration
 level: L2

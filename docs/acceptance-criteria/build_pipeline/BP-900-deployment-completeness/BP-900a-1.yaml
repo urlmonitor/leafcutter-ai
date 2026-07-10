@@ -1,4 +1,6 @@
 id: BP-900a-1
+components:
+  - build_pipeline
 title: "build.py deploys all ac_store scripts to the consumer project"
 component: build_pipeline
 level: L2

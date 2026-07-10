@@ -4,7 +4,7 @@ type: epic
 status: done
 components:
   - commit_guardian
-  - architecture_docs
+  - documentation_system
 created: 2026-05-26
 depends_on: []
 priority: medium

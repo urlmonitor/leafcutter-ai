@@ -2,7 +2,7 @@
 title: "Harden test-writer (and python-coder) with Source-of-Truth Discipline to prevent silent production contract shrinkage"
 status: todo
 components:
-  - agents
+  - agent_registry
   - documentation_system
 created: 2026-05-20
 depends_on: []

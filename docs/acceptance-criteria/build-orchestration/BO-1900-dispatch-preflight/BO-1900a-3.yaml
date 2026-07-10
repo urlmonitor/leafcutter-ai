@@ -1,6 +1,6 @@
 id: BO-1900a-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Sequence diagram documents the read -> preflight -> spawn flow"
 component: build-orchestration
 level: L2

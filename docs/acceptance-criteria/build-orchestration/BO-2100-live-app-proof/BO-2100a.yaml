@@ -1,6 +1,6 @@
 id: BO-2100a
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Live-app checks actually run when you ask for them"
 component: build-orchestration
 level: L1

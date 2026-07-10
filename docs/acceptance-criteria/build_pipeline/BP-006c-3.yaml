@@ -1,4 +1,6 @@
 id: BP-006c-3
+components:
+  - build_pipeline
 title: "Deployed plan-feature.js matches the canonical templates/workflows-js source (no stale committed copy)"
 component: build-pipeline
 level: L2

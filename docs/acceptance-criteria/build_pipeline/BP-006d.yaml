@@ -1,4 +1,6 @@
 id: BP-006d
+components:
+  - build_pipeline
 title: "setup_ticket_worktree bootstrap tests pass without MagicMock JSON errors"
 component: build-pipeline
 level: L1

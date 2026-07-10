@@ -1,6 +1,6 @@
 id: BO-2000b
 components:
-  - build-orchestration
+  - build_orchestration
 title: "python-coder carries its own implementation craft in its template"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: BO-2000f-5-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A ticket is still held until its dependency predecessors complete under the rewired driver"
 component: build-orchestration
 level: L3

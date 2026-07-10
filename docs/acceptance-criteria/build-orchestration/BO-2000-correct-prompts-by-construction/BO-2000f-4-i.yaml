@@ -1,6 +1,6 @@
 id: BO-2000f-4-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The structural check fails if /build-feature reintroduces whole-ticket inline phase execution"
 component: build-orchestration
 level: L3

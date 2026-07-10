@@ -1,4 +1,6 @@
 id: BO-2100b-5
+components:
+  - build_orchestration
 title: "Reference documentation for the live_surface_testing config block"
 component: build-orchestration
 level: L2

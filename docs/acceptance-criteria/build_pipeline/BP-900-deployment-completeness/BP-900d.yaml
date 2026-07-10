@@ -1,4 +1,6 @@
 id: BP-900d
+components:
+  - build_pipeline
 title: "Consumer-facing onboarding script is deployable, so build.py preflight does not abort"
 component: build_pipeline
 level: L1

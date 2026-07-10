@@ -1,4 +1,6 @@
 id: BO-2100a-5
+components:
+  - build_orchestration
 title: "Sequence diagram of the live-surface-tester dispatch path"
 component: build-orchestration
 level: L2

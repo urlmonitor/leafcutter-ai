@@ -2,7 +2,7 @@
 title: "Generate post-onboard checklist of remaining manual steps"
 status: done
 components:
-  - onboard
+  - onboarding
 created: 2026-05-19
 depends_on:
   - 01_placeholder_detection.md

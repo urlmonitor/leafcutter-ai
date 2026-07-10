@@ -2,7 +2,7 @@
 title: "Add known-failing-tests baseline so commits only block on net-new test failures"
 status: done
 components:
-  - build_system
+  - build_pipeline
 created: 2026-05-22
 depends_on: []
 priority: high

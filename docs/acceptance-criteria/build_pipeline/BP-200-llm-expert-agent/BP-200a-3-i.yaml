@@ -1,4 +1,6 @@
 id: BP-200a-3-i
+components:
+  - build_pipeline
 title: "Agent constraints section prohibits editing Python, SQL, and frontend files"
 component: build_pipeline
 level: L3

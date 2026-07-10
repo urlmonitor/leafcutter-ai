@@ -1,4 +1,6 @@
 id: BO-2100c-3-i
+components:
+  - build_orchestration
 title: "Orphan scan never kills unrelated processes and guards against PID reuse"
 component: build-orchestration
 level: L3

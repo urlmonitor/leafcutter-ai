@@ -2,7 +2,7 @@
 title: "Post-build referential integrity check for skills_config.json"
 status: done
 components:
-  - build_system
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 priority: high

@@ -1,6 +1,6 @@
 id: BO-1900a-1-ii
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Held-back reason is surfaced to the operator, not only buried in logs"
 component: build-orchestration
 level: L3

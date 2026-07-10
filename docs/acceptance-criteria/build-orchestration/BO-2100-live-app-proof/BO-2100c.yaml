@@ -1,6 +1,6 @@
 id: BO-2100c
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Every test server is shut down and its port freed"
 component: build-orchestration
 level: L1

@@ -1,4 +1,6 @@
 id: BO-2100a-1
+components:
+  - build_orchestration
 title: "Ticket authoring adds live-surface-tester to the agents map when both toggles are on"
 component: build-orchestration
 level: L2

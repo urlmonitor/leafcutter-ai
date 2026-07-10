@@ -1,6 +1,6 @@
 id: BO-2000f-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A code ticket driven via /build-feature runs test-writer and coder as separate phase agents"
 component: build-orchestration
 level: L2

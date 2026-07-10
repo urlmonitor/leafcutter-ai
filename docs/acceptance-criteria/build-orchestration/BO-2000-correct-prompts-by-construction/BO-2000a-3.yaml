@@ -1,4 +1,6 @@
 id: BO-2000a-3
+components:
+  - build_orchestration
 title: "Sign-off degrades safely when the feedback sink is unreachable"
 component: build-orchestration
 level: L2

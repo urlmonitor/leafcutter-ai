@@ -1,4 +1,6 @@
 id: BO-2100c-1
+components:
+  - build_orchestration
 title: "The started server's PID is recorded in the port registry"
 component: build-orchestration
 level: L2

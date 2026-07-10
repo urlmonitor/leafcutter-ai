@@ -2,7 +2,7 @@
 title: "Portable project-root resolution — stop hardcoding pyproject.toml in hooks and worktree bootstrap"
 status: done
 components:
-  - guardrail-engine
+  - commit_guardian
   - build_pipeline
 created: 2026-07-07
 depends_on: []

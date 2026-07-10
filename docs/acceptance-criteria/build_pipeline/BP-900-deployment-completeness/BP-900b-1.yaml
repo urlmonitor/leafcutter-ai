@@ -1,4 +1,6 @@
 id: BP-900b-1
+components:
+  - build_pipeline
 title: "Guard extracts script path references from all compiled agent templates and skill files"
 component: build_pipeline
 level: L2

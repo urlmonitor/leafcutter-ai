@@ -5,9 +5,9 @@ time: "00:00"
 type: manual
 components:
   - build_pipeline
-  - pre_commit_hooks
-  - agents
-  - docs
+  - precommit_hooks
+  - agent_registry
+  - documentation_system
 summary: "Added a centralized, versionable Acceptance Criteria store — a portable docs/acceptance-criteria/ directory with YAML schema, bidirectional pre-commit enforcement, and AC-aware agent integrations across the BA, test-writer, ticket-authoring, triage, and debug agents."
 description: "11 tickets, ~40 commits (PR #46). Built the AC store as a first-class artifact: ADR-007 defined the YAML schema and ID format; build.py gained a new scaffold phase to deploy docs/acceptance-criteria/ into any target project; two pre-commit hooks enforce bidirectional coverage (every test must carry a covers: tag, every active AC must appear in at least one test); the BA agent now queries existing ACs before authoring new ones; the test-writer emits covers: tags; the ticket-authoring skill gained a Step 2.5 AC-wiring convention; the test-failure-triage agent can look up AC status to classify stale-test vs regression; the debug skill injects active ACs into investigative prompts; and origin_agent was added to the AC schema so authoring provenance is machine-readable. How-to and reference docs were delivered as ticket 09."
 commits:

@@ -1,4 +1,6 @@
 id: BP-900b-2
+components:
+  - build_pipeline
 title: "Guard cross-checks extracted references against the deployable script manifest"
 component: build_pipeline
 level: L2

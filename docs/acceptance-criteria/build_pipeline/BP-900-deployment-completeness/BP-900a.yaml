@@ -1,4 +1,6 @@
 id: BP-900a
+components:
+  - build_pipeline
 title: "Use /build-ac in any consumer project without missing scripts"
 component: build_pipeline
 level: L1

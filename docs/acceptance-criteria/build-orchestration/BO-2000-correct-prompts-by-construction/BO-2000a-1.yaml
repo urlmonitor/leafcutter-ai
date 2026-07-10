@@ -1,4 +1,6 @@
 id: BO-2000a-1
+components:
+  - build_orchestration
 title: "Sign-off block resolves its skill in both consumer and source layouts"
 component: build-orchestration
 level: L2

@@ -1,4 +1,6 @@
 id: BP-200a-2
+components:
+  - build_pipeline
 title: "Agent template body contains the six-item Prompt-Quality Checklist with detection heuristics"
 component: build_pipeline
 level: L2

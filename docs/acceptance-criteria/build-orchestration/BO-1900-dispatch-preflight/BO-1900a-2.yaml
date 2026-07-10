@@ -1,6 +1,6 @@
 id: BO-1900a-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A fit ticket passes preflight and dispatch proceeds unchanged"
 component: build-orchestration
 level: L2
