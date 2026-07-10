@@ -5,7 +5,7 @@ status: active
 created: "2026-06-18"
 source_ac: BP-700c-5
 components:
-  - build-pipeline
+  - build_pipeline
 ---
 
 # frontend-coder Unified Agent — Preserved Capabilities Reference

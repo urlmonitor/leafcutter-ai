@@ -3,7 +3,7 @@ epic_name: EPIC-CommitAcOutputPerStage
 created: 2026-06-18
 status: in_progress
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 source_ac: ACD-300g
 ---
 # EPIC-CommitAcOutputPerStage

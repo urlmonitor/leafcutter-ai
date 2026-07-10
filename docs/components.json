@@ -431,6 +431,74 @@
       "primary_code": [
         "scripts/worktree/"
       ]
+    },
+    "finalize": {
+      "id": "finalize",
+      "name": "Finalize",
+      "type": "orchestration",
+      "description": "ACs for the finalize-feature workflow.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/finalize-feature.js"
+      ]
+    },
+    "build_orchestration": {
+      "id": "build_orchestration",
+      "name": "Build Orchestration",
+      "type": "orchestration",
+      "description": "ACs for build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/workflows/build-feature.md",
+        "templates/workflows-js/build-epic.js"
+      ]
+    },
+    "infrastructure": {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "type": "infrastructure",
+      "description": "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "ux_prototyping": {
+      "id": "ux_prototyping",
+      "name": "UX Prototyping",
+      "type": "utility",
+      "description": "ACs for the UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "persona_management": {
+      "id": "persona_management",
+      "name": "Persona Management",
+      "type": "analysis",
+      "description": "ACs for persona definitions, AC targeting by persona, and persona knowledge graph queries.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "stakeholder_delivery": {
+      "id": "stakeholder_delivery",
+      "name": "Stakeholder Delivery",
+      "type": "utility",
+      "description": "ACs for stakeholder-facing delivery of product value: the presentation-agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "ac_driven_dev": {
+      "id": "ac_driven_dev",
+      "name": "AC-Driven Development",
+      "type": "orchestration",
+      "description": "ACs for the AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
     }
   }
 }

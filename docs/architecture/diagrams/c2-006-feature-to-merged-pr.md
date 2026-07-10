@@ -9,9 +9,9 @@ last_updated: 2026-06-08
 flight_level: L1
 parent: agent_delivery_workflows.md
 components:
-  - ac-store
-  - ticket-creation
-  - build-orchestration
+  - ac_store
+  - ticket_creation_pipeline
+  - build_orchestration
   - phase-agents
 related_docs:
   - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md

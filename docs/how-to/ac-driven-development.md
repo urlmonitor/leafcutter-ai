@@ -6,9 +6,9 @@ status: active
 created: 2026-06-05
 last_updated: 2026-06-05
 components:
-  - ac-store
-  - build-orchestration
-  - ticket-creation
+  - ac_store
+  - build_orchestration
+  - ticket_creation_pipeline
 related_docs:
   - docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
   - docs/architecture/diagrams/c2-004-build-ac-flow.md

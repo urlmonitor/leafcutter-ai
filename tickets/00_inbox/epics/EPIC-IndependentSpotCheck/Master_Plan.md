@@ -3,7 +3,7 @@ epic_name: EPIC-IndependentSpotCheck
 created: 2026-06-18
 status: in_progress
 components:
-  - build-orchestration
+  - build_orchestration
 source_ac: BO-1300
 ---
 # EPIC-IndependentSpotCheck

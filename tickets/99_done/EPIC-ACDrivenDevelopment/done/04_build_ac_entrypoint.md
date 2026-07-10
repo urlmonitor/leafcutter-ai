@@ -2,9 +2,9 @@
 title: "/build-ac entry point — AC-to-ticket-to-build end-to-end"
 status: done
 components:
-  - ac-store
-  - ticket-creation
-  - build-orchestration
+  - ac_store
+  - ticket_creation_pipeline
+  - build_orchestration
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md

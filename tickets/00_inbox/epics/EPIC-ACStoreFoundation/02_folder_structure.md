@@ -2,7 +2,7 @@
 title: "Feature folder naming and ID hierarchy enforcement"
 status: todo
 components:
-  - ac-store
+  - ac_store
 created: 2026-06-05
 depends_on:
   - 01_schema_validation.md

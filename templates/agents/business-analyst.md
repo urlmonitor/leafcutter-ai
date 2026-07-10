@@ -332,9 +332,10 @@ truth.
 - `components` — **required, non-empty list.** Every AC MUST include a `components:`
   list, not just the scalar `component`. This is the LIST the knowledge graph reads
   to build `component_membership` edges (not the scalar `component`). Every value must
-  be a component `id` from `docs/acceptance-criteria/index.yaml`. For a single-component
-  AC, set `components: [<same value as component>]`. Normative source:
-  `docs/reference/ac-schema.md`.
+  be an `id` from `docs/components.json` (the 42 underscore ids, e.g. `knowledge_system`,
+  `build_pipeline`). Note: the scalar `component` field is the AC-store namespace key
+  from `docs/acceptance-criteria/index.yaml` (kebab ids) and is NOT the graph
+  vocabulary. Normative source: `docs/reference/ac-schema.md`.
 - `level` — `L2` or `L3`
 - `criteria` — Gherkin Given/When/Then (see rules below)
 - `depends_on` — parent L1 ID plus any ordering dependencies
@@ -559,11 +560,12 @@ This is your quality gate.
          - The criteria field contains only page-specific behavior, NOT
            a restatement of the matched pattern.
        For each non-match: standalone criteria body is used.
-[ ] 13. Every AC I am writing has a non-empty `components:` list. Each value is a
-       component `id` from `docs/acceptance-criteria/index.yaml`. For a single-component
-       AC, `components: [<same value as component>]`. This is the LIST the knowledge
-       graph reads for `component_membership` edges — not the scalar `component`.
-       Normative source: `docs/reference/ac-schema.md`.
+[ ] 13. Every AC I am writing has a non-empty `components:` list. Each value is an
+       `id` from `docs/components.json` (the 42 underscore ids, e.g. `knowledge_system`,
+       `build_pipeline`). The scalar `component` is the AC-store namespace key from
+       `docs/acceptance-criteria/index.yaml` (kebab ids) and is NOT the graph vocabulary.
+       This is the LIST the knowledge graph reads for `component_membership` edges —
+       not the scalar `component`. Normative source: `docs/reference/ac-schema.md`.
 ```
 
 Only after ALL checkboxes pass do you proceed to write output files.

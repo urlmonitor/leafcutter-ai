@@ -8,7 +8,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/add-agent-to-package/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "add-skill-to-package",
@@ -16,7 +19,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/add-skill-to-package/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "build-feature-ops-notes",
@@ -29,6 +35,9 @@
         "build-single-ticket",
         "building-epics",
         "signoff"
+      ],
+      "components": [
+        "skills_system"
       ]
     },
     {
@@ -41,6 +50,9 @@
       "dependencies": [
         "building-epics",
         "signoff"
+      ],
+      "components": [
+        "skills_system"
       ]
     },
     {
@@ -51,6 +63,9 @@
       "template_path": "leafcutter/templates/skills/building-epics/",
       "dependencies": [
         "signoff"
+      ],
+      "components": [
+        "skills_system"
       ]
     },
     {
@@ -59,7 +74,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/create-hook/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "debug",
@@ -68,7 +86,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/debug/",
       "dependencies": [],
-      "description": "Multi-angle debugging workflow. Spawns three parallel investigative agents (database, backend, frontend/docs) to diagnose an issue from different perspectives, synthesizes findings, creates a fix ticket via create-ticket agent, and builds it via build-feature."
+      "description": "Multi-angle debugging workflow. Spawns three parallel investigative agents (database, backend, frontend/docs) to diagnose an issue from different perspectives, synthesizes findings, creates a fix ticket via create-ticket agent, and builds it via build-feature.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "doc-enforcer",
@@ -77,7 +98,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/doc-enforcer/",
       "description": "Use when a coder agent finishes editing Python or SQL files. Enforces module docstrings, function docstrings, DECISION HISTORY block structure, and tail-tag ticket-traceability format on new entries. Also detects and reads .pending/adr_handoff.json to inject ADR back-links automatically.",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "feature",
@@ -85,7 +109,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/feature/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "feedback-analysis",
@@ -94,7 +121,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/feedback-analysis/",
       "dependencies": [],
-      "description": "Read-side analysis pipeline for the Central Feedback Collection System. Produces a prioritized report structure from accumulated feedback data across all categories."
+      "description": "Read-side analysis pipeline for the Central Feedback Collection System. Produces a prioritized report structure from accumulated feedback data across all categories.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "feedback-review",
@@ -103,7 +133,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/feedback-review/",
       "dependencies": [],
-      "description": "Triage unresolved feedback entries from feedback.jsonl. Presents each entry grouped by category and prompts the user to create a ticket, dismiss, or skip."
+      "description": "Triage unresolved feedback entries from feedback.jsonl. Presents each entry grouped by category and prompts the user to create a ticket, dismiss, or skip.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "frontend-design",
@@ -112,7 +145,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/frontend-design/",
       "description": "Optional skill for frontend-coder. Provides design principles that counteract generic AI aesthetics — strong typographic hierarchy, intentional negative space, distinctive colour choices, and component-level personality. Installed by the /onboard wizard when the user opts in.",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "glossary-bootstrap",
@@ -121,7 +157,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/glossary-bootstrap/",
       "description": "Full-repo glossary bootstrap. Scans all .md/.py/.sql files for novel jargon candidates, dispatches the glossary-triage agent in parallel batches, applies decisions to docs/glossary.md and docs/glossary_blacklist.md, and commits the result.",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "knowledge-query",
@@ -130,7 +169,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/knowledge-query/",
       "description": "Cross-surface knowledge graph query. Invokes scripts/knowledge_query.py to search nodes across all paths.json surfaces (agents, tickets, docs, skills, ADRs, hooks). Supports keyword filter, surface filter, JSON export, and edge list output.",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "package-audit",
@@ -138,7 +180,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/package-audit/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "precommit-autofix",
@@ -146,7 +191,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/precommit-autofix/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "prompt-audit",
@@ -155,7 +203,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/prompt-audit/",
       "dependencies": [],
-      "description": "Systematically audits agent templates and skill files against the Prompt-Quality Checklist. Detects compound bash commands, missing signoff protocol, tool allowlist mismatches, and other convention violations."
+      "description": "Systematically audits agent templates and skill files against the Prompt-Quality Checklist. Detects compound bash commands, missing signoff protocol, tool allowlist mismatches, and other convention violations.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "roadmap-query",
@@ -163,7 +214,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/roadmap-query/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "security-scanner",
@@ -171,7 +225,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/security-scanner/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "ship",
@@ -179,7 +236,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/ship/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "signoff",
@@ -187,7 +247,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/signoff/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "sql-query-past-queries",
@@ -196,7 +259,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/sql-query-past-queries/",
       "description": "Scans the project's past-queries folder and surfaces prior queries relevant to the current request. Returns a ranked list of candidate queries for reuse.",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "ticket-authoring",
@@ -204,7 +270,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/ticket-authoring/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "ticket-prioritizer",
@@ -212,7 +281,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/ticket-prioritizer/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "ticket-wiring",
@@ -220,7 +292,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/ticket-wiring/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "webapp-testing",
@@ -229,7 +304,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/webapp-testing/",
       "description": "Optional skill for frontend-coder. Provides Playwright-based UI verification: screenshots, browser console-log capture, and click/type interactions. Installed by the /onboard wizard when the user opts in.",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "write-c4-diagram",
@@ -237,7 +315,10 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/write-c4-diagram/",
-      "dependencies": []
+      "dependencies": [],
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "roadmap-steward",
@@ -246,7 +327,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/roadmap-steward/",
       "dependencies": [],
-      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for product owner review workflows."
+      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for product owner review workflows.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "route-knowledge",
@@ -255,7 +339,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/route-knowledge/",
       "dependencies": [],
-      "description": "Knowledge routing classifier. Use when a user says 'remember this', 'capture this', or 'we should write this down'. Covers the full surface taxonomy (memory subtypes, CLAUDE.md inline/TOC, per-folder README, agent frontmatter, ADR, architecture doc, Diataxis docs, glossary, settings.json, ticket bodies, skills_config.json). Returns { target_surface, path, rationale }. Also used by documentation-expert as a pre-flight gate before Diataxis routing."
+      "description": "Knowledge routing classifier. Use when a user says 'remember this', 'capture this', or 'we should write this down'. Covers the full surface taxonomy (memory subtypes, CLAUDE.md inline/TOC, per-folder README, agent frontmatter, ADR, architecture doc, Diataxis docs, glossary, settings.json, ticket bodies, skills_config.json). Returns { target_surface, path, rationale }. Also used by documentation-expert as a pre-flight gate before Diataxis routing.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "finalize-feature-archive-check",
@@ -264,7 +351,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/finalize-feature-archive-check/",
       "dependencies": [],
-      "description": "Pre-archive validation gate invoked by finalize-feature.js Step 5 before moving an epic folder to tickets/99_done/. Scans every sub-ticket in the epic's done/ subfolder and verifies frontmatter status: done. Offers confirmation-gated auto-fix for missing entries."
+      "description": "Pre-archive validation gate invoked by finalize-feature.js Step 5 before moving an epic folder to tickets/99_done/. Scans every sub-ticket in the epic's done/ subfolder and verifies frontmatter status: done. Offers confirmation-gated auto-fix for missing entries.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "plan-feature",
@@ -275,7 +365,10 @@
       "dependencies": [],
       "description": "Triage, orchestrate, and gate AC authoring for a user's feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then routes through the correct authoring agents (PO v3, BA v3, IT PO v3) with user confirmation gates between stages. All output goes exclusively to the AC store — no ticket files are produced.",
       "invocation_surface": "/plan-feature",
-      "workflow_script": "scripts/workflows/plan-feature.js"
+      "workflow_script": "scripts/workflows/plan-feature.js",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "ac-tree-split",
@@ -285,7 +378,10 @@
       "template_path": "leafcutter/templates/skills/ac-tree-split/",
       "internal": true,
       "dependencies": [],
-      "description": "Guided procedure for splitting overcrowded AC trees. Loaded by PO v3 (for L0/L1 splits) and BA v3 (for L2 redistribution). Prompt-based — no enforcement scripts. Covers horizontal splits (same component, new sibling L0) and intermediate splits (L1 split into sibling L1s). Vertical splits (new sub-component) deferred to v2."
+      "description": "Guided procedure for splitting overcrowded AC trees. Loaded by PO v3 (for L0/L1 splits) and BA v3 (for L2 redistribution). Prompt-based — no enforcement scripts. Covers horizontal splits (same component, new sibling L0) and intermediate splits (L1 split into sibling L1s). Vertical splits (new sub-component) deferred to v2.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "add-component",
@@ -294,7 +390,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/add-component/",
       "dependencies": [],
-      "description": "Agent-facing wrapper around scripts/add_component.py. Provides a structured interface so agents can add a new entry to docs/components.json during a workflow without knowing the script path or argument format."
+      "description": "Agent-facing wrapper around scripts/add_component.py. Provides a structured interface so agents can add a new entry to docs/components.json during a workflow without knowing the script path or argument format.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "ac-scanner",
@@ -303,7 +402,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/ac-scanner/",
       "dependencies": [],
-      "description": "AC store scanner and ticket generator. Wraps scan_ac_store.py (queries the AC YAML store for ready leaf-level ACs) and generate_ticket_from_ac.py (generates a fully-wired ticket file from a single AC YAML record and writes the implemented_by back-reference). Used by the /build-ac command to drive the AC-first build loop."
+      "description": "AC store scanner and ticket generator. Wraps scan_ac_store.py (queries the AC YAML store for ready leaf-level ACs) and generate_ticket_from_ac.py (generates a fully-wired ticket file from a single AC YAML record and writes the implemented_by back-reference). Used by the /build-ac command to drive the AC-first build loop.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "build-ac",
@@ -312,7 +414,10 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/build-ac/",
       "dependencies": [],
-      "description": "Reference skill for the build-ac coordinator. Documents the three routing modes (leaf, goal, L1-no-children), the mode-detection algorithm, and the exact output contracts for each path. Load when implementing or auditing the build-ac agent template, writing tests for mode-detection logic, or diagnosing a mis-routing bug."
+      "description": "Reference skill for the build-ac coordinator. Documents the three routing modes (leaf, goal, L1-no-children), the mode-detection algorithm, and the exact output contracts for each path. Load when implementing or auditing the build-ac agent template, writing tests for mode-detection logic, or diagnosing a mis-routing bug.",
+      "components": [
+        "skills_system"
+      ]
     },
     {
       "id": "quick-fix",
@@ -322,7 +427,10 @@
       "template_path": "leafcutter/templates/skills/quick-fix/",
       "dependencies": [],
       "description": "Fast, in-place bug-fix pipeline. Operates in the current worktree without creating a new branch or worktree. Accepts a structured bug diagnosis and drives: AC creation, test-first (red), warning check, fix, green phase, commit, and close. Escalates to the full /build-feature pipeline when scope expands beyond the single target file.",
-      "invocation_surface": "/quick-fix"
+      "invocation_surface": "/quick-fix",
+      "components": [
+        "skills_system"
+      ]
     }
   ]
 }

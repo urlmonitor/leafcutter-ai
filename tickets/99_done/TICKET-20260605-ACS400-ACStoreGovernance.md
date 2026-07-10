@@ -2,7 +2,7 @@
 title: "ACS-400: AC Store Governance — write-lock criteria fields, audit trail, build deployment"
 status: done
 components:
-  - ac-store
+  - ac_store
   - infrastructure
   - build_pipeline
 created: 2026-06-05

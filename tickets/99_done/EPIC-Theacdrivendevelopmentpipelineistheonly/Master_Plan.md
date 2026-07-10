@@ -3,7 +3,7 @@ epic_name: EPIC-TheAcDrivenDevelopmentPipelineIsTheOnly
 created: 2026-06-18
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 source_ac: ACD-1100
 ---
 # EPIC-TheAcDrivenDevelopmentPipelineIsTheOnly

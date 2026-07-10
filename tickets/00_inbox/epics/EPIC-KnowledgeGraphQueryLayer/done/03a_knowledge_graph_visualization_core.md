@@ -2,7 +2,7 @@
 title: "Write visualise_knowledge_graph.py — core HTML generation and D3.js data embedding"
 status: done
 components:
-  - knowledge-management
+  - knowledge_system
 created: 2026-06-04
 depends_on:
   - tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md

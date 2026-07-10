@@ -6,7 +6,7 @@ status: active
 created: 2026-05-28
 last_updated: 2026-06-18
 components:
-  - guardrail-engine
+  - commit_guardian
 ---
 
 # Pre-Commit Hooks

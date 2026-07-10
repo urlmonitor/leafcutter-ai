@@ -2,7 +2,7 @@
 title: "Docs & Diagrams"
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-07-02
 depends_on:
   - 06_gates_create_time_pre_drive_commit_phase.md

@@ -3,7 +3,7 @@ title: "EPIC: Worktree Quality Gate Guard"
 type: epic
 status: todo
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-07-02
 depends_on: []
 priority: high

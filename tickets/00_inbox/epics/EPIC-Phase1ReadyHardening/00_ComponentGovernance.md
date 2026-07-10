@@ -2,7 +2,7 @@
 title: "Component-registry governance validation + AC-hook UTF-8 fail-open"
 status: done
 components:
-  - ac-store
+  - ac_store
 created: 2026-07-07
 depends_on: []
 priority: high

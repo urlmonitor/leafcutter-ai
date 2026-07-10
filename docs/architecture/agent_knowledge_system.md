@@ -8,7 +8,7 @@ flight_level: "L2-Container"
 diagram_type: agent_flow
 components:
   - "agent-infrastructure"
-  - "knowledge-management"
+  - knowledge_system
 related_agents:
   - ".claude/skills/route-learning/SKILL.md"
   - ".claude/skills/capture-learning/SKILL.md"

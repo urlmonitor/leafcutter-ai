@@ -6,6 +6,8 @@ type: card
 status: active
 created: 2026-07-01
 card_version: "generated"
+components:
+  - sql_coding
 ---
 # sql-index-creator
 

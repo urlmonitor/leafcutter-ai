@@ -3,7 +3,7 @@ epic_name: EPIC-SharedPatternSpecs
 created: 2026-06-11
 status: in_progress
 components:
-  - ac-store
+  - ac_store
 source_ac: ACS-500
 ---
 # EPIC-SharedPatternSpecs

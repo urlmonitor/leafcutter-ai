@@ -2,7 +2,7 @@
 title: "Gates: Create-Time + Pre-Drive + Commit-Phase"
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-07-02
 depends_on:
   - 03_probe_integrity_robustness.md

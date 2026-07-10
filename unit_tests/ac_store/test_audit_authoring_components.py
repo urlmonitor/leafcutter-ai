@@ -213,7 +213,8 @@ class TestMainExitCodes(unittest.TestCase):
             root = Path(d)
             _write_yaml(
                 root, "ok.yaml",
-                _make_ac_yaml(components="components:\n  - knowledge-management\n"),
+                # Registry is docs/components.json (underscore ids).
+                _make_ac_yaml(components="components:\n  - knowledge_system\n"),
             )
             code = _mod.main(["--ac-root", str(root)])
             self.assertEqual(code, 0)

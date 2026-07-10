@@ -14,7 +14,7 @@ agents:
   user-surface-smoker: not_needed
 complexity: simple
 components:
-  - guardrail-engine
+  - commit_guardian
 created: '2026-07-06'
 depends_on: []
 files_touched:

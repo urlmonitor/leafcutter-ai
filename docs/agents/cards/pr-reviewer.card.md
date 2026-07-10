@@ -6,6 +6,8 @@ type: card
 status: active
 created: 2026-07-07
 card_version: "generated"
+components:
+  - review_system
 ---
 # pr-reviewer
 

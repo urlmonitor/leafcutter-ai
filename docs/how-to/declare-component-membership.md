@@ -6,7 +6,7 @@ status: active
 created: 2026-07-08
 last_updated: 2026-07-08
 components:
-  - knowledge-management
+  - knowledge_system
 related_docs:
   - docs/reference/ac-schema.md
   - docs/acceptance-criteria/index.yaml
@@ -16,6 +16,15 @@ related_docs:
 ---
 
 # How to declare component membership and query the component knowledge graph
+
+> **Two distinct axes — do not conflate them.**
+> The scalar `component` field is the AC-store **namespace/prefix key** — its valid
+> values are the kebab ids in `docs/acceptance-criteria/index.yaml` (e.g.
+> `knowledge-management`). The `components` **list** field is the **graph membership
+> vocabulary** — its valid values are the underscore ids in `docs/components.json`
+> (e.g. `knowledge_system`). An AC can legitimately have both at the same time:
+> `component: knowledge-management` (namespace) and
+> `components: [knowledge_system]` (graph). They are different registries.
 
 This guide covers two tasks:
 
@@ -33,8 +42,10 @@ This guide covers two tasks:
 
 - The project has a leafcutter build deployed (run `python scripts/build.py --target-dir .`
   from the workspace root, or verify that `config/paths.json` exists in the project root).
-- You know which component the item belongs to. Valid component IDs are the `id`
-  values in `docs/acceptance-criteria/index.yaml`.
+- You know which component the item belongs to. For the `components` list (graph
+  membership), valid ids are the underscore keys in `docs/components.json`. For the
+  scalar `component` field (AC-store namespace), valid ids are the kebab keys in
+  `docs/acceptance-criteria/index.yaml`.
 - For acceptance criteria: write access to the AC YAML file.
 
 ---
@@ -43,26 +54,36 @@ This guide covers two tasks:
 
 ### Step 1 — Look up the valid component IDs
 
-Open `docs/acceptance-criteria/index.yaml`. Each entry in the `components` array
-has an `id` field (kebab-case). This value is what goes in the `components` list.
+For the `components` **list** (graph membership), open `docs/components.json`. Each
+entry has an `id` field (underscore notation, e.g. `knowledge_system`). These are the
+values that go in the `components` list.
+
+For the scalar `component` field (AC-store namespace/prefix), open
+`docs/acceptance-criteria/index.yaml`. Each entry has an `id` field (kebab notation,
+e.g. `knowledge-management`). These are the values for the scalar `component` field,
+file placement, and ID prefixes. **Do not use index.yaml ids in the `components` list.**
 
 ```yaml
-# Excerpt from docs/acceptance-criteria/index.yaml
+# docs/components.json — graph membership registry (use for the `components` LIST)
+{
+  "knowledge_system": { ... },
+  "build_pipeline": { ... },
+  "testing_quality": { ... }
+}
+
+# docs/acceptance-criteria/index.yaml — namespace registry (use for the scalar `component`)
 components:
-  - id: knowledge-management
+  - id: knowledge-management   # kebab — for scalar `component` field only
     prefix: KM
     description: "ACs for the cross-surface knowledge graph..."
   - id: ac-store
     prefix: ACS
-    description: "ACs for the acceptance-criteria store..."
-  - id: build-pipeline
-    prefix: BP
-    description: "ACs for the build system..."
+    ...
 ```
 
-If the component you need is not listed, add a new entry to `index.yaml` before
-proceeding. The validator will reject any `components` value that does not appear
-in this registry.
+If the graph component you need is not listed in `docs/components.json`, add a new
+entry there before proceeding. If the AC namespace you need is not in `index.yaml`,
+add a new entry to `index.yaml`.
 
 ### Step 2 — Add the `components` list to the item
 
@@ -91,7 +112,8 @@ Rules enforced by `scripts/ac_store/validate_ac_schema.py` (and the
 
 - `components` must be present and non-null.
 - It must be a non-empty list (empty list or list of blank strings is rejected).
-- Every entry must be an `id` from `docs/acceptance-criteria/index.yaml`.
+- Every entry must be an `id` from `docs/components.json` (underscore ids). These
+  are the graph membership ids — not the kebab ids from `index.yaml`.
 
 An AC that spans two components can declare both:
 
@@ -378,8 +400,10 @@ exactly which criteria are waiting to be delivered.
 
 - `docs/reference/ac-schema.md` — complete field-by-field reference for AC YAML
   files; the `components` field specification is authoritative there.
-- `docs/acceptance-criteria/index.yaml` — component registry (valid IDs, prefixes,
-  and descriptions).
+- `docs/components.json` — graph component registry (the 42 underscore ids used in
+  the `components` list field for knowledge-graph membership).
+- `docs/acceptance-criteria/index.yaml` — AC-store namespace/prefix registry (kebab
+  ids used in the scalar `component` field, file placement, and ID prefixes).
 - `templates/skills/knowledge-query/SKILL.md` — full reference for all
   `knowledge_query.py` flags and output modes.
 - `docs/how-to/declare-a-knowledge-surface.md` — how to register an entirely new

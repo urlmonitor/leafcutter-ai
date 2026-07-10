@@ -87,8 +87,9 @@ class TestComponentsFieldErrors(unittest.TestCase):
 
     def test_real_registry_contains_knowledge_management(self):
         ids = load_registry_ids()
-        self.assertIn("knowledge-management", ids)
-        self.assertIn("ac-driven-dev", ids)  # added to the registry
+        # Registry is now docs/components.json (underscore ids), not index.yaml.
+        self.assertIn("knowledge_system", ids)
+        self.assertIn("ac_store", ids)
 
 
 # ---------------------------------------------------------------------------
