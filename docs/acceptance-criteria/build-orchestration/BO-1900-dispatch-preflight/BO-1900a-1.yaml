@@ -1,4 +1,6 @@
 id: BO-1900a-1
+components:
+  - build-orchestration
 title: "Preflight runs before spawn and holds back an unfit ticket with a reason"
 component: build-orchestration
 level: L2
@@ -46,4 +48,5 @@ superseded_by: null
 covered_by:
   - BO-1900a-1-i
   - BO-1900a-1-ii
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-DispatchPreflightGate/01_TICKET-20260708-BO-1900a-1.md
