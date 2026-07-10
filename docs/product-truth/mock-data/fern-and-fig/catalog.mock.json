@@ -1,0 +1,69 @@
+{
+  "id": "fern-and-fig/catalog",
+  "component": "ux-prototyping",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "reusable": true,
+  "tags": ["catalog", "checkout"],
+  "invariants": [
+    "Plant.status == 'out-of-stock' iff Plant.stock == 0",
+    "Plant.status == 'low-stock' iff 0 < Plant.stock <= 5",
+    "Plant.status == 'in-stock' iff Plant.stock > 5",
+    "Order.total == Plant.price * Order.qty  (pre-shipping)",
+    "Order.customer resolves to a Customer.id",
+    "Order.item resolves to a Plant.id"
+  ],
+  "entities": {
+    "Plant": {
+      "fields": {
+        "id": "string — stable slug",
+        "name": "string",
+        "price": "number — in euros",
+        "currency": "string",
+        "stock": "integer — units on hand",
+        "status": "enum: in-stock | low-stock | out-of-stock (derived from stock)"
+      },
+      "records": [
+        { "id": "monstera-deliciosa", "name": "Monstera Deliciosa", "price": 34, "currency": "EUR", "stock": 12, "status": "in-stock" },
+        { "id": "fiddle-leaf-fig", "name": "Fiddle-leaf Fig", "price": 59, "currency": "EUR", "stock": 3, "status": "low-stock" },
+        { "id": "snake-plant", "name": "Snake Plant", "price": 22, "currency": "EUR", "stock": 0, "status": "out-of-stock" }
+      ]
+    },
+    "Customer": {
+      "fields": {
+        "id": "string",
+        "name": "string",
+        "email": "string",
+        "orders": "integer — lifetime order count"
+      },
+      "records": [
+        { "id": "alex-green", "name": "Alex Green", "email": "alex@fernfig.shop", "orders": 3 }
+      ]
+    },
+    "Order": {
+      "fields": {
+        "id": "string",
+        "customer": "string — Customer.id",
+        "item": "string — Plant.id",
+        "qty": "integer",
+        "total": "number",
+        "currency": "string",
+        "status": "enum: pending | paid | shipped | refunded"
+      },
+      "records": [
+        { "id": "1042", "customer": "alex-green", "item": "monstera-deliciosa", "qty": 1, "total": 34, "currency": "EUR", "status": "paid" }
+      ]
+    }
+  },
+  "used_by": {
+    "mockups": ["plant-listing", "plant-detail", "checkout"],
+    "tests": ["fixtures: catalog, checkout"],
+    "flows": ["fern-and-fig/customer-buys-a-plant"]
+  },
+  "provenance": [
+    { "action": "authored", "by": "walked-by-hand (art-director session)", "date": "2026-07-10", "note": "Seed / gold reference. The ONE canonical dataset for Plant/Customer/Order in ux-prototyping — extend, don't duplicate." },
+    { "action": "reviewed", "by": "product-owner (persona)", "date": "2026-07-10" }
+  ]
+}

@@ -1,0 +1,36 @@
+id: UXP-493
+title: "Product-truth is a living layer: a store beside the ACs, read live by the Atlas, kept fresh by agents"
+component: ux-prototyping
+level: L1
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  As a product owner, I want product-truth to be a living layer of the Leafcutter
+  architecture rather than a static document: the product-truth store lives beside the
+  acceptance-criteria store, the Atlas reads that store live and renders its flows, and
+  the agents produce and extend the artifacts (flows, mock data, ACs) both surfaces
+  depend on — so what I review is always the current truth and the layer maintains itself
+  as features are defined and built.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/product-truth-architecture.flow.json
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-420
+  - UXP-420a
+  - UXP-421
+  - UXP-421a
+  - UXP-422
+  - UXP-422a
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

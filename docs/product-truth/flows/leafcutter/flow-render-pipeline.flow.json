@@ -1,0 +1,30 @@
+{
+  "id": "leafcutter/flow-render-pipeline",
+  "component": "ux-prototyping",
+  "product": "Leafcutter",
+  "name": "How a flow renders in the Atlas",
+  "summary": "The data pipeline that turns a stored flow into the picture you see on the Atlas /flows page: the loader reads the flow file and the store index as JSON, each step is resolved to its acceptance criterion's live work_status, and the resulting graph is drawn — so the render always reflects the real, current implementation status rather than a hand-maintained badge.",
+  "kind": "data",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": ["product-truth", "atlas", "render", "pipeline"],
+  "entities": [],
+  "steps": [
+    { "id": "load", "label": "Read the flow + index JSON from the store", "human": "The loader reads the flow file and the product-truth index.json straight from the store as the raw material for the render.", "order": 1, "implements": ["UXP-410", "UXP-410a"], "impl_status": "done", "impl_asof": "2026-07-10" },
+    { "id": "resolve", "label": "Resolve each step to its AC's live work_status", "human": "For each step, the pipeline looks up the acceptance criteria in step.implements and resolves the step's status from those ACs' live work_status.", "order": 2, "implements": ["UXP-411", "UXP-411a"], "impl_status": "done", "impl_asof": "2026-07-10" },
+    { "id": "render", "label": "Draw the graph on the /flows page", "human": "The resolved flow is drawn as a graph on the Atlas /flows page, badged with the rolled-up implementation status.", "order": 3, "implements": ["UXP-412", "UXP-412a"], "impl_status": "done", "impl_asof": "2026-07-10" }
+  ],
+  "branches": [],
+  "impl_summary": { "done": 3, "in_progress": 0, "not_started": 0, "total": 3, "asof": "2026-07-10" },
+  "acceptance_scenarios": [
+    { "for": "load", "given": "a flow file and index.json in the product-truth store", "when": "the /flows loader runs", "then": "it reads both as JSON without needing any pre-built render artifact" },
+    { "for": "resolve", "given": "a loaded flow whose steps carry implements links", "when": "the pipeline resolves each step", "then": "the step's status is derived from the live work_status of its acceptance criteria" },
+    { "for": "render", "given": "a resolved flow", "when": "the /flows page renders", "then": "the graph is drawn with each step badged by its resolved status and the flow badged by the rollup" }
+  ],
+  "provenance": [
+    { "action": "authored", "by": "BrainCandy (product-truth Atlas session)", "date": "2026-07-10", "note": "Real data-flow describing the Atlas /flows render pipeline just built." }
+  ]
+}

@@ -1,0 +1,33 @@
+id: UXP-410
+title: "The /flows loader reads the flow and index JSON from the product-truth store"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given a flow file and index.json in the product-truth store,
+  When the /flows loader runs,
+  Then it reads both as JSON directly from the store,
+  And it does not require any pre-built render artifact.
+depends_on:
+  - UXP-492
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  The /flows page loader reads flow files and index.json straight from the
+  product-truth store as the raw material for the render.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

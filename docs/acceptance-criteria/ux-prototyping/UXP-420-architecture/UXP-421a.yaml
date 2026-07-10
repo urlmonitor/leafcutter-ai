@@ -1,0 +1,33 @@
+id: UXP-421a
+title: "The Atlas /flows view colours each step live from the acceptance-criteria store"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given a populated product-truth store and acceptance-criteria store,
+  When the Atlas renders the /flows view,
+  Then each step's colour is derived live from the work_status of its linked acceptance criteria,
+  And changing an AC's work_status changes the step's colour on the next load without editing the flow file.
+depends_on:
+  - UXP-493
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/product-truth-architecture.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  The Atlas resolves step colour from live AC work_status at render time, so the picture tracks
+  the AC store rather than a snapshot baked into the flow file.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

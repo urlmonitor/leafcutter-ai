@@ -1,0 +1,30 @@
+{
+  "id": "leafcutter/product-truth-architecture",
+  "component": "ux-prototyping",
+  "product": "Leafcutter",
+  "name": "Product-truth in the leafcutter architecture",
+  "summary": "How product-truth sits inside Leafcutter's architecture: the product-truth store lives beside the acceptance-criteria store, the Atlas reads that store live and renders its flows, and the agents produce and extend the artifacts (flows, mock data, ACs) that both surfaces depend on. Together these three pieces make product-truth a living layer rather than a static document.",
+  "kind": "architecture",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": ["product-truth", "architecture", "atlas", "agents"],
+  "entities": [],
+  "steps": [
+    { "id": "store", "label": "Product-truth store lives beside the AC store", "human": "The product-truth store (flows, mock data, mockups) lives under docs/product-truth, right next to the acceptance-criteria store it links into.", "order": 1, "implements": ["UXP-420", "UXP-420a"], "impl_status": "done", "impl_asof": "2026-07-10" },
+    { "id": "atlas", "label": "The Atlas reads it live and renders flows", "human": "The Leafcutter Atlas reads the product-truth store live and renders its flows, so what you see reflects the current store rather than a snapshot.", "order": 2, "implements": ["UXP-421", "UXP-421a"], "impl_status": "done", "impl_asof": "2026-07-10" },
+    { "id": "agents", "label": "Agents produce & extend the artifacts", "human": "Leafcutter's agents produce and extend the product-truth artifacts — drafting flows, seeding mock data, and generating ACs — keeping the layer alive.", "order": 3, "implements": ["UXP-422", "UXP-422a"], "impl_status": "not_started", "impl_asof": "2026-07-10" }
+  ],
+  "branches": [],
+  "impl_summary": { "done": 2, "in_progress": 0, "not_started": 1, "total": 3, "asof": "2026-07-10" },
+  "acceptance_scenarios": [
+    { "for": "store", "given": "the Leafcutter repository", "when": "a product-truth artifact is authored", "then": "it lives under docs/product-truth beside the acceptance-criteria store and links into it" },
+    { "for": "atlas", "given": "a populated product-truth store", "when": "the Atlas loads", "then": "it reads the store live and renders its flows from the current contents" },
+    { "for": "agents", "given": "a feature to define or extend", "when": "the Leafcutter agents run", "then": "they produce and extend the product-truth artifacts (flows, mock data, ACs) the Atlas and pipeline consume" }
+  ],
+  "provenance": [
+    { "action": "authored", "by": "BrainCandy (product-truth Atlas session)", "date": "2026-07-10", "note": "Real architecture flow describing how product-truth, the Atlas, and agents fit together." }
+  ]
+}

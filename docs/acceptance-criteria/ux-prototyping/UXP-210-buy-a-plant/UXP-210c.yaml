@@ -1,0 +1,30 @@
+id: UXP-210c
+title: "Customer can review the cart before paying"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  Given a plant has been added to the cart,
+  When the customer views the cart,
+  Then the cart shows the plant, quantity, unit price and a running total before they pay.
+depends_on: [UXP-210b]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Renders the cart screen; writes a draft Order from the fern-and-fig/catalog mock data.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

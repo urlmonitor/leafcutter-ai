@@ -1,0 +1,30 @@
+id: UXP-210d
+title: "Customer can check out and pay"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a cart with at least one item and a known customer,
+  When the customer pays,
+  Then an Order is created with status 'paid'.
+depends_on: [UXP-210c]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Renders the checkout screen; reads Customer + Order, writes the paid Order.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

@@ -1,0 +1,34 @@
+id: UXP-401
+title: "The system drafts a flow, mock data, and mockups from the captured intent"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a captured feature intent,
+  When the system processes it,
+  Then a draft flow is produced,
+  And a mock-data set and mockups are produced alongside it for the person to review.
+depends_on:
+  - UXP-491
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/define-a-feature.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements: |
+  Turns captured intent into a draft flow plus its mock data and mockups so the
+  person has something concrete to react to before any acceptance criteria exist.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-401a
+implemented_by: []
+change_target: code
+risk_surface: internal

@@ -1,0 +1,30 @@
+id: UXP-210b-2
+title: "Out-of-stock plant offers a notify-me action instead of add-to-cart"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given an out-of-stock plant,
+  When the customer opens its detail page,
+  Then the add-to-cart button is replaced by a 'Notify me' action.
+depends_on: [UXP-210b]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Branch of the plant-detail screen; reads Plant stock + Customer for the notify request.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

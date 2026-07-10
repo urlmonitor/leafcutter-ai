@@ -1,0 +1,33 @@
+id: UXP-400
+title: "A person can define a feature by saying what they want in plain language"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  Given a person with a feature idea,
+  When they describe it in plain language,
+  Then the request is captured as intent,
+  And no spec format or Gherkin is required from the person.
+depends_on:
+  - UXP-491
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/define-a-feature.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Captures the person's natural-language feature intent as the entry point of the
+  flow-first authoring loop, without imposing a spec or Gherkin format on them.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

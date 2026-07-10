@@ -1,0 +1,38 @@
+id: UXP-300
+title: "Product-truth artifacts live in docs/product-truth with one canonical dataset per entity per component"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  Given the product-truth store,
+  When a flow, mock-data, or mockup artifact is authored,
+  Then it lives under docs/product-truth/ (flows/, mock-data/, mockups/),
+  And each entity has exactly one canonical mock-data artifact per component (extend, never duplicate),
+  And flows link to acceptance criteria via step.implements (flow -> AC), while AC -> flow is derived,
+  And scripts/validate_product_truth.py passes for the store.
+depends_on: []
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/scripts/validate_product_truth.py
+    relationship: enforced-by
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The store location and the flow->AC linking direction are conventions enforced by
+  the validator and consumed by the Leafcutter Atlas /flows view. Mock data is the
+  single source of truth that both populates mockups and seeds test fixtures.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal

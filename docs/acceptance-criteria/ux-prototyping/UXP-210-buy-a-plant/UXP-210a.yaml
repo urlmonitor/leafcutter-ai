@@ -1,0 +1,30 @@
+id: UXP-210a
+title: "Customer can browse the plant catalogue"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the catalog has in-stock and out-of-stock plants,
+  When the customer opens the listing,
+  Then each plant shows its price and a stock badge (in stock / low / out of stock).
+depends_on: []
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Renders the plant-listing screen from the fern-and-fig/catalog mock data.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

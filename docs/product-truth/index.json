@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "description": "Searchable manifest for the product-truth store. artifacts[] is authoritative; entity_registry gates entity names; by_component / by_entity / by_flow are derived indexes (regenerate with scripts/validate_product_truth.py --build). See README.md for the search + add-vs-create protocol.",
+  "search_dimensions": ["component", "entity", "flow", "type", "tag"],
+  "entity_registry": ["Plant", "Customer", "Order"],
+  "artifacts": [
+    {
+      "id": "fern-and-fig/customer-buys-a-plant",
+      "type": "flow",
+      "title": "Customer buys a plant",
+      "summary": "Browse → detail → cart → checkout → confirmed, with a notify-me path for sold-out plants.",
+      "kind": "user",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "flows/fern-and-fig/customer-buys-a-plant.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": ["Plant", "Customer", "Order"],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "impl_summary": { "done": 2, "in_progress": 1, "not_started": 3, "total": 6, "asof": "2026-07-10" },
+      "tags": ["checkout", "catalog", "purchase"]
+    },
+    {
+      "id": "fern-and-fig/track-an-order",
+      "type": "flow",
+      "title": "Customer tracks an order",
+      "summary": "My orders → order detail → track shipment. Reuses the catalog dataset (extend, not duplicate).",
+      "kind": "user",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "flows/fern-and-fig/track-an-order.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": ["Order", "Customer"],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "impl_summary": { "done": 1, "in_progress": 1, "not_started": 1, "total": 3, "asof": "2026-07-10" },
+      "tags": ["orders", "post-purchase"]
+    },
+    {
+      "id": "leafcutter/define-a-feature",
+      "type": "flow",
+      "title": "Define a feature the product-truth way",
+      "summary": "Say what you want → system drafts flow · mock · mockups → you review & approve and ACs are generated.",
+      "kind": "user",
+      "source": "real",
+      "component": "ux-prototyping",
+      "path": "flows/leafcutter/define-a-feature.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [],
+      "impl_summary": { "done": 0, "in_progress": 1, "not_started": 2, "total": 3, "asof": "2026-07-10" },
+      "tags": ["product-truth", "authoring", "flow-first"]
+    },
+    {
+      "id": "leafcutter/flow-render-pipeline",
+      "type": "flow",
+      "title": "How a flow renders in the Atlas",
+      "summary": "Read the flow + index JSON → resolve each step to its AC's live work_status → draw the graph on /flows.",
+      "kind": "data",
+      "source": "real",
+      "component": "ux-prototyping",
+      "path": "flows/leafcutter/flow-render-pipeline.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [],
+      "impl_summary": { "done": 3, "in_progress": 0, "not_started": 0, "total": 3, "asof": "2026-07-10" },
+      "tags": ["product-truth", "atlas", "render", "pipeline"]
+    },
+    {
+      "id": "leafcutter/product-truth-architecture",
+      "type": "flow",
+      "title": "Product-truth in the leafcutter architecture",
+      "summary": "Store lives beside the AC store → the Atlas reads it live and renders flows → agents produce & extend the artifacts.",
+      "kind": "architecture",
+      "source": "real",
+      "component": "ux-prototyping",
+      "path": "flows/leafcutter/product-truth-architecture.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [],
+      "impl_summary": { "done": 2, "in_progress": 0, "not_started": 1, "total": 3, "asof": "2026-07-10" },
+      "tags": ["product-truth", "architecture", "atlas", "agents"]
+    },
+    {
+      "id": "fern-and-fig/catalog",
+      "type": "mock_data",
+      "title": "Fern & Fig catalog",
+      "summary": "The canonical Plant / Customer / Order dataset for the plant-shop sample.",
+      "component": "ux-prototyping",
+      "path": "mock-data/fern-and-fig/catalog.mock.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": ["Plant", "Customer", "Order"],
+      "tags": ["catalog", "checkout"]
+    }
+  ],
+  "by_component": {
+    "ux-prototyping": {
+      "flows": ["fern-and-fig/customer-buys-a-plant", "fern-and-fig/track-an-order", "leafcutter/define-a-feature", "leafcutter/flow-render-pipeline", "leafcutter/product-truth-architecture"],
+      "mock_data": ["fern-and-fig/catalog"],
+      "mockups": []
+    }
+  },
+  "by_entity": {
+    "Plant": {
+      "canonical_mock_data": { "ux-prototyping": "fern-and-fig/catalog" },
+      "flows": { "ux-prototyping": ["fern-and-fig/customer-buys-a-plant"] }
+    },
+    "Customer": {
+      "canonical_mock_data": { "ux-prototyping": "fern-and-fig/catalog" },
+      "flows": { "ux-prototyping": ["fern-and-fig/customer-buys-a-plant"] }
+    },
+    "Order": {
+      "canonical_mock_data": { "ux-prototyping": "fern-and-fig/catalog" },
+      "flows": { "ux-prototyping": ["fern-and-fig/customer-buys-a-plant"] }
+    }
+  },
+  "by_flow": {
+    "fern-and-fig/customer-buys-a-plant": {
+      "component": "ux-prototyping",
+      "entities": ["Plant", "Customer", "Order"],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "path": "flows/fern-and-fig/customer-buys-a-plant.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": { "done": 2, "in_progress": 1, "not_started": 3, "total": 6, "asof": "2026-07-10" }
+    },
+    "fern-and-fig/track-an-order": {
+      "component": "ux-prototyping",
+      "entities": ["Order", "Customer"],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "path": "flows/fern-and-fig/track-an-order.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": { "done": 1, "in_progress": 1, "not_started": 1, "total": 3, "asof": "2026-07-10" }
+    },
+    "leafcutter/define-a-feature": {
+      "component": "ux-prototyping",
+      "entities": [],
+      "path": "flows/leafcutter/define-a-feature.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": { "done": 0, "in_progress": 1, "not_started": 2, "total": 3, "asof": "2026-07-10" }
+    },
+    "leafcutter/flow-render-pipeline": {
+      "component": "ux-prototyping",
+      "entities": [],
+      "path": "flows/leafcutter/flow-render-pipeline.flow.json",
+      "impl_status": "done",
+      "impl_summary": { "done": 3, "in_progress": 0, "not_started": 0, "total": 3, "asof": "2026-07-10" }
+    },
+    "leafcutter/product-truth-architecture": {
+      "component": "ux-prototyping",
+      "entities": [],
+      "path": "flows/leafcutter/product-truth-architecture.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": { "done": 2, "in_progress": 0, "not_started": 1, "total": 3, "asof": "2026-07-10" }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+id: UXP-220a
+title: "Customer can see a list of their past orders"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given a customer with past orders,
+  When they open 'My orders',
+  Then each order shows its number, item, total and status.
+depends_on: []
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/track-an-order.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Renders the orders-list screen from the fern-and-fig/catalog Order records.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

@@ -1,0 +1,36 @@
+id: UXP-420a
+title: "The product-truth store carries a manifest index that mirrors each artifact's status, readiness, and version"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth store,
+  When artifacts are added or changed,
+  Then a manifest index.json lists every artifact with its status, readiness, and version,
+  And the validator fails if the index's status/readiness/version disagree with any artifact file.
+depends_on:
+  - UXP-493
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/product-truth-architecture.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/index.json
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  index.json is the searchable manifest for the store; validate_product_truth.py enforces that
+  each artifact's status/readiness/version is mirrored there.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal

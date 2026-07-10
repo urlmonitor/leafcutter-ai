@@ -1,0 +1,30 @@
+id: UXP-210e
+title: "Customer sees an order confirmation"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given payment has succeeded,
+  When the order is created,
+  Then the confirmation screen shows the order number and the paid items.
+depends_on: [UXP-210d]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Renders the order-confirmation screen from the created Order record.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
