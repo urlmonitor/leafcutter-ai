@@ -1,4 +1,6 @@
 id: BO-1900b-1
+components:
+  - build-orchestration
 title: "A premise that no longer reproduces at dispatch halts the run"
 component: build-orchestration
 level: L2
@@ -48,4 +50,5 @@ superseded_by: null
 covered_by:
   - BO-1900b-1-i
   - BO-1900b-1-ii
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-DispatchPreflightGate/06_TICKET-20260708-BO-1900b-1.md

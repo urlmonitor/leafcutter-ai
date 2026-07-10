@@ -1,4 +1,6 @@
 id: BO-1900a-1-i
+components:
+  - build-orchestration
 title: "Preflight that errors internally fails closed and holds the ticket back"
 component: build-orchestration
 level: L3
@@ -43,4 +45,5 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-DispatchPreflightGate/02_TICKET-20260708-BO-1900a-1-i.md
