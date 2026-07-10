@@ -1,0 +1,50 @@
+id: BO-2100a-3
+title: "build-ticket.js phase ordering includes live-surface-tester after the smoker and before commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the canonical phase ordering array `phaseOrder` in
+    templates/workflows-js/build-ticket.js, which currently lists
+    `user-surface-smoker` (priority 11.5) immediately before `commit` (priority 12)
+  When a ticket's `agents:` map includes `live-surface-tester: needed`
+  Then `live-surface-tester` is a member of `phaseOrder`
+    And it is positioned after `user-surface-smoker` and before `commit`
+    (priority 11.8), so the phase sort dispatches it once the smoker has run and
+    before the commit phase begins.
+depends_on: [BO-2100a]
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "The inserted priority (11.8) must preserve the existing relative order of every other phase; no pre-existing entry's relative order may change."
+  - "The agent key added to phaseOrder must exactly match the key emitted by the ticket-authoring skill (BO-2100a-1) and listed in the supervisor allowlist (BO-2100a-2): `live-surface-tester`."
+  - "Must remain consistent with the building-epics canonical dispatch-order documentation (BO-2100a-4) at priority 11.8."
+delivers_to:
+  agent: test-runner
+  contract: "A phaseOrder entry positioning live-surface-tester at priority 11.8 (after user-surface-smoker 11.5, before commit 12), so a real drive dispatches the phase in the correct slot"
+expects_from:
+  ac_id: BO-2100a-1
+  contract: "A ticket agents: map that names live-surface-tester as a needed phase"
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2100a-3-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-3.md

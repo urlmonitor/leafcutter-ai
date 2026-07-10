@@ -1,0 +1,45 @@
+id: BO-2100a-1
+title: "Ticket authoring adds live-surface-tester to the agents map when both toggles are on"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose frontmatter sets `live_surface_test: true`
+    And a project `skills_config.json` whose `live_surface_testing.enabled` is `true`
+  When the business-analyst authors that ticket via the ticket-authoring skill
+    (templates/skills/ticket-authoring/SKILL.md)
+  Then the ticket's `agents:` map contains the entry `live-surface-tester: needed`
+    And this mirrors the existing rule that adds `user-surface-smoker: needed`
+    when `user_facing_surface` is non-null.
+depends_on: [BO-2100a]
+doc_links:
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The two-toggle check must read the live toggles at authoring time (feature frontmatter live_surface_test AND project skills_config live_surface_testing.enabled); it must not hardcode an assumption about either."
+  - "Must mirror the existing user-surface-smoker: needed insertion rule so the two gating patterns stay structurally consistent and maintainable."
+  - "Must add the entry only when BOTH toggles are true; no partial-toggle combination may produce it."
+  - "The emitted agent key must be spelled exactly `live-surface-tester`, in parity with the ticket-supervisor Spawn Allowlist (BO-2100a-2) and the build-ticket.js phaseOrder (BO-2100a-3)."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A ticket agents: map that carries live-surface-tester: needed when the feature opts in and the project enables the capability"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2100a-1-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-1.md

@@ -1,0 +1,54 @@
+id: BO-2100d-3
+title: "Startup and finalize resolve the deployed scripts from the real deployed dir in a worktree"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a git worktree where the package is deployed under `.leafcutter/` (not
+    `.claude/`, which the ADR and agent text referenced)
+  When startup and finalize teardown resolve and invoke the live-surface scripts
+    (live_surface_startup.py and port_registry.py)
+  Then they locate the scripts at their actual deployed location in the worktree and
+    run successfully
+    And they do NOT fail with a not-found error caused by a hardcoded `.claude` path
+    And live testing works from a fresh worktree without manual path fixups.
+depends_on: [BO-2100d]
+doc_links:
+  - path: scripts/live_surface_startup.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/live_surface_startup.py"
+  n_location_rule: "1"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python -m pytest tests/test_live_surface_startup.py -q"
+  notes: |
+    Script resolution must locate live_surface_startup.py and port_registry.py at their
+    real deployed location (`.leafcutter/`) in a worktree; no hardcoded `.claude` path
+    may remain in the resolution logic. Live testing must work from a fresh worktree
+    with no manual path fixups. The ADR/agent text that referenced `.claude` must be
+    corrected so documentation matches the deployed reality. Path resolution and
+    file-not-found handling must follow the project error-handling policy (clear, named
+    error rather than a silent failure).
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100d-3.md

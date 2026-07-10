@@ -1,0 +1,51 @@
+id: BO-2100e-1
+title: "An opted-in ticket driven through ticket-supervisor demonstrably spawns live-surface-tester"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a real ticket whose frontmatter sets `live_surface_test: true` and a project
+    whose `live_surface_testing.enabled` is `true`
+  When that ticket is driven through ticket-supervisor / build-ticket.js in a real
+    process (not a synthetic-fixture unit test)
+  Then the run demonstrably dispatches the `live-surface-tester` phase — observed
+    from the real dispatch path, e.g. the phase appearing as executed in the drive
+    output with the recorded dispatch occurring after user-surface-smoker and before
+    commit
+    And this observation is the closure gate for the epic: the epic is not done until
+    a real run has been seen to fire the phase.
+depends_on: [BO-2100e, BO-2100a-1, BO-2100a-2, BO-2100a-3, BO-2100a-4, BO-2100c-1, BO-2100c-2, BO-2100c-3, BO-2100d-1, BO-2100d-2, BO-2100d-3]
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: test-runner
+estimated_complexity: M
+it_requirements:
+  - "Must execute a REAL ticket whose frontmatter sets live_surface_test: true, against a project whose skills_config live_surface_testing.enabled is true, driven through ticket-supervisor / build-ticket.js in a fresh real process — NOT a synthetic-fixture unit test."
+  - "Must assert the live-surface-tester phase is actually dispatched/spawned, observed from the real drive output, with the dispatch occurring after user-surface-smoker and before commit."
+  - "This observation is the epic closure gate: the epic MUST NOT be marked done until a real run has been seen to fire the phase (anti-phantom-done)."
+  - "Must run only after the dispatch wiring (BO-2100a-1..a-4) and the startup/teardown fixes (BO-2100c-1..c-3, BO-2100d-1..d-3) are in place, so a failure to spawn reflects a real wiring defect and not a missing prerequisite."
+delivers_to: null
+expects_from:
+  ac_id: BO-2100a-3
+  contract: "A fully wired dispatch path — ticket-authoring agents-map entry (a-1), supervisor Spawn Allowlist entry (a-2), and build-ticket.js phaseOrder slot at 11.8 (a-3) — that this real run exercises end to end"
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100e-1.md
+notes: "Anti-phantom-done gate. Per repo CLAUDE.md and prior retrospectives, closure requires exercising the REAL dispatch path in a fresh process, not green synthetic unit tests."

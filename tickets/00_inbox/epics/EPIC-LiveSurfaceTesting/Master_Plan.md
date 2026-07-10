@@ -116,6 +116,73 @@ constraint. See ticket 01 (`01_adr_live_surface_testing.md`).
 | 06 | [06_worktree_startup_helper.md](./06_worktree_startup_helper.md) | Write worktree startup helper (spin-up, health-check, teardown) callable by `live-surface-tester` | `[ ]` |
 | 07 | [07_finalize_port_cleanup.md](./07_finalize_port_cleanup.md) | Wire port release + orphan-process cleanup into `/finalize-feature` | `[ ]` |
 
+## Revival (2026-07-10) — foundation re-landed + wiring/hardening tickets (BO-2100)
+
+The original tickets 01–07 above describe the **foundation** (ADR, agent template,
+port registry, startup helper, config toggle + validation). A deep review found the
+feature was **phantom-done**: that foundation is well-built and tested, but nothing
+ever dispatches the agent, so it never runs. On revival the foundation has been
+**re-landed onto this branch** (`feat/live-surface-tester-revive`, commit `5f57a5fd`;
+62 tests passing, ruff clean). The missing dispatch wiring plus several merge-blocker
+defect fixes are captured as the approved AC tree **BO-2100**
+(`docs/acceptance-criteria/build-orchestration/BO-2100-live-app-proof/`) and the
+per-AC tickets below (one ticket per leaf AC, generated with `implemented_by`
+back-refs in the store).
+
+### Workstream A — Dispatch wiring: make it actually run (the phantom-done fix)
+Agents: `llm-expert` (templates/skills), `frontend-coder` (build-ticket.js)
+
+| Ticket | AC | Surface |
+|--------|----|---------|
+| [BO-2100a-1](./TICKET-20260710-BO-2100a-1.md) | BO-2100a-1 | BA injects `live-surface-tester: needed` into ticket `agents:` map when both toggles true |
+| [BO-2100a-1-i](./TICKET-20260710-BO-2100a-1-i.md) | BO-2100a-1-i | agent absent from map when not both toggles true |
+| [BO-2100a-2](./TICKET-20260710-BO-2100a-2.md) | BO-2100a-2 | `ticket-supervisor.md` Spawn Allowlist includes the agent |
+| [BO-2100a-3](./TICKET-20260710-BO-2100a-3.md) | BO-2100a-3 | `build-ticket.js` phaseOrder inserts agent at 11.8 (between smoker and commit) |
+| [BO-2100a-3-i](./TICKET-20260710-BO-2100a-3-i.md) | BO-2100a-3-i | ordering 11.5 < 11.8 < 12 preserved |
+| [BO-2100a-4](./TICKET-20260710-BO-2100a-4.md) | BO-2100a-4 | `building-epics` natural dispatch order references the agent |
+
+### Workstream B — Toggle gate & safe default
+Agents: `llm-expert` (authoring gate), `python-coder` (runtime default)
+
+| Ticket | AC | Surface |
+|--------|----|---------|
+| [BO-2100b-1](./TICKET-20260710-BO-2100b-1.md) | BO-2100b-1 | project-off ⇒ never dispatched |
+| [BO-2100b-1-i](./TICKET-20260710-BO-2100b-1-i.md) | BO-2100b-1-i | **fix:** `port_registry._is_enabled()` defaults **false** when key absent |
+| [BO-2100b-2](./TICKET-20260710-BO-2100b-2.md) | BO-2100b-2 | ticket-off/absent ⇒ skipped |
+| [BO-2100b-3](./TICKET-20260710-BO-2100b-3.md) | BO-2100b-3 | both-on ⇒ runs |
+
+### Workstream C — Lifecycle cleanup & teardown  (`python-coder`)
+
+| Ticket | AC | Surface |
+|--------|----|---------|
+| [BO-2100c-1](./TICKET-20260710-BO-2100c-1.md) | BO-2100c-1 | server PID recorded via `port_registry set-pid` (covers existing behavior) |
+| [BO-2100c-2](./TICKET-20260710-BO-2100c-2.md) | BO-2100c-2 | finalize releases port + kills recorded PID |
+| [BO-2100c-3](./TICKET-20260710-BO-2100c-3.md) | BO-2100c-3 | **fix:** teardown kills the whole process group (`start_new_session`/`killpg`) |
+| [BO-2100c-3-i](./TICKET-20260710-BO-2100c-3-i.md) | BO-2100c-3-i | orphan-scan no over-kill / PID-reuse guard |
+
+### Workstream D — Fail-loud & safety  (`python-coder`)
+
+| Ticket | AC | Surface |
+|--------|----|---------|
+| [BO-2100d-1](./TICKET-20260710-BO-2100d-1.md) | BO-2100d-1 | **fix:** loud error when `requests` missing (no silent always-timeout) |
+| [BO-2100d-2](./TICKET-20260710-BO-2100d-2.md) | BO-2100d-2 | `ConfigValidationError` on enabled + empty `startup_command` (covers existing) |
+| [BO-2100d-3](./TICKET-20260710-BO-2100d-3.md) | BO-2100d-3 | worktree path resolution (`.leafcutter` not `.claude`) |
+
+### Workstream E — Behavioral proof: the closure gate  (`test-runner`)
+
+| Ticket | AC | Surface |
+|--------|----|---------|
+| [BO-2100e-1](./TICKET-20260710-BO-2100e-1.md) | BO-2100e-1 | drive a real `live_surface_test:true` ticket through ticket-supervisor and assert the agent **actually spawns** (not a synthetic test). **depends_on** A + C. |
+
+### Docs & diagrams  (`documentation-expert` / `architecture-diagram-author`)
+[BO-2100a-5](./TICKET-20260710-BO-2100a-5.md), [a-6](./TICKET-20260710-BO-2100a-6.md),
+[b-4](./TICKET-20260710-BO-2100b-4.md), [b-5](./TICKET-20260710-BO-2100b-5.md),
+[c-4](./TICKET-20260710-BO-2100c-4.md), [d-4](./TICKET-20260710-BO-2100d-4.md) —
+sequence/component diagrams, how-to, and reference updates per each L1's documentation triggers.
+
+**Build order:** Workstreams A + B + C + D (independent, parallel-safe by files) →
+Docs → **E last** (the anti-phantom-done proof gate).
+
 ## Parallelism Notes
 
 - Ticket 01 (ADR) must complete before any others begin — decisions not yet

@@ -1,0 +1,38 @@
+id: BO-2100c-4
+title: "Sequence diagram of server startup, PID recording, and teardown"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the lifecycle of a test server from start through teardown
+  When a maintainer needs to understand how ports and PIDs are managed
+  Then a sequence diagram exists showing: port allocation, server spawn in its own
+    session, PID recorded to the registry, health probe, and teardown that kills the
+    process group and releases the port at both stop and finalize.
+depends_on: [BO-2100c, BO-2100c-2]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: extends
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The diagram must depict the full lifecycle: port allocation, session-isolated server spawn, PID recording to the registry, health probe, and teardown (process-group kill + port release) at BOTH stop and finalize."
+  - "The depicted behavior must match the implemented lifecycle in live_surface_startup.py and port_registry.py (BO-2100c-1, c-2, c-3), not an idealized version."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100c-4.md

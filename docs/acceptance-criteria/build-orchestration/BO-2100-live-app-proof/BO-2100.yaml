@@ -1,0 +1,38 @@
+id: BO-2100
+components:
+  - build-orchestration
+title: "Prove a feature works in your real running app before it ships"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  See features work in your live app for real — with no leftover test servers.
+
+  When a feature changes how your app behaves at runtime, the delivery pipeline
+  can start your app, exercise it the way a real user or client would, confirm it
+  responds correctly, and then shut it down cleanly. This capability is opt-in: it
+  stays off unless you switch it on for both the project and the individual feature,
+  and when it is on it genuinely runs rather than being quietly skipped. It never
+  leaves orphaned server processes or blocked ports behind, and it only observes —
+  it checks your app without changing your code, handing any problems it finds to
+  your coding agents to fix. This is distinct from the independent spot-check
+  (BO-1300), which re-verifies recorded ticket and requirement state; here the proof
+  comes from driving the real, running application.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-2100a, BO-2100b, BO-2100c, BO-2100d, BO-2100e]
+implemented_by: []

@@ -1,0 +1,35 @@
+id: BO-2100b
+components:
+  - build-orchestration
+title: "You decide when live-app checks run — off by default"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Live testing stays off until you turn it on for the project and the feature.
+
+  The capability is safe by default: it does nothing unless it is switched on at
+  both the project level and for the specific feature being delivered. Turning on
+  only one of the two is not enough, so live testing never runs by surprise.
+depends_on: [BO-2100]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2100b-1
+  - BO-2100b-2
+  - BO-2100b-3
+  - BO-2100b-4
+  - BO-2100b-5
+implemented_by: []
+documentation_triggers: [how-to, reference-doc]
