@@ -223,6 +223,19 @@ A function whose signature is extended but whose callers still use the old signa
 
 (Source: EPIC-ComputedQualityGates FP-1, 2026-07-07.)
 
+### In-Place Workflow Specs — Protected-Branch AC Required
+
+Any workflow spec whose behaviour is "operates in the current worktree" (or otherwise
+commits/pushes in place without creating an isolated branch) MUST include an explicit
+acceptance criterion covering the protected-branch (`main`/`master`) case — either a
+confirmation gate or a hard refusal. A spec that omits it ships a workflow that will
+happily commit straight to `main`.
+
+**Why this matters:** `/quick-fix` shipped without a main-branch guard; the missing
+`BP-600f` confirmation gate had to be added in a post-merge follow-up after the gap was
+found in production.
+(Source: EPIC-QuickFixWorkflow retrospective KI-3, 2026-07-10.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -449,3 +462,19 @@ against a real on-disk ticket file caught the defect. Green sign-offs prove the 
 they do not prove it works on the real data format.
 (Source: EPIC-PhantomDoneFilesTouched retrospective KI-1, 2026-07-07.
 See also user-memory feedback_spotcheck_real_data_format.)
+
+### Doc-spec-only epic — confirm an implementation ticket exists
+
+Before pushing any source-file commits for an epic, check whether **every** ticket in
+the epic is documentation-spec-only (llm-expert-only, empty `test_requirements`,
+test-writer auto-skipped). If so, confirm at least one **implementation** ticket exists —
+with `files_touched` pointing at real source, an assigned coder agent, and a non-empty
+test plan — before any code lands. An all-spec epic silently routes the actual
+implementation outside the ticket system.
+
+**Why this matters:** EPIC-QuickFixWorkflow's 16 tickets were all doc-spec-only, so the
+real 516-line `SKILL.md`, 440-line `quick-fix.js`, and command template arrived in three
+ad-hoc commits with no AC traceability, no test-writer, and no ac-validator — producing
+two post-merge defects (`BP-600f` missing main-branch guard; `ACS-700` missing
+`origin_agent` in AC scaffolds).
+(Source: EPIC-QuickFixWorkflow retrospective KI-1, 2026-07-10.)
