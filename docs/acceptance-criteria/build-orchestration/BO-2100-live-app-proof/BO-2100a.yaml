@@ -1,0 +1,37 @@
+id: BO-2100a
+components:
+  - build-orchestration
+title: "Live-app checks actually run when you ask for them"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Opt in and the check truly runs — never silently skipped.
+
+  When a feature is marked for live-app testing and the capability is enabled, the
+  delivery pipeline reliably performs the check as part of driving that feature,
+  instead of the check existing on paper but never actually happening.
+depends_on: [BO-2100]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+child_limit_override: 6
+covered_by:
+  - BO-2100a-1
+  - BO-2100a-2
+  - BO-2100a-3
+  - BO-2100a-4
+  - BO-2100a-5
+  - BO-2100a-6
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]

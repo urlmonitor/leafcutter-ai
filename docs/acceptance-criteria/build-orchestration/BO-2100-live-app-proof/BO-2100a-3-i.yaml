@@ -1,0 +1,39 @@
+id: BO-2100a-3-i
+title: "Relative phase order 11.5 < 11.8 < 12 is preserved after insertion"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the `phaseOrder` array in templates/workflows-js/build-ticket.js after
+    `live-surface-tester` has been inserted
+  When the index of each of `user-surface-smoker`, `live-surface-tester`, and
+    `commit` is read from that array
+  Then the index of `user-surface-smoker` is strictly less than the index of
+    `live-surface-tester`
+    And the index of `live-surface-tester` is strictly less than the index of
+    `commit`
+    And no pre-existing entry's relative order is changed by the insertion.
+depends_on: [BO-2100a-3]
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "Ordering assertions must be relative (index comparisons), not tied to the absolute numeric priority value, so a future insertion between phases does not break the check."
+  - "The check must confirm no pre-existing entry moved relative to its neighbours as a side effect of the insertion."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-3-i.md

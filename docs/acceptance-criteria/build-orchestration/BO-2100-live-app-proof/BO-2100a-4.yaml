@@ -1,0 +1,44 @@
+id: BO-2100a-4
+title: "building-epics canonical dispatch order documents live-surface-tester at 11.8"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the canonical phase-ordering description in
+    templates/skills/building-epics/SKILL.md, which lists `user-surface-smoker`
+    at priority 11.5 and `commit` at priority 12
+  When a reader consults that ordering to learn where live-app testing runs
+  Then `live-surface-tester` appears in both the natural-language dispatch-order
+    prose and the priority table at priority 11.8
+    And it is placed after `user-surface-smoker` (11.5) and before `commit` (12)
+    consistently with the build-ticket.js `phaseOrder` array.
+depends_on: [BO-2100a]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The documented priority (11.8) and placement must match the build-ticket.js phaseOrder array (BO-2100a-3); the prose and the priority table must agree with each other and with the code."
+  - "Must update both surfaces in the skill (natural-language dispatch-order prose AND the priority table), not just one, so the documentation cannot drift internally."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-4.md

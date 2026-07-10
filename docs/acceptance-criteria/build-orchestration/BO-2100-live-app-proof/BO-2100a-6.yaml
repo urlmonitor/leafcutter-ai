@@ -1,0 +1,41 @@
+id: BO-2100a-6
+title: "Component diagram of the live-surface-testing pieces and their links"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the components that together deliver live-app testing
+    (ticket-authoring skill, ticket-supervisor Spawn Allowlist, build-ticket.js
+    phase ordering, live-surface-tester agent, live_surface_startup.py,
+    port_registry.py, and skills_config.json)
+  When a maintainer needs to see how these parts connect
+  Then a component diagram exists showing each part and the edges between them:
+    which component reads the config toggles, which dispatches the agent, and which
+    manages the server process and port registry.
+depends_on: [BO-2100a, BO-2100a-2]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: extends
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The diagram must name every real component in the wiring (ticket-authoring skill, ticket-supervisor allowlist, build-ticket.js phaseOrder, live-surface-tester agent, live_surface_startup.py, port_registry.py, skills_config.json) and show the toggle-read, dispatch, and process/port-management edges between them."
+  - "Component names and file paths shown must match the actual repository paths so the diagram stays verifiable against the code."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-6.md

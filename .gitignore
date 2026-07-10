@@ -40,3 +40,6 @@ feedback_err_*.txt
 
 # Runtime logs
 debugging/logs/
+
+# Live surface testing runtime state (logs, port registry)
+.live_surface_testing/

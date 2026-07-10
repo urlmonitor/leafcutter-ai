@@ -1,0 +1,32 @@
+id: BO-2100e
+components:
+  - build-orchestration
+title: "The capability is proven by actually running, not just green tests"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Opting a feature in demonstrably launches the check end to end.
+
+  Confidence that this capability works comes from observing a real opted-in feature
+  cause the live-app check to actually happen in a real run — not from unit tests
+  alone — so it can never regress back into existing on paper but never firing.
+depends_on: [BO-2100]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2100e-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal end-to-end verification requirement — it proves the other L1s' behavior fires in a real run and introduces no user-facing surface of its own to document."

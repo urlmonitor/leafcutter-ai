@@ -1,0 +1,58 @@
+id: BO-2100c-1
+title: "The started server's PID is recorded in the port registry"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given live_surface_startup.py has allocated a port and spawned the development
+    server subprocess for a worktree
+  When the start command completes and reports the server ready
+  Then the server's PID has been written into the port registry for that worktree
+    via `python scripts/port_registry.py set-pid <worktree> <pid>`
+    And a subsequent `port_registry.py list` shows a non-null `pid` for that
+    worktree entry
+    And the recorded PID is the identifier later used to stop the server.
+depends_on: [BO-2100c]
+doc_links:
+  - path: scripts/live_surface_startup.py
+    relationship: describes
+    status: exists
+  - path: scripts/port_registry.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/live_surface_startup.py"
+  n_location_rule: "1"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python -m pytest tests/test_live_surface_startup.py -q"
+  notes: |
+    The PID must be recorded before the start command reports the server ready, so
+    teardown always has a PID to act on. The recorded PID must be the
+    process-group-leader PID that teardown signals (consistent with the group-kill
+    behavior in BO-2100c-3). Registry writes must follow the project error-handling
+    policy for file I/O and must not corrupt or lose other worktrees' entries on
+    concurrent access.
+delivers_to:
+  agent: python-coder
+  contract: "A port-registry entry for the worktree carrying a non-null server PID (the process-group leader) that stop/finalize teardown reads to terminate the server"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100c-1.md
