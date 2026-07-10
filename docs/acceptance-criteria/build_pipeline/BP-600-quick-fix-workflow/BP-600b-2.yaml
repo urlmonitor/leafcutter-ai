@@ -1,6 +1,6 @@
 id: BP-600b-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix AC uses the correct component prefix and sequential ID"
 component: build-pipeline
 level: L2

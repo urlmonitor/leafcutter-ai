@@ -1,6 +1,6 @@
 id: PER-100f
 components:
-  - persona-management
+  - persona_management
 readiness: approved
 priority: medium
 title: "Personas grow smarter as your product evolves"

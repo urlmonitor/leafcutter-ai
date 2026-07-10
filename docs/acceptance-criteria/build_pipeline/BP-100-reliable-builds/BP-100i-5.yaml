@@ -1,6 +1,6 @@
 id: BP-100i-5
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "No violations when all directories are in sync — silent pass"

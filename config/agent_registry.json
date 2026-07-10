@@ -131,7 +131,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "supervisor_system"
+            ]
         },
         {
             "id": "ticket-supervisor",
@@ -192,7 +195,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "supervisor_system"
+            ]
         },
         {
             "id": "brainstorm-lead",
@@ -340,7 +346,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "research_analysis"
+            ]
         },
         {
             "id": "architect-review",
@@ -416,7 +425,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "review_verdict"
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
         },
         {
             "id": "python-coder",
@@ -548,6 +560,9 @@
                     "path": "docs/agents/conventions.md",
                     "label": "Agent Conventions"
                 }
+            ],
+            "components": [
+                "python_coding"
             ]
         },
         {
@@ -624,7 +639,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
         },
         {
             "id": "test-runner",
@@ -699,7 +717,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
         },
         {
             "id": "documentation-expert",
@@ -809,7 +830,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "documentation"
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
         },
         {
             "id": "change-scope-reviewer",
@@ -878,7 +902,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "review_verdict"
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
         },
         {
             "id": "pr-reviewer",
@@ -895,7 +922,7 @@
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign to every ticket that produces a code or documentation change \u2014 this is the final quality gate before commit.",
+                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
                 "trigger_conditions": [
                     {
                         "type": "llm",
@@ -945,7 +972,10 @@
                     "source": "agent memory store"
                 }
             ],
-            "produces": "review_verdict"
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
         },
         {
             "id": "code-review-architect",
@@ -1046,7 +1076,10 @@
                     "source": "agent memory store"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
         },
         {
             "id": "pull-request",
@@ -1114,7 +1147,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
         },
         {
             "id": "conflict-resolver",
@@ -1468,7 +1504,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "frontend-coder",
@@ -1562,7 +1601,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "frontend_coding"
+            ]
         },
         {
             "id": "sql-table-creator",
@@ -1684,7 +1726,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "sql-test-writer",
@@ -2206,7 +2251,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "documentation"
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
         },
         {
             "id": "how-to-author",
@@ -2266,7 +2314,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "documentation"
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
         },
         {
             "id": "reference-author",
@@ -2330,7 +2381,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "documentation"
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
         },
         {
             "id": "glossary-triage",
@@ -2639,7 +2693,7 @@
             "priority": 11.5,
             "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
             "requires_ticket_section": false,
-            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements \u2014 read-only on code files, edits only the ticket file.",
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file.",
             "category": "testing",
             "skills_invoked": [
                 {
@@ -2665,7 +2719,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
         },
         {
             "id": "ac-fulfillment-gate",
@@ -2813,7 +2870,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "prompt"
+            "produces": "prompt",
+            "components": [
+                "llm_authoring"
+            ]
         },
         {
             "id": "product-owner",
@@ -2902,7 +2962,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "ticket_creation_pipeline"
+            ]
         },
         {
             "id": "it-po",
@@ -2941,7 +3004,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "product_ownership"
+            ]
         },
         {
             "id": "build-ac",
@@ -2961,7 +3027,7 @@
             "template_path": "templates/agents/build-ac.md",
             "model": "sonnet",
             "skills_used": [],
-            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline \u2014 depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
+            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
             "invocation_surface": [
                 "/build-ac"
             ],
@@ -2996,7 +3062,7 @@
             "template_path": "templates/agents/ac-triage.md",
             "model": "haiku",
             "skills_used": [],
-            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /plan-feature workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only \u2014 never writes files. Must complete in < 3s for \u2264200 ACs.",
+            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /plan-feature workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs.",
             "produces": "analysis",
             "category": "research",
             "skills_invoked": [],

@@ -8,8 +8,8 @@ last_updated: 2026-06-22
 flight_level: L2
 parent: agent_delivery_workflows.md
 components:
-  - ac-store
-  - ticket-creation
+  - ac_store
+  - ticket_creation_pipeline
 related_docs:
   - docs/architecture/diagrams/ac-readiness-states.md
   - docs/architecture/diagrams/build-ac-flow.md

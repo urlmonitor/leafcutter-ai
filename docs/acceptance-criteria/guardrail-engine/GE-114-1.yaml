@@ -1,6 +1,6 @@
 id: "GE-114-1"
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "v1-flat tickets are counted against the 20-total AC cap instead of being silently skipped"
 component: guardrail-engine
 status: active

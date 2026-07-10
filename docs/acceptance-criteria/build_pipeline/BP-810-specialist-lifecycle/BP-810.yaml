@@ -1,6 +1,6 @@
 id: BP-810
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Specialists stay current and old agents transition without pain"
 component: build-pipeline
 level: L0

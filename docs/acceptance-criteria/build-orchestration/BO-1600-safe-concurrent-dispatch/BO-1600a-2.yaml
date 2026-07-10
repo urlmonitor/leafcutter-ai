@@ -1,6 +1,6 @@
 id: BO-1600a-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "A second supervisor waits for the git write portion, then commits cleanly"

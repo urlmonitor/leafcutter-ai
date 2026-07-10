@@ -1,6 +1,6 @@
 id: BO-200a-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Work envelope contains ticket reference and changed file list"
 component: build-orchestration
 level: L2

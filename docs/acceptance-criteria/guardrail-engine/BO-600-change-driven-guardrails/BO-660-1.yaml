@@ -1,6 +1,6 @@
 id: BO-660-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "New agent type inherits guardrails from its declared produces trait"
 component: build-orchestration
 level: L2

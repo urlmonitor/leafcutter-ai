@@ -1,6 +1,6 @@
 id: BO-1800a-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "A drive killed mid-commit cannot corrupt any other drive's object store"

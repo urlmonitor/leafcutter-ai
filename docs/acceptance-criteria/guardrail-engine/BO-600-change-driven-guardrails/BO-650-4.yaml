@@ -1,6 +1,6 @@
 id: BO-650-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Architect asks PO/BA clarifying questions when intent is ambiguous"
 component: build-orchestration
 level: L2

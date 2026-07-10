@@ -3,7 +3,7 @@ epic_name: EPIC-CompleteComponentCoverageInTheRegistry
 created: 2026-06-08
 status: done
 components:
-  - ac-store
+  - ac_store
 source_ac: ACS-300g
 ---
 # EPIC-CompleteComponentCoverageInTheRegistry

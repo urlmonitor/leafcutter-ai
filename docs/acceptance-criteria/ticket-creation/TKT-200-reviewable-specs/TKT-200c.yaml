@@ -1,6 +1,6 @@
 id: TKT-200c
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Everything a reviewer needs is in one place"

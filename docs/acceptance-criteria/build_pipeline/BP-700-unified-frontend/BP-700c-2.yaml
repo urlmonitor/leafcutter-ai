@@ -1,6 +1,6 @@
 id: BP-700c-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "All frontend-coder agent capabilities are preserved in unified template"
 component: build-pipeline
 level: L2

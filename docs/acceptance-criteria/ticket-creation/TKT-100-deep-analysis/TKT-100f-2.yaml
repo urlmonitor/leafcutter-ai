@@ -1,6 +1,6 @@
 id: TKT-100f-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Each L2 AC has exactly one assigned_agent and a depends_on referencing its parent L1"

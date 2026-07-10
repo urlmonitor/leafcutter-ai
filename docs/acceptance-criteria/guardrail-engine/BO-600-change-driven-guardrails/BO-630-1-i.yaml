@@ -1,6 +1,6 @@
 id: BO-630-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Task with no estimated_complexity field defaults to medium (faster model)"
 component: build-orchestration
 level: L3

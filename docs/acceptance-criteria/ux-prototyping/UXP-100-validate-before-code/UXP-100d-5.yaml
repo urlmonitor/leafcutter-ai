@@ -1,6 +1,6 @@
 id: UXP-100d-5
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Component diagram showing the handoff artifact structure and consumers"
 component: ux-prototyping
 level: L2

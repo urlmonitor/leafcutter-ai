@@ -1,6 +1,6 @@
 id: GE-113c-1
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "In the deployed .leafcutter layout a guard resolves the project root to the consumer project root"
 component: guardrail-engine
 level: L2

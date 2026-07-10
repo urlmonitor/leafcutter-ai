@@ -1,6 +1,6 @@
 id: BO-1100e-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Filtering skill returns at most a bounded number of candidate commits"
 component: build-orchestration
 level: L2

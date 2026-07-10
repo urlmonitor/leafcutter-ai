@@ -1,6 +1,6 @@
 id: ACD-1200
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "Turn any goal into a ready-to-build work package with one command"

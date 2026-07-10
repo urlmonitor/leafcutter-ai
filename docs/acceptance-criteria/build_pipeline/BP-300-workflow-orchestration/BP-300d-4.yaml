@@ -1,6 +1,6 @@
 id: BP-300d-4
 components:
-  - build-pipeline
+  - build_pipeline
 title: "The build fails when a primary delivery command would deploy its prose flow on a supported runtime"
 component: build-pipeline
 level: L2

@@ -1,6 +1,6 @@
 id: BP-100i-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Script parity: every .py file in the runtime commit_guardian directory has a counterpart in the canonical template directory"

@@ -1,6 +1,6 @@
 id: BP-600b-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow detects when an equivalent AC already exists"
 component: build-pipeline
 level: L3

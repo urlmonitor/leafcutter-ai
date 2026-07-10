@@ -1,6 +1,6 @@
 id: BP-100i-4
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Hook fires at pre-commit when commit_guardian files are staged"

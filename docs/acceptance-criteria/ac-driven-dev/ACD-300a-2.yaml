@@ -1,6 +1,6 @@
 id: ACD-300a-2
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Triage routes 'behavioral addition' requests directly to BA v3"

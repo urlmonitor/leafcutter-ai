@@ -1,6 +1,6 @@
 id: BP-100e
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Sign-off timestamps are always machine-parseable — no ambiguous dates slip through"
 component: build-pipeline
 level: L1

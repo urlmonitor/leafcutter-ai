@@ -2,7 +2,7 @@
 title: "Tree traversal, ticket generation, and epic folder assembly"
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-05
 depends_on: []
 priority: medium

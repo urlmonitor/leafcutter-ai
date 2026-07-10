@@ -1,6 +1,6 @@
 id: BP-300
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Workflow scripts orchestrate agents deterministically — no silent skips, no stale state"
 component: build-pipeline
 level: L0

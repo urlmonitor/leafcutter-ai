@@ -1,6 +1,6 @@
 id: BP-400c-4
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Date filtering via --since limits report to matching entries only"
 component: build-pipeline
 level: L2

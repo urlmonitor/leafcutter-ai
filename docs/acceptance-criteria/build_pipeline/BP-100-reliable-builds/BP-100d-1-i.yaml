@@ -1,6 +1,6 @@
 id: BP-100d-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Test verifies commit_guardian paths are excluded from production file classification"

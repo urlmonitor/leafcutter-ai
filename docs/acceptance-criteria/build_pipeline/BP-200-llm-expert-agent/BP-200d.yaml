@@ -1,6 +1,6 @@
 id: BP-200d
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Audit any prompt file against the quality checklist on demand"
 component: build-pipeline
 level: L1

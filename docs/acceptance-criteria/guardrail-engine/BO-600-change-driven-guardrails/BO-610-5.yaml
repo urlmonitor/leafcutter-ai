@@ -1,6 +1,6 @@
 id: BO-610-5
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Unrecognized change_target or risk_surface value is rejected at validation"
 component: build-orchestration
 level: L2

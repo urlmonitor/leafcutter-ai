@@ -1,6 +1,6 @@
 id: ACS-900a-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Check fires only when an AC's status transitions to a retired state in the staged diff"

@@ -1,6 +1,6 @@
 id: BO-700e-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A pre-release validation scan reports tickets missing changelog entries"
 component: build-orchestration
 level: L2

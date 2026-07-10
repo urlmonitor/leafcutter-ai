@@ -1,6 +1,6 @@
 id: TKT-300d-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "An L0 AC serves as the epic-level goal for its feature group"

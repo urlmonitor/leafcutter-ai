@@ -1,6 +1,6 @@
 id: GE-113b-1
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "A structural-change bypass does not suppress the misplaced-test block"
 component: guardrail-engine
 level: L2

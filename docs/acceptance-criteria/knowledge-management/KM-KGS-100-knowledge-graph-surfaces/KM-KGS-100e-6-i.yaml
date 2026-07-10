@@ -4,7 +4,7 @@ priority: high
 title: "A component with criteria but no delivering code yet still returns a non-empty answer"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_system
 level: L3
 status: active
 req_status: draft

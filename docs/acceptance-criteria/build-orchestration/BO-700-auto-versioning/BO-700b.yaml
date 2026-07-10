@@ -1,6 +1,6 @@
 id: BO-700b
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Get the right version number without deciding it yourself"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: BO-640-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "High-complexity assessment triggers a decomposition challenge before escalation"
 component: build-orchestration
 level: L2

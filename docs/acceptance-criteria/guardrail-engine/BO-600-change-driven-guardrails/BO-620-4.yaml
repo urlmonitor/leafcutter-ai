@@ -1,6 +1,6 @@
 id: BO-620-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Prompt-safety pair maps to red-team eval + human sign-off"
 component: build-orchestration
 level: L2

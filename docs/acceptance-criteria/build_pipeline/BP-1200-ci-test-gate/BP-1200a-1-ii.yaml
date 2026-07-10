@@ -1,6 +1,6 @@
 id: BP-1200a-1-ii
 components:
-  - build-pipeline
+  - build_pipeline
 title: "No test fails at collection time because a build-generated dependency is missing from the fresh clone"
 component: build-pipeline
 level: L3

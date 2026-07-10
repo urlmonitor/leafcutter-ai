@@ -1,6 +1,6 @@
 id: PER-100b-1
 components:
-  - persona-management
+  - persona_management
 title: "AC YAML schema accepts an optional persona_for field"
 component: persona-management
 level: L2

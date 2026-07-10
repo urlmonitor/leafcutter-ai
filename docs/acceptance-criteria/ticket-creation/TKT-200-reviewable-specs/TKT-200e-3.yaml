@@ -1,6 +1,6 @@
 id: TKT-200e-3
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Reference doc defines the premise-capture format for tickets"
 component: ticket-creation
 level: L2

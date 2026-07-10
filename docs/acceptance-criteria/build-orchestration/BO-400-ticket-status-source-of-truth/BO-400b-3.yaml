@@ -1,6 +1,6 @@
 id: BO-400b-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Script stages the modified ticket file after a successful update"
 component: build-orchestration
 level: L2

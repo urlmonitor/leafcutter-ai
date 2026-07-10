@@ -1,6 +1,6 @@
 id: BO-1700c-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "First-registered self-healing hook re-materializes a missing config on any commit"

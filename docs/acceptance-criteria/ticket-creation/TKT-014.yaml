@@ -1,6 +1,6 @@
 id: TKT-014
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "ac-validator runs store alignment script and surfaces blocker on failure"

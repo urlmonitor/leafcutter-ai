@@ -1,6 +1,6 @@
 id: BP-1200b-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A pull request containing a deliberately failing test is blocked from merging"
 component: build-pipeline
 level: L3

@@ -1,6 +1,6 @@
 id: BO-610-3-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Empty change_target or risk_surface field is rejected"
 component: build-orchestration
 level: L3

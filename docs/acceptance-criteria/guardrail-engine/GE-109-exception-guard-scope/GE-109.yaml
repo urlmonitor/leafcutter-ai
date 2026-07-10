@@ -1,6 +1,6 @@
 id: GE-109
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: medium
 title: "Exception-handling guard enforces the error-handling policy on production code only"

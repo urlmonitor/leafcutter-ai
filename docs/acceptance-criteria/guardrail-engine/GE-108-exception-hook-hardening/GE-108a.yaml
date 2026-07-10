@@ -1,6 +1,6 @@
 id: GE-108a
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: medium
 title: "Exception-handling guard treats subprocess calls as a mandatory I/O boundary"

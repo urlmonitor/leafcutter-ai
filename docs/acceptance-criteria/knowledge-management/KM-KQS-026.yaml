@@ -1,6 +1,6 @@
 id: KM-KQS-026
 components:
-  - knowledge-management
+  - knowledge_system
 title: "depends_on path that matches no existing node is silently dropped"
 component: knowledge-management
 level: L3

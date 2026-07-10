@@ -3,7 +3,7 @@ epic_name: EPIC-TrustworthyTestGate
 created: 2026-06-24
 status: in_progress
 components:
-  - testing-quality
+  - testing_quality
 source_ac: TQ-100
 ---
 # EPIC-TrustworthyTestGate

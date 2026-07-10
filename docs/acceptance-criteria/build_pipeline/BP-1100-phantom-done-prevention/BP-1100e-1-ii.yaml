@@ -1,6 +1,6 @@
 id: BP-1100e-1-ii
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Path comparison is normalized for separators and case so NTFS/APFS paths are not false-flagged"

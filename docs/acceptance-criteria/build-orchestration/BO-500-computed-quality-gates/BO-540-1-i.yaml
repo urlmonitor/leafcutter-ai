@@ -1,6 +1,6 @@
 id: BO-540-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Coder dispatch is blocked if architect-review has not signed off"
 component: build-orchestration
 level: L3

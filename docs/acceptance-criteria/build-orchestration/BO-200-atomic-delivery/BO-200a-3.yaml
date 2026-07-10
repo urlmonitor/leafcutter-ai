@@ -1,6 +1,6 @@
 id: BO-200a-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Incomplete work envelope is rejected before commit attempt"
 component: build-orchestration
 level: L2

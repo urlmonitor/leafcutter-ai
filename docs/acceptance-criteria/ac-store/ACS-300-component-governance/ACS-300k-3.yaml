@@ -1,6 +1,6 @@
 id: ACS-300k-3
 components:
-  - ac-store
+  - ac_store
 title: "index.yaml is scoped solely to AC-prefix assignment"
 component: ac-store
 level: L2

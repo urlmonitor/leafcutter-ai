@@ -1,6 +1,6 @@
 id: BO-610
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Every change is classified by what it touches and where the blast radius lands"
 component: build-orchestration
 level: L1

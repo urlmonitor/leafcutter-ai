@@ -1,6 +1,6 @@
 id: BO-1700d-3-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "A shared-hook mutation between the pre-drive gate and commit is caught at commit"

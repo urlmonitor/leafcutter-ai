@@ -3,7 +3,7 @@ epic_name: EPIC-PhantomDoneFilesTouched
 created: 2026-07-06
 status: in_progress
 components:
-  - build-pipeline
+  - build_pipeline
 source_ac: BP-1100e
 ---
 # EPIC-PhantomDoneFilesTouched

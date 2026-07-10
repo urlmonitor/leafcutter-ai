@@ -8,7 +8,7 @@ last_updated: "2026-06-29"
 deciders:
   - leafcutter-engineering-team
 components:
-  - build-pipeline
+  - build_pipeline
 related_docs:
   - docs/architecture/adrs/ADR-004-consolidated-output-root.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md

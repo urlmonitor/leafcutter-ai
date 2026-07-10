@@ -1,6 +1,6 @@
 id: ACS-900d-2
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Superseded AC re-pointed to its successor passes cleanly even with the code intact"

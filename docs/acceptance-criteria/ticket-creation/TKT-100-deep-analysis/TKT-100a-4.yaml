@@ -1,6 +1,6 @@
 id: TKT-100a-4
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "BA v3 degrades gracefully when AC store directory is absent"

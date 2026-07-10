@@ -1,6 +1,6 @@
 id: BP-1100c-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Spot-check findings are recorded in the retrospective and defects open remediation tickets before close"
 component: build-pipeline
 level: L2

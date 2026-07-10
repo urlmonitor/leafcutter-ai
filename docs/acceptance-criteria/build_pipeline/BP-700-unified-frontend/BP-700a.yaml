@@ -1,6 +1,6 @@
 id: BP-700a
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Design quality is built in, not bolted on"
 component: build-pipeline
 level: L1

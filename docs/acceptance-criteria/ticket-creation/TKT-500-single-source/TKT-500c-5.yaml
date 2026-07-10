@@ -1,6 +1,6 @@
 id: TKT-500c-5
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: low
 title: "How-to: reading and interpreting AC delivery state"

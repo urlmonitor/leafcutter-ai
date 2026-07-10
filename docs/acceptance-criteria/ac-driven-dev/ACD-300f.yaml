@@ -1,6 +1,6 @@
 id: ACD-300f
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "Knowledge-query skill defines a centralized Agent Consumption Protocol so authoring agents stay DRY"

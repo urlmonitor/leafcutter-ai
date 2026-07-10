@@ -1,6 +1,6 @@
 id: BP-1100e-2
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "The reconciliation is advisory and fails open by default; strict blocking is opt-in"

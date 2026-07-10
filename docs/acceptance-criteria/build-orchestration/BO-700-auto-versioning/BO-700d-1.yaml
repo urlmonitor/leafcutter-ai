@@ -1,6 +1,6 @@
 id: BO-700d-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A Markdown CHANGELOG file is rendered from the release data"
 component: build-orchestration
 level: L2

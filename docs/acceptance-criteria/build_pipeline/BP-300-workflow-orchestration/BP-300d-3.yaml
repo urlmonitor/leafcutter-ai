@@ -1,6 +1,6 @@
 id: BP-300d-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "On an unsupported runtime, the prose skill body is what deploys as the fallback"
 component: build-pipeline
 level: L2

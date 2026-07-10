@@ -1,6 +1,6 @@
 id: BP-100a
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Every registered hook has a real script behind it"

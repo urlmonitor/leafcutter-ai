@@ -1,6 +1,6 @@
 id: BO-1100a-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Matched routing group produces its pattern-specific commit subject line"
 component: build-orchestration
 level: L2

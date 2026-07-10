@@ -1,6 +1,6 @@
 id: BP-700b-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Agent registry entry has default_status not_needed"
 component: build-pipeline
 level: L2

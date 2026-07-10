@@ -1,6 +1,6 @@
 id: BP-300a-8
 components:
-  - build-pipeline
+  - build_pipeline
 title: "SKILL.md contains supersession note for debug.js"
 component: build-pipeline
 level: L2

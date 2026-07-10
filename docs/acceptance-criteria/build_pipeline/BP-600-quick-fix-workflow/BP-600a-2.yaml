@@ -1,6 +1,6 @@
 id: BP-600a-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow does not invoke worktree-agent or feature skill"
 component: build-pipeline
 level: L2

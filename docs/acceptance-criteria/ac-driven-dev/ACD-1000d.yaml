@@ -1,6 +1,6 @@
 id: ACD-1000d
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Full pipeline runs end-to-end with minimal intervention"

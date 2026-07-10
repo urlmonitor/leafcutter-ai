@@ -1,6 +1,6 @@
 id: PER-100a-4
 components:
-  - persona-management
+  - persona_management
 title: "How-to guide for creating and maintaining personas"
 component: persona-management
 level: L2

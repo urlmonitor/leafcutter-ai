@@ -1,6 +1,6 @@
 id: BP-1100b-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A ticket touching workflow JavaScript is never classified docs-only"
 component: build-pipeline
 level: L2

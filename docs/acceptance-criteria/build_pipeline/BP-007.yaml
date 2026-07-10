@@ -1,6 +1,6 @@
 id: BP-007
 components:
-  - build-pipeline
+  - build_pipeline
 status: active
 origin_agent: BrainCandy
 component: build-pipeline

@@ -1,6 +1,6 @@
 id: BO-800c-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A ticket with zero L2/L3 ACs produces an empty test plan section with a note"
 component: build-orchestration
 level: L3

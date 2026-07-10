@@ -1,6 +1,6 @@
 id: BP-800g
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Understand how specialist generation works through clear documentation"
 component: build-pipeline
 level: L1

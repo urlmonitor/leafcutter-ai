@@ -1,6 +1,6 @@
 id: ACS-900e-2
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Component diagram shows the boundary between the new hook and the audit script"

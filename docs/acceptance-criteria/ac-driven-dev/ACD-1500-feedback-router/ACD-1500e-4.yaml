@@ -1,6 +1,6 @@
 id: ACD-1500e-4
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Process-feedback recommends faster, more verbose, more structured emission"

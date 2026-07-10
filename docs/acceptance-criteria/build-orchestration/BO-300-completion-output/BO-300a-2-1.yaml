@@ -1,6 +1,6 @@
 id: BO-300a-2-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Zero files_touched across all tickets still renders the manual_tests section"
 component: build-orchestration
 level: L3

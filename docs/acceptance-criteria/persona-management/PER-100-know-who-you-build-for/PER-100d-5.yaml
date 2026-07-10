@@ -1,6 +1,6 @@
 id: PER-100d-5
 components:
-  - persona-management
+  - persona_management
 title: "Component diagram for persona management system"
 component: persona-management
 level: L2

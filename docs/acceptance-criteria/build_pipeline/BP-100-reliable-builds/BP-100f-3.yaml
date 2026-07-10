@@ -1,6 +1,6 @@
 id: BP-100f-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "finalize-feature happy path is unchanged inside a valid git worktree"
 component: build-pipeline
 level: L2

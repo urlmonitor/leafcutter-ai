@@ -1,6 +1,6 @@
 id: BP-400a-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "emit_event.py exists at the deployed path and produces valid JSONL"
 component: build-pipeline
 level: L2

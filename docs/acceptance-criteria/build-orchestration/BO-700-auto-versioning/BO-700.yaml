@@ -1,6 +1,6 @@
 id: BO-700
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Know what shipped and what version you are on without anyone writing it down"
 component: build-orchestration
 level: L0

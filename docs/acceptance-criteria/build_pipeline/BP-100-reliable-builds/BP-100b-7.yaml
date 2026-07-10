@@ -1,6 +1,6 @@
 id: BP-100b-7
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Pre-commit drift hook triggers on compiled workflow files"

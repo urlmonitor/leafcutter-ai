@@ -1,6 +1,6 @@
 id: BP-100b-5-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Drift detection does not false-positive on the legacy .agents/workflows/ path"

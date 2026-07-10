@@ -3,9 +3,9 @@ title: "EPIC-Phase1ReadyHardening — build all ready-but-unimplemented Phase 1 
 type: epic
 status: in_progress
 components:
-  - ac-store
+  - ac_store
   - build_pipeline
-  - guardrail-engine
+  - commit_guardian
   - infrastructure
 created: 2026-07-07
 depends_on: []

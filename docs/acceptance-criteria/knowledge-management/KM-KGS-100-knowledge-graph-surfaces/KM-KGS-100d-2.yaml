@@ -1,6 +1,6 @@
 id: KM-KGS-100d-2
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: approved
 priority: high
 title: "Every edge points to a node that actually exists"

@@ -1,6 +1,6 @@
 id: BO-1800a-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Each drive runs in an independent copy with its own object store, isolated from every other drive"

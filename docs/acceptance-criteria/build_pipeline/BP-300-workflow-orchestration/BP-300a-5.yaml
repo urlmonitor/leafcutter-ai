@@ -1,6 +1,6 @@
 id: BP-300a-5
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Phase 4 finalize prompts user and respects their choice"
 component: build-pipeline
 level: L2

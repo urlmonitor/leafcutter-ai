@@ -1,6 +1,6 @@
 id: BP-100c-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Ticket lifecycle scaffold uses config-driven inbox path instead of hardcoded default"

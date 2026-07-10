@@ -1,6 +1,6 @@
 id: BP-700d-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Onboard wizard no longer offers frontend-design as a separate optional skill"
 component: build-pipeline
 level: L2

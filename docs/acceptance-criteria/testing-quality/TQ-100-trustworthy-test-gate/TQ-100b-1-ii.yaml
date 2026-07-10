@@ -1,6 +1,6 @@
 id: TQ-100b-1-ii
 components:
-  - testing-quality
+  - testing_quality
 title: "A test tagged with an AC id absent from the store is enforced, not silently skipped"
 component: testing-quality
 level: L3

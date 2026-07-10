@@ -1,6 +1,6 @@
 id: GE-100a-2
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "jscpd hook forces staged-only mode when working tree is under /mnt/c/ (WSL2)"

@@ -1,6 +1,6 @@
 id: BO-510-3-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "New agent template added without produces field is caught by validation"
 component: build-orchestration
 level: L3

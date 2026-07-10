@@ -1,6 +1,6 @@
 id: GE-111d-3
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "The block tells the developer which reconciliation routes apply"

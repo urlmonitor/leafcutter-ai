@@ -1,6 +1,6 @@
 id: BO-700b-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Major version is never bumped without explicit human override"
 component: build-orchestration
 level: L2

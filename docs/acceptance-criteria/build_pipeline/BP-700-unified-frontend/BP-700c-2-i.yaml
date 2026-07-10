@@ -1,6 +1,6 @@
 id: BP-700c-2-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Framework-agnostic constraints preserved across React, Vue, Svelte, and plain HTML"
 component: build-pipeline
 level: L3

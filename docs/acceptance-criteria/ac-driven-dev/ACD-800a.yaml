@@ -1,6 +1,6 @@
 id: ACD-800a
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Exact-criteria text matching discovers high-confidence implementations"

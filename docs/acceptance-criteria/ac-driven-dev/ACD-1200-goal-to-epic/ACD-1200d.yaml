@@ -1,6 +1,6 @@
 id: ACD-1200d
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "Every touched AC knows which epic it ships in"

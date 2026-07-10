@@ -1,6 +1,6 @@
 id: BO-1800e-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Scaffold and finalize bookkeeping lands via a branch and pull request, never a direct local-main commit"

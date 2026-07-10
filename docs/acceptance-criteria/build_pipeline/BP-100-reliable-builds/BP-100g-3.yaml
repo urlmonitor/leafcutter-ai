@@ -1,6 +1,6 @@
 id: BP-100g-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "build.py exits non-zero when SKILL.md allowed-tools contains unrecognised tool"
 component: build-pipeline
 level: L2

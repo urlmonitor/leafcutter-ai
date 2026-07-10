@@ -1,6 +1,6 @@
 id: BO-1700a
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Quality checks are proven to actually run, not just assumed present"

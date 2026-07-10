@@ -3,7 +3,7 @@ epic_name: EPIC-ACCodeTraceabilityGraph
 created: 2026-06-22
 status: in_progress
 components:
-  - knowledge-management
+  - knowledge_system
 source_ac: KM-KGS-100
 ---
 # EPIC-ACCodeTraceabilityGraph

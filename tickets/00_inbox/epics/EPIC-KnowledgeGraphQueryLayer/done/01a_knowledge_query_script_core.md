@@ -2,7 +2,7 @@
 title: "Write knowledge_query.py — cross-surface knowledge index script"
 status: done
 components:
-  - knowledge-management
+  - knowledge_system
 created: 2026-06-04
 depends_on: []
 priority: high

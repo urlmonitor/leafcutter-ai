@@ -1,6 +1,6 @@
 id: ACS-100a-5
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "superseded_by field enforces conditional constraint with status"

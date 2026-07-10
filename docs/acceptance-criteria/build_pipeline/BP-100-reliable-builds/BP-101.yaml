@@ -1,6 +1,6 @@
 id: BP-101
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: medium
 title: "Build process handles edge cases gracefully — hooks, validation, and degradation work reliably"

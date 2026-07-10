@@ -4,7 +4,7 @@ priority: high
 title: "A missing component key, an empty list, and an empty name all fail identically"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_system
 level: L3
 status: active
 req_status: draft

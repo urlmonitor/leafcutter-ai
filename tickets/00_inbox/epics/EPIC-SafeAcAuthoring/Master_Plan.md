@@ -3,7 +3,7 @@ epic_name: EPIC-SafeAcAuthoring
 created: 2026-06-24
 status: in_progress
 components:
-  - build-orchestration
+  - build_orchestration
 source_ac: BO-1500
 ---
 # EPIC-SafeAcAuthoring

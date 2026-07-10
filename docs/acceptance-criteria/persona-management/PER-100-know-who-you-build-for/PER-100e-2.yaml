@@ -1,6 +1,6 @@
 id: PER-100e-2
 components:
-  - persona-management
+  - persona_management
 title: "Persona expert refines an existing persona with new evidence"
 component: persona-management
 level: L2

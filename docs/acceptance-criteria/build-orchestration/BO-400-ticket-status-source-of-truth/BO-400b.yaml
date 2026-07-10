@@ -1,6 +1,6 @@
 id: BO-400b
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A dedicated script manages all ticket status transitions"
 component: build-orchestration
 level: L1

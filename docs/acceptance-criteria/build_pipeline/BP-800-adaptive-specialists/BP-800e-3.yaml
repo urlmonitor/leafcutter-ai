@@ -1,6 +1,6 @@
 id: BP-800e-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Migration is idempotent — re-running the build does not re-migrate"
 component: build-pipeline
 level: L2

@@ -1,6 +1,6 @@
 id: GE-104a-1-iii
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Deleting or renaming a page does not falsely block the commit"

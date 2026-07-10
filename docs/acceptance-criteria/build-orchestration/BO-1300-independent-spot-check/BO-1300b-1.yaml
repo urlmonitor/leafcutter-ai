@@ -1,6 +1,6 @@
 id: BO-1300b-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Each of the three reviewers is seeded with a distinct review angle"

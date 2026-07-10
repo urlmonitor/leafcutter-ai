@@ -1,6 +1,6 @@
 id: ACS-400a-3
 components:
-  - ac-store
+  - ac_store
 title: "Unauthorized agents are rejected when writing the criteria field"
 component: ac-store
 level: L2

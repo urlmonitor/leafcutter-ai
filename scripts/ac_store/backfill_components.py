@@ -64,7 +64,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--index",
         default=None,
-        help="Path to index.yaml registry. Default: <ac-store-dir>/index.yaml",
+        help="Path to the components.json registry. Default: <ac-store-dir>/../components.json",
     )
     return parser.parse_args()
 
@@ -161,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: AC store directory not found: {ac_store_dir}", file=sys.stderr)
         return 1
 
-    index_path = Path(args.index) if args.index else (ac_store_dir / "index.yaml")
+    index_path = Path(args.index) if args.index else (ac_store_dir.parent / "components.json")
     registry_ids = load_registry_ids(index_path)
     if not registry_ids:
         print(

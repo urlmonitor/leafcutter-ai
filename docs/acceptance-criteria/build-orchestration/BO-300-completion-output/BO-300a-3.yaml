@@ -1,6 +1,6 @@
 id: BO-300a-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "build-feature.md On-ok block renders all four sections from the return value"
 component: build-orchestration
 level: L2

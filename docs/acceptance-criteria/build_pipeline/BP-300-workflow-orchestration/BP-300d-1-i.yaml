@@ -1,6 +1,6 @@
 id: BP-300d-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A command that has only a prose skill and no deterministic workflow is not forced to invoke a workflow"
 component: build-pipeline
 level: L3

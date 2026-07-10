@@ -1,6 +1,6 @@
 id: ACD-300a
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "A fast triage agent classifies the request and checks for duplicates before authoring begins"

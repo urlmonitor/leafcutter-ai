@@ -1,6 +1,6 @@
 id: BP-100f-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "No secondary git calls fire before the guard in finalize-feature"
 component: build-pipeline
 level: L3

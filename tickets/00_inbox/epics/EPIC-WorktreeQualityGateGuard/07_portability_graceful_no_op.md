@@ -2,7 +2,7 @@
 title: "Portability + Graceful No-Op"
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-07-02
 depends_on:
   - 02_probe_core_canary_git_common_dir.md

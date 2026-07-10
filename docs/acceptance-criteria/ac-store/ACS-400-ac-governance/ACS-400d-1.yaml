@@ -1,6 +1,6 @@
 id: ACS-400d-1
 components:
-  - ac-store
+  - ac_store
 title: "Governance rules appear in deployed agent instructions after build"
 component: ac-store
 level: L2

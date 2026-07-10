@@ -1,6 +1,6 @@
 id: BO-300b-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "build-single-ticket Step 4c template includes all four completion sections"
 component: build-orchestration
 level: L2

@@ -1,6 +1,6 @@
 id: ACD-1100a
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "Legacy v1/v2 pipeline agents are removed from the package"

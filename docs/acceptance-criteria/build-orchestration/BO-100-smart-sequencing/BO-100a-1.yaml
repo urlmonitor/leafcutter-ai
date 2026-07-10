@@ -1,6 +1,6 @@
 id: BO-100a-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "Empty epic folder produces an empty graph and immediate completion"

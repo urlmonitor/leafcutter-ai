@@ -1,6 +1,6 @@
 id: KM-KQS-038
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: draft
 priority: medium
 title: "Agent Protocol distinguishes script-not-found from non-zero-exit in the warning message"

@@ -4,7 +4,7 @@ priority: high
 title: "Ask for a component and get a complete, trustworthy answer — never an empty one"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_system
 level: L1
 status: active
 req_status: draft

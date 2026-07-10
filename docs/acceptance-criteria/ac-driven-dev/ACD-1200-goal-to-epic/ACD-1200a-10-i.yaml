@@ -1,6 +1,6 @@
 id: ACD-1200a-10-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "A goal whose every leaf is done or superseded yields an empty leaf set and triggers the zero-leaf error path, not an empty epic"

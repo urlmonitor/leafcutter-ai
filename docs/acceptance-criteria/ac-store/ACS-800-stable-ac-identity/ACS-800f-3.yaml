@@ -1,6 +1,6 @@
 id: ACS-800f-3
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "The schema reference prose describes stable UIDs and metadata hierarchy"

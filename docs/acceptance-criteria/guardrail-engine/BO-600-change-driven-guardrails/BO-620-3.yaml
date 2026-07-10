@@ -1,6 +1,6 @@
 id: BO-620-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Infra-contract pair maps to plan review + blast-radius label"
 component: build-orchestration
 level: L2

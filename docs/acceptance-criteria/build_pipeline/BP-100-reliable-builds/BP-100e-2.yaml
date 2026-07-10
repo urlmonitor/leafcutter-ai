@@ -1,6 +1,6 @@
 id: BP-100e-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Pre-commit hook rejects signed-off lines with imprecise timestamp suffixes"
 component: build-pipeline
 level: L2

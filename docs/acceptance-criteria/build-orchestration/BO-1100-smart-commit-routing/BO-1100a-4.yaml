@@ -1,6 +1,6 @@
 id: BO-1100a-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Router skips pattern application when a user-approved subject line already exists"
 component: build-orchestration
 level: L2

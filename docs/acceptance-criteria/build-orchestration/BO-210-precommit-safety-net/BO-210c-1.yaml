@@ -1,6 +1,6 @@
 id: BO-210c-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Judgment-tier hook failure re-dispatches the originating agent type with its capsule"

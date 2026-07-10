@@ -1,6 +1,6 @@
 id: BO-400c-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Parity guard rejects commits that move ticket files into epic subfolders"
 component: build-orchestration
 level: L2

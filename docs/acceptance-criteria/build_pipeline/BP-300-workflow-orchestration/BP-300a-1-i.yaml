@@ -1,6 +1,6 @@
 id: BP-300a-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "debug.js returns structured error when userInput is empty"
 component: build-pipeline
 level: L3

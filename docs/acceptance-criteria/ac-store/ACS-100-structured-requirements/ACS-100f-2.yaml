@@ -1,6 +1,6 @@
 id: ACS-100f-2
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Parent chain traversal returns ancestors up to L0"

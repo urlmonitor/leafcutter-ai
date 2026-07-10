@@ -1,6 +1,6 @@
 id: BP-400c-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "trend_report.py produces a prioritized report from multi-category feedback"
 component: build-pipeline
 level: L2

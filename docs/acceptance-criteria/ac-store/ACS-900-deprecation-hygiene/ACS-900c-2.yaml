@@ -1,6 +1,6 @@
 id: ACS-900c-2
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "How-to guide documents the block message and how to act on it"

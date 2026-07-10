@@ -1,6 +1,6 @@
 id: BO-1600a-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Commit phases of concurrent supervisors are serialized at the git layer"

@@ -1,6 +1,6 @@
 id: BO-620-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Schema-contract pair maps to migration plan + backward-compat check + consumer notification"
 component: build-orchestration
 level: L2

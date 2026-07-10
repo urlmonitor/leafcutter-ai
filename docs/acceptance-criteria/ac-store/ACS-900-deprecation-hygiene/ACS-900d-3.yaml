@@ -1,6 +1,6 @@
 id: ACS-900d-3
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "How-to guide documents the legitimate-pass cases so the check is trusted"

@@ -1,6 +1,6 @@
 id: ACD-800a-1
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Audit finds exact-criteria matches at high confidence"

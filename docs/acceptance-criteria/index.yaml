@@ -1,6 +1,17 @@
 # docs/acceptance-criteria/index.yaml
 #
-# Component registry for the AC store.
+# AC-store NAMESPACE/PREFIX registry.
+# This file governs the scalar `component` field in AC YAML files, AC file placement,
+# and ID prefix resolution (e.g. `component: knowledge-management` → prefix KM).
+# IDs here are kebab-case (e.g. `knowledge-management`).
+#
+# NOTE — two distinct component axes exist; do not conflate them:
+#   - scalar `component` field  → namespace/prefix key, governed by THIS file (kebab ids)
+#   - `components` list field   → knowledge-graph membership, governed by docs/components.json
+#                                  (underscore ids, e.g. `knowledge_system`)
+# An AC can legitimately have `component: knowledge-management` (kebab namespace from here)
+# AND `components: [knowledge_system]` (underscore graph id from docs/components.json).
+#
 # Each entry declares one component namespace for acceptance criteria.
 #
 # Fields:

@@ -1,6 +1,6 @@
 id: BP-900f-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Guard classifies every deployable-script source path as tracked or untracked in git"
 component: build-pipeline
 level: L2

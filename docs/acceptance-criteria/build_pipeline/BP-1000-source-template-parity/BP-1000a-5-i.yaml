@@ -1,6 +1,6 @@
 id: BP-1000a-5-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Feedback build succeeds from tracked-only files when the gitignored working copy is deleted"
 component: build-pipeline
 level: L3

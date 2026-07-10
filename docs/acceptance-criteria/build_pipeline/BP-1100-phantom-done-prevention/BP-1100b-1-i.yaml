@@ -1,6 +1,6 @@
 id: BP-1100b-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A non-workflow JavaScript path does not force test-writer dispatch"
 component: build-pipeline
 level: L3

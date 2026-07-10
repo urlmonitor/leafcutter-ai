@@ -1,6 +1,6 @@
 id: BP-600d-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow dispatches python-coder to apply the fix after red-phase test"
 component: build-pipeline
 level: L2

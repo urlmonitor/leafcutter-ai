@@ -1,6 +1,6 @@
 id: TKT-500b-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "Test-writer is dispatched as the first phase agent for a leaf AC"

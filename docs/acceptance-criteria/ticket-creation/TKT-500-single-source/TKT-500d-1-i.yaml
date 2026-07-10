@@ -1,6 +1,6 @@
 id: TKT-500d-1-i
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "Cycle in depends_on among L0 children is detected and rejected"

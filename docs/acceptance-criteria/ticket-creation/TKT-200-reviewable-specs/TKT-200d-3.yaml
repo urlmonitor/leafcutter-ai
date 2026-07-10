@@ -1,6 +1,6 @@
 id: TKT-200d-3
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Stale documentation is detected before the review checkpoint"
 component: ticket-creation
 level: L2

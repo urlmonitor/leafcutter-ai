@@ -1,6 +1,6 @@
 id: ACS-500f-3
 components:
-  - ac-store
+  - ac_store
 title: "AC store schema accepts the real hierarchical id format and the pattern_slots field"
 component: ac-store
 level: L2

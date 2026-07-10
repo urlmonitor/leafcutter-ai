@@ -1,6 +1,6 @@
 id: ACD-300g-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "The commit message identifies the workflow run, stage, and AC IDs produced"

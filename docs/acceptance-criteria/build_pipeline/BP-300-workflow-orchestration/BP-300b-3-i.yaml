@@ -1,6 +1,6 @@
 id: BP-300b-3-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Planner falls back to frontmatter when Sign-offs section is absent"
 component: build-pipeline
 level: L3

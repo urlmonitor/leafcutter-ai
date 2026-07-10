@@ -1,6 +1,6 @@
 id: BP-900f-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Build fails non-zero and names every untracked deployable-script source"
 component: build-pipeline
 level: L2

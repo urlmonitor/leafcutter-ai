@@ -1,6 +1,6 @@
 id: BO-1400
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 title: "Trust that a passing review means the change really works on the real thing"
 component: build-orchestration

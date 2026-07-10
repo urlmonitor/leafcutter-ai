@@ -1,6 +1,6 @@
 id: TKT-500b-3
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "IT-PO tests-after override reverses the sequence"

@@ -1,6 +1,6 @@
 id: BP-100e-2-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Pre-commit hook rejects failed sign-off lines with prose timestamp suffix"
 component: build-pipeline
 level: L3

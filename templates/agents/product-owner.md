@@ -259,9 +259,11 @@ level L0. Key fields (consult the schema for the full list and valid values):
 - `component` — from `index.yaml`
 - `components` — **required, non-empty list.** Every AC MUST include a `components:`
   list, not just the scalar `component`. This is the field the knowledge graph reads
-  to build `component_membership` edges. Every value must be a component `id` from
-  `docs/acceptance-criteria/index.yaml`. For a single-component AC, set
-  `components: [<same value as component>]`. Normative source: `docs/reference/ac-schema.md`.
+  to build `component_membership` edges. Every value must be an `id` from
+  `docs/components.json` (the 42 underscore ids, e.g. `knowledge_system`,
+  `build_pipeline`). Note: the scalar `component` field is the AC-store namespace key
+  from `docs/acceptance-criteria/index.yaml` (kebab ids) and is NOT the graph
+  vocabulary. Normative source: `docs/reference/ac-schema.md`.
 - `level` — `L0`
 - `status`, `req_status`, `work_status` — lifecycle fields per schema enums
 - `criteria` — tagline (under 80 chars) + 2-4 sentence value narrative
@@ -277,9 +279,11 @@ level L1. Key fields (consult the schema for the full list and valid values):
 - `component` — from `index.yaml`
 - `components` — **required, non-empty list.** Every AC MUST include a `components:`
   list, not just the scalar `component`. This is the field the knowledge graph reads
-  to build `component_membership` edges. Every value must be a component `id` from
-  `docs/acceptance-criteria/index.yaml`. For a single-component AC, set
-  `components: [<same value as component>]`. Normative source: `docs/reference/ac-schema.md`.
+  to build `component_membership` edges. Every value must be an `id` from
+  `docs/components.json` (the 42 underscore ids, e.g. `knowledge_system`,
+  `build_pipeline`). Note: the scalar `component` field is the AC-store namespace key
+  from `docs/acceptance-criteria/index.yaml` (kebab ids) and is NOT the graph
+  vocabulary. Normative source: `docs/reference/ac-schema.md`.
 - `level` — `L1`
 - `criteria` — tagline (under 80 chars) + 1-2 sentence expansion
 - `depends_on` — must include parent L0 ID

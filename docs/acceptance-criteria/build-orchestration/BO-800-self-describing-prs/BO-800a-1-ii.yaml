@@ -1,6 +1,6 @@
 id: BO-800a-1-ii
 components:
-  - build-orchestration
+  - build_orchestration
 title: "L1 title exceeding 70 characters is truncated with an ellipsis"
 component: build-orchestration
 level: L3

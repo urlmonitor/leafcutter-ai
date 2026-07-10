@@ -1,6 +1,6 @@
 id: ACS-300k-4
 components:
-  - ac-store
+  - ac_store
 title: "Compiled agents reflect current component data after rebuild"
 component: ac-store
 level: L2

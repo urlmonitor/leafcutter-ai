@@ -1,6 +1,6 @@
 id: BO-510
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Every agent declares what it does, so the system knows what it is capable of"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: GE-102d-1-i
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Exception-handling check emits no AUTOFIX_AGENT line on a clean pass"

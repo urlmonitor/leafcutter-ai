@@ -1,6 +1,6 @@
 id: BO-640-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Challenge produces a structured rationale regardless of outcome"
 component: build-orchestration
 level: L3

@@ -1,6 +1,6 @@
 id: BO-200c-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Commit message follows the project's conventional-commit format"
 component: build-orchestration
 level: L2

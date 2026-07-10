@@ -1,6 +1,6 @@
 id: GE-101b
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "diff-cover hook reports uncovered lines in changed files against the configured threshold"

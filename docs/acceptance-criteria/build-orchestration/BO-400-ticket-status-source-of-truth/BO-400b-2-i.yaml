@@ -1,6 +1,6 @@
 id: BO-400b-2-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Script handles missing status field gracefully"
 component: build-orchestration
 level: L3

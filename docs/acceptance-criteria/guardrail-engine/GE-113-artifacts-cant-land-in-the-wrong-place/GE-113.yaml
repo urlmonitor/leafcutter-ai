@@ -1,6 +1,6 @@
 id: GE-113
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "Work that lands in the wrong place gets stopped before it ships"
 component: guardrail-engine
 level: L0

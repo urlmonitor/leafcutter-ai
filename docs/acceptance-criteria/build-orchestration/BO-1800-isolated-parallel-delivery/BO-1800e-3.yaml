@@ -1,6 +1,6 @@
 id: BO-1800e-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "A developer's local main sync is fetch plus fast-forward-only (read-only)"

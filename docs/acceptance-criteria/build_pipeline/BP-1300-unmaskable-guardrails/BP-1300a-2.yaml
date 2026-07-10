@@ -1,6 +1,6 @@
 id: BP-1300a-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A resolvable skill pointer passes the build check"
 component: build-pipeline
 level: L2

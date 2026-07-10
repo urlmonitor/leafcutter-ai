@@ -1,6 +1,6 @@
 id: ACD-600b-2
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Post-merge hook skips tickets without source_ac and exits 0"

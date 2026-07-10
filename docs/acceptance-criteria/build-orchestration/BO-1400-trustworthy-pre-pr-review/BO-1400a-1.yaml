@@ -1,6 +1,6 @@
 id: BO-1400a-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Pre-PR review re-verifies bulk/quantitative data-claim ACs against the real data store"

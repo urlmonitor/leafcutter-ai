@@ -1,6 +1,6 @@
 id: BP-100c-2
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Ticket lifecycle skips scaffold when manifest already exists"

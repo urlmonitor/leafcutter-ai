@@ -1,6 +1,6 @@
 id: GE-109a
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: medium
 title: "Exception-handling guard skips test files"

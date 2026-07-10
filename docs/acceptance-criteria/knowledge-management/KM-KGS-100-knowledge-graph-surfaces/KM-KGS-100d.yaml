@@ -1,6 +1,6 @@
 id: KM-KGS-100d
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: approved
 priority: high
 title: "Trust the map: every connection points somewhere real"

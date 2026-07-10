@@ -2,7 +2,7 @@
 title: "Probe Core + Canary + Git-Common-Dir Resolution"
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-07-02
 depends_on:
   - 01_adr_worktree_quality_gate_guard_design.md

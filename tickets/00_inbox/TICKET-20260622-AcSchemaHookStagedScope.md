@@ -2,7 +2,7 @@
 title: "Scope check-ac-schema hook to staged files instead of the whole store"
 status: done
 components:
-  - guardrail-engine
+  - commit_guardian
 created: 2026-06-22
 depends_on: []
 priority: high

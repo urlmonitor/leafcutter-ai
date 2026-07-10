@@ -1,6 +1,6 @@
 id: ACD-1500c-2-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Re-running the router is idempotent for already-resolved entries"

@@ -1,6 +1,6 @@
 id: BP-1300c-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Outside an automated drive the same checks stay warn-only"
 component: build-pipeline
 level: L2

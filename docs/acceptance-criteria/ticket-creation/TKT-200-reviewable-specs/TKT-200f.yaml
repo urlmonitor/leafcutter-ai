@@ -1,6 +1,6 @@
 id: TKT-200f
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A spec's premises are proven in a clean environment before it can be built"
 component: ticket-creation
 level: L1

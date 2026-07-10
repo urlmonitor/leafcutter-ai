@@ -1,6 +1,6 @@
 id: BO-630-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Low and medium complexity tasks route to the faster model tier"
 component: build-orchestration
 level: L2

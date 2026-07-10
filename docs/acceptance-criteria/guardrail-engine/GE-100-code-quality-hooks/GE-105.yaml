@@ -1,6 +1,6 @@
 id: GE-105
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "diagram_type enum accepts canonical values so valid arch docs are not rejected at commit"

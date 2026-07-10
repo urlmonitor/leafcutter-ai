@@ -1,6 +1,6 @@
 id: UXP-100b-2
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Research is initiated for each missing component rather than improvising"
 component: ux-prototyping
 level: L2

@@ -1,6 +1,6 @@
 id: KM-KGS-100
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: approved
 priority: high
 title: "Trace any requirement to the exact code and tests that fulfil it"

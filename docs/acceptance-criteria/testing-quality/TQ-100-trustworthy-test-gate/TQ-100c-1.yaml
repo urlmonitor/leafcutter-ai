@@ -1,6 +1,6 @@
 id: TQ-100c-1
 components:
-  - testing-quality
+  - testing_quality
 title: "A test with no covers tag is enforced by default, requiring no backfill"
 component: testing-quality
 level: L2

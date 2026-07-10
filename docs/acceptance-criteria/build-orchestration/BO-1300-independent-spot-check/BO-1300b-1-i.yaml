@@ -1,6 +1,6 @@
 id: BO-1300b-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Two reviewers may not collapse onto the same angle"

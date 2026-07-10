@@ -1,6 +1,6 @@
 id: BP-1000c
 components:
-  - build-pipeline
+  - build_pipeline
 title: "See exactly which file drifted and how it differs"
 component: build-pipeline
 level: L1

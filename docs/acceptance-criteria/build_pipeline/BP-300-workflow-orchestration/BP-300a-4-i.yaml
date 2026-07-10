@@ -1,6 +1,6 @@
 id: BP-300a-4-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Workflow returns error when create-ticket does not return a ticket_path"
 component: build-pipeline
 level: L3

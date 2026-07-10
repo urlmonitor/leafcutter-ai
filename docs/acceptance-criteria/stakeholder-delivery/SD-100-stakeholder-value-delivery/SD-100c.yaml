@@ -1,6 +1,6 @@
 id: SD-100c
 components:
-  - stakeholder-delivery
+  - stakeholder_delivery
 readiness: draft
 priority: medium
 title: "What stakeholders see matches exactly what was approved -- no drift"

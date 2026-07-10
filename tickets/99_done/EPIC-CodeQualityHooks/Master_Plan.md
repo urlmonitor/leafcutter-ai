@@ -3,7 +3,7 @@ epic_name: EPIC-CodeQualityHooks
 created: 2026-06-16
 status: done
 components:
-  - guardrail-engine
+  - commit_guardian
 source_ac: GE-100
 ---
 # EPIC-CodeQualityHooks

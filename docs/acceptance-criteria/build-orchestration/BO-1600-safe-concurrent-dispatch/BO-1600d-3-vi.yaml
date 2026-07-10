@@ -1,6 +1,6 @@
 id: BO-1600d-3-vi
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "In a large object store, recovery removes only the detected corrupt objects, never every empty file"

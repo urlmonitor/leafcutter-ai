@@ -1,6 +1,6 @@
 id: UXP-100c-4
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Rejection stops the pipeline and records the rejection rationale"
 component: ux-prototyping
 level: L2

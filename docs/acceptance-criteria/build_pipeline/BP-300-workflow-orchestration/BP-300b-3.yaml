@@ -1,6 +1,6 @@
 id: BP-300b-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Planner emits no drift warnings when frontmatter and Sign-offs are consistent"
 component: build-pipeline
 level: L2

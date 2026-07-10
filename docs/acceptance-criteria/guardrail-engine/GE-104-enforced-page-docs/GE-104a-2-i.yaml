@@ -1,6 +1,6 @@
 id: GE-104a-2-i
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "DSL trigger expresses a new-page-without-matching-doc condition (negation feasibility open question)"

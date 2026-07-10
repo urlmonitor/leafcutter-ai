@@ -1,6 +1,6 @@
 id: ACD-700a-3-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Repeated skips exhaust all candidates and exit cleanly"

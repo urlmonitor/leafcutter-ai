@@ -1,6 +1,6 @@
 id: ACD-1300d
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "One place to see everything agents are waiting on"

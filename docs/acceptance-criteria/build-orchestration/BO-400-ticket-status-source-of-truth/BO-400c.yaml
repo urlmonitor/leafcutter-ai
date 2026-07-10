@@ -1,6 +1,6 @@
 id: BO-400c
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The done/ subfolder convention is deprecated and replaced by frontmatter queries"
 component: build-orchestration
 level: L1

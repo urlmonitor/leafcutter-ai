@@ -1,6 +1,6 @@
 id: ACS-800d-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Migration assigns a UID and populates hierarchy metadata for every existing requirement"

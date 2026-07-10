@@ -1,6 +1,6 @@
 id: BP-700b-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Trigger conditions match only frontend file extensions"
 component: build-pipeline
 level: L2

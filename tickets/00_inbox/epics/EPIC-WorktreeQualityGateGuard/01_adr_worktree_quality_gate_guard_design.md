@@ -2,7 +2,7 @@
 title: "ADR: Worktree Quality Gate Guard Design"
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-07-02
 depends_on: []
 priority: high

@@ -1,6 +1,6 @@
 id: ACD-1300f
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "Only fully refined work enters the build queue"

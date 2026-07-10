@@ -3,7 +3,7 @@ epic_name: EPIC-ExceptionHandlingGuardEnforcesTheError
 created: 2026-06-17
 status: in_progress
 components:
-  - guardrail-engine
+  - commit_guardian
 source_ac: GE-108
 ---
 # EPIC-ExceptionHandlingGuardEnforcesTheError

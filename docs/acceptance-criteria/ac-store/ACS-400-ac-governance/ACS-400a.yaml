@@ -1,6 +1,6 @@
 id: ACS-400a
 components:
-  - ac-store
+  - ac_store
 title: "Only requirement authors can define what 'done' means"
 component: ac-store
 level: L1

@@ -2,7 +2,7 @@
 title: "Commit-guardian import integrity + diagram_type enum + test-file exemption parity"
 status: done
 components:
-  - guardrail-engine
+  - commit_guardian
 created: 2026-07-07
 depends_on: []
 priority: high

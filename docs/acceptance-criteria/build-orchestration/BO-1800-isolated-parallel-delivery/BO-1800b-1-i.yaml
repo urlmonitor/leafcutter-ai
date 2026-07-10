@@ -1,6 +1,6 @@
 id: BO-1800b-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "An agent's direct push to main is rejected at the hub"

@@ -1,6 +1,6 @@
 id: BP-600
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Fix known bugs in minutes, not hours — without losing quality discipline"
 component: build-pipeline
 level: L0
