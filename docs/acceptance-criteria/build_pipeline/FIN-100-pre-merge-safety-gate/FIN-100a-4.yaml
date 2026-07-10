@@ -3,6 +3,8 @@ title: "Baseline (Step 0) and post-merge (Step 3) test runs use identical build/
 level: L2
 component: finalize
 status: active
+readiness: approved
+priority: high
 parent: FIN-100a
 criteria: |
   Given Step 0 captures the baseline by running the project build
@@ -24,31 +26,57 @@ criteria: |
   skew between the two runs
 origin_agent: "BrainCandy"
 created_by_ticket: "tickets/00_inbox/TICKET-20260707-restore-ci-test-baseline.md"
-assigned_agent: "finalize-feature-workflow"
-estimated_complexity: S
+assigned_agent: "python-coder"
+estimated_complexity: M
 it_requirements: |
-  - The Step 3 test-runner dispatch prompt MUST instruct running the project build
-    (python scripts/build.py --target-dir "<WORKTREE_ROOT>") before pytest, mirroring
-    the Step 0 baseline agent's build step.
-  - The build MUST target the post-merge worktree root via git -C "${WORKTREE_ROOT}"
-    so install_shims deploys into the worktree being tested (not the ambient CWD).
-  - If Step 0 downgrades self-description enforcement to complete the build
-    (--self-description-enforcement warning), Step 3 MUST use the same enforcement
-    level so the two runs stay symmetric.
-  - This AC constrains only the environment parity of the two test runs; it does not
-    alter the triage set-difference logic (FIN-100c) or the null-baseline conservative
-    path (FIN-100c-3).
-  - A regression guard test SHOULD assert that both the Step 0 and Step 3 dispatch
-    prompts contain the build/deploy instruction, so the two cannot drift apart.
+  - CONCRETE GAP (grounded 2026-07-10, observed 3x): in
+    templates/workflows-js/finalize-feature.js, Step 0 captures the baseline by
+    running `pytest --tb=no -q` (around line 440), while Step 3 runs the
+    `test-runner` agent over the "full suite" (around lines 671-677). These are a
+    DIFFERENT command AND a DIFFERENT scope, and NEITHER step runs
+    `python scripts/build.py` / install_shims first. Deploy-dependent tests that
+    invoke the deployed scripts/commit_guardian/* scripts therefore fail RED
+    post-merge but not in the baseline, are mis-classified as regressions, and
+    finalize HALTs falsely.
+  - REQUIRED BEHAVIOR: Step 0 and Step 3 MUST use the SAME test command AND the
+    SAME test scope, AND the SAME build/deploy state — either run
+    `python scripts/build.py` before BOTH runs, or make the deploy-dependent tests
+    resolve their scripts build-independently. The two runs must not differ on any
+    of the three axes (command, scope, build state).
+  - PR #234's "Step 3 build symmetry" is INCOMPLETE: it added a build to Step 3 but
+    did not equalize the command/scope (Step 0 still `pytest --tb=no -q`, Step 3
+    still the test-runner full suite). Verify and COMPLETE the symmetry across all
+    three axes.
+  - The Step 3 build/deploy MUST target the post-merge worktree root via
+    `python scripts/build.py --target-dir "<WORKTREE_ROOT>"` (git -C "${WORKTREE_ROOT}")
+    so install_shims deploys into the worktree being tested (not the ambient CWD);
+    if Step 0 downgrades self-description enforcement
+    (--self-description-enforcement warning) Step 3 MUST use the same level.
+  - DO NOT DISABLE THE GATE: a genuine NEW test failure (present post-merge, absent
+    from a build-symmetric baseline) MUST still be classified `regression` and MUST
+    still HALT finalize. This AC removes environment skew as a false-regression
+    source; it does not weaken real-regression detection.
+  - This AC constrains only the environment/command/scope parity of the two test
+    runs; it does not alter the triage set-difference logic (FIN-100c) or the
+    null-baseline conservative path (FIN-100c-3).
+  - A regression guard test SHOULD assert that the Step 0 and Step 3 dispatch paths
+    use the same command, scope, and build/deploy instruction, so the two cannot
+    drift apart again.
+test_spec:
+  - name: test_finalize_step0_step3_run_symmetric_command_scope_build
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "finalize-feature.js dispatches step-0 baseline and step-3 post-merge with the same test command, scope, and build/deploy instruction; a build-symmetric baseline produces no false regressions while a genuine new post-merge failure is still classified regression and still HALTs."
 delivers_to:
   - agent: "test-failure-triage"
-    contract: "provides post_merge_failures collected under the same build/deploy state as baseline_failures, so set-difference is valid"
+    contract: "provides post_merge_failures (Step 3) collected under the SAME build/deploy state, command, and scope as baseline_failures (Step 0), so the FIN-100c set-difference triage consumes a valid baseline and never mis-classifies environment skew as a regression"
 expects_from:
   - agent: "test-runner"
     contract: "runs the project build/deploy before pytest and returns failures collected on the deployed post-merge state"
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
-    relevance: "Step 0 baseline agent builds before pytest (steps A0-C); the step-3-test-run dispatch must mirror that build step"
+    relevance: "Step 0 baseline runs `pytest --tb=no -q` (~L440); Step 3 runs the test-runner full suite (~L671-677); the two must be equalized on command, scope, and build/deploy state"
   - path: "templates/workflows/finalize-feature.md"
     relevance: "Step map rows 0 and 3 — baseline vs post-merge test runs must use the same setup"
   - path: "docs/how-to/finalize-feature.md"
@@ -56,7 +84,10 @@ doc_links:
 depends_on:
   - FIN-100a-1
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Grounded the it_requirements against the observed 3x false-HALT (Step 0 `pytest --tb=no -q` ~L440 vs Step 3 test-runner full suite ~L671-677; neither runs build.py/install_shims); flagged PR #234 Step-3 build symmetry as incomplete (command+scope still differ); reasserted genuine regressions still HALT. Reassigned assigned_agent finalize-feature-workflow -> python-coder (the .js workflow body is python-coder surface per repo convention) and complexity S -> M. Tightened delivers_to and the finalize-feature.js doc_link relevance to name the concrete line numbers and the FIN-100c baseline-validity contract. Criteria unchanged."
+    by: it-po
 covered_by: []
 implemented_by:
   - tickets/00_inbox/TICKET-20260707-FinalizeFeaturePreflightAndBuildSymmetry.md

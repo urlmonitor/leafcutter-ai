@@ -1,0 +1,35 @@
+id: BP-006d
+title: "setup_ticket_worktree bootstrap tests pass without MagicMock JSON errors"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+criteria: |
+  Given tests/test_setup_ticket_worktree.py exercises the worktree bootstrap paths
+  of scripts/setup_ticket_worktree.py,
+  When the bootstrap tests run under pytest,
+  Then no test fails with `TypeError: the JSON object must be str, bytes or
+  bytearray, not MagicMock` (setup_ticket_worktree.py's json.loads() receiving a
+  MagicMock),
+  And the poetry, pip, no-manifest, and install-failure bootstrap paths are each
+  genuinely exercised,
+  And the setup_ticket_worktree bootstrap tests pass with exit code 0.
+depends_on:
+  - BP-006
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-006d-1
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

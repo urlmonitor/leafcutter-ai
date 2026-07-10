@@ -48,6 +48,12 @@ it_requirements:
   - "Must complete the prepare-then-test sequence deterministically: a repeated fresh-clone run with the same documented command (build step + shim + suite) produces the same green outcome (idempotent build/shim step)."
   - "Must keep parity between the deployed shim/build behavior and its templates/scripts/ package source per ADR-001 (build.py round-trip) where the fix edits any deployed/templated script — never edit one side only. install_shims.py and its shim_map change are part of this parity surface."
   - "Errors during the build/shim preparation step must surface clearly (fail loudly, non-zero exit) rather than leaving a partially-prepared tree that produces misleading test collection errors, per the project error-handling policy."
+test_spec:
+  - name: test_full_suite_green_on_fresh_clone_via_documented_command
+    target_dir: tests/
+    framework: pytest
+    type: integration
+    description: "After the documented CI prepare step (build.py + install_shims shim bridge) on a fresh clone, the full tests/ + unit_tests/ suite passes with no missing-module collection errors."
 delivers_to: null
 expects_from:
   ac_id: BP-1200a-2
@@ -61,11 +67,15 @@ amended_by:
   - reason: "final-gate-decision-applied"
     entry: "Set readiness: approved and priority: high per the final user gate. Recorded the DECIDED ADR-016 direction = Approach 1 (CI build step + install_shims shim_map extension bridging .leafcutter/scripts/ -> scripts/ for commit_guardian/doc_compliance/feedback). Replaced the open-mechanism prerequisite with the fixed direction; retained the consumer-install validation requirement and ADR-001/004 boundary constraints; kept the planned ADR-016 doc_link. Criteria unchanged."
     by: it-po
+  - reason: "it-po-technical-enrichment"
+    entry: "Added covered_by child BP-1200a-1-iv (grounded 2026-07-10): the commit_guardian deploy-dependent tests test_check_ac_done_on_merge.py + test_check_ac_schema.py, which require build.py to have run — the same failure class as the ~36 fresh-clone import failures and the same root as FIN-100a-4's finalize Step-3 build gap. Criteria and all other fields unchanged."
+    by: it-po
 superseded_by: null
 covered_by:
   - BP-1200a-1-i
   - BP-1200a-1-ii
   - BP-1200a-1-iii
+  - BP-1200a-1-iv
 implemented_by:
 - tickets/00_inbox/TICKET-20260624-BP-1200a-1.md
 notes: |
