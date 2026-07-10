@@ -1,6 +1,6 @@
 id: ACD-300e-1
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Each authoring agent template declares knowledge-query in its skills_used frontmatter"

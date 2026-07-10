@@ -1,6 +1,6 @@
 id: BP-1300a-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Reference doc specifies canonical-source skill-pointer resolution for the build"
 component: build-pipeline
 level: L2

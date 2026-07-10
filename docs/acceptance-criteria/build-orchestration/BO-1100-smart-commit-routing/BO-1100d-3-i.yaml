@@ -1,6 +1,6 @@
 id: BO-1100d-3-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Proposed rule conflicting with an existing config entry is rejected with explanation"
 component: build-orchestration
 level: L3

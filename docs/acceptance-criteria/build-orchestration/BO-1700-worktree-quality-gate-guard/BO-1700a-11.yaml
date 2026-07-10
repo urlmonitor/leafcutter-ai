@@ -1,6 +1,6 @@
 id: BO-1700a-11
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Sequence diagram: probe check flow A -> B -> C -> D -> verdict"

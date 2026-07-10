@@ -1,6 +1,6 @@
 id: KM-KQS-015
 components:
-  - knowledge-management
+  - knowledge_system
 title: "paths.json contains a surfaces top-level key with all eight surface entries"
 component: knowledge-management
 level: L2

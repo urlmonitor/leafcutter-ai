@@ -1,6 +1,6 @@
 id: BO-520-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket frontmatter supports a change_type field with a defined enum"
 component: build-orchestration
 level: L2

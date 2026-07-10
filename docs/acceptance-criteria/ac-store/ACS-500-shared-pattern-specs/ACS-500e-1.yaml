@@ -1,6 +1,6 @@
 id: ACS-500e-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Atomic pattern ACs compose into named composite pattern ACs"

@@ -1,6 +1,6 @@
 id: ACD-1100a-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "No workflow or skill dispatches a removed legacy agent"

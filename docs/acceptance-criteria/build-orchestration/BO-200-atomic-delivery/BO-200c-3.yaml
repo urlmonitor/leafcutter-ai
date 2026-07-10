@@ -1,6 +1,6 @@
 id: BO-200c-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Commit message is written by a dedicated agent, not inline by the supervisor"
 component: build-orchestration
 level: L2

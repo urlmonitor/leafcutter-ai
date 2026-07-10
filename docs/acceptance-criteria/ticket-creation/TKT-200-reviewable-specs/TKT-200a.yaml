@@ -1,6 +1,6 @@
 id: TKT-200a
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Architecture is visible before anyone asks for it"

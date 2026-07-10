@@ -1,6 +1,6 @@
 id: BO-560-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Computed chain places mandatory agents in correct priority order"
 component: build-orchestration
 level: L2

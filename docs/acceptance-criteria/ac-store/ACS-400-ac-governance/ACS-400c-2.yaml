@@ -1,6 +1,6 @@
 id: ACS-400c-2
 components:
-  - ac-store
+  - ac_store
 title: "Criteria amendment appends the author to amended_by"
 component: ac-store
 level: L2

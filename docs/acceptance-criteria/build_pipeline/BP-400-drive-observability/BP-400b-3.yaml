@@ -1,6 +1,6 @@
 id: BP-400b-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "CLI SHA override bypasses path-based git log and derives dates from supplied commits"
 component: build-pipeline
 level: L2

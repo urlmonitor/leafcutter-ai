@@ -1,6 +1,6 @@
 id: ACD-300g-4
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Cancel or abort does not commit -- draft files remain on disk uncommitted"

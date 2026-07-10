@@ -1,6 +1,6 @@
 id: BO-1800e-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "No drive step commits to a local main; a clone's main is a read-only tracking branch"

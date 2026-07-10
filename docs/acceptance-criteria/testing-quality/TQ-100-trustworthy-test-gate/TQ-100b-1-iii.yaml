@@ -1,6 +1,6 @@
 id: TQ-100b-1-iii
 components:
-  - testing-quality
+  - testing_quality
 title: "The AC store is read once per session and the enforced set is stable across repeated runs"
 component: testing-quality
 level: L3

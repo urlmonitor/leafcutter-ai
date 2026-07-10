@@ -1,6 +1,6 @@
 id: BP-100m-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Any set of two or more sources mapping to one target is detected, with every colliding source named"
 component: build-pipeline
 level: L2

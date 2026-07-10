@@ -1,6 +1,6 @@
 id: KM-VIS-004
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: reviewed
 priority: medium
 title: "Surface traversal delegated exclusively to knowledge_query.py"

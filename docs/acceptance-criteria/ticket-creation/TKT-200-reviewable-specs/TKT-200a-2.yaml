@@ -1,6 +1,6 @@
 id: TKT-200a-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Diagram generation captures data flow from delivers_to and expects_from contracts"
 component: ticket-creation
 level: L2

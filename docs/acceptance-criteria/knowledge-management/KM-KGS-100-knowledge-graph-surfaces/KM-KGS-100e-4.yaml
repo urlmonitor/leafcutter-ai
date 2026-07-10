@@ -4,7 +4,7 @@ priority: high
 title: "Every criterion produced by the authoring agents already carries its component"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_system
 level: L2
 status: active
 req_status: draft

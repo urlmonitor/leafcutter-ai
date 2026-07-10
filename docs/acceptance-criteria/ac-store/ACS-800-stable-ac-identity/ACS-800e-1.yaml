@@ -1,6 +1,6 @@
 id: ACS-800e-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Child-count limit checks count children from parent-pointer metadata"

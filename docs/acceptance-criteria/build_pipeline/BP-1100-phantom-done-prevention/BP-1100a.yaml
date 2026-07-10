@@ -1,6 +1,6 @@
 id: BP-1100a
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Behavior tickets name the executable integration point in files_touched"
 component: build-pipeline
 level: L1

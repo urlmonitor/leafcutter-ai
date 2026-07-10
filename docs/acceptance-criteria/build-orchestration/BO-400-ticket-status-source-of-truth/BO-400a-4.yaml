@@ -1,6 +1,6 @@
 id: BO-400a-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Dependency graph uses frontmatter status to determine completed tickets"
 component: build-orchestration
 level: L2

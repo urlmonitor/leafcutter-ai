@@ -1,6 +1,6 @@
 id: BO-660
 components:
-  - build-orchestration
+  - build_orchestration
 title: "New agent types and change targets inherit guardrails automatically"
 component: build-orchestration
 level: L1

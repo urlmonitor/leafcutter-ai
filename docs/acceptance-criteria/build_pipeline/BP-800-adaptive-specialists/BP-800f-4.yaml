@@ -1,6 +1,6 @@
 id: BP-800f-4
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Reference documentation for database paradigm support"
 component: build-pipeline
 level: L2

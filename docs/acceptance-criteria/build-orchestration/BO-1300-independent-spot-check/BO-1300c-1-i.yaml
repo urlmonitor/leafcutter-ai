@@ -1,6 +1,6 @@
 id: BO-1300c-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Reviewer tempted to fall back to running tests must refuse and exercise the feature instead"

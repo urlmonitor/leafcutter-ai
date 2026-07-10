@@ -1,6 +1,6 @@
 id: BP-1100e-1-v
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Declared file lists parse from the ticket store's real YAML serialization forms (column-0 block, indented block, and flow-sequence)"

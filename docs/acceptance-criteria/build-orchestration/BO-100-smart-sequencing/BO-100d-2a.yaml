@@ -1,6 +1,6 @@
 id: BO-100d-2a
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "build-epic.js lets the drive proceed when the telemetry sink is reachable"

@@ -1,6 +1,6 @@
 id: BP-100m-2-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "One template deployed to different per-platform directories is not a collision"
 component: build-pipeline
 level: L3

@@ -1,6 +1,6 @@
 id: BO-570-4-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "No Python files changed -- repo-ruff check is skipped, not failed"
 component: build-orchestration
 level: L3

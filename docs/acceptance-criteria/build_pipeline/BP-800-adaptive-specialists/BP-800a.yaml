@@ -1,6 +1,6 @@
 id: BP-800a
 components:
-  - build-pipeline
+  - build_pipeline
 title: "The system knows what your project is built with"
 component: build-pipeline
 level: L1

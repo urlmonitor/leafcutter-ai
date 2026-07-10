@@ -1,6 +1,6 @@
 id: BP-100b-11-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "A dangling registry entry is caught at build/commit time, never silently shipped to consumers"

@@ -1,6 +1,6 @@
 id: BO-900a-4
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: draft
 priority: medium
 title: "Configurable divergence threshold with sensible default"

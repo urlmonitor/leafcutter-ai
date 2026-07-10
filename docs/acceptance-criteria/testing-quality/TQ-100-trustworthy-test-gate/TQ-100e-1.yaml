@@ -1,6 +1,6 @@
 id: TQ-100e-1
 components:
-  - testing-quality
+  - testing_quality
 title: "Enforcement mode is one of three values selected by explicit configuration"
 component: testing-quality
 level: L2

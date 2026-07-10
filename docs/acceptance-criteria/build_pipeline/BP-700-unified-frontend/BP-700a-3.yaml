@@ -1,6 +1,6 @@
 id: BP-700a-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Project design system overrides embedded principles"
 component: build-pipeline
 level: L2

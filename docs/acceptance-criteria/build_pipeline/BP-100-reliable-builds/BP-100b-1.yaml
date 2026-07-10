@@ -1,6 +1,6 @@
 id: BP-100b-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Build creates a symlink so agents reach compiled workflows at .claude/workflows/"

@@ -1,6 +1,6 @@
 id: TKT-500c-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "work_status transitions from todo to in_progress when first agent is dispatched"

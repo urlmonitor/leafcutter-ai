@@ -1,6 +1,6 @@
 id: BO-1300e
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Issues found become tracked work, ready to be fixed"

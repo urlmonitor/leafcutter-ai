@@ -1,6 +1,6 @@
 id: UXP-100a-2
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Prototype output preserves visual and structural consistency with existing pages"
 component: ux-prototyping
 level: L2

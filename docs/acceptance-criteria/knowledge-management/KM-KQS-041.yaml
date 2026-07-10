@@ -1,6 +1,6 @@
 id: KM-KQS-041
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: draft
 priority: low
 title: "knowledge_query CLI lists declared surfaces via --list-surfaces"

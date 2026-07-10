@@ -1,6 +1,6 @@
 id: BP-600a-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow operates in current worktree without branch switching"
 component: build-pipeline
 level: L2

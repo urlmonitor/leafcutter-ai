@@ -1,6 +1,6 @@
 id: BP-200e
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Prompt quality problems are caught at authoring time, not at runtime"
 component: build-pipeline
 level: L1

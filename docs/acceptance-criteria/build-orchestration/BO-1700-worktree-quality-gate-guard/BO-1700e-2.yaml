@@ -1,6 +1,6 @@
 id: BO-1700e-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The guard resolves the shared git dir to the main checkout's config when self-hosting"

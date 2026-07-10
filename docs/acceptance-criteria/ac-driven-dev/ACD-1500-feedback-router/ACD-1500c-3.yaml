@@ -1,6 +1,6 @@
 id: ACD-1500c-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "The back-reference is recoverable from feedback id to the artifact"

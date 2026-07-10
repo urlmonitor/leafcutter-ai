@@ -1,6 +1,6 @@
 id: KM-VIS-009
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: reviewed
 priority: medium
 title: "Test file exists with all specified test cases"

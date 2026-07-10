@@ -1,6 +1,6 @@
 id: BO-630
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Every agent's work is routed to the right model tier based on complexity"
 component: build-orchestration
 level: L1

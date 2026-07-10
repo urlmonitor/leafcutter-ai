@@ -1,6 +1,6 @@
 id: BO-570-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Frontend sign-off gate blocks on render failure using the render-smoke verdict"
 component: build-orchestration
 level: L2

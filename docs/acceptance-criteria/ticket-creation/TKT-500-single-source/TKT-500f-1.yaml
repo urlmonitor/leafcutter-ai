@@ -1,6 +1,6 @@
 id: TKT-500f-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: low
 title: "Component diagram: goal-as-dispatch-boundary architecture"

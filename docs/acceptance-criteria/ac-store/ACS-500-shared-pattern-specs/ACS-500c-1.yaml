@@ -1,6 +1,6 @@
 id: ACS-500c-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "BA agent checks for existing pattern before writing new behavioral AC"

@@ -1,6 +1,6 @@
 id: ACS-800a-3
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Every requirement in the store has exactly one unique UID"

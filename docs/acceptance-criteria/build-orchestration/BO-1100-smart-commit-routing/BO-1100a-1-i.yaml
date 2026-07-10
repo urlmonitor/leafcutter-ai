@@ -1,6 +1,6 @@
 id: BO-1100a-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Files matching multiple groups are escalated to mixed-change handling"
 component: build-orchestration
 level: L3

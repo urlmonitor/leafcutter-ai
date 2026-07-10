@@ -1,6 +1,6 @@
 id: BO-610-4-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket with change_target but missing risk_surface is rejected"
 component: build-orchestration
 level: L3

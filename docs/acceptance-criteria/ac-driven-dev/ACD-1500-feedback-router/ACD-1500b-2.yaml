@@ -1,6 +1,6 @@
 id: ACD-1500b-2
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Classifications below the confidence floor are parked, not auto-acted"

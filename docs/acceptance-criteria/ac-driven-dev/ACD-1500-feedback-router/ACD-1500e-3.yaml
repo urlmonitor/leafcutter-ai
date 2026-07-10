@@ -1,6 +1,6 @@
 id: ACD-1500e-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Emitted process-feedback is itself routable by a future run so the loop compounds"

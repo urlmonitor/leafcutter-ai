@@ -1,6 +1,6 @@
 id: TKT-200a-3
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Diagram generation runs without manual invocation after spec completion"
 component: ticket-creation
 level: L2

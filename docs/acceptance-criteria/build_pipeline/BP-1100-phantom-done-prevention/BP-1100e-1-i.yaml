@@ -1,6 +1,6 @@
 id: BP-1100e-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "out_of_scope entries and generated/lockfiles are exempt from the mismatch flag"

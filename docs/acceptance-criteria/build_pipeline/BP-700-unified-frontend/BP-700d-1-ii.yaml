@@ -1,6 +1,6 @@
 id: BP-700d-1-ii
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Upgrade with customised PROJECT_CONTEXT.md preserves project design system"
 component: build-pipeline
 level: L3

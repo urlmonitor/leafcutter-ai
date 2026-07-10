@@ -1,6 +1,6 @@
 id: BP-800f-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Graph database detected and specialist generated with graph-specific best practices"
 component: build-pipeline
 level: L2

@@ -1,6 +1,6 @@
 id: KM-KQS-027
 components:
-  - knowledge-management
+  - knowledge_system
 title: "Component value not matching any existing component doc still produces a hub node"
 component: knowledge-management
 level: L3

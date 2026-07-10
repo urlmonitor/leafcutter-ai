@@ -1,6 +1,6 @@
 id: BO-650-5
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Architect runs at L0/L1 level, before implementation tickets are created"
 component: build-orchestration
 level: L2

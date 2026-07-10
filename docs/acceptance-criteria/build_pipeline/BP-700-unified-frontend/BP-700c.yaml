@@ -1,6 +1,6 @@
 id: BP-700c
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Nothing is lost from the old setup"
 component: build-pipeline
 level: L1

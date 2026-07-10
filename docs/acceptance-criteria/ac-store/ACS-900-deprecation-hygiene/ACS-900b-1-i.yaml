@@ -1,6 +1,6 @@
 id: ACS-900b-1-i
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "An internal hook error fails open and never hard-blocks the commit"

@@ -1,6 +1,6 @@
 id: BP-700b-2-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "LLM trigger fires for tickets describing UI work without frontend file extensions in files_touched"
 component: build-pipeline
 level: L3

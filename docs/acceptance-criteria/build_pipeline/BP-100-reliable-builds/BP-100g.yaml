@@ -1,6 +1,6 @@
 id: BP-100g
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Malformed skill files fail the build with clear diagnostics"
 component: build-pipeline
 level: L1

@@ -1,6 +1,6 @@
 id: GE-111b-1-i
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "An anchorless implemented_by entry is evaluated at file-path tier only"

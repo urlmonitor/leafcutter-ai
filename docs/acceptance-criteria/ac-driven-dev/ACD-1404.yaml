@@ -1,6 +1,6 @@
 id: ACD-1404
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 status: active
 component: ac-driven-dev
 title: "No orphaned test files reference removed agent templates"

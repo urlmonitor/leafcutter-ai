@@ -1,6 +1,6 @@
 id: TKT-100g-4
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Router classifies L3 when criteria are a sub-scenario of an existing L2 covering an edge case"

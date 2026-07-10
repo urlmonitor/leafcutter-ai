@@ -1,6 +1,6 @@
 id: BO-100d-1-ii
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Only a genuine write failure after remediation hard-blocks the drive"

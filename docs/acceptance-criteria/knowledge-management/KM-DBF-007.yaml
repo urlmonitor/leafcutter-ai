@@ -1,6 +1,6 @@
 id: KM-DBF-007
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: reviewed
 priority: medium
 title: "Backfill script accepts --project-root flag"

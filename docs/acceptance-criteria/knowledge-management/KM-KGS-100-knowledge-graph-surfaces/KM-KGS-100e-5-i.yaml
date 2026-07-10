@@ -4,7 +4,7 @@ priority: high
 title: "An item whose component cannot be inferred is reported for review, never guessed"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_system
 level: L3
 status: active
 req_status: draft

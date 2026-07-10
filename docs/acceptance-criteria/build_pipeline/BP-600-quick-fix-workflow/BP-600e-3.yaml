@@ -1,6 +1,6 @@
 id: BP-600e-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow preserves progress when escalating to full build pipeline"
 component: build-pipeline
 level: L2

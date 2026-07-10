@@ -1,6 +1,6 @@
 id: ACD-1401
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 status: active
 component: ac-driven-dev
 title: "create_ac_workflow.py agent constants use canonical names"

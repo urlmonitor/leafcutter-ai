@@ -1,6 +1,6 @@
 id: TKT-200f-1-i
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A build green only from stale deployed skill artifacts is rejected by the clean tree"
 component: ticket-creation
 level: L3

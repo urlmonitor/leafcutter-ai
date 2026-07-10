@@ -1,6 +1,6 @@
 id: BP-700d-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "skills_config.json frontend key updated to remove frontend-design reference"
 component: build-pipeline
 level: L2

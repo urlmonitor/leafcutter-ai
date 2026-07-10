@@ -1,6 +1,6 @@
 id: GE-111b
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Catch broken links whether the file moved or just the function moved"

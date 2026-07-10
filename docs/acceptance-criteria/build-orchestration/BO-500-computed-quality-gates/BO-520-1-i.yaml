@@ -1,6 +1,6 @@
 id: BO-520-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket with missing change_type is rejected by the build system"
 component: build-orchestration
 level: L3

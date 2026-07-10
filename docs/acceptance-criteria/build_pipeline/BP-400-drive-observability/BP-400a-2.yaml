@@ -1,6 +1,6 @@
 id: BP-400a-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "emit_event.py creates missing log directories automatically"
 component: build-pipeline
 level: L2

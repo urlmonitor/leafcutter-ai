@@ -1,6 +1,6 @@
 id: BP-1100e-1-iii
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "A docs-only or config-only ticket with legitimately narrow scope is not false-flagged"

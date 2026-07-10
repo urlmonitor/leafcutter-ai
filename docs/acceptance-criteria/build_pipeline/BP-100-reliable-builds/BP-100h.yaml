@@ -1,6 +1,6 @@
 id: BP-100h
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Valid skill files deploy cleanly and reviewers catch what the build cannot"
 component: build-pipeline
 level: L1

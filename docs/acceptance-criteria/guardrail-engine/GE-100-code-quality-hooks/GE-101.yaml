@@ -1,6 +1,6 @@
 id: GE-101
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Diff coverage gating blocks or warns when changed lines lack test coverage"

@@ -1,6 +1,6 @@
 id: BO-1300d-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Sequence diagram: automatic end-of-build spot-check wiring"

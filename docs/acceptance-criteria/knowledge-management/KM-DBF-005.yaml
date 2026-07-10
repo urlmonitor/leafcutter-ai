@@ -1,6 +1,6 @@
 id: KM-DBF-005
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: reviewed
 priority: medium
 title: "Hook ignores ticket, skill, and agent template files"

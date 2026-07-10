@@ -1,6 +1,6 @@
 id: ACS-400e-1
 components:
-  - ac-store
+  - ac_store
 title: "Blocked commit produces a clear, actionable error message"
 component: ac-store
 level: L2

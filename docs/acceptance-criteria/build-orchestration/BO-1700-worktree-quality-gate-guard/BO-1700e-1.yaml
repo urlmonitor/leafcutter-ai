@@ -1,6 +1,6 @@
 id: BO-1700e-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The build deploys all three guard scripts to their target paths for a fresh install"

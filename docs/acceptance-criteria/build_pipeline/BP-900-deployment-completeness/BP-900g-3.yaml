@@ -1,6 +1,6 @@
 id: BP-900g-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Handoff targets resolve in the actual consumer install tree — copy-tier presence is insufficient"
 component: build-pipeline
 level: L2

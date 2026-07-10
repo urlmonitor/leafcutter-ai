@@ -1,6 +1,6 @@
 id: BO-700c-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "An L3 fix with no L0 ancestor renders under an Ungrouped fixes heading"
 component: build-orchestration
 level: L3

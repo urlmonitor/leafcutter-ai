@@ -1,6 +1,6 @@
 id: BO-620-5
 components:
-  - build-orchestration
+  - build_orchestration
 title: "UI-internal pair maps to visual regression + a11y audit + TDD"
 component: build-orchestration
 level: L2

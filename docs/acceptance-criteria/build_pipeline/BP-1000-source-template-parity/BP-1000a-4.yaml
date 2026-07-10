@@ -1,6 +1,6 @@
 id: BP-1000a-4
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Component diagram of the source-to-shipped parity relationship at the merge gate"

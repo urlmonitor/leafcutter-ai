@@ -1,6 +1,6 @@
 id: BP-1100c-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A documentation-only epic finalizes without the angle-testing phase"
 component: build-pipeline
 level: L3

@@ -1,6 +1,6 @@
 id: TKT-500f-7
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: high
 title: "Docs-and-config-only tickets omit the Test Requirements section"

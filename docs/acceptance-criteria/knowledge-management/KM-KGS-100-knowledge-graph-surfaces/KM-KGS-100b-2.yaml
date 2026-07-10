@@ -1,6 +1,6 @@
 id: KM-KGS-100b-2
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: approved
 priority: high
 title: "Acceptance criteria and their links are visible in the knowledge-graph visualization"

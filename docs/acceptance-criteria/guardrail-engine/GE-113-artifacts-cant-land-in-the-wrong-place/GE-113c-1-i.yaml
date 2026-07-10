@@ -1,6 +1,6 @@
 id: GE-113c-1-i
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "The same guard resolves the project root correctly in the source-repo layout"
 component: guardrail-engine
 level: L3

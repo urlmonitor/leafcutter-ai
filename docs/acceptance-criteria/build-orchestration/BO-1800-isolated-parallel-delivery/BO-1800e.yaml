@@ -1,6 +1,6 @@
 id: BO-1800e
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Work is never written straight into a shared main branch"
 component: build-orchestration
 level: L1

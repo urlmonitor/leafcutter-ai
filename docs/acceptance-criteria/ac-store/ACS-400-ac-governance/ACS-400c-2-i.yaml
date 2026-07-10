@@ -1,6 +1,6 @@
 id: ACS-400c-2-i
 components:
-  - ac-store
+  - ac_store
 title: "Criteria change with stale amended_by entry is rejected"
 component: ac-store
 level: L3

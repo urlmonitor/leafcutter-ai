@@ -1,6 +1,6 @@
 id: ACD-1402
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 status: active
 component: ac-driven-dev
 title: "Command-map diagram references /plan-feature not /create-ac"

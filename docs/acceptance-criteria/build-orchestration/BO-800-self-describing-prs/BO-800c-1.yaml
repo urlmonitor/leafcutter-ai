@@ -1,6 +1,6 @@
 id: BO-800c-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "PR test plan section lists all L2/L3 Gherkin scenarios from the ticket's AC lineage"
 component: build-orchestration
 level: L2

@@ -1,6 +1,6 @@
 id: BO-100d
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "The telemetry sink is verified reachable before any ticket is dispatched"

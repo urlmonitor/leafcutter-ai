@@ -1,6 +1,6 @@
 id: BO-1300c
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Reviewers exercise the feature instead of re-running your tests"

@@ -1,6 +1,6 @@
 id: BO-210b
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Coders emit a design-context capsule in their sign-off when they trip a warn-tier signal"

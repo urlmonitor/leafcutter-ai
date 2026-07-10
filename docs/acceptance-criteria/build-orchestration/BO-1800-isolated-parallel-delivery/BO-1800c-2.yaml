@@ -1,6 +1,6 @@
 id: BO-1800c-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The number of independent features in flight is not capped by a fixed limit"

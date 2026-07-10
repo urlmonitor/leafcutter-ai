@@ -1,6 +1,6 @@
 id: BP-300a-6-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "debug.js is syntactically valid JavaScript"
 component: build-pipeline
 level: L3

@@ -1,6 +1,6 @@
 id: BP-600c-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow dispatches test-writer to create a failing test before the fix"
 component: build-pipeline
 level: L2

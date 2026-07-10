@@ -1,6 +1,6 @@
 id: ACS-800b-4-i
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "A child whose level does not sit one below its parent is rejected"

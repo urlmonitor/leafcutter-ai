@@ -1,6 +1,6 @@
 id: BO-100d-1b
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "build-feature.md prose hard-blocks the drive before dispatch when the telemetry sink is unreachable"

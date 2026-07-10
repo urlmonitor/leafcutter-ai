@@ -1,6 +1,6 @@
 id: BP-800a-6
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Component diagram for the technology detection subsystem"
 component: build-pipeline
 level: L2

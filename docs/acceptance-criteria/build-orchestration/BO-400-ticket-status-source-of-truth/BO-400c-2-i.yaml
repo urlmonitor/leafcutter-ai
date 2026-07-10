@@ -1,6 +1,6 @@
 id: BO-400c-2-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Mixed state: some tickets in done/ folder, some with status: done at root"
 component: build-orchestration
 level: L3

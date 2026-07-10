@@ -1,6 +1,6 @@
 id: ACS-400
 components:
-  - ac-store
+  - ac_store
 title: "Trust that requirements cannot be silently rewritten by the wrong agent"
 component: ac-store
 level: L0

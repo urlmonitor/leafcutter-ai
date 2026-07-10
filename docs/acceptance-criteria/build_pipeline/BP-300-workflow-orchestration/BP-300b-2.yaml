@@ -1,6 +1,6 @@
 id: BP-300b-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Planner derives needed status from Sign-offs checklist when frontmatter says signed_off"
 component: build-pipeline
 level: L2

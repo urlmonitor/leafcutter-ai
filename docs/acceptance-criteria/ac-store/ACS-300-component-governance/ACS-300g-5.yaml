@@ -1,6 +1,6 @@
 id: ACS-300g-5
 components:
-  - ac-store
+  - ac_store
 title: "Component integrity hook skips the new-component check during a merge"
 component: ac-store
 level: L2

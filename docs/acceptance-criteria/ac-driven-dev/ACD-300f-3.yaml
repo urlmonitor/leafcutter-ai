@@ -1,6 +1,6 @@
 id: ACD-300f-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "Agent Consumption Protocol defines error handling as graceful degradation without abort or retry"

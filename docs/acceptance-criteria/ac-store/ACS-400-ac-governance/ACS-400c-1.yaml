@@ -1,6 +1,6 @@
 id: ACS-400c-1
 components:
-  - ac-store
+  - ac_store
 title: "New AC creation records origin_agent identifying the author"
 component: ac-store
 level: L2

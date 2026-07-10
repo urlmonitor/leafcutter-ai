@@ -1,6 +1,6 @@
 id: BP-300d-5
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Sequence diagram: runtime-aware routing of a primary delivery command to workflow vs prose fallback"
 component: build-pipeline
 level: L2

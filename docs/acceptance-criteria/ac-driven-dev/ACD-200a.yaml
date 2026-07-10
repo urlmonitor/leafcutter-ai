@@ -1,6 +1,6 @@
 id: ACD-200a
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "BA v3 produces documentation ACs when decomposing features with flows or state"

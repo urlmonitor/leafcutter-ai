@@ -1,6 +1,6 @@
 id: BP-700a-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Agent applies design principles without explicit skill activation"
 component: build-pipeline
 level: L2

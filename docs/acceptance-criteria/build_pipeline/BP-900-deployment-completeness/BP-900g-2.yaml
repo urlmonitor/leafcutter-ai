@@ -1,6 +1,6 @@
 id: BP-900g-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Every Workflow/Skill target of every deployed command must resolve, or the build fails naming it"
 component: build-pipeline
 level: L2

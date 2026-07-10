@@ -1,6 +1,6 @@
 id: BP-600d-4
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow pushes to origin and closes the ticket lifecycle"
 component: build-pipeline
 level: L2

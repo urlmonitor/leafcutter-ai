@@ -1,6 +1,6 @@
 id: BP-100a-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Build emits a warning for each registered hook whose script file is absent"

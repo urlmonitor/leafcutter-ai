@@ -1,6 +1,6 @@
 id: BP-100c-4
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Template compiler threads config to project paths table generation"

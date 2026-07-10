@@ -1,6 +1,6 @@
 id: BP-100d-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Contract-shrinking hook excludes commit_guardian paths from production classification"

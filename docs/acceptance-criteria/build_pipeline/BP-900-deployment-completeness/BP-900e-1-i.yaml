@@ -1,6 +1,6 @@
 id: BP-900e-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "A template-referenced script with no template copy is also flagged, coordinated with the BP-900b preflight"

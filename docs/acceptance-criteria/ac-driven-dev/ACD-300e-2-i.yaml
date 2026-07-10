@@ -1,6 +1,6 @@
 id: ACD-300e-2-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Agent proceeds with baseline context when knowledge-query returns no matching nodes"

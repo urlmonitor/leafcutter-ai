@@ -1,6 +1,6 @@
 id: ACS-100h-4
 components:
-  - ac-store
+  - ac_store
 title: "Split leaves an audit trail in amended_by and the git commit message"
 component: ac-store
 level: L2

@@ -1,6 +1,6 @@
 id: TKT-200e-1-ii
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A claim with a command but an empty or placeholder result is flagged"
 component: ticket-creation
 level: L3

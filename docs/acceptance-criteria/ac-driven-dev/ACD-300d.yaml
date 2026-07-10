@@ -1,6 +1,6 @@
 id: ACD-300d
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "All authoring output is written to the AC store, never to ticket files"

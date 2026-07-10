@@ -1,6 +1,6 @@
 id: GE-102b
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Description-field transform hook stubs a missing description from the title in place"

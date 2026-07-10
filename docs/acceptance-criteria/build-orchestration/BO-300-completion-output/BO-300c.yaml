@@ -1,6 +1,6 @@
 id: BO-300c
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Finalize command always uses the epic or branch name, never a raw path"
 component: build-orchestration
 level: L1

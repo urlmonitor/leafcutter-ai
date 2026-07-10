@@ -1,6 +1,6 @@
 id: KM-KGS-100b-1
 components:
-  - knowledge-management
+  - knowledge_system
 readiness: approved
 priority: high
 title: "Answer which code file delivers an acceptance criterion by following its edges"

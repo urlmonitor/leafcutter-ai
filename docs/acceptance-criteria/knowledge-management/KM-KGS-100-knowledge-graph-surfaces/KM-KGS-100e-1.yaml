@@ -4,7 +4,7 @@ priority: high
 title: "An acceptance criterion cannot be committed without declaring its component"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_system
 level: L2
 status: active
 req_status: draft

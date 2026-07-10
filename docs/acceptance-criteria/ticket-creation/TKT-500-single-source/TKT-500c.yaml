@@ -1,6 +1,6 @@
 id: TKT-500c
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "Each requirement tracks its own delivery progress"

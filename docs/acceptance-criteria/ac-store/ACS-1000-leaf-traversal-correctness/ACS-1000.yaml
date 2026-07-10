@@ -1,6 +1,6 @@
 id: ACS-1000
 components:
-  - ac-store
+  - ac_store
 status: active
 component: ac-store
 level: L2

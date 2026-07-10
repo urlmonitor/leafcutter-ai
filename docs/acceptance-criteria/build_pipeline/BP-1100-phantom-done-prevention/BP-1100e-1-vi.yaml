@@ -1,6 +1,6 @@
 id: BP-1100e-1-vi
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Multi-ticket commits reconcile against the UNION of every staged done ticket's declared scope (no cross-ticket false flags)"

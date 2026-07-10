@@ -1,6 +1,6 @@
 id: BO-300a
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Epic completion shows summary, worktree, test hints, and finalize command"
 component: build-orchestration
 level: L1

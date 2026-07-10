@@ -1,6 +1,6 @@
 id: BP-700c-5
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Reference document catalogues all preserved capabilities"
 component: build-pipeline
 level: L2

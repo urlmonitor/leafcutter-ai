@@ -1,6 +1,6 @@
 id: BP-100b-6
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Parity test cross-validates all four infrastructure layers against each other"

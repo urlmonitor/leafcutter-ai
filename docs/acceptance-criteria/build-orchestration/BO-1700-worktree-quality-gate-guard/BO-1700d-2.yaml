@@ -1,6 +1,6 @@
 id: BO-1700d-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Pre-drive gate: no ticket starts until the probe passes against the worktree"

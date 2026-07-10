@@ -1,6 +1,6 @@
 id: BO-1100b-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Staged files spanning two or more routing groups trigger a warning before message composition"
 component: build-orchestration
 level: L2

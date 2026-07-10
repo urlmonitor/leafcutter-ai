@@ -1,6 +1,6 @@
 id: ACS-400d-2-i
 components:
-  - ac-store
+  - ac_store
 title: "Projects without an AC store are not affected by governance rules"
 component: ac-store
 level: L3

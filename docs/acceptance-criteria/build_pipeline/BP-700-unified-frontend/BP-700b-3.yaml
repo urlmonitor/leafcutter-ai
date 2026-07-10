@@ -1,6 +1,6 @@
 id: BP-700b-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Agent produces no output or side effects when not dispatched"
 component: build-pipeline
 level: L2

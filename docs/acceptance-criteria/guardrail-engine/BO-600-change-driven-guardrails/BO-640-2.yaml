@@ -1,6 +1,6 @@
 id: BO-640-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Successful decomposition reduces complexity to medium and routes to faster model"
 component: build-orchestration
 level: L2

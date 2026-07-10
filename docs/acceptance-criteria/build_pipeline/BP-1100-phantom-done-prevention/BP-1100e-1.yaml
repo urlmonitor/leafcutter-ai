@@ -1,6 +1,6 @@
 id: BP-1100e-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Before a ticket is marked done, source files changed but not declared are flagged"

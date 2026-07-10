@@ -1,6 +1,6 @@
 id: ACD-100
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "AC-driven development is documented with flow diagrams and user guides"

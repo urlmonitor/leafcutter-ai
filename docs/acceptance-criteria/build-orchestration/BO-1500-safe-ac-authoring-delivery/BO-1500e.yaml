@@ -1,6 +1,6 @@
 id: BO-1500e
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "It works even when you start from the protected main line or an installed copy"

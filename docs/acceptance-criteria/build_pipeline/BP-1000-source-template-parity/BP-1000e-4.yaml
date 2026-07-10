@@ -1,6 +1,6 @@
 id: BP-1000e-4
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: medium
 title: "Only workflow scripts that have a shipped mirror are compared"

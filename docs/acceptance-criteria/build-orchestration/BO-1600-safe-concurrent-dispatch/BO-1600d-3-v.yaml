@@ -1,6 +1,6 @@
 id: BO-1600d-3-v
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "When a worktree's cache-tree is poisoned, recovery rebuilds via a fresh worktree"

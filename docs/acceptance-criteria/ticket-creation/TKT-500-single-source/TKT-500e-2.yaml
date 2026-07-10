@@ -1,6 +1,6 @@
 id: TKT-500e-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "Agent receives the next AC as an injection, not a new spawn"

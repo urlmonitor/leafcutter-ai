@@ -1,6 +1,6 @@
 id: BO-1900c-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Reference doc defines the charter-vs-task-verb matching rules"
 component: build-orchestration
 level: L2

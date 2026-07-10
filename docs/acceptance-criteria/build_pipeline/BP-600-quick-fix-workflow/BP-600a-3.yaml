@@ -1,6 +1,6 @@
 id: BP-600a-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow rejects invocation when target file has uncommitted changes"
 component: build-pipeline
 level: L2

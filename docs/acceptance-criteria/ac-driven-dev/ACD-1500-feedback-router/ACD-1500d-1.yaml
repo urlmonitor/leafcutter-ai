@@ -1,6 +1,6 @@
 id: ACD-1500d-1
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Feature-type items are checked for roadmap alignment before auto-authoring"

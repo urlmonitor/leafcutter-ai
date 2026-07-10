@@ -1,6 +1,6 @@
 id: TKT-200a-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Diagram generation reads component relationships from AC files"
 component: ticket-creation
 level: L2

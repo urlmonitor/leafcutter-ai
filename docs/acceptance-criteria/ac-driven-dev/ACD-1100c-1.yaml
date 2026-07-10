@@ -1,6 +1,6 @@
 id: ACD-1100c-1
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "Skill directory and registry entry use the name plan-feature"

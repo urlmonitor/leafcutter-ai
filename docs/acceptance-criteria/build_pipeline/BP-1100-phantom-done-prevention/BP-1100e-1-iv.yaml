@@ -1,6 +1,6 @@
 id: BP-1100e-1-iv
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "The reconciliation no-ops cleanly when the ticket has no files_touched frontmatter"

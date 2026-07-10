@@ -1,6 +1,6 @@
 id: BO-800d-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "PR description is assembled from AC YAML files on disk at PR-creation time, not from cached data"
 component: build-orchestration
 level: L2

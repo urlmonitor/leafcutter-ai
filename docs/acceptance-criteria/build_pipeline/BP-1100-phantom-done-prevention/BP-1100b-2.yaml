@@ -1,6 +1,6 @@
 id: BP-1100b-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Test-writer produces an executing behavioral-replay test for modified workflow JavaScript"
 component: build-pipeline
 level: L2

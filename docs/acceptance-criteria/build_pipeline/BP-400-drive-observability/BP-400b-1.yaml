@@ -1,6 +1,6 @@
 id: BP-400b-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Git rename fallback populates commit dates for a moved epic folder"
 component: build-pipeline
 level: L2

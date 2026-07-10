@@ -1,6 +1,6 @@
 id: BP-100c-2-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Force flag bypasses the skip guard and overwrites existing manifest"

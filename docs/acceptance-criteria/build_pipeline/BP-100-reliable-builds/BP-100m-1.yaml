@@ -1,6 +1,6 @@
 id: BP-100m-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Two source templates deploying to the same command path fail the build, naming both sources and the target"
 component: build-pipeline
 level: L2

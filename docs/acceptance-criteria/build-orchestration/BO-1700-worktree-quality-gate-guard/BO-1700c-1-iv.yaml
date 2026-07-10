@@ -1,6 +1,6 @@
 id: BO-1700c-1-iv
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Self-heal is atomic and idempotent under concurrent commits"

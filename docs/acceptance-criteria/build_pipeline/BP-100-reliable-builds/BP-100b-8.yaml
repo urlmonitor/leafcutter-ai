@@ -1,6 +1,6 @@
 id: BP-100b-8
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Build pipeline diagram includes the workflow scripts phase"

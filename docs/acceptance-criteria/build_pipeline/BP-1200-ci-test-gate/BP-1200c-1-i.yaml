@@ -1,6 +1,6 @@
 id: BP-1200c-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "The test gate cannot be bypassed — a missing or failing test check leaves the PR un-mergeable"
 component: build-pipeline
 level: L3

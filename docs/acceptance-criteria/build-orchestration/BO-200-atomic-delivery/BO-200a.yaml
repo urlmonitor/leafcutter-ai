@@ -1,6 +1,6 @@
 id: BO-200a
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "Every commit knows exactly what it contains and why"

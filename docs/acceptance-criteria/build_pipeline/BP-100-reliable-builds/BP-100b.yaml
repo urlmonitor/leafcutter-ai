@@ -1,6 +1,6 @@
 id: BP-100b
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Compiled workflows are reachable where agents look for them"

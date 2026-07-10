@@ -1,6 +1,6 @@
 id: ACD-1500b-1
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Every classification carries a confidence score"

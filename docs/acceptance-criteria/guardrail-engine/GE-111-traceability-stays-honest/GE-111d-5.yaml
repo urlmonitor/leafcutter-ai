@@ -1,6 +1,6 @@
 id: GE-111d-5
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Sequence diagram: developer reconciles via update or confirm and re-commits"

@@ -1,6 +1,6 @@
 id: TQ-100e-1-ii
 components:
-  - testing-quality
+  - testing_quality
 title: "With no explicit config, enforcement defaults to the safe non-blocking mode"
 component: testing-quality
 level: L3

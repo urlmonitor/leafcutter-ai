@@ -1,6 +1,6 @@
 id: BP-600e-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow warns when red-phase test reveals a deeper root cause"
 component: build-pipeline
 level: L2

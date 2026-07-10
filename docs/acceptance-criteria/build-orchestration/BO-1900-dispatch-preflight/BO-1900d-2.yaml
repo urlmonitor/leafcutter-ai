@@ -1,6 +1,6 @@
 id: BO-1900d-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A payload carrying a free-composed prose prompt is rejected before spawn"
 component: build-orchestration
 level: L2

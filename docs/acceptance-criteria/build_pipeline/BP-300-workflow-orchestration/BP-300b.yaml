@@ -1,6 +1,6 @@
 id: BP-300b
 components:
-  - build-pipeline
+  - build_pipeline
 title: "The build planner uses current sign-off state, not stale frontmatter"
 component: build-pipeline
 level: L1

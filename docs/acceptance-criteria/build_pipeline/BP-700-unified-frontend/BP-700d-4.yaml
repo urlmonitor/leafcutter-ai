@@ -1,6 +1,6 @@
 id: BP-700d-4
 components:
-  - build-pipeline
+  - build_pipeline
 title: "How-to guide documents upgrade path for existing adopters"
 component: build-pipeline
 level: L2

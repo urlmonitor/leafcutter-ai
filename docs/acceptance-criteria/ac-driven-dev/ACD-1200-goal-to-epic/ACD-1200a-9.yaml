@@ -1,6 +1,6 @@
 id: ACD-1200a-9
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "Each epic ticket is written only inside the epic folder, with its back-reference pointing at the epic-folder path"

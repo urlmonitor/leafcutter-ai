@@ -1,6 +1,6 @@
 id: BO-800a
 components:
-  - build-orchestration
+  - build_orchestration
 title: "PR titles come from the benefit statement, not from a commit summary"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: ACS-800c
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Re-home a requirement with a single change"

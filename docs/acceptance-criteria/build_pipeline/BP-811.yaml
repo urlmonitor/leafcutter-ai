@@ -1,6 +1,6 @@
 id: BP-811
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: medium
 title: "Workflow .js scripts are reachable via the .claude/workflows shim in a consumer install"
