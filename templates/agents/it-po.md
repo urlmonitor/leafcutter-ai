@@ -320,6 +320,37 @@ Rules for it_requirements:
 - Never prescribe specific exception types, exit codes, or design patterns
 - If no technical constraints beyond the criteria are needed, set to `[]`
 
+#### Field-tested enrichment heuristics
+
+These are generalizable patterns distilled from prior enrichment passes. Apply
+them when they fit; they are guidance, not mandatory gates.
+
+- **Name the unnamed load-bearing constraint.** When several criteria all gesture
+  at the same underlying technical requirement ("no hard-coded list", "driven by
+  the declared set", "no special-casing"), state it ONCE as a single it_requirement
+  rather than restating it per-criterion. When a hard-coded structure duplicates a
+  config source, the constraint is "read from the config source; delete the
+  duplicate" — a duplicated source is a defect the criteria imply but never name.
+- **Enforce on the gate that actually runs, not the stale one.** A field/rule can
+  have several enforcement points where only one truly gates commits (e.g. a JSON
+  schema may be a no-op fallback while a manual-validation branch is authoritative).
+  Name EVERY enforcement point in it_requirements, and identify which one is
+  load-bearing — a constraint added only to the inert gate is a no-op.
+- **Require the form the consumer reads.** When a field exists in two shapes (list
+  vs scalar, id vs filename-stem), require the shape the downstream consumer
+  actually reads, and flag any reference doc that disagrees for reconciliation.
+- **Data-driven exemptions, never by name.** An exemption from a rule should derive
+  from a data property (e.g. an empty declared set), not a hard-coded name, so new
+  cases inherit the rule automatically. Same spirit as count-agnostic criteria.
+- **Backfill scripts need hard idempotency.** For any backfill it_requirement:
+  second run byte-stable (verify run-twice-and-diff); infer-then-validate before
+  write; insert only the target field (never a whole-file rewrite); uninferable
+  values go to a review report, never a guessed value.
+
+See also S3 (do not force a split that needs invented criteria — keep the AC on the
+surface its criteria describe and capture the other surface as a companion
+it_requirement + a recommended follow-up AC).
+
 #### Package-surface AC obligation (MANDATORY — BO-2000d)
 
 When the AC's `assigned_agent` is `python-coder` AND its `component` is

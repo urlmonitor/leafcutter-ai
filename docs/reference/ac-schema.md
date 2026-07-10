@@ -335,6 +335,17 @@ criteria: |
 
 Three hooks are installed by `build.py` to enforce the AC store at commit time.
 
+> **Enforcement is not single-sourced — add a new field rule to every gate.**
+> AC field validation lives in more than one place: the commit hook
+> `check_ac_schema.py` validates against `config/ac_store_schema.json` (JSON
+> Schema draft-07), but falls back to a **manual-validation branch** — plus
+> per-file semantic validators in `_ac_schema_validators.py` — when `jsonschema`
+> is unavailable, and that fallback is what actually gates in some environments.
+> A separate agent-side validator, `scripts/ac_store/validate_ac_schema.py`,
+> checks a subset independently. A new required-field rule added to only the JSON
+> schema is therefore a partial (sometimes no-op) gate; add it to every
+> enforcement point that should reject the field.
+
 ### `check_ac_schema.py` (blocking)
 
 Validates every staged YAML file under `docs/acceptance-criteria/` against
