@@ -1,4 +1,6 @@
 id: ACS-500c-3
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Duplicate detection rejects AC whose criteria duplicates an existing pattern"

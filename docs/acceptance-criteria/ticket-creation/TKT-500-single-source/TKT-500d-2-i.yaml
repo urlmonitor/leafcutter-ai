@@ -1,4 +1,6 @@
 id: TKT-500d-2-i
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "L0 with a mix of L1 and L2 children — done requires all leaves, not just direct children"

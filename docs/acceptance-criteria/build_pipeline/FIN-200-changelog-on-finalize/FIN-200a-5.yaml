@@ -1,4 +1,6 @@
 id: FIN-200a-5
+components:
+  - finalize
 title: "Sequence diagram shows finalize invoking changelog generation"
 component: finalize
 level: L2

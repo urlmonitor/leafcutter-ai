@@ -1,4 +1,6 @@
 id: INF-600l-2
+components:
+  - infrastructure
 readiness: approved
 priority: high
 title: "The mirror check is opt-in to the leafcutter agent subsystem and resolves the card path from convention, not a hardcode"

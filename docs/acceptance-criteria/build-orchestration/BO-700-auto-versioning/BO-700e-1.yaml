@@ -1,4 +1,6 @@
 id: BO-700e-1
+components:
+  - build-orchestration
 title: "The done-link closure invokes changelog emission as a mandatory step"
 component: build-orchestration
 level: L2

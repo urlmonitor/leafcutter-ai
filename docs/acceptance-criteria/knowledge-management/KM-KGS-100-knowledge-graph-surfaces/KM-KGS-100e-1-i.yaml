@@ -1,0 +1,54 @@
+id: KM-KGS-100e-1-i
+readiness: approved
+priority: high
+title: "A missing component key, an empty list, and an empty name all fail identically"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given three acceptance-criterion files: one with no component-membership key at
+    all, one whose components field is an empty list [], and one whose components
+    field is a list containing only an empty string ""
+  When each file is validated at commit time
+  Then all three files are rejected and their commits are blocked
+  And each rejection message states that at least one non-empty component name is
+    required
+  And no one of the three is treated as valid where the others are rejected
+depends_on:
+  - KM-KGS-100e-1
+doc_links:
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "All three degenerate inputs — missing `components` key, empty list [], and a list containing only an empty string [\"\"] — MUST be rejected identically with the same 'at least one non-empty component name is required' message; no input may pass where another is rejected."
+  - "Treat whitespace-only names as empty (strip before the non-empty test), so [\"   \"] fails the same way as [\"\"]."
+  - "Implement inside the single required-non-empty-`components`-list predicate from KM-KGS-100e-1 (deployed + templates/scripts/commit_guardian/ source in parity); do NOT add a second divergent validation code path for the empty-name case."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The commit-time validation predicate that requires a non-empty components list on every acceptance criterion (check_ac_schema.py manual path + ac_store_schema.json + validate_ac_schema.py)"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_components_enforcement.py
+implemented_by:
+  - scripts/ac_store/_ac_components.py
+  - scripts/ac_store/validate_ac_schema.py
+  - config/ac_store_schema.json
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+change_target: code
+risk_surface: internal

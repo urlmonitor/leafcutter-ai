@@ -1,4 +1,6 @@
 id: TKT-500a
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Agents read requirements at their source, not from copies"

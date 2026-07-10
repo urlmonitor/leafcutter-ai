@@ -1,4 +1,6 @@
 id: BP-100e-5
+components:
+  - build-pipeline
 title: "Pre-commit hook rejects comment headings with imprecise timestamps"
 component: build-pipeline
 level: L2

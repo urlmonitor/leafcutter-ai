@@ -1,4 +1,6 @@
 id: KM-KQS-032
+components:
+  - knowledge-management
 readiness: draft
 priority: medium
 title: "Agent Protocol specifies standard invocation syntax with keyword and surface parameters"

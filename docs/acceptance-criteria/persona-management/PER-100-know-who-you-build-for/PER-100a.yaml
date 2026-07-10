@@ -1,4 +1,6 @@
 id: PER-100a
+components:
+  - persona-management
 readiness: approved
 priority: medium
 title: "Personas are documented once and referenced everywhere"

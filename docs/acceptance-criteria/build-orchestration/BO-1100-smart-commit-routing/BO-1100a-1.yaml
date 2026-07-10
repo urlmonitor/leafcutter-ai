@@ -1,4 +1,6 @@
 id: BO-1100a-1
+components:
+  - build-orchestration
 title: "Staged files are classified into exactly one routing group per file"
 component: build-orchestration
 level: L2

@@ -1,4 +1,6 @@
 id: SD-100a
+components:
+  - stakeholder-delivery
 readiness: draft
 priority: medium
 title: "Turn approved value into a presentation deck you can show right now"

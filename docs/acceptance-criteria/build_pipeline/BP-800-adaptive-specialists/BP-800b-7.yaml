@@ -1,4 +1,6 @@
 id: BP-800b-7
+components:
+  - build-pipeline
 title: "Component diagram for the specialist generation subsystem"
 component: build-pipeline
 level: L2

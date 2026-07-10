@@ -1,4 +1,6 @@
 id: BP-1000b-2
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "When the parity gate finds drift, finalize HALTs and the PR-merge step is never reached"

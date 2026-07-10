@@ -1,4 +1,6 @@
 id: ACD-1100b-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Agent registry entries use canonical names without version suffixes"

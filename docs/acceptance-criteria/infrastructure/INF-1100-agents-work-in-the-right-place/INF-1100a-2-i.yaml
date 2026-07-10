@@ -1,4 +1,6 @@
 id: INF-1100a-2-i
+components:
+  - infrastructure
 title: "A configured test_root other than the default is honored verbatim"
 component: infrastructure
 level: L3

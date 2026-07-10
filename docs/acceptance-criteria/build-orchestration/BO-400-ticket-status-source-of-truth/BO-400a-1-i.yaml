@@ -1,4 +1,6 @@
 id: BO-400a-1-i
+components:
+  - build-orchestration
 title: "Ticket already in_progress from a previous failed run"
 component: build-orchestration
 level: L3

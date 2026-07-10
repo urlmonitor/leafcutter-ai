@@ -1,4 +1,6 @@
 id: BO-1700c
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Every workspace sets up its own protection automatically, however it was created"

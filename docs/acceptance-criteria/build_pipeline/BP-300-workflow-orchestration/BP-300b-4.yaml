@@ -1,4 +1,6 @@
 id: BP-300b-4
+components:
+  - build-pipeline
 title: "Planner recognizes failed sign-off lines and derives failed status"
 component: build-pipeline
 level: L2

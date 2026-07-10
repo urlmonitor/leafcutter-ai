@@ -1,4 +1,6 @@
 id: TKT-500e-5
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "Sequence diagram: inject model within a goal"

@@ -1,4 +1,6 @@
 id: ACD-1200g-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "How-to guide documents the goal-to-epic workflow for users"

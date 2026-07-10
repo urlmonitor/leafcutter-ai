@@ -1,4 +1,6 @@
 id: TKT-100e-5
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "PO agent L1 output includes depends_on ordering between sibling L1s"

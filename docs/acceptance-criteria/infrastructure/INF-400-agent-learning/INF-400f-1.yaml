@@ -1,4 +1,6 @@
 id: INF-400f-1
+components:
+  - infrastructure
 title: "PO v3 learnings are available to the BA v3 when both run in the same pipeline invocation"
 component: infrastructure
 level: L2

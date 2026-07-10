@@ -1,4 +1,6 @@
 id: TKT-011
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Hook exits 0 silently when ticket has no AC store references"

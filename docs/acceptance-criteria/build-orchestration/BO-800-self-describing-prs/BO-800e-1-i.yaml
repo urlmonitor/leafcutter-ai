@@ -1,4 +1,6 @@
 id: BO-800e-1-i
+components:
+  - build-orchestration
 title: "A ticket whose source_ac chain has multiple L0 ancestors lists all of them"
 component: build-orchestration
 level: L3

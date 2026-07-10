@@ -1,4 +1,6 @@
 id: ACS-800c-3-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A re-home that would make a requirement its own ancestor is rejected"

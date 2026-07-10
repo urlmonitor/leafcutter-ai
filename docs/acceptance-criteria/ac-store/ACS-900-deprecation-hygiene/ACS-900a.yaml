@@ -1,4 +1,6 @@
 id: ACS-900a
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Retiring a requirement triggers a check that its claimed code is gone"

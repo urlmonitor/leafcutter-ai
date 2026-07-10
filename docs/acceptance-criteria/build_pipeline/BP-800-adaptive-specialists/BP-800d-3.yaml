@@ -1,4 +1,6 @@
 id: BP-800d-3
+components:
+  - build-pipeline
 title: "All existing legacy language agents are accounted for in the migration"
 component: build-pipeline
 level: L2

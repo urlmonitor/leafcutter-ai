@@ -1,4 +1,6 @@
 id: TKT-100h
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "The analyst reads everything relevant before asking you a question"

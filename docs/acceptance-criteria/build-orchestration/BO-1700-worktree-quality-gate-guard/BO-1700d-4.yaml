@@ -1,4 +1,6 @@
 id: BO-1700d-4
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Sequence diagram: probe checkpoints across the worktree lifecycle"

@@ -1,4 +1,6 @@
 id: INF-300a
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Knowledge surfaces are enumerated with routing rules so agents pick the right one"

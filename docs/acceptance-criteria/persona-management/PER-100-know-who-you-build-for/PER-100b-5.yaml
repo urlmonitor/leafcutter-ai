@@ -1,4 +1,6 @@
 id: PER-100b-5
+components:
+  - persona-management
 title: "Reference doc for persona_for AC field"
 component: persona-management
 level: L2

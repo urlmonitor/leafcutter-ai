@@ -1,4 +1,6 @@
 id: INF-500b-3
+components:
+  - infrastructure
 title: "trend_report.py computes week-over-week trend indicators"
 component: infrastructure
 level: L2

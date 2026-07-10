@@ -1,4 +1,6 @@
 id: UXP-100b-1
+components:
+  - ux-prototyping
 title: "Gap detection produces a named list of missing components with usage context"
 component: ux-prototyping
 level: L2

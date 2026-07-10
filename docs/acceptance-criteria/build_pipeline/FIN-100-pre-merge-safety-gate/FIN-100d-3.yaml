@@ -1,4 +1,6 @@
 id: FIN-100d-3
+components:
+  - finalize
 title: "Defensive guard at Step 4 catches blocks_finalization=true that bypassed Step 3 halt"
 level: L3
 component: finalize

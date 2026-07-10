@@ -1,4 +1,6 @@
 id: BO-100b
+components:
+  - build-orchestration
 readiness: reviewed
 priority: medium
 title: "Work runs in parallel up to a safe limit you control"

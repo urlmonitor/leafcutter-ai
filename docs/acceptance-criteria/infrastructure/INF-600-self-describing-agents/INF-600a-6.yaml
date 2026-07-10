@@ -1,4 +1,6 @@
 id: INF-600a-6
+components:
+  - infrastructure
 title: "Agent frontmatter declares structured behavioral patterns"
 component: infrastructure
 level: L2

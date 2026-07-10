@@ -1,4 +1,6 @@
 id: TKT-500d-1
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Supervisor discovers L0 children and walks them in dependency order"

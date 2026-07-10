@@ -1,4 +1,6 @@
 id: BP-100m-1-i
+components:
+  - build-pipeline
 title: "A same-target collision still fails even when the two colliding sources are byte-identical"
 component: build-pipeline
 level: L3

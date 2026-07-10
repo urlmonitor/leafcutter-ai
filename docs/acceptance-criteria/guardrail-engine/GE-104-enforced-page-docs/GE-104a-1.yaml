@@ -1,4 +1,6 @@
 id: GE-104a-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Commit-time guardrail blocks a new frontend page that ships without its reference doc"

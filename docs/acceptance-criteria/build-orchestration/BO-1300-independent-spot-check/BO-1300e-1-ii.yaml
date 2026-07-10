@@ -1,4 +1,6 @@
 id: BO-1300e-1-ii
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Duplicate findings across reviewers are deduplicated to one ticket per distinct issue"

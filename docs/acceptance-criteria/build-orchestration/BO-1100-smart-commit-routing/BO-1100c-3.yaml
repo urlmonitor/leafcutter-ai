@@ -1,4 +1,6 @@
 id: BO-1100c-3
+components:
+  - build-orchestration
 title: "Commit agent reloads the routing config on every invocation"
 component: build-orchestration
 level: L2

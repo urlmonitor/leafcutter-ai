@@ -1,4 +1,6 @@
 id: BP-700
+components:
+  - build-pipeline
 title: "One agent handles both the look and the code for your frontend"
 component: build-pipeline
 level: L0

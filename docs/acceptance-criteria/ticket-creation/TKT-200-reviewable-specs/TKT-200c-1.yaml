@@ -1,4 +1,6 @@
 id: TKT-200c-1
+components:
+  - ticket-creation
 title: "Review package assembles specs, diagrams, and docs into a single location"
 component: ticket-creation
 level: L2

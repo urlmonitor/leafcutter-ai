@@ -1,4 +1,6 @@
 id: GE-100c-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "jscpd hook exits fail-open when the jscpd subprocess exceeds the 30-second timeout"

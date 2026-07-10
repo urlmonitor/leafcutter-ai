@@ -1,4 +1,6 @@
 id: TQ-100a-1-iii
+components:
+  - testing-quality
 title: "Collection isolation still surfaces genuine failures among the loadable tests"
 component: testing-quality
 level: L3

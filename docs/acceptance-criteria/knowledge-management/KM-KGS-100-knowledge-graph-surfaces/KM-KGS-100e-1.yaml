@@ -1,0 +1,73 @@
+id: KM-KGS-100e-1
+readiness: approved
+priority: high
+title: "An acceptance criterion cannot be committed without declaring its component"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given one acceptance-criterion file whose frontmatter declares no component
+    membership, and one acceptance-criterion file whose frontmatter declares
+    components: ["knowledge-management"]
+  When each file is validated at commit time
+  Then the file that declares no component membership is rejected and its commit
+    is blocked
+  And the rejection message names that file and states that a component membership
+    must be declared
+  And the file that declares components: ["knowledge-management"] passes validation
+depends_on:
+  - KM-KGS-100e
+doc_links:
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
+  - path: docs/components.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Standardize enforcement on the LIST field `components`, NOT the scalar `component`: the knowledge graph's component_membership edge is built from the `components` list (see config/paths.json acs surface edge_fields), so the required-field check MUST require a non-empty `components` list. The scalar `component` may remain for backward compatibility but is not the field the graph reads."
+  - "Reconcile the reference docs with the enforced field: docs/reference/ac-schema.md currently marks the scalar `component` required and the `components` list 'rarely used', and ADR-007 lists only the scalar as required. Update both so the `components` list is documented as the authoritative component-membership field this rule enforces."
+  - "Add the requirement to the path that actually gates commits: per the BA's ac-store-conventions note, when the JSON schema (config/ac_store_schema.json) cannot be resolved the hook falls back to a MANUAL field-validation branch, and that manual path is what gates in practice. Add the non-empty-`components`-list check to that manual branch in scripts/commit_guardian/check_ac_schema.py, to config/ac_store_schema.json, AND to the agent-side scripts/ac_store/validate_ac_schema.py — all three, so schema-present and schema-absent environments behave identically."
+  - "Commit-guardian parity per ADR-001: edit the deployed hook under scripts/commit_guardian/ and its package source under templates/scripts/commit_guardian/ together, and verify byte-parity via the build.py round-trip; never edit one side only."
+  - "Rejection is a hard block (non-zero exit) that names the offending file and states a component membership is required; a conforming file (non-empty components list) passes unchanged. Follow the project error-handling policy."
+  - "Keep the hook fail-open on INTERNAL errors (I/O, parse) — exit 0 with a stderr WARNING so a script fault never blocks an unrelated commit — while a genuine missing-component violation always blocks."
+delivers_to:
+  agent: python-coder
+  contract: "The shared 'a non-empty components list is required' validation predicate (added to check_ac_schema.py manual path + config/ac_store_schema.json + scripts/ac_store/validate_ac_schema.py), reused by KM-KGS-100e-1-i, -1-ii, -2, -3, -4"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_components_enforcement.py
+implemented_by:
+  - scripts/ac_store/_ac_components.py
+  - scripts/ac_store/validate_ac_schema.py
+  - config/ac_store_schema.json
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+change_target: code
+risk_surface: contract_boundary

@@ -1,4 +1,6 @@
 id: BO-1700g-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Check B requires the manifest's required hook IDs, not merely one hook"

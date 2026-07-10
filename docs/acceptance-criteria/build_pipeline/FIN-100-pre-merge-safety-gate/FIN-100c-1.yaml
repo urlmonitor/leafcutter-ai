@@ -1,4 +1,6 @@
 id: FIN-100c-1
+components:
+  - finalize
 title: "Failures present in baseline are classified as pre-existing"
 level: L2
 component: finalize

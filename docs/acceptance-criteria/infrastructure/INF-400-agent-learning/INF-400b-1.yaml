@@ -1,4 +1,6 @@
 id: INF-400b-1
+components:
+  - infrastructure
 title: "V3 agent templates contain a mandatory knowledge-capture step that fires before exit"
 component: infrastructure
 level: L2

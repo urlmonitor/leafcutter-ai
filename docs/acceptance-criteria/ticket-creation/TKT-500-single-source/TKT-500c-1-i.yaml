@@ -1,4 +1,6 @@
 id: TKT-500c-1-i
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Sequential sign-off writes to the same AC YAML do not corrupt the file"

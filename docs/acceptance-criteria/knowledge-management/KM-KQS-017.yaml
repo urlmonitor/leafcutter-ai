@@ -1,4 +1,6 @@
 id: KM-KQS-017
+components:
+  - knowledge-management
 title: "knowledge_query.py produces at least one node per surface against the real repository"
 component: knowledge-management
 level: L2

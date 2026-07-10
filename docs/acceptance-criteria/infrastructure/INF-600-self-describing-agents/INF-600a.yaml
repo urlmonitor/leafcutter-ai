@@ -1,4 +1,6 @@
 id: INF-600a
+components:
+  - infrastructure
 title: "Every agent template follows a standardized self-description contract"
 component: infrastructure
 level: L1

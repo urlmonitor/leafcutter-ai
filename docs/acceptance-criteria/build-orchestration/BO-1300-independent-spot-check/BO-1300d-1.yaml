@@ -1,4 +1,6 @@
 id: BO-1300d-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "The same three-reviewer spot-check runs automatically as the closing step of a build"

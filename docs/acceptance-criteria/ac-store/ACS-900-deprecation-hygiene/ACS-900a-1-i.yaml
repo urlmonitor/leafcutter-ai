@@ -1,4 +1,6 @@
 id: ACS-900a-1-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A brand-new AC file authored directly in a retired state does not arm the check"

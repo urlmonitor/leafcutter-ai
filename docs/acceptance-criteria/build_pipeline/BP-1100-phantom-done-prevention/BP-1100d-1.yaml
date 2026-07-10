@@ -1,4 +1,6 @@
 id: BP-1100d-1
+components:
+  - build-pipeline
 title: "A pre-commit guard blocks workflow JavaScript that pairs git commit with a non-commit agent"
 component: build-pipeline
 level: L2

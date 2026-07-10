@@ -1,4 +1,6 @@
 id: ACS-300g-2
+components:
+  - ac-store
 title: "Existing component entries are preserved unmodified during backfill"
 component: ac-store
 level: L2

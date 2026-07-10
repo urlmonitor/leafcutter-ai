@@ -1,4 +1,6 @@
 id: BP-1200b-2
+components:
+  - build-pipeline
 title: "Sequence diagram documents the PR-to-test-check signal flow"
 component: build-pipeline
 level: L2

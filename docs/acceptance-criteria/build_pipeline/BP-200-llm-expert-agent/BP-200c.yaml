@@ -1,4 +1,6 @@
 id: BP-200c
+components:
+  - build-pipeline
 title: "The supervisor can dispatch the expert automatically when a prompt file is touched"
 component: build-pipeline
 level: L1

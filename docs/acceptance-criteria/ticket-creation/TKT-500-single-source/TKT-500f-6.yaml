@@ -1,4 +1,6 @@
 id: TKT-500f-6
+components:
+  - ticket-creation
 readiness: approved
 priority: high
 title: "Generated ticket carries Test Requirements when an implementation .py is in scope"

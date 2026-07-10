@@ -1,4 +1,6 @@
 id: BO-1300b
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Get three independent perspectives, not one opinion"

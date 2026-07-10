@@ -1,4 +1,6 @@
 id: TKT-500b-6
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "Sequence diagram: TDD-first dispatch flow"

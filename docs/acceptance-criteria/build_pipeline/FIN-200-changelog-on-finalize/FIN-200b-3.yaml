@@ -1,4 +1,6 @@
 id: FIN-200b-3
+components:
+  - finalize
 title: "Sequence diagram shows the entry committed pre-merge and landing in the merge"
 component: finalize
 level: L2

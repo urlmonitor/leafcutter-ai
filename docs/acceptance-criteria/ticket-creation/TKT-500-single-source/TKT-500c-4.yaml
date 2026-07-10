@@ -1,4 +1,6 @@
 id: TKT-500c-4
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Progress is queryable at individual AC granularity"

@@ -1,4 +1,6 @@
 id: ACS-100h-2
+components:
+  - ac-store
 title: "Split rewires depends_on and covered_by without breaking any reference"
 component: ac-store
 level: L2

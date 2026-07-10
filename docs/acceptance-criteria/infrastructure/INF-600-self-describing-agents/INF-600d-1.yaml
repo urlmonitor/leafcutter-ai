@@ -1,4 +1,6 @@
 id: INF-600d-1
+components:
+  - infrastructure
 title: "spawn_allowlist excludes agents whose capability is performed via a skill rather than delegation"
 component: infrastructure
 level: L2

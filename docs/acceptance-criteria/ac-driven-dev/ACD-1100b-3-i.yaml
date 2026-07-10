@@ -1,4 +1,6 @@
 id: ACD-1100b-3-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Edge case: no agent in the entire registry carries any version suffix"

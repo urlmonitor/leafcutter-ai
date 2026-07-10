@@ -1,4 +1,6 @@
 id: INF-400b-3
+components:
+  - infrastructure
 title: "V3 agent knowledge-capture prompt is domain-appropriate for specification work"
 component: infrastructure
 level: L2

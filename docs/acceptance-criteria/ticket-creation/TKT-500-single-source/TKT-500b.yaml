@@ -1,4 +1,6 @@
 id: TKT-500b
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Tests are written before code, by default"

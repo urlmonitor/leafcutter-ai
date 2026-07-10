@@ -1,4 +1,6 @@
 id: BP-1200a-1
+components:
+  - build-pipeline
 title: "Full test suite passes on a fresh clone using the documented CI test command"
 component: build-pipeline
 level: L2

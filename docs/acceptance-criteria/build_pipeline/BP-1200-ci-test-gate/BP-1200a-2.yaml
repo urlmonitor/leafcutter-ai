@@ -1,4 +1,6 @@
 id: BP-1200a-2
+components:
+  - build-pipeline
 title: "The CI test command is documented as the single authoritative way to run the suite from a clean checkout"
 component: build-pipeline
 level: L2

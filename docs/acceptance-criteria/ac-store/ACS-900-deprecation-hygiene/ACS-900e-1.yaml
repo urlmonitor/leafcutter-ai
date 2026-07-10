@@ -1,4 +1,6 @@
 id: ACS-900e-1
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Detection reuses the audit tool's traceability logic rather than re-implementing it"

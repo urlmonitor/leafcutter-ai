@@ -1,4 +1,6 @@
 id: GE-100h
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Both hooks ship disabled in commit_guardian.json with correct hooks_manifest entries"

@@ -1,4 +1,6 @@
 id: BO-650-2
+components:
+  - build-orchestration
 title: "Architect produces ADRs when a design decision is required"
 component: build-orchestration
 level: L2

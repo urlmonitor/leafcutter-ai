@@ -1,4 +1,6 @@
 id: BP-100g-1-i
+components:
+  - build-pipeline
 title: "Error message for invalid YAML includes the file path in stderr output"
 component: build-pipeline
 level: L3

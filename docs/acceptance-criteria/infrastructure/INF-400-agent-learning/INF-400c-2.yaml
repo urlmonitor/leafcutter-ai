@@ -1,4 +1,6 @@
 id: INF-400c-2
+components:
+  - infrastructure
 title: "A harvester agent reads learning emissions and routes each to the correct knowledge surface"
 component: infrastructure
 level: L2

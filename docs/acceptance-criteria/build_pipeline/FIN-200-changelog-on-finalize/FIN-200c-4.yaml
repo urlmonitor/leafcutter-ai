@@ -1,4 +1,6 @@
 id: FIN-200c-4
+components:
+  - finalize
 title: "State diagram shows the changelog-capture outcomes and their transitions"
 component: finalize
 level: L2

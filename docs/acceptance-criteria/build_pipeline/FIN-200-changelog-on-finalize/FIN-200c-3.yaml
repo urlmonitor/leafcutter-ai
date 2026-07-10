@@ -1,4 +1,6 @@
 id: FIN-200c-3
+components:
+  - finalize
 title: "When configured as required, a capture failure halts before the merge"
 component: finalize
 level: L2

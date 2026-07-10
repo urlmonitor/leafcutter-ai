@@ -1,4 +1,6 @@
 id: INF-600a-2-i
+components:
+  - infrastructure
 title: "Agent with empty inputs array is valid (utility agents spawned without payload)"
 component: infrastructure
 level: L3

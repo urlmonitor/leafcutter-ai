@@ -1,4 +1,6 @@
 id: UXP-100a-1-i
+components:
+  - ux-prototyping
 title: "Empty or missing component library catalog halts prototype assembly with a diagnostic"
 component: ux-prototyping
 level: L3

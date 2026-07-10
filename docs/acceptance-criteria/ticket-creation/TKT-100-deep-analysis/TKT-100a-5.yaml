@@ -1,4 +1,6 @@
 id: TKT-100a-5
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "BA v3 identifies inter-agent data contracts from the AC store"

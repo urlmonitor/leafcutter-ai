@@ -1,4 +1,6 @@
 id: ACS-100b-3
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "L1 IDs extend the L0 ID with a lowercase letter suffix"

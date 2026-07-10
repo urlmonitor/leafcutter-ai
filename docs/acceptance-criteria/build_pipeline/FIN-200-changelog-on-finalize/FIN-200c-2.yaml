@@ -1,4 +1,6 @@
 id: FIN-200c-2
+components:
+  - finalize
 title: "A missing entry is recorded and reported — never silently dropped"
 component: finalize
 level: L2

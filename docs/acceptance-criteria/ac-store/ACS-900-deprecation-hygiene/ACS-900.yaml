@@ -1,4 +1,6 @@
 id: ACS-900
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "When you retire a requirement, the code it claimed can't quietly stay behind"

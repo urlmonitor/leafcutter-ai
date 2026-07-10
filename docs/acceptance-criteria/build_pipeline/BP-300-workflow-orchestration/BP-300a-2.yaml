@@ -1,4 +1,6 @@
 id: BP-300a-2
+components:
+  - build-pipeline
 title: "Synthesis proceeds without prompt when all investigators agree with high confidence"
 component: build-pipeline
 level: L2

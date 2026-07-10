@@ -1,4 +1,6 @@
 id: ACS-100a
+components:
+  - ac-store
 readiness: reviewed
 priority: medium
 title: "Every required field is validated individually at commit time"

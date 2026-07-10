@@ -1,4 +1,6 @@
 id: ACD-1000b-3
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "/it-po slash command invokes IT PO v3 for technical enrichment"

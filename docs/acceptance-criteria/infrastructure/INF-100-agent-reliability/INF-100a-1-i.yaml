@@ -1,4 +1,6 @@
 id: INF-100a-1-i
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Agent continues with template-only behavior when PROJECT_CONTEXT.md is absent"

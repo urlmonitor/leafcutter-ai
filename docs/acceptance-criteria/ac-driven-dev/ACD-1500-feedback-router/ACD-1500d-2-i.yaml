@@ -1,4 +1,6 @@
 id: ACD-1500d-2-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Cap reached mid-run parks the remainder and ends the run cleanly"

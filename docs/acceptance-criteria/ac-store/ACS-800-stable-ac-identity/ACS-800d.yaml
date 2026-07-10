@@ -1,4 +1,6 @@
 id: ACS-800d
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Everything you already wrote keeps working"

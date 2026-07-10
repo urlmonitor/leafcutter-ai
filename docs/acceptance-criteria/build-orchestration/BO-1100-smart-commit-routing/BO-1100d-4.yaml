@@ -1,4 +1,6 @@
 id: BO-1100d-4
+components:
+  - build-orchestration
 title: "Specialist examines recent commit history for structurally similar commits"
 component: build-orchestration
 level: L2

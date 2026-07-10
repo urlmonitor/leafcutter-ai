@@ -1,4 +1,6 @@
 id: BP-800c
+components:
+  - build-pipeline
 title: "Best practices grow over time"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: SD-100d
+components:
+  - stakeholder-delivery
 readiness: draft
 priority: medium
 title: "Send the same value as a tailored update written for a specific audience"

@@ -1,4 +1,6 @@
 id: FIN-100g-1
+components:
+  - finalize
 title: "Target branch/worktree resolved from input even when invoked outside the worktree"
 level: L2
 component: finalize

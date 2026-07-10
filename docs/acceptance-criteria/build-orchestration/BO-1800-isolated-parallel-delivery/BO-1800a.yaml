@@ -1,4 +1,6 @@
 id: BO-1800a
+components:
+  - build-orchestration
 title: "Every parallel build works in its own isolated copy"
 component: build-orchestration
 level: L1

@@ -1,4 +1,6 @@
 id: INF-1100c-1
+components:
+  - infrastructure
 title: "Compiled agent instructions contain the resolved work-location path"
 component: infrastructure
 level: L2

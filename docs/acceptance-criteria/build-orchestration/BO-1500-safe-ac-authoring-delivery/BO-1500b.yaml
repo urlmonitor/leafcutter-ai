@@ -1,4 +1,6 @@
 id: BO-1500b
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "An interruption mid-authoring never loses your work"

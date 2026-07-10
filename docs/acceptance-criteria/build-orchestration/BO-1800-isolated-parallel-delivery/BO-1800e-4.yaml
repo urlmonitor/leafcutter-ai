@@ -1,4 +1,6 @@
 id: BO-1800e-4
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Reference doc for the no-shared-local-main model and read-only main sync"

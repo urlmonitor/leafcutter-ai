@@ -1,0 +1,49 @@
+id: KM-KGS-100e-6-i
+readiness: approved
+priority: high
+title: "A component with criteria but no delivering code yet still returns a non-empty answer"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given a component whose criteria exist in the knowledge map but none of those
+    criteria yet declare any implementing source files or covering tests
+  When that component is queried through the knowledge map
+  Then the result still includes the component's criteria
+  And the result for that component is not empty
+  And the absence of implementing or covering links produces no error
+depends_on:
+  - KM-KGS-100e-6
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A component whose criteria declare empty implemented_by/covered_by lists MUST still return those criteria; empty edge sets are handled gracefully and produce no exception."
+  - "Cover with a unit test fixture: criteria present, zero source/test edges → non-empty result, no error raised. Tag the test with a # covers: comment."
+  - "Follow the project error-handling policy — the absence of downstream links is a normal state, not an error condition."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-6
+  contract: "The component query path over the built knowledge map; this AC defines its behavior for a component whose criteria have no implementing/covering edges"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - scripts/knowledge_query.py
+  - scripts/ac_store/backfill_components.py
+change_target: code
+risk_surface: internal

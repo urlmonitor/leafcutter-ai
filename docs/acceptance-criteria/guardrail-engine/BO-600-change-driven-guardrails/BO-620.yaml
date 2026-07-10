@@ -1,4 +1,6 @@
 id: BO-620
+components:
+  - build-orchestration
 title: "Each combination of target and risk surface maps to a known set of guardrails"
 component: build-orchestration
 level: L1

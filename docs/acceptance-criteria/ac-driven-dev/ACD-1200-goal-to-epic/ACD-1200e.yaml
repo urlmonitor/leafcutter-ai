@@ -1,4 +1,6 @@
 id: ACD-1200e
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "The existing command just gets smarter"

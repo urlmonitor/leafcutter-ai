@@ -1,4 +1,6 @@
 id: ACD-900b
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "SKILL.md documents the AC-aware prioritization workflow and pick-next script"

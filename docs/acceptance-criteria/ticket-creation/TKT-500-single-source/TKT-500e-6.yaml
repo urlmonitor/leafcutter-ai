@@ -1,4 +1,6 @@
 id: TKT-500e-6
+components:
+  - ticket-creation
 readiness: approved
 priority: low
 title: "Component diagram: agent lifecycle within and across goals"

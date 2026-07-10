@@ -1,4 +1,6 @@
 id: TKT-012
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Hook exits 0 silently when AC store directory does not exist"

@@ -1,4 +1,6 @@
 id: BP-1000d-1
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A source script with no shipped template counterpart is never flagged as a parity failure"

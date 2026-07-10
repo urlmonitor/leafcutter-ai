@@ -1,4 +1,6 @@
 id: BO-1700b-4
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Deleting the canary from the manifest cannot turn Check D into a silent pass"

@@ -1,4 +1,6 @@
 id: BP-900e-3-i
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "Allowlisted external scripts are exempt from the registry-completeness check"

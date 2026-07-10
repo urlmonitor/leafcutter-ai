@@ -1,4 +1,6 @@
 id: BO-1800b
+components:
+  - build-orchestration
 title: "Your main branch can only change through the proper review"
 component: build-orchestration
 level: L1

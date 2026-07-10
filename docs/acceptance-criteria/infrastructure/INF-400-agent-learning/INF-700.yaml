@@ -1,4 +1,6 @@
 id: INF-700
+components:
+  - infrastructure
 title: "Raw agent emissions are routed, recorded, and available for analysis"
 component: infrastructure
 level: L0

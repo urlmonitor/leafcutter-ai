@@ -1,4 +1,6 @@
 id: TKT-200c-3
+components:
+  - ticket-creation
 title: "Review package includes relevant existing documentation alongside new artifacts"
 component: ticket-creation
 level: L2

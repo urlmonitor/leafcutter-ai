@@ -1,4 +1,6 @@
 id: BP-700a-4
+components:
+  - build-pipeline
 title: "How-to guide documents design integration for adopters"
 component: build-pipeline
 level: L2

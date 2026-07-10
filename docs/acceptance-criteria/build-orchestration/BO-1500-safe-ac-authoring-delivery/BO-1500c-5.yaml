@@ -1,4 +1,6 @@
 id: BO-1500c-5
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: Sequence diagram of the approval-to-PR delivery flow

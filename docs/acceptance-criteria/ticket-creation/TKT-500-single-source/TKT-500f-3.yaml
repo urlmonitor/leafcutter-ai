@@ -1,4 +1,6 @@
 id: TKT-500f-3
+components:
+  - ticket-creation
 readiness: draft
 priority: medium
 title: "Old and new pipelines produce equivalent outcomes on the same AC"

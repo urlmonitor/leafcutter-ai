@@ -1,4 +1,6 @@
 id: ACD-1000
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Goals persist and grow incrementally while shipping happens in named batches that close when done"

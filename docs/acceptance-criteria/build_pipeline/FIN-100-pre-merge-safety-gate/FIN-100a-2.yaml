@@ -1,4 +1,6 @@
 id: FIN-100a-2
+components:
+  - finalize
 title: "Baseline capture degrades gracefully on failure"
 level: L2
 component: finalize

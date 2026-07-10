@@ -1,4 +1,6 @@
 id: GE-111a-4
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Sequence diagram: developer to hook to AC store to commit decision"

@@ -1,4 +1,6 @@
 id: ACD-600a-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "mark_ac_done marks the source AC done given a ticket path with source_ac"

@@ -1,4 +1,6 @@
 id: UXP-100a
+components:
+  - ux-prototyping
 readiness: approved
 priority: medium
 title: "Get a prototype that reuses what you already have"

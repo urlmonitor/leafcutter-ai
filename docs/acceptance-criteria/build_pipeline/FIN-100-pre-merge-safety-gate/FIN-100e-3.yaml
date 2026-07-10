@@ -1,4 +1,6 @@
 id: FIN-100e-3
+components:
+  - finalize
 title: "No tickets are created when all tests pass (triageReport is null)"
 level: L3
 component: finalize

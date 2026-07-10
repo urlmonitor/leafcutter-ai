@@ -1,4 +1,6 @@
 id: BP-1100d-1-i
+components:
+  - build-pipeline
 title: "A git commit string in a documentation file does not trip the workflow commit-delegation guard"
 component: build-pipeline
 level: L3

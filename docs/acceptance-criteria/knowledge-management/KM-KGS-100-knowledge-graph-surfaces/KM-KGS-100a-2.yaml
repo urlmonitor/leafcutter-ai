@@ -1,4 +1,6 @@
 id: KM-KGS-100a-2
+components:
+  - knowledge-management
 readiness: approved
 priority: high
 title: "Each acceptance-criterion file becomes one node in the knowledge map"

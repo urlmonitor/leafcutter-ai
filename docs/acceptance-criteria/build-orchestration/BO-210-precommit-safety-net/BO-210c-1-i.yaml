@@ -1,4 +1,6 @@
 id: BO-210c-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "The re-dispatched coder runs at depth 2 and spawns no sub-agents"

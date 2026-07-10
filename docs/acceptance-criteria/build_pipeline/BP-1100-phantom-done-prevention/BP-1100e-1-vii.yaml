@@ -1,4 +1,6 @@
 id: BP-1100e-1-vii
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A done ticket is detected regardless of status-value quoting; a quoted status is never silently skipped"

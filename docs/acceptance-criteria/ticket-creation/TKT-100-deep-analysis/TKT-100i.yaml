@@ -1,4 +1,6 @@
 id: TKT-100i
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "The analyst works with incomplete project setup without crashing or guessing"

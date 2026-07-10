@@ -1,4 +1,6 @@
 id: BP-1000b-4
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "Sequence diagram of the parity gate firing within the finalize-feature merge flow"

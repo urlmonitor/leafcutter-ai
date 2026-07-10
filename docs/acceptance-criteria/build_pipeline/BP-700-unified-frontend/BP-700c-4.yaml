@@ -1,4 +1,6 @@
 id: BP-700c-4
+components:
+  - build-pipeline
 title: "Agent registry entry preserves all existing selection criteria and metadata"
 component: build-pipeline
 level: L2

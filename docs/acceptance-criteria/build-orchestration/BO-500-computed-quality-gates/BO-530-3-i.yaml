@@ -1,4 +1,6 @@
 id: BO-530-3-i
+components:
+  - build-orchestration
 title: "Retry cap on test-failure rework loop prevents infinite cycling"
 component: build-orchestration
 level: L3

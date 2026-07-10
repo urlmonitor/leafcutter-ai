@@ -1,4 +1,6 @@
 id: ACD-900a-4
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Empty ready list produces an informational message and exits successfully"

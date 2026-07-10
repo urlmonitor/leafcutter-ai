@@ -1,0 +1,65 @@
+id: KM-KGS-100e-3
+readiness: approved
+priority: high
+title: "Registry-declared items (agents, skills, roadmap) must declare a component too"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given knowledge-map surfaces that are declared through registries — the agent
+    registry, the skill registry, and the roadmap — each of which declares a
+    component-membership relationship, and one surface (the glossary) that declares
+    no component-membership relationship
+  When an entry in a membership-declaring surface is added or changed while its
+    component membership is absent or empty
+  Then that change is flagged and blocked with a message naming the entry and
+    stating that a component membership must be declared
+  And an entry in a membership-declaring surface whose component membership names a
+    component present in the registry passes
+  And a change to the glossary surface, which declares no component-membership
+    relationship, is not subject to this rule
+depends_on:
+  - KM-KGS-100e
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: config/agent_registry.json
+    relationship: context
+    status: exists
+  - path: config/skill_registry.json
+    relationship: context
+    status: exists
+  - path: docs/roadmap.json
+    relationship: context
+    status: exists
+  - path: docs/glossary.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Enforce a non-empty, registry-valid `components` field on entries in membership-declaring registry surfaces — config/agent_registry.json (each agents[] entry), config/skill_registry.json (each skill), and docs/roadmap.json — reusing the same predicate as KM-KGS-100e-1."
+  - "Do NOT hard-code the exempt surface by name: glossary is exempt because its config/paths.json edge_fields is the empty list [], not because it is 'the glossary'. A future surface with empty edge_fields must be exempt automatically, and any surface that later declares `components` in its edge_fields must become subject to the rule with no code change. Drive the membership-declaring set and the field name entirely from paths.json."
+  - "Enforce at commit time via a commit_guardian hook scanning the staged registry/roadmap files; config/*.json is edited-and-round-tripped by build.py, so treat it as python-coder work and keep the packaged template source (templates/scripts/commit_guardian/) in parity with the deployed hook per ADR-001."
+  - "Hard block naming the offending entry and the missing-membership reason; a registry-valid membership passes. Follow the project error-handling policy; fail-open on internal error, hard-block on real violation."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The shared non-empty-registry-valid-`components`-list validation predicate, applied here to agent/skill/roadmap registry entries"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_check_surface_components_e3.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_surface_components_e3.py
+change_target: code
+risk_surface: contract_boundary

@@ -1,4 +1,6 @@
 id: ACD-900a-4-i
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Empty ready list with --json flag returns a valid JSON object with an empty top array"

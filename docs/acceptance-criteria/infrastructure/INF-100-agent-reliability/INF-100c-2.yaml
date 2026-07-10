@@ -1,4 +1,6 @@
 id: INF-100c-2
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "Config resolution works from the source repo location"

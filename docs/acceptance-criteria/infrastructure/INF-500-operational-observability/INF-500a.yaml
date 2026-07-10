@@ -1,4 +1,6 @@
 id: INF-500a
+components:
+  - infrastructure
 title: "Retrospective facts are accurate even after the epic folder has been archived"
 component: infrastructure
 level: L1

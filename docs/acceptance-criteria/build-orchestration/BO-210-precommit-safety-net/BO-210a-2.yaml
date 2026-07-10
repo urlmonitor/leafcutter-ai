@@ -1,4 +1,6 @@
 id: BO-210a-2
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "A blocking_hook_ids array is the single authority on which hooks gate a commit"

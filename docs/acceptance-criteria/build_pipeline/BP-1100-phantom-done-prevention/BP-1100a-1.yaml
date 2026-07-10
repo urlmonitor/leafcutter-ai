@@ -1,4 +1,6 @@
 id: BP-1100a-1
+components:
+  - build-pipeline
 title: "Refinement files_touched lens flags a behavior ticket missing its executable target"
 component: build-pipeline
 level: L2

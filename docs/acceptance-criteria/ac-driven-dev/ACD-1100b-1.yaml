@@ -1,4 +1,6 @@
 id: ACD-1100b-1
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "V3 agent template files are renamed to canonical names"

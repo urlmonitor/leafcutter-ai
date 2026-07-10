@@ -1,4 +1,6 @@
 id: TQ-100d-1-iii
+components:
+  - testing-quality
 title: "An allowlist entry missing its ticket reference or expiry date is rejected"
 component: testing-quality
 level: L3

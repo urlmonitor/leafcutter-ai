@@ -1,4 +1,6 @@
 id: ACS-100h-7b
+components:
+  - ac-store
 title: "/create-epic runs the AC-tree-limit check before stub generation and blocks on violation"
 component: ac-store
 level: L2

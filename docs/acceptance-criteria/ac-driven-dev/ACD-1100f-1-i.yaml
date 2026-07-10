@@ -1,4 +1,6 @@
 id: ACD-1100f-1-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Edge case: origin_agent accepts any historical agent name without allowlist"

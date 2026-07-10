@@ -1,0 +1,62 @@
+id: KM-KGS-100e-8
+readiness: approved
+priority: high
+title: "The authoring-agent templates instruct emitting a component on every criterion"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given the product-owner authoring-agent template, the business-analyst
+    authoring-agent template, and the IT-product-owner authoring-agent template
+  When each template's AC-authoring instructions are read
+  Then each template instructs the agent to emit a non-empty component-membership
+    list on every acceptance criterion it produces or enriches
+  And each template names the same authoritative component-membership field that the
+    per-criterion validation rule enforces, so template prose and the enforced check
+    stay in parity
+  And a template that omits the instruction to emit a component-membership list is
+    reported as non-conforming
+depends_on:
+  - KM-KGS-100e
+  - KM-KGS-100e-1
+doc_links:
+  - path: templates/agents/product-owner.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Edit the three authoring-agent templates (templates/agents/product-owner.md, templates/agents/business-analyst.md, templates/agents/it-po.md) so each instructs the agent to emit a non-empty, registry-valid `components` LIST on every AC it authors or enriches. This is the emission counterpart to the KM-KGS-100e-4 audit (which only reports violations) and the KM-KGS-100e-1 gate (which only blocks at commit)."
+  - "SPEC PARITY (a markdown template cannot import the Python predicate): state the required-field rule once normatively in docs/reference/ac-schema.md, and have the template prose reference/mirror it rather than restating divergent wording. The field the templates name MUST be the LIST `components` that the graph's component_membership edge reads (config/paths.json acs surface edge_fields) — not the scalar `component`."
+  - "ADR-001 template/deployed parity: templates/agents/*.md are the package source; verify the build.py round-trip so the deployed agent definitions carry the same instruction. Never edit only the deployed side."
+  - "Conformance check: the 'reported as non-conforming' clause can be satisfied by a lightweight template-prose lint (grep-style assertion in a test) confirming each of the three templates contains the components-emission instruction; keep it advisory unless wired into an existing template-audit hook."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The rule that a non-empty, registry-valid components list is required on every acceptance criterion; this AC makes the authoring-agent templates instruct emitting it at authoring time"
+origin_agent: it-po-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/agents/product-owner.md
+  - templates/agents/business-analyst.md
+  - templates/agents/it-po.md
+change_target: code
+risk_surface: contract_boundary

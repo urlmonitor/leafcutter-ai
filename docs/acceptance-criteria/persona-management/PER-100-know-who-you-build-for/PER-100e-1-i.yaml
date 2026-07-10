@@ -1,4 +1,6 @@
 id: PER-100e-1-i
+components:
+  - persona-management
 title: "Persona expert refuses to create a persona with an ambiguous name"
 component: persona-management
 level: L3

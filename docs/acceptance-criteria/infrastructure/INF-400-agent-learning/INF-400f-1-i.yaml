@@ -1,4 +1,6 @@
 id: INF-400f-1-i
+components:
+  - infrastructure
 title: "If the PO captures no learnings, the BA still runs correctly with baseline context"
 component: infrastructure
 level: L3

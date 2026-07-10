@@ -1,4 +1,6 @@
 id: GE-111a-3
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "How-to guide: reconciling a blocked commit when a refactor breaks an AC link"

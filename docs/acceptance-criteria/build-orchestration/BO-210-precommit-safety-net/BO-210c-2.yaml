@@ -1,4 +1,6 @@
 id: BO-210c-2
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Mechanical-tier hooks keep the generic light-model route and the commit retries exactly once"

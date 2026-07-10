@@ -1,4 +1,6 @@
 id: TKT-500d-4
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Cross-goal isolation is enforced via separate branches"

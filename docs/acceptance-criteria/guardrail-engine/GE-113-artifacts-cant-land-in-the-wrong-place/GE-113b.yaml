@@ -1,4 +1,6 @@
 id: GE-113b
+components:
+  - guardrail-engine
 title: "The structural-change override can't excuse a misplaced artifact"
 component: guardrail-engine
 level: L1

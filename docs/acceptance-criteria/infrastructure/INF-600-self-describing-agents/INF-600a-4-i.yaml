@@ -1,4 +1,6 @@
 id: INF-600a-4-i
+components:
+  - infrastructure
 title: "Build detects Mustache variables in template body that are not declared in config_keys"
 component: infrastructure
 level: L3

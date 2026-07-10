@@ -1,4 +1,6 @@
 id: BO-510-1
+components:
+  - build-orchestration
 title: "Agent registry entries carry a produces trait field from a defined enum"
 component: build-orchestration
 level: L2

@@ -1,4 +1,6 @@
 id: ACS-500f
+components:
+  - ac-store
 title: "AC pattern enforcement is mechanically guaranteed, not prompt-only"
 component: ac-store
 level: L1

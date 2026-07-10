@@ -1,4 +1,6 @@
 id: ACS-500f-2
+components:
+  - ac-store
 title: "Pattern-first inventory recognizes a pattern AC by the same definition the hook uses"
 component: ac-store
 level: L2

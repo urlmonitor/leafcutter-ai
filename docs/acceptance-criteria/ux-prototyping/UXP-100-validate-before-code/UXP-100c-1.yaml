@@ -1,4 +1,6 @@
 id: UXP-100c-1
+components:
+  - ux-prototyping
 title: "Prototype is presented to the user with three explicit decision options"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: UXP-100d-1
+components:
+  - ux-prototyping
 title: "Approved prototype produces a structured handoff artifact with layout and flow"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: BP-700d
+components:
+  - build-pipeline
 title: "Existing projects upgrade without breaking"
 component: build-pipeline
 level: L1

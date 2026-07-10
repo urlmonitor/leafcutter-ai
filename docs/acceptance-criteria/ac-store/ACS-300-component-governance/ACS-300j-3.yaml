@@ -1,4 +1,6 @@
 id: ACS-300j-3
+components:
+  - ac-store
 title: "Known minimum dependency set is captured in the registry"
 component: ac-store
 level: L2

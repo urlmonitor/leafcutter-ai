@@ -1,4 +1,6 @@
 id: INF-400d
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Each domain's context files tell future agents what matters there"

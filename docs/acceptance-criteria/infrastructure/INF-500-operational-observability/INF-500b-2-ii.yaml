@@ -1,4 +1,6 @@
 id: INF-500b-2-ii
+components:
+  - infrastructure
 title: "JSON format output contains required keys"
 component: infrastructure
 level: L3

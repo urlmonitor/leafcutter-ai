@@ -1,4 +1,6 @@
 id: BO-1200c
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "Promoting from dev to prod is a deliberate act with full traceability"

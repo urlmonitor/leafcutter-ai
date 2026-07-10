@@ -1,4 +1,6 @@
 id: INF-300
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Agents put knowledge in the right place — never the wrong surface"

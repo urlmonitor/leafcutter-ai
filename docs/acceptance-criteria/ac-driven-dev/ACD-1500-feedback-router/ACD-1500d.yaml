@@ -1,4 +1,6 @@
 id: ACD-1500d
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "The platform only auto-builds what fits the plan"

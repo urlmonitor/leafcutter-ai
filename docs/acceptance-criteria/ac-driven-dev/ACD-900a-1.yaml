@@ -1,4 +1,6 @@
 id: ACD-900a-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Default invocation outputs the single highest-priority item with all required fields"

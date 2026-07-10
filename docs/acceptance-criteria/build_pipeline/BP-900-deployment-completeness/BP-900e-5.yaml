@@ -1,4 +1,6 @@
 id: BP-900e-5
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "The registry-completeness check fires at the finalize merge gate, not the build preflight"

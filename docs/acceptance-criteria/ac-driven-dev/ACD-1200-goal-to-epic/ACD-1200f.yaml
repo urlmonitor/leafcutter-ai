@@ -1,4 +1,6 @@
 id: ACD-1200f
+components:
+  - ac-driven-dev
 readiness: draft
 priority: medium
 title: "Find exactly the right work hidden under a goal"

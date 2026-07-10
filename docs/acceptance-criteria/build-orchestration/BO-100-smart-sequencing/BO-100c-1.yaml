@@ -1,4 +1,6 @@
 id: BO-100c-1
+components:
+  - build-orchestration
 readiness: reviewed
 priority: medium
 title: "Disjoint files_touched sets allow parallel dispatch in same batch"

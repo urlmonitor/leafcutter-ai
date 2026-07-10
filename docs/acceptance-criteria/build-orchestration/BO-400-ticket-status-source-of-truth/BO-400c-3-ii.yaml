@@ -1,4 +1,6 @@
 id: BO-400c-3-ii
+components:
+  - build-orchestration
 title: "Branch commit moving a ticket into tickets/99_done/ is blocked (finalize carve-out)"
 component: build-orchestration
 level: L3

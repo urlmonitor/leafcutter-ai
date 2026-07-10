@@ -1,4 +1,6 @@
 id: BO-100a-3
+components:
+  - build-orchestration
 readiness: reviewed
 priority: medium
 title: "Diamond dependency resolves without duplicate dispatch"

@@ -1,4 +1,6 @@
 id: INF-400g-3
+components:
+  - infrastructure
 title: "emit_event.py creates missing log directory automatically"
 component: infrastructure
 level: L2

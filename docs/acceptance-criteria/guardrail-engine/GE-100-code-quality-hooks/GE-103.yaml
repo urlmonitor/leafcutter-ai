@@ -1,4 +1,6 @@
 id: GE-103
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Every commit_guardian hook module imports cleanly so doc-frontmatter enforcement stays live"

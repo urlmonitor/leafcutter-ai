@@ -1,4 +1,6 @@
 id: KM-KQS-040
+components:
+  - knowledge-management
 readiness: draft
 priority: medium
 title: "Agents handle knowledge-query failures and format results consistently"

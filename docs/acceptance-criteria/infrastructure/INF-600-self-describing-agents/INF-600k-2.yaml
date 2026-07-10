@@ -1,4 +1,6 @@
 id: INF-600k-2
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "A direct user trigger in spawned_by passes registry validation as an external caller"

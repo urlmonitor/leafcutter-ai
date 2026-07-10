@@ -1,4 +1,6 @@
 id: TKT-500f-6-iii-b
+components:
+  - ticket-creation
 readiness: approved
 priority: high
 title: "ticket-supervisor halts (not silently skips) when Test Requirements is absent but an implementation .py is in scope"

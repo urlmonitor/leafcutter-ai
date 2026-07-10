@@ -1,4 +1,6 @@
 id: FIN-100c-3
+components:
+  - finalize
 title: "Null baseline causes all failures to be treated as regressions"
 level: L3
 component: finalize

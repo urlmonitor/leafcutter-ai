@@ -1,4 +1,6 @@
 id: TQ-100a
+components:
+  - testing-quality
 title: "One broken test can never abort the whole run"
 component: testing-quality
 level: L1

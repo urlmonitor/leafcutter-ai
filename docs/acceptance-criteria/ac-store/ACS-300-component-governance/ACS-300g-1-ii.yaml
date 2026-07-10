@@ -1,4 +1,6 @@
 id: ACS-300g-1-ii
+components:
+  - ac-store
 title: "Entry with detail_ref pointing to a non-existent file is rejected"
 component: ac-store
 level: L3

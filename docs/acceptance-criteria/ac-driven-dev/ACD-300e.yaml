@@ -1,4 +1,6 @@
 id: ACD-300e
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Authoring agents query the knowledge graph before making AC decisions"

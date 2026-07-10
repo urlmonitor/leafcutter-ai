@@ -1,4 +1,6 @@
 id: "GE-114-3"
+components:
+  - guardrail-engine
 title: "The ac_limit_override escape hatch and the structured JSON payload work for the v1-flat path"
 component: guardrail-engine
 status: active

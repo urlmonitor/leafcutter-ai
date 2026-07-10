@@ -1,4 +1,6 @@
 id: ACD-1100d-1
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "product-owner-agent and test-planner are fully removed"

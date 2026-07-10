@@ -1,0 +1,62 @@
+id: KM-KGS-100e-2
+readiness: approved
+priority: high
+title: "A ticket or a doc that joins the map must declare its component to be committed"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given a ticket file and a documentation file, each carrying frontmatter and each
+    belonging to a knowledge-map surface that declares a component-membership
+    relationship
+  When each file is validated at commit time while its frontmatter declares no
+    component membership
+  Then the ticket file is rejected and its commit is blocked
+  And the documentation file is rejected and its commit is blocked
+  And each rejection message names the file and states that a component membership
+    must be declared
+  And each of the same files passes validation once it declares
+    components: ["knowledge-management"]
+depends_on:
+  - KM-KGS-100e
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: context
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Enforce a non-empty, registry-valid `components` frontmatter list on ticket files (tickets/) and documentation files (docs/), reusing the SAME predicate as KM-KGS-100e-1 rather than a divergent per-surface rule."
+  - "Which surfaces are subject to the rule is DATA-DRIVEN from config/paths.json surface edge_fields: tickets and docs both declare `components`, so they are membership-declaring. Do not hard-code the surface list — a surface stops/starts being subject to the rule by changing its paths.json edge_fields, with no code change."
+  - "Extend the existing frontmatter guardian hooks (the ticket frontmatter guard and the doc-frontmatter check under scripts/commit_guardian/) rather than adding a parallel hook; keep deployed/template parity per ADR-001 via build.py."
+  - "Hard block naming the file and the missing-membership reason; each file passes once it declares components: [<registry-valid>]. Follow the project error-handling policy; fail-open on internal error, hard-block on real violation."
+  - "Respect the known worktree path-resolution behavior of the frontmatter hooks (they resolve project root via the .leafcutter symlink target) so the new check does not falsely fail or silently skip in worktree contexts."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The shared non-empty-registry-valid-`components`-list validation predicate, applied here to ticket and doc frontmatter"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_check_surface_components_e2.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_surface_components_e2.py
+change_target: code
+risk_surface: contract_boundary

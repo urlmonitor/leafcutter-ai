@@ -1,0 +1,59 @@
+id: KM-KGS-100e-1-ii
+readiness: approved
+priority: high
+title: "A component name that is not a real component is rejected, not silently accepted"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given an acceptance-criterion file whose components field is ["not-a-real-component"],
+    a name that does not appear in the project's component registry
+  When the file is validated at commit time
+  Then the file is rejected and its commit is blocked
+  And the rejection message names the file and the unrecognized component value
+  And an otherwise identical file whose components field is ["knowledge-management"],
+    a name present in the registry, passes validation
+depends_on:
+  - KM-KGS-100e-1
+doc_links:
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Validate each `components` value against the project component registry and hard-block on an unrecognized value, naming the file and the offending value; a registry-present value passes."
+  - "Resolve the registry ambiguity before implementing (see caveat): AC component names are documented against docs/acceptance-criteria/index.yaml component ids in ac-schema.md, while ADR-007 and docs/components.json describe a components.json registry. The validator MUST check against the SAME registry that the knowledge graph treats as real component hubs for the component_membership edge, so a value that passes validation always resolves to a real hub node (no phantom targets) and vice-versa. Confirm which of index.yaml / components.json is that authoritative set and validate against it."
+  - "Same hook/parity constraints as KM-KGS-100e-1: implement in the shared predicate across the deployed hook and the templates/scripts/commit_guardian/ source, verified via build.py."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-1
+  contract: "The commit-time validation predicate that requires a non-empty components list on every acceptance criterion; this AC adds the registry-membership check on each list value"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_components_enforcement.py
+implemented_by:
+  - scripts/ac_store/_ac_components.py
+  - scripts/ac_store/validate_ac_schema.py
+  - config/ac_store_schema.json
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+change_target: code
+risk_surface: contract_boundary

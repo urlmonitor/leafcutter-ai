@@ -1,4 +1,6 @@
 id: BO-1600d-3-iii
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Recovery refuses to run on a shallow or bare clone"

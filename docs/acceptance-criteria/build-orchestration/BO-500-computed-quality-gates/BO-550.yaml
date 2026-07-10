@@ -1,4 +1,6 @@
 id: BO-550
+components:
+  - build-orchestration
 title: "Unusual testing needs are expressed as constraints, not agent assignments"
 component: build-orchestration
 level: L1

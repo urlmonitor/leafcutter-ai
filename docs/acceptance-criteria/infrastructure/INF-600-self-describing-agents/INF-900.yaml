@@ -1,4 +1,6 @@
 id: INF-900
+components:
+  - infrastructure
 title: "Find any agent's full profile in seconds"
 component: infrastructure
 level: L0

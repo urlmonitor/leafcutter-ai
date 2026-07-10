@@ -1,4 +1,6 @@
 id: BP-800b-3
+components:
+  - build-pipeline
 title: "Technology with no best-practice file produces a minimal specialist with a warning"
 component: build-pipeline
 level: L2

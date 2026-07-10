@@ -1,4 +1,6 @@
 id: INF-400a-4
+components:
+  - infrastructure
 title: "First run on a component with no prior context produces normal-quality output"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: BP-400b
+components:
+  - build-pipeline
 title: "Retrospectives produce accurate timelines even after files move"
 component: build-pipeline
 level: L1

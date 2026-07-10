@@ -1,4 +1,6 @@
 id: BO-1700e
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Works everywhere: the project building itself, or installed inside another project"

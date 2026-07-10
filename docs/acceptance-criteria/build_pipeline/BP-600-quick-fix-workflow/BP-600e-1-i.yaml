@@ -1,4 +1,6 @@
 id: BP-600e-1-i
+components:
+  - build-pipeline
 title: "Quick-fix workflow counts only intentional source changes, not auto-formatted files"
 component: build-pipeline
 level: L3

@@ -1,4 +1,6 @@
 id: BO-200a-2
+components:
+  - build-orchestration
 title: "Work envelope includes sign-off records from completed phase agents"
 component: build-orchestration
 level: L2

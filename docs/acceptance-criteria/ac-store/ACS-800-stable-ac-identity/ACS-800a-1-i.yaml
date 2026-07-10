@@ -1,4 +1,6 @@
 id: ACS-800a-1-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Two requirements created concurrently never receive the same UID"

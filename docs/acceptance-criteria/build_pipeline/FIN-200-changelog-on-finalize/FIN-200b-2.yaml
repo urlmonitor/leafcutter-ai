@@ -1,4 +1,6 @@
 id: FIN-200b-2
+components:
+  - finalize
 title: "The committed entry reaches main in the same merge as the feature commits"
 component: finalize
 level: L2

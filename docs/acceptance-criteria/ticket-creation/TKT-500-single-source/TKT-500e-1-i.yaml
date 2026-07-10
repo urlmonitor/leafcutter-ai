@@ -1,4 +1,6 @@
 id: TKT-500e-1-i
+components:
+  - ticket-creation
 readiness: approved
 priority: medium
 title: "Agent crash mid-goal results in respawn with prior AC summaries injected"

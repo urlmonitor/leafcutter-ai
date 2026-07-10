@@ -1,4 +1,6 @@
 id: INF-600f
+components:
+  - infrastructure
 title: "New contributors, operators, and peer agents all find what they need"
 component: infrastructure
 level: L1

@@ -1,4 +1,6 @@
 id: BO-1100b
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Unrelated changes in the same commit are flagged before they land"

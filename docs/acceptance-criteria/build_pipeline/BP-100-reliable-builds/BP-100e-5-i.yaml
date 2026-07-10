@@ -1,4 +1,6 @@
 id: BP-100e-5-i
+components:
+  - build-pipeline
 title: "Pre-commit hook accepts comment headings with valid YYYY-MM-DD HH:MM timestamps"
 component: build-pipeline
 level: L3

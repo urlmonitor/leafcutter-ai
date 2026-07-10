@@ -1,4 +1,6 @@
 id: INF-1100a-2
+components:
+  - infrastructure
 title: "Test location mirrors the source subtree under the configured test root"
 component: infrastructure
 level: L2

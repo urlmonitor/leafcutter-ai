@@ -1,4 +1,6 @@
 id: PER-100a-1
+components:
+  - persona-management
 title: "Persona directory contains a structured YAML definition file"
 component: persona-management
 level: L2

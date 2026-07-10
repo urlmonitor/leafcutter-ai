@@ -1,4 +1,6 @@
 id: ACS-400d
+components:
+  - ac-store
 title: "Governance rules travel with the package into every project"
 component: ac-store
 level: L1

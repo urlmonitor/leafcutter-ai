@@ -1,4 +1,6 @@
 id: ACS-500a-1
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "A pattern AC defines shared behavior with parameterized slots"

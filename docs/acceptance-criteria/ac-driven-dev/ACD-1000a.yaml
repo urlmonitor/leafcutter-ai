@@ -1,4 +1,6 @@
 id: ACD-1000a
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "A shared epic name groups ACs into a transient shipping batch"

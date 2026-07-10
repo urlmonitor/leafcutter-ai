@@ -1,4 +1,6 @@
 id: BP-900g-2-i
+components:
+  - build-pipeline
 title: "A command referencing a Skill by name that is actually deployed passes — no false positive"
 component: build-pipeline
 level: L3

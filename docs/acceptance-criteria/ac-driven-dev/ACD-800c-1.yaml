@@ -1,4 +1,6 @@
 id: ACD-800c-1
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "--apply writes implemented_by for high-confidence matches only"

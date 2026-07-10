@@ -1,4 +1,6 @@
 id: BO-1300a-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "On-demand spot-check command targets a named finished feature"

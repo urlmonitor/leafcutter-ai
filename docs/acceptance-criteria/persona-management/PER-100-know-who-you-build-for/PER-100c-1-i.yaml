@@ -1,4 +1,6 @@
 id: PER-100c-1-i
+components:
+  - persona-management
 title: "Query for a persona with no matching ACs returns an empty result"
 component: persona-management
 level: L3

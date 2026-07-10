@@ -1,4 +1,6 @@
 id: FIN-200a-3
+components:
+  - finalize
 title: "No entry is generated only when there is genuinely nothing to log"
 component: finalize
 level: L2

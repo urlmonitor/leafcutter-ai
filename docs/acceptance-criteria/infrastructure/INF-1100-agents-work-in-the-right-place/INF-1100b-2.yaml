@@ -1,4 +1,6 @@
 id: INF-1100b-2
+components:
+  - infrastructure
 title: "The config-vs-hand-off contradiction is surfaced, not silently corrected"
 component: infrastructure
 level: L2

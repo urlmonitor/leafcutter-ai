@@ -1,4 +1,6 @@
 id: BO-1200e
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "You always know what is in dev that has not reached prod yet"

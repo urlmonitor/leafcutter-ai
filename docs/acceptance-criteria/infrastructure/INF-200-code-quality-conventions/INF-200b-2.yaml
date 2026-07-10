@@ -1,4 +1,6 @@
 id: INF-200b-2
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "[Phase 2] Hook generator produces project-specific pre-commit template"

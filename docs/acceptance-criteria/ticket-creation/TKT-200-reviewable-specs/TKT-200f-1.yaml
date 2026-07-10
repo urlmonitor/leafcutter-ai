@@ -1,4 +1,6 @@
 id: TKT-200f-1
+components:
+  - ticket-creation
 title: "A premise true only on a dirty local tree is rejected against the clean tree"
 component: ticket-creation
 level: L2

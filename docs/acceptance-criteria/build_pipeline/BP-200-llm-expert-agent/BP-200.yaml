@@ -1,4 +1,6 @@
 id: BP-200
+components:
+  - build-pipeline
 title: "Agent authors get a specialist peer that catches prompt mistakes before they ship"
 component: build-pipeline
 level: L0

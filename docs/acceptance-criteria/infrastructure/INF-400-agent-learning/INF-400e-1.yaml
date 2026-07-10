@@ -1,4 +1,6 @@
 id: INF-400e-1
+components:
+  - infrastructure
 title: "Second-run BA produces L2 ACs that reference standing rules without being told"
 component: infrastructure
 level: L2

@@ -1,4 +1,6 @@
 id: GE-111c-1-i
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "A pre-existing broken link in untouched source never blocks an unrelated commit"

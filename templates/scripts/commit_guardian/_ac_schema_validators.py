@@ -178,6 +178,21 @@ def validate_manually(data: dict[str, Any]) -> list[str]:
         if field_name not in data or data[field_name] in (None, "", "null"):
             errors.append(f"missing required field: '{field_name}'")
 
+    # KM-KGS-100e-1 / -1-i: `components` must be a non-empty list — the field the
+    # knowledge graph reads for component_membership edges. Registry-membership
+    # (KM-KGS-100e-1-ii) is enforced by the jsonschema enum path, which this pure
+    # (no-I/O) fallback deliberately does not replicate.
+    components = data.get("components")
+    if components is None or components in ("", "null"):
+        errors.append("missing required field: 'components'")
+    elif not isinstance(components, list) or not any(
+        isinstance(v, str) and v.strip() for v in components
+    ):
+        errors.append(
+            "field 'components' must be a non-empty list of component ids "
+            "(got an empty list or only blank entries)"
+        )
+
     if "status" in data and data["status"] not in VALID_STATUSES:
         errors.append(
             f"invalid status '{data['status']}': must be one of "

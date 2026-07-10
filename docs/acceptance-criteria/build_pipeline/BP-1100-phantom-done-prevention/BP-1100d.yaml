@@ -1,4 +1,6 @@
 id: BP-1100d
+components:
+  - build-pipeline
 title: "Workflow code that commits dispatches the commit agent, never raw git commit"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: ACS-800e-3
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Tree traversal for epic generation follows parent-pointer metadata"

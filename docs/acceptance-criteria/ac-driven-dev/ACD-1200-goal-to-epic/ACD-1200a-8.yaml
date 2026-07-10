@@ -1,4 +1,6 @@
 id: ACD-1200a-8
+components:
+  - ac-driven-dev
 readiness: approved
 priority: high
 title: "Epic folder includes a Master_Plan.md so /build-feature can drive it"

@@ -1,4 +1,6 @@
 id: ACD-1500c-1
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "After producing an artifact, the entry is resolved with a back-reference"

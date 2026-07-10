@@ -1,4 +1,6 @@
 id: ACS-300j-2
+components:
+  - ac-store
 title: "Dependency graph is verified as acyclic"
 component: ac-store
 level: L2

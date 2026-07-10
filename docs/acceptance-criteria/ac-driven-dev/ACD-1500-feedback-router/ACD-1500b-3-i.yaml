@@ -1,4 +1,6 @@
 id: ACD-1500b-3-i
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "High-confidence blocker is still parked — blocker rule wins"

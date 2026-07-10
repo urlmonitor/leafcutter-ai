@@ -1,4 +1,6 @@
 id: BP-500
+components:
+  - build-pipeline
 title: "Build-time safety nets catch mistakes before they reach the pipeline"
 component: build-pipeline
 level: L0

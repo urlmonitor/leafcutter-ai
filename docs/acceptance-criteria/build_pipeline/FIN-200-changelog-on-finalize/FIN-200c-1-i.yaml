@@ -1,4 +1,6 @@
 id: FIN-200c-1-i
+components:
+  - finalize
 title: "Empty/zero-commit result is a clean no-op, not a capture failure"
 component: finalize
 level: L3

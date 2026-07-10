@@ -1,4 +1,6 @@
 id: ACD-1500e-2
+components:
+  - ac-driven-dev
 readiness: approved
 priority: medium
 title: "Emitted process-feedback names the specific deficiency so it is actionable"

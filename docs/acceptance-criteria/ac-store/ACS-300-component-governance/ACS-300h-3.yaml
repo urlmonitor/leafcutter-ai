@@ -1,4 +1,6 @@
 id: ACS-300h-3
+components:
+  - ac-store
 title: "Ordering in agent_affinity conveys implementor priority"
 component: ac-store
 level: L2

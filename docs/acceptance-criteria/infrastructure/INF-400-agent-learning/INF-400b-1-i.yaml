@@ -1,4 +1,6 @@
 id: INF-400b-1-i
+components:
+  - infrastructure
 title: "Knowledge capture does not block agent exit if route-learning or capture-learning is unavailable"
 component: infrastructure
 level: L3

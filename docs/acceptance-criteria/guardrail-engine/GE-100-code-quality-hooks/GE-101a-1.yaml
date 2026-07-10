@@ -1,4 +1,6 @@
 id: GE-101a-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "diff-cover hook falls back through compare branch chain when origin/main is unavailable"

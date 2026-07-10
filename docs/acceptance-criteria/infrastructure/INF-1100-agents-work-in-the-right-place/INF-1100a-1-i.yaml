@@ -1,4 +1,6 @@
 id: INF-1100a-1-i
+components:
+  - infrastructure
 title: "Absent test_root configuration falls back to the documented default"
 component: infrastructure
 level: L3

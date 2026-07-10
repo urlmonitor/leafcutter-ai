@@ -1,4 +1,6 @@
 id: ACS-800b-4
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Root requirements have no parent and child level is exactly one below the parent"

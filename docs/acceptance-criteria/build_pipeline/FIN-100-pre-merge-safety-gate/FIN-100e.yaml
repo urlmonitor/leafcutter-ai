@@ -1,4 +1,6 @@
 id: FIN-100e
+components:
+  - finalize
 title: "Pre-existing failures are auto-ticketed, not ignored"
 component: finalize
 level: L1

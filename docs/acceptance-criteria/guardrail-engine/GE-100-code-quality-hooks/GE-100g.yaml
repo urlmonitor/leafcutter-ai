@@ -1,4 +1,6 @@
 id: GE-100g
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Onboarding wizard offers opt-in enablement for jscpd and diff-cover hooks"

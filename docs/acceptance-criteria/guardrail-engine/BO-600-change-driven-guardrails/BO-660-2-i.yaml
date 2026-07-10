@@ -1,4 +1,6 @@
 id: BO-660-2-i
+components:
+  - build-orchestration
 title: "Change_target with no explicit mapping falls back to the risk_surface default guardrails"
 component: build-orchestration
 level: L3

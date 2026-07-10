@@ -1,4 +1,6 @@
 id: ACD-900
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Developers get a single 'what next?' recommendation from the full backlog of tickets and ACs"

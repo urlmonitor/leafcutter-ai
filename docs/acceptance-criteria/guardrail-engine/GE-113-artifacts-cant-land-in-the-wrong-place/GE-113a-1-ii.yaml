@@ -1,4 +1,6 @@
 id: GE-113a-1-ii
+components:
+  - guardrail-engine
 title: "A test placed directly at the configured test root boundary is allowed"
 component: guardrail-engine
 level: L3

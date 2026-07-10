@@ -1,4 +1,6 @@
 id: BP-1000b-1
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "The parity check runs as a pre-merge gate, positioned before the PR-merge step in finalize"

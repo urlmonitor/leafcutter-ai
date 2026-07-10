@@ -1,4 +1,6 @@
 id: INF-100b-2
+components:
+  - infrastructure
 title: "_resolve_repo_root() returns correct root when .git is a directory (standard checkout)"
 component: infrastructure
 level: L2

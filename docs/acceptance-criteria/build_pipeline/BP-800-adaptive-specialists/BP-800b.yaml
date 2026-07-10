@@ -1,4 +1,6 @@
 id: BP-800b
+components:
+  - build-pipeline
 title: "Each detected technology gets its own specialist"
 component: build-pipeline
 level: L1

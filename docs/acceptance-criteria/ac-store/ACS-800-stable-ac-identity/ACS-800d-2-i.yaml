@@ -1,4 +1,6 @@
 id: ACS-800d-2-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Migration surfaces a reference that points at a non-existent requirement"

@@ -1,4 +1,6 @@
 id: BO-1800a-5
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "Sequence diagram of the drive create-run-remove lifecycle in an isolated clone"

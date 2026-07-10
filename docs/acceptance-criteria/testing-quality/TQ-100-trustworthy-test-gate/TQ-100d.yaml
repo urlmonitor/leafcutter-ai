@@ -1,4 +1,6 @@
 id: TQ-100d
+components:
+  - testing-quality
 title: "Known, accepted failures are tracked and expire on their own"
 component: testing-quality
 level: L1

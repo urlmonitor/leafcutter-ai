@@ -1,4 +1,6 @@
 id: BP-800a-1
+components:
+  - build-pipeline
 title: "Language detection from file extensions and manifest files"
 component: build-pipeline
 level: L2

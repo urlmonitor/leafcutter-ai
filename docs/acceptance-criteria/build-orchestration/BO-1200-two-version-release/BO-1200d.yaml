@@ -1,4 +1,6 @@
 id: BO-1200d
+components:
+  - build-orchestration
 readiness: draft
 priority: medium
 title: "Real users test the dev version continuously"

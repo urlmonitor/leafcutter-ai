@@ -1,4 +1,6 @@
 id: INF-400a-4-i
+components:
+  - infrastructure
 title: "Corrupted or malformed PROJECT_CONTEXT.md does not crash the agent"
 component: infrastructure
 level: L3

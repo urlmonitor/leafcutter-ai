@@ -1,4 +1,6 @@
 id: TQ-100c-1-i
+components:
+  - testing-quality
 title: "Removing a covers tag makes a test unlinked-and-enforced, not informational"
 component: testing-quality
 level: L3

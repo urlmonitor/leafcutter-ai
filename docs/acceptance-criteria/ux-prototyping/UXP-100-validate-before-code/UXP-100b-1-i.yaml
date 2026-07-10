@@ -1,4 +1,6 @@
 id: UXP-100b-1-i
+components:
+  - ux-prototyping
 title: "All components in the feature request already exist — no gap report produced"
 component: ux-prototyping
 level: L3

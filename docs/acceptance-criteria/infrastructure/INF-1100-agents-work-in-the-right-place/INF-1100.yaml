@@ -1,4 +1,6 @@
 id: INF-1100
+components:
+  - infrastructure
 title: "Agents always do their work where your project keeps it"
 component: infrastructure
 level: L0

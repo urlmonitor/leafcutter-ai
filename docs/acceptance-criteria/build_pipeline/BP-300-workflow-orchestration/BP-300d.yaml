@@ -1,4 +1,6 @@
 id: BP-300d
+components:
+  - build-pipeline
 title: "Primary delivery commands run their deterministic workflow, not stale prose"
 component: build-pipeline
 level: L1

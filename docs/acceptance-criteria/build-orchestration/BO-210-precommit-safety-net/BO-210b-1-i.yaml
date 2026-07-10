@@ -1,4 +1,6 @@
 id: BO-210b-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "An oversized context_capsule is truncated to the length cap rather than written unbounded"

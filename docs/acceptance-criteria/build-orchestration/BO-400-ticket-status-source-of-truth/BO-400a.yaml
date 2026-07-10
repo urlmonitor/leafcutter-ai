@@ -1,4 +1,6 @@
 id: BO-400a
+components:
+  - build-orchestration
 title: "Ticket frontmatter status drives all lifecycle decisions"
 component: build-orchestration
 level: L1

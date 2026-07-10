@@ -1,4 +1,6 @@
 id: INF-600a-6-ii
+components:
+  - infrastructure
 title: "related_agent in a behavioral pattern is not constrained to the agent's spawn_allowlist"
 component: infrastructure
 level: L3

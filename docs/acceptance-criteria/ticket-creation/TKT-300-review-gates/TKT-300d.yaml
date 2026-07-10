@@ -1,4 +1,6 @@
 id: TKT-300d
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Large initiatives group related work for tracking, not for execution"

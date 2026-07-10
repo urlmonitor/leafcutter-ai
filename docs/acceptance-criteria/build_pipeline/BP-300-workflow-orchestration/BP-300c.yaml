@@ -1,4 +1,6 @@
 id: BP-300c
+components:
+  - build-pipeline
 title: "The debug workflow executes build-finalize and returns structured results across runtime versions"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: GE-104a-5
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "The planning-time trigger genuinely enforces a new page's documentation rather than silently falling back to not_needed"

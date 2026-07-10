@@ -1,4 +1,6 @@
 id: KM-KGS-100a
+components:
+  - knowledge-management
 readiness: approved
 priority: high
 title: "Your acceptance criteria join the knowledge map"

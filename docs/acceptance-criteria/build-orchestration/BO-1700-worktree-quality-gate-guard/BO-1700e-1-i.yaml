@@ -1,4 +1,6 @@
 id: BO-1700e-1-i
+components:
+  - build-orchestration
 readiness: approved
 priority: medium
 title: "The probe is found when the package is installed in a consumer subdirectory"

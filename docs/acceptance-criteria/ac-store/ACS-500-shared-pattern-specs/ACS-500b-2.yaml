@@ -1,4 +1,6 @@
 id: ACS-500b-2
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Pattern deviations are separate page-specific ACs, not inline overrides"

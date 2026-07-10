@@ -1,4 +1,6 @@
 id: ACS-400b-2
+components:
+  - ac-store
 title: "Implementation agents can update implemented_by and covered_by fields"
 component: ac-store
 level: L2

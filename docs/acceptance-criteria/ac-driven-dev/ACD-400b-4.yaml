@@ -1,4 +1,6 @@
 id: ACD-400b-4
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Generated ticket passes ticket_frontmatter_guard with correct structure and sign-offs"

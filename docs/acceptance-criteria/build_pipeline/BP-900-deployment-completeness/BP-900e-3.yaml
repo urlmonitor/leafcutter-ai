@@ -1,4 +1,6 @@
 id: BP-900e-3
+components:
+  - build-pipeline
 readiness: approved
 priority: high
 title: "A source-only script that is neither registered nor referenced is never flagged"

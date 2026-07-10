@@ -1,4 +1,6 @@
 id: KM-KGS-100c-3
+components:
+  - knowledge-management
 readiness: approved
 priority: high
 title: "How-to guide for declaring a new knowledge surface"

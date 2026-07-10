@@ -1,4 +1,6 @@
 id: UXP-100d-2
+components:
+  - ux-prototyping
 title: "Frontend-coder agent consumes the handoff artifact without human translation"
 component: ux-prototyping
 level: L2

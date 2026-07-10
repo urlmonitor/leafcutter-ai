@@ -1,4 +1,6 @@
 id: BO-610-2
+components:
+  - build-orchestration
 title: "risk_surface enum definition with 6 canonical values"
 component: build-orchestration
 level: L2

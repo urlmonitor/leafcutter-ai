@@ -1,4 +1,6 @@
 id: BP-400c-3
+components:
+  - build-pipeline
 title: "trend_report.py computes week-over-week trend indicators"
 component: build-pipeline
 level: L2

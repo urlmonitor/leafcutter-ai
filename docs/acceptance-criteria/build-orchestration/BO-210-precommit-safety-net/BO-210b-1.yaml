@@ -1,4 +1,6 @@
 id: BO-210b-1
+components:
+  - build-orchestration
 readiness: approved
 priority: high
 title: "Coder emits a context_capsule with the five required design fields only when a warn-tier signal trips"

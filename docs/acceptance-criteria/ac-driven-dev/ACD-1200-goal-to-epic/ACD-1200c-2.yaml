@@ -1,4 +1,6 @@
 id: ACD-1200c-2
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "Multi-hop dependency chains produce transitive ticket ordering"

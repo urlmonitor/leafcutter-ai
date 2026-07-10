@@ -1,4 +1,6 @@
 id: BP-700a-1
+components:
+  - build-pipeline
 title: "Unified agent template embeds design principles directly"
 component: build-pipeline
 level: L2

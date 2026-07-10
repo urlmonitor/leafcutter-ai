@@ -1,4 +1,6 @@
 id: GE-113c-2
+components:
+  - guardrail-engine
 title: "A guard runs its check against the consumer project tree in the deployed layout"
 component: guardrail-engine
 level: L2

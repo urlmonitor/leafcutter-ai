@@ -1,4 +1,6 @@
 id: INF-100c-3
+components:
+  - infrastructure
 readiness: approved
 priority: medium
 title: "All phase agents are recognized as valid writers for their categories"

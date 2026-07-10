@@ -1,4 +1,6 @@
 id: ACS-500d-1-i
+components:
+  - ac-store
 readiness: approved
 priority: high
 title: "Deleting a pattern AC is blocked when consumers still reference it"

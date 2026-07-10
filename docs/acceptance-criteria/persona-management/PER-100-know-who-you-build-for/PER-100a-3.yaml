@@ -1,4 +1,6 @@
 id: PER-100a-3
+components:
+  - persona-management
 title: "Persona schema validation rejects malformed persona files"
 component: persona-management
 level: L2

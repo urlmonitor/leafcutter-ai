@@ -1,4 +1,6 @@
 id: BO-1900c-1-ii
+components:
+  - build-orchestration
 title: "A registry entry with no charter description fails the check closed"
 component: build-orchestration
 level: L3

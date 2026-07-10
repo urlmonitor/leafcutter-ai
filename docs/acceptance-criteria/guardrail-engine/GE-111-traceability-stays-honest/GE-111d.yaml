@@ -1,4 +1,6 @@
 id: GE-111d
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Fix a broken link by updating it or confirming the code still satisfies it"

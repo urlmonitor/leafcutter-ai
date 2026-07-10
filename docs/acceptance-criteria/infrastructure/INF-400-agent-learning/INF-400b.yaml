@@ -1,4 +1,6 @@
 id: INF-400b
+components:
+  - infrastructure
 readiness: reviewed
 priority: medium
 title: "Agents capture what they discover during a run without being asked"

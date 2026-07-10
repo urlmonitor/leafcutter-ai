@@ -1,4 +1,6 @@
 id: TKT-100e-4
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "PO agent enforces level boundary -- never produces L2 or L3 ACs"

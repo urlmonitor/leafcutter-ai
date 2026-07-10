@@ -1,4 +1,6 @@
 id: BO-1900c-2
+components:
+  - build-orchestration
 title: "A correctly-assigned agent passes the charter check"
 component: build-orchestration
 level: L2

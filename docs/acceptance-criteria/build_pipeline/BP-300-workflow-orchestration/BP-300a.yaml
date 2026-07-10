@@ -1,4 +1,6 @@
 id: BP-300a
+components:
+  - build-pipeline
 title: "The debug workflow dispatches parallel investigators and synthesises findings deterministically"
 component: build-pipeline
 level: L1

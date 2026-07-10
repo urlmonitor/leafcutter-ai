@@ -1,4 +1,6 @@
 id: ACS-300g-4
+components:
+  - ac-store
 title: "Write tooling script and skill for adding component entries to the registry"
 component: ac-store
 level: L2

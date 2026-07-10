@@ -1,4 +1,6 @@
 id: ACD-1200b-1-i
+components:
+  - ac-driven-dev
 readiness: reviewed
 priority: medium
 title: "When all leaf ACs are already approved the readiness gate is skipped entirely"

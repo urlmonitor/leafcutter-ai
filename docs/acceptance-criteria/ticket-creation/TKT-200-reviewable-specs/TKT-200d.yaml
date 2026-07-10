@@ -1,4 +1,6 @@
 id: TKT-200d
+components:
+  - ticket-creation
 readiness: reviewed
 priority: medium
 title: "Documentation stays current with the specs it describes"

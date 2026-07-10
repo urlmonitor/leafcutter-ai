@@ -1,4 +1,6 @@
 id: BP-400c-1
+components:
+  - build-pipeline
 title: "Build system deploys all feedback analysis pipeline artifacts"
 component: build-pipeline
 level: L2

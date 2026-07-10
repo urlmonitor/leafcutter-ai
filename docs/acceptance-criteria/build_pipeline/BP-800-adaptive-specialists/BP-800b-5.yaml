@@ -1,4 +1,6 @@
 id: BP-800b-5
+components:
+  - build-pipeline
 title: "How-to guide for adaptive specialist generation"
 component: build-pipeline
 level: L2

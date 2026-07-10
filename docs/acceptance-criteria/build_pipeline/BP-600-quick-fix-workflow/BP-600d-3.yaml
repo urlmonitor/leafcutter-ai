@@ -1,4 +1,6 @@
 id: BP-600d-3
+components:
+  - build-pipeline
 title: "Quick-fix workflow dispatches commit agent after green-phase verification"
 component: build-pipeline
 level: L2

@@ -1,4 +1,6 @@
 id: GE-100h-1
+components:
+  - guardrail-engine
 readiness: approved
 priority: high
 title: "Both hooks ship disabled by default and are not emitted to .pre-commit-config.yaml until enabled"

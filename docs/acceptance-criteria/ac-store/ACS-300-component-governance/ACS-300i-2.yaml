@@ -1,4 +1,6 @@
 id: ACS-300i-2
+components:
+  - ac-store
 title: "Components with no external interfaces have an empty array"
 component: ac-store
 level: L2

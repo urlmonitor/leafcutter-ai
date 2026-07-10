@@ -1,4 +1,6 @@
 id: INF-1000
+components:
+  - infrastructure
 readiness: draft
 priority: medium
 title: "Schema changes never silently break test fixtures"

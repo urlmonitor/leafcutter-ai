@@ -1,4 +1,6 @@
 id: INF-600l
+components:
+  - infrastructure
 title: "An agent's card can never quietly disagree with how the system actually wires that agent"
 component: infrastructure
 level: L1

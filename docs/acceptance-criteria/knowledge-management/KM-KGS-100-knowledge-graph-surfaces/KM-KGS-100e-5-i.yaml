@@ -1,0 +1,49 @@
+id: KM-KGS-100e-5-i
+readiness: approved
+priority: high
+title: "An item whose component cannot be inferred is reported for review, never guessed"
+component: knowledge-management
+components:
+  - knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100e.yaml"
+criteria: |
+  Given the store contains an item lacking component membership whose correct
+    component cannot be determined from its content or its location
+  When the backfill is run
+  Then the item is reported for human review rather than assigned a guessed component
+  And the item's frontmatter is left unchanged
+  And the report names the item and states why its component could not be inferred
+depends_on:
+  - KM-KGS-100e-5
+doc_links:
+  - path: scripts/ac_store/backfill_readiness.py
+    relationship: context
+    status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When the component cannot be determined from content or location, the backfill MUST leave the item's frontmatter unchanged and emit a review report naming the item and stating why inference failed; it MUST NOT write a guessed value."
+  - "The uninferable-report path must preserve idempotency (KM-KGS-100e-5): items routed to review remain unchanged on every subsequent run, and the report is deterministic across runs on an unchanged store."
+  - "Follow the project error-handling policy; the review report is data output, not an error/exception."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100e-5
+  contract: "The backfill pass over items that lack a component membership; this AC defines its uninferable-item review-report branch"
+origin_agent: business-analyst-v3
+created: 2026-07-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_components_enforcement.py
+implemented_by:
+  - scripts/ac_store/backfill_components.py
+change_target: code
+risk_surface: internal
