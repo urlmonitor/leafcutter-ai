@@ -1,5 +1,19 @@
 {
   "components": {
+    "ac_driven_dev": {
+      "id": "ac_driven_dev",
+      "name": "AC-Driven Development",
+      "type": "orchestration",
+      "description": "AC-first development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the build loop that treats the AC store as the authoritative backlog.",
+      "detail_ref": "docs/architecture/components/ac-driven-dev.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/plan-feature.js",
+        "templates/skills/build-ac/SKILL.md"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "ac_store": {
       "id": "ac_store",
       "name": "AC Store",
@@ -47,6 +61,19 @@
         "scripts/bootstrap_install.py",
         "build-self.sh"
       ]
+    },
+    "build_orchestration": {
+      "id": "build_orchestration",
+      "name": "Build Orchestration",
+      "type": "orchestration",
+      "description": "Build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks.",
+      "detail_ref": "docs/architecture/components/build-orchestration.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/build-epic.js"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "build_pipeline": {
       "id": "build_pipeline",
@@ -130,6 +157,19 @@
       "primary_code": [
         "scripts/feedback/"
       ]
+    },
+    "finalize": {
+      "id": "finalize",
+      "name": "Finalize",
+      "type": "orchestration",
+      "description": "The finalize-feature workflow: pre-merge test baseline, push-before-merge sync, PR merge gating, main sync, and ticket/epic closure.",
+      "detail_ref": "docs/architecture/components/finalize.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/finalize-feature.js"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "frontend_coding": {
       "id": "frontend_coding",
@@ -225,6 +265,19 @@
         "build-self.sh",
         "docs/how-to/"
       ]
+    },
+    "persona_management": {
+      "id": "persona_management",
+      "name": "Persona Management",
+      "type": "analysis",
+      "description": "Persona definitions, AC targeting by persona, and persona knowledge-graph queries.",
+      "detail_ref": "docs/architecture/components/persona-management.md",
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/persona-management/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "precommit_hooks": {
       "id": "precommit_hooks",
@@ -346,6 +399,19 @@
         "templates/agents/sql-query.md"
       ]
     },
+    "stakeholder_delivery": {
+      "id": "stakeholder_delivery",
+      "name": "Stakeholder Delivery",
+      "type": "utility",
+      "description": "Stakeholder-facing delivery of product value: a presentation agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications.",
+      "detail_ref": "docs/architecture/components/stakeholder-delivery.md",
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/stakeholder-delivery/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "supervisor_system": {
       "id": "supervisor_system",
       "name": "Supervisor System",
@@ -420,6 +486,19 @@
         "scripts/set_ticket_status.py",
         "scripts/ticket_prioritizer.py"
       ]
+    },
+    "ux_prototyping": {
+      "id": "ux_prototyping",
+      "name": "UX Prototyping",
+      "type": "utility",
+      "description": "UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff.",
+      "detail_ref": "docs/architecture/components/ux-prototyping.md",
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/ux-prototyping/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "worktree_manager": {
       "id": "worktree_manager",
