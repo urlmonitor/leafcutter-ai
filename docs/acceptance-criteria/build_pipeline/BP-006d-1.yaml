@@ -1,0 +1,53 @@
+id: BP-006d-1
+title: "test_setup_ticket_worktree.py bootstrap mocks return valid JSON so json.loads() succeeds"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+parent: BP-006d
+criteria: |
+  Given tests/test_setup_ticket_worktree.py mocks the subprocess/file interactions
+  that scripts/setup_ticket_worktree.py's bootstrap logic feeds to json.loads(),
+  When the bootstrap tests run,
+  Then each mock supplies a real JSON string (not a bare MagicMock) wherever the
+  production code calls json.loads(),
+  And no test raises `TypeError: the JSON object must be str, bytes or bytearray,
+  not MagicMock`,
+  And the poetry-manifest, pip-manifest, no-manifest, and install-failure paths are
+  each driven to their intended branch and asserted,
+  And the tests pass with exit code 0.
+depends_on:
+  - BP-006d
+doc_links:
+  - path: tests/test_setup_ticket_worktree.py
+    relationship: describes
+    status: exists
+  - path: scripts/setup_ticket_worktree.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Grounded (2026-07-10): the bootstrap tests fail with `TypeError: the JSON object must be str, bytes or bytearray, not MagicMock` because a mocked value flows into scripts/setup_ticket_worktree.py's json.loads(). Fix the test mocks to return a valid JSON string at that boundary (preferred), or make the production code tolerate the input; do not delete or skip the failing tests."
+  - "The poetry, pip, no-manifest, and install-failure bootstrap paths must each be GENUINELY exercised — the mock fix must not short-circuit a branch so it silently stops testing the path it names."
+  - "Must not weaken the assertions: each path's observable outcome (which dependency manager is invoked, or that a manifest-absent / install-failure branch is taken) stays asserted after the mock fix."
+  - "Follow the project error-handling policy for any production-side change: if setup_ticket_worktree.py is changed to tolerate malformed input, the failure path must fail loudly (typed error + WARNING log), not swallow silently."
+test_spec:
+  - name: test_setup_ticket_worktree_bootstrap_mocks_return_valid_json
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "The bootstrap tests supply valid JSON strings wherever setup_ticket_worktree.py calls json.loads(); no MagicMock TypeError; poetry/pip/no-manifest/install-failure paths each driven to their branch and asserted."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

@@ -5,6 +5,8 @@ title: "Failures absent from baseline are classified as regressions"
 level: L2
 component: finalize
 status: active
+readiness: approved
+priority: high
 parent: FIN-100c
 criteria: |
   Given the baseline snapshot from main HEAD (which may be empty — all tests passing)
@@ -24,6 +26,16 @@ it_requirements: |
   - Must include every newly-failing test ID in the regressions array
   - Classification runs through Steps 3-4 of the triage algorithm (AC lookup + heuristic refinement)
   - When baseline is empty (all pass on main), any post-merge failure is a regression
+  - ENVIRONMENT-PARITY PRECONDITION (grounded 2026-07-10): the set difference
+    regression_candidates = post_merge_failures - baseline_failures is only VALID when both
+    runs were collected under identical build/deploy state, command, and scope (delivered by
+    FIN-100a-4). A test that fails only post-merge because the build/deploy step did not run
+    (for example deploy-dependent scripts/commit_guardian/* tests) is environment skew, NOT a
+    real regression, and must not be counted as one — the fix lives in FIN-100a-4 (make the two
+    runs symmetric), not by relaxing this set-difference rule.
+  - A GENUINE new failure (present post-merge, absent from a build-symmetric baseline) MUST
+    still be classified regression and MUST still set blocks_finalization=true — do not weaken
+    this to accommodate the parity fix.
 delivers_to:
   - agent: "finalize-feature-workflow"
     contract: "provides triage_report with blocks_finalization=true and regressions array"
@@ -37,9 +49,13 @@ doc_links:
     relevance: "Step 2 partition, Steps 3-4 AC lookup and heuristic refinement, Step 6 blocks_finalization"
   - path: "templates/workflows/finalize-feature.md"
     relevance: "Step 3 test_regression halt category"
-depends_on: []
+depends_on:
+  - FIN-100a-4
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added the environment-parity precondition for the regression set-difference (grounded in the 2026-07-10 false-HALT: deploy-dependent commit_guardian tests failing only post-merge due to missing build state are environment skew, fixed by FIN-100a-4, not real regressions) and reasserted that genuine new failures still HALT. Added depends_on: FIN-100a-4 for the build/deploy-parity precondition. Criteria, assigned_agent, complexity, and contracts unchanged."
+    by: it-po
 covered_by: []
 implemented_by: []
 change_target: pipeline

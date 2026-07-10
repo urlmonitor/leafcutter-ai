@@ -4,7 +4,7 @@ component: build_pipeline
 level: L0
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   Given the full test suite is run,
   When all build pipeline tests execute,
@@ -25,6 +25,7 @@ covered_by:
   - BP-006a
   - BP-006b
   - BP-006c
+  - BP-006d
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
