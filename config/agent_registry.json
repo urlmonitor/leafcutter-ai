@@ -243,7 +243,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "supervisor_system"
+            ]
         },
         {
             "id": "brainstorm-worker",
@@ -286,7 +289,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "supervisor_system"
+            ]
         },
         {
             "id": "research-agent",
@@ -1011,7 +1017,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "review_verdict"
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
         },
         {
             "id": "commit",
@@ -1186,7 +1195,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
         },
         {
             "id": "status-checker",
@@ -1250,7 +1262,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "ticket_lifecycle"
+            ]
         },
         {
             "id": "worktree-agent",
@@ -1303,7 +1318,10 @@
                     "source": "agent memory store"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "worktree_manager"
+            ]
         },
         {
             "id": "changelog-agent",
@@ -1342,7 +1360,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "changelog"
+            ]
         },
         {
             "id": "retrospective-agent",
@@ -1377,7 +1398,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "feedback_collector"
+            ]
         },
         {
             "id": "feedback-analyst",
@@ -1418,7 +1442,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "feedback_collector"
+            ]
         },
         {
             "id": "sql-coder",
@@ -1653,7 +1680,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "sql-query",
@@ -1781,7 +1811,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "sql-procedure-creator",
@@ -1830,7 +1863,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "sql-function-creator",
@@ -1879,7 +1915,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "sql-index-creator",
@@ -1928,7 +1967,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "sql-view-creator",
@@ -1977,7 +2019,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
         },
         {
             "id": "workflow-architect",
@@ -2025,7 +2070,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "agent_registry"
+            ]
         },
         {
             "id": "adr-author",
@@ -2093,7 +2141,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "documentation"
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
         },
         {
             "id": "architect-review-deep",
@@ -2111,7 +2162,10 @@
             "template_path": null,
             "model": "opus",
             "skills_used": [],
-            "produces": "review_verdict"
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
         },
         {
             "id": "architecture-diagram-author",
@@ -2173,7 +2227,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "documentation"
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
         },
         {
             "id": "conflict-resolver-deep",
@@ -2191,7 +2248,10 @@
             "template_path": null,
             "model": "opus",
             "skills_used": [],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
         },
         {
             "id": "explanation-author",
@@ -2426,7 +2486,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "glossary"
+            ]
         },
         {
             "id": "user-surface-smoker",
@@ -2492,7 +2555,10 @@
                     "source": "agent memory store"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
         },
         {
             "id": "live-surface-tester",
@@ -2554,7 +2620,10 @@
                     "source": "agent memory store"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
         },
         {
             "id": "onboard",
@@ -2594,7 +2663,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "onboarding"
+            ]
         },
         {
             "id": "onboard-config-section",
@@ -2623,7 +2695,10 @@
                     "source": "project files read during execution"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "onboarding"
+            ]
         },
         {
             "id": "test-failure-triage",
@@ -2657,7 +2732,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "testing_quality"
+            ]
         },
         {
             "id": "ac-validator",
@@ -2784,7 +2862,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "test_artifact"
+            "produces": "test_artifact",
+            "components": [
+                "ac_store"
+            ]
         },
         {
             "id": "llm-expert",
@@ -2921,7 +3002,10 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "product_ownership"
+            ]
         },
         {
             "id": "business-analyst",
@@ -3043,6 +3127,9 @@
                     "channel": 7,
                     "source": "bash command output (ac_prioritizer.py, generate_ticket_from_ac.py, build_ac_mode_detection.py, goal_to_epic.py)"
                 }
+            ],
+            "components": [
+                "ac_store"
             ]
         },
         {
@@ -3079,6 +3166,9 @@
                     "channel": 7,
                     "source": "bash command output (ls docs/acceptance-criteria/)"
                 }
+            ],
+            "components": [
+                "ac_store"
             ]
         },
         {
@@ -3118,7 +3208,10 @@
                     "source": "bash command output (git, build, tests)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "knowledge_system"
+            ]
         }
     ]
 }

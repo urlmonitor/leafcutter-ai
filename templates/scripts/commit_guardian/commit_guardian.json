@@ -952,8 +952,8 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "enabled": false,
-                "_comment": "KM-KGS-100e-3: Blocks commits when a staged agent/skill/roadmap registry entry lacks a non-empty `components` field. Glossary surface is automatically exempt (edge_fields: [] in paths.json). DISABLED until a backfill adds `components` to all registry entries — enabling now would block all changes to agent_registry.json, skill_registry.json, and roadmap.json. Registry-membership validation deferred. See module docstring for full rationale."
+                "enabled": true,
+                "_comment": "KM-KGS-100e-3: Blocks commits when a staged agent/skill/roadmap registry entry lacks a non-empty `components` field. Glossary surface is automatically exempt (edge_fields: [] in paths.json). ENABLED 2026-07-14 after all registry entries were backfilled (agents 53/53, skills 36/36, roadmap 3/3). Value-style (components.json membership) is enforced separately by the transform-component-vocab pre-commit hook + the component-vocab CI check; this hook enforces PRESENCE on registry entries."
             },
             {
                 "id": "precommit-canary",
