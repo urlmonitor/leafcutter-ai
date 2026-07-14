@@ -234,14 +234,32 @@ else:
 - **Handoff file:** tickets/<ticket-dir>/.pending/adr_handoff.json (written)
 ```
 
+## Supersession Handling
+
+When `documentation-expert` passes a decision specification that indicates the new
+decision supersedes an existing ADR (i.e. the `originating_ticket` or context
+mentions a conflict with an existing ADR):
+
+1. **Create the new superseding ADR** following all rules in the "Writing the ADR"
+   section above. In the Status metadata table set:
+   `Supersedes: ADR-NNN-<slug-of-old-adr>.md`
+2. **Update the old ADR's status** to reflect supersession. Open the old ADR file
+   and set its Status row to:
+   `Superseded by: ADR-MMM-<slug-of-new-adr>.md` (where MMM is the new ADR number).
+   Also update its `status:` frontmatter field from `active` to `superseded` and
+   set `last_updated` to today's date.
+3. After both files are written, include both paths in the Response Payload.
+
+This supersession workflow satisfies BO-650-2 Scenario 2: the architect discovers an
+existing ADR covering the same decision area, produces a new ADR that supersedes the
+old one, and updates the old ADR's status to superseded with a reference to the new ADR.
+
 ## Constraints
 
 - Write only to `docs/architecture/adrs/ADR-NNN-<slug>.md`. Do not touch any other
   file unless the decision specification explicitly lists additional cross-link
   targets (e.g. a `related_docs` entry that already exists and needs a
-  back-link added).
-- Do not edit or supersede existing ADRs. Treat supersession requests as
-  out-of-scope; return them to `documentation-expert` for reclassification.
+  back-link added), or unless performing supersession handling (see above).
 - Do not call `research-agent` autonomously. `documentation-expert` is
   responsible for pre-loading any codebase research the decision requires
   before dispatching here.

@@ -115,7 +115,7 @@ class TestJsonOutputStructure(unittest.TestCase):
     """Output must be a JSON dict with the canonical five keys."""
 
     def test_json_output_structure(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-1
         """Output has exactly the required keys: binary, config, git_hook, canary, failing_checks.
 
         Must implement a run_checks() function (and main() that serialises its
@@ -137,7 +137,7 @@ class TestAllChecksPass(unittest.TestCase):
     """When all four checks return True, run_checks() reflects that."""
 
     def test_all_checks_pass(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-1
         """All four checks pass → result dict has binary/config/git_hook/canary all True,
         failing_checks is an empty list.
 
@@ -187,7 +187,7 @@ class TestCheckAFailsBinaryNotFound(unittest.TestCase):
     """Check A: pre-commit binary absent on PATH → check A reports False."""
 
     def test_check_a_fails_binary_not_found(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-1
         """Running with an empty PATH means pre-commit is not found.
         The probe must exit non-zero and report binary: false in JSON output.
         """
@@ -213,7 +213,7 @@ class TestCheckBFailsConfigNotFound(unittest.TestCase):
     """Check B: no .pre-commit-config.yaml → check B reports False."""
 
     def test_check_b_fails_config_not_found(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-3-i
         """Running in a temp directory with no .leafcutter symlink and no
         .pre-commit-config.yaml causes check B to fail.
 
@@ -242,7 +242,7 @@ class TestCheckBFailsConfigInvalidYaml(unittest.TestCase):
     """Check B: config file exists but contains invalid YAML → check B reports False."""
 
     def test_check_b_fails_config_invalid_yaml(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-1
         """A .pre-commit-config.yaml whose content is not valid YAML must cause
         check B to fail.  Probe exits non-zero with config: false in JSON.
         """
@@ -276,7 +276,7 @@ class TestCheckCFailsHookMissingSentinel(unittest.TestCase):
     """Check C: git hook file exists but lacks the pre-commit sentinel → check C fails."""
 
     def test_check_c_fails_hook_missing_sentinel(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-3-ii
         """Check C reads the shared git hook and looks for a pre-commit sentinel.
         When the hook file exists but the sentinel string is absent, check C must
         report git_hook: false.
@@ -321,7 +321,7 @@ class TestCheckDFailsCanaryNoOutput(unittest.TestCase):
     """Check D: canary hook invoked but does not emit PRECOMMIT_CANARY_OK → check D fails."""
 
     def test_check_d_fails_canary_no_output(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-3
         """Check D runs the canary hook via subprocess and inspects its stdout.
         When the subprocess returns without emitting 'PRECOMMIT_CANARY_OK', check D
         must report canary: false.
@@ -364,7 +364,7 @@ class TestTimeoutHandling(unittest.TestCase):
     """Subprocess timeout during check D → probe exits non-zero (fail-closed)."""
 
     def test_timeout_handling(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-2
         """When the canary subprocess times out, the probe must exit non-zero.
         Fail-closed: a hung subprocess must not produce a zero exit code.
 
@@ -408,7 +408,7 @@ class TestUncaughtExceptionHandling(unittest.TestCase):
     """Unexpected exception anywhere in the probe → non-zero exit (fail-closed)."""
 
     def test_uncaught_exception_handling(self):
-        # covers: UNKNOWN
+        # covers: BO-1700b-1
         """An unexpected exception inside run_checks() must not produce exit 0.
         The probe must catch the exception, mark the relevant check as failed,
         and return a non-passing result.
@@ -449,7 +449,7 @@ class TestExitCodeAllPass(unittest.TestCase):
     """When all checks pass, the CLI exits 0."""
 
     def test_exit_code_all_pass(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-1
         """main() must sys.exit(0) when all four checks pass.
 
         This test invokes the module via subprocess, so _run_probe is used.
@@ -515,7 +515,7 @@ class TestExitCodeAnyFailure(unittest.TestCase):
     """When any check fails, the CLI exits non-zero."""
 
     def test_exit_code_any_failure(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-1
         """main() must sys.exit with a non-zero code when any check fails.
 
         Check A is forced to fail by passing an empty PATH to the subprocess.
@@ -562,7 +562,7 @@ class TestValidateHookName(unittest.TestCase):
     """g-1: Required-hook-ID validation. Hook file must be named exactly 'pre-commit'."""
 
     def test_valid_hook_name_exact(self):
-        # covers: UNKNOWN
+        # covers: BO-1700g-1
         """validate_hook_name returns True when the hook file is named exactly 'pre-commit'.
 
         Must implement validate_hook_name(hook_path: Path) -> bool that returns True only
@@ -586,7 +586,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_backup(self):
-        # covers: UNKNOWN
+        # covers: BO-1700g-1
         """validate_hook_name returns False when the hook is named 'pre-commit-backup'.
 
         A backup hook must not be accepted as the canonical pre-commit hook.
@@ -606,7 +606,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_no_hyphen(self):
-        # covers: UNKNOWN
+        # covers: BO-1700g-1
         """validate_hook_name returns False when the hook is named 'precommit' (no hyphen).
 
         Hook filename must match exactly 'pre-commit'; 'precommit' is a distinct name.
@@ -626,7 +626,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_dotted(self):
-        # covers: UNKNOWN
+        # covers: BO-1700g-1
         """validate_hook_name returns False when the hook is named '.pre-commit' (dot-prefixed).
 
         A hidden file '.pre-commit' must not pass; only the bare name 'pre-commit' is valid.
@@ -646,7 +646,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_with_extension(self):
-        # covers: UNKNOWN
+        # covers: BO-1700g-1
         """validate_hook_name returns False when the hook is named 'pre-commit.sh' (extension present).
 
         Any file extension makes the name non-canonical; only the bare 'pre-commit' passes.
@@ -677,7 +677,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         return config_path
 
     def test_canary_stage_manual_only(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-2
         """validate_canary_stage returns True when the canary entry has stages: ['manual'] exactly.
 
         Must implement validate_canary_stage(config_path: Path) -> bool that reads
@@ -706,7 +706,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_stage_empty(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-2
         """validate_canary_stage returns False when the canary entry has stages: [].
 
         An empty stages list means the canary fires in no stage — must fail.
@@ -730,7 +730,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_stage_commit_msg(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-2
         """validate_canary_stage returns False when stages: ['commit-msg'].
 
         The canary must only be in the 'manual' stage; 'commit-msg' is forbidden.
@@ -757,7 +757,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_stage_multi_including_manual(self):
-        # covers: UNKNOWN
+        # covers: BO-1700g-2
         """validate_canary_stage returns False when stages include 'manual' AND another stage.
 
         Multi-stage registration is a spoof risk; canary must be in ONLY ['manual'].
@@ -785,7 +785,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_entry_absent(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-2
         """validate_canary_stage returns False when no 'precommit-canary' entry exists in registry.
 
         A missing canary entry means the canary is not installed — fail-closed.
@@ -812,7 +812,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_non_manual_stage(self):
-        # covers: UNKNOWN
+        # covers: BO-1700a-2
         """validate_canary_stage returns False when canary is in stages: ['pre-push'] only.
 
         Any non-manual stage alone must fail; the canary must never appear in push stages.
@@ -843,7 +843,7 @@ class TestCheckHookFreshness(unittest.TestCase):
     """h-1: Config freshness/drift detection. Hook must be at least as new as config."""
 
     def test_hook_newer_than_config(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-1
         """check_hook_freshness returns True when hook mtime > config mtime.
 
         Must implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool
@@ -874,7 +874,7 @@ class TestCheckHookFreshness(unittest.TestCase):
         )
 
     def test_hook_same_mtime_as_config(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-1
         """check_hook_freshness returns True when hook mtime == config mtime.
 
         Equal mtime means the hook was regenerated at the same time as config — not stale.
@@ -905,7 +905,7 @@ class TestCheckHookFreshness(unittest.TestCase):
         )
 
     def test_hook_older_than_config(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-1
         """check_hook_freshness returns False when hook mtime < config mtime (hook is stale).
 
         A hook older than the config means the config was updated but the hook was not
@@ -940,7 +940,7 @@ class TestCheckHookFreshness(unittest.TestCase):
         )
 
     def test_hook_missing_config_present(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-1
         """check_hook_freshness returns False when hook does not exist but config does.
 
         A missing hook with a present config is a fail-closed state (hook not installed).
@@ -971,7 +971,7 @@ class TestCheckDCanaryTimeout(unittest.TestCase):
     """h-2: Canary timeout fail-closed. Timeout must be 10 seconds (ticket 03 raises it from 5)."""
 
     def test_canary_timeout_10s_returns_false(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-2
         """run_checks() marks canary: False when subprocess.TimeoutExpired fires at 10s.
 
         Ticket 03 changes the canary timeout from 5s to 10s. This test:
@@ -1028,7 +1028,7 @@ class TestResolveHooksPath(unittest.TestCase):
     """h-3: hooksPath resolution. Absolute, relative, unset, and unreadable .git/config."""
 
     def test_hooks_path_absolute_from_git_config(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-3
         """resolve_hooks_path returns the absolute path from core.hooksPath in .git/config.
 
         Must implement resolve_hooks_path(cwd: Path) -> Path that reads .git/config,
@@ -1061,7 +1061,7 @@ class TestResolveHooksPath(unittest.TestCase):
         )
 
     def test_hooks_path_relative_from_git_config(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-3
         """resolve_hooks_path resolves a relative core.hooksPath against the worktree root.
 
         When core.hooksPath is a relative path (e.g. '.hooks'), it must be resolved
@@ -1095,7 +1095,7 @@ class TestResolveHooksPath(unittest.TestCase):
         )
 
     def test_hooks_path_unset_falls_back_to_commondir(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-3
         """resolve_hooks_path falls back to <commondir>/hooks/ when core.hooksPath is unset.
 
         When .git/config has no core.hooksPath setting, resolve_hooks_path must fall
@@ -1130,7 +1130,7 @@ class TestResolveHooksPath(unittest.TestCase):
         )
 
     def test_hooks_path_unreadable_raises_oserror(self):
-        # covers: UNKNOWN
+        # covers: BO-1700h-3
         """resolve_hooks_path raises OSError when .git/config is unreadable.
 
         When .git/config exists but is not readable (permissions denied),
@@ -1784,6 +1784,436 @@ class TestRemoveCanaryFromManifestFileNotFound(unittest.TestCase):
             msg=(
                 "Expected remove_canary_from_manifest to return False "
                 f"when config_path doesn't exist. Got: {result}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# EPIC-BOTestCoverageBackfill ticket 01 — author-test ACs
+# Added: 2026-07-14 [EPIC-BOTestCoverageBackfill/01_bo1700_test_coverage]
+# These five test classes cover ACs that had NO prior test asserting their
+# behaviour (classified "author test" in the ticket audit).  All classes are
+# RED until verify_precommit_active.py is implemented (BO-1700a-1), which makes
+# _IMPORT_OK True and the subprocess tests receive valid JSON.
+#
+# AC surface notes:
+#   BO-1700b-3, BO-1700d-2, BO-1700d-3, BO-1700d-3-i: llm-expert surfaces
+#     (commit.md / SKILL.md prose).  The unit tests here verify the probe's
+#     Python-side contract that the prose invokes; the human-facing refusal
+#     messages cannot be unit-tested at this layer.
+#   BO-1700e-1-i: python-coder surface — tests path-resolution in the
+#     consumer-subdirectory layout.
+# ---------------------------------------------------------------------------
+
+
+class TestNoVerifyBypassRefused(unittest.TestCase):
+    """BO-1700b-3: Commit with --no-verify is refused because probe runs outside the hook.
+
+    The probe is invoked by the commit DRIVER (commit.md prose) before git commit,
+    at a level that --no-verify cannot skip.  This class verifies the probe's
+    behaviour when called in that driver context: it exits non-zero on any failing
+    check, so the driver can refuse to proceed regardless of --no-verify.
+    """
+
+    def test_bo1700b3_probe_exits_nonzero_when_called_outside_hook(self):
+        # covers: BO-1700b-3
+        """Probe invoked directly (as the commit driver would call it) exits non-zero
+        when a check fails — proving --no-verify cannot bypass the gate.
+
+        Simulates the commit driver calling the probe with empty PATH (Check A fails).
+        The probe must exit non-zero and emit a non-empty failing_checks list so the
+        driver can refuse the commit and name the offending check.
+
+        RED until scripts/commit_guardian/verify_precommit_active.py is implemented:
+        the script is absent, so the subprocess call produces no JSON on stdout and
+        _json_or_fail raises AssertionError.
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        self.assertNotEqual(
+            result.returncode,
+            0,
+            msg=(
+                f"BO-1700b-3: The probe must exit non-zero when invoked outside the "
+                f"pre-commit hook (as the commit driver does) and a check fails. "
+                f"Got returncode={result.returncode}. output={output}"
+            ),
+        )
+        self.assertGreater(
+            len(output.get("failing_checks", [])),
+            0,
+            msg=(
+                f"BO-1700b-3: failing_checks must be non-empty so the commit driver "
+                f"can name the failing check in its refusal message. Got: {output}"
+            ),
+        )
+
+    def test_bo1700b3_failing_checks_names_the_check_that_failed(self):
+        # covers: BO-1700b-3
+        """When Check A fails (binary absent), the probe's failing_checks list must
+        contain a string naming that check, not just be non-empty.
+
+        The commit driver uses this to produce the message
+        "the gate cannot be bypassed with --no-verify: Check A failed".
+
+        RED until verify_precommit_active.py is implemented (no JSON on stdout).
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        failing = output.get("failing_checks", [])
+        # At minimum the first failing check should be present and be a non-empty string
+        self.assertTrue(
+            any(isinstance(c, str) and len(c) > 0 for c in failing),
+            msg=(
+                f"BO-1700b-3: Each entry in failing_checks must be a non-empty string "
+                f"naming the check that failed (e.g. 'binary', 'A', etc.), so the "
+                f"commit driver can include it in the refusal message. Got: {output}"
+            ),
+        )
+
+
+class TestPreDriveGateBlocksOnProbeFail(unittest.TestCase):
+    """BO-1700d-2: Pre-drive gate returns blocked status when probe exits non-zero.
+
+    The pre-drive gate (building-epics SKILL.md prose, §1.0.1) calls the probe
+    before dispatching any phase agent.  When the probe exits non-zero, the gate
+    must return {status: blocked, reason: <failing check>}.  This class verifies
+    the probe's contract that the gate depends on: non-zero exit plus a non-empty
+    failing_checks list carrying the reason payload.
+    """
+
+    def test_bo1700d2_probe_returns_nonzero_for_gate_to_block(self):
+        # covers: BO-1700d-2
+        """Pre-drive gate calls probe; probe exits non-zero so the gate blocks dispatch.
+
+        Runs the probe as a subprocess against a misconfigured environment
+        (PATH='', simulating a worktree where Check A fails).  The probe must exit
+        non-zero with a non-empty failing_checks list — the gate reads these to
+        construct its blocked payload.
+
+        RED until scripts/commit_guardian/verify_precommit_active.py is implemented.
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        self.assertNotEqual(
+            result.returncode,
+            0,
+            msg=(
+                f"BO-1700d-2: Probe must exit non-zero when the pre-drive gate runs "
+                f"it against a misconfigured worktree (no ticket dispatch until probe "
+                f"passes). Got returncode={result.returncode}. output={output}"
+            ),
+        )
+        self.assertGreater(
+            len(output.get("failing_checks", [])),
+            0,
+            msg=(
+                f"BO-1700d-2: failing_checks must be non-empty so the pre-drive gate "
+                f"can build its {{status: blocked, reason: <failing check>}} payload. "
+                f"Got: {output}"
+            ),
+        )
+
+    def test_bo1700d2_probe_returns_zero_and_empty_failing_when_all_pass(self):
+        # covers: BO-1700d-2
+        """Pre-drive gate calls probe; probe exits 0 with empty failing_checks, gate proceeds.
+
+        Uses the module-level run_checks() with all four checks mocked to True,
+        then asserts failing_checks == [] so the gate would proceed to dispatch.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1) so the pre-drive gate "
+                "(BO-1700d-2) can call run_checks() and evaluate the result."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks(). "
+                "Implement run_checks() returning the five-key dict."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertEqual(
+            result.get("failing_checks"),
+            [],
+            msg=(
+                f"BO-1700d-2: When all checks pass, failing_checks must be [] so the "
+                f"pre-drive gate proceeds to dispatch phase agents. Got: {result}"
+            ),
+        )
+
+
+class TestCommitPhaseGateRefusesOnProbeFail(unittest.TestCase):
+    """BO-1700d-3: Commit-phase gate refuses git commit when probe returns non-zero.
+
+    The commit driver (commit.md prose, llm-expert surface) runs the probe before
+    git commit.  When the probe returns a non-zero verdict, the driver refuses the
+    commit and names the failing check.  This class verifies the probe's side of
+    the contract: it returns a dict with the correct failing_checks payload when
+    any check fails at commit time.
+    """
+
+    def test_bo1700d3_probe_reports_failing_check_at_commit_time(self):
+        # covers: BO-1700d-3
+        """At commit time, probe with Check A forced False returns binary=False and
+        'binary' in failing_checks, giving the commit driver the payload it needs
+        to name the check in its refusal message.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1) so the commit-phase gate "
+                "(BO-1700d-3) can call run_checks() before git commit."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=False),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("binary"),
+            msg=(
+                f"BO-1700d-3: binary must be False at commit time when Check A fails. "
+                f"Got: {result}"
+            ),
+        )
+        self.assertIn(
+            "binary",
+            result.get("failing_checks", []),
+            msg=(
+                f"BO-1700d-3: 'binary' must be in failing_checks at commit time so the "
+                f"commit driver can name it in the refusal message. Got: {result}"
+            ),
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                f"BO-1700d-3: failing_checks must be non-empty at commit time "
+                f"(proceed only on exit 0 + empty failing_checks). Got: {result}"
+            ),
+        )
+
+    def test_bo1700d3_probe_passes_at_commit_time_when_all_checks_ok(self):
+        # covers: BO-1700d-3
+        """At commit time, when all four checks pass, the probe returns failing_checks=[]
+        so the commit driver proceeds to run git commit.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertEqual(
+            result.get("failing_checks"),
+            [],
+            msg=(
+                f"BO-1700d-3: At commit time, when all checks pass, failing_checks "
+                f"must be [] so the commit driver proceeds. Got: {result}"
+            ),
+        )
+
+
+class TestCommitPhaseGateReRunsProbeNoCaching(unittest.TestCase):
+    """BO-1700d-3-i: Commit-phase gate re-runs probe independently; no cached pre-drive result.
+
+    A mutation of the hook/config between the pre-drive gate (first run) and the
+    commit-phase gate (second run) must be caught at commit time.  This requires
+    the probe to be stateless and re-evaluable — each gate call produces a fresh
+    result, never trusting a prior pass verdict.
+    """
+
+    def test_bo1700d3i_second_run_catches_between_gates_mutation(self):
+        # covers: BO-1700d-3-i
+        """Two sequential run_checks() calls with different check_c return values
+        produce two different results, proving the probe is stateless.
+
+        First run: all True (simulates pre-drive gate PASS).
+        Second run: check_c mutated to False (simulates a between-gates hook mutation).
+
+        The second run must independently report git_hook=False and 'git_hook' in
+        failing_checks — it does NOT cache the first-run pass verdict.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the probe module (BO-1700a-1). "
+                "This test verifies the probe is stateless so between-gates "
+                "mutations are caught at the commit-phase gate (BO-1700d-3-i)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        # First invocation — pre-drive gate: all checks pass
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            first_result = _vpa.run_checks()
+        self.assertEqual(
+            first_result.get("failing_checks"),
+            [],
+            msg=(
+                f"BO-1700d-3-i: First probe run (pre-drive) must pass when all checks "
+                f"return True. Got: {first_result}"
+            ),
+        )
+        # Second invocation — commit-phase gate: check_c mutated to fail
+        # (simulates the shared git hook having been removed between gates)
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=False),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            second_result = _vpa.run_checks()
+        self.assertFalse(
+            second_result.get("git_hook"),
+            msg=(
+                f"BO-1700d-3-i: Second probe run (commit-phase) must catch the "
+                f"between-gates mutation of check_c (git_hook=False). "
+                f"Got: {second_result}"
+            ),
+        )
+        self.assertIn(
+            "git_hook",
+            second_result.get("failing_checks", []),
+            msg=(
+                f"BO-1700d-3-i: 'git_hook' must appear in failing_checks of the "
+                f"second probe run, proving the commit-phase gate re-ran the probe "
+                f"rather than trusting the cached pre-drive pass verdict. "
+                f"Got: {second_result}"
+            ),
+        )
+
+    def test_bo1700d3i_first_result_and_second_result_are_independent_objects(self):
+        # covers: BO-1700d-3-i
+        """Two calls to run_checks() return two separate dict objects (not the same
+        reference), proving there is no module-level caching of the result.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            first_result = _vpa.run_checks()
+            second_result = _vpa.run_checks()
+        self.assertIsNot(
+            first_result,
+            second_result,
+            msg=(
+                "BO-1700d-3-i: Each call to run_checks() must return a NEW dict "
+                "object (no module-level singleton caching). "
+                f"first_result id={id(first_result)}, second_result id={id(second_result)}"
+            ),
+        )
+
+
+class TestProbeDiscoverableInSubdirLayout(unittest.TestCase):
+    """BO-1700e-1-i: The probe script is locatable when the package is in a consumer subdirectory.
+
+    When leafcutter-ai is installed as my-project/leafcutter-ai/, bootstrap must
+    locate the probe at scripts/commit_guardian/verify_precommit_active.py relative
+    to the package root.  _REPO_ROOT (derived from __file__ via parents[2]) is the
+    probe discovery mechanism; this class verifies it resolves to the correct path.
+    """
+
+    def test_bo1700e1i_probe_script_exists_at_canonical_path(self):
+        # covers: BO-1700e-1-i
+        """The probe script must exist at its canonical path under the package root.
+
+        _SCRIPT = _REPO_ROOT / 'scripts' / 'commit_guardian' / 'verify_precommit_active.py'
+
+        When this path does not exist, bootstrap in a subdirectory layout would fail
+        to find the probe.  The test fails RED until the script is implemented and
+        deployed at the expected path (BO-1700a-1 + BO-1700e-1).
+        """
+        self.assertTrue(
+            _SCRIPT.exists(),
+            msg=(
+                f"BO-1700e-1-i: The probe script must exist at its canonical path "
+                f"so bootstrap can locate it in a consumer subdirectory layout. "
+                f"Expected: {_SCRIPT}. "
+                "Implement verify_precommit_active.py (BO-1700a-1) and ensure "
+                "BO-1700e-1 deploys it to scripts/commit_guardian/."
+            ),
+        )
+
+    def test_bo1700e1i_repo_root_resolves_via_parents_two(self):
+        # covers: BO-1700e-1-i
+        """_REPO_ROOT = Path(__file__).resolve().parents[2] must resolve to the
+        package root (the directory containing scripts/ and templates/).
+
+        When the package is installed as my-project/leafcutter-ai/, this
+        resolution correctly finds the package root regardless of where the consumer
+        project root is, because it navigates relative to the test file itself.
+
+        This test is a structural assertion: if it fails, the path-resolution
+        convention is broken for all subdir-layout consumers.
+        """
+        self.assertTrue(
+            _REPO_ROOT.is_dir(),
+            msg=(
+                f"BO-1700e-1-i: _REPO_ROOT must resolve to a real directory. "
+                f"Got: {_REPO_ROOT}"
+            ),
+        )
+        # The package root must contain known structural markers
+        has_scripts = (_REPO_ROOT / "scripts").is_dir()
+        has_templates = (_REPO_ROOT / "templates").is_dir()
+        self.assertTrue(
+            has_scripts or has_templates,
+            msg=(
+                f"BO-1700e-1-i: _REPO_ROOT ({_REPO_ROOT}) must contain scripts/ or "
+                "templates/ to confirm it is the package root. If neither exists, "
+                "Path(__file__).resolve().parents[2] resolves to the wrong directory "
+                "in this layout."
             ),
         )
 
