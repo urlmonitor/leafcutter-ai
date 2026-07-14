@@ -1,4 +1,6 @@
 id: UXP-530
+components:
+  - ux-prototyping
 readiness: reviewed
 priority: medium
 title: "A request is classified into needs_flow / needs_mock_data / needs_mockup"
@@ -19,6 +21,9 @@ depends_on:
 doc_links:
   - path: docs/product-truth/classifier/eval.jsonl
     relationship: covered-by
+    status: exists
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: verified-by
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M

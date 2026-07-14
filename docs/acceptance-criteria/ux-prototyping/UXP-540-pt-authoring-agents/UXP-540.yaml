@@ -25,6 +25,9 @@ doc_links:
   - path: docs/product-truth/mock-data/pipeline-prompts/draft-mock-data.prompt.json
     relationship: specifies
     status: exists
+  - path: docs/product-truth/evals/mock-data-author/eval.jsonl
+    relationship: verified-by
+    status: exists
 assigned_agent: mock-data-author
 estimated_complexity: L
 it_requirements: |
