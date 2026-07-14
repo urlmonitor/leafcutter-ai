@@ -24,7 +24,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: failed
   commit: needed
   pull-request: needed
 ---
@@ -80,7 +80,7 @@ tests:
 - [x] test-writer — 2026-07-14 14:00
 - [x] python-coder — 2026-07-14 15:00
 - [x] test-runner — 2026-07-14 15:30
-- [ ] pr-reviewer
+- [ ] pr-reviewer — failed 2026-07-14 15:45
 - [ ] commit
 - [ ] pull-request
 
@@ -139,6 +139,21 @@ red_baseline:
   - test_name: test_99_done_move_caught
     file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py
     error: "TypeError: _check_done_folder_prohibition() got an unexpected keyword argument 'old_path'"
+
+### 2026-07-14 15:45 — pr-reviewer (status: blocker)
+feedback-id: fb_2026-07-14_662578b8
+completion_manifest:
+  high_confidence_findings_found:
+    result: false
+    reason: "H-1: Production call site check_ticket_signoff_parity.py:143 calls _check_done_folder_prohibition(ticket_path) without old_path. The BO-400c-3-i false positive (in-place edits at done/ paths triggering the prohibition) remains in the production hook despite the unit tests passing in isolation. CLAUDE.md explicitly flags this pattern: 'tests pass against the function in isolation while every real call path uses the old signature.'"
+    remediation: "Respawn python-coder to update the call site at check_ticket_signoff_parity.py:143 to supply old_path when pre-commit rename information is available, OR amend the ticket scope to explicitly defer call-site wiring to a follow-on ticket and remove the claim that BO-400c-3-i is fully resolved."
+  medium_confidence_findings: 1
+  suppressed_low_findings: 0
+  diff_size_verified: true
+  tests_all_green: true
+  ruff_cited_clean: true
+
+Reviewed `_signoff_parity_checks.py`, `pytest_ac_enforcement.py`, and the test file. The function extension and the 99_done detection (BO-400c-3-ii) are correct; the XFAIL-masking fix is sound. One high-confidence blocker: the production call site at line 143 of `check_ticket_signoff_parity.py` still passes `_check_done_folder_prohibition(ticket_path)` without `old_path`, so the in-place edit false positive (BO-400c-3-i) is unchanged in production. One medium finding: `_check_done_folder` (separate compliance function) still skips `/99_done/` paths — tickets archived to `tickets/99_done/` with needed/failed agents pass the compliance check silently.
 
 ### 2026-07-14 15:30 — test-runner (status: ok)
 feedback-id: fb_2026-07-14_a333f7d7

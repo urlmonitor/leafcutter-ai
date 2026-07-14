@@ -128,6 +128,15 @@ def pytest_runtest_makereport(
     if report.when != "call" or report.outcome != "failed":
         return
 
+    # Only XFAIL-convert assertion failures (the "feature not done yet" semantic).
+    # Implementation errors — TypeError, ImportError, AttributeError, etc. — must
+    # remain RED so that a broken import or wrong function signature is never
+    # silently masked as XFAIL. call.excinfo carries the exception type when the
+    # test body raises; when it is None the hook proceeds with the XFAIL check as
+    # a safe default.
+    if call.excinfo is not None and not issubclass(call.excinfo.type, AssertionError):
+        return
+
     try:
         enforcement = _get_enforcement()
     except ImportError as exc:

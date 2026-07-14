@@ -47,6 +47,7 @@ ALLOWED_RISK_SURFACES = (
     "safety",
     "cost",
 )
+ALLOWED_COMPLEXITIES = ("S", "M", "L")
 
 import json as _json
 from pathlib import Path as _Path
@@ -254,24 +255,37 @@ def _check_bool_field(fm, f):
 
 
 def _check_change_target(fm: dict) -> list[str]:
-    """Report a ``change_target`` value that is not in the allowed enum.
+    """Report a missing, null, empty, or invalid ``change_target`` value.
 
-    ``change_target`` is optional; when present it must be one of the 10
-    allowed values, or a list of such values (mixed-valid lists report only
-    the invalid entries). Absent field passes without error (backward
-    compatibility for existing tickets authored before this field was
-    introduced).
+    ``change_target`` is REQUIRED (BO-610-4); absent or null values are
+    rejected with a missing-field error. An empty list is also rejected.
+    When present, each entry must be one of the 10 allowed values
+    (mixed-valid lists report only the invalid entries).
 
     Args:
         fm: Parsed frontmatter mapping.
 
     Returns:
-        One error per invalid entry. Empty when field is absent or all valid.
+        One error per violation. Empty only when the field is present
+        with at least one valid entry and no invalid entries.
     """
-    value = fm.get("change_target")
+    if "change_target" not in fm:
+        return [
+            f"Missing required field: 'change_target'. "
+            f"Valid values: {', '.join(ALLOWED_CHANGE_TARGETS)}"
+        ]
+    value = fm["change_target"]
     if value is None:
-        return []
+        return [
+            f"'change_target' must not be null. "
+            f"Valid values: {', '.join(ALLOWED_CHANGE_TARGETS)}"
+        ]
     if isinstance(value, list):
+        if not value:
+            return [
+                f"'change_target' must not be an empty list. "
+                f"Valid values: {', '.join(ALLOWED_CHANGE_TARGETS)}"
+            ]
         errors = []
         for entry in value:
             if not isinstance(entry, str) or entry not in ALLOWED_CHANGE_TARGETS:
@@ -289,23 +303,31 @@ def _check_change_target(fm: dict) -> list[str]:
 
 
 def _check_risk_surface(fm: dict) -> list[str]:
-    """Report a ``risk_surface`` value that is not in the allowed enum.
+    """Report a missing, null, or invalid ``risk_surface`` value.
 
-    ``risk_surface`` is optional; when present it must be one of the 6
-    allowed values, or a list of such values (mixed-valid lists report only
-    the invalid entries). Absent field passes without error (backward
-    compatibility for existing tickets authored before this field was
-    introduced).
+    ``risk_surface`` is REQUIRED (BO-610-4); absent or null values are
+    rejected with a missing-field error. When present, each entry must be
+    one of the 6 allowed values (mixed-valid lists report only the invalid
+    entries).
 
     Args:
         fm: Parsed frontmatter mapping.
 
     Returns:
-        One error per invalid entry. Empty when field is absent or all valid.
+        One error per violation. Empty only when the field is present and
+        all entries are valid.
     """
-    value = fm.get("risk_surface")
+    if "risk_surface" not in fm:
+        return [
+            f"Missing required field: 'risk_surface'. "
+            f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
+        ]
+    value = fm["risk_surface"]
     if value is None:
-        return []
+        return [
+            f"'risk_surface' must not be null. "
+            f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
+        ]
     if isinstance(value, list):
         errors = []
         for entry in value:
@@ -320,6 +342,32 @@ def _check_risk_surface(fm: dict) -> list[str]:
     return [
         f"Invalid risk_surface {value!r}. "
         f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
+    ]
+
+
+def _check_estimated_complexity(fm: dict) -> list[str]:
+    """Report an invalid ``estimated_complexity`` value.
+
+    ``estimated_complexity`` is optional; absent or null values produce no
+    error and are treated as the default tier ``M``. When present, the value
+    must be one of the three allowed tiers (S, M, L). ``XL`` and any other
+    non-standard tier are rejected (BO-630-1-i).
+
+    Args:
+        fm: Parsed frontmatter mapping.
+
+    Returns:
+        One error when the value is present but invalid. Empty when absent,
+        null, or a valid tier.
+    """
+    value = fm.get("estimated_complexity")
+    if value is None:
+        return []
+    if value in ALLOWED_COMPLEXITIES:
+        return []
+    return [
+        f"Invalid estimated_complexity {value!r}. "
+        f"Valid values: {', '.join(ALLOWED_COMPLEXITIES)}"
     ]
 
 
@@ -506,6 +554,7 @@ def validate(fm: dict, ticket_path: Path) -> list[str]:
     errors.extend(_check_agents(fm))
     errors.extend(_check_change_target(fm))
     errors.extend(_check_risk_surface(fm))
+    errors.extend(_check_estimated_complexity(fm))
     return errors
 
 
@@ -731,5 +780,14 @@ DECISION HISTORY
   (2) Error message wording changed from "Allowed:" to "Valid values:" in both validators.
   (3) Pre-existing BLE001/TRY300 ruff violations in _load_doc_types, parse_frontmatter,
   _resolve_ticket_path, and main() corrected to use specific exception types.
+- 2026-07-14 [EPIC-BOPhantomDoneRemediation/03]: BO-610-4/BO-610-3-i/BO-630-1-i fixes:
+  (1) _check_change_target and _check_risk_surface promoted from optional to REQUIRED.
+      Absent field, null value, or empty list in change_target now return a
+      "Missing required field" / "must not be null" / "must not be empty list" error.
+      Absent field and null value in risk_surface likewise return required-field errors.
+  (2) Added ALLOWED_COMPLEXITIES = ("S", "M", "L") constant.
+  (3) Added _check_estimated_complexity(): absent/null → no error (defaults to M);
+      present + invalid (e.g. "XL") → error with "Valid values:" wording (BO-630-1-i).
+  (4) Wired _check_estimated_complexity into validate().
 ====================================================================
 """
