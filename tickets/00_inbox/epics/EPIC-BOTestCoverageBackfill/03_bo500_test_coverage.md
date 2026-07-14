@@ -1,6 +1,6 @@
 ---
 title: "Establish green test coverage for BO-500 (computed-quality-gates) ACs"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -222,3 +222,11 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-07-14 18:00 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_3813b6be
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Re-dispatched to finalize status flip: all agents are signed_off or not_needed; flipped status: todo → status: done. PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) already open and branch fully pushed.
