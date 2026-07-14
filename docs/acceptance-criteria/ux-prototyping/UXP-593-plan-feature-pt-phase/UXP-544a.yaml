@@ -1,0 +1,55 @@
+id: UXP-544a
+components:
+  - ux-prototyping
+title: "An unparseable or inconsistent classifier result skips the product-truth phase but still runs the AC pipeline"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth phase has dispatched pt-classifier,
+  When the classifier returns unparseable output, omits its outcome, returns an
+  unknown outcome enum, or its advisory dispatch array disagrees with its outcome,
+  Then the product-truth phase is skipped (no artifact agents are dispatched),
+  And the workflow trusts the outcome over the dispatch array when they disagree,
+  And the AC pipeline still proceeds to completion.
+depends_on:
+  - UXP-544
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Graceful degradation in templates/workflows-js/plan-feature.js: a missing/unknown
+  outcome or unparseable classifier payload falls through to the AC pipeline without
+  raising; when a dispatch array is present it is validated against the outcome and the
+  outcome wins on disagreement.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_unparseable_classifier_string_skips_pt_and_runs_ac
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "unparseable classifier output skips PT and the AC pipeline still runs."
+  - name: test_dispatch_disagreement_trusts_outcome
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "when dispatch disagrees with outcome, the outcome is trusted."

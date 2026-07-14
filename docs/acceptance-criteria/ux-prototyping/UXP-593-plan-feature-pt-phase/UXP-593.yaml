@@ -1,0 +1,48 @@
+id: UXP-593
+components:
+  - ux-prototyping
+title: "/plan-feature authors product-truth artifacts before deriving ACs"
+component: ux-prototyping
+level: L1
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: in_progress
+criteria: |
+  As a product owner running /plan-feature, I want the workflow to author the
+  product-truth artifacts a request needs — classifying the request, then drafting
+  the mock data, mockups, and flow behind a review gate — before it derives the
+  acceptance criteria, so the flow I approved is the reviewable source of truth the
+  AC pipeline builds from, and the workflow degrades safely (never silently) when the
+  product-truth store is unavailable.
+depends_on:
+  - UXP-491
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/define-a-feature.flow.json
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-544
+  - UXP-545
+  - UXP-546
+  - UXP-547
+  - UXP-548
+  - UXP-549
+  - UXP-593a
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: contract_boundary

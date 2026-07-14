@@ -1,0 +1,58 @@
+id: UXP-545a
+components:
+  - ux-prototyping
+title: "A product-truth stage commit refuses to run against the main branch"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given a product-truth stage is ready to commit,
+  When the authoring worktree's current branch is main (or the branch cannot be
+  confirmed to be non-main),
+  Then the commit is refused fail-closed with an error,
+  And the commit agent is never dispatched,
+  And no product-truth files are written to main.
+depends_on:
+  - UXP-545
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+  - path: leafcutter-ai/CLAUDE.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  commitStageOutputProductTruth in templates/workflows-js/plan-feature.js reuses the
+  no-main-commit guard: it dispatches a branch-check status-checker and returns
+  status:error (never dispatching commit) when the branch is main or cannot be
+  confirmed non-main. Satisfies the In-Place Workflow Specs protected-branch AC policy.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_commit_stage_output_product_truth.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js#commitStageOutputProductTruth
+change_target: code
+risk_surface: safety
+test_required: true
+test_spec:
+  - name: test_main_branch_refused_and_no_commit_dispatched
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "on main, the PT commit returns error and never dispatches the commit agent."
+  - name: test_empty_branch_name_fails_closed
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "an unconfirmable branch name fails closed with no commit dispatched."

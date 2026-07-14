@@ -45,7 +45,7 @@
         "UXP-401",
         "UXP-401a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -60,7 +60,7 @@
         "UXP-401",
         "UXP-401a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -78,7 +78,7 @@
         "UXP-401",
         "UXP-401a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -97,7 +97,7 @@
         "UXP-401",
         "UXP-401a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -115,15 +115,15 @@
         "UXP-402",
         "UXP-402a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     }
   ],
   "branches": [],
   "impl_summary": {
     "done": 0,
-    "in_progress": 1,
-    "not_started": 5,
+    "in_progress": 6,
+    "not_started": 0,
     "total": 6,
     "asof": "2026-07-14"
   },

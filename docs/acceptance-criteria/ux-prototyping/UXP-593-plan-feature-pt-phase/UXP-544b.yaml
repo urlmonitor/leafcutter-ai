@@ -1,0 +1,49 @@
+id: UXP-544b
+components:
+  - ux-prototyping
+title: "The product-truth agents run in a fixed order regardless of classifier list order"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given a classifier outcome whose run-set includes more than one artifact agent,
+  When the product-truth phase dispatches those agents,
+  Then they always run in the fixed order mock-data -> mockup -> flow (filtered to the
+  run-set),
+  And the order does not change even when the classifier's advisory dispatch array
+  lists the agents in a different order.
+depends_on:
+  - UXP-544
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  A module-level PT_ORDER constant [mock-data, mockup, flow] in
+  templates/workflows-js/plan-feature.js is filtered by the run-set; iteration follows
+  PT_ORDER, never the classifier's dispatch array, so ordering is deterministic.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: internal
+test_required: true
+test_spec:
+  - name: test_order_is_fixed_regardless_of_dispatch_array_order
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "the three PT agents run mock-data->mockup->flow even when dispatch order differs."

@@ -1,0 +1,61 @@
+id: UXP-544
+components:
+  - ux-prototyping
+title: "pt-classifier is dispatched once after ac-triage and the run-set is derived from its outcome"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given /plan-feature has classified the request via ac-triage,
+  When the product-truth phase begins,
+  Then pt-classifier is dispatched exactly once (always-on) before any authoring agent,
+  And the set of artifact agents to run is derived from the classifier's outcome
+  (full-set / mockup+data / mockup-only / mock-data-only / none) via the canonical
+  OUTCOME_TO_STAGES mapping, not from any advisory dispatch array,
+  And an outcome of none dispatches no product-truth agents and proceeds straight to
+  the AC pipeline.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  The always-on classifier dispatch and the outcome->run-set derivation are
+  implemented in the E2 workflow templates/workflows-js/plan-feature.js, inserted
+  after ac-triage/covered handling and before the AC pipeline. The run-set comes from
+  OUTCOME_TO_STAGES (the row-for-row inverse of the validator's OUTCOME_BY_COMBO);
+  outcome=none is a fast-path that skips the whole phase.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_full_set_dispatches_all_three_in_order
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "full-set outcome runs mock-data, mockup, and flow authors."
+  - name: test_none_dispatches_no_pt_agents_but_runs_ac_pipeline
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "outcome=none dispatches no PT agents and the AC pipeline still runs."

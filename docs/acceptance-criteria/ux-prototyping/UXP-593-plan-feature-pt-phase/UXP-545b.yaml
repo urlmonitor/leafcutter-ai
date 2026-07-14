@@ -1,0 +1,50 @@
+id: UXP-545b
+components:
+  - ux-prototyping
+title: "A failed product-truth stage commit aborts the phase before the next agent runs"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given an approved product-truth stage is being committed,
+  When the commit fails (pre-commit hook rejection, index conflict, or git error),
+  Then the workflow aborts with an error identifying the failed stage,
+  And the next product-truth agent is never dispatched,
+  And the already-drafted files remain on disk,
+  And no pull request is opened.
+depends_on:
+  - UXP-545
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  The PT authoring loop in templates/workflows-js/plan-feature.js checks the
+  commitStageOutputProductTruth result and, on status:error, returns immediately with
+  the failed_stage set before dispatching the next PT agent — the commit-before-next
+  invariant (the BO-1500b-1 analog) applied to the product-truth phase.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_commit_failure_aborts_before_next_agent
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "a failed MOCK-DATA commit aborts before mockup/flow authors are dispatched."

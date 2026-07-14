@@ -138,8 +138,8 @@
       ],
       "impl_summary": {
         "done": 0,
-        "in_progress": 1,
-        "not_started": 5,
+        "in_progress": 6,
+        "not_started": 0,
         "total": 6,
         "asof": "2026-07-14"
       },
@@ -344,9 +344,9 @@
         "Ac"
       ],
       "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 10,
+        "done": 4,
+        "in_progress": 2,
+        "not_started": 4,
         "total": 10,
         "asof": "2026-07-14"
       },
@@ -955,11 +955,11 @@
         "Ac"
       ],
       "path": "flows/leafcutter/author-product-truth.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 10,
+        "done": 4,
+        "in_progress": 2,
+        "not_started": 4,
         "total": 10,
         "asof": "2026-07-14"
       },
@@ -979,8 +979,8 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 1,
-        "not_started": 5,
+        "in_progress": 6,
+        "not_started": 0,
         "total": 6,
         "asof": "2026-07-14"
       },

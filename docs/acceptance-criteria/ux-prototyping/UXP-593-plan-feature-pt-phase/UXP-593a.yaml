@@ -1,0 +1,51 @@
+id: UXP-593a
+components:
+  - ux-prototyping
+title: "When the product-truth store is absent the phase self-skips with an observable signal and AC authoring proceeds"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given the classifier outcome would otherwise run product-truth agents,
+  When the product-truth store (docs/product-truth/ plus its scripts) is not present in
+  the authoring worktree,
+  Then the workflow checks store presence and, finding it absent, emits an observable,
+  non-silent signal (a telemetry/warning dispatch, never a silent no-op),
+  And it skips the product-truth phase without dispatching any artifact agents,
+  And ac-triage and the AC authoring pipeline still proceed to completion.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  templates/workflows-js/plan-feature.js gates the PT phase on checkProductTruthStorePresent
+  (a status-checker probe labelled pt-store-check); when absent it calls emitPtTelemetry
+  (an agent dispatch, because log() is a no-op under E2) so the skip is observable, then
+  falls through to the AC pipeline. Store presence is not even checked when outcome=none.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js#checkProductTruthStorePresent
+change_target: pipeline
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_store_absent_emits_signal_and_ac_proceeds
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "store-absent emits pt-store-check + pt-telemetry, skips PT, and the AC pipeline proceeds."

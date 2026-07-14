@@ -1,0 +1,56 @@
+id: UXP-546
+components:
+  - ux-prototyping
+title: "Product-truth stage commits stage only the reported artifact paths plus index.json"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given a product-truth stage is being committed,
+  When the commit is staged,
+  Then only the stage's reported artifact paths and their derived files plus
+  docs/product-truth/index.json are staged,
+  And a wholesale git add of docs/product-truth is forbidden,
+  And docs/acceptance-criteria/ is excluded from the product-truth commit,
+  And conversely the AC-store commit never reaches into docs/product-truth.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  commitStageOutputProductTruth in templates/workflows-js/plan-feature.js builds commit
+  instructions that enumerate the explicit reported paths + index.json, forbid a blanket
+  "git add docs/product-truth", and keep docs/acceptance-criteria on a SEPARATE commit
+  surface; commitStageOutput (AC side) stays scoped to docs/acceptance-criteria only.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_commit_stage_output_product_truth.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js#commitStageOutputProductTruth
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_reported_paths_and_index_are_staged
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "the PT commit stages the reported paths and index.json."
+  - name: test_ac_store_excluded_from_pt_commit
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "the PT commit excludes docs/acceptance-criteria as a separate surface."
