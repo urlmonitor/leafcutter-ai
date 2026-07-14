@@ -1,0 +1,49 @@
+id: TQ-200a-2-iii
+components:
+  - testing-quality
+title: "MARKUP output is scored by schema, render, and data-binding checks plus a visual judge"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose output is markup — the mockup-author producing a screen,
+  When its eval rows are scored,
+  Then the produced markup is checked by deterministic assertions:
+    it is schema-valid,
+    it renders,
+    and it binds the named mock records rather than placeholder text,
+  And the rendered markup is then scored by a visual judge,
+  And a row passes only when the deterministic assertions all hold and the visual
+    judge score meets the rubric threshold.
+depends_on:
+  - TQ-200a-2
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: L
+it_requirements: |
+  Deterministic assertions: the mockup validates against the mockup schema, renders
+  without error, and its bound values resolve to the named mock records (the same
+  records the flow's steps reference). The visual judge evaluates the rendered
+  screen against the gold mockup for layout/quality per a declared rubric. Both
+  gates must pass.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary

@@ -1,0 +1,49 @@
+id: TQ-200a-2
+components:
+  - testing-quality
+title: "An eval result is scored by the output type the agent produces"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an eval set for an agent,
+  When a row is scored,
+  Then the scoring method is chosen by the agent's output type — a label, an
+    artifact, or markup,
+  And each output type has its own defined scoring method (see TQ-200a-2-i for
+    label, TQ-200a-2-ii for artifact, TQ-200a-2-iii for markup),
+  And an eval set declares which output type it uses so the runner applies the
+    matching scoring method.
+depends_on:
+  - TQ-200a
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements: |
+  Three scoring modes keyed on output type: LABEL, ARTIFACT, MARKUP. Each eval set
+  carries its output type so the shared runner (TQ-200b-1) dispatches to the right
+  scorer. LABEL is fully deterministic; ARTIFACT and MARKUP combine deterministic
+  assertions with an LLM/visual judge.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200a-2-i
+  - TQ-200a-2-ii
+  - TQ-200a-2-iii
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary

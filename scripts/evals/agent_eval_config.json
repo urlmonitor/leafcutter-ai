@@ -1,0 +1,28 @@
+{
+  "$comment": "Shared agent-eval registry. Each key is a pipeline agent; the value declares WHERE its gold eval set lives, HOW to score it (label | artifact), which field of a row feeds the model, and the pass threshold used as a CI gate. Adding a new agent (e.g. flow-author, mock-data-author) is a wiring change here plus, for artifact mode, an assertions/rubric block on each eval row — no harness redesign. All paths are relative to the repo root.",
+  "agents": {
+    "pt-classifier": {
+      "template": "templates/agents/pt-classifier.md",
+      "eval_set": "docs/product-truth/classifier/eval.jsonl",
+      "scoring_mode": "label",
+      "input_field": "request",
+      "expected_field": "expected",
+      "response_label_field": "expected",
+      "model": "claude-haiku-4-5-20251001",
+      "label_axes": ["needs_flow", "needs_mock_data", "needs_mockup"],
+      "derive_outcome": true,
+      "threshold": 0.70,
+      "notes": "Booleans are the scored labels; outcome is derived from them via OUTCOME_BY_COMBO and reported as a secondary accuracy figure. Model pinned to haiku to match the pt-classifier template frontmatter. response_label_field names the sub-object of the model's returned JSON that holds the axes (pt-classifier's S4 contract nests them under 'expected'); omit or null it when an agent returns the axes at top level."
+    }
+  },
+  "artifact_mode_example": {
+    "$comment": "Illustrative shape for a future artifact-producing agent (flow-author / mock-data-author). Not active. When wired, move it under agents{} and point eval_set at a jsonl whose rows carry {id, input, expected:{assertions:[...], rubric:'...'}}.",
+    "template": "templates/agents/flow-author.md",
+    "eval_set": "docs/product-truth/flows/eval.jsonl",
+    "scoring_mode": "artifact",
+    "input_field": "input",
+    "expected_field": "expected",
+    "model": "claude-sonnet-4-6",
+    "threshold": 0.80
+  }
+}

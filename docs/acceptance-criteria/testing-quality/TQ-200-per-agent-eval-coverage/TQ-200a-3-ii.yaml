@@ -1,0 +1,43 @@
+id: TQ-200a-3-ii
+components:
+  - testing-quality
+title: "Held-out cases give a novel input and assert on it without an exact expected output"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent must generalize beyond the gold artifacts,
+  When a held-out case is authored,
+  Then it supplies a novel input the agent has not been shown as a golden case,
+  And its expected field is a set of assertions the output must satisfy rather than
+    an exact expected artifact,
+  And scoring a held-out case passes when those assertions hold, measuring
+    generalization rather than reproduction.
+depends_on:
+  - TQ-200a-3
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Held-out rows carry assertions (schema-valid, entities-in-registry, extend-not-
+  duplicate, referenced-records-exist, acceptance_scenario-per-step, testable
+  Gherkin, or the label/markup equivalents) rather than a byte-exact expected
+  artifact. The scorer runs those assertions against the produced output. This is
+  the generalization half of the set, complementing the regression (golden) half.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+risk_surface: internal

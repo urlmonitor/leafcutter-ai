@@ -1,0 +1,49 @@
+id: TQ-200a-2-i
+components:
+  - testing-quality
+title: "LABEL output is scored by exact label match with precision/recall per routing axis"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose output is a label — the pt-classifier deciding needs_flow,
+    needs_mock_data, and needs_mockup (and the derived outcome),
+  When its eval rows are scored,
+  Then each row passes only when the produced label matches the expected label
+    exactly,
+  And the scorer reports precision and recall computed per routing axis (per each
+    of needs_flow, needs_mock_data, needs_mockup),
+  And the overall score for the set is derived from those per-axis figures.
+depends_on:
+  - TQ-200a-2
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+  - path: docs/product-truth/schemas/classifier-eval.schema.json
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The classifier eval set (docs/product-truth/classifier/eval.jsonl) already carries
+  the expected booleans and derived outcome per row; the LABEL scorer asserts exact
+  match on the outcome and computes precision/recall for each boolean axis across
+  the set. This is the deterministic-only mode (no judge).
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal

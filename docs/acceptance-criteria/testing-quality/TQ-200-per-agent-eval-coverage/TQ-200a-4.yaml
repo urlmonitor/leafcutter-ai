@@ -1,0 +1,51 @@
+id: TQ-200a-4
+components:
+  - testing-quality
+title: "Every eval set contains at least one negative / failure case"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an eval set for an agent,
+  When its rows are validated for completeness,
+  Then the set contains at least one negative / failure case — an input the agent
+    is expected to reject, refuse, or flag as an error rather than produce a
+    well-formed artifact for,
+  And the negative case's expected outcome asserts that the agent handles the bad
+    input correctly (e.g. declines to duplicate an existing dataset, reports an
+    unresolved reference, or returns none for a request that needs no artifact),
+  And an eval set with no negative case is reported as an incomplete set rather
+    than passing.
+depends_on:
+  - TQ-200a
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Mirrors the repo error-path discipline (CLAUDE.md Rules 1-4): an eval set proves
+  the agent rejects bad input, not just handles good input. Examples of a negative
+  case per agent: the classifier's "none" outcome (clf-011/clf-012), a mock-data
+  request for an entity that already has a canonical dataset (must extend, not
+  duplicate), a flow step whose referenced record does not exist. The completeness
+  check asserts >= 1 row flagged negative per set.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

@@ -1,0 +1,51 @@
+id: TQ-200a
+components:
+  - testing-quality
+title: "Each generative or judgment agent has a scored eval set of input -> expected cases"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  As someone who owns the pipeline's agents, I want every generative or judgment
+  agent to carry its own eval set — a collection of rows, each pairing an input
+  with the outcome I expect — so that I can measure how well the agent does its
+  job and catch it getting worse.
+
+  Each row is {id, input, expected}. The set is scored by the kind of output the
+  agent produces (a label, an artifact, or markup), it contains both regression
+  cases reverse-engineered from the gold artifacts and held-out cases that probe
+  generalization, and it always includes at least one negative / failure case so
+  the agent is proven to reject bad input as well as handle good input. The set
+  exists for the producer agents and for the AC-authoring agents; the deterministic
+  gate agents are deliberately left out because unit tests already cover them.
+depends_on:
+  - TQ-200
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+  - path: docs/product-truth/schemas/classifier-eval.schema.json
+    relationship: relates-to
+    status: exists
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200a-1
+  - TQ-200a-2
+  - TQ-200a-3
+  - TQ-200a-4
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

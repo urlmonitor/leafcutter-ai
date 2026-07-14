@@ -1,0 +1,45 @@
+id: TQ-200b
+components:
+  - testing-quality
+title: "A shared runner scores every agent's eval set and blocks merges on regression"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  As someone who owns the pipeline's agents, I want a single shared runner that can
+  take any agent's eval set, run the agent once per row, score each result, and
+  report pass/fail plus a score — and I want that report wired into CI as a quality
+  gate — so that agent evals are executed the same way for every agent and a
+  regression is caught automatically before it merges rather than discovered in
+  production.
+
+  The runner is output-type aware (it applies the label / artifact / markup scoring
+  the agent's set declares), its results are reportable in a machine-readable form,
+  and CI fails the change when an agent's score drops below its golden baseline.
+depends_on:
+  - TQ-200
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+documentation_triggers:
+  - how-to
+  - reference-doc
+documentation_rationale: null
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200b-1
+  - TQ-200b-2
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary

@@ -1,0 +1,49 @@
+id: TQ-200a-1
+components:
+  - testing-quality
+title: "Every in-scope agent has an eval set of {id, input, expected} rows"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of generative and judgment agents in the pipeline,
+  When the eval coverage is assembled,
+  Then each in-scope agent has exactly one eval set associated with it,
+  And every eval set is a collection of rows where each row has an id, an input,
+    and an expected outcome,
+  And an agent that is in scope but has no eval set is reported as a coverage gap
+    rather than passing silently.
+depends_on:
+  - TQ-200a
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The scope is a known, enumerable list of agents (see TQ-200a-1-i / -ii). Each
+  eval set is a data artifact (the classifier's existing docs/product-truth/classifier/eval.jsonl
+  is the shape to follow: one row per line, {id, input, expected}). A coverage
+  check enumerates in-scope agents and asserts each has a non-empty set; a missing
+  set is an error, not a skip.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200a-1-i
+  - TQ-200a-1-ii
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

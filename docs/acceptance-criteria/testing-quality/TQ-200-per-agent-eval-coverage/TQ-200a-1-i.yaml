@@ -1,0 +1,45 @@
+id: TQ-200a-1-i
+components:
+  - testing-quality
+title: "The producer and AC-authoring agents are in scope for eval coverage"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the coverage check enumerates the agents that require an eval set,
+  When it determines scope,
+  Then the producer agents pt-classifier, mock-data-author, mockup-author, and
+    flow-author are each in scope,
+  And the AC-authoring agents product-owner, business-analyst, and it-po are each
+    in scope,
+  And every one of these seven agents is required to have its own eval set.
+depends_on:
+  - TQ-200a-1
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Scope is the union of the product-truth producer agents (pt-classifier,
+  mock-data-author, mockup-author, flow-author) and the AC-authoring agents
+  (product-owner, business-analyst, it-po). These names should be a single
+  declared list the coverage check reads, not hard-coded in multiple places.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+risk_surface: contract_boundary

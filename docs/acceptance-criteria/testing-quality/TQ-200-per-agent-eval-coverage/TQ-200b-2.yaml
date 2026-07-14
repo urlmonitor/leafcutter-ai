@@ -1,0 +1,49 @@
+id: TQ-200b-2
+components:
+  - testing-quality
+title: "The eval suite is wired into CI as a quality gate that blocks on regression"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the shared runner produces an eval report for every in-scope agent's set,
+  When CI runs on a change,
+  Then the eval suite runs as a CI quality gate,
+  And the gate fails the change when any agent's golden score drops below its
+    recorded baseline,
+  And the gate reports which agent and which rows regressed,
+  And the gate cannot be silently bypassed (its result is required to merge).
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  A CI job invokes the runner (TQ-200b-1) across all in-scope eval sets and compares
+  golden scores to recorded baselines; a drop fails the job. Held-out scores are
+  reported for visibility. The gate should be a required check (parallels the
+  BP-1200 / TQ-100 test-gate discipline) so it cannot be bypassed. Baseline storage
+  and update policy is part of this AC.
+delivers_to: null
+expects_from:
+  agent: eval-runner
+  contract: "The machine-readable eval report from TQ-200b-1."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - config
+risk_surface: contract_boundary
