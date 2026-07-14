@@ -1,6 +1,6 @@
 ---
 title: "Establish green test coverage for BO-210 (precommit-safety-net) ACs"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -317,3 +317,13 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-07-14 18:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_9e0069c2
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+  status_done_flipped: true
+
+Re-invocation finalization: pushed pending commit add5a5d0 (pr-reviewer sign-off H-1/H-2 resolution) to existing PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282). All agents now signed_off or not_needed; flipped ticket status todo → done.
