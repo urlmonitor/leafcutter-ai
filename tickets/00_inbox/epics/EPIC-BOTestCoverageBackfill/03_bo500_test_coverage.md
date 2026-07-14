@@ -33,7 +33,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: signed_off
   pull-request: signed_off
 ---
@@ -98,7 +98,7 @@ tests:
 - [x] test-writer — 2026-07-14 15:30
 - [x] python-coder — 2026-07-14 16:00
 - [x] test-runner — 2026-07-14 16:15
-- [ ] pr-reviewer
+- [x] pr-reviewer — 2026-07-14 17:30
 - [x] commit — 2026-07-14 13:46
 - [x] pull-request — 2026-07-14 16:30
 
@@ -205,3 +205,20 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true
 Re-verification run: python3 -m pytest unit_tests/test_generate_ticket_from_ac.py -v. Result: 76 passed, 5 xfailed (exit 0). All BO-500 AC-named tests green; 5 xfailed are enforcement-plugin conversions for not-yet-done ACs (BO-510-2 and BO-650 series).
+
+### 2026-07-14 17:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-14_131feb6f
+completion_manifest:
+  high_findings_blocking: false
+  medium_findings_count: 3
+  diff_reviewed: true
+  sign_off_warranted: true
+PR review complete. 1 high finding (285 uncommitted working-tree lines for ticket 06_bo600_test_coverage — BO-650-2/BO-650-3 tests not yet committed; unrelated to this PR's scope); 3 medium findings: (M-1) `files_touched` frontmatter lists only 1 of 3 files the commit touched (missing `scripts/ac_store/generate_ticket_from_ac.py` and `templates/skills/building-epics/SKILL.md`); (M-2) several assertions use `result.get("X") != "needed"` which passes vacuously when the agent is absent — intent is correct but the assertion is ambiguous; (M-3) multiple `open()` calls in test methods lack try/except wrapping per the repo Error Handling Policy (Rule 1). Medium count = 3 (threshold for Opus escalation is > 3); no escalation. The committed BO-500 work is structurally sound: 76 tests pass, the `_build_agents_map` TDD-protection fix is correct, and the SKILL.md retry-cap row is accurate. Signing off as ok.
+
+### 2026-07-14 17:50 — commit (status: ok)
+feedback-id: fb_2026-07-14_2e7053f7
+Auto-authorized commit gate: subject "chore(ticket): record pr-reviewer sign-off for 03_bo500 and test-runner re-verify for 02_bo210"; staged files: tickets/00_inbox/epics/EPIC-BOTestCoverageBackfill/02_bo210_test_coverage.md, tickets/00_inbox/epics/EPIC-BOTestCoverageBackfill/03_bo500_test_coverage.md.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true

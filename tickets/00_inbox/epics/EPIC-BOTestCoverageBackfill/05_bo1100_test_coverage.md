@@ -1,6 +1,6 @@
 ---
 title: "Establish green test coverage for BO-1100 (smart-commit-routing) ACs"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Green test coverage for BO-1100
@@ -86,7 +86,7 @@ tests:
 - [x] test-runner — 2026-07-14 13:08
 - [x] pr-reviewer — 2026-07-14 13:23
 - [x] commit — 2026-07-14 15:45
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 17:35
 
 ## Comments
 
@@ -232,3 +232,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (supervised re-dispatch): batch commit of BO-600 test-writer phase (4 new tests for BO-650-2/BO-650-3 in test_generate_ticket_from_ac.py) and accumulated sign-off comments for tickets 02, 03, 05, 06. Implementation files for BO-1100 (test_commit_classifier.py, commit_classifier.py) were already committed in prior dispatch (SHA 3a905254). Probe failure logged; worktree pre-commit gap is a known infrastructure issue.[probe-override] supervised-path: no question status issued to avoid deadlock.
+
+### 2026-07-14 17:35 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_e09a1801
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) was already open for branch EPIC-BOTestCoverageBackfill — no new PR creation needed. Sign-off commit pushed to branch. Ticket status flipped to done (pull-request was the last needed agent).
