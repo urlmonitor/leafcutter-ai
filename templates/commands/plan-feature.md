@@ -16,7 +16,7 @@ manually as an LLM conversation.**
 Invoke the `plan-feature` workflow script via the Workflow tool:
 
 ```
-Workflow("scripts/workflows/plan-feature.js", { userInput: $ARGUMENTS })
+Workflow("plan-feature", { userInput: $ARGUMENTS })
 ```
 
 If the Workflow tool is unavailable or the script returns an error, stop

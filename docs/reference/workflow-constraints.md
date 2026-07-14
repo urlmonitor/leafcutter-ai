@@ -10,7 +10,7 @@ related_docs:
   - "templates/workflows-js/build-ticket.js"
   - "templates/workflows-js/build-epic.js"
   - "templates/workflows-js/create-ticket.js"
-  - "scripts/workflows/plan-feature.js"
+  - "templates/workflows-js/plan-feature.js"
   - "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
   - "docs/how-to/configure-workflow-allowlist.md"
   - "templates/agents/onboard.md"
@@ -202,7 +202,7 @@ dispatch-target violation and must be removed.
   architectural decision that introduced the workflow scripts and the
   depth-1 dispatch model.
 - `templates/workflows-js/` — the workflow script source files.
-- `scripts/workflows/plan-feature.js` — the `/plan-feature` workflow script
+- `templates/workflows-js/plan-feature.js` — the `/plan-feature` workflow script
   (AC authoring pipeline); replaced the legacy `/create-ac` command in v2.0.
 - `templates/agents/onboard.md` — the onboarding wizard, which checks the
   Claude Code version at Step 1b and warns if below 2.1.154.

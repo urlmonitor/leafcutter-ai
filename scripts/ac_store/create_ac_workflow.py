@@ -6,7 +6,7 @@ called by the /plan-feature workflow via JavaScript (plan-feature.js). The Pytho
 version is used by unit tests (test_create_ac_workflow.py) and by CI pipelines
 that cannot invoke the agent runtime.
 
-The JavaScript workflow (scripts/workflows/plan-feature.js) is the production
+The JavaScript workflow (templates/workflows-js/plan-feature.js) is the production
 entry point; this module provides the same routing logic in a testable form.
 
 Routing table:

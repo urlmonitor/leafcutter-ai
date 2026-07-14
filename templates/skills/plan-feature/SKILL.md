@@ -2,7 +2,7 @@
 name: plan-feature
 description: |
   Triage, orchestrate, and gate AC authoring for a user's feature request.
-  Invokes the /plan-feature workflow (scripts/workflows/plan-feature.js): dispatches
+  Invokes the /plan-feature workflow (.claude/workflows/plan-feature.js): dispatches
   ac-triage to classify the request as strategic / behavioral / technical /
   covered, then routes through the correct authoring agents (PO v3, BA v3,
   IT PO v3) with user confirmation gates between stages. All output goes
@@ -12,7 +12,7 @@ description: |
   Trigger phrases: "plan feature", "new AC", "author ACs",
   "write requirements", "/plan-feature".
 allowed-tools: Bash, Read, Agent
-workflow_script: scripts/workflows/plan-feature.js
+workflow_script: .claude/workflows/plan-feature.js
 ---
 
 # plan-feature skill
@@ -478,7 +478,7 @@ the branch detection succeeding.
 ## Related
 
 - `templates/agents/ac-triage.md` — Haiku-pinned triage agent.
-- `scripts/workflows/plan-feature.js` — the underlying workflow script.
+- `.claude/workflows/plan-feature.js` — the underlying workflow script (built from `templates/workflows-js/plan-feature.js`).
 - `scripts/ac_store/validate_ac_schema.py` — AC YAML schema validator.
 - `config/ac_schema.json` — JSON Schema for the triage output object.
 - `/build-ac` — downstream command: scanner + ticket generator from existing ACs.

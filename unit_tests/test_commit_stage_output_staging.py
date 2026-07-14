@@ -62,12 +62,18 @@ import tempfile
 import textwrap
 import unittest
 
-_REPO_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..")
+from _plan_feature_e2_runner import (
+    E2_PLAN_FEATURE_JS,
+    NodeScriptError as _RunnerNodeError,
+    run_plan_feature_e2,
 )
-_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "scripts", "workflows", "plan-feature.js"
-)
+
+# The E2 runtime file is the sole plan-feature.js consumer surface after
+# foundation cleanup deleted the legacy scripts/workflows/plan-feature.js. The
+# git-scratch tests below are dialect-independent; the instruction-prose tests
+# capture the ACTUAL commit prompt dispatched by the E2 pipeline instead of
+# calling the (now global-agent) commitStageOutput() directly.
+_PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
 
 
 # ---------------------------------------------------------------------------
@@ -90,27 +96,6 @@ class GitCommandError(Exception):
 # ---------------------------------------------------------------------------
 # Helpers — source reading and Node.js script execution
 # ---------------------------------------------------------------------------
-
-
-def _read_source(path: str) -> str:
-    """Read and return the full text of a file."""
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    except OSError as exc:
-        msg = f"Cannot read source file {path}: {exc}"
-        raise OSError(msg) from exc
-
-
-def _run_node_script(script_text: str, timeout: int = 20) -> subprocess.CompletedProcess:
-    """Run an inline Node.js ESM script via stdin and return the CompletedProcess."""
-    return subprocess.run(
-        ["node", "--input-type=module"],
-        input=script_text,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
 
 
 def _run_git(args: list[str], cwd: str, timeout: int = 10) -> subprocess.CompletedProcess:
@@ -165,61 +150,57 @@ def _write_yaml(path: str, content: str = "id: placeholder\n") -> None:
 
 
 # ---------------------------------------------------------------------------
-# Helpers — extract instructions from commitStageOutput() via Node.js vm.Script
+# Helper — capture the commit prompt the E2 pipeline actually dispatches
 # ---------------------------------------------------------------------------
 
 
 def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
-    """
-    Invoke commitStageOutput() with a mock agent in a Node.js vm.Script context
-    and return the instructions string passed to the agent.
+    """Return the commit prompt dispatched by the E2 pipeline's first stage commit.
 
-    The mock agent captures the full instructions before returning a successful
-    result, so commitStageOutput() completes without error.
+    Drives the real E2 body (strategic route → approve the first gate) so that
+    commitStageOutput() runs and dispatches the ``commit`` agent, then returns
+    that agent call's prompt — the staging instructions under test.
 
-    Raises NodeScriptError if the Node.js process exits non-zero.
+    commitStageOutput() in the E2 file uses the global ``agent`` and a changed
+    signature, so it can no longer be called directly; driving the pipeline
+    exercises the real runtime path. ``plan_feature_path`` is accepted for
+    signature parity; the runner always targets the E2 runtime file.
+
+    Raises NodeScriptError if the pipeline fails or dispatches no commit.
     """
     written_json = json.dumps(written)
-    script = textwrap.dedent(f"""
-        import {{ readFileSync }} from 'fs';
-        import vm from 'vm';
-
-        const source = readFileSync({json.dumps(plan_feature_path)}, 'utf8');
-
-        // Strip ESM syntax so vm.Script can evaluate the source.
-        const patchedSource = source
-            .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-            .replace(/^export \\{{ run \\}};/m, '// export removed')
-            .replace(/^export function/gm, 'function')
-            + `
-        globalThis.__capturedInstructions = '';
+    mock = textwrap.dedent(f"""
         async function mockAgent(call) {{
-            if (call.input && call.input.instructions) {{
-                globalThis.__capturedInstructions = call.input.instructions;
+            const agentType = call.agentType || '';
+            const instructions = (call.input && call.input.instructions) || '';
+            globalThis.__capturedAllCalls.push({{ agentType }});
+            if (agentType === 'ac-triage') {{
+                return {{ route: 'strategic', existing_acs: [], parent_l1_id: null, rationale: 'test' }};
             }}
-            return {{ status: 'ok', message: 'mock commit ok' }};
+            if (agentType === 'product-owner') {{
+                return {{ status: 'ok', acs_written: {written_json} }};
+            }}
+            if (agentType === 'commit') {{
+                globalThis.__capturedCommitCalls.push({{ instructions }});
+                return {{ status: 'ok', message: 'mock commit ok' }};
+            }}
+            if (agentType === 'status-checker') {{
+                if (instructions.includes('git branch --show-current')) {{
+                    return {{ output: 'ac-authoring/test', exit_code: 0 }};
+                }}
+                return {{ action: 'approve' }};
+            }}
+            return {{ status: 'ok' }};
         }}
-
-        commitStageOutput(mockAgent, {written_json}, 'po', 'test-component', false)
-            .then(() => {{
-                process.stdout.write(globalThis.__capturedInstructions || '');
-            }})
-            .catch(err => {{
-                process.stderr.write('Error: ' + err.message);
-                process.exit(1);
-            }});
-        `;
-
-        const ctx = vm.createContext({{ ...globalThis, process, console }});
-        const s = new vm.Script(patchedSource);
-        s.runInContext(ctx);
     """)
-
-    proc = _run_node_script(script, timeout=20)
-    if proc.returncode != 0:
-        msg = f"Node.js vm.Script failed (exit {proc.returncode}). stderr: {proc.stderr!r}"
-        raise NodeScriptError(msg)
-    return proc.stdout
+    try:
+        _run_result, side = run_plan_feature_e2(mock)
+    except _RunnerNodeError as exc:
+        raise NodeScriptError(str(exc)) from exc
+    commit_calls = side.get("commitCalls", [])
+    if not commit_calls:
+        raise NodeScriptError("E2 pipeline dispatched no commit agent call")
+    return commit_calls[0].get("instructions", "")
 
 
 def _extract_porcelain_command(instructions: str) -> str:

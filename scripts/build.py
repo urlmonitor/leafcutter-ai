@@ -54,6 +54,7 @@ from build_phases import (
     build_workflow_tools,
     build_knowledge_scripts,
     build_template_standalone_scripts,
+    build_product_truth,
     detect_deploy_collisions,
     _compute_phase_mappings,
 )
@@ -1039,6 +1040,7 @@ def _run_phases(
         ("Config scaffolds", build_config_scaffolds),
         ("AC store scaffold", build_ac_store_scaffold),
         ("AC store docs", build_ac_store_docs),
+        ("Product-truth tooling", build_product_truth),
         ("Agent cards", build_agent_cards),
         ("Doc index", build_doc_index),
     ]

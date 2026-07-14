@@ -35,21 +35,19 @@ Behavioral approach:
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 import textwrap
 import unittest
 
-_REPO_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..")
-)
-_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "scripts", "workflows", "plan-feature.js"
-)
-_TEMPLATE_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "templates", "workflows-js", "plan-feature.js"
-)
+from _plan_feature_e2_runner import E2_PLAN_FEATURE_JS, run_plan_feature_e2
+
+# The E2 runtime file is the sole plan-feature.js consumer surface after
+# foundation cleanup deleted the legacy scripts/workflows/plan-feature.js.
+# The fail-closed coercion tests read this file's source directly and replay
+# the exact coercion block; the hook-safe tests drive the E2 body via
+# run_plan_feature_e2 and inspect the real dispatched commit agent call.
+_PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
 
 
 # ---------------------------------------------------------------------------
@@ -117,58 +115,6 @@ def _extract_coercion_block(source: str) -> str:
         raise SourceParseError("return-statement-end-missing")
 
     return source[start_idx: end_of_return + 1]
-
-
-def _extract_commit_stage_function(source: str) -> str:
-    """
-    Extract the full commitStageOutput() function text from the source.
-
-    Returns the text from 'async function commitStageOutput' through its
-    closing '}'. Raises SourceParseError if the function cannot be located.
-    """
-    start = source.find("async function commitStageOutput(")
-    if start == -1:
-        raise SourceParseError("commitStageOutput-function-missing")
-
-    depth = 0
-    i = start
-    found_first_brace = False
-    while i < len(source):
-        c = source[i]
-        if c == "{":
-            depth += 1
-            found_first_brace = True
-        elif c == "}" and found_first_brace:
-            depth -= 1
-            if depth == 0:
-                return source[start: i + 1]
-        i += 1
-    raise SourceParseError("commitStageOutput-closing-brace-missing")
-
-
-def _build_vm_patcher_script(plan_feature_path: str) -> str:
-    """
-    Return a Node.js script fragment (CommonJS-compatible vm.Script template)
-    that reads plan-feature.js, strips ESM syntax, and exposes commitStageOutput
-    for direct invocation with a mock agent.
-
-    The fragment is NOT a complete script — the caller appends the mock agent
-    function and the invocation code before running it.
-    """
-    return textwrap.dedent(f"""
-        import {{ readFileSync }} from 'fs';
-        import vm from 'vm';
-
-        const source = readFileSync({json.dumps(plan_feature_path)}, 'utf8');
-
-        // Strip ESM syntax so vm.Script can evaluate the source.
-        // vm.Script does not support import/export — we patch the two export
-        // statements that plan-feature.js uses.
-        const patchedSource = source
-            .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-            .replace(/^export \\{{ run \\}};/m, '// export removed')
-            .replace(/^export function/gm, 'function')
-    """)
 
 
 # ---------------------------------------------------------------------------
@@ -415,54 +361,79 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
     `git commit` in the agent instructions causes a runtime blocker on any
     correctly-configured repo.
 
-    These tests are RED until defect 1 is fixed by either:
-      (a) dispatching the dedicated `commit` agent (agentType: 'commit'), or
-      (b) using a hook-sanctioned COMMIT_AGENT_MODE=1 pattern if approved.
+    GREEN against the E2 runtime file: commitStageOutput() dispatches the
+    dedicated `commit` agent (agentType 'commit') and its instructions delegate
+    the commit to that agent's standard flow rather than running raw git commit.
+
+    Retargeted to the E2 file: rather than calling commitStageOutput() directly
+    (its signature changed and it now uses the global `agent`), these tests drive
+    the real E2 pipeline to a stage commit via run_plan_feature_e2 and inspect the
+    ACTUAL dispatched commit agent call (prompt + agentType) captured by the mock.
 
     AC: ACD-300g-1 — stage commit does not collide with enforce_commit_delegation.
     """
 
     PLAN_FEATURE_PATH = _PLAN_FEATURE_JS
 
-    def _run_capture_script(self, capture_var: str) -> str:
+    # Mock that drives a strategic pipeline far enough to reach the first
+    # (product-owner) stage commit, and records every commit dispatch.
+    _COMMIT_CAPTURE_MOCK = textwrap.dedent("""
+        async function mockAgent(call) {
+            const agentType = call.agentType || '';
+            const instructions = (call.input && call.input.instructions) || '';
+            globalThis.__capturedAllCalls.push({ agentType });
+
+            if (agentType === 'ac-triage') {
+                return { route: 'strategic', existing_acs: [], parent_l1_id: null, rationale: 'test' };
+            }
+            if (agentType === 'product-owner') {
+                return { status: 'ok', acs_written: ['ACD-test-1'] };
+            }
+            if (agentType === 'commit') {
+                // Capture the real dispatched commit call (prompt + agentType).
+                globalThis.__capturedCommitCalls.push({ instructions, agentType });
+                return { status: 'ok', message: 'mock commit ok' };
+            }
+            if (agentType === 'status-checker') {
+                // Confirm a non-main authoring branch so the fail-closed commit
+                // guard proceeds to dispatch the commit agent.
+                if (instructions.includes('git branch --show-current')) {
+                    return { output: 'ac-authoring/test', exit_code: 0 };
+                }
+                // Approve every gate (mid-pipeline and final).
+                return { action: 'approve' };
+            }
+            return { status: 'ok' };
+        }
+    """)
+
+    def _capture_first_commit(self) -> dict:
+        """Drive the E2 pipeline to a stage commit; return the first commit call.
+
+        Returns the dict {instructions, agentType} recorded by the mock for the
+        first dispatched commit agent call.
         """
-        Run a Node.js vm.Script that invokes commitStageOutput() with a mock agent
-        and returns the value of `capture_var` (e.g. '__capturedInstructions').
-        """
-        patcher = _build_vm_patcher_script(self.PLAN_FEATURE_PATH)
-        script = patcher + textwrap.dedent(f"""
-            + `
-            async function mockAgent(call) {{
-                if (call.input && call.input.instructions) {{
-                    globalThis.__capturedInstructions = call.input.instructions;
-                }}
-                globalThis.__capturedAgentType = call.agentType || '';
-                // Return well-formed ok so the function completes without error.
-                return {{ status: 'ok', message: 'mock commit ok' }};
-            }}
-
-            commitStageOutput(mockAgent, ['ACD-test-1'], 'po', 'test-component', false)
-                .then(() => {{
-                    process.stdout.write(globalThis.{capture_var} || '');
-                }})
-                .catch(err => {{
-                    process.stderr.write('Error: ' + err.message);
-                    process.exit(1);
-                }});
-            `;
-
-            const ctx = vm.createContext({{ ...globalThis, process, console }});
-            const s = new vm.Script(patchedSource);
-            s.runInContext(ctx);
-        """)
-
-        proc = _run_node_script(script, timeout=20)
-        if proc.returncode != 0:
+        _run_result, side = run_plan_feature_e2(self._COMMIT_CAPTURE_MOCK)
+        commit_calls = side.get("commitCalls", [])
+        if not commit_calls:
             self.fail(
-                f"Node.js behavioral script failed (exit {proc.returncode}).\n"
-                f"stderr: {proc.stderr}"
+                "No commit agent was dispatched by the E2 pipeline — cannot inspect "
+                f"the commit call. allCalls: {side.get('allCalls')!r}"
             )
-        return proc.stdout
+        return commit_calls[0]
+
+    def _run_capture_script(self, capture_var: str) -> str:
+        """Return the requested field of the first dispatched commit call.
+
+        Preserves the historical helper's call sites: capture_var is either
+        '__capturedInstructions' (the commit prompt) or '__capturedAgentType'.
+        """
+        call = self._capture_first_commit()
+        if capture_var == "__capturedInstructions":
+            return call.get("instructions", "")
+        if capture_var == "__capturedAgentType":
+            return call.get("agentType", "")
+        return ""
 
     def test_agent_instructions_do_not_contain_raw_git_commit(self):
         """
@@ -528,45 +499,14 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Template parity test
+# Template parity test — REMOVED.
+#
+# The former TestCommitStageOutputParityWithTemplate asserted byte-identity
+# between commitStageOutput() in scripts/workflows/plan-feature.js and
+# templates/workflows-js/plan-feature.js. Foundation cleanup deleted the legacy
+# copy, leaving one canonical E2 file, so there is nothing to compare and the
+# parity test was removed rather than left asserting against a deleted path.
 # ---------------------------------------------------------------------------
-
-
-class TestCommitStageOutputParityWithTemplate(unittest.TestCase):
-    """
-    Verify that scripts/workflows/plan-feature.js and
-    templates/workflows-js/plan-feature.js have identical commitStageOutput()
-    function bodies.
-
-    Both files must be fixed identically — the template is the canonical source
-    deployed to consumer projects.
-
-    GREEN when both files are in-sync (byte-identical currently).
-    RED if a partial fix updates only one copy.
-    """
-
-    def test_scripts_and_templates_are_in_parity(self):
-        """
-        The commitStageOutput() function in scripts/ and templates/ must be identical.
-
-        A fix applied to only one copy causes the template-deployed version to
-        carry the defect in production. Both must be fixed together.
-        """
-        scripts_source = _read_source(_PLAN_FEATURE_JS)
-        template_source = _read_source(_TEMPLATE_PLAN_FEATURE_JS)
-
-        scripts_fn = _extract_commit_stage_function(scripts_source)
-        template_fn = _extract_commit_stage_function(template_source)
-
-        self.assertEqual(
-            scripts_fn,
-            template_fn,
-            msg=(
-                "scripts/workflows/plan-feature.js and "
-                "templates/workflows-js/plan-feature.js have DIFFERENT "
-                "commitStageOutput() bodies. Apply the fix to BOTH files."
-            ),
-        )
 
 
 if __name__ == "__main__":

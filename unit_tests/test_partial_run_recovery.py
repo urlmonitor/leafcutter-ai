@@ -31,77 +31,26 @@ prose in SKILL.md, not the runtime execution path.
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import textwrap
 import unittest
 
-_REPO_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..")
-)
-_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "scripts", "workflows", "plan-feature.js"
-)
-_TEMPLATE_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "templates", "workflows-js", "plan-feature.js"
+from _plan_feature_e2_runner import (
+    E2_PLAN_FEATURE_JS,
+    NodeScriptError,
+    run_isolated_e2,
+    run_plan_feature_e2,
 )
 
-
-# ---------------------------------------------------------------------------
-# Custom exception types (required by ruff TRY003 — no long inline messages)
-# ---------------------------------------------------------------------------
-
-
-class SourceParseError(Exception):
-    """Raised when the JS source cannot be parsed as expected by a test helper."""
-
-
-class NodeScriptError(Exception):
-    """Raised when an inline Node.js script exits non-zero."""
+# The E2 runtime file is the sole plan-feature.js consumer surface after
+# foundation cleanup deleted the legacy scripts/workflows/plan-feature.js.
+# These behavioral tests were retargeted to drive the E2 body (and its recovery
+# functions) via the _plan_feature_e2_runner harness.
+_PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
 
 
 # ---------------------------------------------------------------------------
-# Helpers (mirroring the pattern in test_commit_stage_output_behavioral.py)
+# Helpers — drive the E2 body / isolate its recovery functions.
 # ---------------------------------------------------------------------------
-
-
-def _read_source(path: str) -> str:
-    """Read and return the full text of a file."""
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    except OSError as exc:
-        raise OSError(f"Cannot read source file {path}: {exc}") from exc
-
-
-def _run_node_script(script_text: str, timeout: int = 25) -> subprocess.CompletedProcess:
-    """Run an inline Node.js ESM script via stdin and return the CompletedProcess."""
-    return subprocess.run(
-        ["node", "--input-type=module"],
-        input=script_text,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-
-
-def _build_vm_preamble(plan_feature_path: str) -> str:
-    """
-    Return the ESM script fragment that loads plan-feature.js into a vm.Script
-    sandbox with ESM syntax stripped. Callers append their mock + invocation code.
-    """
-    return textwrap.dedent(f"""
-        import {{ readFileSync }} from 'fs';
-        import vm from 'vm';
-
-        const source = readFileSync({json.dumps(plan_feature_path)}, 'utf8');
-
-        // Strip ESM syntax so vm.Script can evaluate the source.
-        const patchedSource = source
-            .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-            .replace(/^export \\{{ run \\}};/m, '// export removed')
-            .replace(/^export function/gm, 'function')
-    """)
 
 
 def _run_with_mock_agent(
@@ -110,191 +59,25 @@ def _run_with_mock_agent(
     user_input: str = "test feature request",
     timeout: int = 25,
     extra_ctx: dict | None = None,
-) -> subprocess.CompletedProcess:
+) -> tuple[dict, dict]:
+    """Drive the E2 plan-feature body under a mock agent.
+
+    Returns (run_result, side_channel). ``run_result`` is the object the E2
+    top-level body returned (the E2 analogue of the legacy run() return value).
+    ``side_channel`` exposes ``commitCalls``, ``allCalls``, ``restoreCalls``,
+    ``deleteCalls``, ``firstGitStatusCallIndex`` and ``triageCallIndex``,
+    populated by the mock. The mock receives the legacy ``call`` object
+    ({agentType, input:{instructions}}) via the runner's shim, so it ports
+    unchanged. ``plan_feature_path`` is accepted for signature parity.
     """
-    Run plan-feature.js's run() function in a Node.js vm.Script sandbox.
-
-    stdout encodes: JSON(run_result) + NUL + JSON(side_channel)
-    where side_channel is { commitCalls: [...], allCalls: [...] }.
-
-    The mock agent code and invocation boilerplate are JSON-encoded and
-    concatenated onto the patched plan-feature.js source OUTSIDE of a
-    JS backtick template literal. This avoids the backtick template \\n
-    interpretation issue: if mock code contained '?? foo\\n' inside a
-    backtick template, JS would expand \\n to a literal newline, breaking
-    the string literal.
-
-    extra_ctx:
-        Optional dict of additional JS context variables to inject. Keys must
-        be valid JS identifiers; values are JSON-serialisable Python objects.
-        They are passed to vm.createContext() so the mock code can read them.
-    """
-    path_js = json.dumps(plan_feature_path)
-    user_input_js = json.dumps(user_input)
-
-    # Build the invocation wrapper (pure JS, no user-data interpolation).
-    invocation_js = textwrap.dedent("""
-        globalThis.__capturedCommitCalls = [];
-        globalThis.__capturedAllCalls = [];
-
-        MOCK_AGENT_CODE_PLACEHOLDER
-
-        run({ userInput: USER_INPUT_PLACEHOLDER, agent: mockAgent })
-            .then(result => {
-                const side = {
-                    commitCalls: globalThis.__capturedCommitCalls,
-                    allCalls: globalThis.__capturedAllCalls,
-                };
-                process.stdout.write(JSON.stringify(result) + '\\x00' + JSON.stringify(side));
-            })
-            .catch(err => {
-                process.stderr.write('run() threw: ' + String(err));
-                process.exit(1);
-            });
-    """)
-    # Substitute placeholders (safe — no user data in these positions).
-    invocation_js = invocation_js.replace("MOCK_AGENT_CODE_PLACEHOLDER", mock_agent_js)
-    invocation_js = invocation_js.replace("USER_INPUT_PLACEHOLDER", user_input_js)
-
-    # Build extra context injection (ESM scope, before vm.createContext).
-    extra_ctx_lines = ""
-    extra_ctx_keys = ""
-    if extra_ctx:
-        for key, val in extra_ctx.items():
-            extra_ctx_lines += f"const {key}_injected = JSON.parse({json.dumps(json.dumps(val))});\n"
-            extra_ctx_keys += f"{key}: {key}_injected,\n"
-
-    # JSON-encode both the plan-feature source patches and the invocation code
-    # so they can be passed as string values without any escape processing.
-    mock_code_js = json.dumps(invocation_js)   # safe: json.dumps escapes all special chars
-
-    script = textwrap.dedent(f"""
-        import {{ readFileSync }} from 'fs';
-        import vm from 'vm';
-
-        const source = readFileSync({path_js}, 'utf8');
-
-        const baseSource = source
-            .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-            .replace(/^export \\{{ run \\}};/m, '// export removed')
-            .replace(/^export function/gm, 'function');
-
-        {extra_ctx_lines}
-        const mockCode = {mock_code_js};
-        const patchedSource = baseSource + '\\x0a' + mockCode;
-
-        const ctx = vm.createContext({{
-            ...globalThis,
-            process,
-            console,
-            setTimeout,
-            clearTimeout,
-            {extra_ctx_keys}
-        }});
-        const s = new vm.Script(patchedSource);
-        s.runInContext(ctx);
-    """)
-    return _run_node_script(script, timeout=timeout)
+    return run_plan_feature_e2(
+        mock_agent_js, user_input=user_input, extra_ctx=extra_ctx, timeout=timeout
+    )
 
 
-def _parse_run_output(proc: subprocess.CompletedProcess) -> tuple[dict, dict]:
-    """
-    Parse the stdout from _run_with_mock_agent() into (run_result, side_channel).
-
-    Raises NodeScriptError if the Node.js process exited non-zero.
-    """
-    if proc.returncode != 0:
-        msg = f"Node.js exited {proc.returncode}. stderr: {proc.stderr!r}"
-        raise NodeScriptError(msg)
-    parts = proc.stdout.split("\x00", 1)
-    run_result = json.loads(parts[0])
-    side = json.loads(parts[1]) if len(parts) > 1 else {}
-    return run_result, side
-
-
-def _build_scan_direct_script(
-    plan_feature_path: str,
-    git_status_output: str,
-    file_contents: dict,
-) -> str:
-    """
-    Build a self-contained Node.js ESM script that invokes scanOrphanedAcDrafts()
-    directly with mocked agent responses.
-
-    Data is passed via JSON.parse() in the ESM outer scope — NOT embedded in a
-    backtick template literal. JS backtick template literals interpret backslash
-    escape sequences (e.g. \\n becomes a newline), which would corrupt JSON string
-    values containing \\n. By setting data on `ctx` before vm.Script runs, the
-    mock code inside the vm can access it as a plain JS value with no escaping issues.
-
-    The script structure:
-      1. ESM preamble: read and patch plan-feature.js source.
-      2. Parse test data in the ESM scope (safe from template-literal escaping).
-      3. Build mock code string (plain JS, not a template literal at this level).
-      4. Concatenate mock code onto patchedSource.
-      5. Create vm context with data globals injected.
-      6. Run vm.Script.
-    """
-    path_js = json.dumps(plan_feature_path)
-    git_status_js = json.dumps(git_status_output)           # safe JS string literal
-    file_contents_js = json.dumps(json.dumps(file_contents))  # double-encoded: outer=JS string, inner=JSON
-
-    # Mock code as a plain Python string (no f-string interpolation of data).
-    # Data is read from ctx.__mockGitStatus / ctx.__mockFileContents at runtime.
-    mock_code = textwrap.dedent("""
-        async function mockAgent(call) {
-            const instructions = (call.input && call.input.instructions) || '';
-            if (instructions.includes('git status --porcelain')) {
-                return { output: __mockGitStatus, exit_code: 0 };
-            }
-            const readMatch = instructions.match(/Read the file at path "([^"]+)"/);
-            if (readMatch) {
-                const filePath = readMatch[1];
-                const content = __mockFileContents[filePath] !== undefined
-                    ? __mockFileContents[filePath] : null;
-                return { content };
-            }
-            return { status: 'ok' };
-        }
-        scanOrphanedAcDrafts(mockAgent, 'docs/acceptance-criteria')
-            .then(orphans => { process.stdout.write(JSON.stringify(orphans)); })
-            .catch(err => { process.stderr.write(String(err)); process.exit(1); });
-    """)
-    mock_code_js = json.dumps(mock_code)  # encode as a JS string literal (safe)
-
-    return textwrap.dedent(f"""
-        import {{ readFileSync }} from 'fs';
-        import vm from 'vm';
-
-        const source = readFileSync({path_js}, 'utf8');
-
-        // Strip ESM syntax.
-        const baseSource = source
-            .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-            .replace(/^export \\{{ run \\}};/m, '// export removed')
-            .replace(/^export function/gm, 'function');
-
-        // Test data decoded here (ESM scope — no backtick template escaping).
-        const mockGitStatus = {git_status_js};
-        const mockFileContents = JSON.parse({file_contents_js});
-
-        // Mock code string (JSON-encoded — no raw newlines in this source).
-        const mockCode = {mock_code_js};
-
-        const patchedSource = baseSource + '\\x0a' + mockCode;
-
-        const ctx = vm.createContext({{
-            ...globalThis,
-            process,
-            console,
-            setTimeout,
-            clearTimeout,
-            __mockGitStatus: mockGitStatus,
-            __mockFileContents: mockFileContents,
-        }});
-        const s = new vm.Script(patchedSource);
-        s.runInContext(ctx);
-    """)
+def _parse_run_output(result_and_side: tuple[dict, dict]) -> tuple[dict, dict]:
+    """Pass-through: run_plan_feature_e2 already returns (run_result, side)."""
+    return result_and_side
 
 
 def _run_scan_orphans_directly(
@@ -303,21 +86,39 @@ def _run_scan_orphans_directly(
     file_contents: dict,
     timeout: int = 15,
 ) -> list:
-    """
-    Invoke scanOrphanedAcDrafts() directly in a Node.js vm.Script sandbox.
+    """Invoke scanOrphanedAcDrafts() in isolation against the E2 source.
+
+    The E2 scanOrphanedAcDrafts uses the global ``agent`` and the signature
+    ``(acStoreDir, authoringWorktreePath)``. This helper extracts that function
+    from the E2 file and runs it with a global-``agent`` mock that returns the
+    supplied git-status output and per-file contents.
 
     Returns a list of orphan dicts: [{ filePath, acId }, ...].
     Raises NodeScriptError if the Node.js process exits non-zero.
     """
-    script = _build_scan_direct_script(plan_feature_path, git_status_output, file_contents)
-    proc = _run_node_script(script, timeout=timeout)
-    if proc.returncode != 0:
-        msg = f"Node.js exited {proc.returncode}. stderr: {proc.stderr!r}"
-        raise NodeScriptError(msg)
-    if not proc.stdout:
-        msg = f"Node.js produced no stdout. stderr: {proc.stderr!r}"
-        raise NodeScriptError(msg)
-    return json.loads(proc.stdout)
+    driver = textwrap.dedent(f"""
+        const __mockGitStatus = {json.dumps(git_status_output)};
+        const __mockFileContents = JSON.parse({json.dumps(json.dumps(file_contents))});
+        const agent = async (prompt, opts) => {{
+            const instructions = (typeof prompt === 'string') ? prompt : '';
+            if (instructions.includes('git status --porcelain')) {{
+                return {{ output: __mockGitStatus, exit_code: 0 }};
+            }}
+            const m = instructions.match(/Read the file at path "([^"]+)"/);
+            if (m) {{
+                const has = Object.prototype.hasOwnProperty.call(__mockFileContents, m[1]);
+                return {{ content: has ? __mockFileContents[m[1]] : null }};
+            }}
+            return {{ status: 'ok' }};
+        }};
+        scanOrphanedAcDrafts('docs/acceptance-criteria', null)
+            .then(orphans => {{ process.stdout.write(JSON.stringify(orphans)); }})
+            .catch(err => {{ process.stderr.write(String(err)); process.exit(1); }});
+    """)
+    stdout = run_isolated_e2(["scanOrphanedAcDrafts"], driver, timeout=timeout)
+    if not stdout:
+        raise NodeScriptError("scanOrphanedAcDrafts produced no output")
+    return json.loads(stdout)
 
 
 # ---------------------------------------------------------------------------
@@ -620,45 +421,16 @@ class TestRecoveryScanBeforeTriage(unittest.TestCase):
             }
         """)
 
-        # We need to capture the ordering globals from the vm context.
-        # Extend the script to emit them in the side channel.
-        preamble = _build_vm_preamble(self.PLAN_FEATURE_PATH)
-        script = preamble + textwrap.dedent(f"""
-            + `
-            globalThis.__capturedCommitCalls = [];
-            globalThis.__capturedAllCalls = [];
-
-            {mock_js}
-
-            run({{ userInput: "test recovery ordering", agent: mockAgent }})
-                .then(result => {{
-                    const side = {{
-                        commitCalls: globalThis.__capturedCommitCalls,
-                        allCalls: globalThis.__capturedAllCalls,
-                        firstGitStatusCallIndex: globalThis.__firstGitStatusCallIndex,
-                        triageCallIndex: globalThis.__triageCallIndex,
-                    }};
-                    process.stdout.write(JSON.stringify(result) + '\\0' + JSON.stringify(side));
-                }})
-                .catch(err => {{
-                    process.stderr.write('run() threw: ' + String(err));
-                    process.exit(1);
-                }});
-            `;
-
-            const ctx = vm.createContext({{ ...globalThis, process, console, setTimeout, clearTimeout }});
-            const s = new vm.Script(patchedSource);
-            s.runInContext(ctx);
-        """)
-
-        proc = _run_node_script(script, timeout=25)
-        if proc.returncode != 0:
-            self.fail(
-                f"Node.js failed (exit {proc.returncode}).\nstderr: {proc.stderr}"
+        # The runner's side channel exposes firstGitStatusCallIndex and
+        # triageCallIndex — both set by the mock above via globalThis.
+        try:
+            _run_result, side = _parse_run_output(
+                _run_with_mock_agent(
+                    self.PLAN_FEATURE_PATH, mock_js, user_input="test recovery ordering"
+                )
             )
-
-        parts = proc.stdout.split("\x00", 1)
-        side = json.loads(parts[1]) if len(parts) > 1 else {}
+        except NodeScriptError as exc:
+            self.fail(f"Node.js failed unexpectedly: {exc}")
 
         git_status_idx = side.get("firstGitStatusCallIndex")
         triage_idx = side.get("triageCallIndex")
@@ -769,6 +541,12 @@ class TestResolveOrphanedDraftsYesBranch(unittest.TestCase):
                 }}
 
                 if (agentType === 'status-checker') {{
+                    // E2 commitStageOutput() runs a fail-closed no-main branch
+                    // check before committing the orphans — confirm a non-main
+                    // authoring branch so the commit agent is dispatched.
+                    if (instructions.includes('git branch --show-current')) {{
+                        return {{ output: 'ac-authoring/test', exit_code: 0 }};
+                    }}
                     const isFinalGate = instructions.includes('IT PO v3 has enriched');
                     if (isFinalGate) {{
                         return {{ action: 'defer', priority: 'medium' }};
@@ -1095,82 +873,22 @@ class TestResolveOrphanedDraftsDiscardBranch(unittest.TestCase):
             }}
         """)
 
-        # Use _run_with_mock_agent with extra_ctx to inject data-carrying globals.
-        # The side channel from _run_with_mock_agent only captures commitCalls and allCalls.
-        # For restoreCalls and deleteCalls, we extend by building a custom invocation.
-        path_js = json.dumps(self.PLAN_FEATURE_PATH)
+        # The mock reads its data from globalThis.__discard* (injected via
+        # extra_ctx) and records restore/delete dispatches on
+        # globalThis.__restoreCalls / __deleteCalls, which the runner's side
+        # channel exposes.
         extra_ctx = {
             "__discardOrphanPath": orphan_path,
             "__discardPerFileStatus": git_status_for_orphan,
             "__discardOrphanContent": orphan_content,
         }
-
-        # Build invocation JS that also captures restoreCalls and deleteCalls.
-        invocation_js = textwrap.dedent("""
-            globalThis.__capturedCommitCalls = [];
-            globalThis.__capturedAllCalls = [];
-
-            MOCK_PLACEHOLDER
-
-            run({ userInput: "test discard scenario", agent: mockAgent })
-                .then(result => {
-                    const side = {
-                        commitCalls: globalThis.__capturedCommitCalls,
-                        allCalls: globalThis.__capturedAllCalls,
-                        restoreCalls: globalThis.__restoreCalls || [],
-                        deleteCalls: globalThis.__deleteCalls || [],
-                    };
-                    process.stdout.write(JSON.stringify(result) + '\\x00' + JSON.stringify(side));
-                })
-                .catch(err => {
-                    process.stderr.write('run() threw: ' + String(err));
-                    process.exit(1);
-                });
-        """).replace("MOCK_PLACEHOLDER", mock_js)
-
-        mock_code_js = json.dumps(invocation_js)
-
-        extra_ctx_lines = ""
-        extra_ctx_keys = ""
-        for key, val in extra_ctx.items():
-            extra_ctx_lines += f"const {key}_var = JSON.parse({json.dumps(json.dumps(val))});\n"
-            extra_ctx_keys += f"{key}: {key}_var,\n"
-
-        script = textwrap.dedent(f"""
-            import {{ readFileSync }} from 'fs';
-            import vm from 'vm';
-
-            const source = readFileSync({path_js}, 'utf8');
-
-            const baseSource = source
-                .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-                .replace(/^export \\{{ run \\}};/m, '// export removed')
-                .replace(/^export function/gm, 'function');
-
-            {extra_ctx_lines}
-            const mockCode = {mock_code_js};
-            const patchedSource = baseSource + '\\x0a' + mockCode;
-
-            const ctx = vm.createContext({{
-                ...globalThis,
-                process,
-                console,
-                setTimeout,
-                clearTimeout,
-                {extra_ctx_keys}
-            }});
-            const s = new vm.Script(patchedSource);
-            s.runInContext(ctx);
-        """)
-
-        proc = _run_node_script(script, timeout=25)
-        if proc.returncode != 0:
-            msg = f"Node.js exited {proc.returncode}. stderr: {proc.stderr!r}"
-            raise NodeScriptError(msg)
-        parts = proc.stdout.split("\x00", 1)
-        run_result = json.loads(parts[0])
-        side = json.loads(parts[1]) if len(parts) > 1 else {}
-        return run_result, side
+        return _parse_run_output(
+            _run_with_mock_agent(
+                self.PLAN_FEATURE_PATH, mock_js,
+                user_input="test discard scenario",
+                extra_ctx=extra_ctx,
+            )
+        )
 
     def test_discard_tracked_modified_calls_git_restore(self):
         """
@@ -1260,130 +978,16 @@ class TestResolveOrphanedDraftsDiscardBranch(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test class: template parity
+# Template parity tests — REMOVED.
+#
+# TestRecoveryFunctionParityWithTemplate asserted byte-identity between the
+# recovery functions (scanOrphanedAcDrafts / resolveOrphanedDrafts / run /
+# buildCancelMessage) in scripts/workflows/plan-feature.js and
+# templates/workflows-js/plan-feature.js. Foundation cleanup deleted the legacy
+# scripts/ copy, leaving one canonical E2 file, so there is nothing to compare;
+# these parity tests were removed rather than left asserting against a deleted
+# path. The functions' real runtime behaviour is exercised by the tests above.
 # ---------------------------------------------------------------------------
-
-
-class TestRecoveryFunctionParityWithTemplate(unittest.TestCase):
-    """
-    Verify that the new recovery functions in scripts/workflows/plan-feature.js and
-    templates/workflows-js/plan-feature.js are identical (byte-level parity).
-
-    Both files must be modified identically — the template is the canonical source
-    deployed to consumer projects. A partial fix that updates only scripts/ means
-    consumer projects carry the old behaviour.
-    """
-
-    def _extract_function(self, source: str, func_name: str, path: str) -> str:
-        """Extract a complete async/non-async function body by name."""
-        # Match both 'async function name(' and 'function name('
-        start_patterns = [
-            f"async function {func_name}(",
-            f"function {func_name}(",
-        ]
-        start = -1
-        for pat in start_patterns:
-            idx = source.find(pat)
-            if idx != -1:
-                start = idx
-                break
-        if start == -1:
-            raise SourceParseError(f"{func_name} not found in {path}")
-
-        depth = 0
-        i = start
-        found_first_brace = False
-        while i < len(source):
-            c = source[i]
-            if c == "{":
-                depth += 1
-                found_first_brace = True
-            elif c == "}" and found_first_brace:
-                depth -= 1
-                if depth == 0:
-                    return source[start: i + 1]
-            i += 1
-        raise SourceParseError(f"{func_name} closing brace not found in {path}")
-
-    def test_scan_orphaned_ac_drafts_function_parity(self):
-        """
-        scanOrphanedAcDrafts() must be byte-identical in scripts/ and templates/.
-        """
-        scripts_source = _read_source(_PLAN_FEATURE_JS)
-        template_source = _read_source(_TEMPLATE_PLAN_FEATURE_JS)
-
-        scripts_fn = self._extract_function(scripts_source, "scanOrphanedAcDrafts", _PLAN_FEATURE_JS)
-        template_fn = self._extract_function(template_source, "scanOrphanedAcDrafts", _TEMPLATE_PLAN_FEATURE_JS)
-
-        self.assertEqual(
-            scripts_fn,
-            template_fn,
-            msg=(
-                "scripts/workflows/plan-feature.js and templates/workflows-js/plan-feature.js "
-                "have DIFFERENT scanOrphanedAcDrafts() bodies. Both files must be identical."
-            ),
-        )
-
-    def test_resolve_orphaned_drafts_function_parity(self):
-        """
-        resolveOrphanedDrafts() must be byte-identical in scripts/ and templates/.
-        """
-        scripts_source = _read_source(_PLAN_FEATURE_JS)
-        template_source = _read_source(_TEMPLATE_PLAN_FEATURE_JS)
-
-        scripts_fn = self._extract_function(scripts_source, "resolveOrphanedDrafts", _PLAN_FEATURE_JS)
-        template_fn = self._extract_function(template_source, "resolveOrphanedDrafts", _TEMPLATE_PLAN_FEATURE_JS)
-
-        self.assertEqual(
-            scripts_fn,
-            template_fn,
-            msg=(
-                "scripts/workflows/plan-feature.js and templates/workflows-js/plan-feature.js "
-                "have DIFFERENT resolveOrphanedDrafts() bodies. Both files must be identical."
-            ),
-        )
-
-    def test_run_function_parity(self):
-        """
-        The run() function (including the recovery scan block) must be byte-identical
-        in scripts/ and templates/.
-        """
-        scripts_source = _read_source(_PLAN_FEATURE_JS)
-        template_source = _read_source(_TEMPLATE_PLAN_FEATURE_JS)
-
-        scripts_fn = self._extract_function(scripts_source, "run", _PLAN_FEATURE_JS)
-        template_fn = self._extract_function(template_source, "run", _TEMPLATE_PLAN_FEATURE_JS)
-
-        self.assertEqual(
-            scripts_fn,
-            template_fn,
-            msg=(
-                "scripts/workflows/plan-feature.js and templates/workflows-js/plan-feature.js "
-                "have DIFFERENT run() function bodies. Both files must be identical."
-            ),
-        )
-
-    def test_build_cancel_message_parity(self):
-        """
-        buildCancelMessage() must be byte-identical in scripts/ and templates/.
-
-        The cancel message fix (mentioning untracked files) must also be applied
-        to both copies.
-        """
-        scripts_source = _read_source(_PLAN_FEATURE_JS)
-        template_source = _read_source(_TEMPLATE_PLAN_FEATURE_JS)
-
-        scripts_fn = self._extract_function(scripts_source, "buildCancelMessage", _PLAN_FEATURE_JS)
-        template_fn = self._extract_function(template_source, "buildCancelMessage", _TEMPLATE_PLAN_FEATURE_JS)
-
-        self.assertEqual(
-            scripts_fn,
-            template_fn,
-            msg=(
-                "scripts/ and templates/ have DIFFERENT buildCancelMessage() bodies. "
-                "The untracked-files warning fix must be applied to both."
-            ),
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -1405,31 +1009,24 @@ class TestBuildCancelMessageUntrackedWarning(unittest.TestCase):
     def _call_build_cancel_message(
         self, committed_acs: list, draft_acs: list, cancelled_at: str
     ) -> str:
-        """
-        Invoke buildCancelMessage() directly in a vm.Script sandbox.
+        """Invoke buildCancelMessage() in isolation against the E2 source.
 
-        Returns the string result.
+        buildCancelMessage() is a pure function; the E2 signature added the
+        ``acStorePath`` and ``authoringWorktreePath`` parameters, so this helper
+        passes the default store path and a null worktree path. Returns the
+        string result.
         """
-        preamble = _build_vm_preamble(self.PLAN_FEATURE_PATH)
-        committed_js = json.dumps(committed_acs)
-        draft_js = json.dumps(draft_acs)
-        cancelled_js = json.dumps(cancelled_at)
-
-        script = preamble + textwrap.dedent(f"""
-            + `
-            const result = buildCancelMessage({committed_js}, {draft_js}, {cancelled_js});
+        driver = textwrap.dedent(f"""
+            const result = buildCancelMessage(
+                {json.dumps(committed_acs)},
+                {json.dumps(draft_acs)},
+                {json.dumps(cancelled_at)},
+                'docs/acceptance-criteria',
+                null
+            );
             process.stdout.write(result);
-            `;
-
-            const ctx = vm.createContext({{ ...globalThis, process, console }});
-            const s = new vm.Script(patchedSource);
-            s.runInContext(ctx);
         """)
-        proc = _run_node_script(script, timeout=10)
-        if proc.returncode != 0:
-            msg = f"Node.js exited {proc.returncode}. stderr: {proc.stderr!r}"
-            raise NodeScriptError(msg)
-        return proc.stdout
+        return run_isolated_e2(["buildCancelMessage"], driver, timeout=10)
 
     def test_cancel_message_mentions_untracked_files(self):
         """

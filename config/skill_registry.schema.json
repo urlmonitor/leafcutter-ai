@@ -70,7 +70,7 @@
         },
         "workflow_script": {
           "type": "string",
-          "description": "Optional relative path (from repo root) to the workflow JS script that drives this skill's slash command (e.g. 'scripts/workflows/plan-feature.js'). Present only when the skill has a workflow_script entry point."
+          "description": "Optional relative path (from repo root) to the deployed workflow JS script that drives this skill's slash command (e.g. '.claude/workflows/plan-feature.js'). Present only when the skill has a workflow_script entry point."
         }
       },
       "additionalProperties": false
