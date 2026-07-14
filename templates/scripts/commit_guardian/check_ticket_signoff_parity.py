@@ -30,6 +30,7 @@ Usage:
 """
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -100,13 +101,24 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
-def _validate_ticket_content(content: str, ticket_path: str, valid_components: set[str]) -> list[str]:
+def _validate_ticket_content(
+    content: str,
+    ticket_path: str,
+    valid_components: set[str],
+    *,
+    old_path: str | None = None,
+) -> list[str]:
     """Run parity checks on a string of ticket content.
 
     Args:
         content: The text content of the ticket.
         ticket_path: Path to the ticket file (used for folder invariant checks).
         valid_components: Set of valid component IDs.
+        old_path: The pre-move (HEAD) path of the file, or ``None`` when the
+            caller does not have rename information.  Forwarded to
+            ``_check_done_folder_prohibition()`` so the move-based done-folder
+            check can distinguish a genuine move from an in-place edit
+            (BO-400c-3-i).
 
     Returns:
         List of violation strings.
@@ -140,7 +152,7 @@ def _validate_ticket_content(content: str, ticket_path: str, valid_components: s
     violations.extend(_check_parity(agents, signoffs))
     violations.extend(_check_orphans(agents, signoffs))
     violations.extend(_check_done_folder(ticket_path, agents))
-    violations.extend(_check_done_folder_prohibition(ticket_path))
+    violations.extend(_check_done_folder_prohibition(ticket_path, old_path=old_path))
 
     # Check #6: signed-off agents with requires_ticket_section: true must have no unchecked tasks.
     _proj_root = find_project_root()
@@ -151,7 +163,12 @@ def _validate_ticket_content(content: str, ticket_path: str, valid_components: s
     return violations
 
 
-def _validate_ticket(ticket_path: str, valid_components: set[str] = frozenset()) -> list[str]:
+def _validate_ticket(
+    ticket_path: str,
+    valid_components: set[str] = frozenset(),
+    *,
+    old_path: str | None = None,
+) -> list[str]:
     """Run all parity checks on a single ticket file.
 
     Failures during file reading or frontmatter parsing are surfaced as a
@@ -160,6 +177,10 @@ def _validate_ticket(ticket_path: str, valid_components: set[str] = frozenset())
     Args:
         ticket_path: Path to the ticket file, as passed by pre-commit.
         valid_components: Set of valid component IDs.
+        old_path: The pre-move (HEAD) path of the file, or ``None`` when rename
+            information is unavailable.  Forwarded to ``_validate_ticket_content``
+            so the move-based done-folder prohibition (BO-400c-3-i) can
+            distinguish a genuine move from an in-place edit.
 
     Returns:
         List of violation strings. Empty list means the ticket is valid
@@ -170,12 +191,50 @@ def _validate_ticket(ticket_path: str, valid_components: set[str] = frozenset())
     except OSError as exc:
         return [f"could not read file: {exc}"]
 
-    return _validate_ticket_content(content, ticket_path, valid_components)
+    return _validate_ticket_content(content, ticket_path, valid_components, old_path=old_path)
 
 
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
+
+
+def _build_rename_map() -> dict[str, str]:
+    """Query git for staged renames and return a new-path to old-path mapping.
+
+    Used to detect whether a staged commit is moving a ticket into a done/
+    folder, so the done-folder prohibition check (BO-400c-3) can distinguish a
+    genuine move from an in-place edit of a file already residing at a done/
+    path (BO-400c-3-i).
+
+    Fail-open: returns an empty dict when git is unavailable or the command
+    fails, causing the prohibition to fall back to presence-based detection
+    for backward compatibility.
+
+    Returns:
+        Dict mapping each renamed file's new (staged) path to its old (HEAD)
+        path.  Non-renamed staged files are absent from the dict.
+    """
+    rename_map: dict[str, str] = {}
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-status", "--diff-filter=R"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        print(
+            f"WARNING: check-ticket-signoff-parity: could not query git renames: {exc}",
+            file=sys.stderr,
+        )
+        return rename_map
+    for line in result.stdout.splitlines():
+        # Format: R<score>\t<old_path>\t<new_path>
+        parts = line.split("\t")
+        if len(parts) == 3 and parts[0].startswith("R"):
+            rename_map[parts[2]] = parts[1]
+    return rename_map
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -217,13 +276,15 @@ def main() -> int:
 
     project_root = find_project_root()
     valid_components = load_components_registry(project_root)
+    rename_map = _build_rename_map()
 
     for ticket_path in args.filenames:
         # /done/ paths always enforce (done-folder invariant is non-negotiable).
         file_enforce = enforce or ("/done/" in ticket_path.replace("\\", "/").lower())
+        old_path = rename_map.get(ticket_path)
 
         try:
-            violations = _validate_ticket(ticket_path, valid_components)
+            violations = _validate_ticket(ticket_path, valid_components, old_path=old_path)
         except Exception as exc:  # noqa: BLE001
             # Crash-resilient: a completely unexpected error on one ticket
             # emits a warning and continues.
@@ -253,6 +314,15 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-07-14 [python-coder/BO-400c-3-callsite]: Threaded old_path through the
+  production call chain to fix the in-place edit false positive (BO-400c-3-i)
+  in production (not just in unit tests). Added import subprocess; added
+  _build_rename_map() which queries `git diff --cached --name-status --diff-filter=R`
+  (fail-open: returns empty dict on OSError); updated _validate_ticket_content and
+  _validate_ticket signatures to accept `old_path: str | None = None`; updated
+  _validate_ticket_content to pass old_path=old_path to _check_done_folder_prohibition;
+  updated main() to build rename_map and pass old_path=rename_map.get(ticket_path) to
+  _validate_ticket. All changes are backward-compatible (old_path defaults to None).
 - 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted parsing and parity-check
   helpers into _signoff_parity_checks.py to stay under the 400-line budget.
   All names re-exported from this module via explicit imports so the existing

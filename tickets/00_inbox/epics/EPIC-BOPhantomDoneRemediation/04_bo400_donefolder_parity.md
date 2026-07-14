@@ -182,3 +182,58 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281) was already open on branch EPIC-BOPhantomDoneRemediation targeting main. Branch is in sync with remote. Implementation commit 488318d5 (move-based done-folder guard + 99_done support) is included. Note: pr-reviewer flagged a deferred item (production call-site not yet wiring old_path through the chain); commit agent documented this as non-blocking for merge.
+
+### 2026-07-14 17:00 — test-writer (status: ok)
+feedback-id: fb_2026-07-14_03890d92
+completion_manifest:
+  existing_tests_verified_green: true
+  cross_layer_seam_test_assessed:
+    result: false
+    reason: "A cross-layer seam test for _validate_ticket_content (the production call site) would fail with AssertionError covering BO-400c-3-i (work_status: todo) — pytest_ac_enforcement would XFAIL it (exit 0), not produce a valid red baseline. Additionally, making it green would require modifying check_ticket_signoff_parity.py, which is not in this ticket's files_touched."
+    remediation: "Open a follow-on ticket scoped to threading old_path through _validate_ticket() and _validate_ticket_content() at the call site (line 143 of check_ticket_signoff_parity.py). That ticket's test-writer phase should write the cross-layer seam test; its python-coder phase should fix the call site."
+  sign_off_already_valid: true
+Re-dispatched after pr-reviewer failure. Verified: all 3 done-folder parity tests pass green (correct post-implementation state). The pr-reviewer concern about the production call site (_validate_ticket_content line 143 not threading old_path) is out of scope for this ticket's files_touched and cannot produce a valid red baseline here due to pytest_ac_enforcement XFAIL masking on work_status: todo ACs. The existing tests correctly cover _check_done_folder_prohibition in isolation per the ticket's Test Requirements. The call-site wiring gap is a deferred follow-on concern.
+
+### 2026-07-14 18:00 — python-coder (status: ok)
+feedback-id: fb_2026-07-14_6e798921
+completion_manifest:
+  pr_reviewer_h1_blocker_resolved: true
+  call_site_old_path_threaded: true
+  _build_rename_map_added: true
+  _validate_ticket_content_signature_updated: true
+  _validate_ticket_signature_updated: true
+  main_uses_rename_map: true
+  import_subprocess_added: true
+  all_red_baseline_tests_green: true
+  ruff_clean: true
+  behavioral_spot_check_passed: true
+  file_size_under_400: true
+context_capsule:
+  agent_id: python-coder
+  intent: "Resolved pr-reviewer H-1 blocker: threaded old_path through the production call chain. Added _build_rename_map() in check_ticket_signoff_parity.py (queries git diff --cached, fail-open on OSError); updated _validate_ticket_content and _validate_ticket signatures with old_path: str | None = None; updated main() to pass old_path=rename_map.get(ticket_path) to _validate_ticket. This wires BO-400c-3-i (in-place edit false positive suppression) into the production pre-commit hook."
+  files_touched_actual:
+    - templates/scripts/commit_guardian/check_ticket_signoff_parity.py (call-site wiring — not in original files_touched but required by pr-reviewer)
+  additional_file_note: "check_ticket_signoff_parity.py was not in the original files_touched list but was required by the pr-reviewer H-1 blocker. All changes are backward-compatible (old_path defaults to None)."
+red_baseline_results:
+  - test_name: test_done_folder_move_blocked
+    result: green
+  - test_name: test_in_place_done_edit_not_blocked
+    result: green
+  - test_name: test_99_done_move_caught
+    result: green
+
+### 2026-07-14 18:30 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_cfeca9d4
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Re-verified all 3 done-folder parity tests green after second python-coder dispatch (call-site wiring of old_path through check_ticket_signoff_parity.py). Tests run: 3   Failures: 0   Errors: 0   Skipped: 0. Elapsed: 0.22s.
+
+### 2026-07-14 19:00 — commit (status: ok)
+feedback-id: fb_2026-07-14_6c1206c8
+Auto-authorized commit gate: subject "fix(bo-remediation): thread old_path through production call chain (BO-400c-3-i)"; staged files: templates/scripts/commit_guardian/check_ticket_signoff_parity.py tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/04_bo400_donefolder_parity.md.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
