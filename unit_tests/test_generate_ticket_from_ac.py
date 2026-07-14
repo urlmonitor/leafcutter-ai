@@ -1706,3 +1706,921 @@ class TestVerificationReport:
         report, has_fail = _build_verification_report(ac, "ZZ-302a-1", agents, body, [])
         assert has_fail is True
         assert "BLOCKED" in report
+
+
+# ===========================================================================
+# BO-500 AC Coverage Backfill Tests
+# Ticket: 03_bo500_test_coverage.md
+# ACs covered: BO-510-1, BO-510-2, BO-510-4, BO-510-4-i, BO-510-5,
+#              BO-530-1-i, BO-530-2, BO-530-3, BO-530-3-i, BO-540-1,
+#              BO-540-1-i, BO-540-2, BO-550-1-i, BO-660-1
+# ===========================================================================
+
+import json as _json  # noqa: E402
+import re as _re_bo500  # noqa: E402
+
+from generate_ticket_from_ac import (  # noqa: E402
+    _load_production_code_agents,
+)
+
+_AGENT_REGISTRY_PATH = _REPO_ROOT / "config" / "agent_registry.json"
+_TEMPLATES_DIR = _REPO_ROOT / "templates" / "agents"
+_BUILDING_EPICS_SKILL = (
+    _REPO_ROOT / "templates" / "skills" / "building-epics" / "SKILL.md"
+)
+
+# Enum values from BO-510-1 AC definition.
+_VALID_PRODUCES_ENUM = frozenset({
+    "production_code",
+    "documentation",
+    "configuration",
+    "prompt",
+    "review_verdict",
+    "orchestration",
+    "test_artifact",
+    "analysis",
+})
+
+# Role → produces mapping from BO-510-1 criteria
+_ROLE_PRODUCES_MAPPING = {
+    "coding": "production_code",
+    "documentation": "documentation",
+    "review": "review_verdict",
+    "orchestration": "orchestration",
+    "quality": "test_artifact",
+    "analysis": "analysis",
+}
+
+
+# ---------------------------------------------------------------------------
+# TestBO510Registry
+# BO-510-1: Agent registry entries carry a produces trait field from a defined enum
+# ---------------------------------------------------------------------------
+
+
+class TestBO510Registry:
+    """BO-510-1: Every agent_registry.json entry carries a 'produces' field
+    with a value from the 8-member enum; the role→produces mapping is consistent.
+    """
+
+    def test_bo510_1_all_registry_entries_have_produces_field(self) -> None:
+        # covers: BO-510-1
+        """BO-510-1: Every entry in agent_registry.json must have a 'produces' field
+        (not absent and not null). The field is required by the BO-510-1 schema contract.
+        """
+        assert _AGENT_REGISTRY_PATH.exists(), (
+            f"agent_registry.json not found at {_AGENT_REGISTRY_PATH}"
+        )
+        with open(_AGENT_REGISTRY_PATH, encoding="utf-8") as fh:
+            registry = _json.load(fh)
+
+        missing = []
+        for agent in registry.get("agents", []):
+            agent_id = agent.get("id", "<unknown>")
+            if "produces" not in agent or agent["produces"] is None:
+                missing.append(agent_id)
+
+        assert not missing, (
+            f"BO-510-1: The following agents are missing the 'produces' field or have "
+            f"produces: null:\n  {missing}\n\n"
+            "Every agent entry must carry a non-null 'produces' field per BO-510-1."
+        )
+
+    def test_bo510_1_produces_values_match_defined_enum(self) -> None:
+        # covers: BO-510-1
+        """BO-510-1: Every produces field value must be one of the 8-member enum:
+        production_code, documentation, configuration, prompt, review_verdict,
+        orchestration, test_artifact, analysis.
+        """
+        with open(_AGENT_REGISTRY_PATH, encoding="utf-8") as fh:
+            registry = _json.load(fh)
+
+        invalid = []
+        for agent in registry.get("agents", []):
+            agent_id = agent.get("id", "<unknown>")
+            produces = agent.get("produces")
+            if produces is not None and produces not in _VALID_PRODUCES_ENUM:
+                invalid.append(f"{agent_id}: {produces!r}")
+
+        assert not invalid, (
+            f"BO-510-1: The following agents have produces values outside the defined enum "
+            f"{sorted(_VALID_PRODUCES_ENUM)}:\n  " + "\n  ".join(invalid)
+        )
+
+    def test_bo510_1_role_coding_maps_to_production_code(self) -> None:
+        # covers: BO-510-1
+        """BO-510-1: Agents with role='coding' must have produces='production_code'.
+
+        The AC criteria states: 'agents with role "coding" have produces: production_code'.
+        """
+        with open(_AGENT_REGISTRY_PATH, encoding="utf-8") as fh:
+            registry = _json.load(fh)
+
+        violations = []
+        for agent in registry.get("agents", []):
+            role = agent.get("role", "")
+            produces = agent.get("produces")
+            agent_id = agent.get("id", "<unknown>")
+            if role in _ROLE_PRODUCES_MAPPING:
+                expected = _ROLE_PRODUCES_MAPPING[role]
+                if produces != expected:
+                    violations.append(
+                        f"{agent_id}: role={role!r} → expected produces={expected!r}, "
+                        f"got {produces!r}"
+                    )
+
+        assert not violations, (
+            "BO-510-1: Role→produces mapping violated for the following agents:\n  "
+            + "\n  ".join(violations)
+            + "\n\nExpected mapping: "
+            + str(_ROLE_PRODUCES_MAPPING)
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO510TemplateProduces
+# BO-510-2: Agent template frontmatter carries the produces trait matching the registry
+# BO-510-4: llm-expert populates the produces trait on every existing agent template
+# ---------------------------------------------------------------------------
+
+
+class TestBO510TemplateProduces:
+    """BO-510-2, BO-510-4: Agent templates have produces field in YAML frontmatter,
+    populated to match the registry entry for each agent.
+    """
+
+    def _load_registry_produces_map(self) -> dict[str, str]:
+        """Load agent_id → produces mapping from the registry."""
+        with open(_AGENT_REGISTRY_PATH, encoding="utf-8") as fh:
+            registry = _json.load(fh)
+
+        return {
+            agent.get("id", ""): agent.get("produces")
+            for agent in registry.get("agents", [])
+            if agent.get("id")
+        }
+
+    def test_bo510_2_all_agent_templates_have_produces_in_frontmatter(self) -> None:
+        # covers: BO-510-2
+        # covers: BO-510-4
+        """BO-510-2, BO-510-4: Every agent template in templates/agents/ that has a
+        corresponding registry entry with template_path must contain a 'produces:' key
+        in its YAML frontmatter.
+        """
+        assert _TEMPLATES_DIR.exists(), (
+            f"templates/agents/ directory not found at {_TEMPLATES_DIR}"
+        )
+
+        missing = []
+        for tmpl_path in sorted(_TEMPLATES_DIR.glob("*.md")):
+            # Skip non-agent special files
+            if tmpl_path.name.startswith("_") or tmpl_path.name == "README.md":
+                continue
+            content = tmpl_path.read_text(encoding="utf-8")
+            # Check YAML frontmatter between --- delimiters
+            if not content.startswith("---"):
+                continue
+            parts = content.split("---", 2)
+            if len(parts) < 3:
+                continue
+            frontmatter = parts[1]
+            # Check for 'produces:' key in frontmatter (any position)
+            if "produces:" not in frontmatter:
+                missing.append(tmpl_path.name)
+
+        assert not missing, (
+            "BO-510-2/BO-510-4: The following agent templates are missing the 'produces:' "
+            "field in their YAML frontmatter:\n  " + "\n  ".join(missing)
+            + "\n\nAll templates must have 'produces:' populated per BO-510-4."
+        )
+
+    def test_bo510_2_template_produces_matches_registry_value(self) -> None:
+        # covers: BO-510-2
+        """BO-510-2: The produces value in each template frontmatter must match exactly
+        the produces value in the corresponding agent_registry.json entry.
+
+        A mismatch means the template was populated with a different value than the registry,
+        violating the single-source-of-truth constraint.
+        """
+        import yaml as _yaml
+
+        registry_map = self._load_registry_produces_map()
+        mismatches = []
+
+        for tmpl_path in sorted(_TEMPLATES_DIR.glob("*.md")):
+            if tmpl_path.name.startswith("_") or tmpl_path.name == "README.md":
+                continue
+            content = tmpl_path.read_text(encoding="utf-8")
+            if not content.startswith("---"):
+                continue
+            parts = content.split("---", 2)
+            if len(parts) < 3:
+                continue
+            try:
+                fm = _yaml.safe_load(parts[1])
+            except _yaml.YAMLError:
+                continue
+            if not isinstance(fm, dict):
+                continue
+
+            # Derive agent_id from template filename (remove .md suffix)
+            tmpl_id = tmpl_path.stem
+            if tmpl_id not in registry_map:
+                continue  # Not in registry — skip (may be a utility template)
+
+            registry_produces = registry_map[tmpl_id]
+            template_produces = fm.get("produces")
+
+            if registry_produces is None:
+                continue  # Null in registry is handled by BO-510-4-i
+            if template_produces != registry_produces:
+                mismatches.append(
+                    f"{tmpl_path.name}: template produces={template_produces!r}, "
+                    f"registry produces={registry_produces!r}"
+                )
+
+        assert not mismatches, (
+            "BO-510-2: produces field mismatch between template frontmatter and registry:\n  "
+            + "\n  ".join(mismatches)
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO510AmbiguousAndTrait
+# BO-510-4-i: llm-expert flags ambiguous agent trait for human review (produces: null)
+# BO-510-5: ticket-supervisor reads the produces trait to determine guardrails
+# ---------------------------------------------------------------------------
+
+
+class TestBO510AmbiguousAndTrait:
+    """BO-510-4-i, BO-510-5: Ambiguous produces handling and trait-based guardrail dispatch."""
+
+    def test_bo510_4i_null_produces_excluded_from_production_code_agents(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BO-510-4-i
+        """BO-510-4-i: An agent entry with produces: null must NOT appear in the set
+        of production_code producers returned by _load_production_code_agents.
+
+        When llm-expert flags an ambiguous agent with produces: null (per BO-510-4-i),
+        that agent must not trigger TDD injection. The test verifies that
+        _load_production_code_agents correctly excludes null-produces entries.
+        """
+        # Write a fixture registry with one ambiguous agent (produces: null)
+        fixture_registry = {
+            "agents": [
+                {"id": "python-coder", "produces": "production_code"},
+                {"id": "ambiguous-coder", "produces": None},  # flagged as ambiguous
+                {"id": "doc-writer", "produces": "documentation"},
+            ]
+        }
+        fixture_path = tmp_path / "fixture_registry.json"
+        fixture_path.write_text(
+            _json.dumps(fixture_registry, indent=2),
+            encoding="utf-8",
+        )
+
+        producers = _load_production_code_agents(fixture_path)
+
+        assert "python-coder" in producers, (
+            "_load_production_code_agents must include agents with produces='production_code'"
+        )
+        assert "ambiguous-coder" not in producers, (
+            "BO-510-4-i: An agent flagged with produces=null must NOT be included in the "
+            "production_code producers set — the null flag signals human review is required, "
+            "and the agent must not trigger TDD guardrail injection until resolved."
+        )
+        assert "doc-writer" not in producers, (
+            "Agents with produces='documentation' must not be in the production_code set."
+        )
+
+    def test_bo510_5_production_code_agent_triggers_tdd_injection(self) -> None:
+        # covers: BO-510-5
+        """BO-510-5: When the assigned agent has produces: production_code, test-writer
+        must be injected before it and test-runner after it in the computed map.
+
+        ticket-supervisor reads the 'produces' field to determine that TDD guardrails apply.
+        This test verifies that the produces field (via registry lookup) drives the injection,
+        not the agent name string.
+        """
+        # python-coder has produces: production_code in the real registry.
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        keys = list(result.keys())
+
+        assert "test-writer" in keys, (
+            "BO-510-5: test-writer must be in agents map when assigned agent "
+            "has produces: production_code (python-coder)"
+        )
+        assert "test-runner" in keys, (
+            "BO-510-5: test-runner must be in agents map when assigned agent "
+            "has produces: production_code (python-coder)"
+        )
+
+        tw_idx = keys.index("test-writer")
+        pc_idx = keys.index("python-coder")
+        tr_idx = keys.index("test-runner")
+
+        assert tw_idx < pc_idx, (
+            f"BO-510-5: test-writer (idx {tw_idx}) must precede python-coder (idx {pc_idx})"
+        )
+        assert pc_idx < tr_idx, (
+            f"BO-510-5: python-coder (idx {pc_idx}) must precede test-runner (idx {tr_idx})"
+        )
+
+    def test_bo510_5_documentation_agent_skips_tdd_injection(self) -> None:
+        # covers: BO-510-5
+        """BO-510-5: When the assigned agent has produces: documentation (e.g.
+        documentation-expert), TDD guardrails (test-writer, test-runner) must NOT be
+        injected around the documentation agent.
+
+        ticket-supervisor reads produces: documentation → determines TDD does NOT apply.
+        """
+        result = _build_agents_map(
+            "documentation-expert",
+            change_targets=["docs"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        # docs/internal guardrail includes documentation-expert, but NOT test-writer or test-runner.
+        # documentation-expert has produces: documentation (not production_code).
+        # Therefore the auto-inject rule must NOT add test-writer or test-runner.
+        assert result.get("test-writer") != "needed", (
+            "BO-510-5: test-writer must NOT be 'needed' when assigned agent has "
+            "produces: documentation (documentation-expert). TDD guardrails must be "
+            "skipped for non-production_code agents."
+        )
+        assert result.get("test-runner") != "needed", (
+            "BO-510-5: test-runner must NOT be 'needed' when assigned agent has "
+            "produces: documentation (documentation-expert)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO530TddSandwich
+# BO-530-1-i: Ticket with doc_change skips TDD injection entirely
+# BO-530-2: test-runner is injected after every coder-class agent
+# BO-530-3: Test failure hands context back to implementation agent for rework
+# BO-530-3-i: Retry cap on test-failure rework loop
+# ---------------------------------------------------------------------------
+
+
+class TestBO530TddSandwich:
+    """BO-530 group: TDD sandwich behavior — injection, ordering, and rework loop."""
+
+    def test_bo530_1i_documentation_change_skips_tdd_injection(self) -> None:
+        # covers: BO-530-1-i
+        """BO-530-1-i: A docs change with documentation-expert assigned must produce
+        an agent chain that does NOT contain test-writer or test-runner.
+
+        Given change_type: doc_change and assigned agent documentation-expert
+        (produces: documentation), the TDD injection must be skipped entirely.
+        """
+        result = _build_agents_map(
+            "documentation-expert",
+            change_targets=["docs"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        # The docs/internal guardrail does not mandate test-writer or test-runner.
+        # documentation-expert does not produce production_code.
+        # Therefore neither test-writer nor test-runner should be "needed".
+        assert result.get("test-writer") != "needed", (
+            "BO-530-1-i: test-writer must not be 'needed' for a docs/internal documentation change. "
+            f"Got agents map: {result}"
+        )
+        assert result.get("test-runner") != "needed", (
+            "BO-530-1-i: test-runner must not be 'needed' for a docs/internal documentation change. "
+            f"Got agents map: {result}"
+        )
+        assert "documentation-expert" in result, (
+            "BO-530-1-i: documentation-expert must be in the computed agents map."
+        )
+
+    def test_bo530_2_test_runner_after_python_coder(self) -> None:
+        # covers: BO-530-2
+        """BO-530-2: test-runner must appear in the computed agents map with a higher
+        sequence position than python-coder (the production_code producer).
+
+        The TDD sandwich invariant: test-writer → coder → test-runner must hold for
+        all agents with produces: production_code.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        keys = list(result.keys())
+
+        assert "test-runner" in keys, (
+            "BO-530-2: test-runner must be present in the agents map for a code/internal change "
+            "with python-coder assigned."
+        )
+        assert "python-coder" in keys, (
+            "python-coder must be in the agents map."
+        )
+
+        pc_idx = keys.index("python-coder")
+        tr_idx = keys.index("test-runner")
+
+        assert pc_idx < tr_idx, (
+            f"BO-530-2: python-coder (index {pc_idx}) must appear BEFORE test-runner "
+            f"(index {tr_idx}) in the agents map key order. "
+            f"Full map: {result}"
+        )
+
+    def test_bo530_2_test_runner_before_pr_reviewer(self) -> None:
+        # covers: BO-530-2
+        """BO-530-2: test-runner must also appear BEFORE pr-reviewer in the computed
+        agents map. The AC criteria states: 'test-runner appears BEFORE pr-reviewer'.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        keys = list(result.keys())
+
+        assert "test-runner" in keys, "test-runner must be in agents map for code/contract_boundary"
+        assert "pr-reviewer" in keys, "pr-reviewer must be in agents map for code/contract_boundary"
+
+        tr_idx = keys.index("test-runner")
+        pr_idx = keys.index("pr-reviewer")
+
+        assert tr_idx < pr_idx, (
+            f"BO-530-2: test-runner (index {tr_idx}) must appear BEFORE pr-reviewer "
+            f"(index {pr_idx}). Full map keys: {keys}"
+        )
+
+    def test_bo530_3_work_agent_correctly_recorded_in_agents_map(self) -> None:
+        # covers: BO-530-3
+        """BO-530-3: The generated agents map must correctly record the work agent
+        (e.g. python-coder vs sql-coder) so that ticket-supervisor can re-dispatch
+        the ORIGINAL work agent after test-runner failure.
+
+        If the work agent is sql-coder, the map must have sql-coder: needed (not
+        defaulting to python-coder).
+        """
+        result_python = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        result_sql = _build_agents_map(
+            "sql-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        assert result_python.get("python-coder") == "needed", (
+            "BO-530-3: python-coder must be 'needed' in the agents map when assigned "
+            "so ticket-supervisor can re-dispatch it on test failure."
+        )
+        assert result_sql.get("sql-coder") == "needed", (
+            "BO-530-3: sql-coder must be 'needed' in the agents map when assigned "
+            "so ticket-supervisor re-dispatches sql-coder (not python-coder) on failure."
+        )
+        # Must not confuse the work agent identity
+        assert result_sql.get("python-coder") != "needed" or "python-coder" not in result_sql, (
+            "BO-530-3: When sql-coder is the work agent, python-coder must NOT be 'needed' "
+            "in the computed map (to avoid ticket-supervisor dispatching the wrong agent)."
+        )
+
+    def test_bo530_3i_building_epics_documents_test_failure_rework_cap(self) -> None:
+        # covers: BO-530-3-i
+        """BO-530-3-i: The building-epics SKILL.md must explicitly document a retry cap
+        for the test-failure rework loop with a configurable default of 2 attempts.
+
+        The AC criteria state: 'the retry cap is configurable in the building-epics skill
+        (default: 2 rework attempts)'.
+
+        RED before fix: The current §4 Retry Caps table has 'Sibling respawn from review:
+        1 per phase pair per ticket' — this is a GENERIC cap that does not specifically
+        address the test-failure rework cycle (test-runner fails → python-coder reworks).
+        The SKILL.md must be updated to include an explicit test-failure rework cap of 2
+        (configurable). Until that update, this test is RED.
+        """
+        assert _BUILDING_EPICS_SKILL.exists(), (
+            f"building-epics SKILL.md not found at {_BUILDING_EPICS_SKILL}"
+        )
+        skill_text = _BUILDING_EPICS_SKILL.read_text(encoding="utf-8")
+
+        # Look for explicit mention of "test-failure rework" (or equivalent) with
+        # a numeric cap of 2 in the §4 Retry Caps table or a dedicated section.
+        # The string "test-failure rework" must appear near a "2" in the retry cap table.
+        has_test_failure_rework_row = bool(
+            _re_bo500.search(
+                r"test.failure.rework",
+                skill_text,
+                _re_bo500.IGNORECASE,
+            )
+        )
+
+        assert has_test_failure_rework_row, (
+            "BO-530-3-i: The building-epics SKILL.md §4 Retry Caps table must include an "
+            "explicit row for 'test-failure rework' with a configurable default of 2 attempts.\n\n"
+            "Currently the §4 table only has:\n"
+            "  - Coder respawn after own failure (§3.1): 1 per phase per ticket\n"
+            "  - Sibling respawn from review (§3.2): 1 per phase pair per ticket\n\n"
+            "Neither row specifically addresses the test-runner failure → coder rework loop, "
+            "and neither documents the 2-attempt default required by BO-530-3-i.\n\n"
+            "Fix: Add a 'test-failure rework' row to the §4 table with cap=2 (configurable).\n"
+            f"Searched in: {_BUILDING_EPICS_SKILL}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO540FlowChangeOrdering
+# BO-540-1: flow_change injects architect-review before any coder
+# BO-540-1-i: Coder dispatch is blocked if architect-review has not signed off
+# BO-540-2: flow_change injects documentation-expert before any coder
+# ---------------------------------------------------------------------------
+
+
+class TestBO540FlowChangeOrdering:
+    """BO-540 group: Flow-change pair agent ordering requirements."""
+
+    def test_bo540_1_architect_review_before_coder_for_flow_change(self) -> None:
+        # covers: BO-540-1
+        """BO-540-1: For a flow_change pair (code/contract_boundary), architect-review
+        must appear in the computed agents map BEFORE python-coder.
+
+        The AC criteria: 'architect-review appears in the chain AND architect-review has
+        a lower sequence number than python-coder'.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        keys = list(result.keys())
+
+        assert "architect-review" in keys, (
+            "BO-540-1: architect-review must be in the agents map for code/contract_boundary "
+            "(a flow_change pair). Currently absent — the flow_change_gates entry must mandate "
+            f"architect-review for this pair. Full map: {result}"
+        )
+
+        ar_idx = keys.index("architect-review")
+        pc_idx = keys.index("python-coder")
+
+        assert ar_idx < pc_idx, (
+            f"BO-540-1: architect-review (index {ar_idx}) must appear BEFORE python-coder "
+            f"(index {pc_idx}) for the code/contract_boundary flow_change pair.\n"
+            f"Full map keys: {keys}"
+        )
+
+    def test_bo540_1i_architect_review_before_test_writer_in_flow_change(self) -> None:
+        # covers: BO-540-1-i
+        """BO-540-1-i: For a flow_change pair, architect-review must appear BEFORE
+        test-writer in the computed map, not just before python-coder.
+
+        The AC criteria: 'architect-review must sign off before any coder or test-writer
+        is dispatched' — this implies architect-review precedes test-writer as well.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        keys = list(result.keys())
+
+        assert "architect-review" in keys, (
+            "BO-540-1-i: architect-review must be present for code/contract_boundary."
+        )
+        assert "test-writer" in keys, (
+            "BO-540-1-i: test-writer must be present for code/contract_boundary."
+        )
+
+        ar_idx = keys.index("architect-review")
+        tw_idx = keys.index("test-writer")
+
+        assert ar_idx < tw_idx, (
+            f"BO-540-1-i: architect-review (index {ar_idx}) must appear BEFORE test-writer "
+            f"(index {tw_idx}). architect-review must sign off before test-writer is dispatched.\n"
+            f"Full map keys: {keys}"
+        )
+
+    def test_bo540_2_documentation_expert_before_coder_for_flow_change(self) -> None:
+        # covers: BO-540-2
+        """BO-540-2: For a flow_change pair (code/contract_boundary), documentation-expert
+        must appear in the computed agents map BEFORE python-coder.
+
+        The AC criteria: 'documentation-expert has a lower sequence number than python-coder
+        AND documentation-expert has a lower sequence number than test-writer'.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        keys = list(result.keys())
+
+        assert "documentation-expert" in keys, (
+            "BO-540-2: documentation-expert must be in the agents map for code/contract_boundary "
+            "(a flow_change pair). The flow_change_gates mandatory_agents for this pair includes "
+            f"documentation-expert. Full map: {result}"
+        )
+
+        de_idx = keys.index("documentation-expert")
+        pc_idx = keys.index("python-coder")
+
+        assert de_idx < pc_idx, (
+            f"BO-540-2: documentation-expert (index {de_idx}) must appear BEFORE "
+            f"python-coder (index {pc_idx}) for the code/contract_boundary flow_change pair.\n"
+            f"Full map keys: {keys}"
+        )
+
+    def test_bo540_2_documentation_expert_before_test_writer_in_flow_change(self) -> None:
+        # covers: BO-540-2
+        """BO-540-2: For a flow_change pair, documentation-expert must also appear BEFORE
+        test-writer. The AC states: 'documentation-expert has a lower sequence number than
+        test-writer' (documentation planning must happen before TDD authoring).
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+        keys = list(result.keys())
+
+        assert "documentation-expert" in keys, (
+            "BO-540-2: documentation-expert must be present for code/contract_boundary."
+        )
+        assert "test-writer" in keys, (
+            "BO-540-2: test-writer must be present for code/contract_boundary."
+        )
+
+        de_idx = keys.index("documentation-expert")
+        tw_idx = keys.index("test-writer")
+
+        assert de_idx < tw_idx, (
+            f"BO-540-2: documentation-expert (index {de_idx}) must appear BEFORE "
+            f"test-writer (index {tw_idx}) for the code/contract_boundary flow_change pair.\n"
+            "documentation-expert plans the spec before test-writer authors tests.\n"
+            f"Full map keys: {keys}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO550ItPoConstraints
+# BO-550-1-i: IT PO modifying agents map for testing is rejected in favor of
+#              the computed chain
+# ---------------------------------------------------------------------------
+
+
+class TestBO550ItPoConstraints:
+    """BO-550-1-i: The computed chain takes precedence over IT PO's manual
+    test-agent additions or removals. test-writer and test-runner cannot be
+    excluded from the map by passing not_needed_overrides when the computed
+    chain mandates them.
+
+    RED before fix: _build_agents_map currently honors not_needed_overrides
+    unconditionally — including for TDD-mandated agents (test-writer, test-runner).
+    BO-550-1-i requires that the computed chain wins: these agents cannot be
+    removed by manual override.
+    """
+
+    def test_bo550_1i_test_writer_not_overridable_to_not_needed(self) -> None:
+        # covers: BO-550-1-i
+        """BO-550-1-i: When the guardrail config mandates test-writer for a
+        (change_target, risk_surface) pair (e.g. code/internal → test-writer),
+        passing not_needed_overrides={'test-writer': 'not_needed'} must be REJECTED.
+        The computed chain takes precedence; test-writer must remain 'needed'.
+
+        RED before fix: _build_agents_map respects not_needed_overrides.discard('test-writer'),
+        then sets agents['test-writer'] = 'not_needed' via the phase-order loop.
+        After fix: TDD-mandated agents (test-writer, test-runner) must be protected from
+        not_needed_overrides when they are required by the computed guardrail chain.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            not_needed_overrides={"test-writer": "not_needed"},
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        # BO-550-1-i requires the computed chain to win:
+        assert result.get("test-writer") == "needed", (
+            "BO-550-1-i: test-writer must remain 'needed' even when "
+            "not_needed_overrides={'test-writer': 'not_needed'} is passed, because the "
+            "guardrail config for code/internal mandates test-writer.\n\n"
+            "The computed chain takes precedence over the IT PO's manual override. "
+            "Currently _build_agents_map removes test-writer from all_needed and sets it "
+            "to not_needed in the phase-order loop — violating BO-550-1-i.\n\n"
+            f"Actual agents map: {result}"
+        )
+
+    def test_bo550_1i_test_runner_not_overridable_to_not_needed(self) -> None:
+        # covers: BO-550-1-i
+        """BO-550-1-i: Similarly to test-writer, test-runner cannot be excluded by
+        not_needed_overrides when the computed chain mandates it.
+
+        RED before fix: same as test_bo550_1i_test_writer_not_overridable_to_not_needed.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            not_needed_overrides={"test-runner": "not_needed"},
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        assert result.get("test-runner") == "needed", (
+            "BO-550-1-i: test-runner must remain 'needed' even when "
+            "not_needed_overrides={'test-runner': 'not_needed'} is passed, because the "
+            "guardrail config for code/internal mandates test-runner.\n\n"
+            "The computed chain takes precedence over the IT PO's manual override.\n\n"
+            f"Actual agents map: {result}"
+        )
+
+    def test_bo550_1i_non_tdd_agents_remain_overridable(self) -> None:
+        # covers: BO-550-1-i
+        """BO-550-1-i: The protection against override applies ONLY to TDD-mandated
+        agents (test-writer, test-runner). Other agents (e.g. architect-review) must
+        still be overridable via not_needed_overrides (per TestPreserveNotNeeded / BO-560-3-i).
+
+        This test confirms the fix is targeted — not a blanket rejection of all overrides.
+        """
+        result = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            not_needed_overrides={"architect-review": "not_needed"},
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=_AGENT_REGISTRY_PATH,
+        )
+
+        # architect-review is in the guardrail for code/contract_boundary, but the override
+        # says not_needed. For NON-TDD agents, the override must still be respected.
+        # Note: After the BO-550-1-i fix, this test verifies the fix is scoped.
+        # Currently this is GREEN (overrides work for non-TDD agents).
+        assert result.get("architect-review") == "not_needed", (
+            "BO-550-1-i: non-TDD agents (e.g. architect-review) must still be overridable "
+            "via not_needed_overrides. The BO-550-1-i protection applies only to "
+            "test-writer and test-runner.\n\n"
+            f"Actual agents map: {result}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO660TraitBasedInheritance
+# BO-660-1: New agent type inherits guardrails from its declared produces trait
+# ---------------------------------------------------------------------------
+
+
+class TestBO660TraitBasedInheritance:
+    """BO-660-1: A new agent with produces: production_code inherits the same
+    guardrails as python-coder for the same (change_target, risk_surface) pair,
+    without any manual update to the guardrail mapping.
+    """
+
+    def test_bo660_1_new_production_code_agent_gets_same_guardrails_as_python_coder(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BO-660-1
+        """BO-660-1: A new agent 'rust-coder' with produces: production_code in a fixture
+        registry must receive the SAME guardrail agents as python-coder for the same
+        (change_target, risk_surface) pair (code/contract_boundary).
+
+        No manual update to guardrail_gates.yaml is required — the inheritance is
+        trait-based (produces field lookup), not ID-based.
+        """
+        # Write a fixture registry that includes a novel agent "rust-coder"
+        fixture_registry = {
+            "agents": [
+                {"id": "python-coder", "produces": "production_code"},
+                {"id": "rust-coder", "produces": "production_code"},  # new agent
+                {"id": "sql-coder", "produces": "production_code"},
+                {"id": "documentation-expert", "produces": "documentation"},
+                {"id": "test-writer", "produces": "test_artifact"},
+                {"id": "test-runner", "produces": "test_artifact"},
+                {"id": "architect-review", "produces": "review_verdict"},
+                {"id": "pr-reviewer", "produces": "review_verdict"},
+            ]
+        }
+        fixture_reg_path = tmp_path / "fixture_registry.json"
+        fixture_reg_path.write_text(
+            _json.dumps(fixture_registry, indent=2),
+            encoding="utf-8",
+        )
+
+        # Build agents map for python-coder (established agent)
+        python_map = _build_agents_map(
+            "python-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=fixture_reg_path,
+        )
+
+        # Build agents map for rust-coder (new agent, same produces trait)
+        rust_map = _build_agents_map(
+            "rust-coder",
+            change_targets=["code"],
+            risk_surface="contract_boundary",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=fixture_reg_path,
+        )
+
+        # BO-660-1: rust-coder must inherit architect-review guardrail (same as python-coder)
+        assert "architect-review" in rust_map, (
+            "BO-660-1: 'rust-coder' (a new agent with produces: production_code) must inherit "
+            "architect-review from the code/contract_boundary guardrail, just like python-coder. "
+            "No manual update to guardrail_gates.yaml should be required.\n\n"
+            f"python-coder map: {python_map}\n"
+            f"rust-coder map:   {rust_map}"
+        )
+
+        assert rust_map.get("architect-review") == "needed", (
+            f"architect-review must be 'needed' for rust-coder; got "
+            f"{rust_map.get('architect-review')!r}"
+        )
+
+        # BO-660-1: rust-coder must inherit test-writer and test-runner (same as python-coder)
+        assert rust_map.get("test-writer") == "needed", (
+            "BO-660-1: test-writer must be injected for rust-coder (produces: production_code). "
+            "TDD guardrail inheritance must be trait-based, not ID-based.\n\n"
+            f"rust-coder map: {rust_map}"
+        )
+        assert rust_map.get("test-runner") == "needed", (
+            "BO-660-1: test-runner must be injected for rust-coder (produces: production_code).\n\n"
+            f"rust-coder map: {rust_map}"
+        )
+
+    def test_bo660_1_guardrail_inheritance_not_id_based(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BO-660-1
+        """BO-660-1: Guardrail inheritance is trait-based, not ID-based.
+        An entirely new agent name that is NOT in any hardcoded fallback list
+        still receives production_code guardrails if its produces trait is
+        correctly set in the fixture registry.
+
+        'And no manual update to the guardrail mapping is required for the new agent'.
+        """
+        # Novel agent not in any hardcoded fallback set
+        fixture_registry = {
+            "agents": [
+                {"id": "totally-new-lang-coder", "produces": "production_code"},
+                {"id": "test-writer", "produces": "test_artifact"},
+                {"id": "test-runner", "produces": "test_artifact"},
+            ]
+        }
+        fixture_reg_path = tmp_path / "fixture_novel_registry.json"
+        fixture_reg_path.write_text(
+            _json.dumps(fixture_registry, indent=2),
+            encoding="utf-8",
+        )
+
+        result = _build_agents_map(
+            "totally-new-lang-coder",
+            change_targets=["code"],
+            risk_surface="internal",
+            guardrail_config_path=_GUARDRAIL_CONFIG,
+            agent_registry_path=fixture_reg_path,
+        )
+
+        # The novel agent must get test-writer and test-runner injected via the produces trait
+        # (code/internal guardrail mandates test-writer, test-runner AND the auto-inject rule
+        # fires because totally-new-lang-coder has produces: production_code).
+        assert "test-writer" in result, (
+            "BO-660-1: test-writer must be auto-injected for 'totally-new-lang-coder' "
+            "because it has produces: production_code in the fixture registry. "
+            "This confirms trait-based (not ID-based) guardrail inheritance.\n\n"
+            f"Result map: {result}"
+        )
+        assert "test-runner" in result, (
+            "BO-660-1: test-runner must be auto-injected for 'totally-new-lang-coder' "
+            "via trait-based inheritance.\n\n"
+            f"Result map: {result}"
+        )

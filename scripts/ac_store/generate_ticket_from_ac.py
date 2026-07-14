@@ -298,8 +298,10 @@ def _build_agents_map(
     The returned dict is ordered according to _CANONICAL_PHASE_ORDER.
     test-writer is auto-injected before, and test-runner after, any agent
     whose produces field equals 'production_code' in agent_registry.json.
-    Explicit not_needed_overrides are always preserved — they are never
-    recomputed to 'needed'.
+    Explicit not_needed_overrides are preserved for non-TDD agents and never
+    recomputed to 'needed'. TDD-mandated agents (test-writer and test-runner)
+    cannot be excluded via not_needed_overrides when the computed chain requires
+    them — the computed chain wins (BO-550-1-i).
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
@@ -398,9 +400,18 @@ def _build_agents_map(
                 all_needed.add("test-runner")
                 break
 
-        # Remove any agent that has an explicit not_needed override
+        # Determine TDD-mandated agents that cannot be overridden (BO-550-1-i).
+        # When the computed chain requires test-writer or test-runner (via guardrail
+        # lookup or auto-inject), those agents cannot be excluded by not_needed_overrides.
+        # Non-TDD agents (e.g. architect-review) remain freely overridable.
+        _TDD_MANDATORY: frozenset[str] = frozenset({"test-writer", "test-runner"})
+        tdd_protected: set[str] = all_needed & _TDD_MANDATORY
+
+        # Remove any agent that has an explicit not_needed override,
+        # but protect TDD-mandated agents (BO-550-1-i: computed chain wins).
         for agent in overrides:
-            all_needed.discard(agent)
+            if agent not in tdd_protected:
+                all_needed.discard(agent)
 
         # Build ordered result according to the chosen phase order.
         # Non-canonical agents (not in phase_order) are inserted in stable
@@ -426,7 +437,10 @@ def _build_agents_map(
                     agents[nc_agent] = "needed"
                 for nc_agent in non_canonical_not_needed:
                     agents[nc_agent] = "not_needed"
-            if phase_agent in overrides:
+            if phase_agent in tdd_protected:
+                # TDD-mandated agents are never overridable (BO-550-1-i).
+                agents[phase_agent] = "needed"
+            elif phase_agent in overrides:
                 agents[phase_agent] = "not_needed"
             elif phase_agent in all_needed:
                 agents[phase_agent] = "needed"
