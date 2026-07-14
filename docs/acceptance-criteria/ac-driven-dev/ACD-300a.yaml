@@ -39,3 +39,15 @@ covered_by: [ACD-300a-1, ACD-300a-2, ACD-300a-3]
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: triage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - AcStore
+      - Request
+    source: real
+    asof: '2026-07-14'

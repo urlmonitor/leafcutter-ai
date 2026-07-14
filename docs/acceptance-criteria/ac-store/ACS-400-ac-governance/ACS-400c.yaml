@@ -27,3 +27,14 @@ covered_by: [ACS-400c-1, ACS-400c-2, ACS-400c-2-i]
 implemented_by: []
 change_target: code
 risk_surface: auth
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: govern
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-07-14'
