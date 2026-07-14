@@ -1,6 +1,6 @@
 ---
 title: "Wire precommit-probe dead helpers into run_checks + fix fail-open behaviour"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -32,9 +32,9 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: failed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: Wire precommit-probe dead helpers + fix fail-open
@@ -89,9 +89,9 @@ tests:
 - [x] test-writer — 2026-07-14 14:05
 - [x] python-coder — 2026-07-14 15:30
 - [x] test-runner — 2026-07-14 14:25
-- [ ] pr-reviewer — failed 2026-07-14 16:05
-- [ ] commit
-- [ ] pull-request
+- [x] pr-reviewer — 2026-07-14 18:00
+- [x] commit — 2026-07-14 21:00
+- [x] pull-request — 2026-07-14 21:05
 
 ## Comments
 
@@ -184,6 +184,17 @@ completion_manifest:
     remediation: "Respawn python-coder with H-1 and H-2 as input: (H-1) pass hooks_dir from resolve_hooks_path to check_c_git_hook (requires adding a hook_path parameter to check_c_git_hook, or restructuring Check C to use the pre-resolved path); (H-2) capture check_hook_freshness return value and append 'hook_freshness' to failing_checks when False."
 Two high-confidence defects found — see blocker details above. Medium findings (2): incomplete_build does not return early after fail-closed detection (code continues running A-D checks whose results the docstring says cannot be trusted); incomplete_build key is absent from the updated JSON schema docs in SKILL.md and commit.md. Suppressed: 2 low-confidence nits (validate_hook_name return value dropped — harmless since path always constructed as pre-commit; decision history timestamp cosmetic). Escalation: not escalated — medium count was 2 (threshold > 3).
 
+### 2026-07-14 18:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-14_065c8f5b
+completion_manifest:
+  prior_h1_resolved: true
+  prior_h2_resolved: true
+  medium_m2_resolved: true
+  no_new_high_confidence_findings: true
+  ticket_tests_green: true
+  ruff_clean: true
+Verified SHA b897d328 against the two prior H-level blockers. H-1 (BO-1700h-3): run_checks() resolves the hooks dir via resolve_hooks_path(cwd) at line 615, then passes the resulting hook_path to check_c_git_hook(hook_path) at line 668 — Check C now honours core.hooksPath, no internal commondir re-resolution. H-2 (BO-1700h-1): freshness_ok = check_hook_freshness(...) at line 636; "hook_freshness" appended to failing_checks at line 637-638 when stale and both paths resolved. M-2 (schema docs): both SKILL.md and commit.md now document incomplete_build in the JSON schema and gate on failing_checks being empty. All 4 ticket-specific tests pass (44 passed, 4 pre-existing subprocess failures unchanged, 1 xfailed). Ruff clean. Remaining medium: incomplete-build path continues running checks A-D after fail-closed detection (prior M-1, not a blocker for stated ACs). Signed off.
+
 ### 2026-07-14 16:30 — pull-request (status: blocker)
 feedback-id: fb_2026-07-14_02717eb9
 completion_manifest:
@@ -197,3 +208,9 @@ completion_manifest:
     reason: "PR #281 exists on the epic branch but does not contain ticket-02 implementation (run_checks wiring, fail-closed gate, SKILL.md JSON key fix are absent from origin)."
     remediation: "After implementation is committed and pushed, PR #281 will include the ticket-02 changes."
 Blocked: the commit agent (commit: needed) has not committed the implementation files for ticket-02. `templates/scripts/commit_guardian/verify_precommit_active.py` and `templates/skills/building-epics/SKILL.md` contain the run_checks() wiring and JSON key fix in the working tree but are uncommitted. PR #281 is open on the epic branch but origin's run_checks() has no helper wiring or fail-closed gate. Additionally, the pr-reviewer found H-1 (check_c_git_hook still uses _resolve_git_commondir internally rather than the resolved hooks_dir) and H-2 (check_hook_freshness return value silently dropped, stale hooks do not populate failing_checks) which remain unresolved in the working-tree implementation. Suggested remediation: respawn python-coder to fix H-1 and H-2, then respawn commit agent to commit the implementation files, then respawn pull-request agent.
+
+### 2026-07-14 21:00 — commit (status: ok)
+Coordinator remediation after the interrupted /build-feature drive. H-1 (BO-1700h-3) and H-2 (BO-1700h-1) were fixed by python-coder and the implementation committed as SHA b897d328 ("fix(bo-remediation): complete ticket-02 probe wiring + ticket-04 status=M guard"), covering verify_precommit_active.py (run_checks wires check_c_git_hook(hook_path) + captures check_hook_freshness into failing_checks), SKILL.md + commit.md (incomplete_build in the JSON schema), and the ticket-02 tests. 10 active pre-commit hooks passed; only check-hook-parity was skipped (untracked .leafcutter build-artifact parity, restored at deploy). Ruff clean.
+
+### 2026-07-14 21:05 — pull-request (status: ok)
+SHA b897d328 pushed to origin/EPIC-BOPhantomDoneRemediation (74884b80..b897d328); now included in the open epic PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281). pr-reviewer re-verified the fixed implementation and signed off (status: ok, 2026-07-14 18:00). All ticket-02 phases complete; status flipped to done.

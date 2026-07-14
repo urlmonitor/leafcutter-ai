@@ -1,6 +1,6 @@
 ---
 title: "Done-folder parity: detect staged path moves (not presence); catch 99_done; un-mask tests"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -24,7 +24,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: failed
+  pr-reviewer: signed_off
   commit: signed_off
   pull-request: signed_off
 ---
@@ -80,7 +80,7 @@ tests:
 - [x] test-writer — 2026-07-14 14:00
 - [x] python-coder — 2026-07-14 15:00
 - [x] test-runner — 2026-07-14 15:30
-- [ ] pr-reviewer — failed 2026-07-14 15:45
+- [x] pr-reviewer — 2026-07-14 19:45
 - [x] commit — 2026-07-14 16:00
 - [x] pull-request — 2026-07-14 16:30
 
@@ -245,3 +245,20 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 Second push to existing PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281) on branch EPIC-BOPhantomDoneRemediation targeting main. Pushed 2 commits: c057b191 (BO-610-3-i fix) and 4fb7543f (thread old_path through production call chain — resolves pr-reviewer H-1 blocker from 15:45). PR state: MERGEABLE / UNSTABLE (pytest CI non-required; only ruff is a required gate). No new PR created; PR #281 was already open from first pull-request phase at 16:30.
+
+### 2026-07-14 19:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-14_24a267b0
+completion_manifest:
+  prior_h1_blocker_resolved: true
+  build_rename_map_diff_filter_rm_confirmed: true
+  m_status_maps_path_to_itself_confirmed: true
+  r_status_maps_new_to_old_confirmed: true
+  subprocess_timeout_30s_confirmed: true
+  main_passes_old_path_via_rename_map_confirmed: true
+  inplace_done_edit_not_blocked_confirmed: true
+  genuine_move_into_done_blocked_confirmed: true
+  99_done_carveout_confirmed: true
+  production_path_test_class_confirmed: true
+  all_7_tests_green: true
+  medium_count_below_escalation_threshold: true
+Fresh review of committed state (post-SHA b897d328 fix). All three invocation-context claims verified against actual diff: _build_rename_map uses --diff-filter=RM (not =R), M-status entries map path→path, R-status entries map new_path→old_path, subprocess timeout is 30s, main() builds rename_map and passes old_path=rename_map.get(ticket_path) through the full call chain to _check_done_folder_prohibition. All 7 tests pass (3 TestDoneFolderMoveBlocked + 4 TestBuildRenameMapProductionPath, 0.11s). One medium finding retained: _check_done_folder compliance function still skips /99_done/ paths — pre-existing gap outside this ticket's scope. No high-confidence findings. Not escalated (1 medium < threshold of 3).

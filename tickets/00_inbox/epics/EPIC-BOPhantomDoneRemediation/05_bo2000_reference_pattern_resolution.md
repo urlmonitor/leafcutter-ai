@@ -1,6 +1,6 @@
 ---
 title: "Reference-pattern resolution in ticket generator + un-phantom the coverage labels"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -22,7 +22,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: signed_off
   pull-request: signed_off
 ---
@@ -72,7 +72,7 @@ tests:
 - [x] test-writer — 2026-07-14 14:30
 - [x] python-coder — 2026-07-14 15:30
 - [x] test-runner — 2026-07-14 13:19
-- [ ] pr-reviewer
+- [x] pr-reviewer — 2026-07-14 17:15
 - [x] commit — 2026-07-14 15:50
 - [x] pull-request — 2026-07-14 16:05
 
@@ -162,3 +162,18 @@ Re-verified after python-coder implementation: all 5 tests in unit_tests/prompt_
 ### 2026-07-14 16:35 — commit (status: ok)
 feedback-id: fb_2026-07-14_61f9a2e9
 Auto-authorized commit gate: subject "test(commit-guardian): add verify_precommit_active test suite; advance ticket-02 (BO-1700)"; staged files: tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/01_bo1100_wire_commit_routing.md, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/02_bo1700_wire_probe_helpers.md, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/05_bo2000_reference_pattern_resolution.md, unit_tests/commit_guardian/test_verify_precommit_active.py.
+
+### 2026-07-14 17:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-14_0a875139
+completion_manifest:
+  core_acs_implemented_correctly: true
+  all_5_tests_green: true
+  no_high_confidence_findings: true
+  three_medium_findings_noted: true
+  medium_count_at_or_below_escalation_threshold: true
+Confirmed against SHA 86759e5e: `_resolve_reference_patterns` correctly expands globs to concrete paths and raises ValueError naming the AC id + pattern on zero matches. All 5 tests in test_implementation_notes_emission.py pass (5/5 green). Three medium-confidence findings are noted below (none rise to high; medium count = 3, below the >3 escalation threshold, so no Opus escalation). BO-2000c-3 and BO-2000c-3-i are genuinely implemented and covered.
+
+Medium findings (all pre-existing from prior review — none new):
+[M-1] Docstring/implementation mismatch on multiple glob matches: docstring states "Exactly one match is required" but the implementation silently returns matches[0] when multiple files match, rather than raising ValueError. No test covers this case.
+[M-2] Dead try/except OSError around glob.glob(): on Linux/POSIX, glob.glob() does not raise OSError — it returns an empty list on permission errors. The except OSError branch is unreachable dead code on this platform.
+[M-3] Missing test for the multiple-matches case: no test asserts the behavior when the glob pattern resolves to more than one file, leaving the docstring's "exactly one required" semantics untested.

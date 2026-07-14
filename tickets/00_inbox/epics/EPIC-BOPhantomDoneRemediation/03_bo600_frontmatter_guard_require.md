@@ -1,6 +1,6 @@
 ---
 title: "Frontmatter guard: require change_target/risk_surface and reject null/empty"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-07-14
@@ -24,7 +24,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: failed
+  pr-reviewer: signed_off
   commit: signed_off
   pull-request: signed_off
 ---
@@ -74,7 +74,7 @@ tests:
 - [x] test-writer — 2026-07-14 17:00
 - [x] python-coder — 2026-07-14 18:00
 - [x] test-runner — 2026-07-14 18:20
-- [ ] pr-reviewer — failed 2026-07-14 19:45
+- [x] pr-reviewer — 2026-07-14 20:30
 - [x] commit — 2026-07-14 18:35
 - [x] pull-request — 2026-07-14 19:00
 
@@ -209,3 +209,16 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (follow-up): subject "fix(guardrail): add empty-list guard to _check_risk_surface, add risk_surface_empty_list test (BO-610-3-i H-1)"; staged files: templates/hooks/ticket_frontmatter_guard.py, unit_tests/test_ticket_frontmatter_guard.py, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/03_bo600_frontmatter_guard_require.md. Applied pr-reviewer H-1 fix: mirrored the empty-list guard from _check_change_target into _check_risk_surface, and added risk_surface_empty_list subtest to TestNullAndEmptyAxesBO6103i. All 22 tests pass (23 subtests).
+
+### 2026-07-14 20:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-14_0dbe6765
+completion_manifest:
+  h1_blocker_resolved: true
+  risk_surface_empty_list_guard_present: true
+  risk_surface_empty_list_test_present: true
+  symmetry_with_check_change_target_confirmed: true
+  all_22_tests_green: true
+  estimated_complexity_validator_intact: true
+  required_axes_behavior_intact: true
+  medium_findings_non_blocking: true
+Re-review of diff (templates/hooks/ticket_frontmatter_guard.py, unit_tests/test_ticket_frontmatter_guard.py) vs origin/main. H-1 from prior review confirmed resolved: _check_risk_surface lines 331–337 now contain the empty-list guard symmetric with _check_change_target; risk_surface_empty_list subtest is present in TestNullAndEmptyAxesBO6103i and passes. All 22 tests, 23 subtests pass green. Three non-blocking medium findings noted (stale "CURRENTLY RED" docstrings, duplicate absent-field tests, vestigial setUp/importlib pattern in TestEstimatedComplexityBO6301i) — none affect correctness or CI. Verdict: signed_off.
