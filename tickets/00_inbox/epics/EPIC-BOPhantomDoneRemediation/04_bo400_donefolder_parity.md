@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: failed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Done-folder parity detects moves, not presence
@@ -82,7 +82,7 @@ tests:
 - [x] test-runner — 2026-07-14 15:30
 - [ ] pr-reviewer — failed 2026-07-14 15:45
 - [x] commit — 2026-07-14 16:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 16:30
 
 ## Comments
 
@@ -174,3 +174,11 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true
 All 3 done-folder parity tests pass: test_done_folder_move_blocked, test_in_place_done_edit_not_blocked, test_99_done_move_caught (3 passed in 0.24s). Test file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py.
+
+### 2026-07-14 16:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_a932c5c6
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281) was already open on branch EPIC-BOPhantomDoneRemediation targeting main. Branch is in sync with remote. Implementation commit 488318d5 (move-based done-folder guard + 99_done support) is included. Note: pr-reviewer flagged a deferred item (production call-site not yet wiring old_path through the chain); commit agent documented this as non-blocking for merge.
