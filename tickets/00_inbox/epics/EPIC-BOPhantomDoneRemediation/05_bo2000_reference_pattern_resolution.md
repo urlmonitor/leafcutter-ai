@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Reference-pattern resolution + un-phantom coverage
@@ -74,7 +74,7 @@ tests:
 - [x] test-runner — 2026-07-14 13:19
 - [ ] pr-reviewer
 - [x] commit — 2026-07-14 15:50
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 16:05
 
 ## Comments
 
@@ -142,3 +142,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "feat(ac-store): resolve reference_pattern globs in ticket generator (BO-2000c-3/3-i)"; staged files: scripts/ac_store/generate_ticket_from_ac.py, scripts/ac_store/pytest_ac_enforcement.py, templates/scripts/commit_guardian/_signoff_parity_checks.py, unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py, unit_tests/prompt_assembly/test_implementation_notes_emission.py, unit_tests/test_ticket_frontmatter_guard.py, plus EPIC-BOPhantomDoneRemediation ticket files 01/03/04/05.
+
+### 2026-07-14 16:05 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_dc2ab4ac
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #281 opened at https://github.com/urlmonitor/leafcutter-ai/pull/281 targeting main; branch EPIC-BOPhantomDoneRemediation pushed to origin. Merge state: MERGEABLE + UNSTABLE (pre-existing non-required CI failure on main — expected baseline).
