@@ -30,9 +30,9 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: failed
   commit: needed
   pull-request: needed
 ---
@@ -88,8 +88,8 @@ tests:
 - [x] architect-review — 2026-07-14 13:56
 - [x] test-writer — 2026-07-14 14:05
 - [x] python-coder — 2026-07-14 15:30
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-runner — 2026-07-14 14:25
+- [ ] pr-reviewer — failed 2026-07-14 16:05
 - [ ] commit
 - [ ] pull-request
 
@@ -162,3 +162,38 @@ completion_manifest:
   architectural_note_written: true
   requires_adr_evaluated: true
 Small ticket (4 files, 1 component: build_orchestration). No always-large trigger fired. Key design concerns: (1) `remove_canary_from_manifest` must NOT be wired into `run_checks()` as it mutates state — call it separately; (2) `graceful_skip_if_incomplete` fail-closed flip needs a defined return schema (e.g., add `incomplete_build` key to result dict); (3) both `commit.md` Step 0a and `building-epics/SKILL.md` §1.0.1 JSON parse blocks must be updated atomically to use `failing_checks` instead of `all_pass`/`results`. No ADR required — correctness fix within existing ADR-017-worktree-quality-gate-guard.md scope.
+### 2026-07-14 14:25 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_8033a1a1
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing:
+    result: false
+    reason: "4 pre-existing subprocess tests fail because scripts/commit_guardian/verify_precommit_active.py is absent in the worktree (only the templates copy exists). Documented by test-writer; path-portability fix is in the Part C ticket."
+    remediation: "No action required for this ticket — these 4 failures pre-date the ticket. The Part C ticket will add the deployed scripts/ copy to the worktree and fix the subprocess tests."
+  failure_report_structured: true
+Ran unit_tests/commit_guardian/test_verify_precommit_active.py: 42 passed, 4 failed (pre-existing setup-error), 1 xfailed. The 2 ticket-specific tests (TestRunChecksInvokesHookIdValidation::test_run_checks_invokes_hook_id_validation and TestIncompleteBuildFailsClosed::test_incomplete_build_fails_closed) both PASS, confirming the helpers are wired into run_checks() and the fail-closed gate is active. The 4 failing subprocess tests are pre-existing (script absent at worktree scripts/ path, not templates/ path) and unrelated to this ticket's deliverables.
+
+### 2026-07-14 16:05 — pr-reviewer (status: blocker)
+feedback-id: fb_2026-07-14_7736112b
+completion_manifest:
+  review_completed: true
+  high_confidence_findings: true
+  blockers_found:
+    result: false
+    reason: "Two high-confidence findings prevent sign-off: (H-1) check_c_git_hook still uses _resolve_git_commondir internally, not the resolve_hooks_path result — BO-1700h-3 functional intent (Check C honours core.hooksPath) is not achieved despite resolve_hooks_path being called. (H-2) check_hook_freshness return value is silently dropped — stale hooks do not populate failing_checks, so BO-1700h-1's 'report the worktree config as stale when it diverges' intent is not met."
+    remediation: "Respawn python-coder with H-1 and H-2 as input: (H-1) pass hooks_dir from resolve_hooks_path to check_c_git_hook (requires adding a hook_path parameter to check_c_git_hook, or restructuring Check C to use the pre-resolved path); (H-2) capture check_hook_freshness return value and append 'hook_freshness' to failing_checks when False."
+Two high-confidence defects found — see blocker details above. Medium findings (2): incomplete_build does not return early after fail-closed detection (code continues running A-D checks whose results the docstring says cannot be trusted); incomplete_build key is absent from the updated JSON schema docs in SKILL.md and commit.md. Suppressed: 2 low-confidence nits (validate_hook_name return value dropped — harmless since path always constructed as pre-commit; decision history timestamp cosmetic). Escalation: not escalated — medium count was 2 (threshold > 3).
+
+### 2026-07-14 16:30 — pull-request (status: blocker)
+feedback-id: fb_2026-07-14_02717eb9
+completion_manifest:
+  branch_pushed:
+    result: false
+    reason: "Branch is fully in sync with origin/EPIC-BOPhantomDoneRemediation; no new commits to push. Implementation files (verify_precommit_active.py, building-epics/SKILL.md) are in the working tree only — not staged or committed."
+    remediation: "Commit agent must commit the implementation files before the pull-request agent can push them to PR #281."
+  pr_created: true
+  pr_body_complete:
+    result: false
+    reason: "PR #281 exists on the epic branch but does not contain ticket-02 implementation (run_checks wiring, fail-closed gate, SKILL.md JSON key fix are absent from origin)."
+    remediation: "After implementation is committed and pushed, PR #281 will include the ticket-02 changes."
+Blocked: the commit agent (commit: needed) has not committed the implementation files for ticket-02. `templates/scripts/commit_guardian/verify_precommit_active.py` and `templates/skills/building-epics/SKILL.md` contain the run_checks() wiring and JSON key fix in the working tree but are uncommitted. PR #281 is open on the epic branch but origin's run_checks() has no helper wiring or fail-closed gate. Additionally, the pr-reviewer found H-1 (check_c_git_hook still uses _resolve_git_commondir internally rather than the resolved hooks_dir) and H-2 (check_hook_freshness return value silently dropped, stale hooks do not populate failing_checks) which remain unresolved in the working-tree implementation. Suggested remediation: respawn python-coder to fix H-1 and H-2, then respawn commit agent to commit the implementation files, then respawn pull-request agent.
