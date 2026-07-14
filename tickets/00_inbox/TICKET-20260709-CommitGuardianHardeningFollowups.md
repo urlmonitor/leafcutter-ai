@@ -1,6 +1,6 @@
 ---
 title: "Commit-guardian hardening follow-ups: parity-hook enforcement gap, diagram dead-SSOT, missing docstring_parser dep"
-status: in_progress
+status: done
 components:
   - commit_guardian
   - precommit_hooks
@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 complexity: medium
 ---
 
@@ -78,7 +78,7 @@ do not duplicate it here.
 - [x] test-runner — 2026-07-14 12:20
 - [x] pr-reviewer — 2026-07-14 12:45
 - [x] commit — 2026-07-14 12:46
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 13:15
 
 ## Comments
 
@@ -131,3 +131,10 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (supervised path): subject "fix(commit_guardian): enforce content-hash parity, port diagram-type ancestor walk, declare docstring_parser dep"; staged files: requirements-dev.txt, templates/commit-guardian/commit_guardian.json, templates/commit-guardian/diagram_type_validators.py, templates/scripts/commit_guardian/check_hook_parity.py, templates/scripts/commit_guardian/diagram_type_validators.py, tickets/00_inbox/TICKET-20260709-CommitGuardianHardeningFollowups.md, unit_tests/commit_guardian/test_check_hook_parity.py, unit_tests/commit_guardian/test_commit_guardian_imports.py. SHA: ffed0060. Note: worktree lacks .pre-commit-config.yaml (documented gap); PRE_COMMIT_ALLOW_NO_CONFIG=1 used per CLAUDE.md worktree pre-commit gap recipe — hooks were not run but pre-existing baseline confirms test suite is green at this branch tip.
+
+### 2026-07-14 13:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Branch ticket/cg-hardening-followups pushed to origin; existing PR #252 updated (origin now at a480c840). Agent was cut off mid-sign-off; supervisor completed the Comments entry. All agents signed off.
