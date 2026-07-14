@@ -1,6 +1,6 @@
 ---
 title: "Establish green test coverage for BO-600 (change-driven-guardrails) ACs"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-07-14
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 06: Green test coverage for BO-600
@@ -77,7 +77,7 @@ tests:
 - [x] test-runner — 2026-07-14 19:00
 - [x] pr-reviewer — 2026-07-14 20:15
 - [x] commit — 2026-07-14 21:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 21:30
 
 ## Comments
 
@@ -174,3 +174,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 [probe-override] verify_precommit_active.py reported false-positive failure: check_c_git_hook looked for .git at /home/henzeh/projects/leafcutter (workspace parent) instead of actual git root /home/henzeh/projects/leafcutter/leafcutter-ai/; hooks confirmed active via direct inspection of /home/henzeh/projects/leafcutter/leafcutter-ai/.git/hooks/pre-commit. Staged changes committed: templates/agents/adr-author.md (supersession handling), templates/agents/architect-review.md (write-c4-diagram directive), templates/skills/write-c4-diagram/SKILL.md (Section 3b + source_ticket field), and this ticket file. Unit test file (unit_tests/test_generate_ticket_from_ac.py) was committed in prior commit 134dbd5b.
+
+### 2026-07-14 21:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_ec644b22
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed feat(bo-650) commit (adr-author supersession handling + write-c4-diagram directives) to branch EPIC-BOTestCoverageBackfill. PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) already existed for this epic branch — no new PR created. All agents signed_off or not_needed; ticket flipped to status: done.
