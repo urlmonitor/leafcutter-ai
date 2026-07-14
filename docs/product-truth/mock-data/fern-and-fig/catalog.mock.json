@@ -4,9 +4,9 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "reusable": true,
-  "tags": ["catalog", "checkout"],
+  "tags": ["catalog", "checkout", "payment"],
   "invariants": [
     "Plant.status == 'out-of-stock' iff Plant.stock == 0",
     "Plant.status == 'low-stock' iff 0 < Plant.stock <= 5",
@@ -17,7 +17,11 @@
     "Order.status == 'pending' is an open cart: stage == 'not-shipped', carrier == null, tracking_number == null (a cart is not a placed order)",
     "Order.tracking_number == null iff Order.stage == 'not-shipped'  (a shipment number exists only once the parcel is dispatched)",
     "Order.carrier == null iff Order.tracking_number == null",
-    "Customer.orders == count of that Customer's Order records with status != 'pending'  (an open cart does not count toward lifetime orders)"
+    "Customer.orders == count of that Customer's Order records with status != 'pending'  (an open cart does not count toward lifetime orders)",
+    "Payment.order resolves to an Order.id",
+    "Payment.amount == its Order.total",
+    "Payment.status == 'captured' implies its Order.status == 'paid'  (a capture is what marks an order paid)",
+    "Order.status == 'paid' implies exactly one 'captured' Payment references it  (an open-cart / pending order has no captured Payment)"
   ],
   "entities": {
     "Plant": {
@@ -68,6 +72,22 @@
         { "id": "1044", "customer": "alex-green", "item": "golden-pothos", "qty": 2, "total": 36, "currency": "EUR", "status": "paid", "stage": "not-shipped", "carrier": null, "tracking_number": null },
         { "id": "1050", "customer": "alex-green", "item": "zz-plant", "qty": 1, "total": 28, "currency": "EUR", "status": "pending", "stage": "not-shipped", "carrier": null, "tracking_number": null }
       ]
+    },
+    "Payment": {
+      "fields": {
+        "id": "string",
+        "order": "string — Order.id",
+        "method": "enum: card",
+        "amount": "number — matches Order.total",
+        "currency": "string",
+        "status": "enum: authorized | captured | declined — authorized == card accepted pending capture; captured == money taken (marks Order paid); declined == card refused",
+        "processor_ref": "string | null — payment-processor reference for the attempt"
+      },
+      "records": [
+        { "id": "pay-1042", "order": "1042", "method": "card", "amount": 34, "currency": "EUR", "status": "captured", "processor_ref": "auth_9f2a1042" },
+        { "id": "pay-1043", "order": "1043", "method": "card", "amount": 59, "currency": "EUR", "status": "captured", "processor_ref": "auth_7bd01043" },
+        { "id": "pay-1050-declined", "order": "1050", "method": "card", "amount": 28, "currency": "EUR", "status": "declined", "processor_ref": "decl_4c8e1050" }
+      ]
     }
   },
   "used_by": {
@@ -86,12 +106,14 @@
     "tests": ["fixtures: catalog, checkout"],
     "flows": [
       "fern-and-fig/customer-buys-a-plant",
-      "fern-and-fig/track-an-order"
+      "fern-and-fig/track-an-order",
+      "fern-and-fig/checkout-and-pay"
     ]
   },
   "provenance": [
     { "action": "authored", "by": "walked-by-hand (art-director session)", "date": "2026-07-10", "note": "Seed / gold reference. The ONE canonical dataset for Plant/Customer/Order in ux-prototyping — extend, don't duplicate." },
     { "action": "reviewed", "by": "product-owner (persona)", "date": "2026-07-10" },
-    { "action": "extended", "by": "BrainCandy (product-truth hardening pass)", "date": "2026-07-14", "note": "v2: added Order shipment fields (stage/carrier/tracking_number) so the track step can read a real delivery stage; added a pending open-cart Order (1050) so the cart step is not backed by a paid order; added orders 1043/1044 so Customer.orders==3 matches the orders-list; added a no-orders Customer (sam-rivera) for the empty-state branch; added golden-pothos/zz-plant to back the new orders; fixed used_by to reflect both flows and all catalog-backed mockups." }
+    { "action": "extended", "by": "BrainCandy (product-truth hardening pass)", "date": "2026-07-14", "note": "v2: added Order shipment fields (stage/carrier/tracking_number) so the track step can read a real delivery stage; added a pending open-cart Order (1050) so the cart step is not backed by a paid order; added orders 1043/1044 so Customer.orders==3 matches the orders-list; added a no-orders Customer (sam-rivera) for the empty-state branch; added golden-pothos/zz-plant to back the new orders; fixed used_by to reflect both flows and all catalog-backed mockups." },
+    { "action": "extended", "by": "BrainCandy (product-truth-way plan-feature session)", "date": "2026-07-14", "note": "v3: added the Payment entity (captured payments for paid orders 1042/1043; a declined attempt for the open-cart order 1050 backing the checkout-and-pay declined branch) plus Payment<->Order invariants, and registered the new checkout-and-pay flow in used_by. Extends the single canonical dataset — no second Payment dataset was created." }
   ]
 }

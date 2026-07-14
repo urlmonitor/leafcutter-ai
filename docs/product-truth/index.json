@@ -12,6 +12,7 @@
     "Plant",
     "Customer",
     "Order",
+    "Payment",
     "Request",
     "Ac",
     "Ticket",
@@ -36,7 +37,7 @@
       "path": "flows/fern-and-fig/customer-buys-a-plant.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Plant",
         "Customer",
@@ -54,6 +55,38 @@
         "checkout",
         "catalog",
         "purchase"
+      ]
+    },
+    {
+      "id": "fern-and-fig/checkout-and-pay",
+      "type": "flow",
+      "title": "Checkout & pay (inside the buy-a-plant checkout step)",
+      "summary": "Drill-down beneath the buy-a-plant checkout step: review → enter payment → authorize & capture → confirmed, with declined and sold-out-at-payment branches. Extends the catalog dataset with Payment.",
+      "kind": "user",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "flows/fern-and-fig/checkout-and-pay.flow.json",
+      "status": "active",
+      "readiness": "reviewed",
+      "version": 1,
+      "entities": [
+        "Customer",
+        "Order",
+        "Payment"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "checkout",
+        "payment",
+        "purchase",
+        "hierarchy"
       ]
     },
     {
@@ -410,20 +443,22 @@
       "id": "fern-and-fig/catalog",
       "type": "mock_data",
       "title": "Fern & Fig catalog",
-      "summary": "The canonical Plant / Customer / Order dataset for the plant-shop sample.",
+      "summary": "The canonical Plant / Customer / Order / Payment dataset for the plant-shop sample.",
       "component": "ux-prototyping",
       "path": "mock-data/fern-and-fig/catalog.mock.json",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Plant",
         "Customer",
-        "Order"
+        "Order",
+        "Payment"
       ],
       "tags": [
         "catalog",
-        "checkout"
+        "checkout",
+        "payment"
       ]
     },
     {
@@ -517,21 +552,22 @@
       "id": "fern-and-fig/order-confirmation",
       "type": "mockup",
       "title": "Order confirmation",
-      "summary": "STUB — order number and paid items after payment. Registered so the buy-a-plant flow's confirmed step resolves; HTML not yet drawn.",
+      "summary": "The confirmation screen after a captured payment: paid order number, payment reference, and paid line items. Populated from the paid Order 1042 + captured Payment. The `confirmed` step of both the buy-a-plant journey and the checkout-and-pay child flow.",
       "screen": "order-confirmation",
       "source": "mock",
       "component": "ux-prototyping",
       "path": "mockups/fern-and-fig/order-confirmation.mockup.json",
       "status": "active",
-      "readiness": "draft",
-      "version": 1,
+      "readiness": "reviewed",
+      "version": 2,
       "entities": [
-        "Order"
+        "Order",
+        "Payment"
       ],
       "mock_data_ref": "fern-and-fig/catalog",
       "tags": [
         "checkout",
-        "stub"
+        "payment"
       ]
     },
     {
@@ -641,6 +677,7 @@
     },
     "ux-prototyping": {
       "flows": [
+        "fern-and-fig/checkout-and-pay",
         "fern-and-fig/customer-buys-a-plant",
         "fern-and-fig/track-an-order",
         "leafcutter/author-product-truth",
@@ -704,6 +741,7 @@
       },
       "flows": {
         "ux-prototyping": [
+          "fern-and-fig/checkout-and-pay",
           "fern-and-fig/customer-buys-a-plant",
           "fern-and-fig/track-an-order"
         ]
@@ -750,6 +788,7 @@
       },
       "flows": {
         "ux-prototyping": [
+          "fern-and-fig/checkout-and-pay",
           "fern-and-fig/customer-buys-a-plant",
           "fern-and-fig/track-an-order"
         ]
@@ -760,6 +799,16 @@
       "flows": {
         "build-pipeline": [
           "leafcutter/how-acs-are-built"
+        ]
+      }
+    },
+    "Payment": {
+      "canonical_mock_data": {
+        "ux-prototyping": "fern-and-fig/catalog"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "fern-and-fig/checkout-and-pay"
         ]
       }
     },
@@ -805,6 +854,32 @@
     }
   },
   "by_flow": {
+    "fern-and-fig/checkout-and-pay": {
+      "component": "ux-prototyping",
+      "level": "pipeline",
+      "entities": [
+        "Customer",
+        "Order",
+        "Payment"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "path": "flows/fern-and-fig/checkout-and-pay.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-07-14"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "fern-and-fig/customer-buys-a-plant",
+          "step": "checkout"
+        }
+      ]
+    },
     "fern-and-fig/customer-buys-a-plant": {
       "component": "ux-prototyping",
       "level": "journey",
@@ -823,7 +898,9 @@
         "total": 10,
         "asof": "2026-07-14"
       },
-      "expands": [],
+      "expands": [
+        "fern-and-fig/checkout-and-pay"
+      ],
       "parents": []
     },
     "fern-and-fig/track-an-order": {
@@ -1920,6 +1997,20 @@
     ],
     "UXP-210d-2": [
       {
+        "flow": "fern-and-fig/checkout-and-pay",
+        "node": "declined",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order",
+          "Payment"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      },
+      {
         "flow": "fern-and-fig/customer-buys-a-plant",
         "node": "paymentFailed",
         "node_kind": "branch",
@@ -1936,6 +2027,20 @@
     ],
     "UXP-210d-3": [
       {
+        "flow": "fern-and-fig/checkout-and-pay",
+        "node": "soldOutAtPay",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order",
+          "Plant"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      },
+      {
         "flow": "fern-and-fig/customer-buys-a-plant",
         "node": "outOfStockAtCheckout",
         "node_kind": "branch",
@@ -1950,7 +2055,68 @@
         "asof": "2026-07-14"
       }
     ],
+    "UXP-210d-4": [
+      {
+        "flow": "fern-and-fig/checkout-and-pay",
+        "node": "review",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210d-5": [
+      {
+        "flow": "fern-and-fig/checkout-and-pay",
+        "node": "payDetails",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer",
+          "Order",
+          "Payment"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210d-6": [
+      {
+        "flow": "fern-and-fig/checkout-and-pay",
+        "node": "authorize",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order",
+          "Payment"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
     "UXP-210e": [
+      {
+        "flow": "fern-and-fig/checkout-and-pay",
+        "node": "confirmed",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "order-confirmation",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      },
       {
         "flow": "fern-and-fig/customer-buys-a-plant",
         "node": "confirmed",

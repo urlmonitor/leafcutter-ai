@@ -1,0 +1,48 @@
+id: UXP-210d-6
+readiness: approved
+priority: medium
+title: "Successful authorization captures the Payment and marks the Order paid"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given an 'authorized' Payment for an in-stock item,
+  When the processor captures the payment,
+  Then the Payment status becomes 'captured',
+  And the Order status becomes 'paid',
+  And the confirmation screen is shown with the order number and captured amount.
+depends_on: [UXP-210d, UXP-210d-5]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/checkout-and-pay.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Reads + writes Order and Payment. On capture, flips Order.status pending -> paid and
+  Payment.status authorized -> captured, upholding the invariant that a paid Order has
+  exactly one captured Payment. Renders the order-confirmation screen.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/checkout-and-pay
+    node: authorize
+    node_kind: step
+    flow_kind: user
+    screen: checkout
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+      - Payment
+    source: mock
+    asof: '2026-07-14'

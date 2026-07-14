@@ -1,0 +1,190 @@
+{
+  "id": "fern-and-fig/checkout-and-pay",
+  "component": "ux-prototyping",
+  "product": "Fern & Fig",
+  "name": "Checkout & pay (inside the buy-a-plant checkout step)",
+  "level": "pipeline",
+  "summary": "The drill-down beneath the single 'Checkout' step of the buy-a-plant journey: the fine-grained payment sub-flow. The signed-in customer reviews the order summary, enters their card, and the processor authorizes it — on success the Order is marked paid and a Payment is captured, and the customer lands on the confirmation screen. It is honest about the two ways paying can fail on this screen: the card is declined (a Payment attempt is recorded as declined, no Order is placed, the cart is kept), or the plant sold out between the cart and payment (payment is blocked, no Order is created). Reuses the same Plant / Customer / Order / Payment dataset as the parent journey — this flow adds no new dataset, it drills into the existing checkout step.",
+  "kind": "user",
+  "source": "mock",
+  "realization": "mock",
+  "status": "active",
+  "readiness": "reviewed",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "checkout",
+    "payment",
+    "purchase",
+    "hierarchy"
+  ],
+  "entities": [
+    "Customer",
+    "Order",
+    "Payment"
+  ],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "steps": [
+    {
+      "id": "review",
+      "label": "Review order",
+      "human": "The customer sees a final summary of what they are about to pay for — the plant, quantity, unit price and the total — before entering any payment details.",
+      "order": 1,
+      "screen": "checkout",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210d-4"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "payDetails",
+      "label": "Enter payment",
+      "human": "The customer enters their card details; a Payment record is created for this order in the 'authorized' (pending-capture) state, tied to the signed-in customer.",
+      "order": 2,
+      "screen": "checkout",
+      "reads": [
+        "Customer",
+        "Order"
+      ],
+      "writes": [
+        "Payment"
+      ],
+      "implements": [
+        "UXP-210d-5"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "authorize",
+      "label": "Authorize & capture",
+      "human": "The processor authorizes the card and the Payment is captured: the Order flips from 'pending' (open cart) to 'paid', and the captured Payment is linked to it.",
+      "order": 3,
+      "screen": "checkout",
+      "reads": [
+        "Order",
+        "Payment"
+      ],
+      "writes": [
+        "Order",
+        "Payment"
+      ],
+      "implements": [
+        "UXP-210d-6"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "confirmed",
+      "label": "Order confirmed",
+      "human": "The customer sees a confirmation with the order number, the paid items and the captured amount.",
+      "order": 4,
+      "screen": "order-confirmation",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210e"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [
+    {
+      "id": "declined",
+      "from": "authorize",
+      "condition": "the processor declines the card",
+      "label": "Payment declined",
+      "human": "The card is declined during authorization: the Payment record is marked 'declined', no Order is placed, the cart is kept intact, and the customer is shown a clear error with a way to try a different payment method.",
+      "screen": "checkout",
+      "reads": [
+        "Payment",
+        "Order"
+      ],
+      "writes": [
+        "Payment"
+      ],
+      "implements": [
+        "UXP-210d-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "soldOutAtPay",
+      "from": "authorize",
+      "condition": "the plant dropped to zero stock after it was added to the cart",
+      "label": "Sold out at payment",
+      "human": "Between adding to the cart and authorizing payment, the plant sold out: authorization is blocked before any capture, no Order is created, and the customer is told the item is no longer available.",
+      "screen": "checkout",
+      "reads": [
+        "Order",
+        "Plant"
+      ],
+      "implements": [
+        "UXP-210d-3"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 6,
+    "total": 6,
+    "asof": "2026-07-14"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "review",
+      "given": "a cart with at least one item and a signed-in customer",
+      "when": "the customer reaches the checkout screen",
+      "then": "a final order summary shows the plant, quantity, unit price and total before any payment details are entered"
+    },
+    {
+      "for": "payDetails",
+      "given": "the order summary is shown",
+      "when": "the customer enters valid card details",
+      "then": "a Payment record is created for the order in the 'authorized' state, tied to the signed-in customer"
+    },
+    {
+      "for": "authorize",
+      "given": "an authorized Payment for an in-stock item",
+      "when": "the processor captures the payment",
+      "then": "the Order status becomes 'paid', the Payment status becomes 'captured', and the confirmation screen is shown"
+    },
+    {
+      "for": "declined",
+      "given": "a customer entering card details at checkout",
+      "when": "the processor declines the card",
+      "then": "the Payment is recorded as 'declined', no Order is marked paid, the cart is preserved, and a clear error offers another payment method"
+    },
+    {
+      "for": "soldOutAtPay",
+      "given": "a cart holding a plant that has since dropped to zero stock",
+      "when": "the customer attempts to authorize payment",
+      "then": "authorization is blocked, no Payment is captured, no Order is created, and the customer is told the item is no longer available"
+    },
+    {
+      "for": "confirmed",
+      "given": "payment has been captured",
+      "when": "the order is created",
+      "then": "the confirmation screen shows the order number, the paid items and the captured amount"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth-way plan-feature session)",
+      "date": "2026-07-14",
+      "note": "Drill-down child flow beneath the customer-buys-a-plant checkout step (expands_to target). Extends — does not duplicate — the buy-a-plant journey: it decomposes the single checkout step into review -> payDetails -> authorize -> confirmed, adds the Payment entity to the shared catalog dataset, and reuses UXP-210d-2 / UXP-210d-3 / UXP-210e for the shared branches and confirmation. Authored artifacts-first, with ACs linked back via step.implements."
+    }
+  ]
+}
