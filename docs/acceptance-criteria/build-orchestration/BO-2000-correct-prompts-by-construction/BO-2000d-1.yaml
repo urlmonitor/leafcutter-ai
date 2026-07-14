@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -42,5 +42,6 @@ created: 2026-07-08
 amended_by: []
 superseded_by: null
 covered_by:
-  - BO-2000d-1-i
+- BO-2000d-1-i
+- unit_tests/prompt_assembly/test_package_surface_spec.py
 implemented_by: []

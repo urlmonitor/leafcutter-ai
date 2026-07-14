@@ -8,7 +8,7 @@ status: active
 readiness: reviewed
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the routing config contains an entry for "shipped-acs" targeting "config/ac_store/",
   And the following files are staged:
@@ -44,7 +44,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_defect_fixes.py
 implemented_by: []
 change_target: code
 risk_surface: internal
