@@ -2,7 +2,7 @@
 title: "Frontmatter guard: require change_target/risk_surface and reject null/empty"
 status: todo
 components:
-  - guardrail_engine
+  - commit_guardian
 created: 2026-07-14
 depends_on: []
 priority: high
