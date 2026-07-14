@@ -14,6 +14,8 @@ ARCHITECTURE: Standalone CLI script. Reads the YAML frontmatter block (between
     After a successful write, stages the file via git add for the next commit.
     Validates transitions against an explicit allow-list. Checks agents: map parity
     before permitting done transitions (unless --force is set).
+    Also exposes scan_epic_archive_readiness() as a library function for callers
+    that need to assess whether all tickets in an epic directory are done.
 
 Exit Codes:
     0 - Success (status updated or no-op same-status call)
@@ -196,6 +198,66 @@ def _stage_file(ticket_path: Path) -> None:
         print("Warning: git not available — file not staged", file=sys.stderr)
     except OSError as exc:
         print(f"Warning: git add error: {exc}", file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
+# Epic archive-readiness scanner
+# ---------------------------------------------------------------------------
+
+
+def scan_epic_archive_readiness(epic_dir: str) -> dict[str, object]:
+    """Scan an epic directory for tickets that have not reached status: done.
+
+    Scans ``.md`` files at the epic root and inside a ``done/`` subfolder
+    (legacy layout where tickets were previously moved via git mv). Excludes
+    ``Master_Plan.md`` from the count. Status is read from YAML frontmatter,
+    not inferred from folder position (BO-400a-3 principle).
+
+    Args:
+        epic_dir: Absolute or relative path to the epic directory.
+
+    Returns:
+        A dict with the following keys:
+
+        - ``all_clear`` (bool): True when every ticket is done.
+        - ``ok_count`` (int): Number of tickets with status: done.
+        - ``missing_count`` (int): Number of tickets not yet done.
+        - ``missing_tickets`` (list[dict]): One entry per non-done ticket,
+          each with ``path`` (str) and ``current_status`` (str | None).
+    """
+    epic_path = Path(epic_dir)
+    ok_tickets: list[str] = []
+    missing_tickets: list[dict[str, object]] = []
+
+    candidates: list[Path] = list(epic_path.glob("*.md"))
+    done_subdir = epic_path / "done"
+    if done_subdir.is_dir():
+        candidates.extend(done_subdir.glob("*.md"))
+
+    for md_file in candidates:
+        if md_file.name == "Master_Plan.md":
+            continue
+        try:
+            content = md_file.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"Warning: cannot read {md_file}: {exc}", file=sys.stderr)
+            continue
+        parts = _extract_frontmatter_block(content)
+        status: str | None = None
+        if parts is not None:
+            _, yaml_block, _ = parts
+            status = _get_current_status(yaml_block)
+        if status == "done":
+            ok_tickets.append(str(md_file))
+        else:
+            missing_tickets.append({"path": str(md_file), "current_status": status})
+
+    return {
+        "all_clear": len(missing_tickets) == 0,
+        "ok_count": len(ok_tickets),
+        "missing_count": len(missing_tickets),
+        "missing_tickets": missing_tickets,
+    }
 
 
 # ---------------------------------------------------------------------------
