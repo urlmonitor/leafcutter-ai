@@ -2,7 +2,7 @@
 title: "Establish green test coverage for BO-600 (change-driven-guardrails) ACs"
 status: todo
 components:
-  - guardrail_engine
+  - commit_guardian
 created: 2026-07-14
 depends_on: []
 priority: high
