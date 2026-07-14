@@ -300,3 +300,11 @@ The ticket's acceptance criterion requires "a green test names it" for every AC 
 [M-3] unit_tests/commit_guardian/test_verify_precommit_active.py:1015 — source-inspection assertion for timeout=10. The inspect.getsource() assertion on check_d_canary is fragile against refactoring (e.g. extracting a CANARY_TIMEOUT constant). Behavioral rather than source-inspection testing would be more robust.
 
 Suppressed: 3 low-confidence nits (import inside method body, redundant subprocess assertions, appropriate noqa comments). 0 medium findings dropped by Opus (not escalated: medium count was 3, threshold >3).
+
+### 2026-07-14 18:19 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_8c4b1ec9
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Re-invocation: staged and committed the pr-reviewer's failed sign-off deltas for ticket 01 (pr-reviewer: needed → failed, blocker comment recorded) and pushed to existing PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282). PR is MERGEABLE/UNSTABLE. The pr-reviewer HIGH blocker (12 ACs missing covers: tags — BO-1700c-1, c-1-i, c-1-ii, c-1-iv, d-1, d-4, e-1, e-2, e-4, e-5, f-1, f-1-i) requires test-writer remediation before the ticket is done-eligible.
