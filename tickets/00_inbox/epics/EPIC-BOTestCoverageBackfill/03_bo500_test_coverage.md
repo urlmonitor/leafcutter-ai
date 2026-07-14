@@ -35,7 +35,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Green test coverage for BO-500
@@ -100,7 +100,7 @@ tests:
 - [x] test-runner — 2026-07-14 16:15
 - [ ] pr-reviewer
 - [x] commit — 2026-07-14 13:46
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 16:30
 
 ## Comments
 
@@ -189,3 +189,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (supervised path): subject "test(BO-500): green coverage for 14 ACs; fix tdd guardrail overrides"; staged files: scripts/ac_store/generate_ticket_from_ac.py, templates/skills/building-epics/SKILL.md, unit_tests/test_generate_ticket_from_ac.py. [probe-override] verify_precommit_active.py cannot detect git hook in worktree (.git is a file pointer; probe resolves wrong path). Binary and config checks pass; previous worktree commits confirm hooks ran. SHA 40e48afb: 3 files, 938 insertions; 76 BO-500 tests pass, 1 xfailed.
+
+### 2026-07-14 16:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_d535f524
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) already open for EPIC-BOTestCoverageBackfill; branch fully pushed (0 commits ahead of origin/EPIC-BOTestCoverageBackfill); BO-500 test coverage commits included. pr-reviewer remains needed; status: todo retained.
