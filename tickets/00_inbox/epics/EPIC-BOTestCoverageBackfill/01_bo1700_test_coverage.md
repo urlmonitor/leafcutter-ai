@@ -48,7 +48,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: failed
   commit: signed_off
   pull-request: signed_off
 ---
@@ -128,7 +128,7 @@ tests:
 - [x] test-writer — 2026-07-14 14:45
 - [x] python-coder — 2026-07-14 15:32
 - [x] test-runner — 2026-07-14 16:10
-- [ ] pr-reviewer
+- [ ] pr-reviewer — failed 2026-07-14 18:04
 - [x] commit — 2026-07-14 17:45
 - [x] pull-request — 2026-07-14 17:58
 
@@ -278,3 +278,25 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true
 Re-confirmed: 55 tests in unit_tests/commit_guardian/test_verify_precommit_active.py all passed (0 failures, 0 errors, elapsed 2.76s). Suite: single-file on unit_tests/commit_guardian/test_verify_precommit_active.py. This is a re-invocation confirming the prior sign-off remains valid.
+
+### 2026-07-14 18:04 — pr-reviewer (status: blocker)
+feedback-id: fb_2026-07-14_bfdd93ed
+completion_manifest:
+  tests_green: true
+  ac_coverage_complete:
+    result: false
+    reason: "12 link-or-author ACs from ac_coverage (BO-1700c-1, c-1-i, c-1-ii, c-1-iv, d-1, d-4, e-1, e-2, e-4, e-5, f-1, f-1-i) have no test with a matching # covers: <AC-ID> tag anywhere in the test file."
+    remediation: "Respawn test-writer to either find existing tests that assert each uncovered AC's behaviour and add covers: tags, or author new test stubs for each. Then re-run pr-reviewer."
+  no_high_correctness_bugs: true
+  no_security_smells: true
+
+[H-1] unit_tests/commit_guardian/test_verify_precommit_active.py — AC coverage gap (12 ACs)
+The ticket's acceptance criterion requires "a green test names it" for every AC in ac_coverage (29 total). The test file covers 13 ACs with explicit # covers: <AC-ID> tags (plus 4 acknowledged non-testable doc/diagram surfaces). Twelve link-or-author ACs remain without any named test: BO-1700c-1, BO-1700c-1-i, BO-1700c-1-ii, BO-1700c-1-iv, BO-1700d-1, BO-1700d-4, BO-1700e-1, BO-1700e-2, BO-1700e-4, BO-1700e-5, BO-1700f-1, BO-1700f-1-i. The test-writer completion report does not mention these ACs as covered or as explicitly non-testable. Respawn test-writer with this finding as input.
+
+[M-1] unit_tests/commit_guardian/test_verify_precommit_active.py:56 — _run_probe lacks subprocess timeout. If the probe hangs at check_d_canary in a test scenario with a live PATH, the test suite hangs indefinitely. Low immediate risk (all current subprocess tests use PATH="" for fast-fail) but should be addressed before the file grows. Consider adding timeout=30 to the subprocess.run() call.
+
+[M-2] unit_tests/commit_guardian/test_verify_precommit_active.py:864 — time.sleep(0.02) for mtime ordering. On filesystems with coarse timestamp resolution or under load, 20ms may not produce distinct mtimes. Risk is low on WSL2+ext4 (nanosecond resolution) but non-zero on NFS or FAT32 mounts.
+
+[M-3] unit_tests/commit_guardian/test_verify_precommit_active.py:1015 — source-inspection assertion for timeout=10. The inspect.getsource() assertion on check_d_canary is fragile against refactoring (e.g. extracting a CANARY_TIMEOUT constant). Behavioral rather than source-inspection testing would be more robust.
+
+Suppressed: 3 low-confidence nits (import inside method body, redundant subprocess assertions, appropriate noqa comments). 0 medium findings dropped by Opus (not escalated: medium count was 3, threshold >3).
