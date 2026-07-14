@@ -15,36 +15,36 @@
     /* Surfaces */
     --background: 160 26% 6%;        /* canopy floor */
     --foreground: 150 14% 92%;       /* dappled light */
-    --card: 158 22% 8.5%;
-    --card-foreground: 150 14% 92%;
-    --popover: 158 24% 7%;
-    --popover-foreground: 150 14% 92%;
+    --card: 158 20% 11%;             /* raised surface — clearly above the 6% canvas */
+    --card-foreground: 150 14% 93%;
+    --popover: 158 20% 12%;
+    --popover-foreground: 150 14% 93%;
 
     /* Brand */
-    --primary: 150 64% 52%;          /* leaf / chlorophyll */
+    --primary: 150 64% 55%;          /* leaf / chlorophyll */
     --primary-foreground: 160 40% 6%;
-    --secondary: 156 16% 14%;
-    --secondary-foreground: 150 14% 92%;
+    --secondary: 156 15% 18%;        /* hover/fill — reads distinctly on card */
+    --secondary-foreground: 150 14% 93%;
 
     /* Neutrals */
-    --muted: 156 14% 13%;
-    --muted-foreground: 150 8% 60%;
-    --accent: 168 52% 40%;           /* teal-leaf accent */
-    --accent-foreground: 150 14% 95%;
+    --muted: 156 14% 17%;
+    --muted-foreground: 150 11% 70%; /* secondary text — crisper (was 60%) */
+    --accent: 168 55% 46%;           /* teal-leaf accent */
+    --accent-foreground: 150 14% 96%;
 
     /* Signals */
-    --destructive: 356 72% 56%;      /* blocked / failed */
+    --destructive: 356 78% 64%;      /* blocked / failed — lifted for small-text AA */
     --destructive-foreground: 0 0% 98%;
-    --warning: 38 92% 58%;           /* in-flight / approved-not-built */
+    --warning: 38 94% 60%;           /* in-flight / approved-not-built */
     --warning-foreground: 40 60% 8%;
-    --success: 150 60% 48%;          /* done */
+    --success: 150 62% 52%;          /* done */
     --success-foreground: 160 40% 6%;
-    --info: 205 78% 60%;
+    --info: 205 82% 64%;
 
-    /* Lines & focus */
-    --border: 156 16% 16%;
-    --input: 156 16% 16%;
-    --ring: 150 64% 52%;
+    /* Lines & focus — visible dividers/outlines (was 16%, ~1.3:1; now ~2:1) */
+    --border: 155 14% 28%;
+    --input: 155 14% 30%;
+    --ring: 150 64% 55%;
 
     /* Data-viz ramp (categorical, botanical) */
     --chart-1: 150 64% 52%;   /* leaf green */
@@ -84,23 +84,24 @@
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(156 16% 24%); }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(156 16% 38%); }
 }
 
 @layer components {
-  /* Glass panel — the core surface of the Atlas */
+  /* Glass panel — the core surface of the Atlas. Near-opaque so content sits on
+     a distinct raised surface (not floating on the canvas), with a visible edge. */
   .panel {
-    @apply rounded-xl border border-border/80 bg-card/70 backdrop-blur-sm;
+    @apply rounded-xl border border-border bg-card/95 backdrop-blur-sm;
     box-shadow:
-      0 1px 0 0 hsl(150 40% 90% / 0.03) inset,
+      0 1px 0 0 hsl(150 40% 90% / 0.04) inset,
       0 20px 40px -24px hsl(0 0% 0% / 0.6);
   }
   .panel-hover {
-    @apply transition-all duration-200 hover:border-primary/40 hover:bg-card/90;
+    @apply transition-all duration-200 hover:border-primary/50 hover:bg-card;
   }
-  /* Section eyebrow */
+  /* Section eyebrow — slightly brighter than plain muted text for legibility */
   .eyebrow {
-    @apply text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground;
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
   }
   /* Leaf-vein grid texture (used by hero backgrounds) */
   .veins {
