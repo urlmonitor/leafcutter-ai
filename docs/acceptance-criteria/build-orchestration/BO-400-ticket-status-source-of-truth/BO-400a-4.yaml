@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given an epic folder with 4 tickets (none in a done/ subfolder):
     - T1.md with `status: done`
@@ -43,7 +43,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_ticket_prioritizer_status_filter.py
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
