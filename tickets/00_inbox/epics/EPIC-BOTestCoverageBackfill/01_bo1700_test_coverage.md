@@ -50,7 +50,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Green test coverage for BO-1700
@@ -130,7 +130,7 @@ tests:
 - [x] test-runner — 2026-07-14 16:10
 - [ ] pr-reviewer
 - [x] commit — 2026-07-14 17:45
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 17:58
 
 ## Comments
 
@@ -262,3 +262,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "test(BO-1700): add green coverage for 29 ACs (verify_precommit_active)"; staged files: unit_tests/commit_guardian/test_verify_precommit_active.py. Probe false-positive noted: worktree context caused git_hook/canary checks to resolve wrong project root — actual pre-commit hook present in main .git/hooks/.
+
+### 2026-07-14 17:58 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_8d53e85f
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed 3 unpushed commits (BO-1700 + BO-500 test coverage + ticket sign-off) to existing PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) on branch EPIC-BOTestCoverageBackfill. urlmonitor account was already active; no account switch needed.
