@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Frontmatter guard requires fields + rejects null/empty
@@ -76,7 +76,7 @@ tests:
 - [x] test-runner — 2026-07-14 18:20
 - [ ] pr-reviewer
 - [x] commit — 2026-07-14 18:35
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 19:00
 
 ## Comments
 
@@ -182,3 +182,11 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true
 All 22 tests pass (22 subtests) in unit_tests/test_ticket_frontmatter_guard.py. Ran as a single-file action (python -m pytest -v); suite confirms required-field enforcement for change_target/risk_surface (BO-610-3-i, BO-610-4, BO-610-4-i) and estimated_complexity validation (BO-630-1-i).
+
+### 2026-07-14 19:00 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_6ed4bf2f
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281) already open for branch EPIC-BOPhantomDoneRemediation; ticket 03 implementation commits (templates/hooks/ticket_frontmatter_guard.py +94 lines, unit_tests/test_ticket_frontmatter_guard.py +290 lines) are included. No new PR creation needed. Sign-off written; status remains todo pending pr-reviewer.
