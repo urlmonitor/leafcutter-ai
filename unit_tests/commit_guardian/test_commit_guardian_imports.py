@@ -553,7 +553,7 @@ class TestDiagramTypeValidatorsAncestorWalk(unittest.TestCase):
         """
         import logging
         import tempfile
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
 
         mod = self._load_fresh_mod()
 
