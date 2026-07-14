@@ -392,8 +392,10 @@ checking file existence. No registry lookup is needed.
 ### webapp-testing skill
 
 ```bash
-[ -f ".claude/skills/webapp-testing/SKILL.md" ] && echo "installed" || echo "not installed"
+ls .claude/skills/webapp-testing/SKILL.md
 ```
+
+Exit code 0 means the skill is installed; non-zero means it is absent.
 
 **If installed:** After making UI changes, invoke the webapp-testing skill by
 reading `.claude/skills/webapp-testing/SKILL.md` and following its protocol to:
@@ -539,9 +541,9 @@ Before claiming the task is complete:
    configured (e.g. ESLint, Stylelint), run it on the files you touched:
    ```bash
    # ESLint example (adapt to project's package.json scripts):
-   npx eslint <touched_files> || true
+   npx eslint <touched_files>
    ```
-   Fix any errors before signing off. Warnings are advisory.
+   Fix any errors before signing off. Warnings are advisory (ignore non-zero exit on warning-only runs).
 3. **Verify optional-skill results are documented** in the response payload.
 
 ## Response Payload (required)

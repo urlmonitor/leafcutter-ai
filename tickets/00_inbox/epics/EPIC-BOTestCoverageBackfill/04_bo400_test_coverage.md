@@ -1,6 +1,6 @@
 ---
 title: "Establish green test coverage for BO-400 (ticket-status-source-of-truth) ACs"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -30,7 +30,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Green test coverage for BO-400
@@ -91,7 +91,7 @@ tests:
 - [x] test-runner — 2026-07-14 13:16
 - [x] pr-reviewer — 2026-07-14 13:24
 - [x] commit — 2026-07-14 16:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 16:45
 
 ## Comments
 
@@ -207,3 +207,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "test(BO-400): add green coverage for 9 ACs + scan_epic_archive_readiness"; staged files: unit_tests/commit_guardian/test_set_ticket_status.py, scripts/set_ticket_status.py, tickets/00_inbox/epics/EPIC-BOTestCoverageBackfill/04_bo400_test_coverage.md.
+
+### 2026-07-14 16:45 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_6bebc116
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed branch EPIC-BOTestCoverageBackfill to origin and opened PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) targeting main. PR is MERGEABLE (UNSTABLE state is pre-existing non-required pytest CI failure, not a conflict). pull-request is the last needed agent — ticket status flipped to done.
