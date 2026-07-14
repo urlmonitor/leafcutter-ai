@@ -1971,5 +1971,147 @@ class TestIncompleteBuildFailsClosed(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# REMEDIATION TESTS — BO-1700h-3 (check_c uses resolved hook_path),
+#                     BO-1700h-1 (hook_freshness in failing_checks)
+# Added: 2026-07-14 [EPIC-BOPhantomDoneRemediation]
+# Tests below verify the two behavioural defects fixed in run_checks():
+#   1. check_c_git_hook must be called with the hook_path resolved by
+#      resolve_hooks_path() — not its own internal commondir path (BO-1700h-3).
+#   2. When check_hook_freshness() returns False, "hook_freshness" must appear
+#      in failing_checks so the probe exits non-zero (BO-1700h-1).
+# ---------------------------------------------------------------------------
+
+
+class TestCheckCGitHookUsesResolvedPath(unittest.TestCase):
+    """BO-1700h-3: Check C must inspect the hook_path resolved by resolve_hooks_path."""
+
+    def test_check_c_called_with_resolved_hook_path(self):
+        """When core.hooksPath is set to a custom dir, run_checks() must pass the
+        resolved hook_path to check_c_git_hook(), NOT let check_c resolve its own
+        commondir path.
+
+        Verifies the call-site wiring: run_checks() must call
+        check_c_git_hook(hook_path) with the path returned by resolve_hooks_path(),
+        not fn() with no arguments.
+        """
+        # covers: BO-1700h-3
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_c_git_hook"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_c_git_hook()."
+            )
+
+        custom_hooks_dir = Path("/custom/hooks/dir")
+        custom_hook_path = custom_hooks_dir / "pre-commit"
+
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "resolve_hooks_path", return_value=custom_hooks_dir),
+            patch.object(_vpa, "validate_hook_name", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True) as spy_check_c,
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            _vpa.run_checks()
+
+        self.assertTrue(
+            spy_check_c.called,
+            msg="check_c_git_hook was not called during run_checks().",
+        )
+        call_args = spy_check_c.call_args
+        self.assertIsNotNone(
+            call_args,
+            msg="check_c_git_hook was called but call_args is None (unexpected).",
+        )
+        # The hook_path passed must be the one from the resolved hooks dir.
+        # It may be passed as a positional or keyword argument.
+        if call_args.args:
+            passed_path = call_args.args[0]
+        else:
+            passed_path = call_args.kwargs.get("hook_path")
+        self.assertEqual(
+            passed_path,
+            custom_hook_path,
+            msg=(
+                f"Expected check_c_git_hook to be called with {custom_hook_path!r} "
+                f"(from core.hooksPath override via resolve_hooks_path), "
+                f"but was called with: {passed_path!r}. "
+                "run_checks() must pass the already-resolved hook_path to check_c_git_hook() "
+                "rather than calling fn() with no arguments."
+            ),
+        )
+
+
+class TestHookFreshnessAppendsToFailingChecks(unittest.TestCase):
+    """BO-1700h-1: A stale hook must append 'hook_freshness' to failing_checks."""
+
+    def test_stale_hook_appends_hook_freshness_to_failing_checks(self):
+        """When check_hook_freshness() returns False (hook older than config),
+        run_checks() must append 'hook_freshness' to failing_checks.
+
+        Previously, check_hook_freshness() return value was discarded, so a stale
+        hook never appeared in failing_checks and the probe exited 0.
+        BO-1700h-1 requires that the stale-hook condition is surfaced.
+
+        Both resolve_hooks_path and _resolve_config_path must succeed (return real
+        values) for the guard condition to pass — otherwise the False freshness
+        result is treated as "not installed" rather than "stale".
+        """
+        # covers: BO-1700h-1
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness()."
+            )
+
+        # resolve_hooks_path succeeds (hooks_resolved=True) and _resolve_config_path
+        # returns a real path (config_path_resolved is not None).  This satisfies the
+        # guard condition so that a False freshness result is reported as "stale", not
+        # "not installed".
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "resolve_hooks_path", return_value=Path("/tmp/hooks")),
+            patch.object(_vpa, "_resolve_config_path", return_value=Path("/tmp/.pre-commit-config.yaml")),
+            patch.object(_vpa, "validate_hook_name", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=False),  # stale hook
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        self.assertIn(
+            "hook_freshness",
+            result.get("failing_checks", []),
+            msg=(
+                "Expected 'hook_freshness' in failing_checks when check_hook_freshness() "
+                f"returns False (stale hook) and both paths resolved successfully. Got: {result}. "
+                "The return value of check_hook_freshness() must be captured and "
+                "'hook_freshness' appended to failing_checks when it is False and "
+                "both hooks and config paths were successfully resolved."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

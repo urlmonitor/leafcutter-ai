@@ -130,7 +130,9 @@ final safety checkpoint that catches between-gates configuration mutation.
 python3 scripts/commit_guardian/verify_precommit_active.py --json 2>/tmp/probe_commit.txt
 ```
 
-Parse stdout JSON: if `failing_checks` is empty (`[]`) → proceed to Step 1.
+Parse stdout JSON (`{"binary": bool, "config": bool, "git_hook": bool, "canary": bool, "incomplete_build": bool, "failing_checks": [...]}`
+— `incomplete_build` is present and `true` only when guardian scripts are not fully deployed):
+if `failing_checks` is empty (`[]`) → proceed to Step 1.
 
 If `failing_checks` is non-empty OR the script exits non-zero:
 

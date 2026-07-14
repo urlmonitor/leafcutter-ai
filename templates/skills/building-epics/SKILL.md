@@ -89,11 +89,12 @@ the worktree bootstrap and the drive start.
 python3 scripts/commit_guardian/verify_precommit_active.py --json 2>/tmp/probe_pre_drive.txt
 ```
 
-Parse the JSON stdout: `{"all_pass": bool, "failing_checks": [...], "results": {...}}`.
+Parse the JSON stdout: `{"binary": bool, "config": bool, "git_hook": bool, "canary": bool, "incomplete_build": bool, "failing_checks": [...]}`.
+(`incomplete_build` is present and `true` only when the guardian scripts are not fully deployed; `failing_checks` will include `"incomplete_build"` in that case.)
 
 **Failure behaviour (surface-and-offer, not hard-halt):**
 
-If `all_pass` is `false` OR the script exits non-zero:
+If `failing_checks` is non-empty OR the script exits non-zero:
 
 1. Emit the structured warning block to the user, listing each failing check:
    ```
@@ -109,7 +110,7 @@ If `all_pass` is `false` OR the script exits non-zero:
 3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
 4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
 
-Do NOT silently continue when `all_pass` is false — the warning must be surfaced.
+Do NOT silently continue when `failing_checks` is non-empty — the warning must be surfaced.
 
 If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
 ```

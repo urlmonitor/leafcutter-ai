@@ -200,29 +200,42 @@ def _validate_ticket(
 
 
 def _build_rename_map() -> dict[str, str]:
-    """Query git for staged renames and return a new-path to old-path mapping.
+    """Query git for staged renames and in-place edits; return new-path to old-path mapping.
 
     Used to detect whether a staged commit is moving a ticket into a done/
     folder, so the done-folder prohibition check (BO-400c-3) can distinguish a
     genuine move from an in-place edit of a file already residing at a done/
     path (BO-400c-3-i).
 
+    For renamed files (R status): maps new_path -> old_path.
+    For modified-in-place files (M status): maps path -> path (old_path == new_path),
+    so that ``_check_done_folder_prohibition`` sees ``old_in_done`` and skips the
+    false-positive prohibition for files that already resided at a done/ path.
+
     Fail-open: returns an empty dict when git is unavailable or the command
     fails, causing the prohibition to fall back to presence-based detection
     for backward compatibility.
 
     Returns:
-        Dict mapping each renamed file's new (staged) path to its old (HEAD)
-        path.  Non-renamed staged files are absent from the dict.
+        Dict mapping each staged file's new (staged) path to its old (HEAD)
+        path.  Modified-in-place files have old_path == new_path.
+        Files not in the R or M status categories are absent from the dict.
     """
     rename_map: dict[str, str] = {}
     try:
         result = subprocess.run(
-            ["git", "diff", "--cached", "--name-status", "--diff-filter=R"],
+            ["git", "diff", "--cached", "--name-status", "--diff-filter=RM"],
             capture_output=True,
             text=True,
             check=False,
+            timeout=30,
         )
+    except subprocess.TimeoutExpired as exc:
+        print(
+            f"WARNING: check-ticket-signoff-parity: git diff timed out: {exc}",
+            file=sys.stderr,
+        )
+        return rename_map
     except OSError as exc:
         print(
             f"WARNING: check-ticket-signoff-parity: could not query git renames: {exc}",
@@ -230,10 +243,13 @@ def _build_rename_map() -> dict[str, str]:
         )
         return rename_map
     for line in result.stdout.splitlines():
-        # Format: R<score>\t<old_path>\t<new_path>
         parts = line.split("\t")
         if len(parts) == 3 and parts[0].startswith("R"):
+            # Rename: R<score>\t<old_path>\t<new_path> — map new_path -> old_path
             rename_map[parts[2]] = parts[1]
+        elif len(parts) == 2 and parts[0] == "M":
+            # Modified in place: M\t<path> — old_path == new_path (no move)
+            rename_map[parts[1]] = parts[1]
     return rename_map
 
 
