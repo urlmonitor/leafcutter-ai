@@ -10,31 +10,183 @@
   "readiness": "approved",
   "superseded_by": null,
   "version": 1,
-  "tags": ["checkout", "catalog", "purchase"],
-  "entities": ["Plant", "Customer", "Order"],
+  "tags": [
+    "checkout",
+    "catalog",
+    "purchase"
+  ],
+  "entities": [
+    "Plant",
+    "Customer",
+    "Order"
+  ],
   "mock_data_ref": "fern-and-fig/catalog",
   "steps": [
-    { "id": "browse", "label": "Browse plants", "human": "The customer sees the whole plant catalogue as a grid of cards — each shows the plant's name, photo, price and a stock badge.", "order": 1, "screen": "plant-listing", "reads": ["Plant"], "implements": ["UXP-210a"], "impl_status": "done", "impl_asof": "2026-07-10" },
-    { "id": "detail", "label": "Plant detail", "human": "The customer opens one plant to see its photo, price and stock, and can add it to the cart.", "order": 2, "screen": "plant-detail", "reads": ["Plant"], "implements": ["UXP-210b"], "impl_status": "done", "impl_asof": "2026-07-10" },
-    { "id": "cart", "label": "Add to cart", "human": "The customer adds the plant to their cart and reviews what they're about to buy before paying.", "order": 3, "screen": "cart", "reads": ["Plant"], "writes": ["Order"], "implements": ["UXP-210c"], "impl_status": "in_progress", "impl_asof": "2026-07-10" },
-    { "id": "checkout", "label": "Checkout", "human": "The customer confirms their details and pays; an order is created.", "order": 4, "screen": "checkout", "reads": ["Customer", "Order"], "writes": ["Order"], "implements": ["UXP-210d"], "impl_status": "not_started", "impl_asof": "2026-07-10" },
-    { "id": "confirmed", "label": "Order confirmed", "human": "The customer sees a confirmation with the order number and what they bought.", "order": 5, "screen": "order-confirmation", "reads": ["Order"], "implements": ["UXP-210e"], "impl_status": "not_started", "impl_asof": "2026-07-10" }
+    {
+      "id": "browse",
+      "label": "Browse plants",
+      "human": "The customer sees the whole plant catalogue as a grid of cards — each shows the plant's name, photo, price and a stock badge.",
+      "order": 1,
+      "screen": "plant-listing",
+      "reads": [
+        "Plant"
+      ],
+      "implements": [
+        "UXP-210a"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "detail",
+      "label": "Plant detail",
+      "human": "The customer opens one plant to see its photo, price and stock, and can add it to the cart.",
+      "order": 2,
+      "screen": "plant-detail",
+      "reads": [
+        "Plant"
+      ],
+      "implements": [
+        "UXP-210b"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "cart",
+      "label": "Add to cart",
+      "human": "The customer adds the plant to their cart and reviews what they're about to buy before paying.",
+      "order": 3,
+      "screen": "cart",
+      "reads": [
+        "Plant"
+      ],
+      "writes": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210c"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "checkout",
+      "label": "Checkout",
+      "human": "The customer confirms their details and pays; an order is created.",
+      "order": 4,
+      "screen": "checkout",
+      "reads": [
+        "Customer",
+        "Order"
+      ],
+      "writes": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210d"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "confirmed",
+      "label": "Order confirmed",
+      "human": "The customer sees a confirmation with the order number and what they bought.",
+      "order": 5,
+      "screen": "order-confirmation",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210e"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
   ],
   "branches": [
-    { "id": "notify", "from": "detail", "condition": "plant is out of stock", "label": "Notify me", "human": "Because the plant is sold out, the 'Add to cart' button is replaced with a 'Notify me' button so the customer can be emailed when it is back.", "screen": "notify-me", "reads": ["Plant", "Customer"], "implements": ["UXP-210b-2"], "impl_status": "not_started", "impl_asof": "2026-07-10" }
+    {
+      "id": "notify",
+      "from": "detail",
+      "condition": "plant is out of stock",
+      "label": "Notify me",
+      "human": "Because the plant is sold out, the 'Add to cart' button is replaced with a 'Notify me' button so the customer can be emailed when it is back.",
+      "screen": "notify-me",
+      "reads": [
+        "Plant",
+        "Customer"
+      ],
+      "implements": [
+        "UXP-210b-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
   ],
-  "impl_summary": { "done": 2, "in_progress": 1, "not_started": 3, "total": 6, "asof": "2026-07-10" },
+  "impl_summary": {
+    "done": 2,
+    "in_progress": 1,
+    "not_started": 3,
+    "total": 6,
+    "asof": "2026-07-14"
+  },
   "acceptance_scenarios": [
-    { "for": "browse", "given": "the catalog has in-stock and out-of-stock plants", "when": "the customer opens the listing", "then": "each plant shows its price and a stock badge (in stock / low / out of stock)" },
-    { "for": "detail", "given": "an in-stock plant", "when": "the customer opens its detail page", "then": "they can add it to the cart" },
-    { "for": "cart", "given": "a plant has been added to the cart", "when": "the customer views the cart", "then": "the cart shows the plant, quantity, unit price and a running total before they pay" },
-    { "for": "notify", "given": "an out-of-stock plant", "when": "the customer opens its detail page", "then": "the add-to-cart button is replaced by a 'Notify me' action" },
-    { "for": "checkout", "given": "a cart with at least one item and a known customer", "when": "the customer pays", "then": "an Order is created with status 'paid' and the confirmation screen is shown" },
-    { "for": "confirmed", "given": "payment has succeeded", "when": "the order is created", "then": "the confirmation screen shows the order number and the paid items" }
+    {
+      "for": "browse",
+      "given": "the catalog has in-stock and out-of-stock plants",
+      "when": "the customer opens the listing",
+      "then": "each plant shows its price and a stock badge (in stock / low / out of stock)"
+    },
+    {
+      "for": "detail",
+      "given": "an in-stock plant",
+      "when": "the customer opens its detail page",
+      "then": "they can add it to the cart"
+    },
+    {
+      "for": "cart",
+      "given": "a plant has been added to the cart",
+      "when": "the customer views the cart",
+      "then": "the cart shows the plant, quantity, unit price and a running total before they pay"
+    },
+    {
+      "for": "notify",
+      "given": "an out-of-stock plant",
+      "when": "the customer opens its detail page",
+      "then": "the add-to-cart button is replaced by a 'Notify me' action"
+    },
+    {
+      "for": "checkout",
+      "given": "a cart with at least one item and a known customer",
+      "when": "the customer pays",
+      "then": "an Order is created with status 'paid' and the confirmation screen is shown"
+    },
+    {
+      "for": "confirmed",
+      "given": "payment has succeeded",
+      "when": "the order is created",
+      "then": "the confirmation screen shows the order number and the paid items"
+    }
   ],
   "provenance": [
-    { "action": "authored", "by": "walked-by-hand (art-director session)", "date": "2026-07-10", "note": "Seed / gold reference for the future flow agent." },
-    { "action": "reviewed", "by": "product-owner (persona)", "date": "2026-07-10", "note": "Approved 5/5 in the persona-review loop." },
-    { "action": "extended", "by": "hardening pass (3-agent review)", "date": "2026-07-10", "note": "Added human fields, implements/impl_status AC linkage, missing scenarios, for-ref fix." }
+    {
+      "action": "authored",
+      "by": "walked-by-hand (art-director session)",
+      "date": "2026-07-10",
+      "note": "Seed / gold reference for the future flow agent."
+    },
+    {
+      "action": "reviewed",
+      "by": "product-owner (persona)",
+      "date": "2026-07-10",
+      "note": "Approved 5/5 in the persona-review loop."
+    },
+    {
+      "action": "extended",
+      "by": "hardening pass (3-agent review)",
+      "date": "2026-07-10",
+      "note": "Added human fields, implements/impl_status AC linkage, missing scenarios, for-ref fix."
+    }
   ]
 }

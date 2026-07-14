@@ -1,8 +1,18 @@
 {
   "version": 1,
   "description": "Searchable manifest for the product-truth store. artifacts[] is authoritative; entity_registry gates entity names; by_component / by_entity / by_flow are derived indexes (regenerate with scripts/validate_product_truth.py --build). See README.md for the search + add-vs-create protocol.",
-  "search_dimensions": ["component", "entity", "flow", "type", "tag"],
-  "entity_registry": ["Plant", "Customer", "Order"],
+  "search_dimensions": [
+    "component",
+    "entity",
+    "flow",
+    "type",
+    "tag"
+  ],
+  "entity_registry": [
+    "Plant",
+    "Customer",
+    "Order"
+  ],
   "artifacts": [
     {
       "id": "fern-and-fig/customer-buys-a-plant",
@@ -16,10 +26,24 @@
       "status": "active",
       "readiness": "approved",
       "version": 1,
-      "entities": ["Plant", "Customer", "Order"],
+      "entities": [
+        "Plant",
+        "Customer",
+        "Order"
+      ],
       "mock_data_ref": "fern-and-fig/catalog",
-      "impl_summary": { "done": 2, "in_progress": 1, "not_started": 3, "total": 6, "asof": "2026-07-10" },
-      "tags": ["checkout", "catalog", "purchase"]
+      "impl_summary": {
+        "done": 2,
+        "in_progress": 1,
+        "not_started": 3,
+        "total": 6,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "checkout",
+        "catalog",
+        "purchase"
+      ]
     },
     {
       "id": "fern-and-fig/track-an-order",
@@ -33,10 +57,22 @@
       "status": "active",
       "readiness": "approved",
       "version": 1,
-      "entities": ["Order", "Customer"],
+      "entities": [
+        "Order",
+        "Customer"
+      ],
       "mock_data_ref": "fern-and-fig/catalog",
-      "impl_summary": { "done": 1, "in_progress": 1, "not_started": 1, "total": 3, "asof": "2026-07-10" },
-      "tags": ["orders", "post-purchase"]
+      "impl_summary": {
+        "done": 1,
+        "in_progress": 1,
+        "not_started": 1,
+        "total": 3,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "orders",
+        "post-purchase"
+      ]
     },
     {
       "id": "leafcutter/define-a-feature",
@@ -51,8 +87,18 @@
       "readiness": "approved",
       "version": 1,
       "entities": [],
-      "impl_summary": { "done": 0, "in_progress": 1, "not_started": 2, "total": 3, "asof": "2026-07-10" },
-      "tags": ["product-truth", "authoring", "flow-first"]
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 1,
+        "not_started": 2,
+        "total": 3,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "product-truth",
+        "authoring",
+        "flow-first"
+      ]
     },
     {
       "id": "leafcutter/flow-render-pipeline",
@@ -67,8 +113,19 @@
       "readiness": "approved",
       "version": 1,
       "entities": [],
-      "impl_summary": { "done": 3, "in_progress": 0, "not_started": 0, "total": 3, "asof": "2026-07-10" },
-      "tags": ["product-truth", "atlas", "render", "pipeline"]
+      "impl_summary": {
+        "done": 3,
+        "in_progress": 0,
+        "not_started": 0,
+        "total": 3,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "product-truth",
+        "atlas",
+        "render",
+        "pipeline"
+      ]
     },
     {
       "id": "leafcutter/product-truth-architecture",
@@ -83,8 +140,19 @@
       "readiness": "approved",
       "version": 1,
       "entities": [],
-      "impl_summary": { "done": 2, "in_progress": 0, "not_started": 1, "total": 3, "asof": "2026-07-10" },
-      "tags": ["product-truth", "architecture", "atlas", "agents"]
+      "impl_summary": {
+        "done": 2,
+        "in_progress": 0,
+        "not_started": 1,
+        "total": 3,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "product-truth",
+        "architecture",
+        "atlas",
+        "agents"
+      ]
     },
     {
       "id": "fern-and-fig/catalog",
@@ -96,68 +164,719 @@
       "status": "active",
       "readiness": "approved",
       "version": 1,
-      "entities": ["Plant", "Customer", "Order"],
-      "tags": ["catalog", "checkout"]
+      "entities": [
+        "Plant",
+        "Customer",
+        "Order"
+      ],
+      "tags": [
+        "catalog",
+        "checkout"
+      ]
+    },
+    {
+      "id": "fern-and-fig/plant-listing",
+      "type": "mockup",
+      "title": "Plant listing",
+      "summary": "The Fern & Fig catalogue landing screen — a grid of plant cards with price + stock badge, populated from the catalog Plant records. THE gold-reference mockup.",
+      "screen": "plant-listing",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/plant-listing.mockup.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "catalog",
+        "listing",
+        "gold-reference"
+      ]
+    },
+    {
+      "id": "fern-and-fig/plant-detail",
+      "type": "mockup",
+      "title": "Plant detail",
+      "summary": "STUB — one plant's photo, price and stock with add-to-cart. Registered so the buy-a-plant flow's detail step resolves; HTML not yet drawn.",
+      "screen": "plant-detail",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/plant-detail.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "catalog",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/cart",
+      "type": "mockup",
+      "title": "Cart",
+      "summary": "STUB — plant, quantity, unit price and running total before payment. Registered so the buy-a-plant flow's cart step resolves; HTML not yet drawn.",
+      "screen": "cart",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/cart.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Order",
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "checkout",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/checkout",
+      "type": "mockup",
+      "title": "Checkout",
+      "summary": "STUB — confirm details and pay, creating an Order. Registered so the buy-a-plant flow's checkout step resolves; HTML not yet drawn.",
+      "screen": "checkout",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/checkout.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Customer",
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "checkout",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/order-confirmation",
+      "type": "mockup",
+      "title": "Order confirmation",
+      "summary": "STUB — order number and paid items after payment. Registered so the buy-a-plant flow's confirmed step resolves; HTML not yet drawn.",
+      "screen": "order-confirmation",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/order-confirmation.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "checkout",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/notify-me",
+      "type": "mockup",
+      "title": "Notify me",
+      "summary": "STUB — notify-me action for an out-of-stock plant. Registered so the buy-a-plant flow's notify branch resolves; HTML not yet drawn.",
+      "screen": "notify-me",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/notify-me.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Customer",
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "catalog",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/orders-list",
+      "type": "mockup",
+      "title": "My orders",
+      "summary": "STUB — list of past orders with number, item, total and status. Registered so the track-an-order flow's orders step resolves; HTML not yet drawn.",
+      "screen": "orders-list",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/orders-list.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Customer",
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "orders",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/order-detail",
+      "type": "mockup",
+      "title": "Order detail",
+      "summary": "STUB — one order's item, quantity, total, payment status and date. Registered so the track-an-order flow's orderDetail step resolves; HTML not yet drawn.",
+      "screen": "order-detail",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/order-detail.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "orders",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/shipment-tracking",
+      "type": "mockup",
+      "title": "Track shipment",
+      "summary": "STUB — current delivery stage for an order. Registered so the track-an-order flow's track step resolves; HTML not yet drawn.",
+      "screen": "shipment-tracking",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/shipment-tracking.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "orders",
+        "stub"
+      ]
     }
   ],
   "by_component": {
     "ux-prototyping": {
-      "flows": ["fern-and-fig/customer-buys-a-plant", "fern-and-fig/track-an-order", "leafcutter/define-a-feature", "leafcutter/flow-render-pipeline", "leafcutter/product-truth-architecture"],
-      "mock_data": ["fern-and-fig/catalog"],
-      "mockups": []
+      "flows": [
+        "fern-and-fig/customer-buys-a-plant",
+        "fern-and-fig/track-an-order",
+        "leafcutter/define-a-feature",
+        "leafcutter/flow-render-pipeline",
+        "leafcutter/product-truth-architecture"
+      ],
+      "mock_data": [
+        "fern-and-fig/catalog"
+      ],
+      "mockups": [
+        "fern-and-fig/cart",
+        "fern-and-fig/checkout",
+        "fern-and-fig/notify-me",
+        "fern-and-fig/order-confirmation",
+        "fern-and-fig/order-detail",
+        "fern-and-fig/orders-list",
+        "fern-and-fig/plant-detail",
+        "fern-and-fig/plant-listing",
+        "fern-and-fig/shipment-tracking"
+      ]
     }
   },
   "by_entity": {
-    "Plant": {
-      "canonical_mock_data": { "ux-prototyping": "fern-and-fig/catalog" },
-      "flows": { "ux-prototyping": ["fern-and-fig/customer-buys-a-plant"] }
-    },
     "Customer": {
-      "canonical_mock_data": { "ux-prototyping": "fern-and-fig/catalog" },
-      "flows": { "ux-prototyping": ["fern-and-fig/customer-buys-a-plant"] }
+      "canonical_mock_data": {
+        "ux-prototyping": "fern-and-fig/catalog"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "fern-and-fig/customer-buys-a-plant",
+          "fern-and-fig/track-an-order"
+        ]
+      }
     },
     "Order": {
-      "canonical_mock_data": { "ux-prototyping": "fern-and-fig/catalog" },
-      "flows": { "ux-prototyping": ["fern-and-fig/customer-buys-a-plant"] }
+      "canonical_mock_data": {
+        "ux-prototyping": "fern-and-fig/catalog"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "fern-and-fig/customer-buys-a-plant",
+          "fern-and-fig/track-an-order"
+        ]
+      }
+    },
+    "Plant": {
+      "canonical_mock_data": {
+        "ux-prototyping": "fern-and-fig/catalog"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "fern-and-fig/customer-buys-a-plant"
+        ]
+      }
     }
   },
   "by_flow": {
     "fern-and-fig/customer-buys-a-plant": {
       "component": "ux-prototyping",
-      "entities": ["Plant", "Customer", "Order"],
+      "entities": [
+        "Plant",
+        "Customer",
+        "Order"
+      ],
       "mock_data_ref": "fern-and-fig/catalog",
       "path": "flows/fern-and-fig/customer-buys-a-plant.flow.json",
       "impl_status": "in_progress",
-      "impl_summary": { "done": 2, "in_progress": 1, "not_started": 3, "total": 6, "asof": "2026-07-10" }
+      "impl_summary": {
+        "done": 2,
+        "in_progress": 1,
+        "not_started": 3,
+        "total": 6,
+        "asof": "2026-07-14"
+      }
     },
     "fern-and-fig/track-an-order": {
       "component": "ux-prototyping",
-      "entities": ["Order", "Customer"],
+      "entities": [
+        "Order",
+        "Customer"
+      ],
       "mock_data_ref": "fern-and-fig/catalog",
       "path": "flows/fern-and-fig/track-an-order.flow.json",
       "impl_status": "in_progress",
-      "impl_summary": { "done": 1, "in_progress": 1, "not_started": 1, "total": 3, "asof": "2026-07-10" }
+      "impl_summary": {
+        "done": 1,
+        "in_progress": 1,
+        "not_started": 1,
+        "total": 3,
+        "asof": "2026-07-14"
+      }
     },
     "leafcutter/define-a-feature": {
       "component": "ux-prototyping",
       "entities": [],
       "path": "flows/leafcutter/define-a-feature.flow.json",
       "impl_status": "in_progress",
-      "impl_summary": { "done": 0, "in_progress": 1, "not_started": 2, "total": 3, "asof": "2026-07-10" }
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 1,
+        "not_started": 2,
+        "total": 3,
+        "asof": "2026-07-14"
+      }
     },
     "leafcutter/flow-render-pipeline": {
       "component": "ux-prototyping",
       "entities": [],
       "path": "flows/leafcutter/flow-render-pipeline.flow.json",
       "impl_status": "done",
-      "impl_summary": { "done": 3, "in_progress": 0, "not_started": 0, "total": 3, "asof": "2026-07-10" }
+      "impl_summary": {
+        "done": 3,
+        "in_progress": 0,
+        "not_started": 0,
+        "total": 3,
+        "asof": "2026-07-14"
+      }
     },
     "leafcutter/product-truth-architecture": {
       "component": "ux-prototyping",
       "entities": [],
       "path": "flows/leafcutter/product-truth-architecture.flow.json",
       "impl_status": "in_progress",
-      "impl_summary": { "done": 2, "in_progress": 0, "not_started": 1, "total": 3, "asof": "2026-07-10" }
+      "impl_summary": {
+        "done": 2,
+        "in_progress": 0,
+        "not_started": 1,
+        "total": 3,
+        "asof": "2026-07-14"
+      }
     }
+  },
+  "by_ac": {
+    "UXP-210a": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "browse",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "plant-listing",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Plant"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210b": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "detail",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "plant-detail",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Plant"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210b-2": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "notify",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "notify-me",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer",
+          "Plant"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210c": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "cart",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "cart",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order",
+          "Plant"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210d": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "checkout",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer",
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210e": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "confirmed",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "order-confirmation",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-220a": [
+      {
+        "flow": "fern-and-fig/track-an-order",
+        "node": "orders",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "orders-list",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer",
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-220b": [
+      {
+        "flow": "fern-and-fig/track-an-order",
+        "node": "orderDetail",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "order-detail",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-220c": [
+      {
+        "flow": "fern-and-fig/track-an-order",
+        "node": "track",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "shipment-tracking",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-400": [
+      {
+        "flow": "leafcutter/define-a-feature",
+        "node": "say",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-400a": [
+      {
+        "flow": "leafcutter/define-a-feature",
+        "node": "say",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-401": [
+      {
+        "flow": "leafcutter/define-a-feature",
+        "node": "draft",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-401a": [
+      {
+        "flow": "leafcutter/define-a-feature",
+        "node": "draft",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-402": [
+      {
+        "flow": "leafcutter/define-a-feature",
+        "node": "approve",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-402a": [
+      {
+        "flow": "leafcutter/define-a-feature",
+        "node": "approve",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-410": [
+      {
+        "flow": "leafcutter/flow-render-pipeline",
+        "node": "load",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-410a": [
+      {
+        "flow": "leafcutter/flow-render-pipeline",
+        "node": "load",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-411": [
+      {
+        "flow": "leafcutter/flow-render-pipeline",
+        "node": "resolve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-411a": [
+      {
+        "flow": "leafcutter/flow-render-pipeline",
+        "node": "resolve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-412": [
+      {
+        "flow": "leafcutter/flow-render-pipeline",
+        "node": "render",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-412a": [
+      {
+        "flow": "leafcutter/flow-render-pipeline",
+        "node": "render",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-420": [
+      {
+        "flow": "leafcutter/product-truth-architecture",
+        "node": "store",
+        "node_kind": "step",
+        "flow_kind": "architecture",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-420a": [
+      {
+        "flow": "leafcutter/product-truth-architecture",
+        "node": "store",
+        "node_kind": "step",
+        "flow_kind": "architecture",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-421": [
+      {
+        "flow": "leafcutter/product-truth-architecture",
+        "node": "atlas",
+        "node_kind": "step",
+        "flow_kind": "architecture",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-421a": [
+      {
+        "flow": "leafcutter/product-truth-architecture",
+        "node": "atlas",
+        "node_kind": "step",
+        "flow_kind": "architecture",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-422": [
+      {
+        "flow": "leafcutter/product-truth-architecture",
+        "node": "agents",
+        "node_kind": "step",
+        "flow_kind": "architecture",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-422a": [
+      {
+        "flow": "leafcutter/product-truth-architecture",
+        "node": "agents",
+        "node_kind": "step",
+        "flow_kind": "architecture",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ]
   }
 }

@@ -10,22 +10,97 @@
   "readiness": "approved",
   "superseded_by": null,
   "version": 1,
-  "tags": ["orders", "post-purchase"],
-  "entities": ["Order", "Customer"],
+  "tags": [
+    "orders",
+    "post-purchase"
+  ],
+  "entities": [
+    "Order",
+    "Customer"
+  ],
   "mock_data_ref": "fern-and-fig/catalog",
   "steps": [
-    { "id": "orders", "label": "My orders", "human": "The customer sees a list of their past orders with number, item, total and status.", "order": 1, "screen": "orders-list", "reads": ["Order", "Customer"], "implements": ["UXP-220a"], "impl_status": "done", "impl_asof": "2026-07-10" },
-    { "id": "orderDetail", "label": "Order detail", "human": "The customer opens one order to see item, quantity, total, payment status and date.", "order": 2, "screen": "order-detail", "reads": ["Order"], "implements": ["UXP-220b"], "impl_status": "in_progress", "impl_asof": "2026-07-10" },
-    { "id": "track", "label": "Track shipment", "human": "The customer sees the current delivery stage for the order.", "order": 3, "screen": "shipment-tracking", "reads": ["Order"], "implements": ["UXP-220c"], "impl_status": "not_started", "impl_asof": "2026-07-10" }
+    {
+      "id": "orders",
+      "label": "My orders",
+      "human": "The customer sees a list of their past orders with number, item, total and status.",
+      "order": 1,
+      "screen": "orders-list",
+      "reads": [
+        "Order",
+        "Customer"
+      ],
+      "implements": [
+        "UXP-220a"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "orderDetail",
+      "label": "Order detail",
+      "human": "The customer opens one order to see item, quantity, total, payment status and date.",
+      "order": 2,
+      "screen": "order-detail",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-220b"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "track",
+      "label": "Track shipment",
+      "human": "The customer sees the current delivery stage for the order.",
+      "order": 3,
+      "screen": "shipment-tracking",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-220c"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
   ],
   "branches": [],
-  "impl_summary": { "done": 1, "in_progress": 1, "not_started": 1, "total": 3, "asof": "2026-07-10" },
+  "impl_summary": {
+    "done": 1,
+    "in_progress": 1,
+    "not_started": 1,
+    "total": 3,
+    "asof": "2026-07-14"
+  },
   "acceptance_scenarios": [
-    { "for": "orders", "given": "a customer with past orders", "when": "they open 'My orders'", "then": "each order shows its number, item, total and status" },
-    { "for": "orderDetail", "given": "the orders list", "when": "the customer opens one order", "then": "the order detail shows item, quantity, total, payment status and date" },
-    { "for": "track", "given": "a paid order", "when": "the customer opens 'Track shipment'", "then": "they see the current delivery stage for that order" }
+    {
+      "for": "orders",
+      "given": "a customer with past orders",
+      "when": "they open 'My orders'",
+      "then": "each order shows its number, item, total and status"
+    },
+    {
+      "for": "orderDetail",
+      "given": "the orders list",
+      "when": "the customer opens one order",
+      "then": "the order detail shows item, quantity, total, payment status and date"
+    },
+    {
+      "for": "track",
+      "given": "a paid order",
+      "when": "the customer opens 'Track shipment'",
+      "then": "they see the current delivery stage for that order"
+    }
   ],
   "provenance": [
-    { "action": "authored", "by": "walked-by-hand (art-director session)", "date": "2026-07-10", "note": "Second seed flow; reuses fern-and-fig/catalog to demonstrate extend-not-duplicate + the flow selector." }
+    {
+      "action": "authored",
+      "by": "walked-by-hand (art-director session)",
+      "date": "2026-07-10",
+      "note": "Second seed flow; reuses fern-and-fig/catalog to demonstrate extend-not-duplicate + the flow selector."
+    }
   ]
 }

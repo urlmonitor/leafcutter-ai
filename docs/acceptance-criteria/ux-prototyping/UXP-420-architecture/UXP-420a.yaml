@@ -34,3 +34,13 @@ covered_by: []
 implemented_by: []
 change_target: config
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/product-truth-architecture
+    node: store
+    node_kind: step
+    flow_kind: architecture
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

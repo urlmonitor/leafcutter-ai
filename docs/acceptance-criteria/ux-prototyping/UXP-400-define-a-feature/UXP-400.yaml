@@ -31,3 +31,13 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/define-a-feature
+    node: say
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

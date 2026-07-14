@@ -10,21 +10,84 @@
   "readiness": "approved",
   "superseded_by": null,
   "version": 1,
-  "tags": ["product-truth", "authoring", "flow-first"],
+  "tags": [
+    "product-truth",
+    "authoring",
+    "flow-first"
+  ],
   "entities": [],
   "steps": [
-    { "id": "say", "label": "Say what you want", "human": "The person describes the feature they want in plain language — no spec format, no Gherkin, just intent.", "order": 1, "implements": ["UXP-400", "UXP-400a"], "impl_status": "in_progress", "impl_asof": "2026-07-10" },
-    { "id": "draft", "label": "System drafts flow · mock · mockups", "human": "The system turns that intent into a draft flow, a mock-data set, and mockups the person can actually look at and react to.", "order": 2, "implements": ["UXP-401", "UXP-401a"], "impl_status": "not_started", "impl_asof": "2026-07-10" },
-    { "id": "approve", "label": "You review & approve; ACs are generated", "human": "The person reviews the drafted flow and approves it; acceptance criteria are then generated from the flow's steps so the flow stays the source of truth.", "order": 3, "implements": ["UXP-402", "UXP-402a"], "impl_status": "not_started", "impl_asof": "2026-07-10" }
+    {
+      "id": "say",
+      "label": "Say what you want",
+      "human": "The person describes the feature they want in plain language — no spec format, no Gherkin, just intent.",
+      "order": 1,
+      "implements": [
+        "UXP-400",
+        "UXP-400a"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "draft",
+      "label": "System drafts flow · mock · mockups",
+      "human": "The system turns that intent into a draft flow, a mock-data set, and mockups the person can actually look at and react to.",
+      "order": 2,
+      "implements": [
+        "UXP-401",
+        "UXP-401a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "approve",
+      "label": "You review & approve; ACs are generated",
+      "human": "The person reviews the drafted flow and approves it; acceptance criteria are then generated from the flow's steps so the flow stays the source of truth.",
+      "order": 3,
+      "implements": [
+        "UXP-402",
+        "UXP-402a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
   ],
   "branches": [],
-  "impl_summary": { "done": 0, "in_progress": 1, "not_started": 2, "total": 3, "asof": "2026-07-10" },
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 1,
+    "not_started": 2,
+    "total": 3,
+    "asof": "2026-07-14"
+  },
   "acceptance_scenarios": [
-    { "for": "say", "given": "a person with a feature idea", "when": "they describe it in plain language", "then": "the request is captured as intent without requiring any spec or Gherkin format" },
-    { "for": "draft", "given": "a captured feature intent", "when": "the system processes it", "then": "a draft flow plus its mock data and mockups are produced for the person to review" },
-    { "for": "approve", "given": "a drafted flow under review", "when": "the person approves it", "then": "acceptance criteria are generated from the flow's steps and linked back via step.implements" }
+    {
+      "for": "say",
+      "given": "a person with a feature idea",
+      "when": "they describe it in plain language",
+      "then": "the request is captured as intent without requiring any spec or Gherkin format"
+    },
+    {
+      "for": "draft",
+      "given": "a captured feature intent",
+      "when": "the system processes it",
+      "then": "a draft flow plus its mock data and mockups are produced for the person to review"
+    },
+    {
+      "for": "approve",
+      "given": "a drafted flow under review",
+      "when": "the person approves it",
+      "then": "acceptance criteria are generated from the flow's steps and linked back via step.implements"
+    }
   ],
   "provenance": [
-    { "action": "authored", "by": "BrainCandy (product-truth Atlas session)", "date": "2026-07-10", "note": "Real flow describing Leafcutter's own flow-first feature-definition loop." }
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-10",
+      "note": "Real flow describing Leafcutter's own flow-first feature-definition loop."
+    }
   ]
 }

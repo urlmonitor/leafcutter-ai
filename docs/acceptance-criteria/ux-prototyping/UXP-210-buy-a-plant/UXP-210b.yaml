@@ -28,3 +28,14 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/customer-buys-a-plant
+    node: detail
+    node_kind: step
+    flow_kind: user
+    screen: plant-detail
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Plant
+    source: mock
+    asof: '2026-07-14'

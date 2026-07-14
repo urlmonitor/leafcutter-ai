@@ -28,3 +28,15 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/track-an-order
+    node: orders
+    node_kind: step
+    flow_kind: user
+    screen: orders-list
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Customer
+      - Order
+    source: mock
+    asof: '2026-07-14'
