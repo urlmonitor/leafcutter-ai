@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given feedback_categories.yaml defines allowed_writers per category,
   When the frontend-coder agent submits feedback to the success-pattern category,
@@ -33,8 +33,8 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by:
-  - INF-100c-3-i
+  - unit_tests/feedback/test_submit_feedback.py::TestAllPhaseAgentsInAllowedWriters
 implemented_by:
-- tickets/00_inbox/epics/EPIC-Feedbacksubmissionresolvesitsconfigand/TICKET-20260608-INF-100c-3.md
+  - templates/config/feedback_categories.yaml
 change_target: config
 risk_surface: internal

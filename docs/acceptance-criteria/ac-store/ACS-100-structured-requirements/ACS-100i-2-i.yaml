@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a staged file under docs/acceptance-criteria/ has a .yaml extension
     but contains non-UTF-8 binary content (e.g. embedded NUL bytes or Latin-1
@@ -34,7 +34,9 @@ origin_agent: BrainCandy
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_check_ac_parent_covered_by.py::TestBinaryContentFailOpenAcs100i2i
+implemented_by:
+  - templates/scripts/commit_guardian/check_ac_parent_covered_by.py
 change_target: code
 risk_surface: internal

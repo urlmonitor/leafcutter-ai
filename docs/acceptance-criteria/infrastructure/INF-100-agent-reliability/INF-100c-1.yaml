@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given submit_feedback.py is running from a deployed location at <project>/.leafcutter/scripts/feedback/,
   When the script resolves the path to feedback_categories.yaml,
@@ -34,8 +34,8 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by:
-  - INF-100c-1-i
+  - unit_tests/feedback/test_submit_feedback.py::TestConfigResolutionAnchoring
 implemented_by:
-- tickets/00_inbox/epics/EPIC-Feedbacksubmissionresolvesitsconfigand/TICKET-20260608-INF-100c-1.md
+  - templates/scripts/feedback/submit_feedback.py
 change_target: code
 risk_surface: internal
