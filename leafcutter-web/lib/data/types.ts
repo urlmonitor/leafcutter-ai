@@ -245,6 +245,9 @@ export interface FlowStep {
   human: string;              // plain-language description
   order: number;
   screen: string | null;
+  agent: string | null;       // actor that runs this step (agent id or script)
+  produces: string[];         // data artifacts/fields handed downstream (handoff out)
+  consumes: string[];         // data artifacts/fields required from upstream (handoff in)
   reads: string[];            // entity names read
   writes: string[];           // entity names written
   implements: string[];       // AC ids
@@ -261,6 +264,9 @@ export interface FlowBranch {
   label: string;
   human: string;
   screen: string | null;
+  agent: string | null;       // actor that runs this branch (agent id or script)
+  produces: string[];         // handoff out
+  consumes: string[];         // handoff in
   reads: string[];
   writes: string[];
   implements: string[];

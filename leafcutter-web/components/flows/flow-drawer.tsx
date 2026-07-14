@@ -18,6 +18,9 @@ import {
   ShieldCheck,
   Database,
   GitBranch,
+  Bot,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { Badge } from "@/components/ui/kit";
 import { cn } from "@/lib/utils";
@@ -38,6 +41,9 @@ export interface StepView {
   variant: "step" | "branch";
   condition?: string;
   status: WorkStatus;
+  agent?: string | null;
+  produces?: string[];
+  consumes?: string[];
   reads: string[];
   writes: string[];
   acs: AcRef[];
@@ -225,6 +231,44 @@ export function FlowDrawer({
                   <span className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 px-2 py-1 font-mono text-[11px] text-foreground">
                     {step.screen}
                   </span>
+                </Section>
+              )}
+
+              {step.agent && (
+                <Section icon={<Bot className="h-3 w-3" />} title="Runs (agent / script)">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 font-mono text-[11px] text-primary">
+                    {step.agent}
+                  </span>
+                </Section>
+              )}
+
+              {step.consumes && step.consumes.length > 0 && (
+                <Section icon={<LogIn className="h-3 w-3" />} title="Consumes (handoff in)">
+                  <div className="flex flex-wrap gap-1.5">
+                    {step.consumes.map((c) => (
+                      <span
+                        key={c}
+                        className="rounded-md border border-info/30 bg-info/10 px-2 py-1 font-mono text-[11px] text-info"
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {step.produces && step.produces.length > 0 && (
+                <Section icon={<LogOut className="h-3 w-3" />} title="Produces (handoff out)">
+                  <div className="flex flex-wrap gap-1.5">
+                    {step.produces.map((p) => (
+                      <span
+                        key={p}
+                        className="rounded-md border border-success/30 bg-success/10 px-2 py-1 font-mono text-[11px] text-success"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
                 </Section>
               )}
 
