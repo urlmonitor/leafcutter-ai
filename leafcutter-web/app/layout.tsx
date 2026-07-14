@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar, MobileNav } from "@/components/shell/sidebar";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
+// IBM Plex Sans — humanist, highly legible on dark UI. Kept under the existing
+// --font-geist-* variable names so the Tailwind theme + all refs work unchanged.
+const geistSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-geist-sans",
-  weight: "100 900",
+  display: "swap",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
+const geistMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   variable: "--font-geist-mono",
-  weight: "100 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
