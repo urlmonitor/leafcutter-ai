@@ -1,6 +1,6 @@
 ---
 title: "Wire commit agent to the classifier/learner library + config-array schema"
-status: todo
+status: done
 components:
   - build_orchestration
 created: 2026-07-14
@@ -350,3 +350,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (second commit — array schema conversion): subject "feat(bo-remediation): convert commit patterns config to array schema (BO-1100c-1)"; staged files: config/commit_message_patterns.json, scripts/commit_classifier.py, templates/agents/commit.md, unit_tests/test_commit_patterns_config.py, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/01_bo1100_wire_commit_routing.md.
+
+### 2026-07-14 20:35 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_24ce350c
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Second pull-request invocation: pushed the array-schema conversion commit (`feat(bo-remediation): convert commit patterns config to array schema (BO-1100c-1)`) and preceding commits to existing epic PR #281 ("Fix phantom-done: resolve reference_pattern globs + 99_done guard"). Merge state: MERGEABLE / BLOCKED (ruff CI gate — expected for epic PRs). All agents are now signed_off or not_needed; flipped ticket status to done.
