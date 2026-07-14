@@ -46,7 +46,7 @@ agents:
   test-runner: failed
   documentation-expert: not_needed
   pr-reviewer: needed
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -108,7 +108,7 @@ tests:
 - [ ] python-coder — failed 2026-07-14 15:20
 - [ ] test-runner — failed 2026-07-14 13:35
 - [ ] pr-reviewer
-- [ ] commit
+- [x] commit — 2026-07-14 13:46
 - [ ] pull-request
 
 ## Comments
@@ -208,6 +208,14 @@ red_baseline_results:
     result: blocker — same conflict
   - test_name: test_ac_bo1100c2_new_rule_addable_via_config_path_param
     result: green
+
+### 2026-07-14 13:46 — commit (status: ok)
+feedback-id: fb_2026-07-14_83563bbc
+Auto-authorized commit gate: subject "feat(bo-remediation): wire classifier/mixed-set detection into commit agent"; staged files: scripts/commit_classifier.py, templates/agents/commit.md, unit_tests/test_commit_classifier.py, unit_tests/test_commit_patterns_config.py, unit_tests/test_mixed_set_detection.py.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
 
 ### 2026-07-14 12:55 — architect-review (status: ok)
 feedback-id: fb_2026-07-14_cf0410e9
