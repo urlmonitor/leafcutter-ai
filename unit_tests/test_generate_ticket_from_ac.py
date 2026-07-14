@@ -10,6 +10,9 @@ COVERS: BO-560, BO-560-1, BO-560-2, BO-560-3, BO-560-1-i, BO-560-3-i, BO-530, BO
 
 from __future__ import annotations
 
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -991,43 +994,52 @@ class TestDeterministicOrdering:
             f"Full map keys: {keys}"
         )
 
-    def test_ac5_deterministic_ordering_multiple_calls(self) -> None:
+    def test_ac5_deterministic_ordering_across_hash_seeds(self) -> None:
         # covers: AC-5
-        """AC-5: Calling _build_agents_map multiple times with the same args must
-        produce identical key ordering (no set-iteration nondeterminism).
+        """AC-5: _build_agents_map key ordering must be stable across interpreter runs.
 
-        This test runs the function 20 times and asserts all outputs have the same
-        key order. In CPython 3.7+ dict insertion order is deterministic, but the
-        intermediate 'all_needed' set is still a Python set (hash-order nondeterministic
-        across interpreter runs). The sort/canonicalization must be stable.
-
-        Note: This test may be green in a single interpreter session due to CPython's
-        fixed-seed hash for small sets in a single run. The ac5_non_canonical_agent
-        placement test above is the primary red indicator; this test is an additional
-        assertion for determinism.
+        The intermediate 'all_needed' is a Python set, whose iteration order varies
+        with PYTHONHASHSEED across *separate* interpreter processes. An in-process
+        repeat loop can never detect this — CPython fixes the hash seed for the life
+        of one process, so 20 in-process calls always agree regardless of whether the
+        code sorts (review finding M-5). This test instead invokes the function in
+        fresh subprocesses with different PYTHONHASHSEED values; if the canonicalization
+        leaked set order, the runs would disagree.
         """
-        baseline = _build_agents_map(
-            "python-coder",
-            change_targets=["code"],
-            risk_surface="contract_boundary",
-            guardrail_config_path=_GUARDRAIL_CONFIG,
+        prog = (
+            "import sys, json;"
+            f"sys.path.insert(0, {str(_SCRIPTS_DIR)!r});"
+            "from generate_ticket_from_ac import _build_agents_map;"
+            "m=_build_agents_map('python-coder', change_targets=['code'],"
+            " risk_surface='contract_boundary',"
+            f" guardrail_config_path={str(_GUARDRAIL_CONFIG)!r});"
+            "print(json.dumps(list(m.keys())))"
         )
-        baseline_keys = list(baseline.keys())
 
-        for i in range(19):
-            repeated = _build_agents_map(
-                "python-coder",
-                change_targets=["code"],
-                risk_surface="contract_boundary",
-                guardrail_config_path=_GUARDRAIL_CONFIG,
+        outputs: list[list[str]] = []
+        for seed in ("0", "1", "42", "12345", "99991"):
+            env = dict(os.environ, PYTHONHASHSEED=seed)
+            result = subprocess.run(
+                [sys.executable, "-c", prog],
+                capture_output=True,
+                text=True,
+                env=env,
             )
-            repeated_keys = list(repeated.keys())
-            assert repeated_keys == baseline_keys, (
-                f"Call {i+2} produced different key order than call 1.\n"
-                f"  Call 1 keys:   {baseline_keys}\n"
-                f"  Call {i+2} keys: {repeated_keys}\n\n"
-                f"The ordering is nondeterministic. The fix must sort or canonicalize "
-                f"non-canonical agents so the output is stable across calls."
+            assert result.returncode == 0, (
+                f"subprocess (PYTHONHASHSEED={seed}) failed: {result.stderr}"
+            )
+            outputs.append(json.loads(result.stdout.strip()))
+
+        baseline = outputs[0]
+        assert baseline, "computed agents map must not be empty"
+        for seed_idx, keys in enumerate(outputs[1:], start=1):
+            assert keys == baseline, (
+                "Key order varied across PYTHONHASHSEED values — set-iteration order "
+                "leaked into the output.\n"
+                f"  seed[0] keys: {baseline}\n"
+                f"  seed[{seed_idx}] keys: {keys}\n\n"
+                "The fix must sort or canonicalize non-canonical agents so the output "
+                "is stable across interpreter runs."
             )
 
 
@@ -1452,21 +1464,26 @@ class TestRealStoreComputedMapE2E:
         immediately with a clear message — it never falls back to a synthetic
         path.
         """
+        import pytest
         import yaml as _yaml
 
         # ---- Step 1: Load the real AC record from disk ----
-        assert _REAL_AC_ROOT.is_dir(), (
-            f"Real AC store root does not exist: {_REAL_AC_ROOT}\n"
-            "This test requires the worktree to contain the docs/acceptance-criteria/ "
-            "directory populated by the ticket-10 backfill."
-        )
+        # NOTE (review finding M-6): TQ-100d-1 belongs to a *foreign* epic
+        # (EPIC-ComputedQualityGates), not this one. It is used here as a
+        # convenient real, backfilled contract_boundary record. Because BO does
+        # not own it, a rename/removal/backfill-revert of that record must NOT
+        # hard-fail the BO suite — skip instead. A future improvement is to point
+        # this gate at a record this epic owns (or materialise one from a fixture).
+        if not _REAL_AC_ROOT.is_dir():
+            pytest.skip(f"real AC store root absent: {_REAL_AC_ROOT}")
 
         result = _find_ac_by_id(_REAL_AC_ROOT, "TQ-100d-1")
 
-        assert result is not None, (
-            f"_find_ac_by_id could not locate 'TQ-100d-1' under {_REAL_AC_ROOT}.\n"
-            "Verify that the backfill (ticket 10) has written TQ-100d-1.yaml to the store."
-        )
+        if result is None:
+            pytest.skip(
+                "foreign anchor record TQ-100d-1 (EPIC-ComputedQualityGates) not present "
+                "in the store — cross-epic real-store gate skipped (M-6)."
+            )
 
         _ac_path, ac = result
 
@@ -2206,43 +2223,46 @@ class TestBO530TddSandwich:
 
     def test_bo530_3i_building_epics_documents_test_failure_rework_cap(self) -> None:
         # covers: BO-530-3-i
-        """BO-530-3-i: The building-epics SKILL.md must explicitly document a retry cap
-        for the test-failure rework loop with a configurable default of 2 attempts.
+        """BO-530-3-i: building-epics SKILL.md documents the test-failure rework cap.
 
-        The AC criteria state: 'the retry cap is configurable in the building-epics skill
-        (default: 2 rework attempts)'.
+        DOCUMENTATION CHECK (not runtime enforcement). The test-failure rework cap is
+        an instruction the LLM ticket-supervisor follows from §4 of building-epics
+        SKILL.md; no Python script reads the cap. This test therefore verifies the
+        *documented* contract is present and specific — the §4 row must name
+        'test-failure rework', state the configurable default of 2, and name the
+        `test_failure_rework_cap` frontmatter key that overrides it. It intentionally
+        does NOT assert enforcement, because there is no code path to enforce (M-3).
 
-        RED before fix: The current §4 Retry Caps table has 'Sibling respawn from review:
-        1 per phase pair per ticket' — this is a GENERIC cap that does not specifically
-        address the test-failure rework cycle (test-runner fails → python-coder reworks).
-        The SKILL.md must be updated to include an explicit test-failure rework cap of 2
-        (configurable). Until that update, this test is RED.
+        A future ticket that makes the cap mechanically enforced in the supervisor
+        dispatch code should add a separate test that drives that code path.
         """
         assert _BUILDING_EPICS_SKILL.exists(), (
             f"building-epics SKILL.md not found at {_BUILDING_EPICS_SKILL}"
         )
         skill_text = _BUILDING_EPICS_SKILL.read_text(encoding="utf-8")
 
-        # Look for explicit mention of "test-failure rework" (or equivalent) with
-        # a numeric cap of 2 in the §4 Retry Caps table or a dedicated section.
-        # The string "test-failure rework" must appear near a "2" in the retry cap table.
-        has_test_failure_rework_row = bool(
+        # Anchor to the specific §4 row: the phrase, a configurable cap of 2, and the
+        # distinctive frontmatter override key — not a lone "test.failure.rework" match
+        # that proves only that the phrase exists somewhere (M-4/M-3).
+        has_named_row = bool(
+            _re_bo500.search(r"test.failure.rework", skill_text, _re_bo500.IGNORECASE)
+        )
+        has_configurable_default_2 = bool(
             _re_bo500.search(
-                r"test.failure.rework",
+                r"test.failure.rework.{0,200}\b2\b.{0,80}configurable",
                 skill_text,
-                _re_bo500.IGNORECASE,
+                _re_bo500.IGNORECASE | _re_bo500.DOTALL,
             )
         )
+        names_override_key = "test_failure_rework_cap" in skill_text
 
-        assert has_test_failure_rework_row, (
-            "BO-530-3-i: The building-epics SKILL.md §4 Retry Caps table must include an "
-            "explicit row for 'test-failure rework' with a configurable default of 2 attempts.\n\n"
-            "Currently the §4 table only has:\n"
-            "  - Coder respawn after own failure (§3.1): 1 per phase per ticket\n"
-            "  - Sibling respawn from review (§3.2): 1 per phase pair per ticket\n\n"
-            "Neither row specifically addresses the test-runner failure → coder rework loop, "
-            "and neither documents the 2-attempt default required by BO-530-3-i.\n\n"
-            "Fix: Add a 'test-failure rework' row to the §4 table with cap=2 (configurable).\n"
+        assert has_named_row and has_configurable_default_2 and names_override_key, (
+            "BO-530-3-i: building-epics SKILL.md §4 Retry Caps table must document a "
+            "'test-failure rework' row with a configurable default of 2 and name the "
+            "`test_failure_rework_cap` frontmatter override key.\n"
+            f"  named_row={has_named_row} "
+            f"configurable_default_2={has_configurable_default_2} "
+            f"override_key={names_override_key}\n"
             f"Searched in: {_BUILDING_EPICS_SKILL}"
         )
 
@@ -2850,25 +2870,22 @@ class TestBO650ArchitectC4DiagramProduction:
 
     def test_bo650_3_write_c4_diagram_skill_records_triggering_ticket(self) -> None:
         # covers: BO-650-3
-        """BO-650-3: The write-c4-diagram skill's frontmatter checklist must require
-        recording the triggering ticket ID in every diagram file's metadata.
+        """BO-650-3: the write-c4-diagram skill instructs recording the triggering ticket.
 
-        The AC criteria: 'And the diagram's metadata records the ticket ID that
-        triggered the update'. The skill must instruct agents to populate a
-        'source_ticket' (or equivalent) field in the diagram frontmatter so that
-        every diagram update is traceable to its originating ticket.
+        DOCUMENTATION CHECK (not end-to-end enforcement). This verifies the skill's
+        frontmatter checklist tells the authoring agent to record a source_ticket /
+        ticket_id / triggered_by field on every diagram. It does NOT prove the field
+        is mechanically produced or validated, because the two mechanical surfaces
+        are not yet wired (review finding M-1):
 
-        RED before fix: The write-c4-diagram skill's Section 6 frontmatter checklist
-        includes: title, type, flight_level, diagram_type, status, components, created,
-        last_updated — but contains NO ticket reference field (source_ticket, ticket_id,
-        triggered_by, etc.). The Section 1a reference to 'ticket_path' is only about
-        reading the ticket for Architecture Plan comparison, not about recording the
-        ticket in the diagram's own metadata.
+          - the arch-doc scaffolder does not emit source_ticket, and
+          - check_doc_frontmatter.py does not require it.
 
-        Fix: add 'source_ticket: "<ticket_path>"' (or 'triggered_by:') to the
-        Section 6 frontmatter checklist YAML example, and add an explicit instruction
-        to populate this field from the ticket_path parameter on every update so
-        the diagram remains traceable to its triggering ticket.
+        Making the field mechanically required is deliberately deferred to a follow-up
+        ticket: turning it on would fail every pre-existing diagram doc that lacks the
+        field, so it needs its own backfill + migration. Until then this remains an
+        instruction-presence check, and the assertion message says so — a green result
+        here must not be read as "traceability is enforced".
         """
         assert _WRITE_C4_DIAGRAM_SKILL_PATH.exists(), (
             f"write-c4-diagram SKILL.md not found at {_WRITE_C4_DIAGRAM_SKILL_PATH}.\n"
