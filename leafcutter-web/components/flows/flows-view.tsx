@@ -15,12 +15,38 @@ import * as React from "react";
 import { PageHeader, Badge, EmptyState } from "@/components/ui/kit";
 import { cn, humanize } from "@/lib/utils";
 import { WORK_STATUS_TONE } from "@/lib/status";
-import type { Flow, FlowKind, FlowSource, MockData } from "@/lib/data/types";
+import type { Flow, FlowKind, FlowLevel, FlowSource, MockData } from "@/lib/data/types";
 import { FlowExplorer } from "./flow-explorer";
-import { Workflow } from "lucide-react";
+import { Workflow, ChevronRight, Layers } from "lucide-react";
 
 const SOURCES: FlowSource[] = ["mock", "real"];
 const KINDS: FlowKind[] = ["user", "data", "architecture"];
+const DEFAULT_ENTRY = "leafcutter/deliver-a-feature";
+
+// HSL accents for the flow-level chip (journey → pipeline → agent = drill deeper).
+const LEVEL_HSL: Record<FlowLevel, string> = {
+  journey: "205 78% 60%",
+  pipeline: "150 64% 52%",
+  agent: "265 60% 66%",
+};
+
+function LevelChip({ level }: { level: FlowLevel }) {
+  const hsl = LEVEL_HSL[level];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+      style={{
+        color: `hsl(${hsl})`,
+        background: `hsl(${hsl} / 0.12)`,
+        borderColor: `hsl(${hsl} / 0.3)`,
+      }}
+      title={`Flow level: ${level}`}
+    >
+      <Layers className="h-3 w-3" />
+      {humanize(level)}
+    </span>
+  );
+}
 
 function Segmented<T extends string>({
   label,
@@ -73,7 +99,23 @@ export function FlowsView({
 }) {
   const [source, setSource] = React.useState<FlowSource>("real");
   const [kind, setKind] = React.useState<FlowKind>("user");
-  const [selectedId, setSelectedId] = React.useState<string>("");
+  const [selectedId, setSelectedId] = React.useState<string>(() =>
+    flows.some((f) => f.id === DEFAULT_ENTRY) ? DEFAULT_ENTRY : "",
+  );
+  // Drill path (flow ids) from the entry flow down into sub-flows.
+  const [path, setPath] = React.useState<string[]>([]);
+
+  const flowById = React.useMemo(() => {
+    const m = new Map<string, Flow>();
+    for (const f of flows) m.set(f.id, f);
+    return m;
+  }, [flows]);
+
+  const flowNames = React.useMemo(() => {
+    const r: Record<string, string> = {};
+    for (const f of flows) r[f.id] = f.name;
+    return r;
+  }, [flows]);
 
   // Kinds that actually have a flow for the current source.
   const kindsForSource = React.useCallback(
@@ -89,8 +131,19 @@ export function FlowsView({
     [flows, source, effectiveKind],
   );
 
-  // Selected flow, falling back to the first match when the current pick is out of scope.
-  const flow = filtered.find((f) => f.id === selectedId) ?? filtered[0] ?? null;
+  // The ENTRY flow (top-level selector), falling back to the first match in scope.
+  const entryFlow = filtered.find((f) => f.id === selectedId) ?? filtered[0] ?? null;
+
+  // Reset the drill path to the entry whenever the entry flow changes
+  // (selector click, source/kind switch). Drilling pushes onto path without
+  // touching the entry, so this does not fire on drill.
+  React.useEffect(() => {
+    setPath(entryFlow ? [entryFlow.id] : []);
+  }, [entryFlow?.id]);
+
+  // The flow actually rendered = deepest crumb, or the entry before the effect runs.
+  const renderedId = path[path.length - 1];
+  const flow = (renderedId && flowById.get(renderedId)) || entryFlow;
   const mock = flow ? mocks[flow.id] ?? null : null;
 
   const onSelectSource = (next: FlowSource) => {
@@ -99,6 +152,15 @@ export function FlowsView({
     const kinds = kindsForSource(next);
     if (!kinds.includes(kind)) setKind(kinds[0] ?? kind);
   };
+
+  const drillTo = React.useCallback(
+    (childId: string) => {
+      if (flowById.has(childId)) setPath((p) => [...p, childId]);
+    },
+    [flowById],
+  );
+
+  const crumbs = path.map((id) => flowById.get(id)).filter((f): f is Flow => Boolean(f));
 
   const s = flow?.implSummary;
 
@@ -160,7 +222,7 @@ export function FlowsView({
           </span>
           <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border/70 bg-card/60 p-1">
             {filtered.map((f) => {
-              const active = f.id === flow?.id;
+              const active = f.id === entryFlow?.id;
               return (
                 <button
                   key={f.id}
@@ -193,10 +255,40 @@ export function FlowsView({
 
       {flow ? (
         <>
+          {/* breadcrumb drill path — click a crumb to zoom back out to that level */}
+          {crumbs.length > 1 && (
+            <nav className="mb-3 flex flex-wrap items-center gap-1 text-sm">
+              {crumbs.map((c, i) => {
+                const last = i === crumbs.length - 1;
+                return (
+                  <React.Fragment key={c.id}>
+                    {i > 0 && (
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    )}
+                    <button
+                      type="button"
+                      disabled={last}
+                      onClick={() => setPath(path.slice(0, i + 1))}
+                      className={cn(
+                        "rounded-md px-2 py-1 transition-colors",
+                        last
+                          ? "font-medium text-foreground"
+                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                      )}
+                    >
+                      {c.name}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </nav>
+          )}
+
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <LevelChip level={flow.level} />
             {flow.entities.length > 0 && (
               <>
-                <span className="font-medium text-foreground">Entities:</span>
+                <span className="ml-1 font-medium text-foreground">Entities:</span>
                 {flow.entities.map((e) => (
                   <span
                     key={e}
@@ -208,8 +300,8 @@ export function FlowsView({
               </>
             )}
             {mock && (
-              <span className={flow.entities.length > 0 ? "ml-1" : ""}>
-                {flow.entities.length > 0 ? "· " : ""}mock data{" "}
+              <span className="ml-1">
+                · mock data{" "}
                 <span className="font-mono text-foreground">
                   {humanize(mock.id.split("/").pop() ?? mock.id)}
                 </span>
@@ -217,7 +309,13 @@ export function FlowsView({
             )}
           </div>
 
-          <FlowExplorer key={flow.id} flow={flow} mock={mock} />
+          <FlowExplorer
+            key={flow.id}
+            flow={flow}
+            mock={mock}
+            flowNames={flowNames}
+            onDrill={drillTo}
+          />
         </>
       ) : (
         <EmptyState

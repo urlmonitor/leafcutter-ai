@@ -1,4 +1,6 @@
 id: UXP-402a
+readiness: reviewed
+priority: medium
 title: "If the person rejects the drafted flow at review, no acceptance criteria are generated"
 component: ux-prototyping
 level: L3

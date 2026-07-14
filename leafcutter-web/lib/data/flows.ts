@@ -8,6 +8,7 @@ import type {
   FlowBranch,
   FlowImplSummary,
   FlowKind,
+  FlowLevel,
   FlowScenario,
   FlowSource,
   FlowStep,
@@ -48,6 +49,12 @@ function normKind(v: unknown): FlowKind {
 function normSource(v: unknown): FlowSource {
   const s = String(v ?? "").toLowerCase();
   return s === "real" ? "real" : "mock";
+}
+
+/** Normalize the flow `level` field (defaults to "journey"). */
+function normLevel(v: unknown): FlowLevel {
+  const s = String(v ?? "").toLowerCase();
+  return s === "pipeline" || s === "agent" ? (s as FlowLevel) : "journey";
 }
 
 /** Resolve each implements AC id to its LIVE store status. */
@@ -102,6 +109,7 @@ function parseStep(raw: Record<string, unknown>): FlowStep {
     implStatus: rollupStatus(acs, fallbackStatus),
     fallbackStatus,
     acs,
+    expandsTo: raw.expands_to ? String(raw.expands_to) : null,
   };
 }
 
@@ -125,6 +133,7 @@ function parseBranch(raw: Record<string, unknown>): FlowBranch {
     implStatus: rollupStatus(acs, fallbackStatus),
     fallbackStatus,
     acs,
+    expandsTo: raw.expands_to ? String(raw.expands_to) : null,
   };
 }
 
@@ -178,6 +187,7 @@ function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
     summary: String(raw.summary ?? ""),
     kind: normKind(raw.kind),
     source: normSource(raw.source),
+    level: normLevel(raw.level),
     status: String(raw.status ?? "active"),
     readiness: String(raw.readiness ?? "unknown"),
     entities: asArray(raw.entities),

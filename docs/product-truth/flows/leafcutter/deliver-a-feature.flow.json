@@ -1,0 +1,86 @@
+{
+  "id": "leafcutter/deliver-a-feature",
+  "component": "build-pipeline",
+  "product": "Leafcutter",
+  "name": "Deliver a feature end-to-end",
+  "level": "journey",
+  "summary": "The top-altitude journey of shipping a feature with Leafcutter: you say what you want and the acceptance criteria get authored (plan), the wired ticket is driven through its phase agents until it is green and committed (build), and the PR is merged and the epic/ticket closed (finalize). Each of the three stages drills down into its own pipeline flow — plan into define-a-feature, build into how-a-ticket-is-built, finalize into the finalize-feature pipeline — so this journey is the C4 L0 map over the whole delivery system.",
+  "kind": "user",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "build-pipeline",
+    "journey",
+    "hierarchy",
+    "c4-l0"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "plan",
+      "label": "Plan",
+      "human": "Say what you want; the ACs get authored.",
+      "order": 1,
+      "expands_to": "leafcutter/define-a-feature",
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "build",
+      "label": "Build",
+      "human": "The wired ticket is driven through its phase agents.",
+      "order": 2,
+      "expands_to": "leafcutter/how-acs-are-built",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "finalize",
+      "label": "Finalize",
+      "human": "The PR is merged and the epic/ticket is closed.",
+      "order": 3,
+      "expands_to": "leafcutter/finalize-feature",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [],
+  "acceptance_scenarios": [
+    {
+      "for": "plan",
+      "given": "a person with a feature idea",
+      "when": "they describe it in plain language",
+      "then": "the acceptance criteria are authored via the define-a-feature pipeline this step drills into"
+    },
+    {
+      "for": "build",
+      "given": "a wired ticket produced from approved ACs",
+      "when": "the build stage runs",
+      "then": "the ticket is driven through the phase chain this step drills into until it is green and committed"
+    },
+    {
+      "for": "finalize",
+      "given": "a committed feature branch with an open PR",
+      "when": "the finalize stage runs",
+      "then": "the PR is merged and the epic/ticket is closed via the finalize-feature pipeline this step drills into"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-14",
+      "note": "L0 journey introducing the SUB-FLOW / drill-down hierarchy: plan -> define-a-feature, build -> how-acs-are-built, finalize -> finalize-feature."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 1,
+    "not_started": 2,
+    "total": 3,
+    "asof": "2026-07-14"
+  }
+}

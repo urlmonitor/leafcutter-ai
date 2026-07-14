@@ -1,4 +1,6 @@
 id: UXP-411a
+readiness: reviewed
+priority: medium
 title: "A step whose acceptance-criteria id does not resolve renders as an unknown/fallback status"
 component: ux-prototyping
 level: L3

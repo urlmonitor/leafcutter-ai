@@ -1,4 +1,6 @@
 id: UXP-510
+readiness: reviewed
+priority: medium
 title: "Generator recomputes each flow step's impl_status from its ACs' work_status"
 component: ux-prototyping
 level: L2

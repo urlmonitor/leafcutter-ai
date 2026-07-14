@@ -1,4 +1,6 @@
 id: UXP-512
+readiness: reviewed
+priority: medium
 title: "Generator writes the product_truth back-ref onto each AC (many-to-many, wholesale)"
 component: ux-prototyping
 level: L2

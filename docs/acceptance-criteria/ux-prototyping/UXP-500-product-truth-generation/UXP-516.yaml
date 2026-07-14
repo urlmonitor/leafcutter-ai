@@ -1,4 +1,6 @@
 id: UXP-516
+readiness: reviewed
+priority: medium
 title: "product_truth is a tool-owned field on the AC schema"
 component: ux-prototyping
 level: L2

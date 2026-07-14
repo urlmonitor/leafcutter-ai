@@ -1,4 +1,6 @@
 id: UXP-513
+readiness: reviewed
+priority: medium
 title: "Generator is idempotent and offers --check for CI"
 component: ux-prototyping
 level: L2

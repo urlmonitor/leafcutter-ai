@@ -1,4 +1,6 @@
 id: UXP-490
+readiness: reviewed
+priority: medium
 title: "A product owner can review flows, mock data, and mockups and see which steps are built"
 component: ux-prototyping
 level: L0

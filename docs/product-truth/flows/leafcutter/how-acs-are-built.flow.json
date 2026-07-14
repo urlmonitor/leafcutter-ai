@@ -3,7 +3,8 @@
   "component": "build-pipeline",
   "product": "Leafcutter",
   "name": "How a ticket is built (the phase chain)",
-  "summary": "The full /build-feature phase chain: ticket-supervisor (depth 0) takes a wired ticket and dispatches each NEEDED phase agent at depth 1 in priority order — status-checker, then the optional design phases (adr-author, architecture-diagram-author, it-po), architect-review, test-writer (TDD red), the coders (make it green), test-runner, documentation + change-scope review, pr-reviewer, then the AC/surface gates (ac-validator, user-surface-smoker, ac-fulfillment-gate, live-surface-tester), and finally commit and pull-request. The handoff medium is the ticket file plus each agent's sign-off comment (ok | handoff | blocker | question), which is what unblocks the next phase. Only agents whose `agents:` map entry is `needed` run; the rest are skipped. On a blocker, ticket-supervisor climbs the failure-adjudication ladder instead of advancing.",
+  "level": "pipeline",
+  "summary": "The full /build-feature phase chain: the build driver (build-feature.js / build-ticket.js per ADR-006; 'ticket-supervisor' is the legacy name for this role) takes a wired ticket and dispatches each NEEDED phase agent at depth 1 in priority order — status-checker, then the optional design phases (adr-author, architecture-diagram-author, it-po), architect-review, test-writer (TDD red), the coders (make it green), test-runner, documentation + change-scope review, pr-reviewer, then the AC/surface gates (ac-validator, user-surface-smoker, ac-fulfillment-gate, live-surface-tester), and finally commit and pull-request. The handoff medium is the ticket file plus each agent's sign-off comment (ok | handoff | blocker | question), which is what unblocks the next phase. Only agents whose `agents:` map entry is `needed` run; the rest are skipped. On a blocker, ticket-supervisor climbs the failure-adjudication ladder instead of advancing.",
   "kind": "data",
   "source": "real",
   "status": "active",
@@ -28,10 +29,10 @@
   "steps": [
     {
       "id": "dispatch",
-      "label": "Supervisor dispatches phases",
-      "human": "ticket-supervisor reads the ticket's `agents:` map and drives it through its phase agents in priority order, spawning the next `needed` agent at depth 1 and routing on the sign-off status it parses back.",
+      "label": "Build driver dispatches phases",
+      "human": "The build driver reads the ticket's `agents:` map and drives it through its phase agents in priority order, spawning the next `needed` agent at depth 1 and routing on the sign-off status it parses back. Per ADR-006 the real driver is the flattened per-phase dispatcher in build-feature.js / build-ticket.js (each phase dispatched at depth 1, no nested supervisor); 'ticket-supervisor' is the legacy name for this role.",
       "order": 1,
-      "agent": "ticket-supervisor",
+      "agent": "build-feature.js / build-ticket.js (per ADR-006; legacy: ticket-supervisor)",
       "reads": [
         "Ticket",
         "Ac"
@@ -93,8 +94,8 @@
     },
     {
       "id": "architect",
-      "label": "Architect review (prio 4)",
-      "human": "architect-review classifies the change's blast radius (small vs large) and writes an inline note or escalates, so coders know the structural impact before touching code.",
+      "label": "Architect review (prio 4, conditional)",
+      "human": "architect-review classifies the change's blast radius (small vs large) and writes an inline note or escalates, so coders know the structural impact before touching code — and it is what decides whether an ADR is required. CONDITIONAL: it is NOT in a normal AC-generated ticket's `agents:` map; it is injected only by a flow-change/guardrail gate (config/guardrail_gates.yaml, e.g. code/contract_boundary, schema/safety) or when the ticket sets requires_adr.",
       "order": 6,
       "agent": "architect-review",
       "reads": [
@@ -132,6 +133,7 @@
       "writes": [
         "Diff"
       ],
+      "expands_to": "leafcutter/python-coder-internal",
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -151,7 +153,7 @@
     {
       "id": "docs",
       "label": "Documentation (prio 10, conditional)",
-      "human": "documentation-expert (and its how-to / reference / explanation sub-authors) writes or updates docs when the ticket calls for it.",
+      "human": "documentation-expert (and its how-to / reference / explanation sub-authors) writes or updates docs. Off by default in AC-generated tickets (documentation-expert: not_needed); it runs only when an L1 AC's documentation_triggers call for docs or a flow-change gate flips it on. NOTE: although its priority is 10 (after the coders), for flow-change tickets it is REORDERED before the coders — docs-before-code — so the design is written down before implementation.",
       "order": 10,
       "agent": "documentation-expert",
       "reads": [
@@ -292,7 +294,7 @@
     {
       "for": "dispatch",
       "given": "a wired ticket handed over from the AC lifecycle",
-      "when": "ticket-supervisor drives it",
+      "when": "the build driver (build-feature.js / build-ticket.js) drives it",
       "then": "each NEEDED phase agent is dispatched at depth 1 in priority order and routed on its sign-off status, and not_needed agents are skipped"
     },
     {
@@ -344,6 +346,12 @@
       "by": "BrainCandy",
       "date": "2026-07-14",
       "note": "Corrected to the COMPLETE phase chain (18 steps): added status-checker, adr-author, architecture-diagram-author, it-po, test-runner, documentation-expert, and split the merged 'acgate' into ac-validator / user-surface-smoker / ac-fulfillment-gate / live-surface-tester."
+    },
+    {
+      "action": "extended",
+      "by": "BrainCandy",
+      "date": "2026-07-14",
+      "note": "Accuracy pass verified against the real pipeline: marked architect-review conditional (injected only by a flow-change/guardrail gate or requires_adr, absent from a normal AC-generated ticket); noted documentation is off by default and reordered before the coders for flow-change tickets (docs-before-code); re-attributed the dispatch step to the ADR-006 flattened per-phase driver (build-feature.js / build-ticket.js), with ticket-supervisor as the legacy name."
     }
   ],
   "impl_summary": {

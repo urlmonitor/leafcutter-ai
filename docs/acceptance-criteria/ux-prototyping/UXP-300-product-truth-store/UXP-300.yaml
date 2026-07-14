@@ -1,4 +1,6 @@
 id: UXP-300
+readiness: reviewed
+priority: medium
 title: "Product-truth artifacts live in docs/product-truth with one canonical dataset per entity per component"
 component: ux-prototyping
 level: L2

@@ -4,8 +4,11 @@ This script is the only thing that writes the store's derived data. It:
 
   1. Builds one {ac_id -> {path, work_status}} map from the AC store (single pass,
      no per-id rglob).
-  2. Recomputes each flow step/branch `impl_status` (+ `impl_asof`) from the
-     `work_status` of every AC in its `implements`, and each flow's `impl_summary`.
+  2. Recomputes each flow step/branch `impl_status` (+ `impl_asof`): from the
+     child flow's rollup when the step has an `expands_to` (C4-style drill-down),
+     otherwise from the `work_status` of every AC in its `implements`
+     (precedence: expands_to > implements > not_started); and each flow's
+     `impl_summary` over those derived statuses.
   3. Inverts the authored flow->AC edges (step.implements) into a `by_ac` map and
      writes it into index.json.
   4. Writes each referenced AC's `product_truth` = its by_ac list (wholesale
@@ -13,7 +16,9 @@ This script is the only thing that writes the store's derived data. It:
      surgically so every other field and its formatting are preserved.
   5. Rebuilds index.json `by_component` / `by_entity` / `by_flow` from artifacts[]
      + the flows/mocks on disk (this fixes stale derived indexes), and syncs each
-     flow artifact's impl_summary.
+     flow artifact's impl_summary. `by_flow` also carries the drill-down
+     hierarchy view: each flow's `level`, the child flow ids its steps `expands`
+     into, and its `parents` (the {flow, step} back-refs that expand into it).
 
 The link direction of truth is flow -> AC (`step.implements`). Everything this
 script writes is the recomputed reverse edge / rollup — never hand-edit it.
@@ -101,11 +106,37 @@ def compute_node_impl_status(implements: list[str], ac_map: dict) -> str:
     return "in_progress"
 
 
-def compute_flow_impl_summary(flow: dict, ac_map: dict) -> dict:
-    """Roll up a flow's node impl_status into a counted summary."""
+def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = ()) -> str:
+    """Derive a node's impl_status honoring the drill-down hierarchy.
+
+    Precedence: `expands_to` > `implements` > not_started. When the node has an
+    `expands_to`, its status is the child flow's rollup (all-done -> done,
+    any-in_progress-or-mixed -> in_progress, else not_started) computed
+    recursively over the child's steps + branches — NOT from the node's own
+    `implements`. A dangling child (unregistered id) or a cycle back into a
+    flow already on the resolution stack falls back to `not_started`
+    deterministically; the validator ERRORs on both so this never masks a real
+    authoring bug. Otherwise the status derives from `implements` via ac_map.
+    """
+    child_id = node.get("expands_to")
+    if child_id:
+        child = flows.get(child_id)
+        if child is None or child_id in _stack:
+            return "not_started"
+        return flow_impl_status(compute_flow_impl_summary(child, ac_map, flows, _stack + (child_id,)))
+    return compute_node_impl_status(node.get("implements", []), ac_map)
+
+
+def compute_flow_impl_summary(flow: dict, ac_map: dict, flows: dict, _stack: tuple = ()) -> dict:
+    """Roll up a flow's node impl_status into a counted summary.
+
+    Node statuses are recomputed from source (ac_map + expands_to recursion),
+    never read from stored fields, so the rollup is deterministic and idempotent
+    regardless of iteration order.
+    """
     counts = {"done": 0, "in_progress": 0, "not_started": 0}
     for node, _kind in iter_nodes(flow):
-        counts[compute_node_impl_status(node.get("implements", []), ac_map)] += 1
+        counts[compute_node_status(node, ac_map, flows, _stack)] += 1
     total = counts["done"] + counts["in_progress"] + counts["not_started"]
     return {
         "done": counts["done"],
@@ -124,6 +155,27 @@ def flow_impl_status(summary: dict) -> str:
     if summary["in_progress"] == 0 and summary["done"] == 0:
         return "not_started"
     return "in_progress"
+
+
+def build_parents_map(flows: dict) -> dict:
+    """For every flow, the sorted {flow, step} back-refs of steps that expand into it."""
+    parents: dict[str, list] = {flow_id: [] for flow_id in flows}
+    for flow in sorted(flows.values(), key=lambda item: item["id"]):
+        for step in flow.get("steps", []):
+            child_id = step.get("expands_to")
+            if child_id in parents:
+                parents[child_id].append({"flow": flow["id"], "step": step["id"]})
+    for child_id in parents:
+        parents[child_id].sort(key=lambda item: (item["flow"], item["step"]))
+    return parents
+
+
+def build_expands_map(flows: dict) -> dict:
+    """For every flow, the sorted child flow ids its steps drill into."""
+    return {
+        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to")})
+        for flow_id, flow in flows.items()
+    }
 
 
 def build_by_ac(flows: dict) -> dict:
@@ -189,16 +241,27 @@ def build_by_entity(flows: dict, mocks: dict) -> dict:
 
 
 def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict) -> dict:
-    """Rebuild the by_flow lookup, with derived impl_status + impl_summary."""
+    """Rebuild the by_flow lookup: derived impl_status/impl_summary + hierarchy view.
+
+    Adds the drill-down hierarchy fields alongside the existing ones:
+      * `level`   — the flow's altitude (journey / pipeline / agent), or None.
+      * `expands` — the child flow ids this flow's steps drill into (downward).
+      * `parents` — the {flow, step} back-refs of steps that expand into this
+                    flow (upward), for quick tree traversal.
+    """
+    parents_map = build_parents_map(flows)
+    expands_map = build_expands_map(flows)
     result: dict[str, dict] = {}
     for flow in flows.values():
-        summary = compute_flow_impl_summary(flow, ac_map)
-        entry = {"component": flow["component"], "entities": flow.get("entities", [])}
+        summary = compute_flow_impl_summary(flow, ac_map, flows)
+        entry = {"component": flow["component"], "level": flow.get("level"), "entities": flow.get("entities", [])}
         if flow.get("mock_data_ref"):
             entry["mock_data_ref"] = flow["mock_data_ref"]
         entry["path"] = flow_paths[flow["id"]]
         entry["impl_status"] = flow_impl_status(summary)
         entry["impl_summary"] = summary
+        entry["expands"] = expands_map[flow["id"]]
+        entry["parents"] = parents_map[flow["id"]]
         result[flow["id"]] = entry
     return dict(sorted(result.items()))
 
@@ -326,9 +389,9 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool) -> boo
     changed = False
     for flow_id, flow in flows.items():
         for node, _kind in iter_nodes(flow):
-            node["impl_status"] = compute_node_impl_status(node.get("implements", []), ac_map)
+            node["impl_status"] = compute_node_status(node, ac_map, flows)
             node["impl_asof"] = ASOF
-        flow["impl_summary"] = compute_flow_impl_summary(flow, ac_map)
+        flow["impl_summary"] = compute_flow_impl_summary(flow, ac_map, flows)
         path = STORE / flow_paths[flow_id]
         new_text = json.dumps(flow, indent=2, ensure_ascii=False) + "\n"
         if new_text != _read_text(path):

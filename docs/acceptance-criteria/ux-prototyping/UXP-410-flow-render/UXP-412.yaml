@@ -1,4 +1,6 @@
 id: UXP-412
+readiness: reviewed
+priority: medium
 title: "The resolved flow is drawn as a graph on the Atlas /flows page"
 component: ux-prototyping
 level: L2

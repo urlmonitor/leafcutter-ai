@@ -1,4 +1,6 @@
 id: UXP-210c
+readiness: reviewed
+priority: medium
 title: "Customer can review the cart before paying"
 component: ux-prototyping
 level: L2

@@ -1,0 +1,107 @@
+{
+  "id": "leafcutter/python-coder-internal",
+  "component": "build-pipeline",
+  "product": "Leafcutter",
+  "name": "Inside python-coder (the coder's internal workflow)",
+  "level": "agent",
+  "summary": "The internal workflow python-coder runs when the build pipeline's code step hands it a red baseline: it loads the project conventions / PROJECT_CONTEXT, edits only the ticket's files_touched to satisfy the red baseline, runs doc-enforcer on the changed Python, runs complexity-reduction, runs the suite until it is green, and finally records its sign-off via the signoff skill. This is the agent-altitude drill-down beneath the code step of how-a-ticket-is-built.",
+  "kind": "data",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "build-pipeline",
+    "python-coder",
+    "agent-internal",
+    "hierarchy"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "conventions",
+      "label": "Load conventions",
+      "human": "python-coder loads the project conventions / PROJECT_CONTEXT so it writes code that matches the repo's error-handling, style, and structure rules.",
+      "order": 1,
+      "agent": "python-coder",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "implement",
+      "label": "Implement against red",
+      "human": "python-coder edits only the ticket's files_touched to satisfy the red baseline handed over by test-writer.",
+      "order": 2,
+      "agent": "python-coder",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "docenforce",
+      "label": "Doc-enforcer",
+      "human": "doc-enforcer runs over the changed .py files to enforce docstring and documentation conventions.",
+      "order": 3,
+      "agent": "doc-enforcer",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "complexity",
+      "label": "Complexity reduction",
+      "human": "python-coder runs complexity-reduction to keep the new code within the repo's complexity budget.",
+      "order": 4,
+      "agent": "python-coder",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "tests",
+      "label": "Run until green",
+      "human": "test-runner runs the suite until every red_baseline test passes.",
+      "order": 5,
+      "agent": "test-runner",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "signoff",
+      "label": "Record sign-off",
+      "human": "python-coder records the sign-off via the signoff skill, updating the ticket frontmatter and the Sign-offs checklist together.",
+      "order": 6,
+      "agent": "python-coder",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [],
+  "acceptance_scenarios": [
+    {
+      "for": "implement",
+      "given": "a red baseline handed over from test-writer",
+      "when": "python-coder implements against it",
+      "then": "only files_touched are edited and the red_baseline tests are the target of the change"
+    },
+    {
+      "for": "tests",
+      "given": "an implemented change",
+      "when": "the suite is run",
+      "then": "the coder does not sign off until every red_baseline test is green"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-14",
+      "note": "Gold agent-internal flow; the drill-down target of the how-acs-are-built code step."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 6,
+    "total": 6,
+    "asof": "2026-07-14"
+  }
+}

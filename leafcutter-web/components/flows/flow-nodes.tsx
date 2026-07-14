@@ -8,7 +8,7 @@
  */
 import * as React from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { GitBranch, Monitor } from "lucide-react";
+import { GitBranch, Monitor, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WORK_STATUS_TONE } from "@/lib/status";
 import type { WorkStatus } from "@/lib/data/types";
@@ -21,11 +21,12 @@ export interface FlowStepNodeData {
   status: WorkStatus;
   variant: "step" | "branch";
   acCount: number;
+  drillable?: boolean;   // step has a resolvable expands_to child flow
   selected?: boolean;
 }
 
 function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
-  const { label, order, screen, status, variant, acCount, selected } = data;
+  const { label, order, screen, status, variant, acCount, drillable, selected } = data;
   const st = WORK_STATUS_TONE[status] ?? WORK_STATUS_TONE.unknown;
   const isBranch = variant === "branch";
   return (
@@ -34,6 +35,7 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
         "w-[220px] rounded-xl border bg-card/90 px-3.5 py-3 backdrop-blur transition-all duration-150",
         "hover:-translate-y-0.5",
         isBranch && "border-dashed",
+        drillable && "cursor-pointer",
       )}
       style={{
         borderColor: `hsl(${st.hsl} / 0.6)`,
@@ -72,12 +74,24 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
           )}
           {isBranch ? "Branch" : "Step"}
         </span>
-        <span
-          className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
-          style={{ color: `hsl(${st.hsl})`, background: `hsl(${st.hsl} / 0.12)` }}
-        >
-          {st.label}
-        </span>
+        <div className="flex items-center gap-1">
+          {drillable && (
+            <span
+              data-flow-drill="true"
+              title="Open sub-flow"
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary transition-colors bg-primary/15 hover:bg-primary/25"
+            >
+              <Maximize2 className="h-2.5 w-2.5" />
+              Open
+            </span>
+          )}
+          <span
+            className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+            style={{ color: `hsl(${st.hsl})`, background: `hsl(${st.hsl} / 0.12)` }}
+          >
+            {st.label}
+          </span>
+        </div>
       </div>
       <div className="mt-1.5 text-sm font-semibold leading-snug text-foreground">
         {label}
@@ -92,6 +106,16 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
         {acCount > 0 && (
           <span className="font-mono">
             {acCount} AC{acCount === 1 ? "" : "s"}
+          </span>
+        )}
+        {drillable && (
+          <span
+            data-flow-drill="true"
+            className="inline-flex items-center gap-1 font-medium text-primary"
+            title="Open sub-flow"
+          >
+            <Maximize2 className="h-2.5 w-2.5" />
+            sub-flow
           </span>
         )}
       </div>

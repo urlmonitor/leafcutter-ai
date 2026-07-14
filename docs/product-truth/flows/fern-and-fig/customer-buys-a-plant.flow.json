@@ -3,6 +3,7 @@
   "component": "ux-prototyping",
   "product": "Fern & Fig",
   "name": "Customer buys a plant",
+  "level": "journey",
   "summary": "A customer browses the Fern & Fig plant catalogue, opens a plant they like, adds it to their cart and pays — finishing on an order-confirmation screen. If the plant they want is sold out, they can ask to be notified instead of buying.",
   "kind": "user",
   "source": "mock",

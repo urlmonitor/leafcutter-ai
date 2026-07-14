@@ -1,4 +1,6 @@
 id: UXP-493
+readiness: reviewed
+priority: medium
 title: "Product-truth is a living layer: a store beside the ACs, read live by the Atlas, kept fresh by agents"
 component: ux-prototyping
 level: L1

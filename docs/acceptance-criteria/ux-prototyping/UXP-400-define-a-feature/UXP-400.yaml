@@ -1,4 +1,6 @@
 id: UXP-400
+readiness: reviewed
+priority: medium
 title: "A person can define a feature by saying what they want in plain language"
 component: ux-prototyping
 level: L2

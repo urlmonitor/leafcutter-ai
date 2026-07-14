@@ -1,4 +1,6 @@
 id: UXP-522
+readiness: reviewed
+priority: medium
 title: "A kind chooser filters flows by user/data/architecture"
 component: ux-prototyping
 level: L2

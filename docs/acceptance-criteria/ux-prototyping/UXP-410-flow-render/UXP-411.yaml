@@ -1,4 +1,6 @@
 id: UXP-411
+readiness: reviewed
+priority: medium
 title: "Each flow step resolves to its acceptance criterion's live work_status"
 component: ux-prototyping
 level: L2

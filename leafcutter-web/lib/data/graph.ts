@@ -110,6 +110,7 @@ export function buildFlowGraph(flow: Flow): Graph {
         reads: s.reads,
         writes: s.writes,
         acIds: s.implements,
+        expandsTo: s.expandsTo,
       },
     });
     addAcNodes(s.acs);
@@ -149,6 +150,7 @@ export function buildFlowGraph(flow: Flow): Graph {
         reads: b.reads,
         writes: b.writes,
         acIds: b.implements,
+        expandsTo: b.expandsTo,
       },
     });
     addAcNodes(b.acs);

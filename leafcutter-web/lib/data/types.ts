@@ -254,6 +254,7 @@ export interface FlowStep {
   implStatus: WorkStatus;     // DERIVED from the live AC status (done|in_progress|not_started)
   fallbackStatus: WorkStatus; // the flow's own impl_status (used when an AC id doesn't resolve)
   acs: AcRef[];               // resolved AC references (id + live status)
+  expandsTo: string | null;   // child flow id this step drills into (sub-flow), or null
 }
 
 /** A conditional branch off a flow step (e.g. out-of-stock path). */
@@ -273,12 +274,15 @@ export interface FlowBranch {
   implStatus: WorkStatus;
   fallbackStatus: WorkStatus;
   acs: AcRef[];
+  expandsTo: string | null;   // child flow id this branch drills into, or null
 }
 
 /** The nature of a flow: an end-user journey, a data pipeline, or architecture. */
 export type FlowKind = "user" | "data" | "architecture";
 /** Whether a flow is backed by mock data or a real (process/architecture) surface. */
 export type FlowSource = "mock" | "real";
+/** The altitude of a flow in the sub-flow hierarchy. */
+export type FlowLevel = "journey" | "pipeline" | "agent";
 
 /** A product-truth flow (docs/product-truth/flows/**.flow.json). */
 export interface Flow {
@@ -289,6 +293,7 @@ export interface Flow {
   summary: string;
   kind: FlowKind;
   source: FlowSource;
+  level: FlowLevel;
   status: string;
   readiness: string;
   entities: string[];

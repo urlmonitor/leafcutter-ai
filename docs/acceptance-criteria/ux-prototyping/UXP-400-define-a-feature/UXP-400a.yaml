@@ -1,4 +1,6 @@
 id: UXP-400a
+readiness: reviewed
+priority: medium
 title: "The plain-language intent is preserved verbatim as the seed the draft is generated from"
 component: ux-prototyping
 level: L2

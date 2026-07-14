@@ -1,4 +1,6 @@
 id: UXP-524
+readiness: reviewed
+priority: medium
 title: "An AC node links to the flows it appears in"
 component: ux-prototyping
 level: L2

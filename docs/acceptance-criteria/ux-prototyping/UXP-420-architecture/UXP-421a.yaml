@@ -1,4 +1,6 @@
 id: UXP-421a
+readiness: reviewed
+priority: medium
 title: "The Atlas /flows view colours each step live from the acceptance-criteria store"
 component: ux-prototyping
 level: L2

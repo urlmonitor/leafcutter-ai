@@ -1,4 +1,6 @@
 id: UXP-520
+readiness: reviewed
+priority: medium
 title: "The Flows view lists flows and renders the selected one as a graph"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: UXP-514
+readiness: reviewed
+priority: medium
 title: "Validator errors on derived-vs-source drift (impl_status, product_truth, indexes, screen->mockup)"
 component: ux-prototyping
 level: L2

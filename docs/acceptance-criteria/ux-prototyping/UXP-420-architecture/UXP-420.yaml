@@ -1,4 +1,6 @@
 id: UXP-420
+readiness: reviewed
+priority: medium
 title: "The product-truth store lives beside the acceptance-criteria store"
 component: ux-prototyping
 level: L2

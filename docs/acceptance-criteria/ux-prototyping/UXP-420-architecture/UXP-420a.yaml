@@ -1,4 +1,6 @@
 id: UXP-420a
+readiness: reviewed
+priority: medium
 title: "The product-truth store carries a manifest index that mirrors each artifact's status, readiness, and version"
 component: ux-prototyping
 level: L2

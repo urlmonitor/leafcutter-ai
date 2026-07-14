@@ -21,6 +21,8 @@ import {
   Bot,
   LogIn,
   LogOut,
+  Maximize2,
+  ArrowRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/kit";
 import { cn } from "@/lib/utils";
@@ -48,6 +50,8 @@ export interface StepView {
   writes: string[];
   acs: AcRef[];
   scenarios: FlowScenario[];
+  expandsTo?: string | null;      // child flow id this step drills into
+  expandsToName?: string | null;  // resolved child flow name (null if unresolved)
 }
 
 function Section({
@@ -150,10 +154,12 @@ export function FlowDrawer({
   step,
   mock,
   onClose,
+  onDrill,
 }: {
   step: StepView | null;
   mock: MockData | null;
   onClose: () => void;
+  onDrill?: (childFlowId: string) => void;
 }) {
   const touched = React.useMemo(() => {
     if (!step) return [] as MockEntity[];
@@ -212,6 +218,23 @@ export function FlowDrawer({
 
             {/* body */}
             <div className="flex-1 space-y-5 overflow-y-auto p-5">
+              {step.expandsTo && step.expandsToName && onDrill && (
+                <button
+                  type="button"
+                  onClick={() => onDrill(step.expandsTo!)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2.5 text-left text-sm text-primary transition-colors hover:bg-primary/20"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Maximize2 className="h-4 w-4" />
+                    <span>
+                      Open sub-flow
+                      <span className="ml-1 font-medium">{step.expandsToName}</span>
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0" />
+                </button>
+              )}
+
               {step.human && (
                 <p className="text-sm leading-relaxed text-foreground/90">
                   {step.human}

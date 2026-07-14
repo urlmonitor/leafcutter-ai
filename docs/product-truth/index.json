@@ -326,6 +326,87 @@
       ]
     },
     {
+      "id": "leafcutter/deliver-a-feature",
+      "type": "flow",
+      "title": "Deliver a feature end-to-end",
+      "summary": "L0 journey: plan (define-a-feature) -> build (how-acs-are-built) -> finalize (finalize-feature). Each stage drills into its own pipeline flow.",
+      "kind": "user",
+      "source": "real",
+      "component": "build-pipeline",
+      "path": "flows/leafcutter/deliver-a-feature.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 1,
+        "not_started": 2,
+        "total": 3,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "build-pipeline",
+        "journey",
+        "hierarchy",
+        "c4-l0"
+      ]
+    },
+    {
+      "id": "leafcutter/finalize-feature",
+      "type": "flow",
+      "title": "Finalize a feature (merge & close)",
+      "summary": "The real finalize-feature.js pipeline: baseline -> open PR -> merge main (HALT on conflict) -> post-merge tests + triage (HALT on regression) -> close ACs -> merge PR (gated) -> archive + remove worktree.",
+      "kind": "data",
+      "source": "real",
+      "component": "build-pipeline",
+      "path": "flows/leafcutter/finalize-feature.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 7,
+        "total": 7,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "build-pipeline",
+        "finalize",
+        "merge",
+        "pipeline"
+      ]
+    },
+    {
+      "id": "leafcutter/python-coder-internal",
+      "type": "flow",
+      "title": "Inside python-coder (the coder's internal workflow)",
+      "summary": "Agent-altitude drill-down beneath the code step: load conventions -> implement against red -> doc-enforcer -> complexity reduction -> run until green -> record sign-off.",
+      "kind": "data",
+      "source": "real",
+      "component": "build-pipeline",
+      "path": "flows/leafcutter/python-coder-internal.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "build-pipeline",
+        "python-coder",
+        "agent-internal",
+        "hierarchy"
+      ]
+    },
+    {
       "id": "fern-and-fig/catalog",
       "type": "mock_data",
       "title": "Fern & Fig catalog",
@@ -550,7 +631,10 @@
     },
     "build-pipeline": {
       "flows": [
-        "leafcutter/how-acs-are-built"
+        "leafcutter/deliver-a-feature",
+        "leafcutter/finalize-feature",
+        "leafcutter/how-acs-are-built",
+        "leafcutter/python-coder-internal"
       ],
       "mock_data": [],
       "mockups": []
@@ -723,6 +807,7 @@
   "by_flow": {
     "fern-and-fig/customer-buys-a-plant": {
       "component": "ux-prototyping",
+      "level": "journey",
       "entities": [
         "Plant",
         "Customer",
@@ -737,10 +822,13 @@
         "not_started": 3,
         "total": 6,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
     },
     "fern-and-fig/track-an-order": {
       "component": "ux-prototyping",
+      "level": "journey",
       "entities": [
         "Order",
         "Customer"
@@ -754,10 +842,13 @@
         "not_started": 1,
         "total": 3,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
     },
     "leafcutter/ac-lifecycle": {
       "component": "ac-driven-dev",
+      "level": "pipeline",
       "entities": [
         "Request",
         "Ac",
@@ -772,10 +863,13 @@
         "not_started": 10,
         "total": 10,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
     },
     "leafcutter/author-product-truth": {
       "component": "ux-prototyping",
+      "level": "pipeline",
       "entities": [
         "Request",
         "MockData",
@@ -791,10 +885,13 @@
         "not_started": 10,
         "total": 10,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
     },
     "leafcutter/define-a-feature": {
       "component": "ux-prototyping",
+      "level": "journey",
       "entities": [
         "MockData",
         "Mockup",
@@ -809,10 +906,38 @@
         "not_started": 5,
         "total": 6,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/deliver-a-feature",
+          "step": "plan"
+        }
+      ]
+    },
+    "leafcutter/deliver-a-feature": {
+      "component": "build-pipeline",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/deliver-a-feature.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 1,
+        "not_started": 2,
+        "total": 3,
+        "asof": "2026-07-14"
+      },
+      "expands": [
+        "leafcutter/define-a-feature",
+        "leafcutter/finalize-feature",
+        "leafcutter/how-acs-are-built"
+      ],
+      "parents": []
     },
     "leafcutter/explore-flows-in-atlas": {
       "component": "ux-prototyping",
+      "level": "journey",
       "entities": [],
       "path": "flows/leafcutter/explore-flows-in-atlas.flow.json",
       "impl_status": "done",
@@ -822,10 +947,34 @@
         "not_started": 0,
         "total": 5,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
+    },
+    "leafcutter/finalize-feature": {
+      "component": "build-pipeline",
+      "level": "pipeline",
+      "entities": [],
+      "path": "flows/leafcutter/finalize-feature.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 7,
+        "total": 7,
+        "asof": "2026-07-14"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/deliver-a-feature",
+          "step": "finalize"
+        }
+      ]
     },
     "leafcutter/flow-render-pipeline": {
       "component": "ux-prototyping",
+      "level": "pipeline",
       "entities": [],
       "path": "flows/leafcutter/flow-render-pipeline.flow.json",
       "impl_status": "done",
@@ -835,10 +984,13 @@
         "not_started": 0,
         "total": 3,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
     },
     "leafcutter/generate-product-truth": {
       "component": "ux-prototyping",
+      "level": "pipeline",
       "entities": [],
       "path": "flows/leafcutter/generate-product-truth.flow.json",
       "impl_status": "done",
@@ -848,10 +1000,13 @@
         "not_started": 0,
         "total": 5,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
     },
     "leafcutter/how-acs-are-built": {
       "component": "build-pipeline",
+      "level": "pipeline",
       "entities": [
         "Ticket",
         "Ac",
@@ -868,10 +1023,20 @@
         "not_started": 19,
         "total": 19,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [
+        "leafcutter/python-coder-internal"
+      ],
+      "parents": [
+        {
+          "flow": "leafcutter/deliver-a-feature",
+          "step": "build"
+        }
+      ]
     },
     "leafcutter/product-truth-architecture": {
       "component": "ux-prototyping",
+      "level": "pipeline",
       "entities": [],
       "path": "flows/leafcutter/product-truth-architecture.flow.json",
       "impl_status": "in_progress",
@@ -881,7 +1046,30 @@
         "not_started": 1,
         "total": 3,
         "asof": "2026-07-14"
-      }
+      },
+      "expands": [],
+      "parents": []
+    },
+    "leafcutter/python-coder-internal": {
+      "component": "build-pipeline",
+      "level": "agent",
+      "entities": [],
+      "path": "flows/leafcutter/python-coder-internal.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-07-14"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/how-acs-are-built",
+          "step": "code"
+        }
+      ]
     }
   },
   "by_ac": {

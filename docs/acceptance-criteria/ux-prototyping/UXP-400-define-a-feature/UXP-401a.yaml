@@ -1,4 +1,6 @@
 id: UXP-401a
+readiness: reviewed
+priority: medium
 title: "When the person requests changes to the draft, the system revises the flow before ACs are generated"
 component: ux-prototyping
 level: L3

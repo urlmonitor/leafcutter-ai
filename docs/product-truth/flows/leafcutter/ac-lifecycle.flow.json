@@ -3,6 +3,7 @@
   "component": "ac-driven-dev",
   "product": "Leafcutter",
   "name": "How an acceptance criterion is born, built & retired",
+  "level": "pipeline",
   "summary": "The data flow of an acceptance criterion through the AC-driven pipeline: a plain-language request is triaged, the authoring agents (PO → BA → IT PO) write the AC records into the store, you approve each stage, the scanner surfaces ready ACs, a wired ticket is generated, and once its implementation merges the AC is marked done automatically. Around that spine sit the update paths — scope stays locked to the author, existing code is discovered and back-linked, ACs can be re-homed without breaking references, and retiring an AC forces its code to be reconciled.",
   "kind": "data",
   "source": "real",

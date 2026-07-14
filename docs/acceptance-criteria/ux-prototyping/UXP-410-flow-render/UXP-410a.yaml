@@ -1,4 +1,6 @@
 id: UXP-410a
+readiness: reviewed
+priority: medium
 title: "The loader discovers every flow file in the store rather than a hardcoded list"
 component: ux-prototyping
 level: L2

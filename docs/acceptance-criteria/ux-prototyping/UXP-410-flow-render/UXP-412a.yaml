@@ -1,4 +1,6 @@
 id: UXP-412a
+readiness: reviewed
+priority: medium
 title: "Each rendered step is colour-coded by its resolved work_status"
 component: ux-prototyping
 level: L2

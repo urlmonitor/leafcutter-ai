@@ -3,6 +3,7 @@
   "component": "ux-prototyping",
   "product": "Leafcutter",
   "name": "How the draft artifacts are authored (the product-truth agents)",
+  "level": "pipeline",
   "summary": "The agent pipeline behind define-a-feature's draft step: a classifier decides which artifacts a request needs, then only the required authoring agents run — a mock-data agent drafts or extends the one canonical dataset, a mockup agent draws the screens from that data, a flow agent assembles the journey wiring steps to screens and entities, and finally the business-analyst derives the acceptance criteria from the flow's steps. The handoff medium between agents is the artifact each produces plus the classifier's decision, so a single-screen tweak never spins up a whole journey and a backend job never drafts a screen. None of these agents exist yet — this flow is the spec for building them, so every step renders not-started.",
   "kind": "data",
   "source": "real",

@@ -1,4 +1,6 @@
 id: UXP-521
+readiness: reviewed
+priority: medium
 title: "A source toggle filters flows by mock vs real"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: UXP-210d
+readiness: reviewed
+priority: medium
 title: "Customer can check out and pay"
 component: ux-prototyping
 level: L2

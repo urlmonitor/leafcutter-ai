@@ -1,4 +1,6 @@
 id: UXP-210b-2
+readiness: reviewed
+priority: medium
 title: "Out-of-stock plant offers a notify-me action instead of add-to-cart"
 component: ux-prototyping
 level: L3

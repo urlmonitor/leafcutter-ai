@@ -1,4 +1,6 @@
 id: UXP-422
+readiness: reviewed
+priority: medium
 title: "Agents produce and extend the product-truth artifacts"
 component: ux-prototyping
 level: L2

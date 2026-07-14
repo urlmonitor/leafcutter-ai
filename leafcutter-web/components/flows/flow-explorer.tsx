@@ -43,10 +43,25 @@ const BRANCH_DROP = 430;
 const STATUS_LEGEND: WorkStatus[] = ["done", "in_progress", "not_started"];
 const EDGE_LEGEND = ["flow", "implements"] as const;
 
-function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
+function ExplorerInner({
+  flow,
+  mock,
+  flowNames,
+  onDrill,
+}: {
+  flow: Flow;
+  mock: MockData | null;
+  flowNames: Record<string, string>;
+  onDrill?: (childFlowId: string) => void;
+}) {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   const graph = React.useMemo(() => buildFlowGraph(flow), [flow]);
+
+  const nameFor = React.useCallback(
+    (id: string | null) => (id ? flowNames[id] ?? null : null),
+    [flowNames],
+  );
 
   // Step-view lookup for the drawer, keyed by the graph node id (`step:<id>`).
   const stepViews = React.useMemo(() => {
@@ -66,6 +81,8 @@ function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
         writes: s.writes,
         acs: s.acs,
         scenarios: flow.scenarios.filter((sc) => sc.for === s.id),
+        expandsTo: s.expandsTo,
+        expandsToName: nameFor(s.expandsTo),
       });
     }
     for (const b of flow.branches) {
@@ -84,10 +101,12 @@ function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
         writes: b.writes,
         acs: b.acs,
         scenarios: flow.scenarios.filter((sc) => sc.for === b.id),
+        expandsTo: b.expandsTo,
+        expandsToName: nameFor(b.expandsTo),
       });
     }
     return m;
-  }, [flow]);
+  }, [flow, nameFor]);
 
   /* ---------- positions ---------- */
   const positions = React.useMemo(() => {
@@ -135,6 +154,7 @@ function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
           };
         }
         const acIds = (n.meta?.acIds as string[]) ?? [];
+        const expandsTo = (n.meta?.expandsTo as string | null) ?? null;
         return {
           id: n.id,
           type: "flowStepNode",
@@ -146,12 +166,13 @@ function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
             status: (n.status as WorkStatus) ?? "unknown",
             variant: (n.meta?.variant as "step" | "branch") ?? "step",
             acCount: acIds.length,
+            drillable: Boolean(expandsTo && flowNames[expandsTo]),
             selected: n.id === selectedId,
           },
           draggable: false,
         };
       }),
-    [graph, positions, selectedId],
+    [graph, positions, selectedId, flowNames],
   );
 
   const edges = React.useMemo<Edge[]>(
@@ -181,9 +202,22 @@ function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
     [graph],
   );
 
-  const onNodeClick = React.useCallback((_evt: React.MouseEvent, node: Node) => {
-    if (node.type === "flowStepNode") setSelectedId(node.id);
-  }, []);
+  const onNodeClick = React.useCallback(
+    (evt: React.MouseEvent, node: Node) => {
+      if (node.type !== "flowStepNode") return;
+      const view = stepViews.get(node.id);
+      const childId = view?.expandsTo ?? null;
+      const canDrill = Boolean(childId && view?.expandsToName && onDrill);
+      // Clicking the drill affordance drills in; clicking elsewhere opens the drawer.
+      const hitDrill = (evt.target as HTMLElement | null)?.closest?.("[data-flow-drill]");
+      if (canDrill && hitDrill) {
+        onDrill!(childId!);
+        return;
+      }
+      setSelectedId(node.id);
+    },
+    [stepViews, onDrill],
+  );
 
   const selectedStep = selectedId ? stepViews.get(selectedId) ?? null : null;
 
@@ -278,15 +312,30 @@ function ExplorerInner({ flow, mock }: { flow: Flow; mock: MockData | null }) {
         </div>
       </div>
 
-      <FlowDrawer step={selectedStep} mock={mock} onClose={() => setSelectedId(null)} />
+      <FlowDrawer
+        step={selectedStep}
+        mock={mock}
+        onClose={() => setSelectedId(null)}
+        onDrill={onDrill}
+      />
     </div>
   );
 }
 
-export function FlowExplorer({ flow, mock }: { flow: Flow; mock: MockData | null }) {
+export function FlowExplorer({
+  flow,
+  mock,
+  flowNames = {},
+  onDrill,
+}: {
+  flow: Flow;
+  mock: MockData | null;
+  flowNames?: Record<string, string>;
+  onDrill?: (childFlowId: string) => void;
+}) {
   return (
     <ReactFlowProvider>
-      <ExplorerInner flow={flow} mock={mock} />
+      <ExplorerInner flow={flow} mock={mock} flowNames={flowNames} onDrill={onDrill} />
     </ReactFlowProvider>
   );
 }

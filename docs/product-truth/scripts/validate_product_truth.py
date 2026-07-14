@@ -14,13 +14,19 @@ Checks performed:
 
 DERIVED-VS-SOURCE checks (ERROR — the generator is the single writer; any drift here
 means generate_product_truth.py was not run):
-  D1. Each step/branch `impl_status` equals the value recomputed from the work_status
-      of its `implements` ACs (via the shared generator logic).
+  D1. Each step/branch `impl_status` equals the value recomputed via the shared
+      generator logic — from the child flow's rollup when the step has `expands_to`,
+      otherwise from the work_status of its `implements` ACs (precedence
+      expands_to > implements > not_started).
   D2. Each AC's `product_truth` equals the by_ac inversion of the flow `implements`
       edges (and no AC carries a product_truth that no flow references).
   D3. index.json by_component / by_entity / by_flow / by_ac equal a fresh rebuild.
   D4. Every step/branch `screen` resolves to a registered mockup artifact —
       WARNING when the flow's readiness != approved, ERROR when it is approved.
+  D5. Drill-down hierarchy integrity: every step `expands_to` resolves to a
+      registered flow (no dangling), no flow transitively expands into itself
+      (no cycle), and the by_flow parents/expands hierarchy view equals a fresh
+      rebuild from the shared generator functions.
 
 The derivation logic is imported from generate_product_truth so the validator and the
 generator agree by construction (one definition of the todo->not_started mapping, the
@@ -52,7 +58,9 @@ from generate_product_truth import (
     build_by_component,
     build_by_entity,
     build_by_flow,
-    compute_node_impl_status,
+    build_expands_map,
+    build_parents_map,
+    compute_node_status,
     iter_nodes,
     load_flows,
     load_mocks,
@@ -142,15 +150,80 @@ def _check_flow(flow: dict, ac_ids: set[str], errors: list[str], warnings: list[
 
 
 def _check_impl_status(flows: dict, ac_map: dict, errors: list[str]) -> None:
-    """D1 — each node's impl_status must equal the value derived from AC work_status."""
+    """D1 — each node's impl_status must equal the derived value.
+
+    Uses the shared generator derivation, so a step with `expands_to` is checked
+    against the child flow's rollup and a plain step against its `implements`
+    (precedence expands_to > implements > not_started) — validator and generator
+    agree by construction.
+    """
     for flow in flows.values():
         for node, kind in iter_nodes(flow):
-            derived = compute_node_impl_status(node.get("implements", []), ac_map)
+            derived = compute_node_status(node, ac_map, flows)
             actual = node.get("impl_status")
             if actual != derived:
                 errors.append(
                     f"[impl_status] {flow['id']} {kind} '{node['id']}': impl_status={actual} != derived {derived}"
                 )
+
+
+def _find_expands_cycles(flows: dict) -> list[list[str]]:
+    """Return every cycle in the step.expands_to graph (edges to registered flows only)."""
+    edges = {
+        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to") in flows})
+        for flow_id, flow in flows.items()
+    }
+    white, gray, black = 0, 1, 2
+    color = {flow_id: white for flow_id in edges}
+    stack: list[str] = []
+    cycles: list[list[str]] = []
+
+    def visit(node: str) -> None:
+        color[node] = gray
+        stack.append(node)
+        for nxt in edges[node]:
+            if color[nxt] == gray:
+                cycles.append(stack[stack.index(nxt):] + [nxt])
+            elif color[nxt] == white:
+                visit(nxt)
+        stack.pop()
+        color[node] = black
+
+    for flow_id in sorted(edges):
+        if color[flow_id] == white:
+            visit(flow_id)
+    return cycles
+
+
+def _check_expands(flows: dict, index: dict, errors: list[str]) -> None:
+    """Hierarchy integrity — dangling expands_to, cycles, and parents/hierarchy drift.
+
+    * Every step `expands_to` must resolve to a registered flow (ERROR if dangling).
+    * No flow may transitively expand into itself (ERROR on cycle).
+    * The by_flow hierarchy view (parents + expands) must equal a fresh rebuild from
+      the shared generator derivation functions (same style as by_ac / impl_status).
+    """
+    registered = set(flows)
+    for flow in flows.values():
+        for step in flow.get("steps", []):
+            child_id = step.get("expands_to")
+            if child_id and child_id not in registered:
+                errors.append(
+                    f"[expands] {flow['id']} step '{step['id']}': expands_to '{child_id}' "
+                    "resolves to no registered flow"
+                )
+    for cycle in _find_expands_cycles(flows):
+        errors.append(f"[expands] cycle detected: {' -> '.join(cycle)}")
+
+    parents_map = build_parents_map(flows)
+    expands_map = build_expands_map(flows)
+    by_flow = index.get("by_flow", {})
+    for flow_id in flows:
+        entry = by_flow.get(flow_id, {})
+        if entry.get("parents") != parents_map[flow_id]:
+            errors.append(f"[expands] by_flow['{flow_id}'].parents does not match a fresh rebuild — run generate_product_truth.py")
+        if entry.get("expands") != expands_map[flow_id]:
+            errors.append(f"[expands] by_flow['{flow_id}'].expands does not match a fresh rebuild — run generate_product_truth.py")
 
 
 def _check_product_truth(ac_records: dict, by_ac: dict, errors: list[str]) -> None:
@@ -311,6 +384,7 @@ def main() -> int:
     _check_product_truth(ac_records, by_ac, errors)
     _check_derived_indexes(index, flows, flow_paths, mocks, ac_records, errors)
     _check_screens(flows, mockups, errors, warnings)
+    _check_expands(flows, index, errors)
 
     for warn in warnings:
         logger.warning("WARN: %s", warn)

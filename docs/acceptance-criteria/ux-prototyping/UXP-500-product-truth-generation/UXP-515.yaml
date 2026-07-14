@@ -1,4 +1,6 @@
 id: UXP-515
+readiness: reviewed
+priority: medium
 title: "Mockup is a first-class artifact type whose screen resolves from flow steps"
 component: ux-prototyping
 level: L2

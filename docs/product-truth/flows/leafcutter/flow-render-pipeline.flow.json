@@ -3,6 +3,7 @@
   "component": "ux-prototyping",
   "product": "Leafcutter",
   "name": "How a flow renders in the Atlas",
+  "level": "pipeline",
   "summary": "The data pipeline that turns a stored flow into the picture you see on the Atlas /flows page: the loader reads the flow file and the store index as JSON, each step is resolved to its acceptance criterion's live work_status, and the resulting graph is drawn — so the render always reflects the real, current implementation status rather than a hand-maintained badge.",
   "kind": "data",
   "source": "real",

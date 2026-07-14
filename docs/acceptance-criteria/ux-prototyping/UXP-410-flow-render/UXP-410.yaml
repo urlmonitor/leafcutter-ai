@@ -1,4 +1,6 @@
 id: UXP-410
+readiness: reviewed
+priority: medium
 title: "The /flows loader reads the flow and index JSON from the product-truth store"
 component: ux-prototyping
 level: L2

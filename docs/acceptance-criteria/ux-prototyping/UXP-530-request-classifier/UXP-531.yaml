@@ -1,4 +1,6 @@
 id: UXP-531
+readiness: reviewed
+priority: medium
 title: "A gold eval set covers the outcome space for the classifier"
 component: ux-prototyping
 level: L2

@@ -1,4 +1,6 @@
 id: UXP-511
+readiness: reviewed
+priority: medium
 title: "Generator inverts flow->AC edges into a by_ac index and rebuilds the reverse indexes"
 component: ux-prototyping
 level: L2

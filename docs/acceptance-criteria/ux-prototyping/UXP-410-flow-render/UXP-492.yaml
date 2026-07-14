@@ -1,4 +1,6 @@
 id: UXP-492
+readiness: reviewed
+priority: medium
 title: "A flow renders live in the Atlas, coloured by each step's acceptance-criteria status"
 component: ux-prototyping
 level: L1

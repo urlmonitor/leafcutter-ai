@@ -1,4 +1,6 @@
 id: UXP-421
+readiness: reviewed
+priority: medium
 title: "The Atlas reads the product-truth store live and renders its flows"
 component: ux-prototyping
 level: L2

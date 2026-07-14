@@ -1,4 +1,6 @@
 id: UXP-422a
+readiness: reviewed
+priority: medium
 title: "An agent searches the product-truth store and extends existing artifacts rather than duplicating them"
 component: ux-prototyping
 level: L2

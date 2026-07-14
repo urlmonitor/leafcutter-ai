@@ -3,6 +3,7 @@
   "component": "ux-prototyping",
   "product": "Fern & Fig",
   "name": "Customer tracks an order",
+  "level": "journey",
   "summary": "A returning customer opens their past orders, drills into one, and tracks its shipment. Reuses the same Plant / Customer / Order dataset as the buy-a-plant flow (extended, not duplicated).",
   "kind": "user",
   "source": "mock",
