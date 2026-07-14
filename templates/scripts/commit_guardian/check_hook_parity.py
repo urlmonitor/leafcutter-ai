@@ -19,12 +19,14 @@ ARCHITECTURE: Reads directory/manifest paths from a 'hook_parity' section in
     2. Manifest parity: legacy manifest hook IDs vs canonical manifest hook IDs
        (disabled hooks still require canonical parity).
     3. Deployed output parity: canonical template dir vs deployed output dir.
-       Skips with an info message if deployed output dir does not exist or is not
-       a directory. Downgrades missing-script findings to informational warnings
-       (exit 0) — a present-but-stale deployed dir (state after adding a hook to
-       the canonical template before build.py runs) is indistinguishable from
-       genuine template->deployed drift; blocking on this check would cause the
-       hook to self-block its own commit. Run build.py to resolve any gap.
+       If deployed output dir does not exist → skip with an info message (exit 0);
+       pre-build staging state must not self-block. If deployed dir exists but is
+       missing canonical scripts → informational warning only (exit 0); a present-
+       but-stale deployed dir is indistinguishable from genuine drift. Run
+       build.py to resolve gaps. If deployed dir exists AND a script is present in
+       BOTH locations but byte-content differs → blocking violation (exit 1); the
+       deployed dir's existence is the build-freshness signal confirming build.py
+       has run, so content divergence represents genuinely stale deployed code.
     Runtime-manifest vs canonical-manifest comparison (L-3) is intentionally
     omitted: build.py overwrites scripts/commit_guardian/commit_guardian.json
     directly from templates/scripts/commit_guardian/commit_guardian.json on every
@@ -36,6 +38,7 @@ ARCHITECTURE: Reads directory/manifest paths from a 'hook_parity' section in
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -216,6 +219,31 @@ def _load_manifest_hook_ids(manifest_path: Path) -> set[str] | None:
 
 
 # ---------------------------------------------------------------------------
+# Content-hash helper
+# ---------------------------------------------------------------------------
+
+
+def _compute_file_hash(path: Path) -> str | None:
+    """Compute the SHA-256 hex digest of a file's byte contents.
+
+    Args:
+        path: Absolute path to the file to hash.
+
+    Returns:
+        Hex digest string, or None if the file cannot be read (OSError).
+    """
+    try:
+        content = path.read_bytes()
+    except OSError as exc:
+        print(
+            f"check-hook-parity: WARNING — cannot read {path} for hashing: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    return hashlib.sha256(content).hexdigest()
+
+
+# ---------------------------------------------------------------------------
 # Individual checks
 # ---------------------------------------------------------------------------
 
@@ -307,19 +335,22 @@ def check_deployed_parity(
     patterns: list[str],
     excluded: set[str],
 ) -> list[str]:
-    """Verify every script in canonical_dir exists in deployed_dir.
+    """Verify every script in canonical_dir exists in deployed_dir with identical content.
 
-    If deployed_dir does not exist or is not a directory, emits a single
-    informational message to stderr and skips the check — this is not a
-    violation.
+    If deployed_dir does not exist or is not a directory, emits an informational
+    message to stderr and skips the check — pre-build staging state must not
+    self-block.
 
     If deployed_dir exists but is missing canonical scripts, emits an
-    informational warning to stderr and returns no violations (exit 0).
-    Rationale: a present-but-stale deployed dir (the state immediately after
-    adding a hook script to the canonical template before running build.py) is
-    indistinguishable from genuine template->deployed drift. Blocking on this
-    check would cause the hook to self-block its own commit. Run build.py to
-    regenerate the deployed output dir and resolve the gap.
+    informational warning to stderr (non-blocking) — a present-but-stale
+    deployed dir (state after adding a hook script before running build.py)
+    is indistinguishable from genuine drift. Run build.py to resolve.
+
+    If deployed_dir exists AND a script is present in BOTH canonical and deployed
+    locations but byte content differs, that is a BLOCKING violation. The deployed
+    dir's existence is the build-freshness signal: if build.py has run and produced
+    the deployed dir, any content divergence means canonical changed but the
+    deployed copy was not regenerated.
 
     Args:
         canonical_dir: Absolute path to the canonical template directory.
@@ -328,8 +359,9 @@ def check_deployed_parity(
         excluded: Filenames to suppress from comparison.
 
     Returns:
-        Always returns an empty list — deployed-output discrepancies are
-        downgraded to informational warnings (never blocking).
+        List of human-readable violation strings for content-hash mismatches
+        (blocking). Missing-script findings are non-blocking INFO warnings.
+        Pre-build state (deployed dir absent) always returns an empty list.
     """
     if not deployed_dir.is_dir():
         # L-2: use is_dir() so an exists-but-is-a-file path is treated as absent.
@@ -344,20 +376,39 @@ def check_deployed_parity(
     canonical_scripts = _collect_hook_scripts(canonical_dir, patterns, excluded)
     deployed_scripts = _collect_hook_scripts(deployed_dir, patterns, excluded)
 
-    missing = sorted(canonical_scripts - deployed_scripts)
-    if not missing:
-        return []
-
-    # M-3: downgrade to informational warning (exit 0) — never block.
+    # Missing-script check: downgrade to informational (non-blocking).
     # Cannot distinguish present-but-stale from genuine drift without a
     # reliable freshness signal. See ARCHITECTURE docstring for rationale.
-    print(
-        f"check-hook-parity: INFO — the following scripts exist in canonical template "
-        f"dir ({canonical_dir}) but are absent from deployed output dir ({deployed_dir}): "
-        f"{', '.join(missing)}. Run build.py to regenerate deployed output. (Non-blocking.)",
-        file=sys.stderr,
-    )
-    return []
+    missing = sorted(canonical_scripts - deployed_scripts)
+    if missing:
+        print(
+            f"check-hook-parity: INFO — the following scripts exist in canonical template "
+            f"dir ({canonical_dir}) but are absent from deployed output dir ({deployed_dir}): "
+            f"{', '.join(missing)}. Run build.py to regenerate deployed output. (Non-blocking.)",
+            file=sys.stderr,
+        )
+
+    # Content-hash check: BLOCKING for scripts present in BOTH locations.
+    # The deployed dir's existence is the build-freshness signal confirming
+    # build.py has run; content divergence means the deployed copy is stale.
+    violations: list[str] = []
+    for name in sorted(canonical_scripts & deployed_scripts):
+        canonical_file = canonical_dir / name
+        deployed_file = deployed_dir / name
+        canonical_hash = _compute_file_hash(canonical_file)
+        deployed_hash = _compute_file_hash(deployed_file)
+        if canonical_hash is None or deployed_hash is None:
+            # Hash failed — fail-open, skip this file.
+            continue
+        if canonical_hash != deployed_hash:
+            violations.append(
+                f"  Script '{name}': content diverged between canonical "
+                f"({canonical_dir}) and deployed ({deployed_dir}).\n"
+                f"  canonical SHA-256: {canonical_hash[:16]}...  "
+                f"deployed SHA-256: {deployed_hash[:16]}...\n"
+                f"  Fix: run build.py to regenerate the deployed output."
+            )
+    return violations
 
 
 # ---------------------------------------------------------------------------
@@ -486,6 +537,14 @@ if __name__ == "__main__":
 #   BP-100i-3-i: deployed output dir absent → skip with info to stderr, exit 0.
 #   BP-100i-2-i: disabled hooks still require canonical parity (build.py reads
 #   canonical manifest regardless of enabled state).
+# - 2026-07-14 [python-coder/TICKET-20260709-CommitGuardianHardeningFollowups]:
+#   AC-1: Added content-hash enforcement to check_deployed_parity(). Previously
+#   always returned [] (filename/ID only comparison, content-blind). Now: for
+#   scripts present in BOTH canonical and deployed, computes SHA-256 and blocks
+#   on divergence. The deployed dir's existence is the build-freshness signal
+#   (if no deployed dir → pre-build state → skip). Missing scripts in deployed
+#   dir remain non-blocking INFO. Added _compute_file_hash() helper.
+#   hashlib import added. ARCHITECTURE docstring updated.
 # - 2026-07-08 [python-coder/remediation]: Applied 10-finding code review fixes.
 #   H-1: Added top-level except Exception fail-open in main() + extracted
 #   _run_checks(); hardened _load_config and _load_manifest_hook_ids against
