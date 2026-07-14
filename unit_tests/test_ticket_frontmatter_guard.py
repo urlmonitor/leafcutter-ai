@@ -614,6 +614,7 @@ class TestNullAndEmptyAxesBO6103i(unittest.TestCase):
             ("change_target_null", lambda: _check_change_target({"change_target": None})),
             ("change_target_empty_list", lambda: _check_change_target({"change_target": []})),
             ("risk_surface_null", lambda: _check_risk_surface({"risk_surface": None})),
+            ("risk_surface_empty_list", lambda: _check_risk_surface({"risk_surface": []})),
             ("risk_surface_empty_str", lambda: _check_risk_surface({"risk_surface": ""})),
         ]
         for case_name, check_fn in cases:

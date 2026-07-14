@@ -329,6 +329,11 @@ def _check_risk_surface(fm: dict) -> list[str]:
             f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
         ]
     if isinstance(value, list):
+        if not value:
+            return [
+                f"'risk_surface' must not be an empty list. "
+                f"Valid values: {', '.join(ALLOWED_RISK_SURFACES)}"
+            ]
         errors = []
         for entry in value:
             if not isinstance(entry, str) or entry not in ALLOWED_RISK_SURFACES:
@@ -789,5 +794,9 @@ DECISION HISTORY
   (3) Added _check_estimated_complexity(): absent/null → no error (defaults to M);
       present + invalid (e.g. "XL") → error with "Valid values:" wording (BO-630-1-i).
   (4) Wired _check_estimated_complexity into validate().
+- 2026-07-14 [EPIC-BOPhantomDoneRemediation/03 pr-reviewer H-1 fix]: Added empty-list
+  guard to _check_risk_surface (mirroring _check_change_target). risk_surface: [] now
+  returns a "must not be an empty list" error. Added risk_surface_empty_list subtest to
+  TestNullAndEmptyAxesBO6103i in test_ticket_frontmatter_guard.py.
 ====================================================================
 """

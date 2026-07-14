@@ -24,7 +24,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: failed
   commit: signed_off
   pull-request: signed_off
 ---
@@ -74,7 +74,7 @@ tests:
 - [x] test-writer — 2026-07-14 17:00
 - [x] python-coder — 2026-07-14 18:00
 - [x] test-runner — 2026-07-14 18:20
-- [ ] pr-reviewer
+- [ ] pr-reviewer — failed 2026-07-14 19:45
 - [x] commit — 2026-07-14 18:35
 - [x] pull-request — 2026-07-14 19:00
 
@@ -183,6 +183,17 @@ completion_manifest:
   failure_report_structured: true
 All 22 tests pass (22 subtests) in unit_tests/test_ticket_frontmatter_guard.py. Ran as a single-file action (python -m pytest -v); suite confirms required-field enforcement for change_target/risk_surface (BO-610-3-i, BO-610-4, BO-610-4-i) and estimated_complexity validation (BO-630-1-i).
 
+### 2026-07-14 19:45 — pr-reviewer (status: blocker)
+feedback-id: (submit-failed)
+completion_manifest:
+  high_confidence_findings_found:
+    result: false
+    reason: "H-1: _check_risk_surface does not reject an empty list. risk_surface: [] passes validation silently while change_target: [] is correctly rejected. BO-610-3-i requires both null AND empty to be rejected for both fields. The test suite also lacks a risk_surface_empty_list subtest in TestNullAndEmptyAxesBO6103i."
+    remediation: "Respawn python-coder to add the empty-list guard to _check_risk_surface (mirror the 'if not value:' check already present in _check_change_target) and add risk_surface_empty_list to TestNullAndEmptyAxesBO6103i.test_null_or_empty_axis_is_rejected cases. Re-run all 22+ tests to confirm green."
+  medium_confidence_findings: true
+  low_findings_suppressed: true
+Reviewed diff (templates/hooks/ticket_frontmatter_guard.py +94, unit_tests/test_ticket_frontmatter_guard.py +290 vs origin/main). One high-confidence finding blocks merge: _check_risk_surface accepts risk_surface: [] without error — the empty-list guard present in _check_change_target is absent in the parallel function, and the matching test case is missing. Three medium findings (duplicate tests, stale "CURRENTLY RED" docstrings, unnecessary setUp pattern) are noted below but do not block after the H-1 fix. Handoff back to python-coder for targeted fix; re-queue pr-reviewer after rework.
+
 ### 2026-07-14 19:00 — pull-request (status: ok)
 feedback-id: fb_2026-07-14_6ed4bf2f
 completion_manifest:
@@ -190,3 +201,11 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281) already open for branch EPIC-BOPhantomDoneRemediation; ticket 03 implementation commits (templates/hooks/ticket_frontmatter_guard.py +94 lines, unit_tests/test_ticket_frontmatter_guard.py +290 lines) are included. No new PR creation needed. Sign-off written; status remains todo pending pr-reviewer.
+
+### 2026-07-14 20:00 — commit (status: ok)
+feedback-id: fb_2026-07-14_006942db
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (follow-up): subject "fix(guardrail): add empty-list guard to _check_risk_surface, add risk_surface_empty_list test (BO-610-3-i H-1)"; staged files: templates/hooks/ticket_frontmatter_guard.py, unit_tests/test_ticket_frontmatter_guard.py, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/03_bo600_frontmatter_guard_require.md. Applied pr-reviewer H-1 fix: mirrored the empty-list guard from _check_change_target into _check_risk_surface, and added risk_surface_empty_list subtest to TestNullAndEmptyAxesBO6103i. All 22 tests pass (23 subtests).
