@@ -19,10 +19,10 @@ files_touched:
   - unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
@@ -77,11 +77,73 @@ tests:
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
+- [x] test-writer — 2026-07-14 14:00
+- [x] python-coder — 2026-07-14 15:00
+- [x] test-runner — 2026-07-14 15:30
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-14 15:00 — python-coder (status: ok)
+feedback-id: fb_2026-07-14_7ca11b97
+completion_manifest:
+  _check_done_folder_prohibition_extended: true
+  old_path_kwarg_added: true
+  99_done_detection_added: true
+  LEAFCUTTER_FINALIZE_ARCHIVE_carveout_added: true
+  pytest_ac_enforcement_assertion_type_guard_added: true
+  import_os_added: true
+  red_baseline_tests_green: true
+  ruff_clean: true
+context_capsule:
+  agent_id: python-coder
+  intent: "Extended _check_done_folder_prohibition with move-based detection (old_path kwarg), 99_done folder support, and LEAFCUTTER_FINALIZE_ARCHIVE carve-out; patched pytest_ac_enforcement to not XFAIL-mask non-AssertionError failures."
+  files_touched_rationale: |
+    templates/scripts/commit_guardian/_signoff_parity_checks.py: updated _check_done_folder_prohibition signature, logic, and added import os
+    scripts/ac_store/pytest_ac_enforcement.py: added assertion-type guard before XFAIL conversion
+  consumers_checked: |
+    Single call site: check_ticket_signoff_parity.py:143 — uses old_path=None default, backward compat preserved
+  red_baseline: |
+    test_done_folder_move_blocked, test_in_place_done_edit_not_blocked, test_99_done_move_caught
+  design_constraints: |
+    old_path defaults to None for backward compat; presence-based fallback retained for callers without rename info; 99_done carve-out only when env flag is set
+All 3 red-baseline tests (TypeError on old_path kwarg) are now green. Ruff clean on both changed files. The pytest_ac_enforcement change ensures implementation errors (TypeError, ImportError) stay RED instead of being masked as XFAIL.
+
+red_baseline_results:
+  - test_name: test_done_folder_move_blocked
+    result: green
+  - test_name: test_in_place_done_edit_not_blocked
+    result: green
+  - test_name: test_99_done_move_caught
+    result: green
+
+### 2026-07-14 14:00 — test-writer (status: ok)
+feedback-id: fb_2026-07-14_81217e4b
+completion_manifest:
+  test_done_folder_move_blocked: true
+  test_in_place_done_edit_not_blocked: true
+  test_99_done_move_caught: true
+  import_path_fixed: true
+
+Wrote 3 red-baseline tests for BO-400c-3, BO-400c-3-i, BO-400c-3-ii.  Fixed the import path from `scripts/commit_guardian/` (wrong — only contains JSON/wrappers in this worktree) to `templates/scripts/commit_guardian/` (canonical Python source).  All 3 tests fail with `TypeError: _check_done_folder_prohibition() got an unexpected keyword argument 'old_path'` — the correct red state indicating that python-coder must extend the function signature.
+
+red_baseline:
+  - test_name: test_done_folder_move_blocked
+    file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py
+    error: "TypeError: _check_done_folder_prohibition() got an unexpected keyword argument 'old_path'"
+  - test_name: test_in_place_done_edit_not_blocked
+    file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py
+    error: "TypeError: _check_done_folder_prohibition() got an unexpected keyword argument 'old_path'"
+  - test_name: test_99_done_move_caught
+    file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py
+    error: "TypeError: _check_done_folder_prohibition() got an unexpected keyword argument 'old_path'"
+
+### 2026-07-14 15:30 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_a333f7d7
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+All 3 done-folder parity tests pass: test_done_folder_move_blocked, test_in_place_done_edit_not_blocked, test_99_done_move_caught (3 passed in 0.24s). Test file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py.

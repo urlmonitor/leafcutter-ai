@@ -114,29 +114,44 @@ class TestChangeTargetValidation(unittest.TestCase):
             msg="Error message should mention the offending value 'database'.",
         )
 
-    def test_absent_change_target_passes(self):
-        """Missing change_target field must return no errors (backward compatibility)."""
-        # covers: BO-610-3
+    def test_absent_change_target_is_rejected(self):
+        """Absent change_target must produce a required-field error (BO-610-4).
+
+        Previously this test asserted backward-compat (absent = no error).
+        The AC has changed: change_target is now REQUIRED. Absent field must
+        return a non-empty error list that mentions 'change_target'.
+        """
+        # covers: BO-610-4
         errors = _check_change_target({})
-        self.assertEqual(
-            errors,
-            [],
+        self.assertGreater(
+            len(errors),
+            0,
             msg=(
-                "Absent change_target should produce no errors for backward "
-                f"compatibility, got: {errors}"
+                "Absent change_target must produce a required-field error (BO-610-4), "
+                "got no errors."
             ),
         )
+        combined = " ".join(errors)
+        self.assertIn(
+            "change_target",
+            combined,
+            msg="Required-field error must mention 'change_target' (BO-610-4).",
+        )
 
-    def test_null_change_target_passes(self):
-        """Explicit None (YAML null) change_target must return no errors."""
-        # covers: BO-610-3
+    def test_null_change_target_is_rejected(self):
+        """Explicit None (YAML null) change_target must produce an error (BO-610-3-i).
+
+        Previously this test asserted null = no error. The AC (BO-610-3-i)
+        requires null to be rejected with a non-empty error list.
+        """
+        # covers: BO-610-3-i
         errors = _check_change_target({"change_target": None})
-        self.assertEqual(
-            errors,
-            [],
+        self.assertGreater(
+            len(errors),
+            0,
             msg=(
-                "change_target: null should produce no errors (treated as absent), "
-                f"got: {errors}"
+                "change_target: null must produce an error (BO-610-3-i), "
+                "got no errors."
             ),
         )
 
@@ -280,29 +295,44 @@ class TestRiskSurfaceValidation(unittest.TestCase):
             msg="Error message should mention the offending value 'reputation'.",
         )
 
-    def test_absent_risk_surface_passes(self):
-        """Missing risk_surface field must return no errors (backward compatibility)."""
+    def test_absent_risk_surface_is_rejected(self):
+        """Absent risk_surface must produce a required-field error (BO-610-4).
+
+        Previously this test asserted backward-compat (absent = no error).
+        The AC has changed: risk_surface is now REQUIRED. Absent field must
+        return a non-empty error list that mentions 'risk_surface'.
+        """
         # covers: BO-610-4
         errors = _check_risk_surface({})
-        self.assertEqual(
-            errors,
-            [],
+        self.assertGreater(
+            len(errors),
+            0,
             msg=(
-                "Absent risk_surface should produce no errors for backward "
-                f"compatibility, got: {errors}"
+                "Absent risk_surface must produce a required-field error (BO-610-4), "
+                "got no errors."
             ),
         )
+        combined = " ".join(errors)
+        self.assertIn(
+            "risk_surface",
+            combined,
+            msg="Required-field error must mention 'risk_surface' (BO-610-4).",
+        )
 
-    def test_null_risk_surface_passes(self):
-        """Explicit None (YAML null) risk_surface must return no errors."""
-        # covers: BO-610-4
+    def test_null_risk_surface_is_rejected(self):
+        """Explicit None (YAML null) risk_surface must produce an error (BO-610-3-i).
+
+        Previously this test asserted null = no error. The AC (BO-610-3-i)
+        requires null to be rejected with a non-empty error list.
+        """
+        # covers: BO-610-3-i
         errors = _check_risk_surface({"risk_surface": None})
-        self.assertEqual(
-            errors,
-            [],
+        self.assertGreater(
+            len(errors),
+            0,
             msg=(
-                "risk_surface: null should produce no errors (treated as absent), "
-                f"got: {errors}"
+                "risk_surface: null must produce an error (BO-610-3-i), "
+                "got no errors."
             ),
         )
 
@@ -473,6 +503,204 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
                 + "\n".join(failures)
                 + "\nRebuild each section to use the 6 ADR-017 risk_surface values."
             ),
+        )
+
+
+# ===========================================================================
+# BO-610-4, BO-610-4-i
+# change_target and risk_surface are now REQUIRED fields (not optional).
+# These tests are CURRENTLY RED because the guard treats both as optional.
+# ===========================================================================
+
+
+class TestRequiredAxesBO6104(unittest.TestCase):
+    """BO-610-4 + BO-610-4-i: change_target and risk_surface must be required.
+
+    Currently the guard returns [] for absent change_target and absent
+    risk_surface.  The AC requires a required-field error in both cases.
+    These tests are RED until python-coder flips the optional → required
+    logic.
+    """
+
+    def test_absent_change_target_is_rejected(self):
+        # covers: BO-610-4
+        # covers: BO-610-4-i
+        """Absent change_target / risk_surface must fail with a required-field error.
+
+        CURRENTLY RED: both _check_change_target({}) and _check_risk_surface({}) return []
+        because the fields are treated as optional.  python-coder must make them required.
+        """
+        with self.subTest(missing="change_target"):
+            errors = _check_change_target({})
+            self.assertGreater(
+                len(errors),
+                0,
+                msg=(
+                    "Absent change_target must produce a required-field error (BO-610-4)."
+                    " Got no errors — field is still treated as optional."
+                ),
+            )
+            combined = " ".join(errors)
+            self.assertIn(
+                "change_target",
+                combined,
+                msg="Error message must mention 'change_target' (BO-610-4).",
+            )
+        with self.subTest(missing="risk_surface"):
+            errors = _check_risk_surface({})
+            self.assertGreater(
+                len(errors),
+                0,
+                msg=(
+                    "Absent risk_surface must produce a required-field error (BO-610-4)."
+                    " Got no errors — field is still treated as optional."
+                ),
+            )
+            combined = " ".join(errors)
+            self.assertIn(
+                "risk_surface",
+                combined,
+                msg="Error message must mention 'risk_surface' (BO-610-4).",
+            )
+
+    def test_both_axes_absent_surfaces_both_errors(self):
+        # covers: BO-610-4-i
+        """When both fields are absent, validation must surface errors for both.
+
+        BO-610-4-i requires the error report to list both missing fields in a
+        single pass — not stop at the first missing field.
+        """
+        ct_errors = _check_change_target({})
+        rs_errors = _check_risk_surface({})
+        self.assertGreater(
+            len(ct_errors),
+            0,
+            msg="change_target absent must produce an error (BO-610-4-i).",
+        )
+        self.assertGreater(
+            len(rs_errors),
+            0,
+            msg="risk_surface absent must produce an error (BO-610-4-i).",
+        )
+
+
+# ===========================================================================
+# BO-610-3-i
+# Null or empty change_target / risk_surface must be rejected.
+# Replaces the inverted tests test_null_change_target_passes and
+# test_null_risk_surface_passes (which assert the wrong behavior).
+# ===========================================================================
+
+
+class TestNullAndEmptyAxesBO6103i(unittest.TestCase):
+    """BO-610-3-i: null or empty change_target / risk_surface must produce errors.
+
+    These tests are CURRENTLY RED because null values are treated as absent
+    (silently ignored) and an empty list produces no errors.
+    """
+
+    def test_null_or_empty_axis_is_rejected(self):
+        # covers: BO-610-3-i
+        """Null / empty change_target and null risk_surface must be rejected.
+
+        CURRENTLY RED for subtests: null/empty-list change_target and null
+        risk_surface — _check_* returns [] for these cases.  The AC requires
+        a non-empty error list.
+
+        Note: empty-string risk_surface is already rejected by the enum check
+        (not in ALLOWED_RISK_SURFACES), so that subtest passes immediately.
+        """
+        cases = [
+            ("change_target_null", lambda: _check_change_target({"change_target": None})),
+            ("change_target_empty_list", lambda: _check_change_target({"change_target": []})),
+            ("risk_surface_null", lambda: _check_risk_surface({"risk_surface": None})),
+            ("risk_surface_empty_str", lambda: _check_risk_surface({"risk_surface": ""})),
+        ]
+        for case_name, check_fn in cases:
+            with self.subTest(case=case_name):
+                errors = check_fn()
+                self.assertGreater(
+                    len(errors),
+                    0,
+                    msg=(
+                        f"Case '{case_name}': null/empty value must produce an error "
+                        f"(BO-610-3-i). Got no errors — value is silently accepted."
+                    ),
+                )
+
+
+# ===========================================================================
+# BO-630-1-i
+# estimated_complexity: absent/null → no error (default M); invalid → error
+# _check_estimated_complexity does not yet exist; all tests in this class
+# are CURRENTLY RED (AssertionError from _require()).
+# ===========================================================================
+
+
+class TestEstimatedComplexityBO6301i(unittest.TestCase):
+    """BO-630-1-i: estimated_complexity validation.
+
+    _check_estimated_complexity does not yet exist in ticket_frontmatter_guard.
+    All tests below fail via self.fail() until python-coder adds the function.
+    """
+
+    def setUp(self):
+        import importlib
+
+        try:
+            mod = importlib.import_module("ticket_frontmatter_guard")
+            self._checker = getattr(mod, "_check_estimated_complexity", None)
+        except ImportError:
+            self._checker = None
+
+    def _require(self):
+        """Return the checker or call self.fail() — produces AssertionError (valid red)."""
+        if self._checker is None:
+            self.fail(
+                "_check_estimated_complexity is not yet implemented in "
+                "ticket_frontmatter_guard (BO-630-1-i). "
+                "python-coder must add this validator and wire it into validate()."
+            )
+        return self._checker
+
+    def test_ac_bo630_1i_absent_complexity_no_error(self):
+        # covers: BO-630-1-i
+        """Absent estimated_complexity must produce no error (defaults to M, BO-630-1-i)."""
+        checker = self._require()
+        errors = checker({})
+        self.assertEqual(
+            errors,
+            [],
+            msg="Absent estimated_complexity must produce no error (defaults to M, BO-630-1-i).",
+        )
+
+    def test_ac_bo630_1i_null_complexity_no_error(self):
+        # covers: BO-630-1-i
+        """Null estimated_complexity must produce no error (treated as absent → M, BO-630-1-i)."""
+        checker = self._require()
+        errors = checker({"estimated_complexity": None})
+        self.assertEqual(
+            errors,
+            [],
+            msg="Null estimated_complexity must produce no error (BO-630-1-i).",
+        )
+
+    def test_ac_bo630_1i_invalid_xl_complexity_is_rejected(self):
+        # covers: BO-630-1-i
+        """Invalid 'XL' estimated_complexity must produce an error (BO-630-1-i)."""
+        checker = self._require()
+        errors = checker({"estimated_complexity": "XL"})
+        self.assertGreater(
+            len(errors),
+            0,
+            msg="Invalid 'XL' estimated_complexity must produce an error (BO-630-1-i).",
+        )
+        combined = " ".join(errors)
+        self.assertIn("XL", combined, msg="Error must mention 'XL' (BO-630-1-i).")
+        self.assertIn(
+            "Valid values:",
+            combined,
+            msg="Error must use 'Valid values:' wording (BO-630-1-i).",
         )
 
 
