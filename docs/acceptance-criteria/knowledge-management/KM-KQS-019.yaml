@@ -1,4 +1,6 @@
 id: KM-KQS-019
+readiness: reviewed
+priority: medium
 components:
   - knowledge-management
 title: "paths.json surfaces section does not break check_paths_integrity.py"

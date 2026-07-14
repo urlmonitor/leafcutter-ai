@@ -1,4 +1,6 @@
 id: KM-KQS-028
+readiness: reviewed
+priority: medium
 components:
   - knowledge-management
 title: "depends_on value that is already a bare node ID is passed through unchanged"

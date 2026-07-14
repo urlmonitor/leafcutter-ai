@@ -1,4 +1,6 @@
 id: INF-600a-1
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Registry declares every skill an agent invokes, with invocation mode"

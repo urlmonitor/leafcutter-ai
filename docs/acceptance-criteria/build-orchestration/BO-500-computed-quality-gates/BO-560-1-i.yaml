@@ -1,4 +1,6 @@
 id: BO-560-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Work agent with missing produces trait causes chain computation to fail gracefully"

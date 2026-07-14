@@ -1,4 +1,6 @@
 id: BO-700c-1
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Each changelog entry includes the parent L0 title and the L1 feature title"

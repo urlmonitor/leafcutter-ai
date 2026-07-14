@@ -943,6 +943,32 @@
                 "_comment": "KM-KGS-100e-3: Blocks commits when a staged agent/skill/roadmap registry entry lacks a non-empty `components` field. Glossary surface is automatically exempt (edge_fields: [] in paths.json). DISABLED until a backfill adds `components` to all registry entries — enabling now would block all changes to agent_registry.json, skill_registry.json, and roadmap.json. Registry-membership validation deferred. See module docstring for full rationale."
             },
             {
+                "id": "check-product-truth-validate",
+                "tier": "judgment",
+                "name": "Validate Product-Truth Store (schema + anti-phantom-done truth gate)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/validate_product_truth.py --quiet",
+                "language": "system",
+                "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ProductTruthTrust: Runs docs/product-truth/scripts/validate_product_truth.py when any product-truth artifact (flow/mock/mockup/index/schema/eval) OR any AC YAML is staged. jsonschema is a HARD dependency (validator exits 2 if absent — never a silent no-op). Enforces schema conformance, cross-ref integrity, derived-vs-source parity, and the anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by a BUILT flow (realization absent or 'built') must carry non-empty implemented_by or covered_by; mock/spec flows are exempt. Exits non-zero on any error. Wired alongside check-product-truth-generate to stop derived live-status drift and phantom-done from landing."
+            },
+            {
+                "id": "check-product-truth-generate",
+                "tier": "judgment",
+                "name": "Check Product-Truth Derived-Data Drift (generator --check)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/generate_product_truth.py --check --quiet",
+                "language": "system",
+                "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ProductTruthTrust: Runs the single-writer generator in --check mode (computes all derived data, writes nothing, exits non-zero if ANY flow impl_status/impl_summary, AC product_truth, or index by_* map would change). Fires when a product-truth artifact or AC YAML is staged so an AC work_status flip that would drift the derived live status becomes a hard commit failure until generate_product_truth.py is re-run."
+            },
+            {
                 "id": "precommit-canary",
                 "tier": "judgment",
                 "name": "Pre-commit canary (PRECOMMIT_CANARY_OK probe)",

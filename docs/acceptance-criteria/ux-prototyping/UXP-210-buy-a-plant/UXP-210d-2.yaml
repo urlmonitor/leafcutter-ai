@@ -1,0 +1,46 @@
+id: UXP-210d-2
+readiness: reviewed
+priority: high
+title: "Declined payment is handled without creating an order"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a cart with at least one item and a signed-in customer,
+  When the customer pays and the payment is declined,
+  Then no Order is created, the cart is preserved, and a clear payment-declined error offers another payment method.
+depends_on: [UXP-210d]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Failure branch of the checkout screen; reads Customer + the pending Order,
+  writes nothing (the Order is NOT promoted to 'paid') and surfaces a retryable
+  payment error.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/customer-buys-a-plant
+    node: paymentFailed
+    node_kind: branch
+    flow_kind: user
+    screen: checkout
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Customer
+      - Order
+    source: mock
+    asof: '2026-07-14'

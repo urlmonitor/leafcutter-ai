@@ -1,4 +1,6 @@
 id: BO-550-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "IT PO modifying agents map for testing is rejected in favor of test_constraints"

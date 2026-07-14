@@ -1,4 +1,6 @@
 id: INF-500b-1
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Build system deploys feedback-analysis skill, feedback-analyst agent, and command"

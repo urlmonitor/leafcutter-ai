@@ -1,4 +1,6 @@
 id: BO-650-4
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Architect asks PO/BA clarifying questions when intent is ambiguous"

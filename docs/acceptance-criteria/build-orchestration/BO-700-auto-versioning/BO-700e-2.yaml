@@ -1,4 +1,6 @@
 id: BO-700e-2
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "A pre-release validation scan reports tickets missing changelog entries"

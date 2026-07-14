@@ -1,4 +1,6 @@
 id: BP-200a-4
+readiness: reviewed
+priority: medium
 title: "Agent template pre-flight reads load PROJECT_CONTEXT and signoff skill before any write"
 component: build_pipeline
 level: L2

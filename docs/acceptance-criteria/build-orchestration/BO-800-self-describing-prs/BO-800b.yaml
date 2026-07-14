@@ -1,4 +1,6 @@
 id: BO-800b
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "PR descriptions tell you what value this change delivers"

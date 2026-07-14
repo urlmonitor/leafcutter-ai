@@ -42,3 +42,15 @@ covered_by:
   - "tests/test_ac_fulfillment_gate.py"
 change_target: prompt
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: acfulfill
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Diff
+    source: real
+    asof: '2026-07-14'

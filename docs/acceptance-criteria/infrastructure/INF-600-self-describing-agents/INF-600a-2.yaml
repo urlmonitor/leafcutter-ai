@@ -1,4 +1,6 @@
 id: INF-600a-2
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Agent frontmatter declares structured inputs, outputs, and mutates"

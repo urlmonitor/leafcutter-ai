@@ -1,0 +1,60 @@
+{
+  "$comment": "GOLD pipeline-prompt: the required inputs and expected output of the mockup-author agent (UXP-541). Hand-authored reference. Output conforms to docs/product-truth/schemas/mockup.schema.json plus a self-contained HTML rendering. The screen is populated from the drafted mock data (not placeholder text) and registers a screen id that flow steps can resolve.",
+  "agent": "mockup-author",
+  "implements": ["UXP-541"],
+  "purpose": "Draft (or extend in place) each screen the request implies, populated from the drafted mock data, registering a screen id the flow's steps resolve via step.screen.",
+  "input": {
+    "classification": {
+      "user_request": "Add a stock badge (in stock / low / out) to each plant card.",
+      "needs_mockup": true,
+      "component": "ux-prototyping",
+      "entities": ["Plant"],
+      "decision": "create"
+    },
+    "mock_data": {
+      "mock_data_ref": "fern-and-fig/catalog",
+      "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+      "records_used": "entities.Plant.records (Monstera in-stock / Fiddle-leaf low-stock / Snake out-of-stock — the three stock states the badge must show)"
+    },
+    "search_result": {
+      "index_ref": "docs/product-truth/index.json",
+      "matched_screen": "plant-listing",
+      "action": "extend_in_place",
+      "note": "The plant card lives on the existing plant-listing screen; extend it rather than create a new screen."
+    }
+  },
+  "expected_output": {
+    "action": "extend",
+    "mockup_artifact": {
+      "id": "fern-and-fig/plant-listing",
+      "component": "ux-prototyping",
+      "screen": "plant-listing",
+      "title": "Plant listing",
+      "summary": "The catalogue grid of plant cards; each card now carries a colour-coded stock badge (in stock / low stock / out of stock) derived from the Plant.stock/status of the fern-and-fig/catalog records.",
+      "entities": ["Plant"],
+      "source": "mock",
+      "renders": "plant-listing.html",
+      "status": "active",
+      "superseded_by": null,
+      "readiness": "draft",
+      "version": 2,
+      "tags": ["catalog", "listing"],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "provenance": [
+        { "action": "extended", "by": "mockup-author", "date": "2026-07-14", "note": "Added the per-card stock badge (in-stock/low-stock/out-of-stock) populated from Plant.status; three states shown by Monstera/Fiddle-leaf/Snake." }
+      ]
+    },
+    "html_rendering": {
+      "path": "docs/product-truth/mockups/fern-and-fig/plant-listing.html",
+      "requirement": "Self-contained HTML; each of the three catalog Plant records rendered as a card with its real name/price and a badge whose label + colour reflect its status (in-stock=green, low-stock=amber, out-of-stock=grey). No lorem-ipsum — values come from the mock records."
+    }
+  },
+  "rules": [
+    "ALWAYS search index.json before writing: if the screen already exists (by screen id), EXTEND its mockup + HTML in place, bump version, append provenance, keep the artifact id and screen id.",
+    "Only CREATE a new <product>/<name>.mockup.json (+ .html) when the screen does not exist.",
+    "The 'screen' field is the bare id flow steps reference via step.screen — it MUST be resolvable by the product-truth validator for any approved flow that names it.",
+    "Populate the screen from the mock_data_ref records — never placeholder/lorem text (UXP-541).",
+    "Every entity MUST be a member of index.json entity_registry; set mock_data_ref to the dataset id whose records populate the screen.",
+    "Do NOT hand-edit the derived index maps or impl fields — after writing the mockup + HTML and registering the artifact in index.json artifacts[], run docs/product-truth/scripts/generate_product_truth.py, then validate_product_truth.py."
+  ]
+}

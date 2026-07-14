@@ -1,4 +1,4 @@
-import { getFlows, mockById } from "@/lib/data/flows";
+import { getFlows, mockById, getScreenTitles } from "@/lib/data/flows";
 import { PageHeader, EmptyState } from "@/components/ui/kit";
 import { FlowsView } from "@/components/flows/flows-view";
 import type { MockData } from "@/lib/data/types";
@@ -34,5 +34,7 @@ export default function FlowsPage() {
     mocks[f.id] = f.mockDataRef ? mockById(f.mockDataRef) ?? null : null;
   }
 
-  return <FlowsView flows={flows} mocks={mocks} />;
+  const screenTitles = getScreenTitles();
+
+  return <FlowsView flows={flows} mocks={mocks} screenTitles={screenTitles} />;
 }

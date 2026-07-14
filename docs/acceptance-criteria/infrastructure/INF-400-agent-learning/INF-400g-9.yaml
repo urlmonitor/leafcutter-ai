@@ -1,4 +1,6 @@
 id: INF-400g-9
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "aggregate.py returns non-empty output for subagent-quality after an epic drive"

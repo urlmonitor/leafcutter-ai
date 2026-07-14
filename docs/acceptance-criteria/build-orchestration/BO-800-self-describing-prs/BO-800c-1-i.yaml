@@ -1,4 +1,6 @@
 id: BO-800c-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "A ticket with zero L2/L3 ACs produces an empty test plan section with a note"

@@ -1,4 +1,6 @@
 id: ACS-100h-5
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Post-split validation confirms no cycles, no dangling refs, and limits respected"

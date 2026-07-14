@@ -1,4 +1,6 @@
 id: FIN-100a-3
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Temporary baseline worktree is cleaned up on any exit path"

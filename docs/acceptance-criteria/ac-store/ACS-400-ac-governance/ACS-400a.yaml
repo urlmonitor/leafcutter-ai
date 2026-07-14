@@ -1,4 +1,6 @@
 id: ACS-400a
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Only requirement authors can define what 'done' means"

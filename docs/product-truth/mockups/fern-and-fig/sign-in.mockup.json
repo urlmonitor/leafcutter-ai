@@ -1,0 +1,19 @@
+{
+  "id": "fern-and-fig/sign-in",
+  "component": "ux-prototyping",
+  "screen": "sign-in",
+  "title": "Sign in",
+  "summary": "STUB — registered so the customer-buys-a-plant flow's `signin` step resolves. Asks the customer to sign in or create an account before checkout, preserving the cart. Not yet drawn; see plant-listing / checkout for the gold-reference shape.",
+  "entities": ["Customer"],
+  "source": "mock",
+  "renders": null,
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 1,
+  "tags": ["auth", "checkout", "stub"],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "provenance": [
+    { "action": "authored", "by": "BrainCandy (product-truth hardening pass)", "date": "2026-07-14", "note": "Stub registration for the new sign-in flow step; HTML to be authored by the mockup agent, matching plant-listing / checkout quality." }
+  ]
+}

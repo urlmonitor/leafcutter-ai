@@ -3,17 +3,18 @@
   "component": "ux-prototyping",
   "screen": "cart",
   "title": "Cart",
-  "summary": "STUB — registered so the customer-buys-a-plant flow's `cart` step resolves. Shows the plant, quantity, unit price and a running total before payment. Not yet drawn; see plant-listing for the gold-reference shape.",
+  "summary": "The cart screen: the plant, quantity, unit price and a running total before payment, with a proceed-to-checkout action. Populated by hand from the pending open-cart Order 1050 (ZZ Plant, EUR 28). Also renders the empty-cart state (branch emptyCart) as a second state.",
   "entities": ["Order", "Plant"],
   "source": "mock",
-  "renders": null,
+  "renders": "cart.html",
   "status": "active",
   "superseded_by": null,
-  "readiness": "draft",
-  "version": 1,
-  "tags": ["checkout", "stub"],
+  "readiness": "reviewed",
+  "version": 2,
+  "tags": ["checkout"],
   "mock_data_ref": "fern-and-fig/catalog",
   "provenance": [
-    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Stub registration for flow screen resolution; HTML to be authored by the mockup agent, matching plant-listing quality." }
+    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Stub registration for flow screen resolution; HTML to be authored by the mockup agent, matching plant-listing quality." },
+    { "action": "extended", "by": "BrainCandy (product-truth hardening pass)", "date": "2026-07-14", "note": "Drawn: cart.html authored by hand from the pending Order 1050 record plus the empty-cart branch state, matching the plant-listing gold-reference style; readiness draft → reviewed." }
   ]
 }

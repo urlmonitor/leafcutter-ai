@@ -1,4 +1,6 @@
 id: BP-100g-5
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "build.py allows mcp__ prefixed tools in allowed-tools"

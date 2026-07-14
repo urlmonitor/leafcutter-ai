@@ -1,4 +1,6 @@
 id: BP-006a
+readiness: reviewed
+priority: medium
 title: "skill_registry.json includes all skill directories so test_no_orphaned_directories passes"
 component: build_pipeline
 level: L1

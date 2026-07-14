@@ -7,6 +7,7 @@
   "summary": "The internal workflow python-coder runs when the build pipeline's code step hands it a red baseline: it loads the project conventions / PROJECT_CONTEXT, edits only the ticket's files_touched to satisfy the red baseline, runs doc-enforcer on the changed Python, runs complexity-reduction, runs the suite until it is green, and finally records its sign-off via the signoff skill. This is the agent-altitude drill-down beneath the code step of how-a-ticket-is-built.",
   "kind": "data",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
@@ -25,6 +26,9 @@
       "human": "python-coder loads the project conventions / PROJECT_CONTEXT so it writes code that matches the repo's error-handling, style, and structure rules.",
       "order": 1,
       "agent": "python-coder",
+      "implements": [
+        "BO-2000b"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -34,6 +38,9 @@
       "human": "python-coder edits only the ticket's files_touched to satisfy the red baseline handed over by test-writer.",
       "order": 2,
       "agent": "python-coder",
+      "implements": [
+        "BP-1100a"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -43,6 +50,9 @@
       "human": "doc-enforcer runs over the changed .py files to enforce docstring and documentation conventions.",
       "order": 3,
       "agent": "doc-enforcer",
+      "implements": [
+        "BO-2000b"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -52,6 +62,9 @@
       "human": "python-coder runs complexity-reduction to keep the new code within the repo's complexity budget.",
       "order": 4,
       "agent": "python-coder",
+      "implements": [
+        "BO-2000b"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -61,6 +74,9 @@
       "human": "test-runner runs the suite until every red_baseline test passes.",
       "order": 5,
       "agent": "test-runner",
+      "implements": [
+        "BO-530-2"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -70,6 +86,9 @@
       "human": "python-coder records the sign-off via the signoff skill, updating the ticket frontmatter and the Sign-offs checklist together.",
       "order": 6,
       "agent": "python-coder",
+      "implements": [
+        "BO-2000a"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     }

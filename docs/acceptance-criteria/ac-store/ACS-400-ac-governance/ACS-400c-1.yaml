@@ -1,4 +1,6 @@
 id: ACS-400c-1
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "New AC creation records origin_agent identifying the author"

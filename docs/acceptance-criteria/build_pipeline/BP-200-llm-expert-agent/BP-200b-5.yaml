@@ -1,4 +1,6 @@
 id: BP-200b-5
+readiness: reviewed
+priority: medium
 title: "Nesting rules section documents the depth-3 cap and spawn_allowlist contract"
 component: build_pipeline
 level: L2

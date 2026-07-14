@@ -1,4 +1,6 @@
 id: BP-200b-2
+readiness: reviewed
+priority: medium
 title: "Shell convention section documents violation patterns with wrong and right examples"
 component: build_pipeline
 level: L2

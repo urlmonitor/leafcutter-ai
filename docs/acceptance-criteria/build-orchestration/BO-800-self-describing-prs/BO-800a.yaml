@@ -1,4 +1,6 @@
 id: BO-800a
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "PR titles come from the benefit statement, not from a commit summary"
@@ -25,3 +27,15 @@ covered_by: [BO-800a-1]
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: pr
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Commit
+      - PR
+    source: real
+    asof: '2026-07-14'

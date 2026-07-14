@@ -1,4 +1,6 @@
 id: BO-510-1
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Agent registry entries carry a produces trait field from a defined enum"

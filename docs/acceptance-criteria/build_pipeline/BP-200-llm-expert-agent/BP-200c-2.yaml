@@ -1,4 +1,6 @@
 id: BP-200c-2
+readiness: reviewed
+priority: medium
 title: "Registry entry has DSL trigger conditions matching agent/skill template file patterns"
 component: build_pipeline
 level: L2

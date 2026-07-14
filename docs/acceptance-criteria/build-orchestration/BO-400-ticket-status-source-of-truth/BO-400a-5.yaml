@@ -1,4 +1,6 @@
 id: BO-400a-5
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "ticket-prioritizer excludes in_progress tickets from the ready set"

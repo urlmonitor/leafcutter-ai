@@ -1,4 +1,6 @@
 id: BO-630-2
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "High complexity tasks route to the deeper-reasoning model tier"

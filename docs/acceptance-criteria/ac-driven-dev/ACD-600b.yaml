@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 criteria: |
   Given a post-merge hook fires after a ticket branch is merged into main,
   When the merge includes ticket files that have status: done and a source_ac field,
@@ -36,7 +36,9 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [ACD-600b-1, ACD-600b-2]
-implemented_by: []
+implemented_by:
+- templates/workflows-js/finalize-feature.js
+- scripts/ac_store/mark_ac_done.py
 change_target: code
 risk_surface: contract_boundary
 product_truth:

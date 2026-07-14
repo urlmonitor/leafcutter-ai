@@ -1,4 +1,6 @@
 id: BO-200b-3
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Automatic retry attempts commit again after recoverable hook failure"

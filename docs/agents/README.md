@@ -530,6 +530,17 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [ticket-supervisor](coding/ticket-supervisor.md) | Sonnet | Internal | — | Drives a single ticket through its phase agents (read `agents:` map → spawn next `needed` → parse comment → route ok/handoff/blocker/question); runs failure-adjudication ladder; holds the commit-phase lock. Invoked only by `epic-supervisor`. [EPIC-AgentSupervisor ticket 08] |
 | [worktree-agent](coding/worktree-agent.md) | Haiku | Confirmation-gated | `/worktree` | Wraps `feature` skill (create, non-destructive) and `close-worktree` workflow (remove, confirmation-gated). [EPIC-CodingAgents ticket 14] |
 
+### `product-truth/` family
+
+Writers of the product-truth store (`docs/product-truth/`) — the classify → mock-data → mockups → flow authoring pipeline behind define-a-feature's draft step. Each searches `index.json`, applies the add-vs-create rule (extend the one canonical artifact, never duplicate), writes to schema, registers the artifact in `index.json` `artifacts[]`, then runs `generate_product_truth.py` (the single writer of all derived data). See [author-product-truth.flow.json](../product-truth/flows/leafcutter/author-product-truth.flow.json).
+
+| Name | Tier | Visibility | Slash command(s) | Notes |
+|---|---|---|---|---|
+| `pt-classifier` | Haiku | Internal | — | Routing gate: decides needs_flow / needs_mock_data / needs_mockup, derives the outcome (full-set / mockup+data / mockup-only / mock-data-only / none) + component/entities/decision; read-only, returns JSON. Scored against `classifier/eval.jsonl`. Implements UXP-530 / UXP-543. |
+| `mock-data-author` | Opus | Internal | — | Drafts or EXTENDS the one canonical `*.mock.json` dataset for the classified entities (realistic records, invariant-consistent). Enforces one-canonical-dataset-per-entity-per-component. Implements UXP-540. |
+| `mockup-author` | Sonnet | Internal | — | Drafts or extends each screen (`*.mockup.json` + self-contained HTML) populated from the mock data, registering a screen id the flow resolves via `step.screen`. Implements UXP-541. |
+| `flow-author` | Opus | Internal | — | Assembles or extends a `*.flow.json` journey: ordered steps wired to screens + read/write entities, one `acceptance_scenario` per step for the business-analyst. Leaves `step.implements` / `impl_status` to the BA / generator. Implements UXP-542. |
+
 ### `ops/` family
 
 | Name | Tier | Visibility | Slash command(s) | Notes |

@@ -1,0 +1,46 @@
+id: UXP-210d-3
+readiness: reviewed
+priority: medium
+title: "Plant that sold out after being carted blocks checkout"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a cart holding a plant that has since dropped to zero stock,
+  When the customer attempts to pay,
+  Then payment is blocked, no Order is created, and the customer is told the item is no longer available.
+depends_on: [UXP-210d]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Failure branch of the checkout screen; re-reads Plant stock against the pending
+  Order at pay time and blocks the sale when stock has fallen to zero, without
+  creating an Order.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/customer-buys-a-plant
+    node: outOfStockAtCheckout
+    node_kind: branch
+    flow_kind: user
+    screen: checkout
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+      - Plant
+    source: mock
+    asof: '2026-07-14'

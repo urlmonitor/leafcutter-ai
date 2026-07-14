@@ -1,4 +1,6 @@
 id: BO-800c-1
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "PR test plan section lists all L2/L3 Gherkin scenarios from the ticket's AC lineage"

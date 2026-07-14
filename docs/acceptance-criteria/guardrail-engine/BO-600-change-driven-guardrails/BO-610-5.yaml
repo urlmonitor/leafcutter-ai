@@ -1,4 +1,6 @@
 id: BO-610-5
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Unrecognized change_target or risk_surface value is rejected at validation"

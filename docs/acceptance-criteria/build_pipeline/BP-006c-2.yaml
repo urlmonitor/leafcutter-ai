@@ -1,4 +1,6 @@
 id: BP-006c-2
+readiness: reviewed
+priority: medium
 title: "test_build_workflow_phase validates .claude/workflows/ path"
 component: build_pipeline
 level: L2

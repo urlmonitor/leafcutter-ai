@@ -1,4 +1,6 @@
 id: ACS-400d-2
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Governance rules are included by default with no opt-in required"

@@ -1,4 +1,6 @@
 id: BO-700e
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Trust that every shipped change has a changelog entry"

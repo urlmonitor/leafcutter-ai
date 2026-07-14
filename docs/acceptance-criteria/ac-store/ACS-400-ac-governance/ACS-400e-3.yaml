@@ -1,4 +1,6 @@
 id: ACS-400e-3
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Non-AC files in the same commit are not affected by governance rejection"

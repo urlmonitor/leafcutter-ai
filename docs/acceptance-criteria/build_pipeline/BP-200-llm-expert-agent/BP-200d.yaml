@@ -1,4 +1,6 @@
 id: BP-200d
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "Audit any prompt file against the quality checklist on demand"

@@ -1,4 +1,6 @@
 id: BP-006
+readiness: reviewed
+priority: medium
 title: "Build pipeline test suite passes without manual intervention"
 component: build_pipeline
 level: L0

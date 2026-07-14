@@ -1,4 +1,6 @@
 id: INF-600
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Understand any agent without reading its source"

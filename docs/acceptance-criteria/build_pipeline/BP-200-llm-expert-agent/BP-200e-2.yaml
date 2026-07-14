@@ -1,4 +1,6 @@
 id: BP-200e-2
+readiness: reviewed
+priority: medium
 title: "Agent emits a structured completion report showing checklist pass/fail per item"
 component: build_pipeline
 level: L2

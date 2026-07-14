@@ -1,4 +1,6 @@
 id: BO-640
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "The system challenges high complexity before accepting it"

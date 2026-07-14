@@ -1,4 +1,6 @@
 id: ACS-400c
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Every criteria change is traceable to the agent that made it"

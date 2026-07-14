@@ -1,4 +1,6 @@
 id: INF-500a-3-i
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "SHA override mode sets git_commit_count to None (distinguishes from zero-commit)"

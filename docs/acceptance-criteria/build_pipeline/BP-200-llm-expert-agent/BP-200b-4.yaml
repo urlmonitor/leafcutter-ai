@@ -1,4 +1,6 @@
 id: BP-200b-4
+readiness: reviewed
+priority: medium
 title: "Signoff protocol section documents the three-place parity guard and timestamp format"
 component: build_pipeline
 level: L2

@@ -1,4 +1,6 @@
 id: BO-300b
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Single-ticket completion shows summary, worktree, test hints, and finalize command"

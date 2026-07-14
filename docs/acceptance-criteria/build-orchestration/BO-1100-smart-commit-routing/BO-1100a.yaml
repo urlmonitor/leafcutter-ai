@@ -37,3 +37,15 @@ implemented_by:
 - tickets/00_inbox/TICKET-20260608-BO-1100a.md
 change_target: code
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: commit
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Commit
+      - Diff
+    source: real
+    asof: '2026-07-14'

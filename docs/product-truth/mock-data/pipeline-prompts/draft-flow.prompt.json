@@ -1,0 +1,61 @@
+{
+  "$comment": "GOLD pipeline-prompt: the required inputs and expected output of the flow-author agent (UXP-542). Hand-authored reference showing the EXTEND path (clf-017: gift-wrap step added to the existing checkout journey). Output conforms to docs/product-truth/schemas/flow.schema.json. Each step is wired to a screen + read/write entities and carries one acceptance_scenario the business-analyst turns into ACs.",
+  "agent": "flow-author",
+  "implements": ["UXP-542", "UXP-422a"],
+  "purpose": "Assemble (or EXTEND) a draft flow — ordering steps and wiring each to its screen and the entities it reads/writes, with an acceptance_scenario per node — from the drafted mock data and mockups.",
+  "input": {
+    "classification": {
+      "user_request": "Add an optional gift-wrap step to the existing checkout flow.",
+      "needs_flow": true,
+      "component": "ux-prototyping",
+      "entities": ["Order"],
+      "decision": "extend",
+      "extends": "fern-and-fig/customer-buys-a-plant"
+    },
+    "mock_data": { "mock_data_ref": "fern-and-fig/catalog" },
+    "mockups": [
+      { "screen": "gift-wrap", "id": "fern-and-fig/gift-wrap", "note": "new screen drafted by mockup-author, populated from the Order records" }
+    ],
+    "search_result": {
+      "index_ref": "docs/product-truth/index.json",
+      "matched_flow": "fern-and-fig/customer-buys-a-plant",
+      "action": "extend_in_place",
+      "note": "A new step in an existing journey is a step ADDED to that flow, not a new flow (README add-vs-create)."
+    }
+  },
+  "expected_output": {
+    "action": "extend",
+    "target_id": "fern-and-fig/customer-buys-a-plant",
+    "realization": "spec",
+    "$realization_note": "realization/source stays 'mock' for a drafted-but-unbuilt journey; set to 'real' only once the screens are built. impl_status per node is DERIVED by the generator from each step's implements[] — never hand-authored.",
+    "new_step": {
+      "id": "gift-wrap",
+      "label": "Gift wrap",
+      "human": "Before paying, the customer can optionally choose gift wrapping, which is added to the order.",
+      "order": 4,
+      "screen": "gift-wrap",
+      "reads": ["Order"],
+      "writes": ["Order"],
+      "implements": [],
+      "$implements_note": "left empty by flow-author; the business-analyst authors the L2/L3 ACs from the acceptance_scenario below and back-links them via step.implements (UXP-402)."
+    },
+    "reordered": "existing checkout/confirmed steps shift order to make room; step ids are stable and unique.",
+    "new_acceptance_scenario": {
+      "for": "gift-wrap",
+      "given": "a cart with at least one item at checkout",
+      "when": "the customer opts into gift wrapping",
+      "then": "the gift-wrap option is recorded on the Order before payment"
+    },
+    "provenance": [
+      { "action": "extended", "by": "flow-author", "date": "2026-07-14", "note": "Inserted the optional gift-wrap step (screen gift-wrap; reads/writes Order) into the existing purchase journey with its acceptance_scenario; did not create a new flow." }
+    ]
+  },
+  "rules": [
+    "ALWAYS search index.json (by_flow / by_component) before writing: a screen that belongs to an existing journey is a STEP ADDED to that flow — extend in place, bump version, append provenance, keep the flow id.",
+    "Only CREATE a new <product>/<name>.flow.json when the request is a genuinely new journey.",
+    "Every step.screen MUST resolve to a mockup screen id; every reads/writes entity MUST be a member of index.json entity_registry; set mock_data_ref to the populating dataset.",
+    "Author exactly one acceptance_scenario per step/branch (schema requires for/given/when/then; 'for' is the step or branch id).",
+    "Leave step.implements EMPTY — the business-analyst derives the ACs and writes the back-links (the flow->AC direction is the source of truth).",
+    "Set status (active) and readiness (draft). Do NOT hand-author impl_status / impl_summary / by_ac — those are DERIVED. After writing the flow and registering it in index.json artifacts[], run docs/product-truth/scripts/generate_product_truth.py (rebuilds derived data + the .md rendering), then validate_product_truth.py."
+  ]
+}

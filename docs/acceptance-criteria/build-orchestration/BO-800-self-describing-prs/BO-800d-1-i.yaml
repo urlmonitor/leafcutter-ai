@@ -1,4 +1,6 @@
 id: BO-800d-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "An AC that was superseded mid-drive is excluded from the PR description"

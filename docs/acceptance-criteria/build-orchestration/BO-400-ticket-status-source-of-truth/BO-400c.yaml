@@ -1,4 +1,6 @@
 id: BO-400c
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "The done/ subfolder convention is deprecated and replaced by frontmatter queries"

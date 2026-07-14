@@ -1,4 +1,6 @@
 id: BO-400b-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Script refuses done when agents map has needed entries"

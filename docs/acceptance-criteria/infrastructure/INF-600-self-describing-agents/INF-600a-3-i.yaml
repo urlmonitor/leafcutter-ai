@@ -1,4 +1,6 @@
 id: INF-600a-3-i
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "knowledge_channels rejects channel numbers outside the 1-11 range"

@@ -1,4 +1,6 @@
 id: FIN-100c-3
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Null baseline causes all failures to be treated as regressions"

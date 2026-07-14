@@ -7,6 +7,7 @@
   "summary": "The single-writer data pipeline that keeps the product-truth store self-describing: it builds one work_status map from the AC store, derives each flow step's impl_status and rolls it up into an impl_summary, inverts the authored flow->AC edges into the by_ac index, writes the product_truth back-reference onto each AC, and finally validates that no derived data has drifted from its source. Running it after any AC or flow edit is what makes 'which steps are built' true rather than hand-maintained.",
   "kind": "data",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,

@@ -25,10 +25,12 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/kit";
-import { cn } from "@/lib/utils";
-import { WORK_STATUS_TONE } from "@/lib/status";
+import { cn, humanize } from "@/lib/utils";
+import { WORK_STATUS_TONE, WORK_STATUS_PLAIN } from "@/lib/status";
+import { RealizationBadge } from "./realization-badge";
 import type {
   AcRef,
+  FlowRealization,
   FlowScenario,
   MockData,
   MockEntity,
@@ -40,6 +42,8 @@ export interface StepView {
   label: string;
   human: string;
   screen: string | null;
+  screenTitle?: string | null;    // resolved mockup title for the screen slug
+  realization?: FlowRealization;  // does the parent flow's system exist yet
   variant: "step" | "branch";
   condition?: string;
   status: WorkStatus;
@@ -76,32 +80,64 @@ function Section({
 
 function AcChip({ ac }: { ac: AcRef }) {
   const st = WORK_STATUS_TONE[ac.workStatus] ?? WORK_STATUS_TONE.unknown;
+  const plain = WORK_STATUS_PLAIN[ac.workStatus] ?? WORK_STATUS_PLAIN.unknown;
+  // Lead with the human title + plain-language status so a non-engineer reads the
+  // requirement, not the raw id. The mono id stays available as the engineer
+  // affordance: a secondary line plus the hover tooltip.
+  const hasTitle = Boolean(ac.title && ac.title !== ac.id);
   return (
     <Link
       href={`/atlas?ac=${encodeURIComponent(ac.id)}`}
-      title={`${ac.title || ac.id} — ${st.label}. Open in AC Atlas.`}
+      title={`${ac.id} — ${st.label}. Open in AC Atlas.`}
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[11px] transition-colors",
+        "flex max-w-full flex-col gap-0.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors",
         st.text,
         st.bg,
         st.border,
         "hover:brightness-125",
       )}
     >
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: `hsl(${st.hsl})` }} />
-      <span className="truncate">{ac.id}</span>
-      <span className="opacity-70">· {st.label}</span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{ background: `hsl(${st.hsl})` }}
+        />
+        <span className="truncate font-medium">
+          {hasTitle ? ac.title : ac.id}
+        </span>
+        <span className="shrink-0 opacity-80">· {plain}</span>
+      </span>
+      {hasTitle && (
+        <span className="pl-3 font-mono text-[9px] opacity-60">{ac.id}</span>
+      )}
     </Link>
   );
 }
 
-/** Render the concrete mock records for a single entity as a compact table. */
+/**
+ * Render the concrete mock records for a single entity as a compact table.
+ * Column headers lead with a human label (humanized field name, or the mock's
+ * own field spec when it reads as a label) rather than the raw field name — a
+ * reviewer sees "Price Eur", not "price_eur". The raw field names stay available
+ * on hover and behind a "raw" toggle (the engineer affordance).
+ */
 function EntityRecords({ entity }: { entity: MockEntity }) {
+  const [showRaw, setShowRaw] = React.useState(false);
+
   const cols = React.useMemo(() => {
     const keys = new Set<string>();
     for (const r of entity.records) for (const k of Object.keys(r)) keys.add(k);
     return Array.from(keys);
   }, [entity.records]);
+
+  // Field-name -> spec string ("number — in euros"), for the header tooltip.
+  const specFor = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const f of entity.fields) m[f.name] = f.spec;
+    return m;
+  }, [entity.fields]);
+
+  const headerLabel = (c: string) => (showRaw ? c : humanize(c));
 
   if (entity.records.length === 0) {
     return (
@@ -113,19 +149,33 @@ function EntityRecords({ entity }: { entity: MockEntity }) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-border/70 bg-background/50">
-      <div className="border-b border-border/60 px-2.5 py-1.5 text-[11px] font-medium text-foreground">
-        {entity.name}
-        <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
-          {entity.records.length} record{entity.records.length === 1 ? "" : "s"}
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-2.5 py-1.5">
+        <span className="text-[11px] font-medium text-foreground">
+          {entity.name}
+          <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+            {entity.records.length} record{entity.records.length === 1 ? "" : "s"}
+          </span>
         </span>
+        <button
+          type="button"
+          onClick={() => setShowRaw((v) => !v)}
+          className="rounded border border-border/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          title={showRaw ? "Show human field labels" : "Show raw field names"}
+        >
+          {showRaw ? "Labels" : "Raw fields"}
+        </button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[10px]">
           <thead>
             <tr className="text-left text-muted-foreground">
               {cols.map((c) => (
-                <th key={c} className="whitespace-nowrap px-2 py-1 font-medium">
-                  {c}
+                <th
+                  key={c}
+                  className="whitespace-nowrap px-2 py-1 font-medium"
+                  title={specFor[c] ? `${c} — ${specFor[c]}` : c}
+                >
+                  {headerLabel(c)}
                 </th>
               ))}
             </tr>
@@ -194,7 +244,7 @@ export function FlowDrawer({
             {/* header */}
             <div className="flex items-start justify-between gap-3 border-b border-border/70 p-5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1 font-mono text-xs text-primary">
                     {step.variant === "branch" && <GitBranch className="h-3 w-3" />}
                     {step.id}
@@ -202,6 +252,9 @@ export function FlowDrawer({
                   <Badge tone={st} dot>
                     {st.label}
                   </Badge>
+                  {step.realization && step.realization !== "built" && (
+                    <RealizationBadge realization={step.realization} size="sm" />
+                  )}
                 </div>
                 <h3 className="mt-1 text-sm font-semibold leading-snug text-foreground">
                   {step.label}
@@ -251,8 +304,20 @@ export function FlowDrawer({
 
               {step.screen && (
                 <Section icon={<Monitor className="h-3 w-3" />} title="Screen">
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 px-2 py-1 font-mono text-[11px] text-foreground">
-                    {step.screen}
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 px-2 py-1 text-[11px] text-foreground"
+                    title={
+                      step.screenTitle
+                        ? `Mockup: ${step.screenTitle} (${step.screen})`
+                        : `Screen slug: ${step.screen}`
+                    }
+                  >
+                    {step.screenTitle ?? step.screen}
+                    {step.screenTitle && (
+                      <span className="font-mono text-[9px] text-muted-foreground">
+                        {step.screen}
+                      </span>
+                    )}
                   </span>
                 </Section>
               )}

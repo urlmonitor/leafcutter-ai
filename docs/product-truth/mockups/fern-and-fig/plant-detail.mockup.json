@@ -3,17 +3,18 @@
   "component": "ux-prototyping",
   "screen": "plant-detail",
   "title": "Plant detail",
-  "summary": "STUB — registered so the customer-buys-a-plant flow's `detail` step resolves. Shows one plant's photo, price and stock with an add-to-cart action. Not yet drawn; see plant-listing for the gold-reference shape.",
+  "summary": "One plant's detail screen: large photo, name, price and a colour-coded stock badge, with an add-to-cart action. Populated by hand from the fern-and-fig/catalog Plant records (Monstera Deliciosa as the in-stock case), and showing the out-of-stock notify-me variant (Snake Plant) as a second state.",
   "entities": ["Plant"],
   "source": "mock",
-  "renders": null,
+  "renders": "plant-detail.html",
   "status": "active",
   "superseded_by": null,
-  "readiness": "draft",
-  "version": 1,
-  "tags": ["catalog", "stub"],
+  "readiness": "reviewed",
+  "version": 2,
+  "tags": ["catalog"],
   "mock_data_ref": "fern-and-fig/catalog",
   "provenance": [
-    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Stub registration for flow screen resolution; HTML to be authored by the mockup agent, matching plant-listing quality." }
+    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Stub registration for flow screen resolution; HTML to be authored by the mockup agent, matching plant-listing quality." },
+    { "action": "extended", "by": "BrainCandy (product-truth hardening pass)", "date": "2026-07-14", "note": "Drawn: plant-detail.html authored by hand from the catalog Plant records, matching the plant-listing gold-reference style; readiness draft → reviewed." }
   ]
 }

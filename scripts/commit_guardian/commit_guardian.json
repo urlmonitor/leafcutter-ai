@@ -805,6 +805,32 @@
                 "_comment": "EPIC-WorktreeQualityGateGuard/05: Re-materializes .pre-commit-config.yaml when absent."
             },
             {
+                "id": "check-product-truth-validate",
+                "tier": "judgment",
+                "name": "Validate Product-Truth Store (schema + anti-phantom-done truth gate)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/validate_product_truth.py --quiet",
+                "language": "system",
+                "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ProductTruthTrust: jsonschema is a HARD dependency (exit 2 if absent). Enforces schema, cross-ref integrity, derived-vs-source parity, and the anti-phantom-done truth-evidence gate (done/in_progress AC in a BUILT flow must carry implemented_by or covered_by; mock/spec flows exempt)."
+            },
+            {
+                "id": "check-product-truth-generate",
+                "tier": "judgment",
+                "name": "Check Product-Truth Derived-Data Drift (generator --check)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/generate_product_truth.py --check --quiet",
+                "language": "system",
+                "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ProductTruthTrust: Single-writer generator in --check mode — exits non-zero if any derived field (flow impl_status/impl_summary, AC product_truth, index by_* maps) would change, making live-status drift a hard commit failure."
+            },
+            {
                 "id": "precommit-canary",
                 "name": "Pre-commit canary (PRECOMMIT_CANARY_OK probe)",
                 "entry": "python scripts/commit_guardian/precommit_canary.py",

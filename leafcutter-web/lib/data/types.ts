@@ -283,6 +283,14 @@ export type FlowKind = "user" | "data" | "architecture";
 export type FlowSource = "mock" | "real";
 /** The altitude of a flow in the sub-flow hierarchy. */
 export type FlowLevel = "journey" | "pipeline" | "agent";
+/**
+ * Whether the system a flow describes actually EXISTS yet.
+ *   built — the described system is real; request genuinely flows through it.
+ *   spec  — aspirational / not-yet-built; the map is a plan, not a live system.
+ *   mock  — sample / demo product content (e.g. a fictional shop).
+ * Defaults to "built" when the field is absent on disk.
+ */
+export type FlowRealization = "built" | "spec" | "mock";
 
 /** A product-truth flow (docs/product-truth/flows/**.flow.json). */
 export interface Flow {
@@ -294,6 +302,7 @@ export interface Flow {
   kind: FlowKind;
   source: FlowSource;
   level: FlowLevel;
+  realization: FlowRealization; // does the described system EXIST yet (built|spec|mock)
   status: string;
   readiness: string;
   entities: string[];

@@ -13,6 +13,7 @@
     "level": { "type": "string", "enum": ["journey", "pipeline", "agent"], "description": "Altitude in the drill-down hierarchy: journey = end-to-end; pipeline = a stage's phase chain; agent = an agent's internal workflow. OPTIONAL." },
     "kind": { "type": "string", "enum": ["user", "data", "architecture"], "description": "What the flow describes: a user journey, a data pipeline, or an architecture process." },
     "source": { "type": "string", "enum": ["mock", "real"], "description": "Whether the flow is a mock/demo journey or a real system process." },
+    "realization": { "type": "string", "enum": ["built", "spec", "mock"], "description": "Does the described system/process EXIST in the repo today (independent of AC bookkeeping)? built = it exists and is enforced by the anti-phantom-done truth check; spec = aspirational, not-yet-built; mock = sample/demo product content. OPTIONAL — absent defaults to 'built'. spec/mock flows are EXEMPT from the truth-evidence gate (their steps may badge done/in_progress from seed ACs without implementation evidence)." },
     "summary": { "type": "string", "description": "HUMAN: one-paragraph plain-language description of the whole journey." },
     "status": { "type": "string", "enum": ["active", "deprecated"], "description": "Lifecycle: is this journey live or retired." },
     "readiness": { "type": "string", "enum": ["draft", "reviewed", "approved"], "description": "Review state: has a persona approved it yet." },

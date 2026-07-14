@@ -112,6 +112,10 @@ You READ:
 - Architecture docs and diagrams (docs/architecture/)
 - Standing rules (CLAUDE.md, index.yaml)
 - INDEX.md
+- Product-truth Flow artifacts (docs/product-truth/flows/) and the store index
+  (docs/product-truth/index.json) — read-only input for flow-derived L2/L3 ACs
+  (see §1 Step 8). You never edit these files; they are owned elsewhere and their
+  `implements` / `impl_status` fields are derived by the store's own validator.
 
 You NEVER READ:
 - Source code (.py, .ts, .sql, .js, .sh files)
@@ -261,6 +265,55 @@ described in its `criteria`.
 
 Record the `pattern_ac_inventory`. You will consult it in §3a before writing
 any new L2 AC.
+
+### Step 8 — Product-Truth flow lookup (additional input source)
+
+The product-truth store (`docs/product-truth/`) holds hand-reviewed **Flows** —
+end-to-end journeys a persona (the Product Owner) has approved. When the L1/L0
+you are decomposing traces to a Flow, that Flow's `steps`, `branches`, and
+`acceptance_scenarios` are an **additional, authoritative input** for your
+decomposition. This does NOT replace your normal L2/L3 authoring (Steps 1–7 and
+§3a still govern) — it enriches it with journeys the PO has already signed off,
+so the ACs you write match the reviewed product truth.
+
+This step is read-only and best-effort. Skip gracefully if the store is absent.
+
+1. **Gate.** Check `docs/product-truth/index.json` exists (`Bash ls
+   docs/product-truth/index.json`). If absent, skip this step and decompose
+   normally.
+
+2. **Find the flow.** Two lookup keys in `index.json`:
+   - **`by_ac`** — maps an AC id to the flow node(s) whose `implements` contains
+     it: `by_ac["<L1-or-related-id>"] → [{flow, node, node_kind, screen,
+     entities, ...}]`. Use it when your L1 (or a sibling/child) is already
+     referenced by a flow step.
+   - **`by_flow` / `by_component`** — list the flows for a component. Use these
+     when the L1 is new and no `by_ac` entry exists yet, to locate the journey it
+     belongs to.
+
+3. **Read the flow.** Open `docs/product-truth/flows/<product>/<name>.flow.json`.
+   For each `step` and `branch` relevant to your L1:
+   - **Step → L2 AC.** Derive a Gherkin L2 from the `acceptance_scenarios` entry
+     whose `for` equals the step `id`: map its `given` / `when` / `then` into
+     your `criteria`, then sharpen with concrete values (per your normal §1
+     rigour) drawn from the flow's `mock_data_ref` dataset in
+     `docs/product-truth/mock-data/`.
+   - **Each `branch` → a negative / alternate scenario.** A branch (e.g. the
+     `notify` branch fired by `condition: "plant is out of stock"`) is an edge
+     case — author it as an **L3** AC whose criteria capture the branch
+     `condition` and its `then`.
+
+4. **Back-link steps to your ACs (the UXP-402 step.implements contract).** Each
+   flow step is meant to carry `implements: [<AC ids>]`. You do NOT hand-edit the
+   flow JSON (your `Write` scope is the AC store, and `impl_status` is derived by
+   the store validator). Instead, honour the contract by (a) adding a `doc_links`
+   entry on each flow-derived AC pointing at the `.flow.json`
+   (`relationship: implements`), and (b) reporting a `flow_backlinks` table in
+   your sign-off — one row per flow node → the AC ids you authored for it — so
+   the flow's `implements` back-links can be reconciled by the store's owner.
+
+Behaviors already covered by a §3a pattern still use `implements_pattern`; the
+flow input changes WHAT behaviors you find, not HOW you express shared ones.
 
 ---
 

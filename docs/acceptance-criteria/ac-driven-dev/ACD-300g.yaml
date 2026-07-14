@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 criteria: |
   Given the /create-ac workflow dispatches authoring agents in stages
     (PO v3, BA v3, IT PO v3) with user confirmation gates between them,
@@ -37,7 +37,8 @@ covered_by:
   - ACD-300g-2
   - ACD-300g-3
   - ACD-300g-4
-implemented_by: []
+implemented_by:
+- scripts/workflows/plan-feature.js
 change_target: pipeline
 risk_surface: contract_boundary
 product_truth:

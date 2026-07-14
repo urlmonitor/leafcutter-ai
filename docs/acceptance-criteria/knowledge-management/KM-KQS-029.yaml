@@ -1,4 +1,6 @@
 id: KM-KQS-029
+readiness: reviewed
+priority: medium
 components:
   - knowledge-management
 title: "Node with empty components list produces no component_membership edges"

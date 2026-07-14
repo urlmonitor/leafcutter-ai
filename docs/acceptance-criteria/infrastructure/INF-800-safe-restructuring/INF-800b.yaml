@@ -1,4 +1,6 @@
 id: INF-800b
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Understand how modules relate to each other"

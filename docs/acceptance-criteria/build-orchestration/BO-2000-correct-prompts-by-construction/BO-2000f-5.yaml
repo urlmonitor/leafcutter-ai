@@ -57,3 +57,14 @@ superseded_by: null
 covered_by:
   - BO-2000f-5-i
 implemented_by: []
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: blocked
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ticket
+    source: real
+    asof: '2026-07-14'

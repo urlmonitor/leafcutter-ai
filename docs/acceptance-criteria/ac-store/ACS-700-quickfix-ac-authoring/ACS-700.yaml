@@ -1,4 +1,6 @@
 id: ACS-700
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 status: active

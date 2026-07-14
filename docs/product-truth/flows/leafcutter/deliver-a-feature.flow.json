@@ -7,6 +7,7 @@
   "summary": "The top-altitude journey of shipping a feature with Leafcutter: you say what you want and the acceptance criteria get authored (plan), the wired ticket is driven through its phase agents until it is green and committed (build), and the PR is merged and the epic/ticket closed (finalize). Each of the three stages drills down into its own pipeline flow — plan into define-a-feature, build into how-a-ticket-is-built, finalize into the finalize-feature pipeline — so this journey is the C4 L0 map over the whole delivery system.",
   "kind": "user",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
@@ -25,6 +26,9 @@
       "human": "Say what you want; the ACs get authored.",
       "order": 1,
       "expands_to": "leafcutter/define-a-feature",
+      "implements": [
+        "ACD-300"
+      ],
       "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
@@ -34,7 +38,10 @@
       "human": "The wired ticket is driven through its phase agents.",
       "order": 2,
       "expands_to": "leafcutter/how-acs-are-built",
-      "impl_status": "not_started",
+      "implements": [
+        "BP-300"
+      ],
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -43,7 +50,10 @@
       "human": "The PR is merged and the epic/ticket is closed.",
       "order": 3,
       "expands_to": "leafcutter/finalize-feature",
-      "impl_status": "not_started",
+      "implements": [
+        "FIN-100"
+      ],
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     }
   ],
@@ -78,8 +88,8 @@
   ],
   "impl_summary": {
     "done": 0,
-    "in_progress": 1,
-    "not_started": 2,
+    "in_progress": 3,
+    "not_started": 0,
     "total": 3,
     "asof": "2026-07-14"
   }

@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given any leaf-level AC (L2 or L3) with work_status: todo and all dependencies satisfied,
   When the generator is invoked with that AC's identifier,
@@ -40,7 +40,8 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4]
-implemented_by: []
+implemented_by:
+- scripts/ac_store/generate_ticket_from_ac.py
 change_target: code
 risk_surface: contract_boundary
 product_truth:

@@ -7,6 +7,7 @@
   "summary": "The data flow of an acceptance criterion through the AC-driven pipeline: a plain-language request is triaged, the authoring agents (PO → BA → IT PO) write the AC records into the store, you approve each stage, the scanner surfaces ready ACs, a wired ticket is generated, and once its implementation merges the AC is marked done automatically. Around that spine sit the update paths — scope stays locked to the author, existing code is discovered and back-linked, ACs can be re-homed without breaking references, and retiring an AC forces its code to be reconciled.",
   "kind": "data",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
@@ -44,7 +45,7 @@
       "implements": [
         "ACD-300a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-14"
     },
     {
@@ -73,7 +74,7 @@
         "ACD-300b",
         "ACD-300d"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -99,7 +100,7 @@
         "ACD-300c",
         "ACD-300g"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -123,7 +124,7 @@
       "implements": [
         "ACD-400a"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-14"
     },
     {
@@ -149,7 +150,7 @@
       "implements": [
         "ACD-400b"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-14"
     },
     {
@@ -176,7 +177,7 @@
         "ACD-600a",
         "ACD-600b"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     }
   ],
@@ -289,9 +290,9 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 10,
+    "done": 3,
+    "in_progress": 3,
+    "not_started": 4,
     "total": 10,
     "asof": "2026-07-14"
   },

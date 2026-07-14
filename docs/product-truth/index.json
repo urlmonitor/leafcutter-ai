@@ -36,7 +36,7 @@
       "path": "flows/fern-and-fig/customer-buys-a-plant.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Plant",
         "Customer",
@@ -46,8 +46,8 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 1,
-        "not_started": 3,
-        "total": 6,
+        "not_started": 7,
+        "total": 10,
         "asof": "2026-07-14"
       },
       "tags": [
@@ -67,7 +67,7 @@
       "path": "flows/fern-and-fig/track-an-order.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Order",
         "Customer"
@@ -76,8 +76,8 @@
       "impl_summary": {
         "done": 1,
         "in_progress": 1,
-        "not_started": 1,
-        "total": 3,
+        "not_started": 3,
+        "total": 5,
         "asof": "2026-07-14"
       },
       "tags": [
@@ -243,9 +243,9 @@
         "AcStore"
       ],
       "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 10,
+        "done": 3,
+        "in_progress": 3,
+        "not_started": 4,
         "total": 10,
         "asof": "2026-07-14"
       },
@@ -277,9 +277,9 @@
         "PR"
       ],
       "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 19,
+        "done": 1,
+        "in_progress": 1,
+        "not_started": 17,
         "total": 19,
         "asof": "2026-07-14"
       },
@@ -340,8 +340,8 @@
       "entities": [],
       "impl_summary": {
         "done": 0,
-        "in_progress": 1,
-        "not_started": 2,
+        "in_progress": 3,
+        "not_started": 0,
         "total": 3,
         "asof": "2026-07-14"
       },
@@ -367,8 +367,8 @@
       "entities": [],
       "impl_summary": {
         "done": 0,
-        "in_progress": 0,
-        "not_started": 7,
+        "in_progress": 1,
+        "not_started": 6,
         "total": 7,
         "asof": "2026-07-14"
       },
@@ -415,7 +415,7 @@
       "path": "mock-data/fern-and-fig/catalog.mock.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Plant",
         "Customer",
@@ -458,8 +458,8 @@
       "component": "ux-prototyping",
       "path": "mockups/fern-and-fig/plant-detail.mockup.json",
       "status": "active",
-      "readiness": "draft",
-      "version": 1,
+      "readiness": "reviewed",
+      "version": 2,
       "entities": [
         "Plant"
       ],
@@ -479,8 +479,8 @@
       "component": "ux-prototyping",
       "path": "mockups/fern-and-fig/cart.mockup.json",
       "status": "active",
-      "readiness": "draft",
-      "version": 1,
+      "readiness": "reviewed",
+      "version": 2,
       "entities": [
         "Order",
         "Plant"
@@ -501,8 +501,8 @@
       "component": "ux-prototyping",
       "path": "mockups/fern-and-fig/checkout.mockup.json",
       "status": "active",
-      "readiness": "draft",
-      "version": 1,
+      "readiness": "reviewed",
+      "version": 2,
       "entities": [
         "Customer",
         "Order"
@@ -819,8 +819,8 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 1,
-        "not_started": 3,
-        "total": 6,
+        "not_started": 7,
+        "total": 10,
         "asof": "2026-07-14"
       },
       "expands": [],
@@ -839,8 +839,8 @@
       "impl_summary": {
         "done": 1,
         "in_progress": 1,
-        "not_started": 1,
-        "total": 3,
+        "not_started": 3,
+        "total": 5,
         "asof": "2026-07-14"
       },
       "expands": [],
@@ -856,11 +856,11 @@
         "AcStore"
       ],
       "path": "flows/leafcutter/ac-lifecycle.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 10,
+        "done": 3,
+        "in_progress": 3,
+        "not_started": 4,
         "total": 10,
         "asof": "2026-07-14"
       },
@@ -923,8 +923,8 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 1,
-        "not_started": 2,
+        "in_progress": 3,
+        "not_started": 0,
         "total": 3,
         "asof": "2026-07-14"
       },
@@ -956,11 +956,11 @@
       "level": "pipeline",
       "entities": [],
       "path": "flows/leafcutter/finalize-feature.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 0,
-        "not_started": 7,
+        "in_progress": 1,
+        "not_started": 6,
         "total": 7,
         "asof": "2026-07-14"
       },
@@ -1016,11 +1016,11 @@
         "PR"
       ],
       "path": "flows/leafcutter/how-acs-are-built.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 19,
+        "done": 1,
+        "in_progress": 1,
+        "not_started": 17,
         "total": 19,
         "asof": "2026-07-14"
       },
@@ -1073,6 +1073,19 @@
     }
   },
   "by_ac": {
+    "ACD-300": [
+      {
+        "flow": "leafcutter/deliver-a-feature",
+        "node": "plan",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
     "ACD-300a": [
       {
         "flow": "leafcutter/ac-lifecycle",
@@ -1100,6 +1113,20 @@
         "entities": [
           "Ac",
           "Request"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "itpo",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Ticket"
         ],
         "source": "real",
         "asof": "2026-07-14"
@@ -1197,6 +1224,17 @@
         ],
         "source": "real",
         "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "closeacs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
       }
     ],
     "ACD-600b": [
@@ -1290,6 +1328,503 @@
         "asof": "2026-07-14"
       }
     ],
+    "BO-1100a": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "commit",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Commit",
+          "Diff"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-1300c": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "smoke",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-1400a": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "review",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-2000a": [
+      {
+        "flow": "leafcutter/python-coder-internal",
+        "node": "signoff",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-2000b": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "code",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff",
+          "Test",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/python-coder-internal",
+        "node": "complexity",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/python-coder-internal",
+        "node": "conventions",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/python-coder-internal",
+        "node": "docenforce",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-2000f": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "dispatch",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-2000f-5": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "blocked",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-201": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "acfulfill",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Diff"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-202": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "acfulfill",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Diff"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-400b": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "closeacs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-400c-2": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "archive",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-530-1": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "test",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Test",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-530-2": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "testrun",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff",
+          "Test"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/python-coder-internal",
+        "node": "tests",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-540": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "adr",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "diagram",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-540-1": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "architect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-540-2": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "docs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-800": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "openpr",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BO-800a": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "pr",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Commit",
+          "PR"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BP-014": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "livetest",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BP-1100": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "acval",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Diff",
+          "Test"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BP-1100a": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "scope",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Diff",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/python-coder-internal",
+        "node": "implement",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BP-300": [
+      {
+        "flow": "leafcutter/deliver-a-feature",
+        "node": "build",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "BP-300b": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "status",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "FIN-100": [
+      {
+        "flow": "leafcutter/deliver-a-feature",
+        "node": "finalize",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "FIN-100a": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "baseline",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "FIN-100b": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "mergemain",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "FIN-100c": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "postmerge",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "FIN-100d": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "postmerge",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "FIN-100f": [
+      {
+        "flow": "leafcutter/finalize-feature",
+        "node": "mergepr",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
     "UXP-210a": [
       {
         "flow": "fern-and-fig/customer-buys-a-plant",
@@ -1352,6 +1887,21 @@
         "asof": "2026-07-14"
       }
     ],
+    "UXP-210c-2": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "emptyCart",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "cart",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
     "UXP-210d": [
       {
         "flow": "fern-and-fig/customer-buys-a-plant",
@@ -1363,6 +1913,38 @@
         "entities": [
           "Customer",
           "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210d-2": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "paymentFailed",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer",
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-210d-3": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "outOfStockAtCheckout",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "checkout",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order",
+          "Plant"
         ],
         "source": "mock",
         "asof": "2026-07-14"
@@ -1383,11 +1965,42 @@
         "asof": "2026-07-14"
       }
     ],
+    "UXP-210f": [
+      {
+        "flow": "fern-and-fig/customer-buys-a-plant",
+        "node": "signin",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "sign-in",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
     "UXP-220a": [
       {
         "flow": "fern-and-fig/track-an-order",
         "node": "orders",
         "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "orders-list",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Customer",
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-220a-2": [
+      {
+        "flow": "fern-and-fig/track-an-order",
+        "node": "noOrders",
+        "node_kind": "branch",
         "flow_kind": "user",
         "screen": "orders-list",
         "mock_data": "fern-and-fig/catalog",
@@ -1419,6 +2032,21 @@
         "flow": "fern-and-fig/track-an-order",
         "node": "track",
         "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "shipment-tracking",
+        "mock_data": "fern-and-fig/catalog",
+        "entities": [
+          "Order"
+        ],
+        "source": "mock",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-220c-2": [
+      {
+        "flow": "fern-and-fig/track-an-order",
+        "node": "trackingUnavailable",
+        "node_kind": "branch",
         "flow_kind": "user",
         "screen": "shipment-tracking",
         "mock_data": "fern-and-fig/catalog",

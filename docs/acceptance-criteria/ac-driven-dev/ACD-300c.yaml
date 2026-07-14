@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 criteria: |
   Between each authoring agent's output and the next agent's invocation, the
   workflow presents the produced ACs to the user and waits for explicit
@@ -28,7 +28,8 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [ACD-300c-1, ACD-300c-2, ACD-300c-3]
-implemented_by: []
+implemented_by:
+- scripts/workflows/plan-feature.js
 change_target: pipeline
 risk_surface: contract_boundary
 product_truth:

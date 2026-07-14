@@ -1,4 +1,6 @@
 id: INF-600a-1-i
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "skills_invoked rejects skill IDs that do not resolve to a template or project-local skill"

@@ -4,7 +4,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "reusable": true,
   "tags": ["catalog", "checkout"],
   "invariants": [
@@ -13,7 +13,11 @@
     "Plant.status == 'in-stock' iff Plant.stock > 5",
     "Order.total == Plant.price * Order.qty  (pre-shipping)",
     "Order.customer resolves to a Customer.id",
-    "Order.item resolves to a Plant.id"
+    "Order.item resolves to a Plant.id",
+    "Order.status == 'pending' is an open cart: stage == 'not-shipped', carrier == null, tracking_number == null (a cart is not a placed order)",
+    "Order.tracking_number == null iff Order.stage == 'not-shipped'  (a shipment number exists only once the parcel is dispatched)",
+    "Order.carrier == null iff Order.tracking_number == null",
+    "Customer.orders == count of that Customer's Order records with status != 'pending'  (an open cart does not count toward lifetime orders)"
   ],
   "entities": {
     "Plant": {
@@ -28,7 +32,9 @@
       "records": [
         { "id": "monstera-deliciosa", "name": "Monstera Deliciosa", "price": 34, "currency": "EUR", "stock": 12, "status": "in-stock" },
         { "id": "fiddle-leaf-fig", "name": "Fiddle-leaf Fig", "price": 59, "currency": "EUR", "stock": 3, "status": "low-stock" },
-        { "id": "snake-plant", "name": "Snake Plant", "price": 22, "currency": "EUR", "stock": 0, "status": "out-of-stock" }
+        { "id": "snake-plant", "name": "Snake Plant", "price": 22, "currency": "EUR", "stock": 0, "status": "out-of-stock" },
+        { "id": "golden-pothos", "name": "Golden Pothos", "price": 18, "currency": "EUR", "stock": 8, "status": "in-stock" },
+        { "id": "zz-plant", "name": "ZZ Plant", "price": 28, "currency": "EUR", "stock": 15, "status": "in-stock" }
       ]
     },
     "Customer": {
@@ -36,10 +42,11 @@
         "id": "string",
         "name": "string",
         "email": "string",
-        "orders": "integer — lifetime order count"
+        "orders": "integer — lifetime placed-order count (Order records with status != 'pending')"
       },
       "records": [
-        { "id": "alex-green", "name": "Alex Green", "email": "alex@fernfig.shop", "orders": 3 }
+        { "id": "alex-green", "name": "Alex Green", "email": "alex@fernfig.shop", "orders": 3 },
+        { "id": "sam-rivera", "name": "Sam Rivera", "email": "sam@fernfig.shop", "orders": 0 }
       ]
     },
     "Order": {
@@ -50,20 +57,41 @@
         "qty": "integer",
         "total": "number",
         "currency": "string",
-        "status": "enum: pending | paid | shipped | refunded"
+        "status": "enum: pending | paid | shipped | refunded — payment/lifecycle state (pending == open cart)",
+        "stage": "enum: not-shipped | shipped | in-transit | delivered — fulfilment/delivery stage",
+        "carrier": "string | null — shipping carrier once the parcel is dispatched, else null",
+        "tracking_number": "string | null — carrier tracking code once dispatched, else null"
       },
       "records": [
-        { "id": "1042", "customer": "alex-green", "item": "monstera-deliciosa", "qty": 1, "total": 34, "currency": "EUR", "status": "paid" }
+        { "id": "1042", "customer": "alex-green", "item": "monstera-deliciosa", "qty": 1, "total": 34, "currency": "EUR", "status": "paid", "stage": "delivered", "carrier": "PostNL", "tracking_number": "3SITSD1042NL" },
+        { "id": "1043", "customer": "alex-green", "item": "fiddle-leaf-fig", "qty": 1, "total": 59, "currency": "EUR", "status": "paid", "stage": "in-transit", "carrier": "DHL", "tracking_number": "JVGL07431NLTRANSIT" },
+        { "id": "1044", "customer": "alex-green", "item": "golden-pothos", "qty": 2, "total": 36, "currency": "EUR", "status": "paid", "stage": "not-shipped", "carrier": null, "tracking_number": null },
+        { "id": "1050", "customer": "alex-green", "item": "zz-plant", "qty": 1, "total": 28, "currency": "EUR", "status": "pending", "stage": "not-shipped", "carrier": null, "tracking_number": null }
       ]
     }
   },
   "used_by": {
-    "mockups": ["plant-listing", "plant-detail", "checkout"],
+    "mockups": [
+      "plant-listing",
+      "plant-detail",
+      "cart",
+      "checkout",
+      "order-confirmation",
+      "notify-me",
+      "sign-in",
+      "orders-list",
+      "order-detail",
+      "shipment-tracking"
+    ],
     "tests": ["fixtures: catalog, checkout"],
-    "flows": ["fern-and-fig/customer-buys-a-plant"]
+    "flows": [
+      "fern-and-fig/customer-buys-a-plant",
+      "fern-and-fig/track-an-order"
+    ]
   },
   "provenance": [
     { "action": "authored", "by": "walked-by-hand (art-director session)", "date": "2026-07-10", "note": "Seed / gold reference. The ONE canonical dataset for Plant/Customer/Order in ux-prototyping — extend, don't duplicate." },
-    { "action": "reviewed", "by": "product-owner (persona)", "date": "2026-07-10" }
+    { "action": "reviewed", "by": "product-owner (persona)", "date": "2026-07-10" },
+    { "action": "extended", "by": "BrainCandy (product-truth hardening pass)", "date": "2026-07-14", "note": "v2: added Order shipment fields (stage/carrier/tracking_number) so the track step can read a real delivery stage; added a pending open-cart Order (1050) so the cart step is not backed by a paid order; added orders 1043/1044 so Customer.orders==3 matches the orders-list; added a no-orders Customer (sam-rivera) for the empty-state branch; added golden-pothos/zz-plant to back the new orders; fixed used_by to reflect both flows and all catalog-backed mockups." }
   ]
 }

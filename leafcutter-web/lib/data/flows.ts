@@ -9,6 +9,7 @@ import type {
   FlowImplSummary,
   FlowKind,
   FlowLevel,
+  FlowRealization,
   FlowScenario,
   FlowSource,
   FlowStep,
@@ -21,6 +22,7 @@ import type {
 const PT_DIR = "docs/product-truth";
 const FLOWS_DIR = "docs/product-truth/flows";
 const MOCK_DIR = "docs/product-truth/mock-data";
+const MOCKUP_DIR = "docs/product-truth/mockups";
 
 function asArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
@@ -55,6 +57,16 @@ function normSource(v: unknown): FlowSource {
 function normLevel(v: unknown): FlowLevel {
   const s = String(v ?? "").toLowerCase();
   return s === "pipeline" || s === "agent" ? (s as FlowLevel) : "journey";
+}
+
+/**
+ * Normalize the flow `realization` field (defaults to "built" when absent, so
+ * data authored before the field landed still renders as a live map). Only
+ * "spec" and "mock" downgrade the flow away from the built default.
+ */
+function normRealization(v: unknown): FlowRealization {
+  const s = String(v ?? "").toLowerCase();
+  return s === "spec" || s === "mock" ? (s as FlowRealization) : "built";
 }
 
 /** Resolve each implements AC id to its LIVE store status. */
@@ -188,6 +200,7 @@ function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
     kind: normKind(raw.kind),
     source: normSource(raw.source),
     level: normLevel(raw.level),
+    realization: normRealization(raw.realization),
     status: String(raw.status ?? "active"),
     readiness: String(raw.readiness ?? "unknown"),
     entities: asArray(raw.entities),
@@ -308,6 +321,35 @@ export function flowAppearancesByAc(): Record<string, FlowAppearance[]> {
     }
   }
   return index;
+}
+
+let _screenTitleCache: Record<string, string> | null = null;
+
+/**
+ * Map a flow step's raw `screen` slug (e.g. "plant-detail") to the human mockup
+ * title (e.g. "Plant detail"), read from docs/product-truth/mockups/**.mockup.json.
+ * Lets the Flows view show a reviewer the screen NAME instead of a raw slug while
+ * keeping the slug available as the engineer affordance. Keyed on the bare screen
+ * slug; a later product with the same slug wins (acceptable for display). Cached.
+ */
+export function getScreenTitles(): Record<string, string> {
+  if (_screenTitleCache) return _screenTitleCache;
+  const map: Record<string, string> = {};
+  for (const file of walk(repoPath(MOCKUP_DIR), ".mockup.json")) {
+    const rawStr = readFileSafe(file);
+    if (!rawStr) continue;
+    let doc: Record<string, unknown> | null = null;
+    try {
+      doc = JSON.parse(rawStr) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const screen = doc.screen ? String(doc.screen) : "";
+    const title = doc.title ? String(doc.title) : "";
+    if (screen && title) map[screen] = title;
+  }
+  _screenTitleCache = map;
+  return map;
 }
 
 // Referenced to keep the product-truth root path documented alongside the loader.

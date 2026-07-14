@@ -1,4 +1,6 @@
 id: INF-400g-5
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "ticket-supervisor executes feedback emission on mechanical retry (section 3.1)"

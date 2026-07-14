@@ -1,4 +1,6 @@
 id: BP-006b-1
+readiness: reviewed
+priority: medium
 title: "sys.path includes scripts/ directory before build_helpers module load"
 component: build_pipeline
 level: L2

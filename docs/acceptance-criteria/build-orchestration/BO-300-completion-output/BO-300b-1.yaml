@@ -1,4 +1,6 @@
 id: BO-300b-1
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "build-single-ticket Step 4c template includes all four completion sections"

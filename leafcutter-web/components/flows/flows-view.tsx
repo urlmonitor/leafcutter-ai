@@ -15,12 +15,29 @@ import * as React from "react";
 import { PageHeader, Badge, EmptyState } from "@/components/ui/kit";
 import { cn, humanize } from "@/lib/utils";
 import { WORK_STATUS_TONE } from "@/lib/status";
-import type { Flow, FlowKind, FlowLevel, FlowSource, MockData } from "@/lib/data/types";
+import type {
+  Flow,
+  FlowKind,
+  FlowLevel,
+  FlowRealization,
+  FlowSource,
+  MockData,
+} from "@/lib/data/types";
 import { FlowExplorer } from "./flow-explorer";
+import { RealizationBadge, realizationMeta } from "./realization-badge";
 import { Workflow, ChevronRight, Layers } from "lucide-react";
 
 const SOURCES: FlowSource[] = ["mock", "real"];
 const KINDS: FlowKind[] = ["user", "data", "architecture"];
+// "all" plus the three realizations, in built→spec→mock order (most→least real).
+type RealizationFilter = "all" | FlowRealization;
+const REALIZATIONS: FlowRealization[] = ["built", "spec", "mock"];
+const REALIZATION_LABEL: Record<RealizationFilter, string> = {
+  all: "All",
+  built: "Built",
+  spec: "Spec",
+  mock: "Sample",
+};
 const DEFAULT_ENTRY = "leafcutter/deliver-a-feature";
 
 // HSL accents for the flow-level chip (journey → pipeline → agent = drill deeper).
@@ -93,12 +110,15 @@ function Segmented<T extends string>({
 export function FlowsView({
   flows,
   mocks,
+  screenTitles = {},
 }: {
   flows: Flow[];
   mocks: Record<string, MockData | null>;
+  screenTitles?: Record<string, string>;
 }) {
   const [source, setSource] = React.useState<FlowSource>("real");
   const [kind, setKind] = React.useState<FlowKind>("user");
+  const [realization, setRealization] = React.useState<RealizationFilter>("all");
   const [selectedId, setSelectedId] = React.useState<string>(() =>
     flows.some((f) => f.id === DEFAULT_ENTRY) ? DEFAULT_ENTRY : "",
   );
@@ -126,9 +146,33 @@ export function FlowsView({
   // If the chosen kind has no flows for this source, fall back to the first that does.
   const effectiveKind = availableKinds.includes(kind) ? kind : availableKinds[0] ?? kind;
 
+  // Realizations actually present in the current source+kind scope. Powers the
+  // realization filter so a reviewer can isolate real (built) flows from
+  // spec/sample seeds. Only offered when >1 realization is present (else noise).
+  const realizationsInScope = React.useMemo(() => {
+    const present = new Set<FlowRealization>();
+    for (const f of flows) {
+      if (f.source === source && f.kind === effectiveKind) present.add(f.realization);
+    }
+    return present;
+  }, [flows, source, effectiveKind]);
+  const availableRealizations = React.useMemo<RealizationFilter[]>(
+    () => ["all", ...REALIZATIONS.filter((r) => realizationsInScope.has(r))],
+    [realizationsInScope],
+  );
+  // Fall back to "all" if the chosen realization has no flows in the current scope.
+  const effectiveRealization: RealizationFilter =
+    realization === "all" || realizationsInScope.has(realization) ? realization : "all";
+
   const filtered = React.useMemo(
-    () => flows.filter((f) => f.source === source && f.kind === effectiveKind),
-    [flows, source, effectiveKind],
+    () =>
+      flows.filter(
+        (f) =>
+          f.source === source &&
+          f.kind === effectiveKind &&
+          (effectiveRealization === "all" || f.realization === effectiveRealization),
+      ),
+    [flows, source, effectiveKind, effectiveRealization],
   );
 
   // The ENTRY flow (top-level selector), falling back to the first match in scope.
@@ -178,6 +222,9 @@ export function FlowsView({
       >
         {flow && s && (
           <div className="flex flex-wrap items-center justify-end gap-1.5">
+            {flow.realization !== "built" && (
+              <RealizationBadge realization={flow.realization} className="mr-1" />
+            )}
             <Badge tone={WORK_STATUS_TONE.done} dot>
               {s.done} done
             </Badge>
@@ -193,6 +240,30 @@ export function FlowsView({
           </div>
         )}
       </PageHeader>
+
+      {/* Realization banner — never let a reviewer read a spec/sample flow as a live map. */}
+      {flow && flow.realization !== "built" && (() => {
+        const meta = realizationMeta(flow.realization);
+        if (!meta) return null;
+        return (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-lg border px-4 py-3"
+            style={{
+              borderColor: `hsl(${meta.hsl} / 0.5)`,
+              background: `hsl(${meta.hsl} / 0.1)`,
+            }}
+          >
+            <RealizationBadge realization={flow.realization} />
+            <p className="text-sm leading-relaxed text-foreground/90">
+              {meta.description}{" "}
+              <span className="text-muted-foreground">
+                The step colours below track whether each step&apos;s acceptance
+                criteria are authored — not whether this system is running.
+              </span>
+            </p>
+          </div>
+        );
+      })()}
 
       {/* source + kind controls */}
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -210,6 +281,21 @@ export function FlowsView({
             value={effectiveKind}
             onChange={setKind}
             render={(opt) => <span>{humanize(opt)}</span>}
+          />
+        )}
+        {availableRealizations.length > 2 && (
+          <Segmented
+            label="Realization"
+            options={availableRealizations}
+            value={effectiveRealization}
+            onChange={setRealization}
+            render={(opt) =>
+              opt === "all" || opt === "built" ? (
+                <span>{REALIZATION_LABEL[opt]}</span>
+              ) : (
+                <RealizationBadge realization={opt} size="sm" />
+              )
+            }
           />
         )}
       </div>
@@ -236,6 +322,9 @@ export function FlowsView({
                   )}
                 >
                   <span>{f.name}</span>
+                  {f.realization !== "built" && (
+                    <RealizationBadge realization={f.realization} size="sm" />
+                  )}
                   <span
                     className={cn(
                       "rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
@@ -314,6 +403,7 @@ export function FlowsView({
             flow={flow}
             mock={mock}
             flowNames={flowNames}
+            screenTitles={screenTitles}
             onDrill={drillTo}
           />
         </>

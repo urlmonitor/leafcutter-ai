@@ -1,4 +1,6 @@
 id: BP-300a-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "debug.js returns structured error when userInput is empty"

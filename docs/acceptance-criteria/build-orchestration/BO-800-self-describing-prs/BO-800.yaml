@@ -1,4 +1,6 @@
 id: BO-800
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Pull requests explain themselves using what was already decided"
@@ -33,3 +35,13 @@ covered_by:
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/finalize-feature
+    node: openpr
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

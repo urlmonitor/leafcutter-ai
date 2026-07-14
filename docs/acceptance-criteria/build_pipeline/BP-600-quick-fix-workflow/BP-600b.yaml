@@ -1,4 +1,6 @@
 id: BP-600b
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "Quality assurance without the ceremony"

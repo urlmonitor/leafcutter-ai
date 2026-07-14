@@ -1,4 +1,6 @@
 id: BO-400c-2
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "finalize-feature-archive-check scans by frontmatter, not folder position"
@@ -46,3 +48,13 @@ covered_by: [BO-400c-2-i]
 implemented_by: []
 change_target: prompt
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/finalize-feature
+    node: archive
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

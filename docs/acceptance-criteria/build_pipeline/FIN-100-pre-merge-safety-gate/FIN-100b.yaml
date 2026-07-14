@@ -1,4 +1,6 @@
 id: FIN-100b
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Main is merged into the worktree before the PR merge decision"
@@ -33,3 +35,13 @@ implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/finalize-feature
+    node: mergemain
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

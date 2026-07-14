@@ -1,4 +1,6 @@
 id: INF-800f
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Refactoring specialist recognized as a first-class agent"

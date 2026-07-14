@@ -383,6 +383,19 @@
         "scripts/build_phases.py"
       ]
     },
+    "ux-prototyping": {
+      "id": "ux-prototyping",
+      "name": "UX Prototyping",
+      "type": "analysis",
+      "description": "Product-truth store: the flow-first upstream authoring surface of Flows, Mockups, and Mock Data that captures product intent, generates acceptance criteria, and is rendered live by the Leafcutter Atlas.",
+      "detail_ref": "docs/architecture/components/ux-prototyping.md",
+      "status": "active",
+      "primary_code": [
+        "docs/product-truth/",
+        "docs/product-truth/scripts/validate_product_truth.py",
+        "leafcutter-web/lib/data/flows.ts"
+      ]
+    },
     "testing_quality": {
       "id": "testing_quality",
       "name": "Testing and Quality",

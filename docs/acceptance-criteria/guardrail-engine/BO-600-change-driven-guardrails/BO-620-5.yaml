@@ -1,4 +1,6 @@
 id: BO-620-5
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "UI-internal pair maps to visual regression + a11y audit + TDD"

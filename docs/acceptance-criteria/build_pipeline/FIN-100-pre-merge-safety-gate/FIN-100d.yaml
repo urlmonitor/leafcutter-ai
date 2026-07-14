@@ -1,4 +1,6 @@
 id: FIN-100d
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Regressions trigger a hard halt — PR merge is blocked"
@@ -32,3 +34,13 @@ implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
 risk_surface: safety
+product_truth:
+  - flow: leafcutter/finalize-feature
+    node: postmerge
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

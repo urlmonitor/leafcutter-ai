@@ -1,4 +1,6 @@
 id: BP-200d-1
+readiness: reviewed
+priority: medium
 title: "Prompt-audit skill frontmatter declares read-only tool contract"
 component: build_pipeline
 level: L2

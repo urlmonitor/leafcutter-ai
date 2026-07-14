@@ -7,6 +7,7 @@
   "summary": "The user journey through the Atlas /flows view: open the view to see every flow listed, filter by source (mock vs real) and kind (user/data/architecture), select a flow to render its graph, open a step to inspect its acceptance criteria's live status plus the mock records and mockup it uses, and cross-jump from an acceptance criterion back to the flows it appears in. This is how a person sees product truth visually rather than reading JSON.",
   "kind": "user",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,

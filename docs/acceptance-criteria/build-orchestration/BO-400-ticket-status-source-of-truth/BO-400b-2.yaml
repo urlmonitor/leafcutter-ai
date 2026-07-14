@@ -1,4 +1,6 @@
 id: BO-400b-2
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Script validates status transitions against an allow-list"

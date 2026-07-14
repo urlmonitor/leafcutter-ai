@@ -1,4 +1,6 @@
 id: BP-300a-1
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "debug.js dispatches three parallel Explore agents in Phase 1"

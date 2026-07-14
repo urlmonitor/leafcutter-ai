@@ -1,4 +1,6 @@
 id: BO-400a-2-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Parity violation: status done but agents map has needed entries"

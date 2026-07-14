@@ -1,4 +1,6 @@
 id: ACS-400a-3
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Unauthorized agents are rejected when writing the criteria field"

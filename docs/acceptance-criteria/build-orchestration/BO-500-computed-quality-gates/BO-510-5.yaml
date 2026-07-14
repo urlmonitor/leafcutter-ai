@@ -1,4 +1,6 @@
 id: BO-510-5
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Ticket-supervisor reads the produces trait to determine which guardrails apply"

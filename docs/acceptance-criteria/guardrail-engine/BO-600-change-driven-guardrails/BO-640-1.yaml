@@ -1,4 +1,6 @@
 id: BO-640-1
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "High-complexity assessment triggers a decomposition challenge before escalation"

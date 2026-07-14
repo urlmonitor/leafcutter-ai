@@ -35,6 +35,20 @@ export const WORK_STATUS_TONE: Record<WorkStatus, Tone> = {
   unknown: tone("Unknown", "150 8% 45%", "text-muted-foreground", "bg-muted/30", "border-border", "bg-muted-foreground/60"),
 };
 
+/**
+ * Plain-language rendering of a work-status for a non-engineer reviewer.
+ * Deliberately jargon-free ("not built yet" rather than "not_started"), used by
+ * the Flows view's AC chips so the picture reads without decoding the enum.
+ */
+export const WORK_STATUS_PLAIN: Record<WorkStatus, string> = {
+  done: "done",
+  in_progress: "in progress",
+  todo: "ready to build",
+  not_started: "not built yet",
+  blocked: "blocked",
+  unknown: "not built yet",
+};
+
 export const LEVEL_TONE: Record<AcLevel, Tone> = {
   L0: tone("L0 · Value", "265 60% 66%", "text-chart-4", "bg-chart-4/10", "border-chart-4/30", "bg-chart-4"),
   L1: tone("L1 · Feature", "200 78% 60%", "text-chart-5", "bg-chart-5/10", "border-chart-5/30", "bg-chart-5"),

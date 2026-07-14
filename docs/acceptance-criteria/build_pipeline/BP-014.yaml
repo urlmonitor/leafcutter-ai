@@ -1,0 +1,40 @@
+id: BP-014
+readiness: reviewed
+priority: medium
+components:
+  - build-pipeline
+status: active
+origin_agent: BrainCandy
+component: build-pipeline
+level: L2
+work_status: todo
+title: "live-surface-tester runs real HTTP requests against a dev server and asserts status/body/headers"
+criteria: |
+  Given a ticket that sets live_surface_test: true and declares a
+    ## Live Test Fixtures block, and live_surface_testing.enabled is true in
+    skills_config.json,
+  When the build pipeline reaches the live-surface-tester phase (priority 11.8,
+    after user-surface-smoker at 11.5 and before commit at 12),
+  Then live-surface-tester starts a development server on a port allocated via
+    the port registry,
+  And it issues each declared HTTP request against the running server,
+  And it asserts each response's status code, body, and headers against the
+    fixture,
+  And it tears the server down after the assertions complete,
+  And the phase emits status: skipped (not failed) when live_surface_test is not
+    true or live_surface_testing is disabled.
+notes: "Authored to back the how-acs-are-built product-truth flow's livetest node. As of this branch the live-surface-tester agent is a deployed/runtime agent but has no source template under templates/agents/, so work_status is todo (not verifiable as shipped from source)."
+change_target: prompt
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: livetest
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Diff
+      - Ticket
+    source: real
+    asof: '2026-07-14'

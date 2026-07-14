@@ -1,4 +1,6 @@
 id: BP-400c-5
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "feedback-analyst agent is read-only and never modifies feedback files"

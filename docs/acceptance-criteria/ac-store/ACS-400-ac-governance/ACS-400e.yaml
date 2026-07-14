@@ -1,4 +1,6 @@
 id: ACS-400e
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Violations are caught before they reach the repository"

@@ -1,4 +1,6 @@
 id: BO-700c
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Understand which goals and features a release advances"

@@ -1,4 +1,6 @@
 id: BP-500
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "Build-time safety nets catch mistakes before they reach the pipeline"

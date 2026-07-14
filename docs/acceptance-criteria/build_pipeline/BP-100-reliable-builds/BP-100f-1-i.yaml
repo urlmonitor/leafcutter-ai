@@ -1,4 +1,6 @@
 id: BP-100f-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "No secondary git calls fire before the guard in finalize-feature"

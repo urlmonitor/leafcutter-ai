@@ -1,4 +1,6 @@
 id: BP-100e-1
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "Signoff skill recipe mandates timestamp capture before any edit"

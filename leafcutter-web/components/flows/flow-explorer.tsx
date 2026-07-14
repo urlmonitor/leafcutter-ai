@@ -39,6 +39,11 @@ import { FlowDrawer, type StepView } from "./flow-drawer";
 const COL_GAP = 340;
 const AC_DROP = 210;
 const BRANCH_DROP = 430;
+// Vertical lane per sibling branch forking from the SAME step. Two branches off
+// one step share a column, so without this they (and their AC nodes) would stack
+// at identical coordinates and hide each other. A lane clears the branch card
+// plus its AC row (AC_DROP) beneath it.
+const BRANCH_LANE = AC_DROP + 180;
 
 const STATUS_LEGEND: WorkStatus[] = ["done", "in_progress", "not_started"];
 const EDGE_LEGEND = ["flow", "implements"] as const;
@@ -47,11 +52,13 @@ function ExplorerInner({
   flow,
   mock,
   flowNames,
+  screenTitles,
   onDrill,
 }: {
   flow: Flow;
   mock: MockData | null;
   flowNames: Record<string, string>;
+  screenTitles: Record<string, string>;
   onDrill?: (childFlowId: string) => void;
 }) {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -63,6 +70,11 @@ function ExplorerInner({
     [flowNames],
   );
 
+  const screenTitleFor = React.useCallback(
+    (slug: string | null) => (slug ? screenTitles[slug] ?? null : null),
+    [screenTitles],
+  );
+
   // Step-view lookup for the drawer, keyed by the graph node id (`step:<id>`).
   const stepViews = React.useMemo(() => {
     const m = new Map<string, StepView>();
@@ -72,6 +84,8 @@ function ExplorerInner({
         label: s.label,
         human: s.human,
         screen: s.screen,
+        screenTitle: screenTitleFor(s.screen),
+        realization: flow.realization,
         variant: "step",
         status: s.implStatus,
         agent: s.agent,
@@ -91,6 +105,8 @@ function ExplorerInner({
         label: b.label,
         human: b.human,
         screen: b.screen,
+        screenTitle: screenTitleFor(b.screen),
+        realization: flow.realization,
         variant: "branch",
         condition: b.condition,
         status: b.implStatus,
@@ -106,16 +122,25 @@ function ExplorerInner({
       });
     }
     return m;
-  }, [flow, nameFor]);
+  }, [flow, nameFor, screenTitleFor]);
 
   /* ---------- positions ---------- */
   const positions = React.useMemo(() => {
     const pos = new Map<string, XY>();
+    // Track how many branches have already been placed in each column so that
+    // sibling branches off the same step drop into successive vertical lanes
+    // instead of colliding at one point.
+    const branchesInCol = new Map<number, number>();
     for (const n of graph.nodes) {
       if (n.kind !== "phase") continue;
       const col = (n.meta?.col as number) ?? 0;
-      const y = n.meta?.variant === "branch" ? BRANCH_DROP : 0;
-      pos.set(n.id, { x: col * COL_GAP, y });
+      if (n.meta?.variant === "branch") {
+        const lane = branchesInCol.get(col) ?? 0;
+        branchesInCol.set(col, lane + 1);
+        pos.set(n.id, { x: col * COL_GAP, y: BRANCH_DROP + lane * BRANCH_LANE });
+      } else {
+        pos.set(n.id, { x: col * COL_GAP, y: 0 });
+      }
     }
     // AC nodes drop beneath the step/branch that implements them.
     const acSource = new Map<string, string>();
@@ -155,6 +180,7 @@ function ExplorerInner({
         }
         const acIds = (n.meta?.acIds as string[]) ?? [];
         const expandsTo = (n.meta?.expandsTo as string | null) ?? null;
+        const screen = (n.meta?.screen as string | null) ?? null;
         return {
           id: n.id,
           type: "flowStepNode",
@@ -162,7 +188,9 @@ function ExplorerInner({
           data: {
             label: n.label,
             order: n.meta?.order as number | undefined,
-            screen: (n.meta?.screen as string | null) ?? null,
+            screen,
+            screenTitle: screenTitleFor(screen),
+            realization: flow.realization,
             status: (n.status as WorkStatus) ?? "unknown",
             variant: (n.meta?.variant as "step" | "branch") ?? "step",
             acCount: acIds.length,
@@ -172,7 +200,7 @@ function ExplorerInner({
           draggable: false,
         };
       }),
-    [graph, positions, selectedId, flowNames],
+    [graph, positions, selectedId, flowNames, screenTitleFor, flow.realization],
   );
 
   const edges = React.useMemo<Edge[]>(
@@ -230,7 +258,12 @@ function ExplorerInner({
         onPaneClick={() => setSelectedId(null)}
         nodeTypes={flowNodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        // Floor the initial fit zoom so large graphs (e.g. how-acs-are-built,
+        // 19 nodes) open at a legible zoom and the user pans, instead of the
+        // default fitView shrinking every label to specks. Small flows already
+        // fit above this floor, so they are unaffected. The interaction minZoom
+        // below stays low so users can still manually zoom out to see everything.
+        fitViewOptions={{ padding: 0.2, minZoom: 0.62 }}
         minZoom={0.2}
         maxZoom={2.2}
         nodesDraggable={false}
@@ -326,16 +359,24 @@ export function FlowExplorer({
   flow,
   mock,
   flowNames = {},
+  screenTitles = {},
   onDrill,
 }: {
   flow: Flow;
   mock: MockData | null;
   flowNames?: Record<string, string>;
+  screenTitles?: Record<string, string>;
   onDrill?: (childFlowId: string) => void;
 }) {
   return (
     <ReactFlowProvider>
-      <ExplorerInner flow={flow} mock={mock} flowNames={flowNames} onDrill={onDrill} />
+      <ExplorerInner
+        flow={flow}
+        mock={mock}
+        flowNames={flowNames}
+        screenTitles={screenTitles}
+        onDrill={onDrill}
+      />
     </ReactFlowProvider>
   );
 }

@@ -9,8 +9,27 @@ Checks performed:
   6. impl_summary matches the counted impl_status of steps + branches.
   7. classifier eval `outcome` is consistent with `expected{}`.
   8. Mock-data `invariants` hold over the records (stock/status, order total, FKs).
+     Declared `invariants` are also validated for structure (non-empty strings)
+     and any that reference no machine-checked entity are surfaced as a WARNING
+     (declared-but-not-enforced) rather than silently ignored.
   9. Every AC id in a step's `implements` resolves in the AC store (WARNING only —
      seed flows may reference not-yet-authored ACs).
+ 10. ANTI-PHANTOM-DONE TRUTH GATE (ERROR): every AC referenced by a step/branch of
+     a BUILT flow (realization absent or "built") whose work_status derives to
+     `done` or `in_progress` MUST carry real implementation evidence — a non-empty
+     `implemented_by` (leaf → ticket/commit) or `covered_by` (composite → children).
+     A done/in_progress AC with neither is phantom-done and fails the commit gate.
+     Flows with realization "mock"/"spec" are EXEMPT (seed/aspirational journeys),
+     downgraded to an informational WARNING so the exemption stays visible.
+
+SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it is not
+importable the validator exits non-zero (2) up front rather than warn-and-skip —
+a missing package must never silently disable every schema check.
+
+REALIZATION AXIS: flows/mockups/mock-data may carry an optional top-level
+`realization` in {built, spec, mock} (absent → built). It is orthogonal to
+`status`/`readiness` and answers "does the described thing exist in the repo
+today?" — it drives the truth gate's built-vs-seed exemption above.
 
 DERIVED-VS-SOURCE checks (ERROR — the generator is the single writer; any drift here
 means generate_product_truth.py was not run):
@@ -41,12 +60,18 @@ DECISION HISTORY
 - 2026-07-14: Added derived-vs-source checks (D1-D4), mockup schema validation, and
   the screen->mockup resolution gate. Derivation logic is now shared with
   generate_product_truth (the single writer). (product-truth linking infrastructure)
+- 2026-07-14: Trustworthy-status hardening. jsonschema made a HARD dependency
+  (exit 2 when absent, no more warn-and-skip). Added the anti-phantom-done
+  truth-evidence gate (check 10) keyed on the new `realization` axis. Declared
+  mock-data invariants now validated for structure + flagged when unenforced,
+  instead of being decorative. (product-truth trustworthy-status)
 """
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 
@@ -61,12 +86,27 @@ from generate_product_truth import (
     build_expands_map,
     build_parents_map,
     compute_node_status,
+    impl_status_for_ac,
     iter_nodes,
     load_flows,
     load_mocks,
 )
 
+# jsonschema is a HARD dependency. A missing import used to warn-and-skip, which
+# silently no-oped every schema check on hosts without the package — the exact
+# "green sign-off on a broken feature" failure this store exists to prevent. We
+# import it at module load and surface the absence as a hard, non-zero exit in
+# main() (see JSONSCHEMA_MISSING) instead of degrading to no validation.
+try:
+    import jsonschema
+except ImportError:
+    jsonschema = None  # type: ignore[assignment]
+
 logger = logging.getLogger("validate_product_truth")
+
+# Flow realizations exempt from the anti-phantom-done truth-evidence gate:
+# seeds/specs may legitimately badge done/in_progress without impl evidence.
+_EVIDENCE_EXEMPT_REALIZATIONS = frozenset({"mock", "spec"})
 
 STORE = Path(__file__).resolve().parent.parent
 AC_STORE = STORE.parent / "acceptance-criteria"
@@ -85,11 +125,11 @@ def _load_schema(name: str) -> dict:
 
 
 def _validate_schema(instance: dict, schema: dict, label: str, errors: list[str]) -> None:
-    try:
-        import jsonschema
-    except ImportError:
-        logger.warning("jsonschema not installed — skipping strict schema check for %s", label)
-        return
+    """Validate one instance against a schema (jsonschema is guaranteed present).
+
+    main() exits non-zero before any check runs when jsonschema is absent, so
+    the module-level `jsonschema` is never None here.
+    """
     try:
         jsonschema.validate(instance, schema)
     except jsonschema.ValidationError as exc:
@@ -97,7 +137,12 @@ def _validate_schema(instance: dict, schema: dict, label: str, errors: list[str]
 
 
 def load_ac_records() -> dict:
-    """One pass over the AC store: {ac_id -> {path, work_status, product_truth}}."""
+    """One pass over the AC store.
+
+    {ac_id -> {path, work_status, product_truth, implemented_by, covered_by}}.
+    implemented_by / covered_by are the implementation-evidence fields the
+    anti-phantom-done truth check reads (see _check_truth_evidence).
+    """
     records: dict[str, dict] = {}
     for path in sorted(AC_STORE.rglob("*.yaml")):
         data = _load_yaml(path)
@@ -109,6 +154,8 @@ def load_ac_records() -> dict:
                 "path": path,
                 "work_status": data.get("work_status"),
                 "product_truth": data.get("product_truth"),
+                "implemented_by": data.get("implemented_by"),
+                "covered_by": data.get("covered_by"),
             }
     return records
 
@@ -165,6 +212,57 @@ def _check_impl_status(flows: dict, ac_map: dict, errors: list[str]) -> None:
                 errors.append(
                     f"[impl_status] {flow['id']} {kind} '{node['id']}': impl_status={actual} != derived {derived}"
                 )
+
+
+def _has_evidence(record: dict) -> bool:
+    """True when an AC carries real implementation evidence.
+
+    Evidence is a non-empty `implemented_by` (a leaf AC wired to a ticket/commit)
+    OR a non-empty `covered_by` (a composite AC whose fulfilment rolls up from
+    children). Both empty on a done/in_progress AC is phantom-done.
+    """
+    return bool(record.get("implemented_by")) or bool(record.get("covered_by"))
+
+
+def _check_truth_evidence(flows: dict, ac_records: dict, errors: list[str], warnings: list[str]) -> None:
+    """Anti-phantom-done gate — the core "is the live status trustworthy?" check.
+
+    For every AC referenced by a step/branch of a BUILT flow (realization absent
+    or "built"), if that AC's work_status derives to `done` or `in_progress`, the
+    AC MUST carry real implementation evidence (`implemented_by` or `covered_by`).
+    An AC badged done/in_progress with neither is a phantom-done status — the
+    exact defect this store exists to surface — and is an ERROR.
+
+    Flows whose realization is "mock" or "spec" are EXEMPT: seed/aspirational
+    journeys may badge progress from illustrative ACs without implementation. A
+    referenced AC absent from the store is handled (as a warning) by _check_flow;
+    here it is skipped so the two checks do not double-report. When an exempt
+    (mock/spec) flow does contain a phantom-done AC, a single informational
+    warning is emitted so the exemption stays visible rather than silent.
+    """
+    for flow in flows.values():
+        exempt = flow.get("realization", "built") in _EVIDENCE_EXEMPT_REALIZATIONS
+        for node, kind in iter_nodes(flow):
+            for ac_id in node.get("implements", []):
+                record = ac_records.get(ac_id)
+                if record is None:
+                    continue
+                derived = impl_status_for_ac(record.get("work_status"))
+                if derived not in ("done", "in_progress") or _has_evidence(record):
+                    continue
+                message = (
+                    f"{flow['id']} {kind} '{node['id']}': AC '{ac_id}' "
+                    f"work_status={record.get('work_status')!r} derives impl_status={derived} "
+                    "but has no implementation evidence (empty implemented_by AND covered_by) "
+                    "— phantom-done"
+                )
+                if exempt:
+                    warnings.append(
+                        f"[truth] {message} (allowed: flow realization="
+                        f"{flow.get('realization')!r})"
+                    )
+                else:
+                    errors.append(f"[truth] {message}")
 
 
 def _find_expands_cycles(flows: dict) -> list[list[str]]:
@@ -271,7 +369,45 @@ def _check_screens(flows: dict, mockups: dict, errors: list[str], warnings: list
                 (errors if approved else warnings).append(message)
 
 
-def _check_mock_invariants(mock: dict, errors: list[str]) -> None:
+# Entities for which this validator has a hardcoded machine-checker below.
+# A declared invariant that names only entities OUTSIDE this set is validated
+# for structure but cannot be machine-enforced yet — surfaced as a warning
+# rather than silently ignored.
+_MACHINE_CHECKED_ENTITIES = frozenset({"Plant", "Customer", "Order"})
+_ENTITY_TOKEN = re.compile(r"\b([A-Z][A-Za-z0-9]+)\b")
+
+
+def _check_declared_invariants(mock: dict, errors: list[str], warnings: list[str]) -> None:
+    """Validate the artifact's declared `invariants` and surface unenforced ones.
+
+    The `invariants` array is human/machine free-text (e.g.
+    "Plant.status==out-of-stock iff stock==0"). Arbitrary rule text cannot be
+    executed generically, but it must not be silently ignored (the decorative-
+    invariant defect). This does two things:
+
+    * STRUCTURE (error): every declared invariant must be a non-empty string.
+    * COVERAGE (warning): an invariant that references no entity with a
+      registered machine-checker (_MACHINE_CHECKED_ENTITIES) is flagged as
+      declared-but-not-enforced, so the gap is visible instead of silent.
+    """
+    invariants = mock.get("invariants", [])
+    if not isinstance(invariants, list):
+        errors.append(f"[mock] {mock['id']}: invariants must be a list of strings")
+        return
+    for index, invariant in enumerate(invariants):
+        if not isinstance(invariant, str) or not invariant.strip():
+            errors.append(f"[mock] {mock['id']}: invariant #{index} is empty or not a string")
+            continue
+        referenced = set(_ENTITY_TOKEN.findall(invariant))
+        if not (referenced & _MACHINE_CHECKED_ENTITIES):
+            warnings.append(
+                f"[mock] {mock['id']}: declared invariant is not machine-enforced "
+                f"(no registered checker for its entities): {invariant!r}"
+            )
+
+
+def _check_mock_invariants(mock: dict, errors: list[str], warnings: list[str]) -> None:
+    _check_declared_invariants(mock, errors, warnings)
     plants = mock.get("entities", {}).get("Plant", {}).get("records", [])
     for plant in plants:
         stock, status = plant.get("stock"), plant.get("status")
@@ -339,6 +475,14 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="%(message)s")
 
+    if jsonschema is None:
+        logger.error(
+            "FAIL: jsonschema is required for product-truth validation but is not installed. "
+            "Install it (pip install 'jsonschema>=4.0', or pip install -r requirements-dev.txt). "
+            "Refusing to run — schema validation must not silently no-op."
+        )
+        return 2
+
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -357,7 +501,7 @@ def main() -> int:
     mocks = load_mocks()
     for mock in mocks.values():
         _validate_schema(mock, mock_schema, f"mock {mock['id']}", errors)
-        _check_mock_invariants(mock, errors)
+        _check_mock_invariants(mock, errors, warnings)
 
     mockups = load_mockups()
     for mockup in mockups.values():
@@ -385,6 +529,10 @@ def main() -> int:
     _check_derived_indexes(index, flows, flow_paths, mocks, ac_records, errors)
     _check_screens(flows, mockups, errors, warnings)
     _check_expands(flows, index, errors)
+
+    # Anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by
+    # a BUILT flow must carry real implementation evidence.
+    _check_truth_evidence(flows, ac_records, errors, warnings)
 
     for warn in warnings:
         logger.warning("WARN: %s", warn)

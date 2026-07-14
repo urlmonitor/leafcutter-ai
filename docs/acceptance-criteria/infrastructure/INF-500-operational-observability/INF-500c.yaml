@@ -1,4 +1,6 @@
 id: INF-500c
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Feedback analysis supports trend detection, date filtering, and read-only agent integration"

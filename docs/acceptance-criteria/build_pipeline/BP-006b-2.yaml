@@ -1,4 +1,6 @@
 id: BP-006b-2
+readiness: reviewed
+priority: medium
 title: "Edge case: duplicate sys.path insertion is prevented by guard"
 component: build_pipeline
 level: L3

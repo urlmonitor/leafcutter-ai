@@ -1,4 +1,6 @@
 id: ACD-1404
+readiness: reviewed
+priority: medium
 components:
   - ac-driven-dev
 status: active

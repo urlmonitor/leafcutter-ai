@@ -1,4 +1,6 @@
 id: BP-200d-2-i
+readiness: reviewed
+priority: medium
 title: "Audit check 4 is skipped when agent template has signoff: false"
 component: build_pipeline
 level: L3

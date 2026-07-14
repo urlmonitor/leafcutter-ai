@@ -1,4 +1,6 @@
 id: INF-500b-5
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "feedback-analyst agent reads data and returns report without modifying files"

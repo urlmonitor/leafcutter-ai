@@ -1,4 +1,6 @@
 id: BO-400c-1-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Backward compatibility: old epics with done/ subfolder still work"

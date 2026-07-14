@@ -1,4 +1,6 @@
 id: INF-500b-2
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "trend_report.py produces prioritized report with per-category sections"

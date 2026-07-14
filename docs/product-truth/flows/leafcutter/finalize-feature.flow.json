@@ -7,6 +7,7 @@
   "summary": "The real finalize-feature.js pipeline that lands a committed feature branch on main: capture a pre-merge test baseline on main, open the PR if it is missing, merge origin/main into the worktree (HALT on conflict), run the post-merge suite and triage failures (HALT on regression), close the tickets and mark the source ACs done, merge the PR to main behind a confirmation gate, and finally archive the epic and remove the worktree. The destructive steps are gated and the pipeline halts rather than advancing when a merge conflicts or a regression is detected.",
   "kind": "data",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
@@ -25,6 +26,9 @@
       "human": "Capture the pre-merge test baseline on main so post-merge failures can be triaged against a known-good starting point.",
       "order": 1,
       "agent": "test-runner",
+      "implements": [
+        "FIN-100a"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -34,6 +38,9 @@
       "human": "Open the pull request if one does not already exist for the branch.",
       "order": 2,
       "agent": "pull-request",
+      "implements": [
+        "BO-800"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -43,6 +50,9 @@
       "human": "Merge origin/main into the worktree so the branch is up to date — HALT on conflict instead of advancing.",
       "order": 3,
       "agent": "finalize-feature",
+      "implements": [
+        "FIN-100b"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -52,6 +62,10 @@
       "human": "Run the post-merge test suite and triage any failures against the baseline — HALT on a real regression.",
       "order": 4,
       "agent": "test-runner / test-failure-triage",
+      "implements": [
+        "FIN-100c",
+        "FIN-100d"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -61,7 +75,11 @@
       "human": "Close the tickets and mark the source acceptance criteria done in the store.",
       "order": 5,
       "agent": "finalize-feature",
-      "impl_status": "not_started",
+      "implements": [
+        "ACD-600a",
+        "BO-400b"
+      ],
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-14"
     },
     {
@@ -70,6 +88,9 @@
       "human": "Merge the PR to main — confirmation-gated because it is destructive to the protected branch.",
       "order": 6,
       "agent": "finalize-feature",
+      "implements": [
+        "FIN-100f"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -79,6 +100,9 @@
       "human": "Archive the epic and remove the feature worktree once the PR is merged.",
       "order": 7,
       "agent": "finalize-feature-archive-check / worktree-agent",
+      "implements": [
+        "BO-400c-2"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     }
@@ -114,8 +138,8 @@
   ],
   "impl_summary": {
     "done": 0,
-    "in_progress": 0,
-    "not_started": 7,
+    "in_progress": 1,
+    "not_started": 6,
     "total": 7,
     "asof": "2026-07-14"
   }

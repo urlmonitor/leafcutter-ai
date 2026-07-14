@@ -1,4 +1,6 @@
 id: INF-400h
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Supervisor templates execute feedback emission at every adjudication point"

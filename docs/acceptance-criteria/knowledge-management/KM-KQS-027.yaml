@@ -1,4 +1,6 @@
 id: KM-KQS-027
+readiness: reviewed
+priority: medium
 components:
   - knowledge-management
 title: "Component value not matching any existing component doc still produces a hub node"

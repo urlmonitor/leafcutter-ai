@@ -1,4 +1,6 @@
 id: INF-600a
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Every agent template follows a standardized self-description contract"

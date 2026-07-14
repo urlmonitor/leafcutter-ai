@@ -1,4 +1,6 @@
 id: BO-800d
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "PRs stay accurate even when the ticket scope changed during implementation"

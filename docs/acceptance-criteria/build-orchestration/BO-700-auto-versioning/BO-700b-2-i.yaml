@@ -1,4 +1,6 @@
 id: BO-700b-2-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Mixed L1 and L3 completions in one release yield a single minor bump (highest wins)"

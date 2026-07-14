@@ -49,3 +49,15 @@ covered_by:
   - BO-2000f-5-i
 implemented_by:
   - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/06_buildfeature_flatten_wiring.md
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: dispatch
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Ticket
+    source: real
+    asof: '2026-07-14'

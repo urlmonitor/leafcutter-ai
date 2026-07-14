@@ -1,4 +1,6 @@
 id: BO-520-2
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "BA or IT PO sets change_type during ticket creation"

@@ -1,4 +1,6 @@
 id: INF-500a-4
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Existing path (pre-finalization) behavior is unchanged"

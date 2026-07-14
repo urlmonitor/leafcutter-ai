@@ -13,6 +13,7 @@
     "summary": { "type": "string", "minLength": 1, "description": "HUMAN: one-paragraph plain-language description of what the screen shows." },
     "entities": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" }, "description": "Entities the screen renders. Every value must be a member of index.json entity_registry." },
     "source": { "type": "string", "enum": ["mock", "real"], "description": "Whether the screen renders mock/demo data or a real system surface." },
+    "realization": { "type": "string", "enum": ["built", "spec", "mock"], "description": "Does the screen EXIST in the repo today? built = drawn and wired; spec = aspirational, not-yet-drawn; mock = sample/demo screen. OPTIONAL — absent defaults to 'built'. Parallels flow.realization." },
     "renders": { "type": ["string", "null"], "description": "Path to the self-contained HTML rendering, relative to this mockup file's directory (e.g. 'plant-listing.html'). Null when the screen is registered but not yet drawn." },
     "status": { "type": "string", "enum": ["active", "deprecated"], "description": "Lifecycle: is this screen live or retired." },
     "superseded_by": { "type": ["string", "null"], "description": "id of the artifact replacing this one when status=deprecated." },

@@ -7,6 +7,7 @@
   "summary": "The way a person adds a feature to Leafcutter without writing specs by hand: they say in plain language what they want, the system classifies what the request needs and drafts the artifacts that fit — mock data, then mockups populated from it, then a flow wiring them together — and once the person reviews and approves that draft, the acceptance criteria are generated from the flow's steps. The flow becomes the reviewable source of truth the rest of the pipeline builds from.",
   "kind": "user",
   "source": "real",
+  "realization": "spec",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,

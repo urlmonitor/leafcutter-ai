@@ -1,4 +1,6 @@
 id: BO-400b-2-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Script handles missing status field gracefully"

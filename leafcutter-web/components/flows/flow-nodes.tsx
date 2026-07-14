@@ -11,13 +11,16 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { GitBranch, Monitor, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WORK_STATUS_TONE } from "@/lib/status";
-import type { WorkStatus } from "@/lib/data/types";
+import type { FlowRealization, WorkStatus } from "@/lib/data/types";
 import { AcNode } from "@/components/atlas/nodes";
+import { RealizationBadge } from "./realization-badge";
 
 export interface FlowStepNodeData {
   label: string;
   order?: number;
   screen: string | null;
+  screenTitle?: string | null; // resolved mockup title for the screen slug, if any
+  realization?: FlowRealization;
   status: WorkStatus;
   variant: "step" | "branch";
   acCount: number;
@@ -26,7 +29,7 @@ export interface FlowStepNodeData {
 }
 
 function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
-  const { label, order, screen, status, variant, acCount, drillable, selected } = data;
+  const { label, order, screen, screenTitle, realization, status, variant, acCount, drillable, selected } = data;
   const st = WORK_STATUS_TONE[status] ?? WORK_STATUS_TONE.unknown;
   const isBranch = variant === "branch";
   return (
@@ -75,6 +78,9 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
           {isBranch ? "Branch" : "Step"}
         </span>
         <div className="flex items-center gap-1">
+          {realization && realization !== "built" && (
+            <RealizationBadge realization={realization} size="sm" />
+          )}
           {drillable && (
             <span
               data-flow-drill="true"
@@ -98,9 +104,12 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
         {screen && (
-          <span className="inline-flex items-center gap-1">
+          <span
+            className="inline-flex items-center gap-1"
+            title={screenTitle ? `Screen: ${screenTitle} (${screen})` : `Screen: ${screen}`}
+          >
             <Monitor className="h-3 w-3" />
-            {screen}
+            {screenTitle ?? screen}
           </span>
         )}
         {acCount > 0 && (

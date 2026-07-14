@@ -1,4 +1,6 @@
 id: BP-400a-1
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "emit_event.py exists at the deployed path and produces valid JSONL"

@@ -1,4 +1,6 @@
 id: TKT-200a-1
+readiness: reviewed
+priority: medium
 components:
   - ticket-creation
 title: "Diagram generation reads component relationships from AC files"

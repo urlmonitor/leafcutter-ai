@@ -1,4 +1,6 @@
 id: ACS-400b-1
+readiness: reviewed
+priority: medium
 components:
   - ac-store
 title: "Implementation agents can update work_status field"

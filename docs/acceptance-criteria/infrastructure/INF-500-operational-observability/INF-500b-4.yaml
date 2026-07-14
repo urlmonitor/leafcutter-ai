@@ -1,4 +1,6 @@
 id: INF-500b-4
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "trend_report.py gracefully handles empty or absent feedback data"

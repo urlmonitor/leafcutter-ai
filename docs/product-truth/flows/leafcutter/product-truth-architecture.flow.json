@@ -7,6 +7,7 @@
   "summary": "How product-truth sits inside Leafcutter's architecture: the product-truth store lives beside the acceptance-criteria store, the Atlas reads that store live and renders its flows, and the agents produce and extend the artifacts (flows, mock data, ACs) that both surfaces depend on. Together these three pieces make product-truth a living layer rather than a static document.",
   "kind": "architecture",
   "source": "real",
+  "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,

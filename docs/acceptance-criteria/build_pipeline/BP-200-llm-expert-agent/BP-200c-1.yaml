@@ -1,4 +1,6 @@
 id: BP-200c-1
+readiness: reviewed
+priority: medium
 title: "Registry entry declares llm-expert as a phase agent with correct tier and role"
 component: build_pipeline
 level: L2

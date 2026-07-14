@@ -1,4 +1,6 @@
 id: BP-200e-1
+readiness: reviewed
+priority: medium
 title: "Agent runs the Prompt-Quality Checklist before declaring any written prompt complete"
 component: build_pipeline
 level: L2

@@ -1,4 +1,6 @@
 id: BP-400b
+readiness: reviewed
+priority: medium
 components:
   - build-pipeline
 title: "Retrospectives produce accurate timelines even after files move"

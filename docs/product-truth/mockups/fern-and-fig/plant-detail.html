@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fern &amp; Fig — Plant detail</title>
+  <!--
+    REFERENCE MOCKUP — screen: plant-detail
+    Populated by hand from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json
+    (entity Plant → monstera-deliciosa). Self-contained, low-fidelity, no external assets.
+    The out-of-stock variant (branch: notify) is shown as a second state at the bottom
+    and belongs to screen notify-me once that screen is drawn.
+  -->
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --card: #ffffff;
+      --ink: #23301f;
+      --muted: #6c7a63;
+      --line: #e4e1d7;
+      --leaf: #3f6b3a;
+      --in-stock-bg: #e5f2e2;   --in-stock-fg: #2f6b2a;
+      --low-bg: #fdf1d6;        --low-fg: #8a6410;
+      --out-bg: #f7e1df;        --out-fg: #9a3b33;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    header.site {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--card);
+    }
+    header.site .brand { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; color: var(--leaf); }
+    header.site .tag { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    main { max-width: 900px; margin: 0 auto; padding: 28px 24px 48px; }
+    .crumbs { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+    .crumbs a { color: var(--leaf); text-decoration: none; }
+    .detail {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 28px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .hero {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 128px;
+      background: linear-gradient(135deg, #eef3ea, #dfe8d8);
+    }
+    .info { padding: 26px 28px 28px; display: flex; flex-direction: column; gap: 14px; }
+    h1 { font-size: 24px; margin: 0; }
+    .price { font-size: 22px; font-weight: 700; }
+    .badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; align-self: flex-start; }
+    .badge.in-stock { background: var(--in-stock-bg); color: var(--in-stock-fg); }
+    .badge.low-stock { background: var(--low-bg); color: var(--low-fg); }
+    .badge.out-of-stock { background: var(--out-bg); color: var(--out-fg); }
+    p.desc { color: var(--muted); font-size: 15px; line-height: 1.55; margin: 0; }
+    .btn {
+      margin-top: 6px; border: 1px solid var(--leaf); background: var(--leaf); color: #fff;
+      border-radius: 8px; padding: 12px 18px; font-size: 15px; font-weight: 600; cursor: pointer;
+      text-align: center; align-self: flex-start;
+    }
+    .btn.secondary { background: #fff; color: var(--leaf); }
+    .btn[disabled] { background: #eceae3; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+    .state-label { margin: 34px 0 12px; font-size: 13px; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="brand">Fern &amp; Fig</div>
+    <p class="tag">Houseplants, delivered.</p>
+  </header>
+  <main>
+    <p class="crumbs"><a href="plant-listing.html">All plants</a> &rsaquo; Monstera Deliciosa</p>
+
+    <!-- Plant: monstera-deliciosa (stock 12 → in-stock) -->
+    <article class="detail">
+      <div class="hero" aria-hidden="true">&#127807;</div>
+      <div class="info">
+        <h1>Monstera Deliciosa</h1>
+        <span class="badge in-stock">In stock &middot; 12 available</span>
+        <div class="price">&euro;34</div>
+        <p class="desc">The Swiss cheese plant. Big, glossy, split leaves that love bright indirect light. A forgiving statement plant for any room.</p>
+        <button class="btn">Add to cart</button>
+      </div>
+    </article>
+
+    <!-- Branch: notify — out-of-stock plant replaces Add to cart with Notify me -->
+    <p class="state-label">Out-of-stock variant (branch: notify → screen notify-me)</p>
+    <article class="detail">
+      <div class="hero" aria-hidden="true">&#127793;</div>
+      <div class="info">
+        <h1>Snake Plant</h1>
+        <span class="badge out-of-stock">Out of stock</span>
+        <div class="price">&euro;22</div>
+        <p class="desc">Nearly indestructible and happy in low light. Currently sold out — leave your email and we'll tell you the moment it's back.</p>
+        <button class="btn secondary">Notify me when back</button>
+      </div>
+    </article>
+  </main>
+</body>
+</html>

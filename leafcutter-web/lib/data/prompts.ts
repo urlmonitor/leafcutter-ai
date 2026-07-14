@@ -1,7 +1,7 @@
 import "server-only";
 import matter from "gray-matter";
 import { repoPath, readFileSafe } from "./repo";
-import { loadAcs, acById } from "./ac-store";
+import { loadAcs } from "./ac-store";
 import { loadTickets } from "./tickets";
 import { computeNextUp } from "./backlog";
 import type {

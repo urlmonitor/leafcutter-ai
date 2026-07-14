@@ -13,6 +13,7 @@
     "superseded_by": { "type": ["string", "null"], "description": "id of the artifact replacing this one when status=deprecated." },
     "version": { "type": "integer", "minimum": 1 },
     "reusable": { "type": "boolean", "description": "true if other flows/components may reuse this dataset." },
+    "realization": { "type": "string", "enum": ["built", "spec", "mock"], "description": "Origin of the dataset: mock = sample/demo product content (the default meaning for mock-data); spec = aspirational shape for a not-yet-built dataset; built = mirrors a real on-disk dataset. OPTIONAL — absent defaults to 'built'. Parallels flow.realization." },
     "tags": { "type": "array", "items": { "type": "string" } },
     "invariants": { "type": "array", "items": { "type": "string" }, "description": "Human/machine rules the records must satisfy (e.g. 'Plant.status==out-of-stock iff stock==0'). Checked by the validator." },
     "entities": {

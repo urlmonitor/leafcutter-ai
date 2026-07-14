@@ -1,4 +1,6 @@
 id: BO-510-3
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "Validation test fails when any agent entry or template lacks the produces field"

@@ -1,4 +1,6 @@
 id: TKT-200d-1
+readiness: reviewed
+priority: medium
 components:
   - ticket-creation
 title: "Changed spec triggers regeneration of its dependent diagram"

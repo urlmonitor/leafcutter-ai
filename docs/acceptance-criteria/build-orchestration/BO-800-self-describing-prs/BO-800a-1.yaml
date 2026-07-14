@@ -1,4 +1,6 @@
 id: BO-800a-1
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "PR title is set to the L1 AC title referenced by the ticket's source_ac field"

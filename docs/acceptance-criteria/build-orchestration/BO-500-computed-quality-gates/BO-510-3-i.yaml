@@ -1,4 +1,6 @@
 id: BO-510-3-i
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "New agent template added without produces field is caught by validation"

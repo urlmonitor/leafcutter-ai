@@ -1,4 +1,6 @@
 id: BO-530-2
+readiness: reviewed
+priority: medium
 components:
   - build-orchestration
 title: "test-runner is injected after every coder-class agent in the computed chain"
@@ -58,3 +60,24 @@ covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: testrun
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Diff
+      - Test
+    source: real
+    asof: '2026-07-14'
+  - flow: leafcutter/python-coder-internal
+    node: tests
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

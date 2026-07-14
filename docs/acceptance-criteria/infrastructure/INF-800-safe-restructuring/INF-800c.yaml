@@ -1,4 +1,6 @@
 id: INF-800c
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Restructure across file boundaries without losing track"
