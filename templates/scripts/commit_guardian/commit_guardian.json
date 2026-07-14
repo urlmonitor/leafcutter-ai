@@ -439,6 +439,19 @@
                 "_comment": "EPIC-PrecommitSafetyNet/02: Pre-stage transformer that fills missing created, last_updated, type, status fields in staged docs/*.md files before check_doc_frontmatter validator runs. Exits 0 always (fail-open)."
             },
             {
+                "id": "transform-component-vocab",
+                "tier": "transform",
+                "name": "Transform Component Vocab (normalise components list to components.json ids)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_component_vocab.py",
+                "language": "system",
+                "files": "^(docs/acceptance-criteria/.*\\.yaml|tickets/.*\\.md|docs/.*\\.md)$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "Component-taxonomy guard: pre-stage transformer that rewrites legacy/near-miss `components` LIST values (e.g. build-orchestration -> build_orchestration, guardrail-engine -> commit_guardian) to canonical docs/components.json ids in staged ACs/tickets/docs, so kebab reintroduced by a merge of a pre-migration branch is auto-healed before validators run. Scalar `component` and already-valid ids (e.g. knowledge_management) are untouched. Exits 0 always (fail-open)."
+            },
+            {
                 "id": "check-doc-frontmatter",
                 "tier": "judgment",
                 "name": "Check Doc Frontmatter (YAML frontmatter validation for docs/*.md and tickets/)",
