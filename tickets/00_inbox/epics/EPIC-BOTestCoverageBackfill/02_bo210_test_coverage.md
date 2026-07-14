@@ -33,7 +33,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: failed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: Green test coverage for BO-210
@@ -97,7 +97,7 @@ tests:
 - [x] test-runner — 2026-07-14 15:00
 - [ ] pr-reviewer — failed 2026-07-14 15:30
 - [x] commit — 2026-07-14 16:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-14 16:15
 
 ## Comments
 
@@ -251,3 +251,12 @@ completion_manifest:
   ticket_staged: true
 
 Applied pr-reviewer H-1 and H-2 fixes before committing: changed _load_deployed_config() to raise unittest.SkipTest (not AssertionError) so tests skip gracefully when the gitignored config is absent in CI; staged templates/agents/frontend-coder.md (python-coder's working-tree && and || fix) in the same commit as the test file. SHA cdedfec0; 42 tests green; ruff clean. Pre-commit probe noted git_hook/canary false (known worktree gap — hooks silent-skip).
+
+### 2026-07-14 16:15 — pull-request (status: ok)
+feedback-id: fb_2026-07-14_59e673a6
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+
+Pushed 1 pending commit (commit phase sign-off) to existing PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282). PR was already open for branch EPIC-BOTestCoverageBackfill; no new PR needed. Note: pr-reviewer: failed is present in the agents map — ticket status remains todo (not flipped to done) since not all agents are in {signed_off, not_needed}.
