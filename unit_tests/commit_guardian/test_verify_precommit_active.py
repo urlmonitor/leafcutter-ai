@@ -1788,5 +1788,188 @@ class TestRemoveCanaryFromManifestFileNotFound(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# TICKET 02 (BO-1700 PHANTOM-DONE REMEDIATION) — BO-1700g-1, BO-1700h-1,
+# BO-1700h-3, BO-1700e-3
+# Added: 2026-07-14 [EPIC-BOPhantomDoneRemediation/02]
+# Tests below are RED until the following are wired into run_checks():
+#   validate_hook_name   — must be called during the check flow (BO-1700g-1)
+#   check_hook_freshness — must be called during the check flow (BO-1700h-1)
+#   resolve_hooks_path   — must be called during Check C (BO-1700h-3)
+#   is_guardian_complete — must gate run_checks() to fail closed (BO-1700e-3)
+# Additionally:
+#   run_checks() must add 'incomplete_build': True to its result dict when the
+#   guardian deployment is incomplete, and append 'incomplete_build' to
+#   failing_checks so the CLI exits non-zero (BO-1700e-3 fail-closed criterion).
+# ---------------------------------------------------------------------------
+
+
+class TestRunChecksInvokesHookIdValidation(unittest.TestCase):
+    """BO-1700g-1/h-1/h-3: run_checks must wire validate helpers into the check flow."""
+
+    def test_run_checks_invokes_hook_id_validation(self):
+        # covers: BO-1700g-1
+        # covers: BO-1700h-1
+        # covers: BO-1700h-3
+        """run_checks() must call validate_hook_name, check_hook_freshness, and
+        resolve_hooks_path during its execution. All three are currently dead code
+        (not called by run_checks()) — this test is RED until they are wired in.
+
+        Wiring criteria:
+          BO-1700g-1: validate_hook_name is the required hook-ID anti-spoofing guard
+                      that must run as part of Check B/C orchestration.
+          BO-1700h-1: check_hook_freshness detects config-drift and must be called
+                      to report the worktree config as stale when it diverges.
+          BO-1700h-3: resolve_hooks_path must be called so Check C honours any
+                      core.hooksPath override rather than assuming a default path.
+
+        The four canonical check functions (check_a–d) are mocked so the test does
+        not require a live git repo or pre-commit installation. The helpers are spied
+        upon via patch.object; their mock.called flags confirm wiring. If the coder
+        wires the helpers inside check_b_config/check_c_git_hook rather than inside
+        run_checks() directly, these mocks will prevent the helpers from firing —
+        in that case update the test to call the check functions directly without
+        mocking them.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        for fn_name in ("validate_hook_name", "check_hook_freshness", "resolve_hooks_path"):
+            if not hasattr(_vpa, fn_name):
+                self.fail(
+                    f"AttributeError: verify_precommit_active does not expose {fn_name}(). "
+                    f"Implement this helper first (tickets 03/04)."
+                )
+        # Spy on the three helpers that must be wired into run_checks().
+        # The four check functions are mocked so no live environment is needed.
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "validate_hook_name", return_value=True) as spy_vhn,
+            patch.object(
+                _vpa, "check_hook_freshness", return_value=True
+            ) as spy_chf,
+            patch.object(
+                _vpa, "resolve_hooks_path", return_value=Path("/tmp/hooks")
+            ) as spy_rhp,
+        ):
+            _vpa.run_checks()
+
+        # BO-1700g-1: validate_hook_name must be called (required hook-ID guard)
+        self.assertTrue(
+            spy_vhn.called,
+            msg=(
+                "validate_hook_name was NOT called during run_checks(). "
+                "Wire validate_hook_name into the check flow per BO-1700g-1. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+        # BO-1700h-1: check_hook_freshness must be called (drift detection)
+        self.assertTrue(
+            spy_chf.called,
+            msg=(
+                "check_hook_freshness was NOT called during run_checks(). "
+                "Wire check_hook_freshness into the check flow per BO-1700h-1. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+        # BO-1700h-3: resolve_hooks_path must be called (core.hooksPath honour)
+        self.assertTrue(
+            spy_rhp.called,
+            msg=(
+                "resolve_hooks_path was NOT called during run_checks(). "
+                "Wire resolve_hooks_path into Check C per BO-1700h-3. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+
+
+class TestIncompleteBuildFailsClosed(unittest.TestCase):
+    """BO-1700e-3: Incomplete guardian-scripts build must fail closed, not skip."""
+
+    def test_incomplete_build_fails_closed(self):
+        # covers: BO-1700e-3
+        """When is_guardian_complete() returns False (incomplete deploy), run_checks()
+        must fail closed: the result must contain incomplete_build: True AND
+        failing_checks must be non-empty with 'incomplete_build' in it.
+
+        Must NOT return a passing result — the fail-open graceful_skip_if_incomplete
+        pattern (returns True and lets the gate proceed silently) is the exact
+        OPPOSITE of the required fail-closed behaviour (BO-1700e-3 anti-criterion).
+
+        RED until:
+          1. run_checks() calls is_guardian_complete() before running checks A–D.
+          2. When is_guardian_complete() returns False, run_checks() adds
+             'incomplete_build': True to the result dict (architect-review §3).
+          3. 'incomplete_build' is appended to failing_checks so the CLI exits non-zero.
+
+        Current state: run_checks() never calls is_guardian_complete() → the result
+        dict has no 'incomplete_build' key → result.get('incomplete_build', False) is
+        False → first assertion fails → RED.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "is_guardian_complete(). Implement this helper first (ticket 07)."
+            )
+        # Simulate an incomplete build: one or more guard scripts are absent.
+        # All four checks return True to isolate the incomplete_build detection path.
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=False),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        # BO-1700e-3: Fail closed — incomplete_build must be True in result
+        self.assertTrue(
+            result.get("incomplete_build", False),
+            msg=(
+                "Expected result['incomplete_build'] == True when is_guardian_complete() "
+                "returns False. run_checks() must fail closed on an incomplete build. "
+                f"Got result: {result}"
+            ),
+        )
+        # BO-1700e-3: Fail closed — failing_checks must be non-empty
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                "Expected failing_checks to be non-empty when build is incomplete "
+                "(fail-closed). The fail-open graceful_skip_if_incomplete pattern "
+                f"(empty failing_checks) must be replaced. Got result: {result}"
+            ),
+        )
+        # BO-1700e-3: 'incomplete_build' must appear in failing_checks
+        self.assertIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "Expected 'incomplete_build' in failing_checks when is_guardian_complete() "
+                "returns False. The probe must name the missing-deploy condition in its "
+                f"failing_checks output. Got result: {result}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

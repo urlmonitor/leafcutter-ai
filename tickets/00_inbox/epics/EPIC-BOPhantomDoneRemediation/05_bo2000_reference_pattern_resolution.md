@@ -150,3 +150,15 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 PR #281 opened at https://github.com/urlmonitor/leafcutter-ai/pull/281 targeting main; branch EPIC-BOPhantomDoneRemediation pushed to origin. Merge state: MERGEABLE + UNSTABLE (pre-existing non-required CI failure on main — expected baseline).
+
+### 2026-07-14 16:20 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_f834ace6
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Re-verified after python-coder implementation: all 5 tests in unit_tests/prompt_assembly/test_implementation_notes_emission.py pass. TestReferencePatternResolution.test_ac3_reference_pattern_resolves_to_paths and test_ac3i_unresolvable_pattern_errors both green (BO-2000c-3 and BO-2000c-3-i covered). Tests run: 5   Failures: 0   Errors: 0   Skipped: 0.
+
+### 2026-07-14 16:35 — commit (status: ok)
+feedback-id: fb_2026-07-14_61f9a2e9
+Auto-authorized commit gate: subject "test(commit-guardian): add verify_precommit_active test suite; advance ticket-02 (BO-1700)"; staged files: tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/01_bo1100_wire_commit_routing.md, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/02_bo1700_wire_probe_helpers.md, tickets/00_inbox/epics/EPIC-BOPhantomDoneRemediation/05_bo2000_reference_pattern_resolution.md, unit_tests/commit_guardian/test_verify_precommit_active.py.

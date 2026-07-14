@@ -245,3 +245,12 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 Pushed branch EPIC-BOPhantomDoneRemediation to origin; commit `feat(bo-remediation): wire classifier/mixed-set detection into commit agent` now included in existing epic PR #281. No new PR was created — the epic PR already covers this branch. pr-reviewer is still needed before ticket is done.
+
+### 2026-07-14 16:15 — architect-review (status: ok)
+feedback-id: fb_2026-07-14_c413b9fd
+completion_manifest:
+  blast_radius_reassessed: true
+  classification_confirmed: true
+  test_drift_scope_widened: true
+  remediation_path_confirmed: true
+Re-assessment triggered by python-coder/test-runner failures. Classification remains SMALL: 6 files, single build_orchestration component, no always-large trigger, no cross-module boundary. The test_drift scope is wider than python-coder reported — the respawned test-writer must update all 6 conflicting test methods across THREE classes (not just TestPatternsConfigFileExists): (1) TestPatternsConfigFileExists.test_config_file_is_valid_json and test_config_file_has_patterns_key and test_config_patterns_cover_all_file_groups and test_all_patterns_contain_detail_placeholder; (2) TestLoadPatterns.test_load_patterns_with_custom_path_overrides_a_pattern (writes old dict format in custom config); (3) TestConfigIsConsultedByClassifier.test_one_line_config_edit_changes_a_pattern (also writes old dict format). If only TestPatternsConfigFileExists is updated and the TestLoadPatterns/TestConfigIsConsultedByClassifier dict-format custom-config writes are not converted to array format, another partial-green failure will result. Remediation path: respawn test-writer with this expanded scope, then respawn python-coder for the array schema implementation. requires_adr: false (single component, no new cross-cutting policy).
