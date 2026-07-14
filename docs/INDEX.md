@@ -10,7 +10,7 @@ description: "Master index of all documentation in the leafcutter-ai package, au
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-06-30 08:14 UTC
+> Generated: 2026-07-14 17:23 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -20,32 +20,40 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| ac driven dev | [docs/architecture/components/ac-driven-dev.md](docs/architecture/components/ac-driven-dev.md) | The AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog. |
 | agent registry | [docs/architecture/components/agent-registry.md](docs/architecture/components/agent-registry.md) | Central registry of all phase agents with is_ticket_phase flags, produces traits, and model tier assignments used by ticket-supervisor for dispatch and validation. |
 | agent telemetry | [docs/architecture/components/agent-telemetry.md](docs/architecture/components/agent-telemetry.md) | Event emission and tracking system for recording supervisor dispatch, agent sign-offs, retries, and failure events to JSONL logs for retrospective analysis. |
 | bootstrap installer | [docs/architecture/components/bootstrap-installer.md](docs/architecture/components/bootstrap-installer.md) | Self-hosting installation system that deploys leafcutter-ai agents, skills, hooks, and config scaffolds into consumer projects with zero manual setup. |
 | build epic workflow dispatch | [docs/architecture/components/build-epic-workflow-dispatch.md](docs/architecture/components/build-epic-workflow-dispatch.md) | build-epic.js Workflow Dispatch — Agent Flow |
+| build orchestration | [docs/architecture/components/build-orchestration.md](docs/architecture/components/build-orchestration.md) | Build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks. |
 | build ticket workflow dispatch | [docs/architecture/components/build-ticket-workflow-dispatch.md](docs/architecture/components/build-ticket-workflow-dispatch.md) | build-ticket.js Workflow Dispatch — Agent Flow |
 | changelog | [docs/architecture/components/changelog.md](docs/architecture/components/changelog.md) | Automated changelog entry management system that tracks feature delivery history with structured YAML entries linked to tickets and commits. |
 | commit guardian | [docs/architecture/components/commit-guardian.md](docs/architecture/components/commit-guardian.md) | Pre-commit hook orchestration system that enforces code quality, ADR coverage, component integrity, and structural rules before every commit lands. |
 | doc compliance | [docs/architecture/components/doc-compliance.md](docs/architecture/components/doc-compliance.md) | Documentation compliance verification system that enforces frontmatter presence, description fields, doc-length limits, and coverage requirements across all project documentation. |
 | feedback collector | [docs/architecture/components/feedback-collector.md](docs/architecture/components/feedback-collector.md) | Structured feedback collection system that aggregates agent quality signals into JSONL logs for retrospective analysis and continuous improvement. |
+| finalize | [docs/architecture/components/finalize.md](docs/architecture/components/finalize.md) | The finalize-feature workflow: pre-merge test baseline capture, PR merge gating, push-before-merge sync, main sync, and ticket/epic closure. |
 | glossary | [docs/architecture/components/glossary.md](docs/architecture/components/glossary.md) | Project terminology registry with automated coverage checks that ensure novel jargon is triaged and documented consistently across all project artifacts. |
 | injection builder | [docs/architecture/components/injection-builder.md](docs/architecture/components/injection-builder.md) | Context injection payload assembler that delivers structured knowledge to agents at invocation time via the 11-channel agent knowledge plane. |
+| knowledge management | [docs/architecture/components/knowledge-management.md](docs/architecture/components/knowledge-management.md) | The cross-surface knowledge graph: surface ingestion from config/paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation. |
 | knowledge system | [docs/architecture/components/knowledge-system.md](docs/architecture/components/knowledge-system.md) | Knowledge harvesting and context file maintenance system that persists learnings across agent sessions for improved future-invocation quality. |
+| persona management | [docs/architecture/components/persona-management.md](docs/architecture/components/persona-management.md) | Persona definitions, AC targeting by persona, and persona knowledge-graph queries. |
 | release manager | [docs/architecture/components/release-manager.md](docs/architecture/components/release-manager.md) | Semantic version computation and schema diff checking system for managing structured releases of the leafcutter-ai package. |
 | roadmap | [docs/architecture/components/roadmap.md](docs/architecture/components/roadmap.md) | Phase-based roadmap that tracks current outcomes, exit criteria, and the tickets advancing each outcome toward the stable MVP target. |
 | skill registry | [docs/architecture/components/skill-registry.md](docs/architecture/components/skill-registry.md) | Registry of all available skills with metadata on usage context, allowed tools, and configuration constraints for agent invocation. |
+| stakeholder delivery | [docs/architecture/components/stakeholder-delivery.md](docs/architecture/components/stakeholder-delivery.md) | Stakeholder-facing delivery of product value: a presentation agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications. |
 | supervisor spawn topology | [docs/architecture/components/supervisor-spawn-topology.md](docs/architecture/components/supervisor-spawn-topology.md) | Supervisor Spawn Topology — Flattened Agent Dispatch Chain |
 | template compiler | [docs/architecture/components/template-compiler.md](docs/architecture/components/template-compiler.md) | Build-time template compilation system that transforms Jinja-style agent and skill templates into deployed artifacts during the leafcutter build phase. |
 | ticket lifecycle | [docs/architecture/components/ticket-lifecycle.md](docs/architecture/components/ticket-lifecycle.md) | End-to-end ticket management system covering inbox creation, status transitions, phase-agent sign-offs, and archival to the done state. |
+| ux prototyping | [docs/architecture/components/ux-prototyping.md](docs/architecture/components/ux-prototyping.md) | The UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff. |
 | worktree manager | [docs/architecture/components/worktree-manager.md](docs/architecture/components/worktree-manager.md) | Git worktree lifecycle management component that creates, tracks, and tears down isolated branch environments for parallel epic and ticket development. |
+| worktree quality gate guard | [docs/architecture/components/worktree-quality-gate-guard.md](docs/architecture/components/worktree-quality-gate-guard.md) | Container-level overview of the worktree quality-gate guard subsystem: the four-check probe, the index-0 self-healing config hook, and the three lifecycle gates that keep pre-commit hooks firing inside git worktrees. |
 
 ## Architecture Diagrams
 
 | Name | Path | Description |
 |------|------|-------------|
 | agent delivery workflows | [docs/architecture/agent_delivery_workflows.md](docs/architecture/agent_delivery_workflows.md) | Visualises how the leafcutter-ai agent ecosystem orchestrates code delivery — slash-command entry points, supervisor dispatch topology, quick-fix workflow, and blocker adjudication flows. |
-| agent knowledge plane | [docs/architecture/agent_knowledge_plane.md](docs/architecture/agent_knowledge_plane.md) | Agent Knowledge Plane |
+| agent knowledge plane | [docs/architecture/agent_knowledge_plane.md](docs/architecture/agent_knowledge_plane.md) | Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including skills_invoked cross-reference validation. |
 | agent knowledge system | [docs/architecture/agent_knowledge_system.md](docs/architecture/agent_knowledge_system.md) | Agent Knowledge System |
 | feedback lifecycle | [docs/architecture/feedback-lifecycle.md](docs/architecture/feedback-lifecycle.md) | Feedback Lifecycle — Data Flow |
 
@@ -71,6 +79,12 @@ task, then pull only those files.
 | ADR 014 exception guard enforcement scope | [docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md](docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md) | Records two enforcement-scope decisions for the exception-handling pre-commit guard: subprocess calls become a mandatory I/O boundary (GE-108a), and only WARNING-or-higher logging on a real logger clears a blind-catch handler (GE-108b). |
 | ADR 015 guard honors noqa ble001 | [docs/architecture/adrs/ADR-015-guard-honors-noqa-ble001.md](docs/architecture/adrs/ADR-015-guard-honors-noqa-ble001.md) | Records the decision to teach check_exception_handling.py to honor inline `# noqa: BLE001` suppression comments, scoped per-line and per-violation-code to match Ruff semantics, resolving the GE-108b self-hosting regression where the widened guard flagged leafcutter's own intentionally-blind handlers. |
 | ADR 016 ci fresh clone test dependencies | [docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md](docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md) | Records the decision to extend install_shims() with script-directory shims so that the full test suite passes on a fresh clone after the ADR-004 consolidation removed scripts/commit_guardian/, scripts/doc_compliance/, and scripts/feedback/ from the project root. Also records the decision to move feedback scripts into templates/scripts/feedback/ as the canonical tracked source so that build.py's _check_script_reference_guard() passes on a fresh clone (AC BP-1200a-1-ii). |
+| ADR 017 computed quality gates | [docs/architecture/adrs/ADR-017-computed-quality-gates.md](docs/architecture/adrs/ADR-017-computed-quality-gates.md) | Two-axis classification system (change_target x risk_surface) that maps ticket changes to mandatory guardrail agents at ticket-creation time. |
+| ADR 017 dual engine workflow support | [docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md](docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md) | Records the decision to author all new workflow scripts exclusively in E2 top-level-body form, generate E1-compatible shim wrappers at build time, use a runtime engine-detection predicate to route execution, and explicitly fail on unrecognised engines rather than fall back to LLM. Establishes the canonical E2 authoring contract based on empirical probes of the Claude Code 2.1.185 workflow engine. |
+| ADR 017 worktree quality gate guard | [docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md](docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md) | Records the design of the worktree quality gate guard: a four-check probe model (binary, config, git_hook, canary) whose canary check requires the hook chain to actually FIRE, a fail-closed-on-self-error invariant with no fail-open path, an index-0 self-healing hook that re-materialises the pre-commit config, dual create-time and pre-drive gates, template/deployed source parity per ADR-001, and supersession of the interim one-file feature/SKILL.md slice (commit 586d6191). Motivated by the fresh-worktree silent-skip failure mode surfaced in the EPIC-AcPipelineDeployGaps retrospective. |
+| ADR 018 agent isolation topology | [docs/architecture/adrs/ADR-018-agent-isolation-topology.md](docs/architecture/adrs/ADR-018-agent-isolation-topology.md) | Records the decision to isolate each parallel coding-agent drive in its own independent git clone (own object store) instead of a git worktree sharing one .git, to make main structurally unmodifiable except through a gated PR + merge-queue workflow on an authoritative hub, and to cap agents-per-feature (not features-in-flight). Motivated by repeated 0-byte-object / poisoned-index corruption of the shared .git under ~16 concurrent autonomous committers, and by 2025-2026 research showing every SOTA autonomous-agent product isolates each agent's checkout+object-store and integrates via PR. Includes a worktree-agent -> clone-agent migration plan and the impact on the in-flight BO-1600 guardrail ACs. |
+| ADR 019 build feature inline phase dispatch | [docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md](docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md) | Records the decision to inline the driveTicketPhases loop from build-ticket.js directly into build-feature.js, replacing the prior pattern of dispatching a ticket-supervisor agent per ticket. The prior pattern silently placed phase agents at depth 2 — beyond Claude Code's hard depth-1 Agent-tool nesting limit — so no phase templates ever applied. The workflow() alternative is also prohibited by the E2 leaf-invariant. Inlining the loop is the only configuration that satisfies both constraints. |
+| ADR 020 live surface tester | [docs/architecture/adrs/ADR-020-live-surface-tester.md](docs/architecture/adrs/ADR-020-live-surface-tester.md) | Overview of ADR-020: Live Surface Tester — Port Registry, Read-Only |
 
 ## How-To Guides
 
@@ -86,6 +100,7 @@ task, then pull only those files.
 | creating a skill | [docs/how-to/creating-a-skill.md](docs/how-to/creating-a-skill.md) | How to create a skill |
 | creating an agent template | [docs/how-to/creating-an-agent-template.md](docs/how-to/creating-an-agent-template.md) | How to create an agent template |
 | declare a knowledge surface | [docs/how-to/declare-a-knowledge-surface.md](docs/how-to/declare-a-knowledge-surface.md) | Step-by-step guide for registering a new source of knowledge in config/paths.json so it participates in the cross-surface knowledge map. |
+| declare component membership | [docs/how-to/declare-component-membership.md](docs/how-to/declare-component-membership.md) | Step-by-step guide for adding a components list to a knowledge item so it joins the cross-surface component view, and for querying a component back to its criteria, source files, and tests. |
 | deprecating or removing artifacts | [docs/how-to/deprecating-or-removing-artifacts.md](docs/how-to/deprecating-or-removing-artifacts.md) | Step-by-step guide for safely deprecating or deleting agents, skills, hooks, and scripts from the leafcutter package without breaking consumer builds. |
 | drain backlog with build backlog | [docs/how-to/drain-backlog-with-build-backlog.md](docs/how-to/drain-backlog-with-build-backlog.md) | How to drain the backlog automatically with /build-backlog |
 | drive epic manually | [docs/how-to/drive-epic-manually.md](docs/how-to/drive-epic-manually.md) | How to drive an epic manually when epic-supervisor is unavailable |
@@ -98,6 +113,7 @@ task, then pull only those files.
 | ticket creation workflow | [docs/how-to/ticket-creation-workflow.md](docs/how-to/ticket-creation-workflow.md) | Guide to the canonical ticket-creation workflow (/plan-feature then /build-ac) that replaced the retired create-ticket.js, with a migration note. |
 | upgrade frontend coder unified agent | [docs/how-to/upgrade-frontend-coder-unified-agent.md](docs/how-to/upgrade-frontend-coder-unified-agent.md) | Step-by-step guide for adopters migrating from the separate frontend-coder and frontend-design split to the unified frontend-coder agent — covers what build.py does automatically, verification steps, and rollback instructions. |
 | using frontend coder with design integration | [docs/how-to/using-frontend-coder-with-design-integration.md](docs/how-to/using-frontend-coder-with-design-integration.md) | How to use frontend-coder with design integration |
+| verify precommit active | [docs/how-to/verify-precommit-active.md](docs/how-to/verify-precommit-active.md) | Step-by-step guide to running the verify_precommit_active.py probe and interpreting its four checks to confirm that pre-commit hooks will fire in a git worktree. |
 | working with leafcutter | [docs/how-to/working-with-leafcutter.md](docs/how-to/working-with-leafcutter.md) | How to work with leafcutter end-to-end |
 | writing a tdd ticket | [docs/how-to/writing-a-tdd-ticket.md](docs/how-to/writing-a-tdd-ticket.md) | This guide walks you through writing a ticket that will go through the leafcutter |
 
@@ -112,7 +128,8 @@ task, then pull only those files.
 | feedback concurrency | [docs/reference/feedback-concurrency.md](docs/reference/feedback-concurrency.md) | Reference: Feedback Client Concurrency Limitation |
 | frontend coder capabilities | [docs/reference/frontend-coder-capabilities.md](docs/reference/frontend-coder-capabilities.md) | frontend-coder Unified Agent — Preserved Capabilities Reference |
 | skill frontmatter | [docs/reference/skill-frontmatter.md](docs/reference/skill-frontmatter.md) | Reference: SKILL.md Frontmatter Fields |
-| skills config fields | [docs/reference/skills-config-fields.md](docs/reference/skills-config-fields.md) | Reference: skills_config.json Fields |
+| skills config fields | [docs/reference/skills-config-fields.md](docs/reference/skills-config-fields.md) | Overview of Reference: skills_config.json Fields. |
+| workflow authoring contract | [docs/reference/workflow-authoring-contract.md](docs/reference/workflow-authoring-contract.md) | Copy-paste reference for workflow script authors covering the E2 canonical execution contract, E1-wrap shim pattern, primitive mapping table, and non-transparent edge handling conventions. |
 | workflow constraints | [docs/reference/workflow-constraints.md](docs/reference/workflow-constraints.md) | Reference: Claude Code Workflow Script Constraints |
 
 ## Explanation
@@ -140,6 +157,7 @@ task, then pull only those files.
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](docs/retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering six knowledge items on worktree setup, deployment AC assertions, test coverage, and epic close protocols. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](docs/retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](docs/retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
+| EPIC ComputedQualityGates | [docs/retrospectives/EPIC-ComputedQualityGates.md](docs/retrospectives/EPIC-ComputedQualityGates.md) | Post-merge retrospective for EPIC-ComputedQualityGates (PR #201), covering the phantom-done remediation, three-layer integration gap root cause analysis, backfill of 1,802 ACs, and five proposed knowledge items. |
 | EPIC ErrorHandlingEnforcement | [docs/retrospectives/EPIC-ErrorHandlingEnforcement.md](docs/retrospectives/EPIC-ErrorHandlingEnforcement.md) | Date: 2026-06-01 |
 | EPIC Exceptionhandlingguardenforcestheerror | [docs/retrospectives/EPIC-Exceptionhandlingguardenforcestheerror.md](docs/retrospectives/EPIC-Exceptionhandlingguardenforcestheerror.md) | Date: 2026-06-18 |
 | EPIC FinalizeFeatureHardening | [docs/retrospectives/EPIC-FinalizeFeatureHardening.md](docs/retrospectives/EPIC-FinalizeFeatureHardening.md) | Retrospective: EPIC-FinalizeFeatureHardening |
@@ -148,13 +166,18 @@ task, then pull only those files.
 | EPIC GoalToEpicLeafFilter | [docs/retrospectives/EPIC-GoalToEpicLeafFilter.md](docs/retrospectives/EPIC-GoalToEpicLeafFilter.md) | Epic retrospective for EPIC-GoalToEpicLeafFilter — leaf filter correctness fixes for scan_ac_store.py (done/superseded exclusion and out-of-scope cycle resilience). |
 | EPIC MoveOnMainOnly | [docs/retrospectives/EPIC-MoveOnMainOnly.md](docs/retrospectives/EPIC-MoveOnMainOnly.md) | Date: 2026-06-03 |
 | EPIC Oneagenthandlesboththelookandthecodefor | [docs/retrospectives/EPIC-Oneagenthandlesboththelookandthecodefor.md](docs/retrospectives/EPIC-Oneagenthandlesboththelookandthecodefor.md) | Retrospective for the frontend-coder/frontend-design unification epic (BP-700) |
+| EPIC PhantomDoneFilesTouched | [docs/retrospectives/EPIC-PhantomDoneFilesTouched.md](docs/retrospectives/EPIC-PhantomDoneFilesTouched.md) | Epic retrospective for EPIC-PhantomDoneFilesTouched: real-format parser no-op, fail-open hole, AC audit, and finalize workflow bugs discovered during post-merge remediation. |
 | EPIC PrecommitSafetyNet | [docs/retrospectives/EPIC-PrecommitSafetyNet.md](docs/retrospectives/EPIC-PrecommitSafetyNet.md) | Epic retrospective for EPIC-PrecommitSafetyNet — pre-commit safety net for the leafcutter-ai package. |
+| EPIC QuickFixWorkflow | [docs/retrospectives/EPIC-QuickFixWorkflow.md](docs/retrospectives/EPIC-QuickFixWorkflow.md) | epic: EPIC-QuickFixWorkflow |
+| EPIC SelfDescribingAgentsCorrections | [docs/retrospectives/EPIC-SelfDescribingAgentsCorrections.md](docs/retrospectives/EPIC-SelfDescribingAgentsCorrections.md) | Retrospective for EPIC-SelfDescribingAgentsCorrections |
 | EPIC TDDWorkflowEnforcement | [docs/retrospectives/EPIC-TDDWorkflowEnforcement.md](docs/retrospectives/EPIC-TDDWorkflowEnforcement.md) | **Date**: 2026-05-27 |
+| EPIC TrustworthyTestGate | [docs/retrospectives/EPIC-TrustworthyTestGate.md](docs/retrospectives/EPIC-TrustworthyTestGate.md) | Retrospective for EPIC-TrustworthyTestGate — AC-status-gated test enforcement gate (PR #172); 8 of 25 tickets completed. |
 | TICKET 20260601 FixHooksDeploymentPipeline | [docs/retrospectives/TICKET-20260601-FixHooksDeploymentPipeline.md](docs/retrospectives/TICKET-20260601-FixHooksDeploymentPipeline.md) | Date: 2026-06-01 |
+| TICKET 20260707 BP CollisionGuardrailAndDescriptiveSkills | [docs/retrospectives/TICKET-20260707-BP-CollisionGuardrailAndDescriptiveSkills.md](docs/retrospectives/TICKET-20260707-BP-CollisionGuardrailAndDescriptiveSkills.md) | Overview of Retrospective: BP-100m-1 + BP-1300a Build-Pipeline Remediation. |
 
 ## Glossary
 
-- [docs/glossary.md](docs/glossary.md) — Authoritative glossary of leafcutter-ai project jargon and terminology, seeded by /glossary-bootstrap and maintained by the check_glossary_coverage pre-commit hook.
+- [docs/glossary.md](docs/glossary.md) — Authoritative glossary of leafcutter-ai project jargon and terminology,
 
 ---
 *Index generated by `scripts/generate_doc_index.py`.*
