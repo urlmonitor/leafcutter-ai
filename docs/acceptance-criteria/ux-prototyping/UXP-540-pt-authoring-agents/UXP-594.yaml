@@ -1,0 +1,37 @@
+id: UXP-594
+components:
+  - ux-prototyping
+title: "A feature draft is produced by the product-truth authoring agents — only the ones the request needs"
+component: ux-prototyping
+level: L1
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: todo
+criteria: |
+  As a person defining a feature, the draft I review (a flow, its mock data, and its mockups)
+  is produced by a set of product-truth authoring agents — a classifier, a mock-data agent,
+  a mockup agent, and a flow agent — and only the agents the classifier says the request needs
+  are run, so a single-screen tweak does not spin up a whole journey and a backend job does not
+  draft a screen. None of these agents exist yet; this family tracks the work to build them.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-540
+  - UXP-541
+  - UXP-542
+  - UXP-543
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

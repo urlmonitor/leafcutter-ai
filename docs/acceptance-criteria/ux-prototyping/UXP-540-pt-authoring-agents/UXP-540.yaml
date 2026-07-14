@@ -1,0 +1,57 @@
+id: UXP-540
+components:
+  - ux-prototyping
+title: "A mock-data agent drafts or extends the one canonical dataset for the classified entities"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: todo
+criteria: |
+  Given a classified request naming a component and its entities,
+  When the mock-data agent (mock-data-author) runs,
+  Then it searches the product-truth store for an existing canonical dataset for those entities,
+  And it extends that dataset in place (bumping version, appending provenance) when one exists,
+  And it creates a new *.mock.json only when none exists,
+  And it never creates a second dataset for an entity a component already has.
+depends_on:
+  - UXP-594
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/pipeline-prompts/draft-mock-data.prompt.json
+    relationship: specifies
+    status: exists
+assigned_agent: mock-data-author
+estimated_complexity: L
+it_requirements: |
+  The mock-data-author agent does not exist yet and must be built. It consumes the classifier
+  output (component + entities) plus any existing canonical dataset, and produces a *.mock.json
+  conforming to mock-data.schema.json. It must enforce the add-vs-create rule from the store
+  README (one canonical dataset per entity per component; extend, never duplicate). A hand-authored
+  gold example of its required inputs/outputs lives at
+  docs/product-truth/mock-data/pipeline-prompts/draft-mock-data.prompt.json.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/author-product-truth
+    node: mockData
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - MockData
+    source: real
+    asof: '2026-07-14'

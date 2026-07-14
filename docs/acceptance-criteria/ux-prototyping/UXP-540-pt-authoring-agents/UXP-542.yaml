@@ -1,0 +1,59 @@
+id: UXP-542
+components:
+  - ux-prototyping
+title: "A flow agent assembles the draft flow, wiring each step to its screen and entities"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: todo
+criteria: |
+  Given drafted mock data and mockups for a multi-step request,
+  When the flow agent (flow-author) runs,
+  Then it assembles a *.flow.json whose steps are ordered and each wired to its screen,
+  And each step declares the entities it reads and writes,
+  And each step carries an acceptance_scenario the business-analyst can turn into ACs,
+  And it extends an existing journey rather than creating a new flow when the screen belongs to one.
+depends_on:
+  - UXP-594
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/pipeline-prompts/draft-flow.prompt.json
+    relationship: specifies
+    status: exists
+assigned_agent: flow-author
+estimated_complexity: L
+it_requirements: |
+  The flow-author agent does not exist yet and must be built. It consumes the classifier output,
+  the drafted mock data, and the drafted mockups, and produces a *.flow.json conforming to
+  flow.schema.json — steps wired to screen ids, reads/writes over registered entities, and one
+  acceptance_scenario per node. It must follow the add-vs-create rule (extend an existing journey
+  rather than duplicate). A hand-authored gold example lives at
+  docs/product-truth/mock-data/pipeline-prompts/draft-flow.prompt.json.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/author-product-truth
+    node: flow
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Flow
+      - MockData
+      - Mockup
+    source: real
+    asof: '2026-07-14'

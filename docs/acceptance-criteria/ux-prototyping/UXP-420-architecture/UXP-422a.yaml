@@ -36,6 +36,15 @@ implemented_by: []
 change_target: code
 risk_surface: internal
 product_truth:
+  - flow: leafcutter/author-product-truth
+    node: search
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'
   - flow: leafcutter/product-truth-architecture
     node: agents
     node_kind: step

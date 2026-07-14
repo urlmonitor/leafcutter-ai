@@ -279,8 +279,8 @@
       "impl_summary": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 10,
-        "total": 10,
+        "not_started": 19,
+        "total": 19,
         "asof": "2026-07-14"
       },
       "tags": [
@@ -289,6 +289,40 @@
         "phase-chain",
         "handoff",
         "tdd"
+      ]
+    },
+    {
+      "id": "leafcutter/author-product-truth",
+      "type": "flow",
+      "title": "How the draft artifacts are authored (the product-truth agents)",
+      "summary": "classify (which artifacts?) → search (add vs create) → mock-data agent → mockup agent → flow agent → business-analyst derives ACs, with decision branches for mockup+data / mock-data-only / mockup-only / none.",
+      "kind": "data",
+      "source": "real",
+      "component": "ux-prototyping",
+      "path": "flows/leafcutter/author-product-truth.flow.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [
+        "Request",
+        "MockData",
+        "Mockup",
+        "Flow",
+        "Ac"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 10,
+        "total": 10,
+        "asof": "2026-07-14"
+      },
+      "tags": [
+        "product-truth",
+        "authoring",
+        "agents",
+        "classifier",
+        "pipeline"
       ]
     },
     {
@@ -525,6 +559,7 @@
       "flows": [
         "fern-and-fig/customer-buys-a-plant",
         "fern-and-fig/track-an-order",
+        "leafcutter/author-product-truth",
         "leafcutter/define-a-feature",
         "leafcutter/explore-flows-in-atlas",
         "leafcutter/flow-render-pipeline",
@@ -558,6 +593,7 @@
           "leafcutter/how-acs-are-built"
         ],
         "ux-prototyping": [
+          "leafcutter/author-product-truth",
           "leafcutter/define-a-feature"
         ]
       }
@@ -601,6 +637,7 @@
       "canonical_mock_data": {},
       "flows": {
         "ux-prototyping": [
+          "leafcutter/author-product-truth",
           "leafcutter/define-a-feature"
         ]
       }
@@ -609,6 +646,7 @@
       "canonical_mock_data": {},
       "flows": {
         "ux-prototyping": [
+          "leafcutter/author-product-truth",
           "leafcutter/define-a-feature"
         ]
       }
@@ -617,6 +655,7 @@
       "canonical_mock_data": {},
       "flows": {
         "ux-prototyping": [
+          "leafcutter/author-product-truth",
           "leafcutter/define-a-feature"
         ]
       }
@@ -655,6 +694,9 @@
       "flows": {
         "ac-driven-dev": [
           "leafcutter/ac-lifecycle"
+        ],
+        "ux-prototyping": [
+          "leafcutter/author-product-truth"
         ]
       }
     },
@@ -723,6 +765,25 @@
         "AcStore"
       ],
       "path": "flows/leafcutter/ac-lifecycle.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 10,
+        "total": 10,
+        "asof": "2026-07-14"
+      }
+    },
+    "leafcutter/author-product-truth": {
+      "component": "ux-prototyping",
+      "entities": [
+        "Request",
+        "MockData",
+        "Mockup",
+        "Flow",
+        "Ac"
+      ],
+      "path": "flows/leafcutter/author-product-truth.flow.json",
       "impl_status": "not_started",
       "impl_summary": {
         "done": 0,
@@ -804,8 +865,8 @@
       "impl_summary": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 10,
-        "total": 10,
+        "not_started": 19,
+        "total": 19,
         "asof": "2026-07-14"
       }
     },
@@ -1318,6 +1379,20 @@
     ],
     "UXP-402": [
       {
+        "flow": "leafcutter/author-product-truth",
+        "node": "deriveAcs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Flow"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
         "flow": "leafcutter/define-a-feature",
         "node": "approve",
         "node_kind": "step",
@@ -1493,6 +1568,17 @@
     ],
     "UXP-422a": [
       {
+        "flow": "leafcutter/author-product-truth",
+        "node": "search",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
         "flow": "leafcutter/product-truth-architecture",
         "node": "agents",
         "node_kind": "step",
@@ -1627,6 +1713,115 @@
         "node": "cross",
         "node_kind": "step",
         "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-530": [
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-540": [
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "mockData",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "MockData"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-541": [
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "mockups",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "MockData",
+          "Mockup"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-542": [
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "flow",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "MockData",
+          "Mockup"
+        ],
+        "source": "real",
+        "asof": "2026-07-14"
+      }
+    ],
+    "UXP-543": [
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "dataOnly",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "mockupOnly",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "noFlow",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-07-14"
+      },
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "none",
+        "node_kind": "branch",
+        "flow_kind": "data",
         "screen": null,
         "mock_data": null,
         "entities": [],

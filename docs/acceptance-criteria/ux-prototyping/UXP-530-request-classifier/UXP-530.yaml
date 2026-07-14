@@ -35,3 +35,14 @@ covered_by:
 implemented_by: []
 change_target: code
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/author-product-truth
+    node: classify
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Request
+    source: real
+    asof: '2026-07-14'

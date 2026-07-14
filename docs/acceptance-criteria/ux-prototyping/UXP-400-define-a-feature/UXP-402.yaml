@@ -33,6 +33,17 @@ implemented_by: []
 change_target: code
 risk_surface: internal
 product_truth:
+  - flow: leafcutter/author-product-truth
+    node: deriveAcs
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Flow
+    source: real
+    asof: '2026-07-14'
   - flow: leafcutter/define-a-feature
     node: approve
     node_kind: step

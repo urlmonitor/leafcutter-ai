@@ -1,0 +1,58 @@
+id: UXP-541
+components:
+  - ux-prototyping
+title: "A mockup agent drafts each screen populated from the mock data"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: todo
+criteria: |
+  Given drafted mock data and a request that involves one or more screens,
+  When the mockup agent (mockup-author) runs,
+  Then it drafts a mockup for each screen the request implies,
+  And each mockup is populated from the drafted mock data rather than placeholder text,
+  And each mockup registers a screen id that the flow's steps can resolve,
+  And it extends an existing mockup in place when the screen already exists.
+depends_on:
+  - UXP-594
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/pipeline-prompts/draft-mockups.prompt.json
+    relationship: specifies
+    status: exists
+assigned_agent: mockup-author
+estimated_complexity: L
+it_requirements: |
+  The mockup-author agent does not exist yet and must be built. It consumes the classifier output
+  and the drafted mock data, and produces one *.mockup.json per screen conforming to
+  mockup.schema.json, populated from the mock records. Screen ids must match what the flow's steps
+  reference (the product-truth validator errors on an unresolved screen for an approved flow).
+  A hand-authored gold example lives at
+  docs/product-truth/mock-data/pipeline-prompts/draft-mockups.prompt.json.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/author-product-truth
+    node: mockups
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - MockData
+      - Mockup
+    source: real
+    asof: '2026-07-14'

@@ -1,0 +1,330 @@
+{
+  "id": "leafcutter/author-product-truth",
+  "component": "ux-prototyping",
+  "product": "Leafcutter",
+  "name": "How the draft artifacts are authored (the product-truth agents)",
+  "summary": "The agent pipeline behind define-a-feature's draft step: a classifier decides which artifacts a request needs, then only the required authoring agents run — a mock-data agent drafts or extends the one canonical dataset, a mockup agent draws the screens from that data, a flow agent assembles the journey wiring steps to screens and entities, and finally the business-analyst derives the acceptance criteria from the flow's steps. The handoff medium between agents is the artifact each produces plus the classifier's decision, so a single-screen tweak never spins up a whole journey and a backend job never drafts a screen. None of these agents exist yet — this flow is the spec for building them, so every step renders not-started.",
+  "kind": "data",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "product-truth",
+    "authoring",
+    "agents",
+    "classifier",
+    "pipeline"
+  ],
+  "entities": [
+    "Request",
+    "MockData",
+    "Mockup",
+    "Flow",
+    "Ac"
+  ],
+  "steps": [
+    {
+      "id": "classify",
+      "label": "Classify what the request needs",
+      "human": "A classifier reads the plain-language request and decides which artifacts it needs — flow, mock data, mockups, or a subset — plus the target component and entities, so the pipeline only runs the agents that fit.",
+      "order": 1,
+      "agent": "pt-classifier",
+      "consumes": [
+        "user_request"
+      ],
+      "produces": [
+        "classification.needs_flow",
+        "classification.needs_mock_data",
+        "classification.needs_mockup",
+        "classification.component",
+        "classification.entities",
+        "classification.decision (create|extend)"
+      ],
+      "reads": [
+        "Request"
+      ],
+      "implements": [
+        "UXP-530"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "search",
+      "label": "Search the store (add vs create)",
+      "human": "Before drafting anything, the pipeline searches the product-truth index by component and entities to decide whether to extend an existing artifact or create a new one — there is one canonical dataset per entity per component.",
+      "order": 2,
+      "agent": "mock-data-author / flow-author (add-vs-create)",
+      "consumes": [
+        "classification.component",
+        "classification.entities"
+      ],
+      "produces": [
+        "extend_target | create_decision"
+      ],
+      "implements": [
+        "UXP-422a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "mockData",
+      "label": "Mock-data agent drafts the data",
+      "human": "The mock-data agent drafts or extends the one canonical dataset for the classified entities — realistic records the mockups and flow are built on, never a duplicate dataset.",
+      "order": 3,
+      "agent": "mock-data-author",
+      "consumes": [
+        "classification",
+        "extend_target"
+      ],
+      "produces": [
+        "MockData (*.mock.json, records)"
+      ],
+      "writes": [
+        "MockData"
+      ],
+      "implements": [
+        "UXP-540"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "mockups",
+      "label": "Mockup agent draws the screens",
+      "human": "The mockup agent drafts each screen the request implies, populated from the drafted mock data, registering a screen id the flow's steps can resolve.",
+      "order": 4,
+      "agent": "mockup-author",
+      "consumes": [
+        "classification",
+        "MockData"
+      ],
+      "produces": [
+        "Mockup (*.mockup.json, screen id)"
+      ],
+      "reads": [
+        "MockData"
+      ],
+      "writes": [
+        "Mockup"
+      ],
+      "implements": [
+        "UXP-541"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "flow",
+      "label": "Flow agent assembles the journey",
+      "human": "The flow agent assembles the draft flow, ordering the steps and wiring each to its screen and the entities it reads and writes, with an acceptance_scenario per step.",
+      "order": 5,
+      "agent": "flow-author",
+      "consumes": [
+        "classification",
+        "MockData",
+        "Mockup"
+      ],
+      "produces": [
+        "Flow (*.flow.json, steps wired to screens+entities)",
+        "acceptance_scenarios"
+      ],
+      "reads": [
+        "MockData",
+        "Mockup"
+      ],
+      "writes": [
+        "Flow"
+      ],
+      "implements": [
+        "UXP-542"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "deriveAcs",
+      "label": "Business-analyst derives the ACs",
+      "human": "Once the person approves the drafted flow, the business-analyst derives the L2/L3 acceptance criteria from the flow's steps and back-links each step via step.implements — the flow stays the reviewable source of truth.",
+      "order": 6,
+      "agent": "business-analyst",
+      "consumes": [
+        "Flow (approved)",
+        "acceptance_scenarios"
+      ],
+      "produces": [
+        "Ac (L2/L3)",
+        "step.implements back-links"
+      ],
+      "reads": [
+        "Flow"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "UXP-402"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [
+    {
+      "id": "noFlow",
+      "from": "classify",
+      "condition": "classifier outcome = mockup+data (a single screen, not a journey)",
+      "label": "Skip the flow agent",
+      "human": "For a single-screen change the classifier returns mockup+data: the mock-data and mockup agents run, but the flow agent is skipped — there is no multi-step journey to assemble.",
+      "agent": "pt-classifier (routing)",
+      "consumes": [
+        "classification.outcome"
+      ],
+      "produces": [
+        "dispatch: mock-data + mockup only"
+      ],
+      "implements": [
+        "UXP-543"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "dataOnly",
+      "from": "classify",
+      "condition": "classifier outcome = mock-data-only (backend/API/job, no screen)",
+      "label": "Only the mock-data agent runs",
+      "human": "For backend logic, an API, or a batch job the classifier returns mock-data-only: just the mock-data agent runs so tests have realistic fixtures — no mockups, no flow.",
+      "agent": "pt-classifier (routing)",
+      "consumes": [
+        "classification.outcome"
+      ],
+      "produces": [
+        "dispatch: mock-data only"
+      ],
+      "implements": [
+        "UXP-543"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "mockupOnly",
+      "from": "classify",
+      "condition": "classifier outcome = mockup-only (a static screen with no records)",
+      "label": "Only the mockup agent runs",
+      "human": "For a static screen with no business data (e.g. an About page) the classifier returns mockup-only: just the mockup agent runs — no dataset to draft, no journey.",
+      "agent": "pt-classifier (routing)",
+      "consumes": [
+        "classification.outcome"
+      ],
+      "produces": [
+        "dispatch: mockup only"
+      ],
+      "implements": [
+        "UXP-543"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "none",
+      "from": "classify",
+      "condition": "classifier outcome = none (config / schema / docs, no product surface)",
+      "label": "Draft no artifacts",
+      "human": "For a config change, a schema/perf tweak, or documentation the classifier returns none: no product-truth artifacts are drafted and the request goes straight to normal AC authoring.",
+      "agent": "pt-classifier (routing)",
+      "consumes": [
+        "classification.outcome"
+      ],
+      "produces": [
+        "dispatch: none (straight to AC authoring)"
+      ],
+      "implements": [
+        "UXP-543"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 10,
+    "total": 10,
+    "asof": "2026-07-14"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "classify",
+      "given": "a plain-language feature request",
+      "when": "the classifier runs",
+      "then": "it returns which of flow / mock data / mockups the request needs, plus the component and entities"
+    },
+    {
+      "for": "search",
+      "given": "a classified request naming a component and entities",
+      "when": "the pipeline searches the product-truth index",
+      "then": "it decides to extend the existing canonical artifact or create a new one, never duplicating a dataset"
+    },
+    {
+      "for": "mockData",
+      "given": "a request that needs data",
+      "when": "the mock-data agent runs",
+      "then": "the one canonical dataset for those entities is drafted or extended in place"
+    },
+    {
+      "for": "mockups",
+      "given": "drafted mock data and a request with screens",
+      "when": "the mockup agent runs",
+      "then": "each screen is produced and populated from that mock data with a resolvable screen id"
+    },
+    {
+      "for": "flow",
+      "given": "drafted mock data and mockups",
+      "when": "the flow agent runs",
+      "then": "a draft flow is assembled with each step wired to its screen, its read/write entities, and an acceptance_scenario"
+    },
+    {
+      "for": "deriveAcs",
+      "given": "an approved draft flow",
+      "when": "the business-analyst runs",
+      "then": "acceptance criteria are derived from the flow's steps and each step is back-linked via step.implements"
+    },
+    {
+      "for": "noFlow",
+      "given": "a request classified mockup+data",
+      "when": "the pipeline dispatches agents",
+      "then": "the mock-data and mockup agents run but the flow agent is skipped"
+    },
+    {
+      "for": "dataOnly",
+      "given": "a request classified mock-data-only",
+      "when": "the pipeline dispatches agents",
+      "then": "only the mock-data agent runs"
+    },
+    {
+      "for": "mockupOnly",
+      "given": "a request classified mockup-only",
+      "when": "the pipeline dispatches agents",
+      "then": "only the mockup agent runs"
+    },
+    {
+      "for": "none",
+      "given": "a request classified none",
+      "when": "the pipeline dispatches agents",
+      "then": "no product-truth artifacts are drafted and the request goes straight to normal AC authoring"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-14",
+      "note": "Real data-flow of the product-truth authoring agents (classify -> search -> mock data -> mockups -> flow -> derive ACs) with the agent + consumes/produces handoff contract and the classifier decision branches (mockup+data / mock-data-only / mockup-only / none). Specs the agents behind define-a-feature's draft step — none built yet, so all steps are not_started."
+    }
+  ]
+}
