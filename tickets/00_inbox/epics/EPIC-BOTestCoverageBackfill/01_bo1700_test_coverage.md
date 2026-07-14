@@ -270,3 +270,11 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 Pushed 3 unpushed commits (BO-1700 + BO-500 test coverage + ticket sign-off) to existing PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) on branch EPIC-BOTestCoverageBackfill. urlmonitor account was already active; no account switch needed.
+
+### 2026-07-14 17:53 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_31388dc7
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Re-confirmed: 55 tests in unit_tests/commit_guardian/test_verify_precommit_active.py all passed (0 failures, 0 errors, elapsed 2.76s). Suite: single-file on unit_tests/commit_guardian/test_verify_precommit_active.py. This is a re-invocation confirming the prior sign-off remains valid.

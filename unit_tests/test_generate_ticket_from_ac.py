@@ -2624,3 +2624,285 @@ class TestBO660TraitBasedInheritance:
             "via trait-based inheritance.\n\n"
             f"Result map: {result}"
         )
+
+
+# ===========================================================================
+# BO-600 AC Coverage Backfill Tests
+# Ticket: 06_bo600_test_coverage.md
+# ACs covered: BO-650-2, BO-650-3
+# ===========================================================================
+
+import re as _re_bo600  # noqa: E402
+
+_ADR_AUTHOR_TEMPLATE = _REPO_ROOT / "templates" / "agents" / "adr-author.md"
+_ARCHITECT_REVIEW_TEMPLATE_PATH = _REPO_ROOT / "templates" / "agents" / "architect-review.md"
+_WRITE_C4_DIAGRAM_SKILL_PATH = (
+    _REPO_ROOT / "templates" / "skills" / "write-c4-diagram" / "SKILL.md"
+)
+
+
+# ---------------------------------------------------------------------------
+# TestBO650ArchitectADRProduction
+# BO-650-2: Architect produces ADRs when a design decision is required
+# ---------------------------------------------------------------------------
+
+
+class TestBO650ArchitectADRProduction:
+    """BO-650-2: Architect produces ADRs when a design decision is required.
+
+    Tests verify that the adr-author agent template handles all required
+    behaviors described in the AC criteria including:
+    - Standard ADR structure (Title, Status, Context, Decision, Consequences)
+    - Sequential numbering convention
+    - Referencing the triggering ticket ID
+    - Superseding existing ADRs when the decision area conflicts
+
+    Both scenarios in the AC must be supported:
+      Scenario 1 — new ADR: architect identifies a design decision and produces
+        an ADR with the standard five-section structure.
+      Scenario 2 — supersedes: architect discovers an existing ADR covering the
+        same decision area, produces a new superseding ADR, and updates the old
+        ADR's status to 'superseded' with a back-reference to the new ADR.
+    """
+
+    def test_bo650_2_adr_author_supports_supersedes_scenario(self) -> None:
+        # covers: BO-650-2
+        """BO-650-2: The adr-author agent must support Scenario 2: when the architect
+        discovers an existing ADR covering the same decision area, a NEW ADR that
+        supersedes the old one must be produced AND the old ADR's status must be
+        updated to 'superseded' with a reference to the new ADR.
+
+        RED before fix (assertion 1): The adr-author.md template explicitly prohibits
+        supersession:
+          'Do not edit or supersede existing ADRs. Treat supersession requests as
+           out-of-scope; return them to documentation-expert for reclassification.'
+        This directly contradicts BO-650-2 Scenario 2.
+
+        Fix: remove the prohibition and add explicit instructions for:
+          (1) creating a new ADR that supersedes the old one, and
+          (2) updating the old ADR's status field to 'superseded' with a back-reference
+              to the new ADR's filename.
+        """
+        assert _ADR_AUTHOR_TEMPLATE.exists(), (
+            f"adr-author.md template not found at {_ADR_AUTHOR_TEMPLATE}.\n"
+            "The template must exist for BO-650-2 to be testable."
+        )
+        content = _ADR_AUTHOR_TEMPLATE.read_text(encoding="utf-8")
+
+        # Assertion 1: The prohibition on supersession must be removed.
+        # Currently the template says "Do not edit or supersede existing ADRs."
+        # After the fix this sentence must be absent from the Constraints section.
+        assert "Do not edit or supersede existing ADRs" not in content, (
+            "BO-650-2: The adr-author.md template prohibits supersession with the line:\n"
+            "  'Do not edit or supersede existing ADRs.'\n\n"
+            "This directly contradicts AC BO-650-2 Scenario 2:\n"
+            "  'Then the architect produces a NEW ADR that supersedes the old one\n"
+            "   And updates the old ADR's status to superseded with a reference to\n"
+            "   the new ADR.'\n\n"
+            "Fix: remove the prohibition clause from the Constraints section and add "
+            "explicit supersession-handling instructions (see assertion 2).\n\n"
+            f"Template path: {_ADR_AUTHOR_TEMPLATE}"
+        )
+
+        # Assertion 2: The template must have explicit instructions for updating the
+        # OLD ADR's status to 'superseded' (proving the prohibition was replaced with
+        # a positive instruction, not just deleted).
+        has_update_old_adr_status = bool(
+            _re_bo600.search(
+                r"(update|set|change).{0,80}(old|existing|prior|previous).{0,60}"
+                r"(status|adr).{0,40}supersede",
+                content,
+                _re_bo600.IGNORECASE | _re_bo600.DOTALL,
+            )
+        )
+        assert has_update_old_adr_status, (
+            "BO-650-2: After removing the supersession prohibition, the adr-author.md "
+            "template must also include explicit instructions to update the OLD ADR's "
+            "status field to 'superseded' with a back-reference to the new ADR.\n\n"
+            "The AC criteria: 'And updates the old ADR's status to superseded with a "
+            "reference to the new ADR.'\n\n"
+            "Fix: add a 'Supersession handling' section to the template that instructs the "
+            "agent to edit the old ADR file and set its Status row to 'Superseded by "
+            "ADR-NNN-<slug>.md' before writing the new superseding ADR.\n\n"
+            f"Template path: {_ADR_AUTHOR_TEMPLATE}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestBO650ArchitectC4DiagramProduction
+# BO-650-3: Architect produces C4 diagrams for structural changes
+# ---------------------------------------------------------------------------
+
+
+class TestBO650ArchitectC4DiagramProduction:
+    """BO-650-3: Architect produces C4 diagrams for structural changes.
+
+    Tests verify that the architect-review and write-c4-diagram skill templates
+    handle all required behaviors from the AC criteria:
+    - Using the write-c4-diagram skill for diagram production
+    - Covering the appropriate C4 level (L1 / L2 / L3)
+    - Writing diagrams to docs/architecture/diagrams/
+    - Updating existing diagrams (not creating duplicates)
+    - Recording the triggering ticket ID in diagram metadata
+    """
+
+    def test_bo650_3_architect_review_directs_write_c4_diagram_skill(self) -> None:
+        # covers: BO-650-3
+        """BO-650-3: The architect-review template must explicitly instruct the architect
+        to use the write-c4-diagram skill for diagram production.
+
+        The AC criteria: 'it produces or updates a C4 diagram using the
+        write-c4-diagram skill'. The architect-review template must reference this
+        skill by name so the architect knows which skill to invoke when diagrams
+        are needed.
+
+        RED before fix: The architect-review.md template mentions 'suggested_diagrams'
+        in the output payload and 'next_diagram_seq.py' for numbering new diagrams,
+        but does NOT reference 'write-c4-diagram' by name. The 'When to populate
+        suggested_diagrams' heuristics table provides guidance on WHEN to suggest
+        diagrams but gives no instruction on HOW to produce them.
+
+        Fix: add an explicit instruction in the Step 4 output section telling the
+        architect that when suggested_diagrams is non-empty, the write-c4-diagram
+        skill must be invoked (or delegated to architecture-diagram-author) to
+        produce or update the actual diagram files.
+        """
+        assert _ARCHITECT_REVIEW_TEMPLATE_PATH.exists(), (
+            f"architect-review.md template not found at {_ARCHITECT_REVIEW_TEMPLATE_PATH}.\n"
+            "The template must exist for BO-650-3 to be testable."
+        )
+        content = _ARCHITECT_REVIEW_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+        assert "write-c4-diagram" in content, (
+            "BO-650-3: The architect-review.md template does not reference the "
+            "'write-c4-diagram' skill by name.\n\n"
+            "The AC criteria: 'it produces or updates a C4 diagram using the "
+            "write-c4-diagram skill.'\n\n"
+            "Currently the template: \n"
+            "  - Mentions 'suggested_diagrams' in the Step 4 output payload.\n"
+            "  - Includes 'When to populate suggested_diagrams' heuristics.\n"
+            "  - References 'next_diagram_seq.py' for diagram path naming.\n"
+            "  - Does NOT mention 'write-c4-diagram'.\n\n"
+            "Fix: add an explicit instruction (e.g. 'Use the write-c4-diagram skill "
+            "when producing or updating diagram files') in the Step 4 output or the "
+            "'When to populate suggested_diagrams' section.\n\n"
+            f"Template path: {_ARCHITECT_REVIEW_TEMPLATE_PATH}"
+        )
+
+    def test_bo650_3_write_c4_diagram_skill_prevents_duplicate_diagrams(self) -> None:
+        # covers: BO-650-3
+        """BO-650-3: The write-c4-diagram skill must have an explicit step instructing
+        agents to check for an existing diagram covering the same component before
+        creating a new one, thereby preventing duplicate diagram files.
+
+        The AC criteria: 'Then the update is made to the existing diagram file (not
+        a duplicate)'. The skill must guide agents to prefer updating over creating.
+
+        RED before fix: The write-c4-diagram skill's Section 4 mentions:
+        'Exception: minor edits to an existing doc do not require re-scaffolding.'
+        This handles the EDITING case but does not instruct agents to SEARCH for
+        an existing diagram before invoking new_arch_doc.py. An agent following the
+        skill literally would always create a new file (running new_arch_doc.py) and
+        only fall through to the Exception if it already had the existing file in mind.
+
+        Fix: add a pre-scaffold check step (before Section 4) instructing agents to:
+          1. Scan docs/architecture/ for a file whose frontmatter components list
+             includes the target component AND whose flight_level matches.
+          2. If a match is found, UPDATE that file (skip new_arch_doc.py).
+          3. Only create a new file when no existing diagram is found.
+        """
+        assert _WRITE_C4_DIAGRAM_SKILL_PATH.exists(), (
+            f"write-c4-diagram SKILL.md not found at {_WRITE_C4_DIAGRAM_SKILL_PATH}.\n"
+            "The skill must exist for BO-650-3 to be testable."
+        )
+        content = _WRITE_C4_DIAGRAM_SKILL_PATH.read_text(encoding="utf-8")
+
+        has_existing_check = bool(
+            _re_bo600.search(
+                r"(check|search|look|scan|find).{0,80}"
+                r"(existing|already).{0,80}diagram",
+                content,
+                _re_bo600.IGNORECASE | _re_bo600.DOTALL,
+            )
+            or _re_bo600.search(
+                r"(avoid|prevent|not.{0,20}creat).{0,50}duplicate",
+                content,
+                _re_bo600.IGNORECASE,
+            )
+        )
+
+        assert has_existing_check, (
+            "BO-650-3: The write-c4-diagram skill does not instruct agents to check "
+            "for an existing diagram before creating a new one (duplicate prevention).\n\n"
+            "The AC criteria: 'Then the update is made to the existing diagram file "
+            "(not a duplicate)'.\n\n"
+            "Currently Section 4 says: 'Exception: minor edits to an existing doc "
+            "(e.g. adding a node to an existing diagram, fixing a typo) do not require "
+            "re-scaffolding. The scaffold rule applies only to NEW docs.' This handles "
+            "in-place edits but gives no instruction to SCAN for existing diagrams "
+            "before running new_arch_doc.py.\n\n"
+            "Fix: add a pre-scaffold check step instructing agents to scan "
+            "docs/architecture/ for an existing diagram whose frontmatter components "
+            "includes the target component (and whose flight_level matches) before "
+            "invoking new_arch_doc.py.\n\n"
+            f"Skill path: {_WRITE_C4_DIAGRAM_SKILL_PATH}"
+        )
+
+    def test_bo650_3_write_c4_diagram_skill_records_triggering_ticket(self) -> None:
+        # covers: BO-650-3
+        """BO-650-3: The write-c4-diagram skill's frontmatter checklist must require
+        recording the triggering ticket ID in every diagram file's metadata.
+
+        The AC criteria: 'And the diagram's metadata records the ticket ID that
+        triggered the update'. The skill must instruct agents to populate a
+        'source_ticket' (or equivalent) field in the diagram frontmatter so that
+        every diagram update is traceable to its originating ticket.
+
+        RED before fix: The write-c4-diagram skill's Section 6 frontmatter checklist
+        includes: title, type, flight_level, diagram_type, status, components, created,
+        last_updated — but contains NO ticket reference field (source_ticket, ticket_id,
+        triggered_by, etc.). The Section 1a reference to 'ticket_path' is only about
+        reading the ticket for Architecture Plan comparison, not about recording the
+        ticket in the diagram's own metadata.
+
+        Fix: add 'source_ticket: "<ticket_path>"' (or 'triggered_by:') to the
+        Section 6 frontmatter checklist YAML example, and add an explicit instruction
+        to populate this field from the ticket_path parameter on every update so
+        the diagram remains traceable to its triggering ticket.
+        """
+        assert _WRITE_C4_DIAGRAM_SKILL_PATH.exists(), (
+            f"write-c4-diagram SKILL.md not found at {_WRITE_C4_DIAGRAM_SKILL_PATH}.\n"
+            "The skill must exist for BO-650-3 to be testable."
+        )
+        content = _WRITE_C4_DIAGRAM_SKILL_PATH.read_text(encoding="utf-8")
+
+        # The ticket reference must appear as a FRONTMATTER FIELD, not merely as
+        # 'ticket_path' in the Section 1a comparison logic.
+        # We check for 'source_ticket', 'ticket_id', or 'triggered_by' since these
+        # are the expected field names for a metadata traceability field (as opposed
+        # to 'ticket_path' which only appears in the §1a comparison-to-spec step).
+        has_ticket_metadata_field = bool(
+            _re_bo600.search(
+                r"source_ticket|ticket_id|triggered_by",
+                content,
+                _re_bo600.IGNORECASE,
+            )
+        )
+
+        assert has_ticket_metadata_field, (
+            "BO-650-3: The write-c4-diagram skill does not include a frontmatter field "
+            "for recording the triggering ticket ID in diagram metadata.\n\n"
+            "The AC criteria: 'And the diagram's metadata records the ticket ID that "
+            "triggered the update'.\n\n"
+            "Current Section 6 frontmatter checklist fields: title, type, flight_level, "
+            "diagram_type, status, components, created, last_updated — no ticket reference.\n\n"
+            "Note: 'ticket_path' does appear in Section 1a for Architecture Plan comparison "
+            "but is NOT a frontmatter metadata field on the diagram file itself.\n\n"
+            "Fix: add 'source_ticket: \"<ticket_path>\"' (or 'triggered_by:') to:\n"
+            "  1. The Section 6 frontmatter checklist YAML example.\n"
+            "  2. The scaffolding template (scripts/scaffold/new_arch_doc.py) so every "
+            "     new diagram inherits the field.\n"
+            "  3. An explicit instruction: 'Populate source_ticket from the ticket_path "
+            "     parameter on every create or update.'\n\n"
+            f"Skill path: {_WRITE_C4_DIAGRAM_SKILL_PATH}"
+        )

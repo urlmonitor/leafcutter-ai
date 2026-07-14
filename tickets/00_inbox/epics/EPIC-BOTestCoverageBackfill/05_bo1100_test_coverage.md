@@ -213,3 +213,22 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "test(BO-1100): add green coverage for 7 ACs + no_staged_files attribute"; staged files: scripts/commit_classifier.py, tickets/00_inbox/epics/EPIC-BOTestCoverageBackfill/05_bo1100_test_coverage.md, unit_tests/test_commit_classifier.py.
+
+### 2026-07-14 16:35 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_277eaf62
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Re-verification run (post python-coder fix): all 29 tests in unit_tests/test_commit_classifier.py pass. BO-1100 AC backfill coverage confirmed green for BO-1100a-1, BO-1100d-1-i, BO-1100e-1, BO-1100e-1-i, BO-1100e-2, BO-1100e-2-i, and BO-1100a-2-i (previously red no_staged_files test now passes after python-coder attribute addition).
+
+### 2026-07-14 17:15 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass:
+    result: false
+    reason: "Worktree git_hook probe failed (git_hook: false, canary: false) — pre-commit hook binary not installed in .git/hooks/, though .pre-commit-config.yaml is present. Known worktree infrastructure gap."
+    remediation: "Run 'pre-commit install' in the worktree root to install the hook binary; hooks will then run on subsequent commits."
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (supervised re-dispatch): batch commit of BO-600 test-writer phase (4 new tests for BO-650-2/BO-650-3 in test_generate_ticket_from_ac.py) and accumulated sign-off comments for tickets 02, 03, 05, 06. Implementation files for BO-1100 (test_commit_classifier.py, commit_classifier.py) were already committed in prior dispatch (SHA 3a905254). Probe failure logged; worktree pre-commit gap is a known infrastructure issue.[probe-override] supervised-path: no question status issued to avoid deadlock.

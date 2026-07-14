@@ -197,3 +197,11 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 PR #282 (https://github.com/urlmonitor/leafcutter-ai/pull/282) already open for EPIC-BOTestCoverageBackfill; branch fully pushed (0 commits ahead of origin/EPIC-BOTestCoverageBackfill); BO-500 test coverage commits included. pr-reviewer remains needed; status: todo retained.
+
+### 2026-07-14 17:00 — test-runner (status: ok)
+feedback-id: fb_2026-07-14_eb6f0639
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Re-verification run: python3 -m pytest unit_tests/test_generate_ticket_from_ac.py -v. Result: 76 passed, 5 xfailed (exit 0). All BO-500 AC-named tests green; 5 xfailed are enforcement-plugin conversions for not-yet-done ACs (BO-510-2 and BO-650 series).
