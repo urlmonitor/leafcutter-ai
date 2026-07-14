@@ -31,7 +31,9 @@ created: 2026-07-10
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/product-truth/index.json
+  - docs/product-truth/README.md
 change_target: config
 risk_surface: internal
 product_truth:

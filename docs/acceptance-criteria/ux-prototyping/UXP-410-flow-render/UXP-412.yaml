@@ -28,7 +28,11 @@ created: 2026-07-10
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - leafcutter-web/app/flows/page.tsx
+  - leafcutter-web/components/flows/flow-explorer.tsx
+  - leafcutter-web/components/flows/flow-nodes.tsx
+  - leafcutter-web/lib/data/graph.ts
 change_target: code
 risk_surface: internal
 product_truth:

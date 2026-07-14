@@ -1,0 +1,125 @@
+{
+  "id": "leafcutter/generate-product-truth",
+  "component": "ux-prototyping",
+  "product": "Leafcutter",
+  "name": "How product-truth links are generated and kept truthful",
+  "summary": "The single-writer data pipeline that keeps the product-truth store self-describing: it builds one work_status map from the AC store, derives each flow step's impl_status and rolls it up into an impl_summary, inverts the authored flow->AC edges into the by_ac index, writes the product_truth back-reference onto each AC, and finally validates that no derived data has drifted from its source. Running it after any AC or flow edit is what makes 'which steps are built' true rather than hand-maintained.",
+  "kind": "data",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "product-truth",
+    "generator",
+    "validator",
+    "traceability"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "map",
+      "label": "Build the AC work_status map",
+      "human": "The generator makes a single pass over the AC store, building one {ac_id -> work_status} map that every later step reads from.",
+      "order": 1,
+      "implements": [
+        "UXP-510"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "derive",
+      "label": "Derive each step's impl_status and roll up impl_summary",
+      "human": "For every flow step and branch, the generator recomputes impl_status from the work_status of its implements ACs and rolls the counts up into the flow's impl_summary.",
+      "order": 2,
+      "implements": [
+        "UXP-511"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "invert",
+      "label": "Invert flow->AC edges into the by_ac index",
+      "human": "The authored flow->AC edges (step.implements) are inverted into a by_ac index and the reverse indexes (by_component/by_entity/by_flow) are rebuilt in index.json.",
+      "order": 3,
+      "implements": [
+        "UXP-512"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "backref",
+      "label": "Write the product_truth back-ref onto each AC",
+      "human": "Each referenced AC's product_truth block is overwritten wholesale from its by_ac list so the AC is self-describing (which flow nodes / screens / mock data realise it).",
+      "order": 4,
+      "implements": [
+        "UXP-513"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "validate",
+      "label": "Fail on derived-vs-source drift",
+      "human": "The validator recomputes every derived field and errors if impl_status, product_truth, the derived indexes, or any screen->mockup link has drifted from its source.",
+      "order": 5,
+      "implements": [
+        "UXP-514"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [],
+  "impl_summary": {
+    "done": 5,
+    "in_progress": 0,
+    "not_started": 0,
+    "total": 5,
+    "asof": "2026-07-14"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "map",
+      "given": "an AC store with work_status on each criterion",
+      "when": "the generator runs",
+      "then": "it builds one ac_id -> work_status map in a single pass"
+    },
+    {
+      "for": "derive",
+      "given": "flows whose steps carry implements links",
+      "when": "the generator derives status",
+      "then": "each step's impl_status and the flow's impl_summary are recomputed from the ACs' work_status"
+    },
+    {
+      "for": "invert",
+      "given": "the authored flow->AC edges",
+      "when": "the generator inverts them",
+      "then": "the by_ac index and the derived reverse indexes in index.json are rebuilt"
+    },
+    {
+      "for": "backref",
+      "given": "the by_ac inversion",
+      "when": "the generator writes back-references",
+      "then": "each referenced AC's product_truth block equals its by_ac list (wholesale, many-to-many)"
+    },
+    {
+      "for": "validate",
+      "given": "the generated derived data",
+      "when": "the validator runs",
+      "then": "it errors on any drift between a derived field and its source"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth dogfooding session)",
+      "date": "2026-07-14",
+      "note": "Real data-flow describing the single-writer generator + validator that keep product-truth links truthful."
+    }
+  ]
+}

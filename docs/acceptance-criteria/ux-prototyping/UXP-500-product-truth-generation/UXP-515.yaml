@@ -1,0 +1,42 @@
+id: UXP-515
+title: "Mockup is a first-class artifact type whose screen resolves from flow steps"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  Given a mockup artifact registered in the product-truth store,
+  When a flow step carries a screen id,
+  Then the mockup is a first-class artifact type with its own schema (mockup.schema.json)
+  and index registration,
+  And a step's screen resolves to a registered mockup so the validator can gate on it,
+  And at least one mockup is drawn in full (the gold reference) while the rest are
+  registered stubs.
+depends_on:
+  - UXP-590
+doc_links:
+  - path: docs/product-truth/schemas/mockup.schema.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  mockup.schema.json defines the artifact type; each mockup carries a screen id that flow
+  steps reference. plant-listing is the fully drawn gold reference; eight other screens are
+  registered stubs (readiness: draft) so their flow steps resolve.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/schemas/mockup.schema.json
+  - docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json
+change_target: code
+risk_surface: internal

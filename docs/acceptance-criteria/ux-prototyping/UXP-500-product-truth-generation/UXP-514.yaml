@@ -1,0 +1,51 @@
+id: UXP-514
+title: "Validator errors on derived-vs-source drift (impl_status, product_truth, indexes, screen->mockup)"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth store,
+  When validate_product_truth.py runs,
+  Then it errors (non-zero exit) if any step/branch impl_status differs from the value
+  recomputed from its ACs' work_status (D1),
+  And if any AC's product_truth differs from the by_ac inversion, or an AC carries a
+  product_truth no flow references (D2),
+  And if index.json by_component / by_entity / by_flow / by_ac differ from a fresh rebuild
+  (D3),
+  And if a step/branch screen resolves to no registered mockup — a warning when the flow
+  is not approved, an error when it is (D4).
+depends_on:
+  - UXP-590
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The validator imports the derivation logic from generate_product_truth so both agree by
+  construction, then runs checks D1-D4 plus schema, index-mirror, entity-registry, and
+  mock-invariant checks. AC-id resolution failures are warnings; drift checks are errors.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: validate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

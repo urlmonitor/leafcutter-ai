@@ -1,0 +1,44 @@
+id: UXP-524
+title: "An AC node links to the flows it appears in"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given an acceptance-criterion node shown in the Atlas,
+  When the person activates it,
+  Then they are taken to the flows that criterion appears in (via the AC's product_truth
+  back-reference), so they can cross-navigate from an AC to its flow context.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  components/atlas/detail-drawer.tsx renders the AC detail with links to the flows the AC
+  appears in, sourced from the AC's product_truth back-reference.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - leafcutter-web/components/atlas/detail-drawer.tsx
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: cross
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

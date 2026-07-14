@@ -1,0 +1,37 @@
+id: UXP-530
+title: "A request is classified into needs_flow / needs_mock_data / needs_mockup"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a natural-language feature request,
+  When the classifier runs,
+  Then it decides needs_flow, needs_mock_data, and needs_mockup (a boolean each),
+  And it maps that combination to an outcome (full-set / mockup+data / mockup-only /
+  mock-data-only / none),
+  And the decision is scored against the gold eval set.
+depends_on:
+  - UXP-592
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: covered-by
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The classifier is not yet built as code; the gold eval set (classifier/eval.jsonl) is the
+  spec/fixture it must satisfy. Each eval row carries the request and the expected
+  needs_flow/needs_mock_data/needs_mockup booleans plus the derived outcome.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - docs/product-truth/classifier/eval.jsonl
+implemented_by: []
+change_target: code
+risk_surface: internal

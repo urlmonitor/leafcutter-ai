@@ -3,19 +3,24 @@
   "component": "ux-prototyping",
   "product": "Leafcutter",
   "name": "Define a feature the product-truth way",
-  "summary": "The way a person adds a feature to Leafcutter without writing specs by hand: they say in plain language what they want, the system drafts a flow (plus mock data and mockups) they can look at, and once they review and approve it the acceptance criteria are generated from the flow's steps. The flow becomes the reviewable source of truth that the rest of the pipeline builds from.",
+  "summary": "The way a person adds a feature to Leafcutter without writing specs by hand: they say in plain language what they want, the system classifies what the request needs and drafts the artifacts that fit — mock data, then mockups populated from it, then a flow wiring them together — and once the person reviews and approves that draft, the acceptance criteria are generated from the flow's steps. The flow becomes the reviewable source of truth the rest of the pipeline builds from.",
   "kind": "user",
   "source": "real",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "product-truth",
     "authoring",
     "flow-first"
   ],
-  "entities": [],
+  "entities": [
+    "MockData",
+    "Mockup",
+    "Flow",
+    "Ac"
+  ],
   "steps": [
     {
       "id": "say",
@@ -30,10 +35,62 @@
       "impl_asof": "2026-07-14"
     },
     {
-      "id": "draft",
-      "label": "System drafts flow · mock · mockups",
-      "human": "The system turns that intent into a draft flow, a mock-data set, and mockups the person can actually look at and react to.",
+      "id": "classify",
+      "label": "Classify what to draft",
+      "human": "The system reads the request and decides which artifacts it needs — a whole flow, mock data, mockups, or a subset — along with the component and entities involved, so it only drafts what actually fits (a full journey, a single screen, or just a dataset).",
       "order": 2,
+      "implements": [
+        "UXP-401",
+        "UXP-401a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "mockData",
+      "label": "Draft the mock data",
+      "human": "For anything data-backed, the system drafts — or extends — the one canonical mock-data set for those entities: realistic records the rest of the draft is built on, never a duplicate dataset.",
+      "order": 3,
+      "writes": [
+        "MockData"
+      ],
+      "implements": [
+        "UXP-401",
+        "UXP-401a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "mockups",
+      "label": "Draft the mockups",
+      "human": "For each screen the request implies, the system drafts a mockup populated from that mock data, so the person sees the actual screens with real-looking content rather than a description.",
+      "order": 4,
+      "reads": [
+        "MockData"
+      ],
+      "writes": [
+        "Mockup"
+      ],
+      "implements": [
+        "UXP-401",
+        "UXP-401a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "flow",
+      "label": "Assemble the draft flow",
+      "human": "The system assembles the steps into a draft flow, wiring each step to its screen and to the entities it reads and writes — the reviewable map of the whole journey.",
+      "order": 5,
+      "reads": [
+        "Mockup",
+        "MockData"
+      ],
+      "writes": [
+        "Flow"
+      ],
       "implements": [
         "UXP-401",
         "UXP-401a"
@@ -44,8 +101,14 @@
     {
       "id": "approve",
       "label": "You review & approve; ACs are generated",
-      "human": "The person reviews the drafted flow and approves it; acceptance criteria are then generated from the flow's steps so the flow stays the source of truth.",
-      "order": 3,
+      "human": "The person reviews the drafted flow (with its mock data and mockups) and approves it; acceptance criteria are then generated from the flow's steps so the flow stays the source of truth.",
+      "order": 6,
+      "reads": [
+        "Flow"
+      ],
+      "writes": [
+        "Ac"
+      ],
       "implements": [
         "UXP-402",
         "UXP-402a"
@@ -58,8 +121,8 @@
   "impl_summary": {
     "done": 0,
     "in_progress": 1,
-    "not_started": 2,
-    "total": 3,
+    "not_started": 5,
+    "total": 6,
     "asof": "2026-07-14"
   },
   "acceptance_scenarios": [
@@ -70,10 +133,28 @@
       "then": "the request is captured as intent without requiring any spec or Gherkin format"
     },
     {
-      "for": "draft",
+      "for": "classify",
       "given": "a captured feature intent",
       "when": "the system processes it",
-      "then": "a draft flow plus its mock data and mockups are produced for the person to review"
+      "then": "it decides which of flow / mock data / mockups the request needs, with the component and entities, before anything is drafted"
+    },
+    {
+      "for": "mockData",
+      "given": "a request that involves data",
+      "when": "the system drafts the mock data",
+      "then": "it extends the one canonical dataset for those entities rather than creating a duplicate"
+    },
+    {
+      "for": "mockups",
+      "given": "drafted mock data and a request that involves screens",
+      "when": "the system drafts the mockups",
+      "then": "each screen is produced and populated from that mock data"
+    },
+    {
+      "for": "flow",
+      "given": "the drafted mock data and mockups",
+      "when": "the system assembles the flow",
+      "then": "a draft flow is produced with each step wired to its screen and the entities it reads and writes"
     },
     {
       "for": "approve",
@@ -88,6 +169,12 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-10",
       "note": "Real flow describing Leafcutter's own flow-first feature-definition loop."
+    },
+    {
+      "action": "extended",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-14",
+      "note": "Exploded the single 'draft' step into explicit classify -> draft mock data -> draft mockups -> assemble flow steps, with reads/writes over the MockData/Mockup/Flow/Ac artifacts, to show where mockups and mock data are created."
     }
   ]
 }

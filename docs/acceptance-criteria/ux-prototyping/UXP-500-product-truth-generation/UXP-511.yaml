@@ -1,0 +1,48 @@
+id: UXP-511
+title: "Generator inverts flow->AC edges into a by_ac index and rebuilds the reverse indexes"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the authored flow->AC edges (step.implements) across every flow,
+  When generate_product_truth.py runs,
+  Then it inverts those edges into a by_ac map (ac_id -> sorted list of back-references
+  carrying flow, node, node_kind, flow_kind, screen, mock_data, entities, source, asof),
+  And it rebuilds index.json by_component / by_entity / by_flow from artifacts[] plus the
+  flows and mocks on disk,
+  And each flow artifact's impl_summary in index.json is synced to the recomputed rollup.
+depends_on:
+  - UXP-590
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  build_by_ac inverts step.implements; build_by_component / build_by_entity /
+  build_by_flow rebuild the derived index maps deterministically (sorted) so a fresh
+  rebuild always equals the stored value.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/generate_product_truth.py
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: derive
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-14'

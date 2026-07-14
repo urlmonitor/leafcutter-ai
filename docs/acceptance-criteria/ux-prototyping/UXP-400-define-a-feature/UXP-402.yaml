@@ -39,6 +39,8 @@ product_truth:
     flow_kind: user
     screen: null
     mock_data: null
-    entities: []
+    entities:
+      - Ac
+      - Flow
     source: real
     asof: '2026-07-14'

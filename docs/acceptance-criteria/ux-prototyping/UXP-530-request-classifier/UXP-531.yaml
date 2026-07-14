@@ -1,0 +1,41 @@
+id: UXP-531
+title: "A gold eval set covers the outcome space for the classifier"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  Given the classifier must decide which artifacts a request needs,
+  When the gold eval set is authored,
+  Then classifier/eval.jsonl contains rows spanning the outcome space (full-set,
+  mockup+data, mockup-only, mock-data-only, none),
+  And each row's outcome is consistent with its expected needs_flow / needs_mock_data /
+  needs_mockup booleans,
+  And every row conforms to classifier-eval.schema.json.
+depends_on:
+  - UXP-592
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/schemas/classifier-eval.schema.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  classifier/eval.jsonl is the authored gold set; the product-truth validator checks each
+  row against classifier-eval.schema.json and asserts outcome matches the booleans via
+  OUTCOME_BY_COMBO.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/classifier/eval.jsonl
+change_target: code
+risk_surface: internal

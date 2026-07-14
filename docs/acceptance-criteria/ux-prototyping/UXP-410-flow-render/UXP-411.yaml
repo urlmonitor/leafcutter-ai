@@ -30,7 +30,9 @@ amended_by: []
 superseded_by: null
 covered_by:
   - UXP-411a
-implemented_by: []
+implemented_by:
+  - leafcutter-web/lib/data/flows.ts
+  - leafcutter-web/lib/data/graph.ts
 change_target: code
 risk_surface: internal
 product_truth:

@@ -1,0 +1,125 @@
+{
+  "id": "leafcutter/explore-flows-in-atlas",
+  "component": "ux-prototyping",
+  "product": "Leafcutter",
+  "name": "Exploring product-truth flows in the Atlas",
+  "summary": "The user journey through the Atlas /flows view: open the view to see every flow listed, filter by source (mock vs real) and kind (user/data/architecture), select a flow to render its graph, open a step to inspect its acceptance criteria's live status plus the mock records and mockup it uses, and cross-jump from an acceptance criterion back to the flows it appears in. This is how a person sees product truth visually rather than reading JSON.",
+  "kind": "user",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "product-truth",
+    "atlas",
+    "flows",
+    "explorer"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "open",
+      "label": "Open the Flows view",
+      "human": "The person opens the Atlas /flows view and sees every product-truth flow listed, with the selected one rendered as a graph.",
+      "order": 1,
+      "implements": [
+        "UXP-520"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "filter",
+      "label": "Choose source (mock/real) and kind (user/data/architecture)",
+      "human": "The person uses the source toggle to filter flows by mock vs real.",
+      "order": 2,
+      "implements": [
+        "UXP-521"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "select",
+      "label": "Select a flow to render its graph",
+      "human": "The person uses the kind chooser to filter flows by user/data/architecture and selects one to render its graph.",
+      "order": 3,
+      "implements": [
+        "UXP-522"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "inspect",
+      "label": "Open a step to see its ACs' live status + mock records + mockup",
+      "human": "The person opens a step in the drawer and sees its acceptance criteria's live work_status, the mock records the step uses, and its mockup.",
+      "order": 4,
+      "implements": [
+        "UXP-523"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "cross",
+      "label": "Jump from an AC to the flows it appears in",
+      "human": "From an acceptance-criterion node the person jumps to the flows that criterion appears in.",
+      "order": 5,
+      "implements": [
+        "UXP-524"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [],
+  "impl_summary": {
+    "done": 5,
+    "in_progress": 0,
+    "not_started": 0,
+    "total": 5,
+    "asof": "2026-07-14"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "open",
+      "given": "the product-truth store has flows",
+      "when": "the person opens the Atlas /flows view",
+      "then": "every flow is listed and the selected one renders as a graph"
+    },
+    {
+      "for": "filter",
+      "given": "flows of both mock and real source",
+      "when": "the person toggles the source filter",
+      "then": "the flow list is filtered by mock vs real"
+    },
+    {
+      "for": "select",
+      "given": "flows of different kinds",
+      "when": "the person chooses a kind and selects a flow",
+      "then": "the list is filtered by user/data/architecture and the chosen flow renders"
+    },
+    {
+      "for": "inspect",
+      "given": "a rendered flow graph",
+      "when": "the person opens a step",
+      "then": "the step drawer shows its ACs' live status, the mock records it uses, and its mockup"
+    },
+    {
+      "for": "cross",
+      "given": "an acceptance-criterion node in the graph",
+      "when": "the person activates it",
+      "then": "they are taken to the flows that criterion appears in"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth dogfooding session)",
+      "date": "2026-07-14",
+      "note": "Real user-flow describing the Atlas /flows explorer that was just built."
+    }
+  ]
+}

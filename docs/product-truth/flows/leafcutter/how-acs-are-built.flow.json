@@ -1,0 +1,309 @@
+{
+  "id": "leafcutter/how-acs-are-built",
+  "component": "build-pipeline",
+  "product": "Leafcutter",
+  "name": "How a ticket is built (the phase chain)",
+  "summary": "The data flow of the /build-feature phase chain: ticket-supervisor takes a wired ticket (handed over from the AC lifecycle) and dispatches each phase agent at depth 1 in order — architect-review, then test-writer (TDD red), then the coders (make it green), then change-scope-reviewer, pr-reviewer, the AC coverage gates, and finally commit and pull-request. The handoff medium between phases is the ticket file itself plus each agent's sign-off comment: a phase reads the ticket + the prior sign-offs, does its work, and appends its own sign-off with status ok | blocker | handoff, which is what unblocks the next phase. When the PR merges, control returns to the AC lifecycle's 'complete' step, which marks the AC done.",
+  "kind": "data",
+  "source": "real",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "build-pipeline",
+    "ticket-supervisor",
+    "phase-chain",
+    "handoff",
+    "tdd"
+  ],
+  "entities": [
+    "Ticket",
+    "Ac",
+    "Test",
+    "Diff",
+    "Commit",
+    "PR"
+  ],
+  "steps": [
+    {
+      "id": "dispatch",
+      "label": "Supervisor dispatches phases",
+      "human": "ticket-supervisor reads the ticket's `agents:` map and drives the ticket through its phase agents in natural order, spawning the next `needed` agent at depth 1 and routing on the sign-off status it parses back (ok / handoff / blocker / question).",
+      "order": 1,
+      "agent": "ticket-supervisor",
+      "consumes": [
+        "Ticket (wired)",
+        "Ac.criteria (L0-L3)"
+      ],
+      "produces": [
+        "phase dispatch order",
+        "routed sign-off status"
+      ],
+      "reads": [
+        "Ticket",
+        "Ac"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "architect",
+      "label": "Architect review (blast radius)",
+      "human": "architect-review classifies the change's structural impact (small vs large) and either writes an inline architectural note or escalates to an Opus sub-agent, so downstream coders know the blast radius before they touch code.",
+      "order": 2,
+      "agent": "architect-review",
+      "consumes": [
+        "Ticket (wired)"
+      ],
+      "produces": [
+        "review_verdict",
+        "architectural note / ADR",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Ticket"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "test",
+      "label": "Test-writer (TDD red)",
+      "human": "test-writer reads the ticket's `## Test Requirements`, writes the specified failing test stubs, runs them to confirm they are RED, and records a structured red_baseline in its sign-off — the contract the coders must turn green.",
+      "order": 3,
+      "agent": "test-writer",
+      "consumes": [
+        "Ticket.test_requirements",
+        "Ac.criteria (L0-L3)"
+      ],
+      "produces": [
+        "Test (red stubs)",
+        "red_baseline",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Ticket",
+        "Ac"
+      ],
+      "writes": [
+        "Test"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "code",
+      "label": "Coders make it green",
+      "human": "python-coder / frontend-coder / sql-coder implement against the red baseline, editing only the ticket's files_touched, and run the suite until every red_baseline test moves to green.",
+      "order": 4,
+      "agent": "python-coder / frontend-coder / sql-coder",
+      "consumes": [
+        "Test (red stubs)",
+        "red_baseline",
+        "Ticket.files_touched"
+      ],
+      "produces": [
+        "Diff (production code)",
+        "red_baseline_results (green)",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Ticket",
+        "Test"
+      ],
+      "writes": [
+        "Diff"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "scope",
+      "label": "Change-scope review",
+      "human": "change-scope-reviewer compares the staged diff against the ticket's files_touched / out_of_scope and flags any unexpected file as soft / hard / ambiguous before the diff is reviewed for quality.",
+      "order": 5,
+      "agent": "change-scope-reviewer",
+      "consumes": [
+        "Diff (production code)",
+        "Ticket.files_touched"
+      ],
+      "produces": [
+        "review_verdict (scope)",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Ticket",
+        "Diff"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "review",
+      "label": "PR self-review",
+      "human": "pr-reviewer runs the review-pr toolkit over the working diff, keeps only high-confidence findings, and escalates a medium-confidence cluster to Opus — a quality gate before the coverage gates.",
+      "order": 6,
+      "agent": "pr-reviewer",
+      "consumes": [
+        "Diff (production code)"
+      ],
+      "produces": [
+        "review_verdict (high-confidence findings)",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Diff"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "acgate",
+      "label": "AC coverage + fulfillment gates",
+      "human": "ac-validator confirms every AC has concrete implementation + test evidence in the diff, and ac-fulfillment-gate verifies (and auto-fixes) the AC store's work_status / implemented_by / covered_by fields before the commit lock.",
+      "order": 7,
+      "agent": "ac-validator + ac-fulfillment-gate",
+      "consumes": [
+        "Ac.criteria (L0-L3)",
+        "Diff (production code)",
+        "Test (green)"
+      ],
+      "produces": [
+        "coverage verdict",
+        "Ac.work_status / implemented_by / covered_by (updated)",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Ac",
+        "Diff",
+        "Test"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "commit",
+      "label": "Gated commit",
+      "human": "the commit agent shows the planned message + file list, commits under the worktree commit-phase lock, and on a pre-commit hook failure runs the precommit-autofix loop and retries once.",
+      "order": 8,
+      "agent": "commit",
+      "consumes": [
+        "Diff (production code)",
+        "review_verdict (high-confidence findings)",
+        "coverage verdict"
+      ],
+      "produces": [
+        "Commit",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Diff"
+      ],
+      "writes": [
+        "Commit"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    },
+    {
+      "id": "pr",
+      "label": "Open the pull request",
+      "human": "the pull-request agent drafts the title + body from the branch's commits, opens (or reuses) the PR, and resolves any merge conflict via conflict-resolver — when the PR merges, control returns to the AC lifecycle's 'complete' step, which marks the AC done.",
+      "order": 9,
+      "agent": "pull-request",
+      "consumes": [
+        "Commit"
+      ],
+      "produces": [
+        "PR",
+        "sign_off_comment: ok"
+      ],
+      "reads": [
+        "Commit"
+      ],
+      "writes": [
+        "PR"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "branches": [
+    {
+      "id": "blocked",
+      "label": "Blocker → adjudication ladder",
+      "condition": "a phase agent signs off with status: blocker",
+      "human": "when a phase returns a blocker, ticket-supervisor climbs the failure-adjudication ladder from building-epics — mechanical retry, then cross-agent rework, then brainstorm-lead, then halt — with hard retry caps, instead of proceeding to the next phase.",
+      "from": "dispatch",
+      "agent": "ticket-supervisor + brainstorm-lead",
+      "consumes": [
+        "sign_off_comment: blocker"
+      ],
+      "produces": [
+        "retry / rework / halt decision"
+      ],
+      "reads": [
+        "Ticket"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-14"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "dispatch",
+      "given": "a wired ticket handed over from the AC lifecycle",
+      "when": "ticket-supervisor drives it",
+      "then": "each needed phase agent is dispatched at depth 1 in natural order and routed on its sign-off status"
+    },
+    {
+      "for": "test",
+      "given": "a ticket with a non-empty test_requirements block",
+      "when": "test-writer runs before any coder",
+      "then": "failing test stubs and a red_baseline are produced for the coders to turn green"
+    },
+    {
+      "for": "code",
+      "given": "a red baseline handed over by test-writer",
+      "when": "the coders implement against it",
+      "then": "the production diff turns every red_baseline test green without touching files outside files_touched"
+    },
+    {
+      "for": "acgate",
+      "given": "a green diff",
+      "when": "the AC coverage + fulfillment gates run",
+      "then": "every AC has implementation + test evidence and the AC store fields are made accurate before commit"
+    },
+    {
+      "for": "pr",
+      "given": "a committed change on the feature branch",
+      "when": "the pull-request agent runs",
+      "then": "a PR is opened (or reused) and, on merge, the AC lifecycle marks the AC done"
+    },
+    {
+      "for": "blocked",
+      "given": "a phase agent that returns a blocker",
+      "when": "ticket-supervisor adjudicates it",
+      "then": "the failure climbs the retry → cross-agent → brainstorm-lead → halt ladder instead of advancing the chain"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-14",
+      "note": "Real data-flow of the /build-feature phase chain (dispatch → architect → test → code → scope → review → ac-gate → commit → pr) with the agent + produces/consumes handoff contract on each step. Continues from leafcutter/ac-lifecycle's 'generate' (Ticket wired) and returns to its 'complete' step on merge."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 10,
+    "total": 10,
+    "asof": "2026-07-14"
+  }
+}
