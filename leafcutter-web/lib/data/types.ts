@@ -432,6 +432,32 @@ export interface CoverageStats {
   totalTestFiles: number;
 }
 
+/** Bidirectional AC⇄test⇄code traceability health. */
+export interface TraceabilityHealth {
+  // Guard coverage over the LOGICAL denominator (shipped work), not all ACs.
+  doneGuard: {
+    total: number; guarded: number; unguarded: number; pct: number;
+    leafTotal: number; leafGuarded: number; leafUnguarded: number; leafPct: number;
+  };
+  // Tests that reference no acceptance criterion (untraceable to a requirement).
+  orphanTests: {
+    files: number; linkedFiles: number; orphanFiles: number; orphanFilePct: number;
+    orphanFileSamples: string[];
+    fns: number; linkedFns: number; orphanFns: number; orphanFnPct: number;
+  };
+  // Source functions/classes in files no AC links to. Two scopes ("the code" is ambiguous).
+  untracedCode: {
+    scopes: {
+      key: string; label: string;
+      files: number; linkedFiles: number; untracedFiles: number; untracedFilePct: number;
+      symbols: number; symbolsInUntraced: number; symbolsUntracedPct: number;
+      topUntraced: { path: string; symbols: number }[];
+    }[];
+  };
+  ticketsWithTraceability: number;   // tickets carrying ac_traceability
+  ticketsTotal: number;
+}
+
 /** One row of the honest backlog waterfall (raw todo -> genuinely ready). */
 export interface BacklogWaterfall {
   bucket: BacklogBucket | "not_done";
@@ -472,6 +498,7 @@ export interface AtlasSnapshot {
   nextUp: AC[];                 // the TRUE /build-ac queue: eligible + ranked
   builtUnflipped: AC[];         // built (real source / done ticket) but still not "done"
   coverage: CoverageStats;
+  traceability: TraceabilityHealth;
   activity: {
     inProgress: ActivityItem[];     // in-progress LEAF tickets with a live phase chain
     inFlightEpics: Ticket[];        // in-progress epic Master_Plan markers (may be stale)

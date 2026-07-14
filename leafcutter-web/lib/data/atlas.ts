@@ -7,6 +7,7 @@ import { loadAgents } from "./agents";
 import { loadCoverage, totalTestFiles } from "./tests";
 import { enrichBacklog, computeNextUp } from "./backlog";
 import { computeActivity } from "./activity";
+import { computeTraceability } from "./traceability";
 import type {
   AC,
   AcLevel,
@@ -119,6 +120,7 @@ export function getAtlas(): AtlasSnapshot {
     nextUp: backlog.nextUp,
     builtUnflipped: backlog.builtUnflipped,
     coverage: coverageStats(acs),
+    traceability: computeTraceability(acs, tickets),
     activity: computeActivity(tickets),
   };
 }

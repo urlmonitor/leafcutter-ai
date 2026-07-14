@@ -30,5 +30,23 @@ export async function GET() {
         failed: x.failedPhases,
       })),
     },
+    traceability: {
+      doneGuard: a.traceability.doneGuard,
+      orphanTests: {
+        files: a.traceability.orphanTests.files,
+        orphanFiles: a.traceability.orphanTests.orphanFiles,
+        orphanFilePct: a.traceability.orphanTests.orphanFilePct,
+        fns: a.traceability.orphanTests.fns,
+        orphanFns: a.traceability.orphanTests.orphanFns,
+        orphanFnPct: a.traceability.orphanTests.orphanFnPct,
+      },
+      untracedCode: a.traceability.untracedCode.scopes.map((s) => ({
+        key: s.key, untracedFiles: s.untracedFiles, files: s.files,
+        untracedFilePct: s.untracedFilePct, symbolsInUntraced: s.symbolsInUntraced,
+        symbols: s.symbols, symbolsUntracedPct: s.symbolsUntracedPct,
+      })),
+      ticketsWithTraceability: a.traceability.ticketsWithTraceability,
+      ticketsTotal: a.traceability.ticketsTotal,
+    },
   });
 }
