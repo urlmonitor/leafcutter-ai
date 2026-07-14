@@ -12,23 +12,24 @@
 
 @layer base {
   :root {
-    /* Surfaces */
-    --background: 160 26% 6%;        /* canopy floor */
-    --foreground: 150 14% 92%;       /* dappled light */
-    --card: 158 20% 11%;             /* raised surface — clearly above the 6% canvas */
-    --card-foreground: 150 14% 93%;
-    --popover: 158 20% 12%;
-    --popover-foreground: 150 14% 93%;
+    /* Surfaces — green identity kept, but low saturation so it never competes
+       with text; canvas slightly warmer/less loud than before */
+    --background: 158 16% 7%;        /* canopy floor */
+    --foreground: 150 6% 98%;        /* crisp near-white (was greyish 14%/92%) */
+    --card: 158 12% 13%;             /* raised surface — clearly above the canvas */
+    --card-foreground: 150 6% 98%;
+    --popover: 158 13% 13%;
+    --popover-foreground: 150 6% 98%;
 
     /* Brand */
-    --primary: 150 64% 55%;          /* leaf / chlorophyll */
+    --primary: 150 64% 56%;          /* leaf / chlorophyll */
     --primary-foreground: 160 40% 6%;
-    --secondary: 156 15% 18%;        /* hover/fill — reads distinctly on card */
-    --secondary-foreground: 150 14% 93%;
+    --secondary: 156 12% 19%;        /* hover/fill — reads distinctly on card */
+    --secondary-foreground: 150 6% 97%;
 
     /* Neutrals */
-    --muted: 156 14% 17%;
-    --muted-foreground: 150 11% 70%; /* secondary text — crisper (was 60%) */
+    --muted: 156 12% 18%;
+    --muted-foreground: 155 7% 80%;  /* secondary text — bright, near-neutral */
     --accent: 168 55% 46%;           /* teal-leaf accent */
     --accent-foreground: 150 14% 96%;
 
@@ -41,10 +42,10 @@
     --success-foreground: 160 40% 6%;
     --info: 205 82% 64%;
 
-    /* Lines & focus — visible dividers/outlines (was 16%, ~1.3:1; now ~2:1) */
-    --border: 155 14% 28%;
-    --input: 155 14% 30%;
-    --ring: 150 64% 55%;
+    /* Lines & focus — visible dividers/outlines against the surfaces */
+    --border: 155 10% 30%;
+    --input: 155 10% 32%;
+    --ring: 150 64% 56%;
 
     /* Data-viz ramp (categorical, botanical) */
     --chart-1: 150 64% 52%;   /* leaf green */
