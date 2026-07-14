@@ -1,6 +1,6 @@
 id: KM-VIS-014
 components:
-  - knowledge_system
+  - knowledge_management
 status: active
 component: knowledge-management
 level: L2

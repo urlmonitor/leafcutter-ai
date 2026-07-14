@@ -1,6 +1,6 @@
 id: KM-KGS-100b-3
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: approved
 priority: high
 title: "How-to guide for tracing a requirement to its code and tests"

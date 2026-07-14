@@ -1,6 +1,6 @@
 id: KM-KQS-028
 components:
-  - knowledge_system
+  - knowledge_management
 title: "depends_on value that is already a bare node ID is passed through unchanged"
 component: knowledge-management
 level: L3

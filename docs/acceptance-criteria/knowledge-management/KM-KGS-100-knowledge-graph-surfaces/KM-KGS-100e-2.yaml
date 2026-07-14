@@ -4,7 +4,7 @@ priority: high
 title: "A ticket or a doc that joins the map must declare its component to be committed"
 component: knowledge-management
 components:
-  - knowledge_system
+  - knowledge_management
 level: L2
 status: active
 req_status: draft

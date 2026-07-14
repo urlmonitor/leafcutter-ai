@@ -1,6 +1,6 @@
 id: KM-VIS-003
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Pure stdlib Python with CDN-only D3.js reference"

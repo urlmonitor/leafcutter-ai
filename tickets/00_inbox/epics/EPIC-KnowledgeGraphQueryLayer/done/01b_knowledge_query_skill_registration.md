@@ -2,7 +2,7 @@
 title: "Register /knowledge-query skill — template and registry entry"
 status: done
 components:
-  - knowledge_system
+  - knowledge_management
 created: 2026-06-04
 depends_on:
   - tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md

@@ -4,7 +4,7 @@ priority: high
 title: "The authoring-agent templates instruct emitting a component on every criterion"
 component: knowledge-management
 components:
-  - knowledge_system
+  - knowledge_management
 level: L2
 status: active
 req_status: draft

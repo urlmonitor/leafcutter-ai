@@ -1,6 +1,6 @@
 id: KM-KGS-100a-4
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: approved
 priority: high
 title: "Component diagram shows the acceptance-criteria store as a knowledge-map surface"

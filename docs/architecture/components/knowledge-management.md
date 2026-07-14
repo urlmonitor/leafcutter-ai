@@ -8,8 +8,7 @@ type: reference
 created: 2026-07-09
 last_updated: 2026-07-09
 components:
-  - knowledge-management
-  - knowledge_system
+  - knowledge_management
 ---
 
 # Knowledge Management

@@ -1,6 +1,6 @@
 id: KM-VIS-005
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Surface filter flag restricts graph to specified surfaces only"

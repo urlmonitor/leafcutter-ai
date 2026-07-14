@@ -6,7 +6,7 @@ status: active
 created: 2026-07-08
 last_updated: 2026-07-08
 components:
-  - knowledge_system
+  - knowledge_management
 related_docs:
   - docs/reference/ac-schema.md
   - docs/acceptance-criteria/index.yaml
@@ -99,7 +99,7 @@ Add the `components` key immediately after the `id` line:
 ```yaml
 id: KM-KGS-100a-1
 components:
-  - knowledge-management
+  - knowledge_management
 title: "Graph ingests all surfaces declared in paths.json"
 component: knowledge-management    # keep in sync with components[0] for backward compatibility
 status: active
@@ -150,7 +150,7 @@ a `components` list. This guide is an example:
 ---
 type: how-to
 components:
-  - knowledge-management
+  - knowledge_management
 ---
 ```
 

@@ -1,6 +1,6 @@
 id: KM-KQS-036
 components:
-  - knowledge_system
+  - knowledge_management
 readiness: draft
 priority: medium
 title: "Agent Protocol specifies mandatory-invocation rule preventing agents from skipping the query"

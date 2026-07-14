@@ -1,6 +1,6 @@
 id: KM-KQS-018
 components:
-  - knowledge_system
+  - knowledge_management
 title: "Edge fields in surfaces config match fields present in each surface source"
 component: knowledge-management
 level: L2

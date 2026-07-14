@@ -4,7 +4,7 @@ priority: high
 title: "How-to guide: declare a component on a knowledge item and query it back"
 component: knowledge-management
 components:
-  - knowledge_system
+  - knowledge_management
 level: L2
 status: active
 req_status: draft

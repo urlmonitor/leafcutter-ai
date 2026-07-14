@@ -2,7 +2,7 @@
 title: "Add check_description_field.py commit-guardian hook and register it"
 status: done
 components:
-  - knowledge_system
+  - knowledge_management
   - build_pipeline
 created: 2026-06-04
 depends_on:

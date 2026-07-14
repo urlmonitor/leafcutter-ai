@@ -2,7 +2,7 @@
 title: "Backfill description: field on all docs/ADRs/components (migration script)"
 status: done
 components:
-  - knowledge_system
+  - knowledge_management
   - build_pipeline
 created: 2026-06-04
 depends_on: []

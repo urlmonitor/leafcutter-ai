@@ -2,7 +2,7 @@
 title: "Fix edge connectivity — components as hubs, depends_on resolution, phantom filtering"
 status: done
 components:
-  - knowledge_system
+  - knowledge_management
 created: 2026-06-05
 depends_on:
   - done/01a_knowledge_query_script_core.md

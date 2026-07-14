@@ -218,8 +218,8 @@
         "scripts/injection_builders.py"
       ]
     },
-    "knowledge-management": {
-      "id": "knowledge-management",
+    "knowledge_management": {
+      "id": "knowledge_management",
       "name": "Knowledge Management",
       "type": "analysis",
       "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.",

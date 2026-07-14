@@ -2,7 +2,7 @@
 title: "Add --surface and --project-root CLI flags to visualise_knowledge_graph.py"
 status: done
 components:
-  - knowledge_system
+  - knowledge_management
 created: 2026-06-04
 depends_on:
   - tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03a_knowledge_graph_visualization_core.md
