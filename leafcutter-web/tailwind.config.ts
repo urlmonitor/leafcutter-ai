@@ -74,8 +74,11 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+        // var() carries a fallback so the declaration is never invalid at the
+        // <html> level (where the variable isn't defined) — otherwise the whole
+        // font-family collapses to the browser default serif (Times New Roman).
+        sans: ["var(--font-geist-sans, ui-sans-serif)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono, ui-monospace)", "ui-monospace", "monospace"],
       },
       keyframes: {
         "accordion-down": {

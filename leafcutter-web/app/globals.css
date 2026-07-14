@@ -66,6 +66,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    /* Explicit so the variable (defined on <body>) always resolves — never
+       falls back to the browser default serif. */
+    font-family: var(--font-geist-sans, ui-sans-serif), ui-sans-serif, system-ui,
+      -apple-system, "Segoe UI", Roboto, sans-serif;
     /* subtle canopy vignette */
     background-image:
       radial-gradient(1200px 800px at 85% -10%, hsl(150 64% 52% / 0.06), transparent 60%),
