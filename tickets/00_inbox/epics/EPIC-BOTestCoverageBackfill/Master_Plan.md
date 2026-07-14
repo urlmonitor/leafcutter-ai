@@ -4,7 +4,7 @@ type: epic
 status: todo
 components:
   - build_orchestration
-  - guardrail_engine
+  - commit_guardian
 created: 2026-07-14
 depends_on: []
 requires_diagram: false
