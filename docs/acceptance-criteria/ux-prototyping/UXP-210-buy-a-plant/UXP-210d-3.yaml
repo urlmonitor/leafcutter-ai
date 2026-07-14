@@ -33,6 +33,17 @@ implemented_by: []
 change_target: code
 risk_surface: internal
 product_truth:
+  - flow: fern-and-fig/checkout-and-pay
+    node: soldOutAtPay
+    node_kind: branch
+    flow_kind: user
+    screen: checkout
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+      - Plant
+    source: mock
+    asof: '2026-07-14'
   - flow: fern-and-fig/customer-buys-a-plant
     node: outOfStockAtCheckout
     node_kind: branch

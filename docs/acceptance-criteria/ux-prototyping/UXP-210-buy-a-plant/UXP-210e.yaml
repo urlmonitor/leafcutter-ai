@@ -31,6 +31,16 @@ implemented_by: []
 change_target: code
 risk_surface: internal
 product_truth:
+  - flow: fern-and-fig/checkout-and-pay
+    node: confirmed
+    node_kind: step
+    flow_kind: user
+    screen: order-confirmation
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+    source: mock
+    asof: '2026-07-14'
   - flow: fern-and-fig/customer-buys-a-plant
     node: confirmed
     node_kind: step

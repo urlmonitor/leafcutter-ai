@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "tags": [
     "checkout",
     "catalog",
@@ -91,7 +91,7 @@
     {
       "id": "checkout",
       "label": "Checkout",
-      "human": "The customer confirms their details and pays; an order is created.",
+      "human": "The customer confirms their details and pays; an order is created. This single step drills into the checkout-and-pay child flow for the fine-grained payment sub-journey.",
       "order": 5,
       "screen": "checkout",
       "reads": [
@@ -104,6 +104,7 @@
       "implements": [
         "UXP-210d"
       ],
+      "expands_to": "fern-and-fig/checkout-and-pay",
       "impl_status": "not_started",
       "impl_asof": "2026-07-14"
     },
@@ -285,6 +286,12 @@
       "by": "BrainCandy (product-truth hardening pass)",
       "date": "2026-07-14",
       "note": "v2: added a sign-in step (auth) and three honest failure branches — empty-cart, payment-declined, and sold-out-at-checkout — so the gold reference stops teaching a happy-path-only journey. Each new node carries reads/writes backed by the catalog dataset and a Given/When/Then scenario, and links to a new UXP L3 AC. Set realization=mock."
+    },
+    {
+      "action": "extended",
+      "by": "BrainCandy (product-truth-way plan-feature session)",
+      "date": "2026-07-14",
+      "note": "v3: the checkout step now expands_to the new fern-and-fig/checkout-and-pay child flow (C4 drill-down). Its impl_status now rolls up from that child's payment sub-journey rather than from UXP-210d alone — extend-not-duplicate: the checkout detail lives in one place and this journey references it."
     }
   ]
 }
