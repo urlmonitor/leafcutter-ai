@@ -117,16 +117,26 @@ function parseArgs(raw) {
  * Map an internal pipeline stage key to a display-name used in commit messages.
  *
  * Canonical display names per AC ACD-300g-3:
- *   po   → PO
- *   ba   → BA
- *   itpo → IT-PO
+ *   po       → PO
+ *   ba       → BA
+ *   itpo     → IT-PO
+ *   mockdata → MOCK-DATA   (product-truth phase)
+ *   mockup   → MOCKUP      (product-truth phase)
+ *   flow     → FLOW        (product-truth phase)
  *   (any other key is returned uppercase as a fallback)
  *
- * @param {string} stageKey - Internal stage key (e.g. "po", "ba", "itpo").
- * @returns {string} Display name (e.g. "PO", "BA", "IT-PO").
+ * @param {string} stageKey - Internal stage key (e.g. "po", "ba", "mockdata").
+ * @returns {string} Display name (e.g. "PO", "BA", "MOCK-DATA").
  */
 function stageDisplayName(stageKey) {
-  const map = { po: "PO", ba: "BA", itpo: "IT-PO" };
+  const map = {
+    po: "PO",
+    ba: "BA",
+    itpo: "IT-PO",
+    mockdata: "MOCK-DATA",
+    mockup: "MOCKUP",
+    flow: "FLOW",
+  };
   return map[stageKey] || stageKey.toUpperCase();
 }
 
@@ -701,7 +711,16 @@ async function scanCommittedStages(authoringWorktreePath) {
   }
 
   // Display name → internal stage key mapping (inverse of stageDisplayName()).
-  const displayToKey = { "po": "po", "ba": "ba", "it-po": "itpo" };
+  // Keyed on the LOWERCASED display name (the subject scan lowercases below), so
+  // "MOCK-DATA" → "mock-data" → "mockdata", "MOCKUP" → "mockup", "FLOW" → "flow".
+  const displayToKey = {
+    "po": "po",
+    "ba": "ba",
+    "it-po": "itpo",
+    "mock-data": "mockdata",
+    "mockup": "mockup",
+    "flow": "flow",
+  };
 
   const committedStageKeys = new Set();
   const lines = logOutput.split("\n").filter((l) => l.trim().length > 0);
@@ -867,6 +886,473 @@ async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktr
       "Uncommitted AC files must be resolved first. " +
       "Re-run /plan-feature after committing or discarding them.",
   };
+}
+
+// ===========================================================================
+// PRODUCT-TRUTH (PT) PHASE HELPERS
+//
+// The PT phase runs on every invocation (always-on) between ac-triage and the
+// AC authoring pipeline. It dispatches pt-classifier, derives the run-set from
+// the classifier OUTCOME (never the dispatch array), then drafts the required
+// product-truth artifacts (mock data → mockups → flow) each behind a user gate,
+// committing each approved stage surgically. See ADR (always-on PT phase).
+// ===========================================================================
+
+/**
+ * Canonical outcome → {mockdata, mockup, flow} run-set mapping.
+ *
+ * This is the row-for-row inverse of the validator's OUTCOME_BY_COMBO table
+ * (docs/product-truth/scripts/validate_product_truth.py) keyed on
+ * (needs_flow, needs_mock_data, needs_mockup):
+ *
+ *   OUTCOME_BY_COMBO = {
+ *     (True,  True,  True):  "full-set",
+ *     (False, True,  True):  "mockup+data",
+ *     (False, False, True):  "mockup-only",
+ *     (False, True,  False): "mock-data-only",
+ *     (False, False, False): "none",
+ *   }
+ *
+ * so full-set ⇒ all three; mockup+data ⇒ mockdata+mockup; mockup-only ⇒ mockup;
+ * mock-data-only ⇒ mockdata; none ⇒ nothing. (mockdata==needs_mock_data,
+ * mockup==needs_mockup, flow==needs_flow.)
+ *
+ * @type {Object<string,{mockdata:boolean,mockup:boolean,flow:boolean}>}
+ */
+const OUTCOME_TO_STAGES = {
+  "full-set":       { mockdata: true,  mockup: true,  flow: true  },
+  "mockup+data":    { mockdata: true,  mockup: true,  flow: false },
+  "mockup-only":    { mockdata: false, mockup: true,  flow: false },
+  "mock-data-only": { mockdata: true,  mockup: false, flow: false },
+  "none":           { mockdata: false, mockup: false, flow: false },
+};
+
+/**
+ * FIXED authoring order for the PT phase. The classifier's `dispatch` array
+ * order is NEVER trusted for sequencing — the run-set is filtered from this
+ * canonical order so mock data is always drafted before the mockups that
+ * populate from it, and the flow that wires them is always drafted last.
+ *
+ * @type {Array<{agent:string, stage:string}>}
+ */
+const PT_ORDER = [
+  { agent: "mock-data-author", stage: "mockdata" },
+  { agent: "mockup-author",    stage: "mockup" },
+  { agent: "flow-author",      stage: "flow" },
+];
+
+/**
+ * Derive the PT run-set from a classifier decision.
+ *
+ * Pure function (no I/O). Trusts `classifier.outcome` exclusively — the
+ * `dispatch` array is only cross-checked for advisory disagreement. Unparseable,
+ * non-object, or unknown-outcome input returns `{ skip: true }` so the caller
+ * falls straight through to the AC pipeline (graceful degradation). An outcome
+ * of "none" returns `{ skip: false, order: [] }` — the PT phase runs but drafts
+ * nothing and continues to the AC pipeline.
+ *
+ * @param {*} classifier - Parsed classifier JSON (any shape).
+ * @returns {{skip:boolean, reason:string, outcome:string|null, order:Array<{agent:string,stage:string}>, dispatchDisagrees:boolean}}
+ */
+function derivePtRunSet(classifier) {
+  if (!classifier || typeof classifier !== "object" || Array.isArray(classifier)) {
+    return { skip: true, reason: "classifier output was not a JSON object", outcome: null, order: [], dispatchDisagrees: false };
+  }
+  const outcome = classifier.outcome;
+  if (typeof outcome !== "string" || !Object.prototype.hasOwnProperty.call(OUTCOME_TO_STAGES, outcome)) {
+    return {
+      skip: true,
+      reason: "classifier outcome missing or not a known enum: " + JSON.stringify(outcome),
+      outcome: null,
+      order: [],
+      dispatchDisagrees: false,
+    };
+  }
+  const bools = OUTCOME_TO_STAGES[outcome];
+  const order = PT_ORDER.filter((step) => bools[step.stage]);
+
+  // Advisory consistency check only — we ALWAYS trust `outcome` for the run-set.
+  let dispatchDisagrees = false;
+  if (Array.isArray(classifier.dispatch)) {
+    const derivedAgents = order.map((step) => step.agent).sort();
+    const claimed = classifier.dispatch.filter((entry) => typeof entry === "string").slice().sort();
+    dispatchDisagrees = JSON.stringify(derivedAgents) !== JSON.stringify(claimed);
+  }
+
+  return { skip: false, reason: "", outcome, order, dispatchDisagrees };
+}
+
+/**
+ * Verify the product-truth store + its scripts exist in the authoring worktree.
+ *
+ * The workflow cannot run raw fs — this is an agent dispatch (status-checker
+ * runs a bash existence check). Returns true only when the store dir AND both
+ * required scripts are present; any failure/unparseable result returns false so
+ * the caller self-skips (non-silent) rather than dispatching authors into a
+ * store that isn't there.
+ *
+ * @param {string}      ptStorePath           - Store path (e.g. "docs/product-truth").
+ * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @returns {Promise<boolean>}
+ */
+async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath) {
+  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
+  const storeDir = root + ptStorePath;
+  const genScript = root + ptStorePath + "/scripts/generate_product_truth.py";
+  const reconcileScript = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
+  const checkCmd =
+    `test -d "${storeDir}" && test -f "${genScript}" && test -f "${reconcileScript}" ` +
+    `&& echo present || echo absent`;
+
+  try {
+    const result = await agent(
+      `Run the following command and return ONLY the raw stdout:\n` +
+      `${checkCmd}\n` +
+      `Return JSON: { "output": "<raw stdout line>", "exit_code": <number> }`,
+      { agentType: "status-checker", label: "pt-store-check" }
+    );
+    const parsed = typeof result === "string" ? JSON.parse(result) : result;
+    if (!parsed || typeof parsed.output !== "string") {
+      return false;
+    }
+    return parsed.output.trim() === "present";
+  } catch (_err) {
+    // Cannot confirm the store — self-skip (fail-closed to "absent").
+    return false;
+  }
+}
+
+/**
+ * Emit an OBSERVABLE, non-silent PT telemetry line via an agent dispatch.
+ *
+ * The workflow cannot append to a log file directly (everything is an agent
+ * dispatch), so store-absent / skip events are recorded by dispatching a
+ * status-checker to append one JSON line to debugging/logs/agent_telemetry.jsonl.
+ * Best-effort: never throws, never blocks the pipeline. This is the "never
+ * silent" guarantee for the store-absent self-skip.
+ *
+ * @param {string}      event                 - Short event key (e.g. "pt_phase_skipped_store_absent").
+ * @param {object}      detail                - JSON-serialisable detail payload.
+ * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @returns {Promise<void>}
+ */
+async function emitPtTelemetry(event, detail, authoringWorktreePath) {
+  log(`[plan-feature][PT] ${event}: ${JSON.stringify(detail)}`);
+  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
+  const logPath = root + "debugging/logs/agent_telemetry.jsonl";
+  const line = JSON.stringify({ source: "plan-feature", phase: "product-truth", event, detail });
+  try {
+    await agent(
+      `Append exactly one line to a telemetry log (create the directory if needed).\n` +
+      `Run: mkdir -p "${root}debugging/logs" && printf '%s\\n' ${JSON.stringify(line)} >> "${logPath}"\n` +
+      `This is an observability signal for the /plan-feature product-truth phase — event: ${event}.\n` +
+      `Return JSON: { "exit_code": <number> }`,
+      { agentType: "status-checker", label: "pt-telemetry" }
+    );
+  } catch (_err) {
+    // Telemetry is best-effort — the log() call above already recorded the event.
+  }
+}
+
+/**
+ * Commit one product-truth stage's output — the surgical sibling of
+ * commitStageOutput() for the AC store.
+ *
+ * SURGICAL STAGING (critical): stages ONLY the explicit artifact paths the PT
+ * agent reported (the artifact + its regenerated derived files) PLUS
+ * `<ptStorePath>/index.json`. It NEVER runs `git add docs/product-truth` (or
+ * `git add .`) wholesale — that would sweep unrelated derived churn — and it
+ * NEVER stages docs/acceptance-criteria/ (the AC store is a separate commit
+ * surface). This mirrors the deliberately-surgical AC commit in the other
+ * direction.
+ *
+ * NO-MAIN-COMMIT DEFENSIVE GUARD (fail-CLOSED): duplicates commitStageOutput()'s
+ * guard — the branch MUST be positively confirmed non-main before any commit;
+ * all failure paths abort.
+ *
+ * Commit subject: `plan-feature(MOCK-DATA|MOCKUP|FLOW): <component>`.
+ *
+ * @param {string[]}    reportedPaths         - Worktree-relative artifact + derived paths the PT agent wrote.
+ * @param {string}      stageName             - Internal PT stage key ("mockdata"|"mockup"|"flow").
+ * @param {string}      component             - Target component id.
+ * @param {string}      runId                 - Short run identifier.
+ * @param {string}      ptStorePath           - Product-truth store path (default "docs/product-truth").
+ * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @returns {Promise<{ status:"ok"|"error", message:string, hook_name?:string|null, failing_files?:string[], is_conflict?:boolean }>}
+ */
+async function commitStageOutputProductTruth(reportedPaths, stageName, component, runId, ptStorePath, authoringWorktreePath) {
+  ptStorePath = ptStorePath || "docs/product-truth";
+  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const stageLabel = stageDisplayName(stageName);
+
+  // -------------------------------------------------------------------------
+  // NO-MAIN-COMMIT DEFENSIVE GUARD (fail-CLOSED) — mirrors commitStageOutput.
+  // -------------------------------------------------------------------------
+  {
+    let branchConfirmed = false;
+    let branchCheckError = "unknown error during branch check";
+    const branchCheckCmd = authoringWorktreePath
+      ? `git -C "${authoringWorktreePath}" branch --show-current`
+      : `git branch --show-current`;
+
+    try {
+      const branchCheckResult = await agent(
+        `Run the following command and return its raw stdout output:\n` +
+        `${branchCheckCmd}\n` +
+        `Return JSON: { "output": "<raw stdout line>", "exit_code": <number> }`,
+        { agentType: "status-checker", label: "branch-check" }
+      );
+      let branchParsed;
+      try {
+        branchParsed =
+          typeof branchCheckResult === "string" ? JSON.parse(branchCheckResult) : branchCheckResult;
+      } catch (_parseErr) {
+        branchCheckError = "branch check response was not valid JSON";
+        branchParsed = null;
+      }
+
+      if (branchParsed && branchParsed.exit_code === 0) {
+        const currentBranch = (branchParsed.output || "").trim();
+        if (currentBranch.toLowerCase() === "main") {
+          return {
+            status: "error",
+            message:
+              "safety: refusing to commit product-truth files to main — authoring branch invariant violated (AC BO-1500c-3)",
+            hook_name: null,
+            failing_files: [],
+            is_conflict: false,
+          };
+        }
+        if (currentBranch.length > 0) {
+          branchConfirmed = true;
+        } else {
+          branchCheckError = "git branch --show-current returned an empty branch name";
+        }
+      } else if (branchParsed) {
+        branchCheckError =
+          "git branch --show-current exited non-zero (exit_code=" + branchParsed.exit_code + ")";
+      } else {
+        branchCheckError = "branch check returned null or unparseable result";
+      }
+    } catch (branchCheckErr) {
+      branchCheckError = "agent dispatch failed: " + branchCheckErr.message;
+    }
+
+    if (!branchConfirmed) {
+      return {
+        status: "error",
+        message:
+          "safety: cannot confirm authoring branch is not main — product-truth commit aborted to " +
+          "prevent committing to an unknown branch (AC BO-1500c-3). Cause: " + branchCheckError,
+        hook_name: null,
+        failing_files: [],
+        is_conflict: false,
+      };
+    }
+  }
+  // -------------------------------------------------------------------------
+
+  const componentLabel = component || "unknown-component";
+  const commitMessage =
+    `plan-feature(${stageLabel}): ${componentLabel}\n\nrun-id: ${runId}\nproduct-truth stage commit`;
+
+  // Surgical staging set: the reported artifact/derived paths + index.json only.
+  const indexPath = `${ptStorePath}/index.json`;
+  const pathsToStage = Array.isArray(reportedPaths) ? reportedPaths.filter((p) => typeof p === "string" && p) : [];
+  if (!pathsToStage.includes(indexPath)) {
+    pathsToStage.push(indexPath);
+  }
+  const pathsJson = JSON.stringify(pathsToStage);
+
+  let commitResult;
+  try {
+    commitResult = await agent(
+      `Stage and commit the product-truth artifacts produced by the ${stageName} stage.\n` +
+      "\n" +
+      `The EXACT paths to stage (artifact + its regenerated derived files + the store index) are:\n` +
+      `  ${pathsJson}\n` +
+      `The commit message to use is: ${commitMessage}\n` +
+      "\n" +
+      (authoringWorktreePath
+        ? `ISOLATION RULE: ALL git commands in this task MUST use the '-C "${authoringWorktreePath}"'\n` +
+          `flag so they operate inside the dedicated authoring worktree and NEVER in another checkout.\n\n`
+        : "") +
+      `SURGICAL STAGING RULE (correctness-critical): stage ONLY the explicit paths listed above.\n` +
+      `  - NEVER run 'git ${gitC} add ${ptStorePath}' or 'git ${gitC} add ${ptStorePath}/' or 'git ${gitC} add .'\n` +
+      `    — a wholesale add would sweep unrelated derived churn into this commit.\n` +
+      `  - NEVER stage anything under docs/acceptance-criteria/ — the AC store is a SEPARATE commit surface.\n` +
+      "\n" +
+      "Step 1 — Stage each listed path individually (skip any that do not exist on disk):\n" +
+      `  For each path P in the list above, run: git ${gitC} add "P"\n` +
+      `  If a 'git ${gitC} add' for a path that DOES exist exits non-zero:\n` +
+      "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
+      "\n" +
+      "Step 2 — Verify staging is surgical:\n" +
+      `  Run: git ${gitC} diff --cached --name-only\n` +
+      "  Confirm every staged path is one of the listed paths and NONE is under docs/acceptance-criteria/.\n" +
+      "  If nothing is staged: Return { \"status\": \"ok\", \"message\": \"no product-truth files to commit — skipped\" }\n" +
+      "\n" +
+      "Step 3 — Commit the staged files using the commit agent's standard flow with the message above.\n" +
+      "  If exit code is 0: Return { \"status\": \"ok\", \"message\": \"committed successfully\" }\n" +
+      "  If non-zero, analyse the output:\n" +
+      "    a) 'conflict' (case-insensitive) → { \"status\": \"error\", \"message\": \"index conflict detected\", \"hook_name\": null, \"failing_files\": [<paths>], \"is_conflict\": true }\n" +
+      "    b) hook failure → { \"status\": \"error\", \"message\": \"pre-commit hook rejected staged files\", \"hook_name\": \"<hook or null>\", \"failing_files\": [<paths>], \"is_conflict\": false }\n" +
+      "    c) generic → { \"status\": \"error\", \"message\": \"git commit failed\", \"hook_name\": null, \"failing_files\": [], \"is_conflict\": false }\n" +
+      "\n" +
+      "  IMPORTANT: Do NOT retry. Do NOT run git commit --no-verify. Leave files as uncommitted changes on disk.",
+      { agentType: "commit", label: "commit-stage-output-product-truth" }
+    );
+  } catch (err) {
+    return {
+      status: "error",
+      message: `commitStageOutputProductTruth: agent dispatch failed: ${err.message}`,
+      hook_name: null,
+      failing_files: [],
+      is_conflict: false,
+    };
+  }
+
+  let result;
+  try {
+    result = typeof commitResult === "string" ? JSON.parse(commitResult) : commitResult;
+  } catch (_parseErr) {
+    result = { status: "error", message: "product-truth commit result unparseable — cannot confirm success", hook_name: null, failing_files: [], is_conflict: false };
+  }
+
+  return result || { status: "error", message: "no result returned by agent", hook_name: null, failing_files: [], is_conflict: false };
+}
+
+/**
+ * Recover the committed flow's store-relative path (flowRef) from the FLOW-stage
+ * commit on the authoring branch — net-new crash-resume support (today's resume
+ * only recovers AC IDs). Inspects the committed diff of the plan-feature(FLOW)
+ * commit for the `*.flow.json` path it added/modified.
+ *
+ * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @returns {Promise<string|null>} The `.flow.json` path, or null when not recoverable.
+ */
+async function recoverFlowRefFromCommit(authoringWorktreePath) {
+  const gitLogCmd = authoringWorktreePath
+    ? `git -C "${authoringWorktreePath}" log --name-only --format=%H%x00%s origin/main..HEAD`
+    : "git log --name-only --format=%H%x00%s origin/main..HEAD";
+
+  try {
+    const logResult = await agent(
+      `Run the following command and return ONLY the raw stdout:\n` +
+      `${gitLogCmd}\n` +
+      `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+      { agentType: "status-checker", label: "resume-flow-ref" }
+    );
+    const parsed = typeof logResult === "string" ? JSON.parse(logResult) : logResult;
+    if (!parsed || parsed.exit_code !== 0) {
+      return null;
+    }
+    const out = parsed.output || "";
+    // Split into per-commit blocks (blank-line separated); find the FLOW commit,
+    // then the first *.flow.json path in its name-only file list.
+    const blocks = out.split(/\n{2,}/);
+    for (const block of blocks) {
+      const lines = block.split("\n").filter((l) => l.length > 0);
+      if (lines.length === 0) { continue; }
+      const header = lines[0].split("\x00");
+      const subject = (header[1] || "").trim();
+      if (/^plan-feature\(FLOW\):/i.test(subject)) {
+        for (const candidate of lines.slice(1)) {
+          if (candidate.trim().endsWith(".flow.json")) {
+            return candidate.trim();
+          }
+        }
+      }
+    }
+    return null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+/**
+ * Reconciliation (Track 1.3): write the business-analyst's reported
+ * `flow_backlinks` into the flow's `step.implements[]` and regenerate derived
+ * data, then commit the flow + index + affected ACs as a DEDICATED
+ * reconciliation commit (it re-mutates already-committed files, so it cannot be
+ * folded into a stage commit).
+ *
+ * Runs `docs/product-truth/scripts/apply_flow_backlinks.py` via a status-checker
+ * dispatch, then commits via the commit agent (surgical: flow + index +
+ * docs/acceptance-criteria — the ACs whose product_truth back-ref changed).
+ *
+ * @param {string}      flowRef               - Store-relative path to the approved flow's `.flow.json`.
+ * @param {object}      flowBacklinks         - Map step_id -> [AC ids] reported by the BA.
+ * @param {string}      component             - Target component id.
+ * @param {string}      runId                 - Short run identifier.
+ * @param {string}      ptStorePath           - Product-truth store path.
+ * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @returns {Promise<{status:"ok"|"error"|"skipped", message:string}>}
+ */
+async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, ptStorePath, authoringWorktreePath) {
+  if (!flowRef || !flowBacklinks || typeof flowBacklinks !== "object" || Object.keys(flowBacklinks).length === 0) {
+    return { status: "skipped", message: "no flow_backlinks reported by the business-analyst — reconciliation skipped" };
+  }
+
+  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
+  const scriptPath = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
+  // flowRef is store-relative (e.g. flows/foo/bar.flow.json); resolve it for the CLI.
+  const flowArg = root + ptStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
+  const backlinksJson = JSON.stringify(JSON.stringify(flowBacklinks));
+
+  // Step 1 — run the reconciliation script (writes step.implements + regenerates derived data).
+  let runResult;
+  try {
+    runResult = await agent(
+      `Run the flow-backlink reconciliation script and return its result.\n` +
+      `Run: python "${scriptPath}" --flow "${flowArg}" --backlinks-json ${backlinksJson}\n` +
+      `Return JSON: { "output": "<raw stdout>", "exit_code": <number>, "stderr": "<stderr or empty>" }`,
+      { agentType: "status-checker", label: "pt-reconcile-run" }
+    );
+  } catch (err) {
+    return { status: "error", message: "reconciliation dispatch failed: " + err.message };
+  }
+  const runParsed = typeof runResult === "string" ? JSON.parse(runResult) : runResult;
+  if (!runParsed || (runParsed.exit_code != null && runParsed.exit_code !== 0)) {
+    return {
+      status: "error",
+      message: "apply_flow_backlinks.py failed: " + ((runParsed && runParsed.stderr) || "(no stderr)"),
+    };
+  }
+
+  // Step 2 — commit the reconciliation as its own commit (flow + index + affected ACs).
+  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const commitMessage =
+    `plan-feature(RECONCILE): ${component || "unknown-component"}\n\nrun-id: ${runId}\nflow step.implements back-links + regenerated derived data`;
+  const indexPath = ptStorePath + "/index.json";
+  const flowStorePath = ptStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
+
+  try {
+    const commitOut = await agent(
+      `Commit the flow-backlink reconciliation as a DEDICATED commit.\n` +
+      `The reconciliation script already wrote step.implements into the flow and regenerated derived data.\n` +
+      `Commit message to use: ${commitMessage}\n\n` +
+      (authoringWorktreePath
+        ? `ISOLATION RULE: ALL git commands MUST use '-C "${authoringWorktreePath}"'.\n\n`
+        : "") +
+      `Step 1 — Stage the reconciled files:\n` +
+      `  Run: git ${gitC} add "${flowStorePath}"\n` +
+      `  Run: git ${gitC} add "${indexPath}"\n` +
+      `  Then stage ONLY the changed AC files under docs/acceptance-criteria/ whose product_truth back-ref\n` +
+      `  was regenerated by this reconciliation:\n` +
+      `    Run: git ${gitC} status --porcelain --untracked-files=all -- docs/acceptance-criteria/\n` +
+      `    For each modified '.yaml' line, run: git ${gitC} add "<path>"\n` +
+      `  Do NOT run 'git ${gitC} add .' or 'git ${gitC} add ${ptStorePath}' wholesale.\n\n` +
+      `Step 2 — Commit with the message above.\n` +
+      `  If exit 0: Return { "status": "ok", "message": "reconciliation committed" }\n` +
+      `  If non-zero: Return { "status": "error", "message": "<summary>" }`,
+      { agentType: "commit", label: "commit-flow-reconciliation" }
+    );
+    const commitParsed = typeof commitOut === "string" ? JSON.parse(commitOut) : commitOut;
+    return commitParsed || { status: "error", message: "no result from reconciliation commit agent" };
+  } catch (err) {
+    return { status: "error", message: "reconciliation commit dispatch failed: " + err.message };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1071,9 +1557,171 @@ if (route === "covered" && !force) {
 }
 
 // -------------------------------------------------------------------------
+// Product-Truth (PT) Phase — ALWAYS-ON; runs between triage and the AC pipeline.
+//
+// Dispatches pt-classifier, derives the run-set from the OUTCOME (never the
+// `dispatch` array), self-skips (non-silent) when the store is absent, then
+// drafts mock-data → mockup → flow (filtered) each behind a user gate, committing
+// each approved stage surgically. `outcome:"none"` and unparseable classifier
+// output fall straight through to the AC pipeline.
+// -------------------------------------------------------------------------
+phase('Product-Truth Phase')
+
+const ptStoreDir = "docs/product-truth";
+
+// State the PT phase hands forward to the AC pipeline.
+let ptFlowProduced = false;
+let ptFlowRef = null;          // store-relative path to the approved .flow.json
+let ptComponent = component;   // classifier may refine the target component
+
+const classifierResult = await agent(
+  "Classify which product-truth artifacts this request needs. " +
+  "Decide needs_mock_data, needs_mockup, needs_flow; derive the `outcome` per OUTCOME_BY_COMBO " +
+  "(full-set / mockup+data / mockup-only / mock-data-only / none); name the target component and entities. " +
+  "Return the structured JSON decision — it MUST include an `outcome` field.\n" +
+  `user_request: ${JSON.stringify(request)}\n` +
+  `component: ${JSON.stringify(component)}\n` +
+  "Return ONLY the JSON classification object.",
+  { agentType: "pt-classifier", label: "pt-classify" }
+);
+
+let classifier;
+try {
+  classifier = typeof classifierResult === "string" ? JSON.parse(classifierResult) : classifierResult;
+} catch (_ptParseErr) {
+  classifier = null;
+}
+
+const ptRunSet = derivePtRunSet(classifier);
+
+if (ptRunSet.skip) {
+  log(`[plan-feature][PT] classifier unparseable/inconsistent — skipping PT phase, continuing to AC pipeline. reason: ${ptRunSet.reason}`);
+} else if (ptRunSet.order.length === 0) {
+  log("[plan-feature][PT] outcome=none — no product-truth artifacts needed; continuing to AC pipeline.");
+} else {
+  if (classifier && typeof classifier.component === "string" && classifier.component) {
+    ptComponent = classifier.component;
+  }
+  if (ptRunSet.dispatchDisagrees) {
+    log("[plan-feature][PT] classifier.dispatch disagreed with outcome — trusting the outcome-derived run-set.");
+  }
+
+  const storePresent = await checkProductTruthStorePresent(ptStoreDir, authoringWorktreePath);
+  if (!storePresent) {
+    // Store-absent self-skip — NON-SILENT (observable telemetry + log).
+    await emitPtTelemetry(
+      "pt_phase_skipped_store_absent",
+      { outcome: ptRunSet.outcome, component: ptComponent, run_id: runId },
+      authoringWorktreePath
+    );
+    log("[plan-feature][PT] product-truth store/scripts absent — self-skipping PT phase; AC pipeline will proceed.");
+  } else {
+    // PT authoring loop — mirrors the AC pipeline loop.
+    for (const ptStep of ptRunSet.order) {
+      // Crash-resume: skip PT stages already committed on the authoring branch.
+      if (committedStageKeys.has(ptStep.stage)) {
+        if (ptStep.stage === "flow") {
+          ptFlowProduced = true;
+          const recovered = await recoverFlowRefFromCommit(authoringWorktreePath);
+          if (recovered) { ptFlowRef = recovered; }
+        }
+        continue;
+      }
+
+      let ptResult;
+      let ptEditRetries = 0;
+      let ptApproved = false;
+
+      while (!ptApproved) {
+        ptResult = await agent(
+          `You are running as part of the /plan-feature product-truth phase (outcome: ${ptRunSet.outcome}). ` +
+          `Draft or extend the ${ptStep.stage} artifact for this request in the product-truth store at ${ptStoreDir}. ` +
+          "Do NOT write any acceptance-criteria files. " +
+          "After writing, return a JSON object: " +
+          "{ \"status\": \"ok\", \"artifact_paths\": [\"docs/product-truth/...\"], \"flow_ref\": \"<path or null>\" } " +
+          "where artifact_paths lists EVERY file you created or modified (the artifact PLUS any regenerated derived files).\n" +
+          `user_request: ${JSON.stringify(request)}\n` +
+          `component: ${JSON.stringify(ptComponent)}\n` +
+          `outcome: ${JSON.stringify(ptRunSet.outcome)}\n` +
+          `pt_store_path: ${JSON.stringify(ptStoreDir)}`,
+          { agentType: ptStep.agent, label: `pt-${ptStep.stage}-author` }
+        );
+
+        const reportedPaths = (ptResult && Array.isArray(ptResult.artifact_paths)) ? ptResult.artifact_paths : [];
+
+        // Gate: approve / edit / cancel.
+        const ptGateResult = await agent(
+          `${ptStep.agent} drafted the following product-truth artifact(s): ${reportedPaths.join(", ") || "(none)"}.\n` +
+          "Present these to the user and ask them to choose:\n" +
+          "  1. approve — commit this stage and proceed.\n" +
+          "  2. edit    — re-invoke this agent with feedback.\n" +
+          "  3. cancel  — abort the pipeline (no PR; prior committed stages preserved; this draft left uncommitted).\n" +
+          "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"cancel\", \"feedback\": \"...\" }",
+          { agentType: "status-checker", label: `pt-gate-${ptStep.stage}` }
+        );
+
+        let ptGate;
+        try {
+          ptGate = typeof ptGateResult === "string" ? JSON.parse(ptGateResult) : ptGateResult;
+        } catch (_ptGateErr) {
+          ptGate = { action: "cancel" };
+        }
+        const ptAction = (ptGate.action || "cancel").toLowerCase();
+
+        if (ptAction === "cancel") {
+          // NO-PR GUARANTEE (PT cancel): prior committed PT stages preserved, current draft uncommitted.
+          return {
+            status: "ok",
+            message:
+              `Pipeline cancelled at the product-truth gate (${ptStep.agent}). No PR was opened. ` +
+              `Prior committed product-truth stages are preserved; the current ${ptStep.stage} draft is left uncommitted on disk.`,
+            cancelled_at: `pt-gate-${ptStep.stage}`,
+          };
+        } else if (ptAction === "edit" && ptEditRetries < MAX_EDIT_RETRIES) {
+          ptEditRetries++;
+          continue;
+        } else if (ptAction === "edit" && ptEditRetries >= MAX_EDIT_RETRIES) {
+          return {
+            status: "error",
+            message:
+              `${ptStep.agent} failed to produce a satisfactory ${ptStep.stage} artifact after ${MAX_EDIT_RETRIES + 1} attempts. ` +
+              "Pipeline aborted (no PR).",
+          };
+        } else {
+          // approve — COMMIT-BEFORE-NEXT-PT-STAGE INVARIANT: a failed commit aborts
+          // BEFORE the next PT agent is dispatched (mirrors the AC pipeline).
+          const ptCommit = await commitStageOutputProductTruth(
+            reportedPaths, ptStep.stage, ptComponent, runId, ptStoreDir, authoringWorktreePath
+          );
+          if (ptCommit.status === "error") {
+            return {
+              status: "error",
+              message:
+                `Commit of the ${ptStep.stage} product-truth artifact failed: ${ptCommit.message}\n` +
+                "The pipeline aborted BEFORE dispatching the next product-truth agent. " +
+                "The drafted artifact remains on disk as uncommitted changes.",
+              failed_stage: ptStep.stage,
+            };
+          }
+          ptApproved = true;
+          if (ptStep.stage === "flow") {
+            ptFlowProduced = true;
+            const fr = (ptResult && typeof ptResult.flow_ref === "string" && ptResult.flow_ref) ? ptResult.flow_ref : null;
+            ptFlowRef = fr || (reportedPaths.find((p) => typeof p === "string" && p.endsWith(".flow.json")) || null);
+          }
+        }
+      }
+    }
+  }
+}
+
+// -------------------------------------------------------------------------
 // Build the agent dispatch sequence based on effective route
 // -------------------------------------------------------------------------
 const effectiveRoute = triage.route;
+
+// flow_backlinks reported by the business-analyst (for the reconciliation step).
+let baFlowBacklinks = null;
 
 /** @type {Array<{agent: string, stage: string, gate: string}>} */
 let pipeline;
@@ -1087,6 +1735,14 @@ if (effectiveRoute === "strategic") {
 } else if (effectiveRoute === "behavioral") {
   pipeline = [
     { agent: "business-analyst", stage: "ba",  gate: "after_ba" },
+    { agent: "it-po",           stage: "itpo", gate: "final" },
+  ];
+} else if (ptFlowProduced) {
+  // technical route BUT a flow was produced — FORCE the BA stage in so the flow's
+  // steps derive L2s (else the flow steps would be orphaned). The BA dispatch
+  // below supplies an L1 anchor for the component when parent_l1_id is absent.
+  pipeline = [
+    { agent: "business-analyst", stage: "ba",   gate: "after_ba" },
     { agent: "it-po",           stage: "itpo", gate: "final" },
   ];
 } else {
@@ -1190,6 +1846,22 @@ for (const step of pipeline) {
       `use the absolute path ${acStoreDir} instead. ` +
       "Do NOT create or modify any files in tickets/. " +
       "After writing, return a JSON object: { \"status\": \"ok\", \"acs_written\": [\"ACD-...\", ...] }\n" +
+      // Flow → BA handoff: when a product-truth flow was approved this run, the BA
+      // derives L2/L3 from the flow's steps (self-discovered via index.json — a
+      // structured flow_ref input is inert) and reports a flow_backlinks map the
+      // reconciliation step writes back into step.implements.
+      (step.stage === "ba" && ptFlowProduced
+        ? "A product-truth flow was approved for this request" +
+          (ptFlowRef ? ` (${ptFlowRef})` : "") +
+          ". Derive the L2/L3 ACs FROM THE FLOW'S STEPS. The flow is self-discoverable via " +
+          "docs/product-truth/index.json — rely on that discovery, not a passed flow_ref. " +
+          "ALSO return a flow_backlinks map in your JSON response: " +
+          "{ \"<flow step id>\": [\"<AC id>\", ...] } linking each flow step to the AC ids you derived from it. " +
+          (parent_l1_id
+            ? ""
+            : `Anchor the derived L2s under the L1 for component ${JSON.stringify(ptComponent)} so they are not orphaned. `) +
+          "\n"
+        : "") +
       `user_request: ${JSON.stringify(request)}\n` +
       `component: ${JSON.stringify(component)}\n` +
       `parent_l1_id: ${JSON.stringify(parent_l1_id)}\n` +
@@ -1200,6 +1872,11 @@ for (const step of pipeline) {
 
     const written = (stepResult && stepResult.acs_written) ? stepResult.acs_written : [];
     allAcsWritten.push(...written);
+
+    // Capture the BA's reported flow_backlinks for the post-BA reconciliation step.
+    if (step.stage === "ba" && stepResult && stepResult.flow_backlinks && typeof stepResult.flow_backlinks === "object") {
+      baFlowBacklinks = stepResult.flow_backlinks;
+    }
 
     // Present gate to the user.
     if (step.gate !== "final") {
@@ -1262,6 +1939,25 @@ for (const step of pipeline) {
         // Commit succeeded — record committed ACs.
         committedAcs.push(...written);
         approved = true;
+
+        // -----------------------------------------------------------------
+        // Reconciliation (Track 1.3): AFTER the BA stage is committed, write
+        // the BA's reported flow_backlinks into the flow's step.implements and
+        // regenerate derived data as a DEDICATED reconciliation commit (it
+        // re-mutates the already-committed flow + index + ACs).
+        // -----------------------------------------------------------------
+        if (step.stage === "ba" && ptFlowProduced) {
+          const reconcileOutcome = await runFlowReconciliation(
+            ptFlowRef, baFlowBacklinks, ptComponent, runId, ptStoreDir, authoringWorktreePath
+          );
+          if (reconcileOutcome.status === "error") {
+            // Non-fatal: the ACs are already committed and the flow can be
+            // reconciled by re-running the script. Log observably and continue.
+            log(`[plan-feature][PT] flow reconciliation did not complete: ${reconcileOutcome.message}`);
+          } else if (reconcileOutcome.status === "ok") {
+            log("[plan-feature][PT] flow step.implements reconciled and committed.");
+          }
+        }
       }
     } else {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
