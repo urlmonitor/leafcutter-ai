@@ -437,6 +437,11 @@ def classify_staged_files(
     if patterns:
         effective_patterns.update(patterns)
 
+    # Derive the empty-staging flag from the INPUT, not from the grouping output,
+    # so no_staged_files always means exactly what its name says even if grouping
+    # behaviour changes in future (review finding L-5).
+    no_staged = not staged_paths
+
     groups = group_files_by_type(staged_paths)
 
     if not groups:
@@ -446,7 +451,7 @@ def classify_staged_files(
             groups={},
             suggested_subject="chore: update files",
             specific_pattern_matched=False,
-            no_staged_files=True,
+            no_staged_files=no_staged,
         )
 
     # Pick the primary group: highest file count; ties broken by FileGroup

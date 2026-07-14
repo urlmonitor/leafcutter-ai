@@ -14,23 +14,31 @@ ARCHITECTURE: Standalone CLI script. Reads the YAML frontmatter block (between
     After a successful write, stages the file via git add for the next commit.
     Validates transitions against an explicit allow-list. Checks agents: map parity
     before permitting done transitions (unless --force is set).
-    Also exposes scan_epic_archive_readiness() as a library function for callers
-    that need to assess whether all tickets in an epic directory are done.
+    Also exposes scan_epic_archive_readiness() as a library function, and a
+    --scan-epic CLI mode, for callers that need to assess whether all tickets
+    in an epic directory are done. The finalize-feature-archive-check skill
+    (finalize-feature.js Step 5) invokes the --scan-epic mode as its
+    authoritative pre-archive gate (BO-400c-2).
 
 Exit Codes:
-    0 - Success (status updated or no-op same-status call)
-    1 - Validation failure (invalid transition, parity check failed)
-    2 - Internal error (file not found, frontmatter parse failure)
+    0 - Success (status updated / no-op same-status call / epic all_clear)
+    1 - Validation failure (invalid transition, parity check failed, or
+        --scan-epic found tickets not yet done)
+    2 - Internal error (file not found, frontmatter parse failure, or
+        --scan-epic pointed at a directory that does not exist)
 
 Usage:
     python scripts/set_ticket_status.py --ticket <path> --status <todo|in_progress|done> [--force]
+    python scripts/set_ticket_status.py --scan-epic <epic_dir>
 """
 
 import argparse
+import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 
 # ---------------------------------------------------------------------------
@@ -204,50 +212,93 @@ def _stage_file(ticket_path: Path) -> None:
 # Epic archive-readiness scanner
 # ---------------------------------------------------------------------------
 
+# Files that are never tickets and must be excluded from the readiness count.
+_NON_TICKET_FILES: frozenset[str] = frozenset({"Master_Plan.md", "README.md"})
 
-def scan_epic_archive_readiness(epic_dir: str) -> dict[str, object]:
+# Frontmatter statuses that count as "done enough" to archive an epic.
+_ARCHIVE_OK_STATUSES: frozenset[str] = frozenset({"done", "deferred"})
+
+
+class MissingTicket(TypedDict):
+    """One non-done ticket surfaced by scan_epic_archive_readiness."""
+
+    path: str
+    current_status: str | None
+
+
+class ArchiveReadiness(TypedDict):
+    """Structured result of an epic archive-readiness scan."""
+
+    all_clear: bool
+    ok_count: int
+    missing_count: int
+    missing_tickets: list[MissingTicket]
+
+
+def scan_epic_archive_readiness(epic_dir: str) -> ArchiveReadiness:
     """Scan an epic directory for tickets that have not reached status: done.
 
     Scans ``.md`` files at the epic root and inside a ``done/`` subfolder
     (legacy layout where tickets were previously moved via git mv). Excludes
-    ``Master_Plan.md`` from the count. Status is read from YAML frontmatter,
-    not inferred from folder position (BO-400a-3 principle).
+    ``Master_Plan.md`` and ``README.md`` from the count. Status is read from
+    YAML frontmatter, not inferred from folder position (BO-400a-3 principle).
+    A ticket counts as ready when its status is ``done`` or ``deferred``.
+
+    Backward-compat: a legacy ticket that lives under the ``done/`` subfolder
+    and has no ``status:`` field is treated as ``done`` (the only reason it
+    would have been moved there under the old convention) — per the
+    finalize-feature-archive-check skill §4.
+
+    An empty-but-existing epic directory returns ``all_clear: True`` (nothing
+    blocks archival) — this is the deliberate skill §4 contract. A directory
+    that does not exist is an operator error (e.g. a mistyped path), NOT a
+    ready state, so it raises ``FileNotFoundError`` rather than reporting a
+    false all-clear.
 
     Args:
         epic_dir: Absolute or relative path to the epic directory.
 
     Returns:
-        A dict with the following keys:
+        An :class:`ArchiveReadiness` mapping with keys ``all_clear``,
+        ``ok_count``, ``missing_count``, and ``missing_tickets`` (one
+        :class:`MissingTicket` per non-done ticket).
 
-        - ``all_clear`` (bool): True when every ticket is done.
-        - ``ok_count`` (int): Number of tickets with status: done.
-        - ``missing_count`` (int): Number of tickets not yet done.
-        - ``missing_tickets`` (list[dict]): One entry per non-done ticket,
-          each with ``path`` (str) and ``current_status`` (str | None).
+    Raises:
+        FileNotFoundError: When ``epic_dir`` does not exist or is not a
+            directory. Prevents a mistyped path from being reported as
+            ready-to-archive.
     """
     epic_path = Path(epic_dir)
+    if not epic_path.is_dir():
+        raise FileNotFoundError(epic_dir)
+
     ok_tickets: list[str] = []
-    missing_tickets: list[dict[str, object]] = []
+    missing_tickets: list[MissingTicket] = []
 
-    candidates: list[Path] = list(epic_path.glob("*.md"))
+    root_candidates = list(epic_path.glob("*.md"))
     done_subdir = epic_path / "done"
-    if done_subdir.is_dir():
-        candidates.extend(done_subdir.glob("*.md"))
+    done_candidates = list(done_subdir.glob("*.md")) if done_subdir.is_dir() else []
 
-    for md_file in candidates:
-        if md_file.name == "Master_Plan.md":
+    for md_file in [*root_candidates, *done_candidates]:
+        if md_file.name in _NON_TICKET_FILES:
             continue
         try:
             content = md_file.read_text(encoding="utf-8")
         except OSError as exc:
+            # A file we cannot read must not be silently dropped when gating
+            # archival — count it as not-done so all_clear stays honest.
             print(f"Warning: cannot read {md_file}: {exc}", file=sys.stderr)
+            missing_tickets.append({"path": str(md_file), "current_status": "(read error)"})
             continue
         parts = _extract_frontmatter_block(content)
         status: str | None = None
         if parts is not None:
             _, yaml_block, _ = parts
             status = _get_current_status(yaml_block)
-        if status == "done":
+        # Legacy backward-compat: a done/ ticket with no status: is treated as done.
+        if status is None and md_file in done_candidates:
+            status = "done"
+        if status in _ARCHIVE_OK_STATUSES:
             ok_tickets.append(str(md_file))
         else:
             missing_tickets.append({"path": str(md_file), "current_status": status})
@@ -258,6 +309,28 @@ def scan_epic_archive_readiness(epic_dir: str) -> dict[str, object]:
         "missing_count": len(missing_tickets),
         "missing_tickets": missing_tickets,
     }
+
+
+def _run_scan_epic(epic_dir: str) -> int:
+    """CLI entry point for --scan-epic: print the readiness JSON to stdout.
+
+    This is the wired call path that the finalize-feature-archive-check skill
+    (finalize-feature.js Step 5) invokes to assess an epic before archival.
+
+    Args:
+        epic_dir: Path to the epic directory to scan.
+
+    Returns:
+        0 when the epic is all-clear, 1 when tickets remain not-done, 2 when
+        the directory does not exist.
+    """
+    try:
+        result = scan_epic_archive_readiness(epic_dir)
+    except FileNotFoundError as exc:
+        print(f"Error: epic directory does not exist: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, indent=2))
+    return 0 if result["all_clear"] else 1
 
 
 # ---------------------------------------------------------------------------
@@ -375,14 +448,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--ticket",
-        required=True,
-        help="Absolute or repo-relative path to the ticket markdown file.",
+        required=False,
+        help="Absolute or repo-relative path to the ticket markdown file. "
+        "Required unless --scan-epic is given.",
     )
     parser.add_argument(
         "--status",
-        required=True,
+        required=False,
         choices=sorted(VALID_STATUSES),
-        help="Target status value to set.",
+        help="Target status value to set. Required unless --scan-epic is given.",
     )
     parser.add_argument(
         "--force",
@@ -391,6 +465,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Bypass transition allow-list and parity checks. "
             "Required for transitions like done -> in_progress or todo -> done."
+        ),
+    )
+    parser.add_argument(
+        "--scan-epic",
+        metavar="EPIC_DIR",
+        default=None,
+        help=(
+            "Scan an epic directory for archive readiness and print the result "
+            "as JSON. Exits 0 when all_clear, 1 when tickets remain not-done, "
+            "2 when the directory does not exist. Ignores --ticket/--status."
         ),
     )
     return parser
@@ -404,6 +488,12 @@ def main() -> int:
     """
     parser = _build_arg_parser()
     args = parser.parse_args()
+
+    if args.scan_epic is not None:
+        return _run_scan_epic(args.scan_epic)
+
+    if not args.ticket or not args.status:
+        parser.error("--ticket and --status are required unless --scan-epic is given")
 
     ticket_path = Path(args.ticket).resolve()
     if not ticket_path.exists():
@@ -428,5 +518,18 @@ DECISION HISTORY
   / FORCE_ALLOWED_TRANSITIONS) chosen over scattered conditionals for maintainability.
   Parity check reads agents: from frontmatter YAML only (not ## Sign-offs body section),
   consistent with how check_ticket_signoff_parity.py operates.
+- 2026-07-14 [code-review remediation/BO-400c-2]: Hardened scan_epic_archive_readiness
+  and wired it into the finalize/archive surface (review findings H-1, H-2).
+  H-1: a non-existent epic_dir now raises FileNotFoundError instead of returning
+  a false {all_clear: True} — a mistyped path is an operator error, not a ready
+  state. An existing-but-empty directory still returns all_clear: True per the
+  finalize-feature-archive-check skill §4 contract. H-2: added the --scan-epic
+  CLI mode (_run_scan_epic) so the skill (finalize-feature.js Step 5) invokes
+  this one authoritative implementation instead of an ad-hoc find+parse; the
+  skill body was updated to call it. Aligned the scanner's semantics with the
+  skill's documented §2/§4 contract: README.md excluded alongside Master_Plan.md,
+  status: deferred counts as ready, and a legacy done/ ticket with no status:
+  field is treated as done. Return type tightened to the ArchiveReadiness
+  TypedDict (review finding L-3).
 ====================================================================
 """

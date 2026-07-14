@@ -20,6 +20,11 @@ DECISION HISTORY:
       Tests checking .claude/precommit-autofix.json will be RED until the
       deployed config is built/copied from the template. SKILL.md-content
       tests may be green immediately (implementation already exists).
+    - 2026-07-14 [code-review remediation/M-2]: _load_deployed_config() no longer
+      SkipTests when the gitignored deployed config is absent — it falls back to
+      the template (the content build.py deploys by straight copy), so the BO-210a
+      schema and parity assertions run unconditionally in CI instead of silently
+      skipping on a fresh checkout.
 """
 
 from __future__ import annotations
@@ -87,19 +92,21 @@ def _read_text(path: Path) -> str:
         raise AssertionError(str(exc)) from exc
 
 
-# Pre-built message for _load_deployed_config — assigned to a variable so
-# TRY003 (Avoid long string literals in raise) does not fire.
-_DEPLOYED_CONFIG_ABSENT_MSG = (
-    f"Skipping: deployed routing config not found at {_DEPLOYED_CONFIG}. "
-    "This file is gitignored; run build.py (or copy templates/scripts/precommit-autofix.json) "
-    "to create it before running these tests locally."
-)
-
-
 def _load_deployed_config() -> dict:
-    """Load the deployed precommit-autofix.json; skips the calling test if absent (gitignored)."""
+    """Load the deployed precommit-autofix.json, falling back to the template.
+
+    The deployed config is a straight copy of the template
+    (``build_config_scaffolds.py`` uses write-if-absent). In a fresh CI checkout
+    the deployed file does not exist yet — it is gitignored and created by
+    ``build.py`` — so this falls back to the template, which is the authoritative
+    content ``build.py`` would deploy. That keeps the BO-210a schema and parity
+    assertions running unconditionally in CI instead of silently skipping when
+    the deployed artifact is absent (review finding M-2). On a developer machine
+    where a real (possibly hand-edited) deployed config exists, that file is used,
+    so the parity test still catches drift.
+    """
     if not _DEPLOYED_CONFIG.exists():
-        raise unittest.SkipTest(_DEPLOYED_CONFIG_ABSENT_MSG)
+        return _load_json_file(_TEMPLATE_CONFIG)
     return _load_json_file(_DEPLOYED_CONFIG)
 
 
@@ -358,15 +365,20 @@ class TestContextCapsuleCoderTemplates(unittest.TestCase):
             (_FRONTEND_CODER, "frontend-coder"),
         ]:
             content = _read_text(path)
-            has_no_rederive = (
-                "not re-derive" in content
-                or "do NOT re-derive" in content
-                or "copied verbatim" in content
-                or "reuse" in content.lower()
+            # Anchor to the consumers_checked field and require the specific
+            # copy-don't-rederive instruction near it — not a lone high-frequency
+            # word like "reuse" that appears in almost any template (M-4).
+            has_no_rederive = bool(
+                re.search(
+                    r"consumers_checked.{0,160}(copied verbatim|(?:not|NOT) re-derive|do NOT re-derive)",
+                    content,
+                    re.IGNORECASE | re.DOTALL,
+                )
             )
             self.assertTrue(
                 has_no_rederive,
-                f"{name} template must instruct reuse of blast-radius results, not re-derive."
+                f"{name} template must instruct that consumers_checked is copied "
+                "from blast-radius results verbatim, not re-derived."
             )
 
 
@@ -381,9 +393,10 @@ class TestContextCapsuleTruncation(unittest.TestCase):
         # covers: BO-210b-1-i
         """BO-210b-1-i: signoff SKILL.md states the 2000-character length cap."""
         content = _read_text(_SIGNOFF_SKILL)
+        # Anchor to "2000 character(s)" — a bare "2000" matches any year/number (M-4).
         self.assertIn(
-            "2000",
-            content,
+            "2000 character",
+            content.lower(),
             "signoff SKILL.md must state the 2000-character capsule length cap."
         )
         self.assertIn(
@@ -403,10 +416,12 @@ class TestContextCapsuleTruncation(unittest.TestCase):
                 content,
                 f"signoff SKILL.md must document '{phrase}' in the truncation order."
             )
-        self.assertIn(
-            "intent",
+        # Anchor "intent" to the preservation rule — a bare "intent" also matches
+        # "intentionally"/"intended" and cannot fail (M-4).
+        self.assertRegex(
             content,
-            "signoff SKILL.md must explicitly name 'intent' as a preserved field."
+            r"(?i)never truncate\s+`?intent`?",
+            "signoff SKILL.md must state that 'intent' is never truncated (preserved).",
         )
         self.assertIn(
             "consumers_checked",
@@ -423,9 +438,10 @@ class TestContextCapsuleTruncation(unittest.TestCase):
             (_FRONTEND_CODER, "frontend-coder"),
         ]:
             content = _read_text(path)
+            # Anchor to "2000 character(s)" — a bare "2000" matches any year/number (M-4).
             self.assertIn(
-                "2000",
-                content,
+                "2000 character",
+                content.lower(),
                 f"{name} template must document the 2000-character capsule length cap."
             )
 
@@ -689,15 +705,19 @@ class TestMechanicalTierRoute(unittest.TestCase):
     def test_ac_bo210c2_autofix_skill_retries_exactly_once(self):
         # covers: BO-210c-2
         """BO-210c-2: precommit-autofix SKILL.md must document exactly one retry after any fixer."""
-        content = _read_text(_AUTOFIX_SKILL)
+        content = _read_text(_AUTOFIX_SKILL).lower()
+        # Require the specific single-retry contract, not a lone "once" that
+        # matches any incidental use of the word (M-4).
         has_single_retry = (
-            "exactly once" in content.lower()
-            or "retry once" in content.lower()
-            or "once" in content.lower()
+            "exactly once" in content
+            or "retry once" in content
+            or "retried exactly once" in content
+            or "retry cap is exactly one" in content
         )
         self.assertTrue(
             has_single_retry,
-            "precommit-autofix SKILL.md must state the commit is retried exactly once."
+            "precommit-autofix SKILL.md must state the commit is retried exactly once "
+            "(e.g. 'the retry cap is exactly one')."
         )
 
     def test_ac_bo210c2_autofix_skill_surfaces_second_failure(self):

@@ -274,9 +274,9 @@ class TestSetTicketStatusArchiveAcs(unittest.TestCase):
 
     These tests cover ACs that were previously unlinked to any named test (test backfill).
     The set_ticket_status.py script is already implemented; tests for BO-400a-2, BO-400a-3,
-    BO-400c-1, BO-400c-4 verify its existing behavior. Tests for BO-400c-2 and BO-400c-2-i
-    call scan_epic_archive_readiness() which must be added to set_ticket_status.py by
-    python-coder — those tests are intentionally RED until that function exists.
+    BO-400c-1, BO-400c-4 verify its existing behavior. BO-400c-2 and BO-400c-2-i cover
+    scan_epic_archive_readiness(), and the --scan-epic CLI mode that wires it into the
+    finalize-feature-archive-check surface (review finding H-2).
     """
 
     def setUp(self) -> None:
@@ -362,9 +362,6 @@ class TestSetTicketStatusArchiveAcs(unittest.TestCase):
         and every file has frontmatter status: done, the function must return:
           {all_clear: True, ok_count: 3, missing_count: 0, missing_tickets: []}
         Master_Plan.md must be excluded from the count.
-
-        NOTE: scan_epic_archive_readiness() does not yet exist in scripts/set_ticket_status.py.
-        This test is intentionally RED (AttributeError) until python-coder adds the function.
         """
         import scripts.set_ticket_status as _sts  # type: ignore[import]
 
@@ -398,9 +395,6 @@ class TestSetTicketStatusArchiveAcs(unittest.TestCase):
         scan_epic_archive_readiness() must return:
           {all_clear: False, ok_count: 2, missing_count: 1}
         with missing_tickets listing 03_ticket.md with current_status: in_progress.
-
-        NOTE: scan_epic_archive_readiness() does not yet exist in scripts/set_ticket_status.py.
-        This test is intentionally RED (AttributeError) until python-coder adds the function.
         """
         import scripts.set_ticket_status as _sts  # type: ignore[import]
 
@@ -455,6 +449,190 @@ class TestSetTicketStatusArchiveAcs(unittest.TestCase):
         self.assertEqual(ticket.name, original_name, "Filename must not change — no git mv")
         content = ticket.read_text(encoding="utf-8")
         self.assertIn("status: done", content)
+
+
+class TestScanEpicArchiveReadinessHardening(unittest.TestCase):
+    """Review-remediation tests for scan_epic_archive_readiness() (H-1, semantic parity).
+
+    Covers the H-1 false-all-clear defect (a mistyped/non-existent epic path must not
+    report ready) and the semantics the finalize-feature-archive-check skill documents
+    but the original function did not implement: README.md exclusion, deferred-as-ready,
+    and legacy done/ backward-compat.
+    """
+
+    def setUp(self) -> None:
+        """Create a temporary directory for test epic folders."""
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp_dir = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        """Clean up the temporary directory."""
+        self._tmp.cleanup()
+
+    def test_nonexistent_epic_dir_raises_not_false_all_clear(self) -> None:
+        # covers: BO-400c-2
+        """H-1: a non-existent epic directory must raise, not return all_clear: True.
+
+        The original implementation globbed a missing path (yielding nothing) and
+        returned {all_clear: True}, giving a green archive signal for a typo. The
+        hardened function raises FileNotFoundError so a mistyped path can never be
+        mistaken for a ready-to-archive epic.
+        """
+        import scripts.set_ticket_status as _sts  # type: ignore[import]
+
+        missing = self.tmp_dir / "EPIC-DoesNotExist"
+        self.assertFalse(missing.exists())
+        with self.assertRaises(FileNotFoundError):
+            _sts.scan_epic_archive_readiness(str(missing))
+
+    def test_existing_empty_epic_dir_is_all_clear(self) -> None:
+        # covers: BO-400c-2
+        """An existing-but-empty epic dir stays all_clear: True (skill §4 contract).
+
+        The H-1 fix targets non-existent paths only; a genuinely empty (but present)
+        epic folder has nothing blocking archival and must still report ready.
+        """
+        import scripts.set_ticket_status as _sts  # type: ignore[import]
+
+        empty = self.tmp_dir / "EPIC-Empty"
+        empty.mkdir()
+        result = _sts.scan_epic_archive_readiness(str(empty))
+        self.assertTrue(result["all_clear"])
+        self.assertEqual(result["ok_count"], 0)
+        self.assertEqual(result["missing_count"], 0)
+
+    def test_readme_excluded_from_count(self) -> None:
+        # covers: BO-400c-2
+        """README.md is excluded from the readiness count (skill §2.1)."""
+        import scripts.set_ticket_status as _sts  # type: ignore[import]
+
+        epic = self.tmp_dir / "EPIC-Readme"
+        epic.mkdir()
+        (epic / "01_ticket.md").write_text(
+            "---\ntitle: T1\nstatus: done\n---\n# body\n", encoding="utf-8"
+        )
+        (epic / "README.md").write_text(
+            "---\ntitle: Readme\n---\n# not a ticket\n", encoding="utf-8"
+        )
+        result = _sts.scan_epic_archive_readiness(str(epic))
+        self.assertTrue(result["all_clear"], "README.md must not count as a missing ticket")
+        self.assertEqual(result["ok_count"], 1)
+
+    def test_deferred_counts_as_ready(self) -> None:
+        # covers: BO-400c-2
+        """status: deferred counts as ready-to-archive (skill §2.1)."""
+        import scripts.set_ticket_status as _sts  # type: ignore[import]
+
+        epic = self.tmp_dir / "EPIC-Deferred"
+        epic.mkdir()
+        (epic / "01_ticket.md").write_text(
+            "---\ntitle: T1\nstatus: done\n---\n# body\n", encoding="utf-8"
+        )
+        (epic / "02_ticket.md").write_text(
+            "---\ntitle: T2\nstatus: deferred\n---\n# body\n", encoding="utf-8"
+        )
+        result = _sts.scan_epic_archive_readiness(str(epic))
+        self.assertTrue(result["all_clear"], "deferred must count as ready")
+        self.assertEqual(result["ok_count"], 2)
+        self.assertEqual(result["missing_count"], 0)
+
+    def test_legacy_done_subfolder_no_status_treated_done(self) -> None:
+        # covers: BO-400c-2-i
+        """A legacy done/ ticket with no status: field is treated as done (skill §4)."""
+        import scripts.set_ticket_status as _sts  # type: ignore[import]
+
+        epic = self.tmp_dir / "EPIC-LegacyDone"
+        epic.mkdir()
+        done_dir = epic / "done"
+        done_dir.mkdir()
+        (done_dir / "01_ticket.md").write_text(
+            "---\ntitle: Legacy\n---\n# moved under old convention, no status field\n",
+            encoding="utf-8",
+        )
+        (epic / "02_ticket.md").write_text(
+            "---\ntitle: T2\nstatus: done\n---\n# body\n", encoding="utf-8"
+        )
+        result = _sts.scan_epic_archive_readiness(str(epic))
+        self.assertTrue(
+            result["all_clear"],
+            "legacy done/ ticket without status: must be treated as done",
+        )
+        self.assertEqual(result["ok_count"], 2)
+
+
+class TestScanEpicCli(unittest.TestCase):
+    """H-2: exercise the wired --scan-epic CLI path, not just the bare function.
+
+    The finalize-feature-archive-check skill invokes
+    `set_ticket_status.py --scan-epic <dir>` and consumes its JSON stdout; these
+    tests run that exact command so the wired call path — not only the library
+    function — is covered.
+    """
+
+    def setUp(self) -> None:
+        """Create a temporary directory for test epic folders."""
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp_dir = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        """Clean up the temporary directory."""
+        self._tmp.cleanup()
+
+    def _run_scan(self, epic_dir: Path) -> subprocess.CompletedProcess:
+        """Run set_ticket_status.py --scan-epic as a subprocess."""
+        script = Path(__file__).resolve().parent.parent.parent / "scripts" / "set_ticket_status.py"
+        return subprocess.run(
+            [sys.executable, str(script), "--scan-epic", str(epic_dir)],
+            capture_output=True,
+            text=True,
+        )
+
+    def test_cli_all_clear_exits_0_and_prints_json(self) -> None:
+        # covers: BO-400c-2
+        """--scan-epic on an all-done epic exits 0 and prints all_clear JSON."""
+        import json as _json
+
+        epic = self.tmp_dir / "EPIC-AllDone"
+        epic.mkdir()
+        for i in range(1, 3):
+            (epic / f"0{i}_ticket.md").write_text(
+                f"---\ntitle: T{i}\nstatus: done\n---\n# body\n", encoding="utf-8"
+            )
+        result = self._run_scan(epic)
+        self.assertEqual(result.returncode, 0, f"stderr: {result.stderr}")
+        payload = _json.loads(result.stdout)
+        self.assertTrue(payload["all_clear"])
+        self.assertEqual(payload["ok_count"], 2)
+
+    def test_cli_missing_ticket_exits_1(self) -> None:
+        # covers: BO-400c-2-i
+        """--scan-epic on an epic with a not-done ticket exits 1 and lists it."""
+        import json as _json
+
+        epic = self.tmp_dir / "EPIC-Mixed"
+        epic.mkdir()
+        (epic / "01_ticket.md").write_text(
+            "---\ntitle: T1\nstatus: done\n---\n# body\n", encoding="utf-8"
+        )
+        (epic / "02_ticket.md").write_text(
+            "---\ntitle: T2\nstatus: in_progress\n---\n# body\n", encoding="utf-8"
+        )
+        result = self._run_scan(epic)
+        self.assertEqual(result.returncode, 1, f"stderr: {result.stderr}")
+        payload = _json.loads(result.stdout)
+        self.assertFalse(payload["all_clear"])
+        self.assertEqual(payload["missing_count"], 1)
+        missing_paths = [m["path"] for m in payload["missing_tickets"]]
+        self.assertTrue(any("02_ticket.md" in p for p in missing_paths))
+
+    def test_cli_nonexistent_dir_exits_2(self) -> None:
+        # covers: BO-400c-2
+        """H-1 at the CLI boundary: a non-existent epic dir exits 2, prints no JSON."""
+        missing = self.tmp_dir / "EPIC-Typo"
+        result = self._run_scan(missing)
+        self.assertEqual(result.returncode, 2, f"stdout: {result.stdout}")
+        self.assertNotIn("all_clear", result.stdout)
+        self.assertIn("does not exist", result.stderr)
 
 
 if __name__ == "__main__":

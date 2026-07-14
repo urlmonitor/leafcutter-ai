@@ -365,24 +365,32 @@ class TestAcBackfillBO1100a2i(unittest.TestCase):
     any commit message (neither routed nor generic) and must report that there
     are no staged changes to commit.
 
-    Implementation requirement: ClassificationResult must expose a
-    ``no_staged_files: bool`` attribute that is ``True`` when staged_paths is
-    empty.  python-coder must add this attribute to the dataclass before this
-    test can pass.
+    ClassificationResult exposes a ``no_staged_files: bool`` attribute that is
+    ``True`` exactly when staged_paths is empty (derived from the input, per
+    review finding L-5).
     """
 
     def test_ac_bo1100a2i_empty_staging_area_signals_no_commit(self):
         # covers: BO-1100a-2-i
         """BO-1100a-2-i: Empty staging area — result.no_staged_files must be True."""
         result = classify_staged_files([])
-        # ClassificationResult does not yet have `no_staged_files`.
-        # This test is intentionally RED until python-coder adds the attribute.
-        # Expected failure: AttributeError: 'ClassificationResult' object has
-        # no attribute 'no_staged_files'
         self.assertTrue(
             result.no_staged_files,
             "ClassificationResult.no_staged_files must be True when staging area is empty "
             "(AC BO-1100a-2-i: agent must not produce a commit message for zero staged files)",
+        )
+
+    def test_ac_bo1100a2i_nonempty_staging_area_is_not_no_staged(self):
+        # covers: BO-1100a-2-i
+        """BO-1100a-2-i (converse): a non-empty staging area must report no_staged_files False.
+
+        Guards the L-5 derivation: the flag must be False whenever any file is staged,
+        so a real commit is never mistaken for an empty one.
+        """
+        result = classify_staged_files(["scripts/foo.py"])
+        self.assertFalse(
+            result.no_staged_files,
+            "no_staged_files must be False when at least one file is staged.",
         )
 
 
