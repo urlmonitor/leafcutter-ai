@@ -105,12 +105,18 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
     """Load commit-message patterns from the external config file.
 
     Reads ``config/commit_message_patterns.json`` (or the caller-supplied
-    ``config_path``) and converts the JSON ``patterns`` object into a
-    ``FileGroup``-keyed dict.
+    ``config_path``) and converts the JSON top-level array of routing entries
+    into a ``FileGroup``-keyed dict.
 
     The config file is the **single source of truth** for all routing patterns
-    (AC BO-1100c). Callers that want to add or modify a pattern should edit
-    the JSON file; this function picks up the change on the next invocation.
+    (AC BO-1100c).  It must be a top-level JSON array where each entry is an
+    object with at minimum ``group`` and ``template`` keys (AC BO-1100c-1).
+    Callers that want to add or modify a pattern should edit the JSON file;
+    this function picks up the change on the next invocation.
+
+    The legacy flat-object schema (``{"patterns": {...}}``) is no longer
+    supported.  When the loaded JSON is not a list, the function falls back to
+    compiled-in defaults and logs a warning so the misconfiguration is visible.
 
     Args:
         config_path: Optional explicit path to the patterns JSON file.
@@ -140,15 +146,21 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
         )
         return dict(_FALLBACK_PATTERNS)
 
-    patterns_raw = raw.get("patterns")
-    if not isinstance(patterns_raw, dict):
+    if not isinstance(raw, list):
         logger.warning(
-            "commit_message_patterns.json has no 'patterns' object — using compiled-in defaults"
+            "commit_message_patterns.json is not a top-level array "
+            "(legacy dict format is stale per AC BO-1100c-1) — using compiled-in defaults"
         )
         return dict(_FALLBACK_PATTERNS)
 
     result: dict[FileGroup, str] = dict(_FALLBACK_PATTERNS)
-    for key, template in patterns_raw.items():
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("group", "")
+        template = entry.get("template", "")
+        if not key or not template:
+            continue
         try:
             group = FileGroup(key)
         except ValueError:
@@ -373,6 +385,39 @@ def _derive_detail(
 # ---------------------------------------------------------------------------
 
 
+def _compile_routing_rule(
+    rule: object,
+) -> "tuple[re.Pattern[str], str] | None":
+    """Validate and compile a single array routing-rule entry.
+
+    Extracts ``path_pattern`` and ``template`` from ``rule``, compiles the
+    pattern, and returns the pair.  Returns ``None`` when the entry is invalid
+    (wrong type, missing keys, or un-compilable regex) and logs a warning so
+    the misconfiguration is visible.
+
+    Args:
+        rule: A single element from the routing-rule array.  Expected to be a
+            dict with ``path_pattern`` (regex string) and ``template`` keys.
+
+    Returns:
+        ``(compiled_pattern, template)`` on success; ``None`` on any failure.
+    """
+    if not isinstance(rule, dict):
+        return None
+    path_pattern = rule.get("path_pattern", "")
+    template = rule.get("template", "")
+    if not path_pattern or not template:
+        return None
+    try:
+        compiled = re.compile(path_pattern)
+    except re.error as exc:
+        logger.warning(
+            "Invalid path_pattern %r in array routing rule: %s", path_pattern, exc
+        )
+        return None
+    return compiled, template
+
+
 def _classify_with_array_config(
     staged_paths: Sequence[str],
     config_path: Path,
@@ -383,6 +428,10 @@ def _classify_with_array_config(
     containing a JSON array of ``{group, path_pattern, template}`` entries,
     files are matched against ``path_pattern`` (regex) in array order — first
     match wins.  The matched entry's ``template`` is used for the subject.
+
+    Per-rule validation and pattern compilation is delegated to
+    ``_compile_routing_rule`` so that this function stays within the project's
+    cyclomatic-complexity threshold.
 
     Args:
         staged_paths: Iterable of file paths to classify.
@@ -424,20 +473,10 @@ def _classify_with_array_config(
         return None
 
     for rule in rules:
-        if not isinstance(rule, dict):
+        compiled_pair = _compile_routing_rule(rule)
+        if compiled_pair is None:
             continue
-        path_pattern = rule.get("path_pattern", "")
-        template = rule.get("template", "")
-        if not path_pattern or not template:
-            continue
-
-        try:
-            compiled = re.compile(path_pattern)
-        except re.error as exc:
-            logger.warning(
-                "Invalid path_pattern %r in array routing rule: %s", path_pattern, exc
-            )
-            continue
+        compiled, template = compiled_pair
 
         matched = [p for p in staged_paths if compiled.search(p)]
         if not matched:

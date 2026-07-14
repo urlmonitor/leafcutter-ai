@@ -130,9 +130,9 @@ final safety checkpoint that catches between-gates configuration mutation.
 python3 scripts/commit_guardian/verify_precommit_active.py --json 2>/tmp/probe_commit.txt
 ```
 
-Parse stdout JSON: if `all_pass` is `true` → proceed to Step 1.
+Parse stdout JSON: if `failing_checks` is empty (`[]`) → proceed to Step 1.
 
-If `all_pass` is `false` OR the script exits non-zero:
+If `failing_checks` is non-empty OR the script exits non-zero:
 
 1. Surface to the user:
    ```
