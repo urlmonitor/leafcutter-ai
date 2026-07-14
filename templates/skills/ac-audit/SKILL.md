@@ -61,14 +61,19 @@ python3 .claude/skills/ac-audit/scripts/audit_ac_area.py --component ac-store
 python3 .claude/skills/ac-audit/scripts/audit_ac_area.py --path ac-driven-dev --format json
 ```
 
-It enumerates the area's ACs, builds AC-id citation maps over the test dirs
-(`unit_tests/`, `tests/`) and source dirs (`scripts/`, `templates/`, `config/`),
-resolves each `implemented_by` ticket's `status` + `files_touched`, and emits:
+It enumerates the area's ACs and builds AC-id citation maps over the test dirs
+(`unit_tests/`, `tests/`) and source dirs (`scripts/`, `templates/`, `config/`).
+**The verdict is derived from repo citations only** — the store's own
+`work_status` / `implemented_by` / `covered_by` are read only to compute
+comparison flags, never to set the verdict (so the tool cannot launder a store
+claim into "done"). It emits:
 
 - a first-pass verdict per leaf (`FULLY_IMPLEMENTED` / `CODE_NO_TEST` /
-  `TEST_NO_CODE` / `NOT_IMPLEMENTED`),
-- **flags**: `phantom-suspect` (store=done, no cited test), `stale-bookkeeping`
-  (evidence exists, store≠done), `needs-test`,
+  `TEST_NO_CODE` / `NOT_IMPLEMENTED`) from cited code + cited tests,
+- **flags**: `phantom-suspect` (store/ticket says done, no cited test),
+  `unverified-coverage-claim` (`covered_by` names a test the repo doesn't cite),
+  `stale-bookkeeping` (evidence exists, store≠done), `needs-test`,
+- a `store_claimed_code` column (files_touched, shown but not counted as evidence),
 - the list of **cited test files** — the suites to run in Stage 2.
 
 Treat every Stage-1 verdict as a hypothesis. Grep misses code/tests that don't

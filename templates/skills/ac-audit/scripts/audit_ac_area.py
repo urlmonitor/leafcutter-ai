@@ -6,22 +6,24 @@ script enumerates that area's acceptance criteria and cross-references each one
 against the actual repository:
 
 * which test files under the test dirs cite the AC id,
-* which source files under the source dirs cite the AC id,
-* the ``status`` and ``files_touched`` of any ticket listed in ``implemented_by``.
+* which source files under the source dirs cite the AC id.
 
 It then emits a per-AC evidence table plus a first-pass verdict per leaf AC.
 
-The AC store's own ``work_status`` / ``implemented_by`` / ``covered_by`` fields
-are reported but **never trusted as ground truth** — they are compared against
-the evidence and mismatches are flagged (``stale-bookkeeping`` when the store
-says todo but tests cite it; ``phantom-suspect`` when the store/ticket claims
-done or code exists but no test cites it).
+**Evidence is repo citations only.** The AC store's own ``work_status`` /
+``implemented_by`` / ``covered_by`` fields are reported *for comparison* but
+NEVER drive the verdict — a verdict is derived solely from which files in the
+repo actually cite the AC id. Store claims that the repo does not corroborate
+are surfaced as flags (``phantom-suspect``, ``unverified-coverage-claim``,
+``stale-bookkeeping``, ``needs-test``). This is deliberate: the tool exists to
+catch phantom-done, so it must not let a store field launder itself into a
+"done" verdict.
 
-This is the *mechanical* first stage of the ``ac-audit`` skill. It deliberately
-does NOT run tests and does NOT make semantic judgements. The skill layer
-(``SKILL.md``) runs the cited test suites for green-test ground truth and fans
-out verification agents for the deep phantom-done checks (orphaned / dead /
-opposite-behaviour code). Treat every verdict here as a hypothesis to verify.
+This is the *mechanical* first stage of the ``ac-audit`` skill. It does NOT run
+tests and does NOT make semantic judgements. The skill layer (``SKILL.md``)
+runs the cited test suites for green-test ground truth and fans out verification
+agents for the deep phantom-done checks (orphaned / dead / opposite-behaviour /
+xfail-masked). Treat every verdict here as a hypothesis to verify.
 
 Usage:
     python3 .claude/skills/ac-audit/scripts/audit_ac_area.py --prefix BO
@@ -34,7 +36,7 @@ Selectors (at least one required):
     --path SUBPATH     Match ACs whose file lives under <ac-root>/SUBPATH.
 
 Options:
-    --ac-root DIR      AC store root (default: <repo>/docs/acceptance-criteria).
+    --ac-root DIR      AC store root (default: discovered docs/acceptance-criteria).
     --tests-dir DIR    Test dir to scan for citations (repeatable; default: unit_tests, tests).
     --source-dir DIR   Source dir to scan for citations (repeatable; default: scripts, templates, config).
     --format FMT       markdown (default) or json.
@@ -42,7 +44,7 @@ Options:
 
 Exit codes:
     0  Report produced.
-    1  No AC matched the selector, or the AC root does not exist.
+    1  No AC matched the selector, or the AC root could not be located.
     2  Bad arguments (no selector given).
 """
 from __future__ import annotations
@@ -50,8 +52,10 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import re
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -66,13 +70,30 @@ AcRecord = dict[str, Any]
 #: in-scope id set, so occasional over-matches are harmless.
 _AC_ID_RE = re.compile(r"[A-Z]{2,6}(?:-[A-Z]{2,6})?-\d+(?:[a-z]\d*)?(?:-[0-9a-z]+)*")
 
-#: File extensions scanned for AC-id citations.
+#: File extensions scanned for AC-id citations. ``.md`` is included because in
+#: this repo agent/skill/command prompts (implementation artefacts) are Markdown.
 _TEXT_EXTS = {".py", ".md", ".js", ".mjs", ".ts", ".json", ".yaml", ".yml", ".sh"}
 
-#: Directories never scanned for citations.
+#: Directory names never descended into when scanning for citations.
 _SKIP_DIRS = {".git", "node_modules", "__pycache__", ".next", ".pytest_cache", "dist", "build"}
 
 _LEAF_LEVELS = {"L2", "L3"}
+
+
+def _read_text(path: Path) -> str | None:
+    """Read *path* as UTF-8, tolerating decode and I/O errors.
+
+    Args:
+        path: File to read.
+
+    Returns:
+        The file text, or None when it cannot be read (logged at WARNING).
+    """
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except OSError as exc:
+        logger.warning("Cannot read %s: %s", path, exc)
+        return None
 
 
 def _has_store(base: Path) -> bool:
@@ -91,7 +112,9 @@ def discover_store(cli_ac_root: str | None) -> tuple[Path, Path]:
     """Locate the repo root and AC store, robust to where the script is deployed.
 
     Resolution order:
-      1. an explicit ``--ac-root`` (repo root is inferred as its grandparent);
+      1. an explicit ``--ac-root`` — its enclosing repo root is found by walking
+         up until a directory containing ``docs/`` is seen (falling back to the
+         grandparent when none matches);
       2. the first ancestor of the cwd, then of this file, that contains
          ``docs/acceptance-criteria`` — checking both the ancestor itself and its
          ``leafcutter-ai/`` subdir (the package sits in a subdir of the workspace).
@@ -108,6 +131,9 @@ def discover_store(cli_ac_root: str | None) -> tuple[Path, Path]:
     """
     if cli_ac_root:
         ac_root = Path(cli_ac_root).resolve()
+        for candidate in [ac_root, *ac_root.parents]:
+            if (candidate / "docs").is_dir():
+                return candidate, ac_root
         return ac_root.parent.parent, ac_root
     starts = [Path.cwd().resolve(), Path(__file__).resolve()]
     for start in starts:
@@ -118,48 +144,6 @@ def discover_store(cli_ac_root: str | None) -> tuple[Path, Path]:
     raise FileNotFoundError(  # noqa: TRY003
         "Could not locate docs/acceptance-criteria; pass --ac-root explicitly"
     )
-
-
-def load_ac_records(
-    ac_root: Path,
-    repo_root: Path,
-    component: str | None,
-    prefix: str | None,
-    subpath: str | None,
-) -> list[AcRecord]:
-    """Load AC records matching the selector.
-
-    Args:
-        ac_root: AC store root directory.
-        repo_root: Repository root (for producing relative paths).
-        component: When set, keep ACs whose ``component`` field equals this.
-        prefix: When set, keep ACs whose ``id`` starts with this.
-        subpath: When set, keep ACs whose file lives under ``ac_root / subpath``.
-
-    Returns:
-        A list of AC records; each carries the extra keys ``_path`` (repo-relative
-        file path) and ``_group`` (the parent directory name, used as the epic
-        grouping).
-    """
-    base = (ac_root / subpath) if subpath else ac_root
-    records: list[AcRecord] = []
-    for yaml_path in sorted(base.rglob("*.yaml")):
-        try:
-            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
-        except (yaml.YAMLError, OSError) as exc:
-            logger.warning("Skipping unreadable AC %s: %s", yaml_path, exc)
-            continue
-        if not isinstance(data, dict) or "id" not in data:
-            continue
-        if component is not None and data.get("component") != component:
-            continue
-        if prefix is not None and not str(data.get("id", "")).startswith(prefix):
-            continue
-        rel = _relative(yaml_path, repo_root)
-        data["_path"] = rel
-        data["_group"] = yaml_path.parent.name
-        records.append(data)
-    return records
 
 
 def _relative(path: Path, repo_root: Path) -> str:
@@ -178,6 +162,47 @@ def _relative(path: Path, repo_root: Path) -> str:
         return str(path)
 
 
+def load_ac_records(
+    ac_root: Path,
+    component: str | None,
+    prefix: str | None,
+    subpath: str | None,
+) -> list[AcRecord]:
+    """Load AC records matching the selector.
+
+    Args:
+        ac_root: AC store root directory.
+        component: When set, keep ACs whose ``component`` field equals this.
+        prefix: When set, keep ACs whose ``id`` starts with this.
+        subpath: When set, keep ACs whose file lives under ``ac_root / subpath``.
+
+    Returns:
+        A list of AC records; each carries the extra key ``_group`` (the parent
+        directory name, used as the epic grouping).
+    """
+    base = (ac_root / subpath) if subpath else ac_root
+    paths = sorted({*base.rglob("*.yaml"), *base.rglob("*.yml")})
+    records: list[AcRecord] = []
+    for yaml_path in paths:
+        text = _read_text(yaml_path)
+        if text is None:
+            continue
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            logger.warning("Skipping unparseable AC %s: %s", yaml_path, exc)
+            continue
+        if not isinstance(data, dict) or "id" not in data:
+            continue
+        if component is not None and data.get("component") != component:
+            continue
+        if prefix is not None and not str(data.get("id", "")).startswith(prefix):
+            continue
+        data["_group"] = yaml_path.parent.name
+        records.append(data)
+    return records
+
+
 def build_reference_map(
     dirs: list[Path],
     in_scope: set[str],
@@ -185,8 +210,9 @@ def build_reference_map(
 ) -> dict[str, set[str]]:
     """Map each in-scope AC id to the set of files under *dirs* that cite it.
 
-    Scans every text file under *dirs*, extracts AC-id tokens, and records a
-    citation whenever a token is in *in_scope*.
+    Scans every text file under *dirs* (pruning ``_SKIP_DIRS`` so vendored trees
+    are never entered), extracts AC-id tokens, and records a citation whenever a
+    token is in *in_scope*.
 
     Args:
         dirs: Directories to scan.
@@ -200,77 +226,89 @@ def build_reference_map(
     for root in dirs:
         if not root.exists():
             continue
-        for path in root.rglob("*"):
-            if not path.is_file() or path.suffix not in _TEXT_EXTS:
-                continue
-            if any(part in _SKIP_DIRS for part in path.parts):
-                continue
-            try:
-                text = path.read_text(encoding="utf-8", errors="ignore")
-            except OSError as exc:
-                logger.warning("Skipping unreadable file %s: %s", path, exc)
-                continue
-            tokens = {m.group(0) for m in _AC_ID_RE.finditer(text)}
-            hit = tokens & in_scope
-            if hit:
-                rel = _relative(path, repo_root)
-                for ac_id in hit:
-                    out[ac_id].add(rel)
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+            for name in filenames:
+                if Path(name).suffix not in _TEXT_EXTS:
+                    continue
+                path = Path(dirpath) / name
+                text = _read_text(path)
+                if text is None:
+                    continue
+                tokens = {m.group(0) for m in _AC_ID_RE.finditer(text)}
+                hit = tokens & in_scope
+                if hit:
+                    rel = _relative(path, repo_root)
+                    for ac_id in hit:
+                        out[ac_id].add(rel)
     return out
 
 
-def read_ticket_meta(repo_root: Path, ticket_ref: str) -> tuple[str | None, list[str]]:
-    """Read ``status`` and ``files_touched`` from a ticket referenced by an AC.
+def read_ticket_statuses(repo_root: Path, implemented_by: list[Any]) -> tuple[bool, list[str]]:
+    """Read the store's ticket claims for an AC (for display / flags only).
 
     Args:
-        repo_root: Repository root, used to resolve a relative ticket path.
-        ticket_ref: A path string from an AC's ``implemented_by`` list.
+        repo_root: Repository root, used to resolve relative ticket paths.
+        implemented_by: The AC's ``implemented_by`` list (ticket path strings).
 
     Returns:
-        ``(status, files_touched)``. ``status`` is None when the ticket cannot
-        be read or is not a ticket path; ``files_touched`` is the parsed list
-        (possibly empty).
+        ``(any_done, claimed_files)`` — whether any referenced ticket has
+        ``status: done``, and the (existence-checked, non-ticket/non-AC-store)
+        source files those tickets claim to have touched. These are STORE CLAIMS,
+        surfaced for transparency; they never drive the verdict.
     """
-    if not ticket_ref or ".md" not in ticket_ref:
-        return None, []
-    candidate = Path(ticket_ref)
-    if not candidate.is_absolute():
-        candidate = repo_root / ticket_ref
-    if not candidate.exists():
-        return None, []
-    try:
-        text = candidate.read_text(encoding="utf-8")
-    except OSError as exc:
-        logger.warning("Cannot read ticket %s: %s", candidate, exc)
-        return None, []
-    if not text.startswith("---"):
-        return None, []
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return None, []
-    try:
-        fm = yaml.safe_load(parts[1])
-    except yaml.YAMLError as exc:
-        logger.warning("Cannot parse ticket frontmatter %s: %s", candidate, exc)
-        return None, []
-    if not isinstance(fm, dict):
-        return None, []
-    ft = fm.get("files_touched") or []
-    files = [str(f) for f in ft] if isinstance(ft, list) else []
-    return fm.get("status"), files
+    any_done = False
+    claimed: list[str] = []
+    for ref in implemented_by or []:
+        ref_s = str(ref)
+        if ".md" not in ref_s:
+            continue
+        candidate = Path(ref_s) if Path(ref_s).is_absolute() else repo_root / ref_s
+        if not candidate.exists():
+            continue
+        text = _read_text(candidate)
+        if text is None:
+            continue
+        match = re.match(r"^---\n(.*?)\n---", text, re.S)
+        if not match:
+            continue
+        try:
+            fm = yaml.safe_load(match.group(1))
+        except yaml.YAMLError as exc:
+            logger.warning("Cannot parse ticket frontmatter %s: %s", candidate, exc)
+            continue
+        if not isinstance(fm, dict):
+            continue
+        if fm.get("status") == "done":
+            any_done = True
+        for f in fm.get("files_touched") or []:
+            fs = str(f)
+            if fs.startswith("tickets/") or fs.startswith("docs/acceptance"):
+                continue
+            if (repo_root / fs).exists():
+                claimed.append(fs)
+    return any_done, claimed
 
 
 def _looks_like_test(path: str) -> bool:
-    """Return True when *path* looks like a test file.
+    """Return True when *path* is a test file (not merely a path containing 'test').
+
+    Matches a ``test``/``tests`` path segment, or a ``test_*.py`` / ``*_test.py``
+    filename — so production modules such as ``test_enforcement.py`` living under a
+    source dir, or ``check_ticket_test_requirements.py``, are NOT treated as tests.
 
     Args:
         path: A file path string.
 
     Returns:
-        True when the path contains a ``test`` segment and is a Python file.
+        True when the path denotes a test file.
     """
-    low = path.lower()
-    return "test" in low and low.endswith(".py")
+    p = path.split("::", 1)[0]
+    parts = p.replace("\\", "/").split("/")
+    if any(seg in ("test", "tests") for seg in parts[:-1]):
+        return True
+    name = parts[-1]
+    return name.startswith("test_") and name.endswith(".py") or name.endswith("_test.py")
 
 
 def _split_covered_by(covered_by: list[Any]) -> tuple[list[str], list[str]]:
@@ -299,7 +337,11 @@ def classify(
     source_refs: set[str],
     repo_root: Path,
 ) -> dict[str, Any]:
-    """Compute the first-pass evidence verdict for one leaf AC.
+    """Compute the evidence verdict for one leaf AC from REPO CITATIONS ONLY.
+
+    Store fields (``work_status``, ``implemented_by``, ``covered_by``) are read
+    only to compute comparison flags — they never contribute to ``has_code`` /
+    ``has_test`` or the verdict.
 
     Args:
         record: The AC record.
@@ -308,29 +350,18 @@ def classify(
         repo_root: Repo root, for resolving ``implemented_by`` tickets.
 
     Returns:
-        A dict with the verdict, the concrete code/test evidence, the store's own
-        claim, and any bookkeeping flags.
+        A dict with the verdict, the concrete cited code/test evidence, the
+        store's own (untrusted) claims, and any bookkeeping flags.
     """
     ac_id = record.get("id", "?")
-    cb_tests, _cb_children = _split_covered_by(record.get("covered_by") or [])
 
-    ticket_status: str | None = None
-    ticket_code: list[str] = []
-    for ref in record.get("implemented_by") or []:
-        status, files = read_ticket_meta(repo_root, str(ref))
-        if status is not None:
-            ticket_status = status
-            ticket_code += [f for f in files if not f.startswith("tickets/") and not f.startswith("docs/acceptance")]
-
-    # Evidence — union of the grep map, the AC's own covered_by test links, and
-    # any real (existing, non-ticket) source files a done ticket touched.
-    tests = sorted(set(test_refs) | set(cb_tests))
-    code = sorted(set(source_refs) | {f for f in ticket_code if (repo_root / f).exists()})
-    # Source refs that are themselves test files should count as tests, not code.
-    code = [c for c in code if not _looks_like_test(c)]
-
+    # Evidence — grep citations only. A cited source file that is itself a test
+    # counts as a test, never as code.
+    tests = sorted(set(test_refs) | {s for s in source_refs if _looks_like_test(s)})
+    code = sorted(s for s in source_refs if not _looks_like_test(s))
     has_test = bool(tests)
     has_code = bool(code)
+
     if has_code and has_test:
         verdict = "FULLY_IMPLEMENTED"
     elif has_code:
@@ -340,13 +371,20 @@ def classify(
     else:
         verdict = "NOT_IMPLEMENTED"
 
+    # --- Store claims (untrusted; for comparison only) ---
     store_status = record.get("work_status")
+    ticket_done, claimed_code = read_ticket_statuses(repo_root, record.get("implemented_by") or [])
+    cb_tests, _cb_children = _split_covered_by(record.get("covered_by") or [])
+    store_claims_done = store_status == "done" or ticket_done
+
     flags: list[str] = []
-    if store_status != "done" and has_test and has_code:
-        flags.append("stale-bookkeeping")  # looks done, store says otherwise
-    if store_status == "done" and not has_test:
-        flags.append("phantom-suspect")  # store says done, no test cites it
-    if (ticket_status == "done" or has_code) and not has_test:
+    if store_claims_done and not has_test:
+        flags.append("phantom-suspect")  # store says done, no repo-cited test
+    if cb_tests and not any(t.split("::")[0] in {r.split("::")[0] for r in tests} for t in cb_tests):
+        flags.append("unverified-coverage-claim")  # covered_by test not corroborated by a citation
+    if has_code and has_test and store_status != "done":
+        flags.append("stale-bookkeeping")  # evidence exists, store not marked done
+    if (has_code or store_claims_done) and not has_test:
         flags.append("needs-test")
 
     return {
@@ -359,9 +397,61 @@ def classify(
         "verdict": verdict,
         "code": code,
         "tests": tests,
-        "ticket_status": ticket_status,
+        "store_claimed_code": sorted(set(claimed_code)),
+        "store_ticket_done": ticket_done,
         "flags": flags,
     }
+
+
+def _natkey(text: str) -> list[Any]:
+    """Return a natural-sort key so ``BO-9`` sorts before ``BO-10``.
+
+    Args:
+        text: The string to key.
+
+    Returns:
+        A list of alternating string / int fragments.
+    """
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", text)]
+
+
+def _cell(items: list[str]) -> str:
+    """Render a list of paths as one escaped Markdown table cell.
+
+    Args:
+        items: Path strings.
+
+    Returns:
+        A ``<br>``-joined, pipe-escaped cell, or an em-dash when empty.
+    """
+    return "<br>".join(x.replace("|", r"\|") for x in items) or "—"
+
+
+def _verdict_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Tally verdicts across *rows*.
+
+    Args:
+        rows: Classified leaf rows.
+
+    Returns:
+        Mapping verdict -> count (all four verdicts present, zero-filled).
+    """
+    counts = {"FULLY_IMPLEMENTED": 0, "CODE_NO_TEST": 0, "TEST_NO_CODE": 0, "NOT_IMPLEMENTED": 0}
+    for r in rows:
+        counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
+    return counts
+
+
+def _cited_test_files(rows: list[dict[str, Any]]) -> list[str]:
+    """Return the sorted set of test files cited across *rows* (node ids stripped).
+
+    Args:
+        rows: Classified leaf rows.
+
+    Returns:
+        Sorted unique test file paths.
+    """
+    return sorted({t.split("::")[0] for r in rows for t in r["tests"]})
 
 
 def render_markdown(rows: list[dict[str, Any]], area: str) -> str:
@@ -374,21 +464,18 @@ def render_markdown(rows: list[dict[str, Any]], area: str) -> str:
     Returns:
         A Markdown string.
     """
-    from collections import defaultdict
-
-    counts: dict[str, int] = defaultdict(int)
-    for r in rows:
-        counts[r["verdict"]] += 1
+    counts = _verdict_counts(rows)
     lines: list[str] = [
         f"# AC evidence audit — {area}",
         "",
-        "> First-pass, grep-based. Store fields are shown but NOT trusted. "
-        "Run the cited test suites for green-test truth and verify phantom-suspect "
-        "rows with a skeptical agent before trusting any verdict.",
+        "> First-pass, grep-based, evidence = repo citations only (store fields are "
+        "shown for comparison, never trusted). Run the cited test suites for "
+        "green-test truth and verify flagged rows with a skeptical agent before "
+        "trusting any verdict.",
         "",
         "## Summary (leaf ACs)",
         "",
-        f"- FULLY_IMPLEMENTED (code + cited test): {counts['FULLY_IMPLEMENTED']}",
+        f"- FULLY_IMPLEMENTED (cited code + cited test): {counts['FULLY_IMPLEMENTED']}",
         f"- CODE_NO_TEST: {counts['CODE_NO_TEST']}",
         f"- TEST_NO_CODE: {counts['TEST_NO_CODE']}",
         f"- NOT_IMPLEMENTED: {counts['NOT_IMPLEMENTED']}",
@@ -401,34 +488,34 @@ def render_markdown(rows: list[dict[str, Any]], area: str) -> str:
         groups[r["group"] or "(ungrouped)"].append(r)
     lines += ["## Per-group rollup", ""]
     for group in sorted(groups):
-        gc: dict[str, int] = defaultdict(int)
-        for r in groups[group]:
-            gc[r["verdict"]] += 1
+        gc = _verdict_counts(groups[group])
         lines.append(
             f"- **{group}** ({len(groups[group])}): "
             f"full={gc['FULLY_IMPLEMENTED']}, code-only={gc['CODE_NO_TEST']}, "
             f"test-only={gc['TEST_NO_CODE']}, none={gc['NOT_IMPLEMENTED']}"
         )
-    lines += ["", "## Per-AC evidence", "", "| AC | Verdict | Store | Code | Tests | Flags |", "|---|---|---|---|---|---|"]
-    for r in sorted(rows, key=lambda x: str(x["id"])):
-        code = "<br>".join(r["code"]) or "—"
-        tests = "<br>".join(r["tests"]) or "—"
-        flags = ", ".join(r["flags"]) or ""
+    lines += [
+        "", "## Per-AC evidence", "",
+        "| AC | Verdict | Store | Cited code | Cited tests | Store-claimed code | Flags |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for r in sorted(rows, key=lambda x: _natkey(str(x["id"]))):
         lines.append(
-            f"| {r['id']} | {r['verdict']} | {r['store_work_status']} | {code} | {tests} | {flags} |"
+            f"| {r['id']} | {r['verdict']} | {r['store_work_status']} | {_cell(r['code'])} | "
+            f"{_cell(r['tests'])} | {_cell(r['store_claimed_code'])} | {', '.join(r['flags'])} |"
         )
 
-    suspects = [r for r in rows if "phantom-suspect" in r["flags"]]
-    stale = [r for r in rows if "stale-bookkeeping" in r["flags"]]
+    by_flag: dict[str, list[str]] = defaultdict(list)
+    for r in rows:
+        for f in r["flags"]:
+            by_flag[f].append(str(r["id"]))
     lines += ["", "## Flags", ""]
-    lines.append(f"- **phantom-suspect** (store=done but no cited test): {len(suspects)} — "
-                 + (", ".join(str(r["id"]) for r in suspects) or "none"))
-    lines.append(f"- **stale-bookkeeping** (evidence but store!=done): {len(stale)} — "
-                 + (", ".join(str(r["id"]) for r in stale) or "none"))
+    for flag in ("phantom-suspect", "unverified-coverage-claim", "stale-bookkeeping", "needs-test"):
+        ids = by_flag.get(flag, [])
+        lines.append(f"- **{flag}** ({len(ids)}): " + (", ".join(sorted(ids, key=_natkey)) or "none"))
 
-    test_files = sorted({t.split("::")[0] for r in rows for t in r["tests"]})
     lines += ["", "## Cited test files (run these for green-test truth)", ""]
-    lines += [f"- {tf}" for tf in test_files] or ["- (none)"]
+    lines += [f"- {tf}" for tf in _cited_test_files(rows)] or ["- (none)"]
     return "\n".join(lines)
 
 
@@ -478,7 +565,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: AC root not found: {ac_root}", file=sys.stderr)
         return 1
 
-    records = load_ac_records(ac_root, repo_root, args.component, args.prefix, args.subpath)
+    records = load_ac_records(ac_root, args.component, args.prefix, args.subpath)
     if not records:
         print("ERROR: no AC matched the selector.", file=sys.stderr)
         return 1
@@ -500,10 +587,17 @@ def main(argv: list[str] | None = None) -> int:
 
     area = args.component or args.prefix or args.subpath or "?"
     if args.format == "json":
+        by_flag: dict[str, list[str]] = defaultdict(list)
+        for r in rows:
+            for f in r["flags"]:
+                by_flag[f].append(str(r["id"]))
         payload = {
             "area": area,
             "total_records": len(records),
             "leaf_count": len(rows),
+            "summary": _verdict_counts(rows),
+            "flags": dict(by_flag),
+            "cited_test_files": _cited_test_files(rows),
             "rows": rows,
         }
         output = json.dumps(payload, indent=1)
@@ -531,11 +625,20 @@ if __name__ == "__main__":
 # ====================================================================
 # - 2026-07-14 [ac-audit skill]: Initial implementation. Generalises the
 #   one-off BO-* audit (enumerate area ACs -> grep test/source citation maps ->
-#   resolve implemented_by tickets -> first-pass verdict + phantom-suspect /
-#   stale-bookkeeping flags) into a reusable, area-parameterised evidence
-#   engine. Store fields are reported but never trusted; green-test truth and
-#   deep phantom-done verification are layered by the skill (SKILL.md), not this
-#   script. Scans .py/.md/.js/.json/.yaml under test and source dirs; intersects
-#   maximal AC-id tokens with the in-scope id set to avoid prefix collisions
-#   (BO-100 vs BO-1000).
+#   first-pass verdict + flags) into a reusable, area-parameterised evidence
+#   engine. Intersects maximal AC-id tokens with the in-scope id set to avoid
+#   prefix collisions (BO-100 vs BO-1000).
+# - 2026-07-14 [ac-audit skill, post-review]: Hardened after a code review + an
+#   independent logic check. Evidence is now REPO CITATIONS ONLY — store fields
+#   (implemented_by/files_touched, covered_by, work_status) no longer contribute
+#   to has_code/has_test/verdict; they are surfaced as store-claim columns and
+#   as flags (phantom-suspect, unverified-coverage-claim) so the tool can no
+#   longer launder a store claim into a "done" verdict (the exact phantom-done
+#   failure it exists to catch). Also: precise _looks_like_test (path segment /
+#   test_*.py / *_test.py filename, not bare substring) so production modules
+#   like check_ticket_test_requirements.py / test_enforcement.py are not dropped;
+#   UnicodeDecodeError-safe reads (errors="ignore") at all read sites; os.walk
+#   with dir pruning instead of rglob; --ac-root repo-root validation; *.yml as
+#   well as *.yaml; anchored frontmatter regex; natural-sort + pipe-escaped
+#   Markdown cells; enriched JSON payload (summary/flags/cited_test_files).
 # ====================================================================
