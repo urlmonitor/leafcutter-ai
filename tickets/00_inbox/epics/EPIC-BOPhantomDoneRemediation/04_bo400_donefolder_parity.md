@@ -237,3 +237,11 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-07-14 19:30 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Second push to existing PR #281 (https://github.com/urlmonitor/leafcutter-ai/pull/281) on branch EPIC-BOPhantomDoneRemediation targeting main. Pushed 2 commits: c057b191 (BO-610-3-i fix) and 4fb7543f (thread old_path through production call chain — resolves pr-reviewer H-1 blocker from 15:45). PR state: MERGEABLE / UNSTABLE (pytest CI non-required; only ruff is a required gate). No new PR created; PR #281 was already open from first pull-request phase at 16:30.
