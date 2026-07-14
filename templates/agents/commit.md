@@ -176,6 +176,34 @@ user instruction.
 
 ## Step 2 — Draft the commit message
 
+### Step 2a — Classify staged files (PRIMARY path, AC BO-1100a-2)
+
+**Already-approved subject guard (AC BO-1100a-4):** If a commit subject has
+already been approved by the user in this conversation (e.g. the user confirmed
+a specific message at the Step 3 gate or supplied one explicitly), that subject
+is already approved — skip calling `classify_staged_files()` and use the approved
+subject verbatim. Do NOT re-invoke the classifier during the precommit-autofix
+retry loop when the subject has already been confirmed.
+
+Otherwise, `classify_staged_files()` from `scripts/commit_classifier.py` is the
+**PRIMARY path** for determining the commit subject. It groups staged files by
+recognised type and selects the appropriate message pattern automatically.
+
+**Mixed-set check — run BEFORE composing any subject (AC BO-1100b-1):**
+Call `detect_mixed_set(result.groups)` immediately after classifying. If
+`mixed_warning.is_mixed` is True, surface the warning to the user with explicit
+**Proceed** / **Abort** options before drafting any message. Do not silently
+continue past a mixed-set warning.
+
+**Unknown-group delegation (AC BO-1100a-3):** When `result.specific_pattern_matched`
+is `False` (the classifier fell back to the UNKNOWN group), call
+`maybe_propose_rule(staged_paths)` from `scripts/commit_pattern_learner.py` to
+hand the unmatched shape to the pattern-learning specialist. Show the returned
+proposal (if any) to the user.
+
+Use `result.suggested_subject` as the base for the commit subject, then refine
+following the style of `git log -5`:
+
 Following the style of `git log -5`:
 - One subject line under 72 chars, present-tense imperative ("add", "fix",
   "update").

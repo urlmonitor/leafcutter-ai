@@ -5,6 +5,12 @@ Verifies that commit message patterns are defined in a single external
 configuration file (config/commit_message_patterns.json) that the classifier
 loads at runtime. Adding a new pattern should be a one-line config edit, not
 a code change.
+
+TestRoutingConfigIsArraySchema (added for the BO-1100 phantom-done remediation)
+asserts that the config is a TOP-LEVEL ARRAY of {group, path_pattern, template}
+entries per AC BO-1100c-1 and BO-1100c-2. The current config uses a 'patterns'
+dict (object) format — these tests are the RED baseline the python-coder must
+satisfy by converting the schema.
 """
 # @ac-tag: BO-1100c
 
@@ -245,6 +251,140 @@ class TestConfigIsConsultedByClassifier(unittest.TestCase):
             self.assertTrue(
                 result.suggested_subject.startswith("CUSTOM(tickets):"),
                 msg=f"Expected custom prefix, got {result.suggested_subject!r}",
+            )
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+
+class TestRoutingConfigIsArraySchema(unittest.TestCase):
+    """AC BO-1100c-1/2 schema tests: config must be a top-level JSON array.
+
+    AC BO-1100c-1 specifies: "the file is valid JSON containing a top-level
+    array of routing entries" with each entry having at minimum 'group',
+    'path_pattern', and 'template' fields, evaluated in array order (first
+    match wins). At least 5 built-in entries must ship with the default config.
+
+    AC BO-1100c-2 specifies: appending a 6th entry activates it on next
+    invocation without modifying any code or agent prompt file.
+
+    CURRENT STATE (RED): config/commit_message_patterns.json uses a
+    'patterns' object (dict of group→template), not a top-level array. The
+    'path_pattern' field does not exist. These tests are the red baseline.
+    """
+
+    def test_routing_config_is_array_schema(self) -> None:
+        # covers: BO-1100c-1
+        """AC BO-1100c-1: commit_message_patterns.json must be a top-level JSON array.
+
+        The current config is a dict with a 'patterns' key (object schema).
+        After remediation it must be a list of routing-rule objects.
+        """
+        with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        self.assertIsInstance(
+            data,
+            list,
+            msg=(
+                "config/commit_message_patterns.json must be a top-level JSON array "
+                "of routing entries per AC BO-1100c-1. "
+                f"Got: {type(data).__name__!r}. "
+                "Current config uses a {{patterns: dict}} structure (phantom-done: "
+                "BO-1100c-1 array schema is not implemented)."
+            ),
+        )
+
+    def test_ac_bo1100c1_each_entry_has_path_pattern_field(self) -> None:
+        # covers: BO-1100c-1
+        """AC BO-1100c-1: each array entry must contain 'group', 'path_pattern', 'template'.
+
+        The 'path_pattern' field is new — the current config has no such field.
+        """
+        with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        self.assertIsInstance(data, list, msg="Top-level config must be a list.")
+        self.assertGreater(len(data), 0, msg="Config must have at least one routing entry.")
+        for i, entry in enumerate(data):
+            with self.subTest(entry_index=i):
+                self.assertIn(
+                    "group",
+                    entry,
+                    msg=f"Entry {i} is missing required field 'group'.",
+                )
+                self.assertIn(
+                    "path_pattern",
+                    entry,
+                    msg=(
+                        f"Entry {i} is missing required field 'path_pattern' "
+                        "(AC BO-1100c-1: each entry must specify a path glob/regex). "
+                        "The current config does not include path_pattern at all."
+                    ),
+                )
+                self.assertIn(
+                    "template",
+                    entry,
+                    msg=f"Entry {i} is missing required field 'template'.",
+                )
+
+    def test_ac_bo1100c1_at_least_five_default_entries(self) -> None:
+        # covers: BO-1100c-1
+        """AC BO-1100c-1: at least 5 built-in entries must ship (tickets, new ACs,
+        shipped ACs, implementation code, status-changes).
+        """
+        with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        self.assertIsInstance(data, list)
+        self.assertGreaterEqual(
+            len(data),
+            5,
+            msg=(
+                "Config must ship with at least 5 built-in routing entries per AC "
+                "BO-1100c-1 (tickets, new ACs, shipped ACs, implementation code, "
+                "status changes)."
+            ),
+        )
+
+    def test_ac_bo1100c2_new_rule_addable_via_config_path_param(self) -> None:
+        # covers: BO-1100c-2
+        """AC BO-1100c-2: appending a new rule to the array activates it without code changes.
+
+        classify_staged_files() must accept a patterns_config_path parameter
+        so it can load from a custom array-format config. This exercises the
+        'no code change required' guarantee: add a line to the JSON, done.
+        """
+        custom_rules = [
+            {
+                "group": "architecture-docs",
+                "path_pattern": "^docs/architecture/",
+                "template": "docs(arch): {detail}",
+            },
+        ]
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as tmp:
+            json.dump(custom_rules, tmp)
+            tmp_path = Path(tmp.name)
+
+        try:
+            # classify_staged_files must accept a patterns_config_path kwarg
+            # (new parameter) so the commit agent can point it at the live config.
+            result = classify_staged_files(
+                ["docs/architecture/components/new-component.md"],
+                patterns_config_path=tmp_path,
+            )
+            self.assertTrue(
+                result.specific_pattern_matched,
+                msg=(
+                    "classify_staged_files must route by path_pattern from the "
+                    "array config (BO-1100c-2). Currently path rules are hardcoded "
+                    "in _PATH_RULES and not read from config."
+                ),
+            )
+            self.assertTrue(
+                result.suggested_subject.startswith("docs(arch):"),
+                msg=(
+                    f"Expected 'docs(arch):' prefix from array config entry, "
+                    f"got: {result.suggested_subject!r}"
+                ),
             )
         finally:
             tmp_path.unlink(missing_ok=True)
