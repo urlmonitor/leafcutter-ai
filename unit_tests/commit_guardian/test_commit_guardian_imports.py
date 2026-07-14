@@ -51,9 +51,10 @@ _SCRIPTS_COMMIT_GUARDIAN = _REPO_ROOT / "templates" / "scripts" / "commit_guardi
 # broad import scan — their own dedicated tests (if any) handle them separately.
 # Excluding a module here does NOT exempt it from GE-103: the specific
 # diagram_type_validators tests below still provide targeted coverage.
+# AC-3 (TICKET-20260709-CommitGuardianHardeningFollowups): docstring_parser is
+# now declared in requirements-dev.txt (>=0.15), so check_docstrings and
+# docstring_validators are no longer excluded from the broad import scan.
 _EXTERNAL_DEP_MODULES: frozenset[str] = frozenset({
-    "check_docstrings",      # needs docstring_parser (pip install docstring-parser)
-    "docstring_validators",  # needs docstring_parser (same as above)
     "check_secrets",         # needs scan_secrets (deployed by security-scanner skill)
 })
 
@@ -94,7 +95,7 @@ def _import_module_from_dir(module_name: str, directory: Path):
             directory / f"{module_name}.py",
         )
         if spec is None or spec.loader is None:
-            raise ImportError(f"Cannot load spec for {module_name} from {directory}")
+            raise ImportError(f"Cannot load spec for {module_name} from {directory}")  # noqa: TRY003
         mod = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = mod
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
@@ -383,6 +384,244 @@ class TestGE105CanonicalEnumValuesAccepted(unittest.TestCase):
                 "GE-105: backward compatibility requires retaining 'dataflow'."
             ),
         )
+
+
+# ---------------------------------------------------------------------------
+# AC-2: Ancestor-walk SSOT resolution and WARNING emission
+# ---------------------------------------------------------------------------
+
+
+class TestDiagramTypeValidatorsAncestorWalk(unittest.TestCase):
+    """AC-2 (TICKET-20260709-CommitGuardianHardeningFollowups):
+    Behavioral tests for the ported ancestor-walk SSOT resolution.
+
+    The canonical diagram_type_validators.py previously used a fixed
+    parents[2] path that never resolved to an existing file, making the
+    except blocks unreachable and causing silent fallback on every execution.
+    After the fix, _find_diagram_types_json() walks ancestor directories and
+    WARNING logging is emitted on I/O or parse errors.
+    """
+
+    def _load_fresh_mod(self):
+        """Load diagram_type_validators fresh from the canonical template path.
+
+        Returns:
+            The loaded module with a cleared cache.
+        """
+        mod_name = "diagram_type_validators"
+        sys.modules.pop(mod_name, None)
+        mod = _import_module_from_dir(mod_name, _SCRIPTS_COMMIT_GUARDIAN)
+        mod._DIAGRAM_TYPES_CACHE = None
+        return mod
+
+    def test_find_diagram_types_json_returns_path_or_none(self) -> None:
+        """AC-2: _find_diagram_types_json() returns a Path or None (does not raise).
+
+        When running in the real project tree, it should find config/diagram_types.json
+        at an ancestor of the canonical template directory.
+        """
+        mod = self._load_fresh_mod()
+        result = mod._find_diagram_types_json()
+        # Must be either None or a Path to an existing file named diagram_types.json
+        if result is not None:
+            self.assertIsInstance(result, Path)
+            self.assertTrue(result.exists(), msg=f"Returned path does not exist: {result}")
+            self.assertEqual(result.name, "diagram_types.json")
+
+    def test_ancestor_walk_finds_config_via_start_dir_override(self) -> None:
+        """AC-2: ancestor walk uses _start_dir override to find config/diagram_types.json.
+
+        Creates a real temporary directory tree simulating a deployed project:
+          tmproot/
+            config/diagram_types.json   <- target file
+            some/deep/path/             <- simulated script location
+
+        Calls _find_diagram_types_json(_start_dir=some/deep/path/) and verifies
+        the walk ascends to find the config file at tmproot/config/.
+        """
+        import tempfile
+
+        mod = self._load_fresh_mod()
+        with tempfile.TemporaryDirectory() as td:
+            tmproot = Path(td)
+            # Create the config directory and JSON file
+            config_dir = tmproot / "config"
+            config_dir.mkdir()
+            dtj = config_dir / "diagram_types.json"
+            dtj.write_text(
+                '{"diagram_types": {"test_type": {"description": "test"}}}',
+                encoding="utf-8",
+            )
+            # Create a simulated deep "deployed script" directory
+            script_dir = tmproot / "some" / "deep" / "path"
+            script_dir.mkdir(parents=True)
+
+            result = mod._find_diagram_types_json(_start_dir=script_dir)
+
+        self.assertIsNotNone(result, msg="Ancestor walk must find config/diagram_types.json.")
+        self.assertEqual(result.name, "diagram_types.json")
+
+    def test_ancestor_walk_finds_leafcutter_config_layout(self) -> None:
+        """AC-2: ancestor walk finds leafcutter/config/diagram_types.json layout.
+
+        Creates a real temporary directory tree simulating a consumer-project layout:
+          tmproot/
+            leafcutter/config/diagram_types.json   <- target file
+            scripts/commit_guardian/               <- simulated script location
+        """
+        import tempfile
+
+        mod = self._load_fresh_mod()
+        with tempfile.TemporaryDirectory() as td:
+            tmproot = Path(td)
+            # Create the leafcutter/config directory and JSON file
+            lc_config = tmproot / "leafcutter" / "config"
+            lc_config.mkdir(parents=True)
+            dtj = lc_config / "diagram_types.json"
+            dtj.write_text(
+                '{"diagram_types": {"consumer_type": {}}}',
+                encoding="utf-8",
+            )
+            # Simulated deployed script directory
+            script_dir = tmproot / "scripts" / "commit_guardian"
+            script_dir.mkdir(parents=True)
+
+            result = mod._find_diagram_types_json(_start_dir=script_dir)
+
+        self.assertIsNotNone(
+            result,
+            msg="Ancestor walk must find leafcutter/config/diagram_types.json layout.",
+        )
+        self.assertIn("leafcutter", str(result))
+
+    def test_warning_emitted_on_malformed_json(self) -> None:
+        """AC-2: WARNING is logged when diagram_types.json is malformed.
+
+        Uses a real tempdir with malformed JSON and patches _find_diagram_types_json
+        to return that path, then verifies a WARNING log record is produced.
+        """
+        import logging
+        import tempfile
+        from unittest.mock import patch
+
+        mod = self._load_fresh_mod()
+
+        with tempfile.TemporaryDirectory() as td:
+            malformed = Path(td) / "diagram_types.json"
+            malformed.write_text("{ this is not valid json !!", encoding="utf-8")
+
+            log_records: list[logging.LogRecord] = []
+
+            class _Capture(logging.Handler):
+                def emit(self, record: logging.LogRecord) -> None:
+                    log_records.append(record)
+
+            handler = _Capture()
+            target_logger = logging.getLogger("diagram_type_validators")
+            target_logger.addHandler(handler)
+            target_logger.setLevel(logging.WARNING)
+            mod._DIAGRAM_TYPES_CACHE = None
+
+            try:
+                with patch.object(mod, "_find_diagram_types_json", return_value=malformed):
+                    result = mod._load_diagram_types()
+            finally:
+                target_logger.removeHandler(handler)
+
+        # Must fall back to the config constant (non-empty dict)
+        self.assertIsInstance(result, dict)
+        self.assertGreater(len(result), 0, msg="Fallback must produce a non-empty dict.")
+        # Must have emitted at least one WARNING
+        warning_records = [r for r in log_records if r.levelno >= logging.WARNING]
+        self.assertGreater(
+            len(warning_records),
+            0,
+            msg="AC-2: malformed JSON must produce a WARNING log record.",
+        )
+        combined = " ".join(r.getMessage() for r in warning_records)
+        self.assertIn(
+            str(malformed),
+            combined,
+            msg="WARNING message must include the malformed file path.",
+        )
+
+    def test_warning_emitted_on_os_error(self) -> None:
+        """AC-2: WARNING is logged when diagram_types.json raises OSError on open.
+
+        Patches _find_diagram_types_json to return an existing path, then patches
+        open() to raise OSError, and verifies a WARNING log record is produced.
+        """
+        import logging
+        import tempfile
+        from unittest.mock import patch
+
+        mod = self._load_fresh_mod()
+
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "diagram_types.json"
+            target.write_text("{}", encoding="utf-8")
+
+            log_records: list[logging.LogRecord] = []
+
+            class _Capture(logging.Handler):
+                def emit(self, record: logging.LogRecord) -> None:
+                    log_records.append(record)
+
+            handler = _Capture()
+            target_logger = logging.getLogger("diagram_type_validators")
+            target_logger.addHandler(handler)
+            target_logger.setLevel(logging.WARNING)
+            mod._DIAGRAM_TYPES_CACHE = None
+
+            def _raise_oserror(*args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+                raise OSError("Permission denied (mocked)")  # noqa: TRY003
+
+            try:
+                with patch.object(mod, "_find_diagram_types_json", return_value=target):
+                    with patch("builtins.open", side_effect=_raise_oserror):
+                        result = mod._load_diagram_types()
+            finally:
+                target_logger.removeHandler(handler)
+
+        self.assertIsInstance(result, dict)
+        warning_records = [r for r in log_records if r.levelno >= logging.WARNING]
+        self.assertGreater(
+            len(warning_records),
+            0,
+            msg="AC-2: OSError on open must produce a WARNING log record.",
+        )
+
+    def test_validate_diagram_type_accepts_data_flow(self) -> None:
+        """AC-2: validate_diagram_type still accepts 'data_flow' after the fix."""
+        mod = self._load_fresh_mod()
+        result = mod.validate_diagram_type({"diagram_type": "data_flow"})
+        self.assertEqual(result, [])
+
+    def test_validate_diagram_type_accepts_user_flow(self) -> None:
+        """AC-2: validate_diagram_type still accepts 'user_flow' after the fix."""
+        mod = self._load_fresh_mod()
+        result = mod.validate_diagram_type({"diagram_type": "user_flow"})
+        self.assertEqual(result, [])
+
+    def test_validate_diagram_type_accepts_agent_flow(self) -> None:
+        """AC-2: validate_diagram_type still accepts 'agent_flow' after the fix."""
+        mod = self._load_fresh_mod()
+        result = mod.validate_diagram_type({"diagram_type": "agent_flow"})
+        self.assertEqual(result, [])
+
+    def test_validate_diagram_type_accepts_dataflow_legacy(self) -> None:
+        """AC-2: validate_diagram_type still accepts legacy alias 'dataflow'."""
+        mod = self._load_fresh_mod()
+        result = mod.validate_diagram_type({"diagram_type": "dataflow"})
+        self.assertEqual(result, [])
+
+    def test_validate_diagram_type_rejects_bogus_value(self) -> None:
+        """AC-2: validate_diagram_type rejects unknown values after the fix."""
+        mod = self._load_fresh_mod()
+        result = mod.validate_diagram_type({"diagram_type": "totally_bogus_xyz"})
+        self.assertIsInstance(result, list)
+        self.assertGreater(len(result), 0)
+        self.assertIn("totally_bogus_xyz", " ".join(result))
 
 
 if __name__ == "__main__":
