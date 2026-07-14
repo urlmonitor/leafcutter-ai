@@ -1,6 +1,6 @@
 ---
 title: "DualEngine: deep-assess current state, then merge-or-salvage the workflow engine"
-status: todo
+status: done
 components:
   - build_orchestration
   - supervisor_system
@@ -81,7 +81,60 @@ duplicate-ID store corruption that schema-diff will NOT catch).
 
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-07-14 — deep-assessment (status: ok)
+
+**Verdict: NEITHER MERGE NOR SALVAGE. The epic is already fully merged and live on
+`origin/main`. This ticket's premise was stale — exactly the CQG-style false
+"known-broken" flag it warned about.**
+
+**Key structural finding:** the epic branch `origin/EPIC-DualEngineWorkflowSupport`
+**no longer exists** (deleted at squash-merge). There is no branch to merge or salvage
+from. PR #198 (`bf73f9a6`) was a **squash-merge of the entire branch** — all 13 tickets
+(01–13, including remediation tickets 08–13), not just 01–04. `git show bf73f9a6 --stat`
+shows +7907/-2866 across `build-feature.js` (+413 net-new), `plan-feature.js`,
+`finalize-feature.js`, `build-epic.js`, `build-ticket.js`, `build_phases.py`,
+command templates, ADR-017, the authoring contract, and the full dual-engine test suite.
+
+**AC-1 — per-artifact state on `main` (evidence: file content on `origin/main`):**
+- `build-feature.js` — present & correct (pure-literal `meta`; Phase-0 worktree establish;
+  `.git`-file worktree detection).
+- `plan-feature.js` / `finalize-feature.js` / `build-epic.js` / `build-ticket.js` —
+  present & correct (all rewritten to E2 canonical form).
+- default-engine flip — present: `config/skills_config.default.json` →
+  `workflows.engine: "auto"` (resolves to E2, the engine that runs here).
+- `build_phases.py` variant transform — present & correct (E2-only; E1 wrap removed).
+
+**AC-2 — the 6 HIGH defects, all ALREADY-FIXED on `main` (evidence: content):**
+1. plan-feature empty input → command passes `{ userInput: $ARGUMENTS }`, script reads
+   `args.userInput`. Fixed.
+2. `build-feature.js` missing/orphaned → exists (+413) and dispatches. Fixed.
+3. E1-wrap unloadable module → E1 removed; `_emit_workflow_variant("e1")` raises
+   `ValueError` (ticket 09). Fixed.
+4. `build-epic` spread-form `parallel()` → array-of-thunks form
+   `parallel(chunk.map((t) => async () => …))`. Fixed.
+5. plan-feature no-main-commit guard fail-open → now explicitly **fail-CLOSED**, aborts
+   on any unconfirmed branch (AC BO-1500c-3). Fixed.
+6. real-engine defects (meta-not-literal / no-worktree / reads-main-clone, tickets 11–13)
+   → all fixed in `build-feature.js`. Fixed.
+
+**AC-3 — real-engine behavioral spot-check (observed 2026-07-14):** `/build-feature`
+against this very ticket path ran as a **real E2 workflow** (Workflow tool, fresh
+process): dispatched `status-checker` + `worktree-agent` (2 real agents), then aborted
+**loudly** on the missing ticket file with "will NOT fall back to driving phase agents
+against the main clone." That is the epic's exact intended behavior — no silent no-op,
+no LLM fallback. **PASS.**
+
+**AC-4 — recommendation:** neither MERGE nor SALVAGE-FRESH applies (no branch exists;
+nothing unmerged). The correct action is to **close this ticket as obsolete/superseded
+by PR #198** and **archive `EPIC-DualEngineWorkflowSupport/` to `99_done/`** (the only
+residual — the epic folder was never archived despite all 13 sub-tickets being
+`status: done`). Both done in this commit.
+
+**AC-5 — `main` not regressed:** nothing was executed against the engine; this is a
+tickets-only change. Required gates (ruff + schema-diff) are unaffected.
+
+The stale `origin/EPIC-DualEngineWorkflowSupport` branch is already gone, so the
+"delete the stale branch" implementation task is moot.
 
 ## Implementation Tasks
 

@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Dual-Engine Workflow Support — port scripts to the live contract"
 type: epic
-status: in_progress
+status: done
 components:
   - build_pipeline
   - supervisor_system
