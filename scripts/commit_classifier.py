@@ -251,6 +251,9 @@ class ClassificationResult:
     suggested_subject: str
     #: True when a specific pattern was matched; False when the fallback was used.
     specific_pattern_matched: bool
+    #: True when the staging area is empty (no staged files). AC BO-1100a-2-i:
+    #: the commit agent must not produce a commit message when this is True.
+    no_staged_files: bool = False
 
 
 # Groups that are considered "naturally co-occurring" and therefore NOT flagged
@@ -425,6 +428,7 @@ def classify_staged_files(
         - groups: the full grouped dict.
         - suggested_subject: the formatted commit subject.
         - specific_pattern_matched: True unless the UNKNOWN fallback fired.
+        - no_staged_files: True when ``staged_paths`` is empty (AC BO-1100a-2-i).
     """
     # Re-read patterns from disk on every call so that changes to
     # config/commit_message_patterns.json are reflected without a restart
@@ -436,12 +440,13 @@ def classify_staged_files(
     groups = group_files_by_type(staged_paths)
 
     if not groups:
-        # Nothing staged — return a neutral fallback.
+        # Nothing staged — return a neutral fallback (AC BO-1100a-2-i).
         return ClassificationResult(
             primary_group=FileGroup.UNKNOWN,
             groups={},
             suggested_subject="chore: update files",
             specific_pattern_matched=False,
+            no_staged_files=True,
         )
 
     # Pick the primary group: highest file count; ties broken by FileGroup
