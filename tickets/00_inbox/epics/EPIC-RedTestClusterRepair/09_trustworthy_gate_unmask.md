@@ -147,3 +147,21 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate (supervised path). Staged .github/workflows/ci.yml (AC_ENFORCE_STRICT: "1" on CI test step) and unit_tests/ac_store/test_pytest_ac_enforcement_strict_on_ci.py (3 behavioral/structural tests). Probe noted git_hook: false — verified as false negative: hook exists at leafcutter-ai/.git/hooks/pre-commit (shared commondir); probe path-resolution fails in worktree topology. Commit includes ticket 06 staged residuals (requirements-dev.txt, tests/test_sweep_processes.py, 06 ticket file) accumulated in staging area from prior phases.
+
+### 2026-07-15 15:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-15_a22d7636
+completion_manifest:
+  ci_yml_change_correct: true
+  test_structural_check_valid: true
+  test_behavioral_probe_valid: true
+  no_high_findings: true
+  medium_findings_within_threshold: true
+Re-review (second pass) of ticket 09 working diff vs origin/main. Implementation correctly sets AC_ENFORCE_STRICT: "1" at step scope on the "Run test suite" step in ci.yml, which is the minimal correct mechanism. The test file provides both structural (parse ci.yml, assert env var) and behavioral (subprocess probe for strict and non-strict paths) coverage; probe comment format "# covers: ZZ-PROBE-NOTDONE-1" matches the plugin's _COVERS_TAG_RE pattern. No high-confidence findings. Three medium findings: (M-1) _run_probe_pytest calls subprocess.run without a timeout — a hung pytest collection will block the test indefinitely; (M-2) commit e9585ad4 bundles unreferenced test fixture additions (tests/ac_store/test_readiness_gate.py + unit_tests/commit_guardian/test_check_ac_schema.py) not mentioned in the commit message or files_touched; (M-3) files_touched lists scripts/ac_store/pytest_ac_enforcement.py but the file was not changed — no changes were needed since AC_ENFORCE_STRICT was already implemented in the plugin. Medium count is 3 (threshold >3): no Opus escalation. Suppressed: 2 low-confidence nits (step-locator fragility, speculative future-step coverage), 0 medium findings dropped by Opus.
+
+### 2026-07-15 16:00 — commit (status: ok)
+feedback-id: fb_2026-07-15_99e7192d
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Second commit invocation (supervised path). Implementation commit e9585ad4 already in history (feat(ci): set AC_ENFORCE_STRICT=1 on blocking test gate to unmask hidden failures). Staging ticket file to capture second pr-reviewer pass (15:45). Pre-commit probe git_hook: false confirmed false negative — hook exists at leafcutter-ai/.git/hooks/pre-commit (shared worktree commondir); probe resolves to workspace parent which has no .git/config.
