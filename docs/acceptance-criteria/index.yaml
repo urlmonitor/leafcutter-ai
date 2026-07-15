@@ -216,13 +216,13 @@ components:
 # that reference it. It uses the same `component` field as those consuming ACs.
 # It appears in the parent AC's `covered_by` list just like any other child AC.
 #
-# Example placement (component: ac-store, feature-folder: ACS-500-pattern-reuse):
-#   docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/ACS-500a-1.yaml  (pattern)
-#   docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/ACS-500a-2.yaml  (consuming)
+# Example placement (component: ac-store, feature-folder: ACS-500-shared-pattern-specs):
+#   docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500a-1.yaml  (pattern)
+#   docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500a-2.yaml  (consuming)
 #
 # Pattern AC example — demonstrates the pattern_slots / implements_pattern / pattern_bindings fields.
 #
-# Pattern AC (ACS-500a-1, stored in docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/):
+# Pattern AC (ACS-500a-1, stored in docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/):
 #
 #   id: ACS-500a-1
 #   title: "Sortable table shared behavior pattern"

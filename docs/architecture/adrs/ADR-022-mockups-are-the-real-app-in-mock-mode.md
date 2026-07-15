@@ -1,6 +1,6 @@
 ---
 title: "ADR-022: Mockups Are the Real Application in Mock Mode (Data-Layer Mock Provider or Throwaway Real-DB Seed)"
-description: "Records the now-decided model for how product-truth mockups work: a mockup is NOT standalone HTML and is NOT an isolated /mockups preview component — it is the REAL application running in MOCK MODE (same stack, same routes/components, data swapped to mock, toggled on, deployed to a shareable dev URL for review). Two flavors under one mock-mode concept: UI-heavy (a data-layer mock PROVIDER returns product-truth mock-data records, no DB) and DB-heavy (the mock-data artifact is a TYPED DATA MODEL plus seed rows that seeds a THROWAWAY instance of the project's REAL DB engine — Postgres / MSSQL / Neo4j — so the schema itself can be prototyped on the real running site before any migration exists). The mock-data artifact thus becomes the schema prototype that feeds forward on approval: sql-coder builds the real schema from the typed model, test-writer seeds fixtures from the seed rows, frontend-coder hardens the mock-mode screens, user-surface-smoker asserts the built screen matches the approved mock-mode screen. Extends ADR-020 and supersedes the interim bespoke-HTML and isolated-/mockups-preview-component approaches (draft-only, never merged)."
+description: "Records the now-decided model for how product-truth mockups work: a mockup is NOT standalone HTML and is NOT an isolated /mockups preview component — it is the REAL application running in MOCK MODE (same stack, same routes/components, data swapped to mock, toggled on, deployed to a shareable dev URL for review). Two flavors under one mock-mode concept: UI-heavy (a data-layer mock PROVIDER returns product-truth mock-data records, no DB) and DB-heavy (the mock-data artifact is a TYPED DATA MODEL plus seed rows that seeds a THROWAWAY instance of the project's REAL DB engine — Postgres / MSSQL / Neo4j — so the schema itself can be prototyped on the real running site before any migration exists). The mock-data artifact thus becomes the schema prototype that feeds forward on approval: sql-coder builds the real schema from the typed model, test-writer seeds fixtures from the seed rows, frontend-coder hardens the mock-mode screens, user-surface-smoker asserts the built screen matches the approved mock-mode screen. Extends ADR-023 and supersedes the interim bespoke-HTML and isolated-/mockups-preview-component approaches (draft-only, never merged)."
 type: "adr"
 status: "proposed"
 created: "2026-07-15"
@@ -11,7 +11,7 @@ components:
   - ux_prototyping
   - build_pipeline
 related_docs:
-  - docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
   - docs/architecture/components/ux-prototyping.md
   - docs/product-truth/README.md
   - docs/how-to/authoring-product-truth-artifacts.md
@@ -34,11 +34,11 @@ related_code:
 | Deciders | BrainCandy |
 | Author | documentation-expert |
 | Supersedes | — (supersedes two *unmerged, draft-only* interim approaches — see "Alternatives") |
-| Extends | ADR-020 (adds the mock-mode realization model to the product-truth layer ADR-020 established) |
+| Extends | ADR-023 (adds the mock-mode realization model to the product-truth layer ADR-023 established) |
 
 ## Context
 
-ADR-020 adopted the product-truth store as the flow-first upstream layer, holding
+ADR-023 adopted the product-truth store as the flow-first upstream layer, holding
 three artifact kinds — **Flows**, **Mockups**, and **Mock Data**. It fixed *where*
 mockups and mock data live and *how* they link to ACs, but it deliberately did not
 pin down *what a mockup physically is* or *how a reviewer sees it running*. Two
@@ -58,7 +58,7 @@ interim answers were sketched and neither was ever merged:
    scaffolding distinct from the screens the build will ship.
 
 Both share a defect: **the thing the persona reviews is not the thing the build
-hardens into production.** That is the same gap ADR-020 exists to close one level
+hardens into production.** That is the same gap ADR-023 exists to close one level
 down (the picture and the machine artifact must be the same file) — here the
 *running screen* the PO approves must be the *running screen* the build ships.
 
@@ -111,7 +111,7 @@ approval it feeds forward into the build pipeline:
 - **`user-surface-smoker`** asserts the built screen matches the **approved
   mock-mode screen**.
 
-This is the DB analog of ADR-020's principle "the mockup is the seed the build
+This is the DB analog of ADR-023's principle "the mockup is the seed the build
 hardens": here the mock-data artifact is the seed the *schema* build hardens.
 
 ### 3. Toggle mechanism (proposed default)
@@ -173,7 +173,7 @@ migration but is no longer the target model — see "Impact / follow-on work".
 
 ### Neutral
 
-- The product-truth store's *linkage* model (ADR-020) is unchanged: mockups still
+- The product-truth store's *linkage* model (ADR-023) is unchanged: mockups still
   key to mock-data and to flow steps by stable ids; status is still derived.
 - The Atlas remains a read surface; only *what it shows for a mockup* changes
   (link to the running mock-mode route / screenshot rather than embedded HTML).
@@ -221,7 +221,7 @@ adds the schema-prototyping path.
 
 ## References
 
-- [ADR-020 — Product-Truth Store as the Flow-First Upstream Layer](ADR-020-product-truth-flow-first-upstream-layer.md) — the layer this ADR extends; establishes the mockup/mock-data artifacts and the "picture = machine artifact" principle this ADR applies to the running screen.
+- [ADR-023 — Product-Truth Store as the Flow-First Upstream Layer](ADR-023-product-truth-flow-first-upstream-layer.md) — the layer this ADR extends; establishes the mockup/mock-data artifacts and the "picture = machine artifact" principle this ADR applies to the running screen.
 - `docs/acceptance-criteria/ux-prototyping/UXP-540-pt-authoring-agents/UXP-540.yaml` — the mock-data-author AC; its `fields` must gain the typed model + seed rows this ADR requires.
 - `docs/acceptance-criteria/ux-prototyping/UXP-540-pt-authoring-agents/UXP-541.yaml` — the mockup-author AC; currently specifies the isolated `/mockups/<screen>` preview model this ADR supersedes.
 - `docs/product-truth/schemas/mockup.schema.json` — current mockup shape (`app_component`, `renders`, `early_stage_html`); the mock-mode model changes what `app_component` should express.
@@ -264,5 +264,5 @@ records the decision):
       seam), the typed data model, and per-engine DB seeding; supersede/amend
       UXP-541 (isolated-preview model) and enrich UXP-540 (typed model).
 - [ ] **Atlas `/flows` drawer.** Link the step drawer to the running mock-mode
-      route / screenshot instead of embedding mockup HTML (the ADR-020 follow-up
+      route / screenshot instead of embedding mockup HTML (the ADR-023 follow-up
       already noted against the flow-drawer AC).

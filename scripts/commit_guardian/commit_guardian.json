@@ -872,7 +872,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/."
+                "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/."
             },
             {
                 "id": "check-duplicate-code",

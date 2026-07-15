@@ -19,7 +19,7 @@ ARCHITECTURE: Standalone helper module imported by check_ac_pattern_refs.py. All
     not counted as blocking consumers.
 
 DOC_LINKS:
-  - docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/
+  - docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/
   - docs/reference/ac-schema.md
 
 DECISION HISTORY:

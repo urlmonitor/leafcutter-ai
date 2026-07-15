@@ -4,7 +4,7 @@ A living map of the Leafcutter project — acceptance criteria, roadmap, build
 pipeline, product-truth flows, and architecture — **read live from the repo on
 every request**. The Atlas is the read surface over both the AC store
 (`docs/acceptance-criteria/`) and the product-truth store (`docs/product-truth/`).
-See [ADR-020](../docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md)
+See [ADR-023](../docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md)
 and the [UX Prototyping component](../docs/architecture/components/ux-prototyping.md).
 
 It is a [Next.js](https://nextjs.org) (App Router) app. Nothing is precomputed or
