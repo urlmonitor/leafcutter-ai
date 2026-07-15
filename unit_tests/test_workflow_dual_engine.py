@@ -60,7 +60,6 @@ _WORKFLOWS_DIR = _REPO_ROOT / "templates" / "workflows-js"
 _E1_ONLY_SCRIPTS = frozenset(
     [
         "create-ticket.js",
-        "plan-feature.js",
     ]
 )
 
@@ -528,13 +527,6 @@ def test_dispatch_order_build_epic() -> None:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "plan-feature.js is the canonical E1 form; dispatches 0 agents under E2. "
-        "Port to E2 in EPIC-DualEngineWorkflowSupport; then remove."
-    ),
-)
 def test_dispatch_order_plan_feature() -> None:
     """plan-feature.js dispatches agents in the expected full sequence.
 
@@ -858,13 +850,6 @@ def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "plan-feature.js is the canonical E1 form; dispatches 0 agents under E2. "
-        "Port to E2 in EPIC-DualEngineWorkflowSupport; then remove."
-    ),
-)
 def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> None:
     """plan-feature.js no-commit-to-main guard must be fail-CLOSED (M-2).
 
