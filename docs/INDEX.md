@@ -1,16 +1,19 @@
 ---
 title: "Documentation Index"
-type: index
+type: reference
 status: active
 created: 2026-06-30
-description: "Master index of all documentation in the leafcutter-ai package, auto-generated."
+last_updated: 2026-07-15
+components: []
+description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
+
 # Documentation Index
 
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-14 17:23 UTC
+> Generated: 2026-07-15 15:30 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -44,7 +47,7 @@ task, then pull only those files.
 | supervisor spawn topology | [docs/architecture/components/supervisor-spawn-topology.md](docs/architecture/components/supervisor-spawn-topology.md) | Supervisor Spawn Topology — Flattened Agent Dispatch Chain |
 | template compiler | [docs/architecture/components/template-compiler.md](docs/architecture/components/template-compiler.md) | Build-time template compilation system that transforms Jinja-style agent and skill templates into deployed artifacts during the leafcutter build phase. |
 | ticket lifecycle | [docs/architecture/components/ticket-lifecycle.md](docs/architecture/components/ticket-lifecycle.md) | End-to-end ticket management system covering inbox creation, status transitions, phase-agent sign-offs, and archival to the done state. |
-| ux prototyping | [docs/architecture/components/ux-prototyping.md](docs/architecture/components/ux-prototyping.md) | The UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff. |
+| ux prototyping | [docs/architecture/components/ux-prototyping.md](docs/architecture/components/ux-prototyping.md) | The flow-first upstream authoring surface: a schema-validated store of Flows, Mockups, and Mock Data that captures product intent, generates acceptance criteria, and is rendered live by the Leafcutter Atlas. |
 | worktree manager | [docs/architecture/components/worktree-manager.md](docs/architecture/components/worktree-manager.md) | Git worktree lifecycle management component that creates, tracks, and tears down isolated branch environments for parallel epic and ticket development. |
 | worktree quality gate guard | [docs/architecture/components/worktree-quality-gate-guard.md](docs/architecture/components/worktree-quality-gate-guard.md) | Container-level overview of the worktree quality-gate guard subsystem: the four-check probe, the index-0 self-healing config hook, and the three lifecycle gates that keep pre-commit hooks firing inside git worktrees. |
 
@@ -85,6 +88,7 @@ task, then pull only those files.
 | ADR 018 agent isolation topology | [docs/architecture/adrs/ADR-018-agent-isolation-topology.md](docs/architecture/adrs/ADR-018-agent-isolation-topology.md) | Records the decision to isolate each parallel coding-agent drive in its own independent git clone (own object store) instead of a git worktree sharing one .git, to make main structurally unmodifiable except through a gated PR + merge-queue workflow on an authoritative hub, and to cap agents-per-feature (not features-in-flight). Motivated by repeated 0-byte-object / poisoned-index corruption of the shared .git under ~16 concurrent autonomous committers, and by 2025-2026 research showing every SOTA autonomous-agent product isolates each agent's checkout+object-store and integrates via PR. Includes a worktree-agent -> clone-agent migration plan and the impact on the in-flight BO-1600 guardrail ACs. |
 | ADR 019 build feature inline phase dispatch | [docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md](docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md) | Records the decision to inline the driveTicketPhases loop from build-ticket.js directly into build-feature.js, replacing the prior pattern of dispatching a ticket-supervisor agent per ticket. The prior pattern silently placed phase agents at depth 2 — beyond Claude Code's hard depth-1 Agent-tool nesting limit — so no phase templates ever applied. The workflow() alternative is also prohibited by the E2 leaf-invariant. Inlining the loop is the only configuration that satisfies both constraints. |
 | ADR 020 live surface tester | [docs/architecture/adrs/ADR-020-live-surface-tester.md](docs/architecture/adrs/ADR-020-live-surface-tester.md) | Overview of ADR-020: Live Surface Tester — Port Registry, Read-Only |
+| ADR 020 product truth flow first upstream layer | [docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md](docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md) | Records the decision to introduce a second structured store — the product-truth store (flows, mockups, mock data) — as the flow-first upstream authoring surface that GENERATES acceptance criteria, while the AC store remains the single authoritative backlog. Reconciles ADR-010 by scoping the AC store's authority to the backlog and positioning flows as the upstream product-intent surface. Covers flow-first authoring, ACs derived from flow steps, derived impl_status rolled up from work_status, and the Leafcutter Atlas as the read surface. |
 
 ## How-To Guides
 
@@ -94,6 +98,7 @@ task, then pull only those files.
 | ac driven development | [docs/how-to/ac-driven-development.md](docs/how-to/ac-driven-development.md) | How to use the AC-driven development system |
 | ac traceability store | [docs/how-to/ac-traceability-store.md](docs/how-to/ac-traceability-store.md) | How-to guide for delivering approved ACs via the reviewed-PR path, and for creating, amending, deprecating, and tracing acceptance criteria through the AC Traceability Store and knowledge map. |
 | approval gate | [docs/how-to/approval-gate.md](docs/how-to/approval-gate.md) | Task-oriented guide: read the readiness report, choose a gate option (yes / review-all / cancel), and manage the IT PO review-all path. |
+| authoring product truth artifacts | [docs/how-to/authoring-product-truth-artifacts.md](docs/how-to/authoring-product-truth-artifacts.md) | Step-by-step guide for authoring product-truth artifacts by hand, including the mandatory search-index.json then add-vs-create protocol that keeps exactly one canonical dataset per entity per component. |
 | build ac unified | [docs/how-to/build-ac-unified.md](docs/how-to/build-ac-unified.md) | Task-oriented guide: /build-ac auto-detects leaf vs goal mode — leaf ACs generate a single ticket, goal ACs generate a full EPIC folder. |
 | configure workflow allowlist | [docs/how-to/configure-workflow-allowlist.md](docs/how-to/configure-workflow-allowlist.md) | How to configure the workflow shell-command allowlist |
 | creating a claude code hook | [docs/how-to/creating-a-claude-code-hook.md](docs/how-to/creating-a-claude-code-hook.md) | How to create a Claude Code hook |
@@ -104,12 +109,13 @@ task, then pull only those files.
 | deprecating or removing artifacts | [docs/how-to/deprecating-or-removing-artifacts.md](docs/how-to/deprecating-or-removing-artifacts.md) | Step-by-step guide for safely deprecating or deleting agents, skills, hooks, and scripts from the leafcutter package without breaking consumer builds. |
 | drain backlog with build backlog | [docs/how-to/drain-backlog-with-build-backlog.md](docs/how-to/drain-backlog-with-build-backlog.md) | How to drain the backlog automatically with /build-backlog |
 | drive epic manually | [docs/how-to/drive-epic-manually.md](docs/how-to/drive-epic-manually.md) | How to drive an epic manually when epic-supervisor is unavailable |
-| finalize feature | [docs/how-to/finalize-feature.md](docs/how-to/finalize-feature.md) | Step-by-step guide for running /finalize-feature to merge a feature branch, run post-merge tests, and close tracking tickets. |
+| finalize feature | [docs/how-to/finalize-feature.md](docs/how-to/finalize-feature.md) | Step-by-step guide for running /finalize-feature to merge a feature branch, |
 | goal to epic | [docs/how-to/goal-to-epic.md](docs/how-to/goal-to-epic.md) | Task-oriented guide: invoke /build-ac with a goal-level AC ID to generate a full EPIC folder of tickets in one command. |
 | inject project knowledge into agents | [docs/how-to/inject-project-knowledge-into-agents.md](docs/how-to/inject-project-knowledge-into-agents.md) | How to inject project knowledge into a portable agent |
 | known failing tests baseline | [docs/how-to/known-failing-tests-baseline.md](docs/how-to/known-failing-tests-baseline.md) | How to Use the Known-Failing Tests Baseline |
 | managing pre commit hooks | [docs/how-to/managing-pre-commit-hooks.md](docs/how-to/managing-pre-commit-hooks.md) | Step-by-step guide for enabling, disabling, configuring, and opt-ing in to pre-commit hooks in the leafcutter commit_guardian system. |
 | adopt consolidated output root | [docs/how-to/output-layout/adopt-consolidated-output-root.md](docs/how-to/output-layout/adopt-consolidated-output-root.md) | How to adopt the consolidated output root (.leafcutter/) |
+| product truth schema reference | [docs/how-to/product-truth-schema-reference.md](docs/how-to/product-truth-schema-reference.md) | Field-by-field reference for the four product-truth schemas — Flow, Mock Data, Mockup, and Classifier eval — including required fields, enums, id patterns, and which fields are authored vs derived. |
 | ticket creation workflow | [docs/how-to/ticket-creation-workflow.md](docs/how-to/ticket-creation-workflow.md) | Guide to the canonical ticket-creation workflow (/plan-feature then /build-ac) that replaced the retired create-ticket.js, with a migration note. |
 | upgrade frontend coder unified agent | [docs/how-to/upgrade-frontend-coder-unified-agent.md](docs/how-to/upgrade-frontend-coder-unified-agent.md) | Step-by-step guide for adopters migrating from the separate frontend-coder and frontend-design split to the unified frontend-coder agent — covers what build.py does automatically, verification steps, and rollback instructions. |
 | using frontend coder with design integration | [docs/how-to/using-frontend-coder-with-design-integration.md](docs/how-to/using-frontend-coder-with-design-integration.md) | How to use frontend-coder with design integration |
@@ -155,6 +161,7 @@ task, then pull only those files.
 | EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](docs/retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](docs/retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering six knowledge items on worktree setup, deployment AC assertions, test coverage, and epic close protocols. |
+| EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](docs/retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](docs/retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](docs/retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
 | EPIC ComputedQualityGates | [docs/retrospectives/EPIC-ComputedQualityGates.md](docs/retrospectives/EPIC-ComputedQualityGates.md) | Post-merge retrospective for EPIC-ComputedQualityGates (PR #201), covering the phantom-done remediation, three-layer integration gap root cause analysis, backfill of 1,802 ACs, and five proposed knowledge items. |
