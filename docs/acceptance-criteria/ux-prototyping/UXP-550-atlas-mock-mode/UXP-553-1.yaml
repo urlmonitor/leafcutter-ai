@@ -1,0 +1,51 @@
+id: UXP-553-1
+readiness: draft
+priority: medium
+title: "An optional production lock forbids runtime overrides so a deployment can guarantee real data"
+component: ux-prototyping
+components:
+  - ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a deployment that must guarantee real data and therefore sets the production lock
+  LEAFCUTTER_MOCK_LOCK=real,
+  When a request arrives carrying a runtime mock override (e.g. a leftover mock cookie or
+  a ?mock=1 query-param from a prior mock session),
+  Then the Atlas ignores the override and serves real data — no view renders fixture
+  content and no mock badge is shown,
+  And given an UNLOCKED deployment (LEAFCUTTER_MOCK_LOCK is unset — the dev/preview default),
+  When the same runtime override arrives,
+  Then the override is honored so the in-app toggle switches the session to mock,
+  So the production lock is the explicit, opt-in way to forbid overrides, while unlocked
+  deployments keep the in-app toggle working.
+depends_on:
+  - UXP-553
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Enforce a production lock in the repo.ts seam evaluated FIRST in the resolution order
+  (lock > runtime override > LEAFCUTTER_MOCK env default). When LEAFCUTTER_MOCK_LOCK=real
+  is set, the seam short-circuits to the real repo and ignores any cookie / query / header
+  override regardless of the env default. When the lock is unset (dev/preview default),
+  runtime overrides from UXP-553 are honored so the in-app toggle works. This is the
+  explicit realization of the ADR-021 warning that "a stale override must never leak mock
+  data into a real deployment": the lock is the mechanism. Verify with two tests — (1)
+  locked deployment ignores a mock cookie/query and serves real data; (2) unlocked
+  deployment honors the same override and serves mock.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

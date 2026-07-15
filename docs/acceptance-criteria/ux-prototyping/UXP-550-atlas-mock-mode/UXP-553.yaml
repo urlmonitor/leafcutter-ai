@@ -1,0 +1,49 @@
+id: UXP-553
+readiness: draft
+priority: medium
+title: "LEAFCUTTER_MOCK env sets the default mock state; a runtime override takes precedence"
+component: ux-prototyping
+components:
+  - ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the Atlas is deployed,
+  When the server resolves whether to serve mock data for a request,
+  Then the LEAFCUTTER_MOCK server env variable sets the DEFAULT mock state
+  (LEAFCUTTER_MOCK=1 defaults to mock on; unset or 0 defaults to real),
+  And the app CAN override that default at runtime via an in-app control (cookie or
+  ?mock query-param),
+  And when a runtime override is present it takes PRECEDENCE over the env default, so an
+  on-page toggle can switch the current session between mock and real,
+  And when no runtime override is present the env default decides,
+  And this precedence is subject to the optional production lock in UXP-553-1.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  The mock-mode decision in leafcutter-web/lib/data/repo.ts (the UXP-550 seam) reads the
+  server-side env var LEAFCUTTER_MOCK as the DEFAULT, then applies any runtime override
+  (a cookie or ?mock query-param) which takes precedence over the default. Resolution
+  order: production lock (UXP-553-1) > runtime override > LEAFCUTTER_MOCK env default.
+  The NEXT_PUBLIC_ badge flag (UXP-552) reflects the resolved decision, it does not make
+  it. The runtime override is what enables an in-app toggle; its safety boundary is the
+  optional production lock covered by UXP-553-1.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-553-1
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

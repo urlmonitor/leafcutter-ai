@@ -1,0 +1,43 @@
+id: UXP-593
+readiness: draft
+priority: medium
+title: "A person can review the whole Atlas in mock mode from bundled fixtures, with no live repo"
+component: ux-prototyping
+components:
+  - ux-prototyping
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  As a person who wants to review or share the leafcutter Atlas without access to a
+  live repo, I can run the Atlas in MOCK MODE so that every view renders from a bundled,
+  schema-valid fixture repo instead of the real repo. One data-layer seam swaps the whole
+  app to fixtures at once (no per-page hacks); a visible badge tells me I am looking at
+  mock data; the LEAFCUTTER_MOCK server env sets the DEFAULT mock state, the app can
+  OVERRIDE that default at runtime (cookie / query-param / in-app toggle), and a
+  deployment that must guarantee real data can set an optional production LOCK that
+  forbids overrides; and the fixtures are validated against the same schemas and parsed
+  through the same loaders as real data so the mock output can never silently drift from
+  the real shape. The Atlas stays read-only throughout; mock mode only changes what it reads.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-550
+  - UXP-551
+  - UXP-552
+  - UXP-553
+  - UXP-554
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

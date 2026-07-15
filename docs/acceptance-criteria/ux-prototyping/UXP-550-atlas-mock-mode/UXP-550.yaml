@@ -1,0 +1,46 @@
+id: UXP-550
+readiness: draft
+priority: medium
+title: "One repoRoot() seam swaps the entire Atlas to the fixture repo when mock mode is active"
+component: ux-prototyping
+components:
+  - ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given every Atlas loader resolves the paths it reads through repoRoot() (via repoPath()),
+  When mock mode is active,
+  Then repoRoot() returns the bundled fixture repo root instead of the live repo root,
+  And because repoRoot() is the single resolution seam, all 8 Atlas views (home, /atlas,
+  /coverage, /flows, /now, /pipeline, /roadmap, /architecture) render from fixtures at
+  once, with no per-page and no per-loader mock branch anywhere in the code,
+  And when mock mode is inactive repoRoot() returns the live repo root exactly as it does today.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  leafcutter-web/lib/data/repo.ts owns the seam: repoRoot() (~line 16) gains a mock
+  branch that returns the bundled fixture repo root when mock mode is active, ahead of
+  the existing LEAFCUTTER_REPO_ROOT / cwd-parent probing. Whether mock mode is active is
+  decided per UXP-553 (LEAFCUTTER_MOCK env default + runtime override) / UXP-553-1
+  (production lock). Every loader (ac-store.ts, tickets.ts, components.ts, roadmap.ts,
+  agents.ts, tests.ts, flows.ts, traceability.ts, activity.ts) already reads through
+  repoPath(), so no loader is edited — the swap is whole-app by construction. No per-page
+  code path may special-case mock.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
