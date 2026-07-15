@@ -1,6 +1,6 @@
 ---
 title: "Auto-regenerate docs/INDEX.md via a pre-commit transform hook"
-status: in_progress
+status: done
 components:
   - doc_compliance
   - commit_guardian
@@ -28,7 +28,7 @@ agents:
   change-scope-reviewer: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Auto-regenerate docs/INDEX.md via a pre-commit transform hook
@@ -114,7 +114,7 @@ Related code / patterns to mirror (list duplicate-logic locations up front):
 - [x] change-scope-reviewer — 2026-07-15 13:05
 - [x] pr-reviewer — 2026-07-15 13:27
 - [x] commit — 2026-07-15 11:45
-- [ ] pull-request
+- [x] pull-request — 2026-07-15 15:00
 
 ## Comments
 
@@ -320,3 +320,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Commit `08395364` landed on `feature/docindexautoregen` (6 files, 931 insertions). One precommit-autofix applied: `check-doc-frontmatter` blocked on `type: index` (invalid) and missing `components` field in `docs/INDEX.md` frontmatter — fixed `_HEADER_TEMPLATE` in `generate_doc_index.py` to use `type: reference` and `components: []`, regenerated `INDEX.md`, re-staged, and retried. All subsequent hooks passed.
+
+### 2026-07-15 15:00 — pull-request (status: ok)
+feedback-id: fb_2026-07-15_6862ba45
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed `feature/docindexautoregen` to origin and opened PR #303 at https://github.com/urlmonitor/leafcutter-ai/pull/303. Merge-state poll: MERGEABLE / BLOCKED (CI checks running — not conflicting). All prior phase agents signed_off; ticket status flipped to done.
