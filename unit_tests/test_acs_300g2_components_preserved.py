@@ -117,7 +117,7 @@ class TestOriginalComponentEntriesPreserved(unittest.TestCase):
         self.assertEqual(
             errors,
             [],
-            f"sync_platforms fails minimum schema:\n" + "\n".join(errors),
+            "sync_platforms fails minimum schema:\n" + "\n".join(errors),
         )
 
     def test_build_pipeline_passes_minimum_schema(self):
@@ -127,7 +127,7 @@ class TestOriginalComponentEntriesPreserved(unittest.TestCase):
         self.assertEqual(
             errors,
             [],
-            f"build_pipeline fails minimum schema:\n" + "\n".join(errors),
+            "build_pipeline fails minimum schema:\n" + "\n".join(errors),
         )
 
     def test_config_loader_passes_minimum_schema(self):
@@ -137,7 +137,7 @@ class TestOriginalComponentEntriesPreserved(unittest.TestCase):
         self.assertEqual(
             errors,
             [],
-            f"config_loader fails minimum schema:\n" + "\n".join(errors),
+            "config_loader fails minimum schema:\n" + "\n".join(errors),
         )
 
     def test_all_three_originals_pass_minimum_schema(self):
