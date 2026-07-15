@@ -1,6 +1,6 @@
 id: UXP-546
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Product-truth stage commits stage only the reported artifact paths plus index.json"
 component: ux-prototyping
 level: L2
@@ -18,7 +18,7 @@ criteria: |
   And docs/acceptance-criteria/ is excluded from the product-truth commit,
   And conversely the AC-store commit never reaches into docs/product-truth.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

@@ -1,6 +1,6 @@
 id: UXP-544a
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "An unparseable or inconsistent classifier result skips the product-truth phase but still runs the AC pipeline"
 component: ux-prototyping
 level: L3

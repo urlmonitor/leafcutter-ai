@@ -272,4 +272,4 @@ keeps each commit scoped and reviewable.
 - `docs/product-truth/scripts/apply_flow_backlinks.py` — the reconciliation script that writes `step.implements` and re-runs the generator.
 - `docs/product-truth/scripts/generate_product_truth.py` — the single writer of derived `impl_status` / `product_truth` back-refs.
 - [templates/skills/plan-feature/SKILL.md](../../../templates/skills/plan-feature/SKILL.md) — the skill surface documenting the PT phase.
-- AC coverage: UXP-593 (L1) and UXP-544–549 / UXP-593a; reconciled UXP-401, UXP-402, UXP-530, UXP-543.
+- AC coverage: UXP-595 (L1) and UXP-544–549 / UXP-595a; reconciled UXP-401, UXP-402, UXP-530, UXP-543.

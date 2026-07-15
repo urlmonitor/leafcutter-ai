@@ -1,6 +1,6 @@
 id: UXP-548
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "The business-analyst's reported flow_backlinks are reconciled into step.implements and derived data is regenerated"
 component: ux-prototyping
 level: L2
@@ -21,7 +21,7 @@ criteria: |
   (idempotent),
   And a backlink for an unknown step id is a non-fatal warning, not a crash.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

@@ -368,7 +368,7 @@ and ADR-020. Behaviour (implemented in `templates/workflows-js/plan-feature.js`)
    for `docs/product-truth/` + its scripts via a `status-checker` dispatch. If
    absent, emit an **observable** telemetry/warning dispatch (never a silent
    no-op — `log()` is inert under E2) and skip the PT phase; the AC pipeline still
-   runs. (AC UXP-593a)
+   runs. (AC UXP-595a)
 
 3. **Draft the artifacts (fixed order, gated, surgical commits).** Run the run-set
    in the fixed `PT_ORDER` `mock-data-author → mockup-author → flow-author`. Each

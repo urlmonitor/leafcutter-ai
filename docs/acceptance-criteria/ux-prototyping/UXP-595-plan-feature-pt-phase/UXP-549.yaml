@@ -1,6 +1,6 @@
 id: UXP-549
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Crash-resume recognizes committed product-truth stages, skips them, and recovers the flow reference"
 component: ux-prototyping
 level: L2
@@ -19,7 +19,7 @@ criteria: |
   And when the flow stage was already committed it recovers the flow reference from that
   commit so the reference flows into the (possibly forced) business-analyst prompt.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

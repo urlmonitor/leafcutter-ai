@@ -1,6 +1,6 @@
 id: UXP-544b
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "The product-truth agents run in a fixed order regardless of classifier list order"
 component: ux-prototyping
 level: L3

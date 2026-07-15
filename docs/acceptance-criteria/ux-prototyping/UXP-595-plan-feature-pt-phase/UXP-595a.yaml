@@ -1,6 +1,6 @@
-id: UXP-593a
+id: UXP-595a
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "When the product-truth store is absent the phase self-skips with an observable signal and AC authoring proceeds"
 component: ux-prototyping
 level: L3
@@ -18,7 +18,7 @@ criteria: |
   And it skips the product-truth phase without dispatching any artifact agents,
   And ac-triage and the AC authoring pipeline still proceed to completion.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

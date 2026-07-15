@@ -1,6 +1,6 @@
 id: UXP-544
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "pt-classifier is dispatched once after ac-triage and the run-set is derived from its outcome"
 component: ux-prototyping
 level: L2
@@ -19,7 +19,7 @@ criteria: |
   And an outcome of none dispatches no product-truth agents and proceeds straight to
   the AC pipeline.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

@@ -1,6 +1,6 @@
 id: UXP-545
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Each product-truth stage is gated (approve/edit/cancel) and committed under a plan-feature(<STAGE>) subject"
 component: ux-prototyping
 level: L2
@@ -18,7 +18,7 @@ criteria: |
   And approve commits that stage's output under a commit subject of the form
   plan-feature(MOCK-DATA|MOCKUP|FLOW): <component> before the next stage begins.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

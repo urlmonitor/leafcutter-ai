@@ -1,6 +1,6 @@
 id: UXP-545b
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "A failed product-truth stage commit aborts the phase before the next agent runs"
 component: ux-prototyping
 level: L3

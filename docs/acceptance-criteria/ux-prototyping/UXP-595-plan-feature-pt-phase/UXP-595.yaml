@@ -1,6 +1,6 @@
-id: UXP-593
+id: UXP-595
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "/plan-feature authors product-truth artifacts before deriving ACs"
 component: ux-prototyping
 level: L1
@@ -41,7 +41,7 @@ covered_by:
   - UXP-547
   - UXP-548
   - UXP-549
-  - UXP-593a
+  - UXP-595a
 implemented_by:
   - templates/workflows-js/plan-feature.js
 change_target: pipeline

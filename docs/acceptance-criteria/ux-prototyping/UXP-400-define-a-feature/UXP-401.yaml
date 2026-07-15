@@ -1,6 +1,6 @@
 id: UXP-401
 components:
-  - ux-prototyping
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "The system drafts a flow, mock data, and mockups from the captured intent"

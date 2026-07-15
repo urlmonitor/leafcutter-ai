@@ -1,6 +1,6 @@
 id: UXP-547
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "An approved flow is handed to the business-analyst to derive ACs, forcing BA in when the route skipped it"
 component: ux-prototyping
 level: L2
@@ -24,7 +24,7 @@ criteria: |
   covering L1) — so no flow-derived AC is left orphaned,
   And when no flow was produced the BA runs normally per the triage route.
 depends_on:
-  - UXP-593
+  - UXP-595
 doc_links:
   - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
     relationship: specifies

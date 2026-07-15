@@ -1,6 +1,6 @@
 id: UXP-545a
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "A product-truth stage commit refuses to run against the main branch"
 component: ux-prototyping
 level: L3

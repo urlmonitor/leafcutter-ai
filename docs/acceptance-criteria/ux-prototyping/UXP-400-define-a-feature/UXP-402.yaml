@@ -1,6 +1,6 @@
 id: UXP-402
 components:
-  - ux-prototyping
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "On approval, acceptance criteria are generated from the flow's steps"

@@ -1,6 +1,6 @@
 id: UXP-545c
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Cancelling at a product-truth gate opens no PR and preserves prior committed stages"
 component: ux-prototyping
 level: L3
