@@ -245,15 +245,17 @@ _PREFIXES_WITH_EXISTING_DEPLOY_PHASE: tuple[str, ...] = (
 def _suggest_action(missing_path: str, allowlist: frozenset[str]) -> str:
     """Return the appropriate suggested action for a single broken reference.
 
-    State-based selector (AC BP-900c-3 / BP-900c-3-i / M-2):
+    State-based selector (AC BP-900c-3 / BP-900c-3-i / M-2). The branches are
+    evaluated in this order — leafcutter-ownership wins over allowlisting:
 
-    * When the missing path is in the external-dependency allowlist: should
-      not normally reach this function, but if it does the path is external —
-      return ``ACTION_ADD_TO_ALLOWLIST``.
     * When the missing path is under a directory that already has an established
       deploy phase in build_phases.py the source file is missing or untracked
       in git; the truthful action is to commit the source under
-      ``templates/scripts/`` (the tracked deploy-source mirror).
+      ``templates/scripts/`` (the tracked deploy-source mirror). This is checked
+      FIRST so a leafcutter-owned path that also appears in the allowlist (e.g.
+      the feedback subsystem scripts) still gets the commit-source action.
+    * When the missing path is in the external-dependency allowlist AND is not
+      leafcutter-owned, the path is external — return ``ACTION_ADD_TO_ALLOWLIST``.
     * When the path is under an entirely new directory (no deploy phase exists)
       the action is to add a deploy phase in build_phases.py.
 
@@ -273,16 +275,22 @@ def _suggest_action(missing_path: str, allowlist: frozenset[str]) -> str:
         missing/untracked), or ``ACTION_ADD_DEPLOY_PHASE`` (genuinely new
         capability, no deploy phase yet).
     """
-    # M-2: external-dependency branch — path is in the allowlist but caller
-    # explicitly passed it through (e.g. for advisory reporting).  Return the
-    # allowlist action so consumers know this path should be registered, not
-    # authored.
-    if missing_path in allowlist:
-        return ACTION_ADD_TO_ALLOWLIST
-
-    # Dir+phase already exist — source file is missing or untracked.
+    # Dir+phase already exist — the path is leafcutter-owned (it lives under a
+    # directory that has an established deploy phase), so the source file is
+    # merely missing or untracked in git.  This branch MUST be evaluated BEFORE
+    # the allowlist branch: some leafcutter-owned paths (e.g. the feedback
+    # subsystem scripts) are ALSO present in EXTERNAL_DEPENDENCY_ALLOWLIST, but
+    # for those the truthful action is to commit the source under
+    # templates/scripts/, not to register them as an external dependency
+    # (AC BP-900c-3).
     if any(missing_path.startswith(prefix) for prefix in _PREFIXES_WITH_EXISTING_DEPLOY_PHASE):
         return ACTION_COMMIT_UNDER_TEMPLATES
+
+    # M-2: external-dependency branch — path is in the allowlist and is NOT
+    # leafcutter-owned (no matching deploy-phase prefix).  Return the allowlist
+    # action so consumers know this path should be registered, not authored.
+    if missing_path in allowlist:
+        return ACTION_ADD_TO_ALLOWLIST
 
     # Genuinely new capability — no deploy phase exists yet.
     return ACTION_ADD_DEPLOY_PHASE
