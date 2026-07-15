@@ -1,0 +1,132 @@
+id: FIN-100c-10
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "How-to guide describes the null-baseline targeted rerun, not the old blanket-halt"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the null-baseline targeted-rerun behavior (FIN-100c-4 through FIN-100c-9)
+    has been implemented in the finalize-feature workflow
+  And the how-to guide at docs/how-to/finalize-feature.md documents Step 0
+    (baseline capture) and Step 3 (post-merge test run + regression triage)
+  When a reader consults the guide to understand what happens when the Step 0
+    baseline is unavailable (baseline_failures is null) and post-merge tests fail
+  Then the Step 0 narrative no longer states that an unavailable baseline causes
+    triage to "classify all post-merge failures conservatively as regressions"
+    as the current behavior
+  And the Step 3 narrative (and the test_regression halt section) describes the
+    targeted per-test rerun against main HEAD that recovers a baseline and
+    distinguishes pre_existing from regression when the Step 0 baseline is null
+  And the guide describes the conservative all-regressions halt as narrowed to the
+    rerun-unavailable fallback, and states that this fallback surfaces each failing
+    test's modified_by_branch flag for human adjudication
+  And the guide contains no remaining passage that presents the old
+    "null baseline -> all post-merge failures are regressions -> halt" behavior as
+    the current Step 3 behavior
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+  - FIN-100c-9
+doc_links:
+  - path: "docs/how-to/finalize-feature.md"
+    relationship: modifies
+    status: exists
+    relevance: "Step 0 baseline-capture narrative (~L32) and Step 3 / test_regression halt narrative (~L35, ~L68-99) must be rewritten to describe the recovered-baseline targeted rerun and the narrowed rerun-unavailable fallback"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "source of truth for the implemented recovery + fallback behavior the guide must accurately reflect"
+  - path: "templates/agents/test-failure-triage.md"
+    relationship: describes
+    status: exists
+    relevance: "conservative null-baseline classification path that is now the rerun-unavailable fallback, not the primary path"
+origin_agent: business-analyst
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "documentation-expert"
+estimated_complexity: S
+it_requirements: |
+  - TARGET FILE (doc-only): the ONLY file touched is docs/how-to/finalize-feature.md
+    (change_target: docs). No source, workflow, agent-template, test, or schema
+    change — this AC updates narrative to match already-implemented behavior.
+  - STEP 0 EDIT (~L32): the Step 0 "Capture baseline" table row must stop presenting
+    "triage will classify all post-merge failures conservatively as regressions" as
+    the current consequence of a failed/unavailable baseline capture. Reframe it so
+    an unavailable baseline (baseline_failures null) with post-merge failures triggers
+    the targeted per-test rerun against main HEAD that recovers a baseline
+    (FIN-100c-4/5/6), and the conservative all-regressions path is only the
+    rerun-unavailable fallback (FIN-100c-9).
+  - STEP 3 EDIT (~L35 row + test_regression halt section ~L68-99): describe the
+    targeted rerun of ONLY the failing test IDs against main HEAD (after the same
+    build/deploy step, for deploy parity), the recovered baseline supplied to triage
+    in place of null, pre_existing-vs-regression classification over that recovered
+    baseline, and that only genuine regressions (tests that pass on main) halt
+    finalization.
+  - FALLBACK NARRATIVE: describe the conservative all-regressions halt as the NARROWED
+    rerun-unavailable fallback (main-HEAD checkout or build/deploy step fails per
+    FIN-100c-9) and state that this fallback lists each failing test with its
+    modified_by_branch flag so a human can adjudicate which failures the branch touched.
+  - NO STALE PASSAGE: remove or rewrite any remaining passage that presents
+    "null baseline -> all post-merge failures are regressions -> halt" as the CURRENT
+    Step 3 behavior, including the misclassification-troubleshooting text (~L91-99)
+    that attributes a false regression to a transient baseline failure — that guidance
+    must reflect the recovered-baseline / narrowed-fallback model.
+  - ACCURACY (no invention): the rewritten narrative must match the behavior actually
+    implemented in templates/workflows-js/finalize-feature.js and
+    templates/agents/test-failure-triage.md; describe only FIN-100c-4..9 behavior,
+    invent nothing beyond it.
+  - FRONTMATTER: bump the doc's `last_updated` frontmatter field to the edit date so
+    the check-doc-frontmatter hook passes.
+test_spec:
+  - name: test_howto_step0_drops_blanket_regression_as_current
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    description: "The Step 0 narrative in docs/how-to/finalize-feature.md no longer presents an unavailable baseline as causing triage to classify all post-merge failures conservatively as regressions as the current behavior (the stale ~L32 phrasing is gone or reframed as the rerun-unavailable fallback)."
+  - name: test_howto_step3_describes_targeted_rerun_recovered_baseline
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    description: "The Step 3 row and the test_regression halt section describe the targeted per-test rerun against main HEAD that recovers a baseline and distinguishes pre_existing from regression when the Step 0 baseline is null (mentions the main-HEAD rerun of the failing test IDs and the recovered baseline)."
+  - name: test_howto_conservative_halt_narrowed_to_fallback_with_modified_by_branch
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    description: "The guide describes the conservative all-regressions halt as the narrowed rerun-unavailable fallback and states it surfaces each failing test's modified_by_branch flag for human adjudication."
+  - name: test_howto_has_no_stale_null_baseline_all_regressions_as_current
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    description: "No remaining passage in the guide presents the old 'null baseline -> all post-merge failures are regressions -> halt' behavior as the current Step 3 behavior (including the misclassification-troubleshooting text ~L91-99)."
+delivers_to: null
+expects_from:
+  - agent: "python-coder"
+    contract: "the null-baseline targeted-rerun + recovered-baseline behavior (FIN-100c-4/5/6) implemented in templates/workflows-js/finalize-feature.js, which the Step 0/Step 3 narrative must accurately describe"
+  - agent: "python-coder"
+    contract: "the rerun-unavailable conservative fallback that surfaces modified_by_branch (FIN-100c-9), which the test_regression halt-section narrative must describe as the narrowed fallback"
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added assigned_agent (documentation-expert — how-to narrative update), estimated_complexity (S — single doc file), it_requirements (target file docs/how-to/finalize-feature.md only; concrete Step 0 ~L32 / Step 3 ~L35 / test_regression halt ~L68-99 + misclassification ~L91-99 edit pointers; narrow the conservative halt to the FIN-100c-9 rerun-unavailable fallback surfacing modified_by_branch; accuracy against finalize-feature.js + test-failure-triage.md; frontmatter last_updated bump; doc-only), test_spec (4 descriptors, one per Then, doc-content assertions in unit_tests/docs/), and expects_from (the implemented FIN-100c-4..9 behavior the narrative must reflect). Kept criteria, doc_links, change_target: docs, and readiness: draft unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+req_status: active
+work_status: todo
+notes: |
+  Documentation deliverable for the FIN-100c-4..9 null-baseline targeted-rerun
+  behavior. The store expresses documentation_triggers on L1 ACs only (see
+  docs/reference/ac-schema.md field table), so the doc-deliverable nature of this
+  L2 is carried by change_target: docs plus the modifies doc_link to
+  docs/how-to/finalize-feature.md, mirroring other L2 doc-deliverable ACs
+  (e.g. BP-100b-9). If the parent L1 FIN-100c should advertise a `how-to`
+  documentation_trigger, that is a PO-domain edit to the L1 and is left out of
+  scope here. it-po enrichment added assigned_agent (documentation-expert),
+  estimated_complexity (S), it_requirements, test_spec, and expects_from; the
+  BA's criteria and doc_links are unchanged.

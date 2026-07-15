@@ -39,6 +39,7 @@ covered_by:
   - FIN-100c-7
   - FIN-100c-8
   - FIN-100c-9
+  - FIN-100c-10
 implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
