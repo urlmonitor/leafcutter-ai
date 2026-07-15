@@ -1,8 +1,8 @@
 id: ACD-1200b-5-i
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Approval mechanism leaves already-approved and non-reviewed leaves unchanged"
 component: ac-driven-dev
 level: L3
@@ -37,13 +37,57 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1200b-5
+  contract: "The approval mechanism (scripts/ac_store/approve_acs.py and/or the goal-to-epic --approve flag) whose promotion behaviour this AC constrains to reviewed-only leaves, leaving approved and draft leaves untouched."
 origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/approve_acs.py"
+  n_location_rule: "1 (the leaf-selection / promotion-eligibility logic of the approval mechanism introduced by ACD-1200b-5)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Only reviewed leaves are promoted; already-approved leaves are left untouched (no re-stamp, no duplicate amended_by entry, no field mutated)."
+    - "Draft leaves (readiness below reviewed) must never be jumped straight to approved by this mechanism."
+    - "Promotion eligibility must derive from the readiness data property, not from any hard-coded AC id or name, so new cases inherit the rule automatically."
+    - "The run must report which leaves were promoted and which were left unchanged; when all leaves are already approved, no AC file is modified and the run completes successfully reporting zero promotions."
+test_spec:
+  - name: test_mixed_readiness_only_reviewed_promoted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Goal with approved + reviewed + draft leaves; run; assert only the reviewed leaf is promoted, and the approved and draft leaves are unchanged."
+  - name: test_draft_not_promoted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert a draft leaf remains at readiness: draft and is never jumped to approved."
+  - name: test_all_approved_zero_promotions_no_write
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Goal where all leaves are already approved; assert no AC file is modified, the run exits successfully, and it reports zero promotions."
+  - name: test_run_reports_promoted_and_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the run's report lists which leaves were promoted and which were left unchanged."
 change_target: pipeline
 risk_surface: internal

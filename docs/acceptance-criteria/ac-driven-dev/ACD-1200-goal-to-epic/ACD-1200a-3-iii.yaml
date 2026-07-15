@@ -1,8 +1,8 @@
 id: ACD-1200a-3-iii
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Epic slug is ASCII-safe for non-ASCII punctuation, is not truncated mid-word, and is identical in dry-run and real run"
 component: ac-driven-dev
 level: L3
@@ -46,6 +46,12 @@ doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
 delivers_to: null
 expects_from:
   ac_id: ACD-1200a-3
@@ -56,5 +62,36 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/goal_to_epic.py"
+  n_location_rule: "1 (the single slug / PascalCase epic-name derivation function; both dry-run and real run must call this one shared function)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Non-ASCII punctuation (em-dash, en-dash, smart quotes, and similar) must be stripped or normalized to a word boundary so the derived folder name contains only ASCII alphanumeric characters."
+    - "Any length limit must truncate only at a word boundary (never mid PascalCase word) and must not leave a partial word, a dangling separator, or an empty segment."
+    - "Dry-run and real run must derive the name from a single shared code path so the two results are byte-for-byte identical (no drift)."
+    - "Must not regress ACD-1200a-3-ii (apostrophe / quote-character stripping)."
+test_spec:
+  - name: test_em_dash_title_yields_ascii_slug
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Derive the slug from title 'Ship parts tree — the fast path'; assert the folder name is exactly EPIC-ShipPartsTreeTheFastPath (ASCII only, no dash code point)."
+  - name: test_long_title_truncates_at_word_boundary
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Derive the slug from a >60-character title; assert truncation occurs only at a word boundary with no mid-word cut, no dangling separator, and no empty segment."
+  - name: test_dry_run_matches_real_run
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Invoke the derivation via --dry-run and via a real run for the same title; assert the reported/created folder name is byte-for-byte identical."
 change_target: pipeline
 risk_surface: internal

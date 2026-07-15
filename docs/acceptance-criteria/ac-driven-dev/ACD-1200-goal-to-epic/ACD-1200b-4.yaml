@@ -1,8 +1,8 @@
 id: ACD-1200b-4
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Non-interactive run with an approval flag clears the readiness gate; without a flag and without a TTY it fails clearly"
 component: ac-driven-dev
 level: L2
@@ -41,6 +41,12 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
@@ -49,5 +55,42 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/goal_to_epic.py"
+  n_location_rule: "1 (the readiness-gate approve / review-all / cancel prompt site)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "A new approval flag (for example --yes / --approved-only) must let a non-interactive (no-TTY) run proceed past the readiness gate without prompting, and must not exit non-zero merely because interactive input is unavailable."
+    - "With --approved-only, generation must proceed using only already-approved leaf ACs and exclude unapproved ones."
+    - "No TTY and no flag must exit non-zero with a clear message that names the flag to pass, never hang waiting for input that can never arrive."
+    - "Interactive (TTY present, no flag) behaviour must remain unchanged."
+    - "TTY detection must use the actual controlling-terminal state of standard input, not an environment guess."
+test_spec:
+  - name: test_no_tty_with_flag_proceeds
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Simulate no controlling TTY plus --yes; assert the command proceeds past the readiness gate and exits zero."
+  - name: test_approved_only_excludes_unapproved
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Invoke with --approved-only over a goal with mixed readiness; assert generation includes only already-approved leaves and excludes unapproved ones."
+  - name: test_no_tty_no_flag_fails_clearly
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Simulate no TTY and no approval flag; assert a non-zero exit and a message that names the flag to pass (no hang)."
+  - name: test_tty_no_flag_prompts_as_before
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Simulate a TTY present with no flag; assert the existing interactive prompt behaviour is unchanged."
 change_target: pipeline
 risk_surface: internal

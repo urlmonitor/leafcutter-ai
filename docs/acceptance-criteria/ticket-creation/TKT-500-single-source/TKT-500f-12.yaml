@@ -1,8 +1,8 @@
 id: TKT-500f-12
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Code-AC ticket's agents map wires ac-validator and ac-fulfillment-gate"
 component: ticket-creation
 level: L2
@@ -35,11 +35,47 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
 origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-9
+  contract: "Ticket frontmatter ac_traceability { id, path } so the wired ac-validator / ac-fulfillment-gate phases can resolve the source AC (rather than silently no-opping). Combines with TKT-500f-11's '- [ ] AC-N:' checkbox lines that ac-validator asserts against (see depends_on: TKT-500f-11)."
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1 (the agents-map builder; e.g. _build_agents_map / the computed-quality-gates map, BO-500 family, per ADR-017)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "When the generated ticket's files_touched contains at least one implementation .py file, the agents map must wire the ac-validator phase and the ac-fulfillment-gate phase as needed phases."
+    - "These two phases must be wired SPECIFICALLY (named as ac-validator and ac-fulfillment-gate for code-AC tickets); do not merely re-derive the generic computed-quality-gates guardrail map and assume they are included."
+    - "Docs/config-only tickets (no implementation .py in files_touched) must not be forced to carry these phases beyond the pipeline's existing rules."
+    - "The .py detection must key off files_touched, which must reflect the real edit surface produced by TKT-500f-8; a stale or doc_links-only files_touched would mis-classify a code AC as docs-only."
+test_spec:
+  - name: test_code_ticket_wires_ac_validator_and_fulfillment_gate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket from an AC whose files_touched contains an implementation .py; assert the agents map has ac-validator and ac-fulfillment-gate wired as needed phases."
+  - name: test_docs_only_ticket_not_forced
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket from a docs/config-only AC (no .py in files_touched); assert ac-validator and ac-fulfillment-gate are not force-added beyond the pipeline's existing rules."
 change_target: pipeline
 risk_surface: internal

@@ -1,8 +1,8 @@
 id: TKT-500f-10
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Generated ticket renders the AC's delivers_to and expects_from contracts"
 component: ticket-creation
 level: L2
@@ -37,11 +37,49 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
 origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1 (the ticket body/frontmatter contract-rendering point in _build_ticket_body, near line 923+)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "When the source AC carries delivers_to, the ticket must render the downstream agent and contract text; when it carries expects_from, render the upstream AC id and contract text."
+    - "Both contracts must reach the implementing agent (body and/or frontmatter) so the producer-to-consumer hand-off is explicit rather than re-derived from the source AC."
+    - "When both delivers_to and expects_from are null, no contract content is rendered and generation completes without error."
+test_spec:
+  - name: test_delivers_to_rendered
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC with delivers_to {agent, contract}; assert the generated ticket renders the downstream agent name and the contract text."
+  - name: test_expects_from_rendered
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC with expects_from {ac_id, contract}; assert the generated ticket renders the upstream AC id and the contract text."
+  - name: test_null_contracts_no_render
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC with delivers_to null and expects_from null; assert no contract block is rendered and generation completes without error."
 change_target: pipeline
 risk_surface: internal

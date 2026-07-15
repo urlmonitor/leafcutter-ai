@@ -1,8 +1,8 @@
 id: TKT-500f-8-i
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "List-form it_requirements: the named source surface is extracted into files_touched too"
 component: ticket-creation
 level: L3
@@ -37,11 +37,46 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
 origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-8
+  contract: "The structured-form files_touched extraction (union of it_requirements edit surface and doc_links paths) that this AC extends to the list-form (prose bullet) it_requirements shape."
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1 (the it_requirements edit-surface extractor helper introduced by TKT-500f-8, extended to also parse list-form prose bullets)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "For list-form (prose bullet) it_requirements, a source file path named within a bullet's text must be extracted into files_touched, matching the structured-form behaviour."
+    - "When no bullet names a source file path, no phantom path may be invented; files_touched must still contain the AC's doc_links paths."
+    - "Path detection must avoid false positives on non-path prose tokens (a bullet that merely mentions a directory-like word is not a source path)."
+test_spec:
+  - name: test_list_form_bullet_source_extracted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC with list-form it_requirements ['Modify scripts/goal_to_epic.py to ...']; assert files_touched contains scripts/goal_to_epic.py."
+  - name: test_list_form_no_path_no_phantom
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC with list-form bullets naming no file path; assert no invented path in files_touched and the doc_links paths are still present."
 change_target: pipeline
 risk_surface: internal

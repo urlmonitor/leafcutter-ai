@@ -1,8 +1,8 @@
 id: TKT-500f-11
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Acceptance Criteria section emits machine-parseable '- [ ] AC-N:' checkbox lines"
 component: ticket-creation
 level: L2
@@ -36,11 +36,51 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
 origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A '## Acceptance Criteria' section containing at least one machine-parseable '- [ ] AC-N: <text>' checkbox line that ac-validator can recognize and assert against. Consumed by the agents-map wiring (TKT-500f-12), which wires ac-validator so it has criteria to check."
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1 (the '## Acceptance Criteria' section renderer in _build_ticket_body, near line 923+)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The '## Acceptance Criteria' section must contain at least one line of the exact form '- [ ] AC-N: <text>' (1-based N) that ac-validator parses."
+    - "Each checkbox line's text must derive from the source AC criteria; the checkbox lines must be additive to any human-readable Gherkin block (never replace it, never be replaced by it)."
+    - "Every emitted checkbox line must be recognized by ac-validator's parser as an acceptance-criterion checkbox."
+test_spec:
+  - name: test_acceptance_criteria_has_checkbox_line
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket; assert the '## Acceptance Criteria' section contains at least one line matching the pattern '- [ ] AC-1:'."
+  - name: test_checkbox_and_gherkin_coexist
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the machine-parseable checkbox lines are present alongside (not replacing) the human-readable Gherkin block."
+  - name: test_ac_validator_recognizes_checkboxes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Parse the generated section with ac-validator's checkbox parser; assert the recognized-criteria count is at least 1."
 change_target: pipeline
 risk_surface: internal
