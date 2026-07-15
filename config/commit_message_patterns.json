@@ -1,14 +1,48 @@
-{
-  "_comment": "Commit message pattern registry — AC BO-1100c. Each key is a FileGroup enum value. The template uses {detail} as the only placeholder. Edit this file to add or change a pattern; the commit agent picks it up on the next invocation without any code change.",
-  "patterns": {
-    "tickets":           "chore(tickets): {detail}",
-    "new_acs":           "feat(ac-store): {detail}",
-    "shipped_acs":       "chore(ac-store): {detail}",
-    "implementation_code": "feat: {detail}",
-    "status_changes":    "chore(status): {detail}",
-    "tests":             "test: {detail}",
-    "docs":              "docs: {detail}",
-    "config":            "chore(config): {detail}",
-    "unknown":           "chore: {detail}"
+[
+  {
+    "_comment": "AC BO-1100c-1: top-level array of routing entries. Each entry has 'group' (FileGroup enum value), 'path_pattern' (regex applied to staged file paths, first match wins), and 'template' (commit subject template with {detail} placeholder). Add a new rule by appending an entry — no code change required (AC BO-1100c-2).",
+    "group": "tickets",
+    "path_pattern": "^tickets/",
+    "template": "chore(tickets): {detail}"
+  },
+  {
+    "group": "new_acs",
+    "path_pattern": "^config/ac_store/new/",
+    "template": "feat(ac-store): {detail}"
+  },
+  {
+    "group": "shipped_acs",
+    "path_pattern": "^config/ac_store/",
+    "template": "chore(ac-store): {detail}"
+  },
+  {
+    "group": "implementation_code",
+    "path_pattern": "(^|/)scripts/|(^|/)templates/|\\.py$",
+    "template": "feat: {detail}"
+  },
+  {
+    "group": "status_changes",
+    "path_pattern": "known_failing_tests\\.json$",
+    "template": "chore(status): {detail}"
+  },
+  {
+    "group": "tests",
+    "path_pattern": "(^|/)unit_tests/|(^|/)tests/|test_[^/]+\\.py$",
+    "template": "test: {detail}"
+  },
+  {
+    "group": "docs",
+    "path_pattern": "(^|/)docs/|\\.md$",
+    "template": "docs: {detail}"
+  },
+  {
+    "group": "config",
+    "path_pattern": "^config/|\\.json$|\\.ya?ml$",
+    "template": "chore(config): {detail}"
+  },
+  {
+    "group": "unknown",
+    "path_pattern": ".*",
+    "template": "chore: {detail}"
   }
-}
+]

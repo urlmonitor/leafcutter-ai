@@ -105,12 +105,18 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
     """Load commit-message patterns from the external config file.
 
     Reads ``config/commit_message_patterns.json`` (or the caller-supplied
-    ``config_path``) and converts the JSON ``patterns`` object into a
-    ``FileGroup``-keyed dict.
+    ``config_path``) and converts the JSON top-level array of routing entries
+    into a ``FileGroup``-keyed dict.
 
     The config file is the **single source of truth** for all routing patterns
-    (AC BO-1100c). Callers that want to add or modify a pattern should edit
-    the JSON file; this function picks up the change on the next invocation.
+    (AC BO-1100c).  It must be a top-level JSON array where each entry is an
+    object with at minimum ``group`` and ``template`` keys (AC BO-1100c-1).
+    Callers that want to add or modify a pattern should edit the JSON file;
+    this function picks up the change on the next invocation.
+
+    The legacy flat-object schema (``{"patterns": {...}}``) is no longer
+    supported.  When the loaded JSON is not a list, the function falls back to
+    compiled-in defaults and logs a warning so the misconfiguration is visible.
 
     Args:
         config_path: Optional explicit path to the patterns JSON file.
@@ -140,15 +146,21 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
         )
         return dict(_FALLBACK_PATTERNS)
 
-    patterns_raw = raw.get("patterns")
-    if not isinstance(patterns_raw, dict):
+    if not isinstance(raw, list):
         logger.warning(
-            "commit_message_patterns.json has no 'patterns' object — using compiled-in defaults"
+            "commit_message_patterns.json is not a top-level array "
+            "(legacy dict format is stale per AC BO-1100c-1) — using compiled-in defaults"
         )
         return dict(_FALLBACK_PATTERNS)
 
     result: dict[FileGroup, str] = dict(_FALLBACK_PATTERNS)
-    for key, template in patterns_raw.items():
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("group", "")
+        template = entry.get("template", "")
+        if not key or not template:
+            continue
         try:
             group = FileGroup(key)
         except ValueError:
@@ -372,6 +384,127 @@ def _derive_detail(
 
 
 # ---------------------------------------------------------------------------
+# Array-format routing (AC BO-1100c-2)
+# ---------------------------------------------------------------------------
+
+
+def _compile_routing_rule(
+    rule: object,
+) -> "tuple[re.Pattern[str], str] | None":
+    """Validate and compile a single array routing-rule entry.
+
+    Extracts ``path_pattern`` and ``template`` from ``rule``, compiles the
+    pattern, and returns the pair.  Returns ``None`` when the entry is invalid
+    (wrong type, missing keys, or un-compilable regex) and logs a warning so
+    the misconfiguration is visible.
+
+    Args:
+        rule: A single element from the routing-rule array.  Expected to be a
+            dict with ``path_pattern`` (regex string) and ``template`` keys.
+
+    Returns:
+        ``(compiled_pattern, template)`` on success; ``None`` on any failure.
+    """
+    if not isinstance(rule, dict):
+        return None
+    path_pattern = rule.get("path_pattern", "")
+    template = rule.get("template", "")
+    if not path_pattern or not template:
+        return None
+    try:
+        compiled = re.compile(path_pattern)
+    except re.error as exc:
+        logger.warning(
+            "Invalid path_pattern %r in array routing rule: %s", path_pattern, exc
+        )
+        return None
+    return compiled, template
+
+
+def _classify_with_array_config(
+    staged_paths: Sequence[str],
+    config_path: Path,
+) -> "ClassificationResult | None":
+    """Apply array-format routing rules from ``config_path`` to staged files.
+
+    Implements AC BO-1100c-2: when the caller supplies a ``patterns_config_path``
+    containing a JSON array of ``{group, path_pattern, template}`` entries,
+    files are matched against ``path_pattern`` (regex) in array order — first
+    match wins.  The matched entry's ``template`` is used for the subject.
+
+    Per-rule validation and pattern compilation is delegated to
+    ``_compile_routing_rule`` so that this function stays within the project's
+    cyclomatic-complexity threshold.
+
+    Args:
+        staged_paths: Iterable of file paths to classify.
+        config_path: Path to a JSON file that contains a top-level array of
+            routing-rule objects, each with at minimum ``group``,
+            ``path_pattern``, and ``template`` keys.
+
+    Returns:
+        A ``ClassificationResult`` with ``specific_pattern_matched=True`` when
+        at least one staged file matches a rule; ``None`` when no rule matches
+        or when the config cannot be loaded.
+    """
+    try:
+        with config_path.open("r", encoding="utf-8") as fh:
+            rules = json.load(fh)
+    except FileNotFoundError:
+        logger.warning(
+            "Array-format patterns config not found at %s — skipping array routing",
+            config_path,
+        )
+        return None
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Failed to load array-format patterns config at %s (%s: %s) — skipping",
+            config_path,
+            type(exc).__name__,
+            exc,
+        )
+        return None
+
+    if not isinstance(rules, list):
+        logger.warning(
+            "Array-format patterns config at %s is not a list — skipping array routing",
+            config_path,
+        )
+        return None
+
+    if not staged_paths:
+        return None
+
+    for rule in rules:
+        compiled_pair = _compile_routing_rule(rule)
+        if compiled_pair is None:
+            continue
+        compiled, template = compiled_pair
+
+        matched = [p for p in staged_paths if compiled.search(p)]
+        if not matched:
+            continue
+
+        # First matching rule wins — build the result from this rule.
+        groups_for_detail: dict[FileGroup, list[str]] = {
+            FileGroup.UNKNOWN: list(matched)
+        }
+        detail = _derive_detail(FileGroup.UNKNOWN, groups_for_detail)
+        subject = template.format(detail=detail)
+        if len(subject) > 72:
+            subject = subject[:69] + "..."
+
+        return ClassificationResult(
+            primary_group=FileGroup.UNKNOWN,
+            groups=groups_for_detail,
+            suggested_subject=subject,
+            specific_pattern_matched=True,  # Array rule matched explicitly.
+        )
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -401,6 +534,7 @@ def group_files_by_type(
 def classify_staged_files(
     staged_paths: Sequence[str],
     patterns: dict[FileGroup, str] | None = None,
+    patterns_config_path: Path | None = None,
 ) -> ClassificationResult:
     """Classify a staged file set and return the best commit message pattern.
 
@@ -420,6 +554,14 @@ def classify_staged_files(
         Optional override map.  Keys are FileGroup members; values are
         Python format strings with a ``{detail}`` placeholder.  Defaults
         to DEFAULT_PATTERNS for any group not present in the override.
+    patterns_config_path:
+        Optional path to a JSON file containing an **array** of routing-rule
+        objects, each with ``group``, ``path_pattern``, and ``template`` keys.
+        When provided, the array rules are applied first (first-match wins).
+        If no array rule matches, the function falls back to the standard
+        enum-based classification.  Supports AC BO-1100c-2: a new routing
+        rule is activated by appending an entry to this file — no code change
+        required.
 
     Returns
     -------
@@ -430,6 +572,14 @@ def classify_staged_files(
         - specific_pattern_matched: True unless the UNKNOWN fallback fired.
         - no_staged_files: True when ``staged_paths`` is empty (AC BO-1100a-2-i).
     """
+    # AC BO-1100c-2 — when an array-format patterns config is supplied, try it
+    # first.  Array routing rules support custom path_pattern regexes that can
+    # be added via config without a code change.
+    if patterns_config_path is not None:
+        array_result = _classify_with_array_config(staged_paths, patterns_config_path)
+        if array_result is not None:
+            return array_result
+
     # Re-read patterns from disk on every call so that changes to
     # config/commit_message_patterns.json are reflected without a restart
     # (AC BO-1100c-4).
@@ -564,6 +714,7 @@ def detect_mixed_set(
         )
 
     # Build a human-readable summary of the unrelated groups and the files in each.
+    # AC BO-1100b-2: list every individual filename per group, not just a count.
     group_summaries = []
     for group in unrelated:
         file_list = groups.get(group, [])
@@ -573,17 +724,22 @@ def detect_mixed_set(
             sample = file_list[0].split("/")[-1]
             group_summaries.append(f"{label} ({sample})")
         else:
-            group_summaries.append(f"{label} ({file_count} files)")
+            # List every basename so the user sees exactly which files are in each group.
+            basenames = ", ".join(f.split("/")[-1] for f in file_list)
+            group_summaries.append(f"{label} ({basenames})")
 
     groups_str = ", ".join(group_summaries)
     warning = (
         f"Mixed staged set detected: unrelated groups present — {groups_str}. "
         "A single commit message cannot accurately describe all of these changes."
     )
+    # AC BO-1100b-3: offer explicit Proceed and Abort options so the user sees
+    # unambiguous decision labels rather than free-form "confirm" language.
     recommendation = (
-        "Split the commit into separate commits by group "
-        "(e.g. `git reset HEAD <file>` to unstage unrelated files), "
-        "or confirm the mixed set intentionally if you are certain they belong together."
+        "Proceed (confirm that the mixed changes are intentional and keep the commit as-is). "
+        "Abort: split the commit into separate commits by group "
+        "(e.g. `git reset HEAD <file>` to unstage unrelated files). "
+        "If you are certain these changes belong together, confirm and proceed."
     )
 
     return MixedSetWarning(

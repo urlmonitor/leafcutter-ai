@@ -115,7 +115,7 @@ class TestJsonOutputStructure(unittest.TestCase):
     """Output must be a JSON dict with the canonical five keys."""
 
     def test_json_output_structure(self):
-        # covers: BO-1700a-1
+        # covers: UNKNOWN
         """Output has exactly the required keys: binary, config, git_hook, canary, failing_checks.
 
         Must implement a run_checks() function (and main() that serialises its
@@ -137,7 +137,7 @@ class TestAllChecksPass(unittest.TestCase):
     """When all four checks return True, run_checks() reflects that."""
 
     def test_all_checks_pass(self):
-        # covers: BO-1700a-1
+        # covers: UNKNOWN
         """All four checks pass → result dict has binary/config/git_hook/canary all True,
         failing_checks is an empty list.
 
@@ -187,7 +187,7 @@ class TestCheckAFailsBinaryNotFound(unittest.TestCase):
     """Check A: pre-commit binary absent on PATH → check A reports False."""
 
     def test_check_a_fails_binary_not_found(self):
-        # covers: BO-1700a-1
+        # covers: UNKNOWN
         """Running with an empty PATH means pre-commit is not found.
         The probe must exit non-zero and report binary: false in JSON output.
         """
@@ -213,7 +213,7 @@ class TestCheckBFailsConfigNotFound(unittest.TestCase):
     """Check B: no .pre-commit-config.yaml → check B reports False."""
 
     def test_check_b_fails_config_not_found(self):
-        # covers: BO-1700a-3-i
+        # covers: UNKNOWN
         """Running in a temp directory with no .leafcutter symlink and no
         .pre-commit-config.yaml causes check B to fail.
 
@@ -242,7 +242,7 @@ class TestCheckBFailsConfigInvalidYaml(unittest.TestCase):
     """Check B: config file exists but contains invalid YAML → check B reports False."""
 
     def test_check_b_fails_config_invalid_yaml(self):
-        # covers: BO-1700a-1
+        # covers: UNKNOWN
         """A .pre-commit-config.yaml whose content is not valid YAML must cause
         check B to fail.  Probe exits non-zero with config: false in JSON.
         """
@@ -276,7 +276,7 @@ class TestCheckCFailsHookMissingSentinel(unittest.TestCase):
     """Check C: git hook file exists but lacks the pre-commit sentinel → check C fails."""
 
     def test_check_c_fails_hook_missing_sentinel(self):
-        # covers: BO-1700a-3-ii
+        # covers: UNKNOWN
         """Check C reads the shared git hook and looks for a pre-commit sentinel.
         When the hook file exists but the sentinel string is absent, check C must
         report git_hook: false.
@@ -321,7 +321,7 @@ class TestCheckDFailsCanaryNoOutput(unittest.TestCase):
     """Check D: canary hook invoked but does not emit PRECOMMIT_CANARY_OK → check D fails."""
 
     def test_check_d_fails_canary_no_output(self):
-        # covers: BO-1700a-3
+        # covers: UNKNOWN
         """Check D runs the canary hook via subprocess and inspects its stdout.
         When the subprocess returns without emitting 'PRECOMMIT_CANARY_OK', check D
         must report canary: false.
@@ -364,7 +364,7 @@ class TestTimeoutHandling(unittest.TestCase):
     """Subprocess timeout during check D → probe exits non-zero (fail-closed)."""
 
     def test_timeout_handling(self):
-        # covers: BO-1700h-2
+        # covers: UNKNOWN
         """When the canary subprocess times out, the probe must exit non-zero.
         Fail-closed: a hung subprocess must not produce a zero exit code.
 
@@ -408,7 +408,7 @@ class TestUncaughtExceptionHandling(unittest.TestCase):
     """Unexpected exception anywhere in the probe → non-zero exit (fail-closed)."""
 
     def test_uncaught_exception_handling(self):
-        # covers: BO-1700b-1
+        # covers: UNKNOWN
         """An unexpected exception inside run_checks() must not produce exit 0.
         The probe must catch the exception, mark the relevant check as failed,
         and return a non-passing result.
@@ -449,7 +449,7 @@ class TestExitCodeAllPass(unittest.TestCase):
     """When all checks pass, the CLI exits 0."""
 
     def test_exit_code_all_pass(self):
-        # covers: BO-1700a-1
+        # covers: UNKNOWN
         """main() must sys.exit(0) when all four checks pass.
 
         This test invokes the module via subprocess, so _run_probe is used.
@@ -515,7 +515,7 @@ class TestExitCodeAnyFailure(unittest.TestCase):
     """When any check fails, the CLI exits non-zero."""
 
     def test_exit_code_any_failure(self):
-        # covers: BO-1700a-1
+        # covers: UNKNOWN
         """main() must sys.exit with a non-zero code when any check fails.
 
         Check A is forced to fail by passing an empty PATH to the subprocess.
@@ -562,7 +562,7 @@ class TestValidateHookName(unittest.TestCase):
     """g-1: Required-hook-ID validation. Hook file must be named exactly 'pre-commit'."""
 
     def test_valid_hook_name_exact(self):
-        # covers: BO-1700g-1
+        # covers: UNKNOWN
         """validate_hook_name returns True when the hook file is named exactly 'pre-commit'.
 
         Must implement validate_hook_name(hook_path: Path) -> bool that returns True only
@@ -586,7 +586,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_backup(self):
-        # covers: BO-1700g-1
+        # covers: UNKNOWN
         """validate_hook_name returns False when the hook is named 'pre-commit-backup'.
 
         A backup hook must not be accepted as the canonical pre-commit hook.
@@ -606,7 +606,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_no_hyphen(self):
-        # covers: BO-1700g-1
+        # covers: UNKNOWN
         """validate_hook_name returns False when the hook is named 'precommit' (no hyphen).
 
         Hook filename must match exactly 'pre-commit'; 'precommit' is a distinct name.
@@ -626,7 +626,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_dotted(self):
-        # covers: BO-1700g-1
+        # covers: UNKNOWN
         """validate_hook_name returns False when the hook is named '.pre-commit' (dot-prefixed).
 
         A hidden file '.pre-commit' must not pass; only the bare name 'pre-commit' is valid.
@@ -646,7 +646,7 @@ class TestValidateHookName(unittest.TestCase):
         )
 
     def test_invalid_hook_name_with_extension(self):
-        # covers: BO-1700g-1
+        # covers: UNKNOWN
         """validate_hook_name returns False when the hook is named 'pre-commit.sh' (extension present).
 
         Any file extension makes the name non-canonical; only the bare 'pre-commit' passes.
@@ -677,7 +677,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         return config_path
 
     def test_canary_stage_manual_only(self):
-        # covers: BO-1700a-2
+        # covers: UNKNOWN
         """validate_canary_stage returns True when the canary entry has stages: ['manual'] exactly.
 
         Must implement validate_canary_stage(config_path: Path) -> bool that reads
@@ -706,7 +706,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_stage_empty(self):
-        # covers: BO-1700a-2
+        # covers: UNKNOWN
         """validate_canary_stage returns False when the canary entry has stages: [].
 
         An empty stages list means the canary fires in no stage — must fail.
@@ -730,7 +730,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_stage_commit_msg(self):
-        # covers: BO-1700a-2
+        # covers: UNKNOWN
         """validate_canary_stage returns False when stages: ['commit-msg'].
 
         The canary must only be in the 'manual' stage; 'commit-msg' is forbidden.
@@ -757,7 +757,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_stage_multi_including_manual(self):
-        # covers: BO-1700g-2
+        # covers: UNKNOWN
         """validate_canary_stage returns False when stages include 'manual' AND another stage.
 
         Multi-stage registration is a spoof risk; canary must be in ONLY ['manual'].
@@ -785,7 +785,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_entry_absent(self):
-        # covers: BO-1700a-2
+        # covers: UNKNOWN
         """validate_canary_stage returns False when no 'precommit-canary' entry exists in registry.
 
         A missing canary entry means the canary is not installed — fail-closed.
@@ -812,7 +812,7 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
     def test_canary_non_manual_stage(self):
-        # covers: BO-1700a-2
+        # covers: UNKNOWN
         """validate_canary_stage returns False when canary is in stages: ['pre-push'] only.
 
         Any non-manual stage alone must fail; the canary must never appear in push stages.
@@ -843,7 +843,7 @@ class TestCheckHookFreshness(unittest.TestCase):
     """h-1: Config freshness/drift detection. Hook must be at least as new as config."""
 
     def test_hook_newer_than_config(self):
-        # covers: BO-1700h-1
+        # covers: UNKNOWN
         """check_hook_freshness returns True when hook mtime > config mtime.
 
         Must implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool
@@ -874,7 +874,7 @@ class TestCheckHookFreshness(unittest.TestCase):
         )
 
     def test_hook_same_mtime_as_config(self):
-        # covers: BO-1700h-1
+        # covers: UNKNOWN
         """check_hook_freshness returns True when hook mtime == config mtime.
 
         Equal mtime means the hook was regenerated at the same time as config — not stale.
@@ -905,7 +905,7 @@ class TestCheckHookFreshness(unittest.TestCase):
         )
 
     def test_hook_older_than_config(self):
-        # covers: BO-1700h-1
+        # covers: UNKNOWN
         """check_hook_freshness returns False when hook mtime < config mtime (hook is stale).
 
         A hook older than the config means the config was updated but the hook was not
@@ -940,7 +940,7 @@ class TestCheckHookFreshness(unittest.TestCase):
         )
 
     def test_hook_missing_config_present(self):
-        # covers: BO-1700h-1
+        # covers: UNKNOWN
         """check_hook_freshness returns False when hook does not exist but config does.
 
         A missing hook with a present config is a fail-closed state (hook not installed).
@@ -971,7 +971,7 @@ class TestCheckDCanaryTimeout(unittest.TestCase):
     """h-2: Canary timeout fail-closed. Timeout must be 10 seconds (ticket 03 raises it from 5)."""
 
     def test_canary_timeout_10s_returns_false(self):
-        # covers: BO-1700h-2
+        # covers: UNKNOWN
         """run_checks() marks canary: False when subprocess.TimeoutExpired fires at 10s.
 
         Ticket 03 changes the canary timeout from 5s to 10s. This test:
@@ -1028,7 +1028,7 @@ class TestResolveHooksPath(unittest.TestCase):
     """h-3: hooksPath resolution. Absolute, relative, unset, and unreadable .git/config."""
 
     def test_hooks_path_absolute_from_git_config(self):
-        # covers: BO-1700h-3
+        # covers: UNKNOWN
         """resolve_hooks_path returns the absolute path from core.hooksPath in .git/config.
 
         Must implement resolve_hooks_path(cwd: Path) -> Path that reads .git/config,
@@ -1061,7 +1061,7 @@ class TestResolveHooksPath(unittest.TestCase):
         )
 
     def test_hooks_path_relative_from_git_config(self):
-        # covers: BO-1700h-3
+        # covers: UNKNOWN
         """resolve_hooks_path resolves a relative core.hooksPath against the worktree root.
 
         When core.hooksPath is a relative path (e.g. '.hooks'), it must be resolved
@@ -1095,7 +1095,7 @@ class TestResolveHooksPath(unittest.TestCase):
         )
 
     def test_hooks_path_unset_falls_back_to_commondir(self):
-        # covers: BO-1700h-3
+        # covers: UNKNOWN
         """resolve_hooks_path falls back to <commondir>/hooks/ when core.hooksPath is unset.
 
         When .git/config has no core.hooksPath setting, resolve_hooks_path must fall
@@ -1130,7 +1130,7 @@ class TestResolveHooksPath(unittest.TestCase):
         )
 
     def test_hooks_path_unreadable_raises_oserror(self):
-        # covers: BO-1700h-3
+        # covers: UNKNOWN
         """resolve_hooks_path raises OSError when .git/config is unreadable.
 
         When .git/config exists but is not readable (permissions denied),
@@ -1784,6 +1784,331 @@ class TestRemoveCanaryFromManifestFileNotFound(unittest.TestCase):
             msg=(
                 "Expected remove_canary_from_manifest to return False "
                 f"when config_path doesn't exist. Got: {result}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# TICKET 02 (BO-1700 PHANTOM-DONE REMEDIATION) — BO-1700g-1, BO-1700h-1,
+# BO-1700h-3, BO-1700e-3
+# Added: 2026-07-14 [EPIC-BOPhantomDoneRemediation/02]
+# Tests below are RED until the following are wired into run_checks():
+#   validate_hook_name   — must be called during the check flow (BO-1700g-1)
+#   check_hook_freshness — must be called during the check flow (BO-1700h-1)
+#   resolve_hooks_path   — must be called during Check C (BO-1700h-3)
+#   is_guardian_complete — must gate run_checks() to fail closed (BO-1700e-3)
+# Additionally:
+#   run_checks() must add 'incomplete_build': True to its result dict when the
+#   guardian deployment is incomplete, and append 'incomplete_build' to
+#   failing_checks so the CLI exits non-zero (BO-1700e-3 fail-closed criterion).
+# ---------------------------------------------------------------------------
+
+
+class TestRunChecksInvokesHookIdValidation(unittest.TestCase):
+    """BO-1700g-1/h-1/h-3: run_checks must wire validate helpers into the check flow."""
+
+    def test_run_checks_invokes_hook_id_validation(self):
+        # covers: BO-1700g-1
+        # covers: BO-1700h-1
+        # covers: BO-1700h-3
+        """run_checks() must call validate_hook_name, check_hook_freshness, and
+        resolve_hooks_path during its execution. All three are currently dead code
+        (not called by run_checks()) — this test is RED until they are wired in.
+
+        Wiring criteria:
+          BO-1700g-1: validate_hook_name is the required hook-ID anti-spoofing guard
+                      that must run as part of Check B/C orchestration.
+          BO-1700h-1: check_hook_freshness detects config-drift and must be called
+                      to report the worktree config as stale when it diverges.
+          BO-1700h-3: resolve_hooks_path must be called so Check C honours any
+                      core.hooksPath override rather than assuming a default path.
+
+        The four canonical check functions (check_a–d) are mocked so the test does
+        not require a live git repo or pre-commit installation. The helpers are spied
+        upon via patch.object; their mock.called flags confirm wiring. If the coder
+        wires the helpers inside check_b_config/check_c_git_hook rather than inside
+        run_checks() directly, these mocks will prevent the helpers from firing —
+        in that case update the test to call the check functions directly without
+        mocking them.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        for fn_name in ("validate_hook_name", "check_hook_freshness", "resolve_hooks_path"):
+            if not hasattr(_vpa, fn_name):
+                self.fail(
+                    f"AttributeError: verify_precommit_active does not expose {fn_name}(). "
+                    f"Implement this helper first (tickets 03/04)."
+                )
+        # Spy on the three helpers that must be wired into run_checks().
+        # The four check functions are mocked so no live environment is needed.
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "validate_hook_name", return_value=True) as spy_vhn,
+            patch.object(
+                _vpa, "check_hook_freshness", return_value=True
+            ) as spy_chf,
+            patch.object(
+                _vpa, "resolve_hooks_path", return_value=Path("/tmp/hooks")
+            ) as spy_rhp,
+        ):
+            _vpa.run_checks()
+
+        # BO-1700g-1: validate_hook_name must be called (required hook-ID guard)
+        self.assertTrue(
+            spy_vhn.called,
+            msg=(
+                "validate_hook_name was NOT called during run_checks(). "
+                "Wire validate_hook_name into the check flow per BO-1700g-1. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+        # BO-1700h-1: check_hook_freshness must be called (drift detection)
+        self.assertTrue(
+            spy_chf.called,
+            msg=(
+                "check_hook_freshness was NOT called during run_checks(). "
+                "Wire check_hook_freshness into the check flow per BO-1700h-1. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+        # BO-1700h-3: resolve_hooks_path must be called (core.hooksPath honour)
+        self.assertTrue(
+            spy_rhp.called,
+            msg=(
+                "resolve_hooks_path was NOT called during run_checks(). "
+                "Wire resolve_hooks_path into Check C per BO-1700h-3. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+
+
+class TestIncompleteBuildFailsClosed(unittest.TestCase):
+    """BO-1700e-3: Incomplete guardian-scripts build must fail closed, not skip."""
+
+    def test_incomplete_build_fails_closed(self):
+        # covers: BO-1700e-3
+        """When is_guardian_complete() returns False (incomplete deploy), run_checks()
+        must fail closed: the result must contain incomplete_build: True AND
+        failing_checks must be non-empty with 'incomplete_build' in it.
+
+        Must NOT return a passing result — the fail-open graceful_skip_if_incomplete
+        pattern (returns True and lets the gate proceed silently) is the exact
+        OPPOSITE of the required fail-closed behaviour (BO-1700e-3 anti-criterion).
+
+        RED until:
+          1. run_checks() calls is_guardian_complete() before running checks A–D.
+          2. When is_guardian_complete() returns False, run_checks() adds
+             'incomplete_build': True to the result dict (architect-review §3).
+          3. 'incomplete_build' is appended to failing_checks so the CLI exits non-zero.
+
+        Current state: run_checks() never calls is_guardian_complete() → the result
+        dict has no 'incomplete_build' key → result.get('incomplete_build', False) is
+        False → first assertion fails → RED.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "is_guardian_complete(). Implement this helper first (ticket 07)."
+            )
+        # Simulate an incomplete build: one or more guard scripts are absent.
+        # All four checks return True to isolate the incomplete_build detection path.
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=False),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        # BO-1700e-3: Fail closed — incomplete_build must be True in result
+        self.assertTrue(
+            result.get("incomplete_build", False),
+            msg=(
+                "Expected result['incomplete_build'] == True when is_guardian_complete() "
+                "returns False. run_checks() must fail closed on an incomplete build. "
+                f"Got result: {result}"
+            ),
+        )
+        # BO-1700e-3: Fail closed — failing_checks must be non-empty
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                "Expected failing_checks to be non-empty when build is incomplete "
+                "(fail-closed). The fail-open graceful_skip_if_incomplete pattern "
+                f"(empty failing_checks) must be replaced. Got result: {result}"
+            ),
+        )
+        # BO-1700e-3: 'incomplete_build' must appear in failing_checks
+        self.assertIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "Expected 'incomplete_build' in failing_checks when is_guardian_complete() "
+                "returns False. The probe must name the missing-deploy condition in its "
+                f"failing_checks output. Got result: {result}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# REMEDIATION TESTS — BO-1700h-3 (check_c uses resolved hook_path),
+#                     BO-1700h-1 (hook_freshness in failing_checks)
+# Added: 2026-07-14 [EPIC-BOPhantomDoneRemediation]
+# Tests below verify the two behavioural defects fixed in run_checks():
+#   1. check_c_git_hook must be called with the hook_path resolved by
+#      resolve_hooks_path() — not its own internal commondir path (BO-1700h-3).
+#   2. When check_hook_freshness() returns False, "hook_freshness" must appear
+#      in failing_checks so the probe exits non-zero (BO-1700h-1).
+# ---------------------------------------------------------------------------
+
+
+class TestCheckCGitHookUsesResolvedPath(unittest.TestCase):
+    """BO-1700h-3: Check C must inspect the hook_path resolved by resolve_hooks_path."""
+
+    def test_check_c_called_with_resolved_hook_path(self):
+        """When core.hooksPath is set to a custom dir, run_checks() must pass the
+        resolved hook_path to check_c_git_hook(), NOT let check_c resolve its own
+        commondir path.
+
+        Verifies the call-site wiring: run_checks() must call
+        check_c_git_hook(hook_path) with the path returned by resolve_hooks_path(),
+        not fn() with no arguments.
+        """
+        # covers: BO-1700h-3
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_c_git_hook"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_c_git_hook()."
+            )
+
+        custom_hooks_dir = Path("/custom/hooks/dir")
+        custom_hook_path = custom_hooks_dir / "pre-commit"
+
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "resolve_hooks_path", return_value=custom_hooks_dir),
+            patch.object(_vpa, "validate_hook_name", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True) as spy_check_c,
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            _vpa.run_checks()
+
+        self.assertTrue(
+            spy_check_c.called,
+            msg="check_c_git_hook was not called during run_checks().",
+        )
+        call_args = spy_check_c.call_args
+        self.assertIsNotNone(
+            call_args,
+            msg="check_c_git_hook was called but call_args is None (unexpected).",
+        )
+        # The hook_path passed must be the one from the resolved hooks dir.
+        # It may be passed as a positional or keyword argument.
+        if call_args.args:
+            passed_path = call_args.args[0]
+        else:
+            passed_path = call_args.kwargs.get("hook_path")
+        self.assertEqual(
+            passed_path,
+            custom_hook_path,
+            msg=(
+                f"Expected check_c_git_hook to be called with {custom_hook_path!r} "
+                f"(from core.hooksPath override via resolve_hooks_path), "
+                f"but was called with: {passed_path!r}. "
+                "run_checks() must pass the already-resolved hook_path to check_c_git_hook() "
+                "rather than calling fn() with no arguments."
+            ),
+        )
+
+
+class TestHookFreshnessAppendsToFailingChecks(unittest.TestCase):
+    """BO-1700h-1: A stale hook must append 'hook_freshness' to failing_checks."""
+
+    def test_stale_hook_appends_hook_freshness_to_failing_checks(self):
+        """When check_hook_freshness() returns False (hook older than config),
+        run_checks() must append 'hook_freshness' to failing_checks.
+
+        Previously, check_hook_freshness() return value was discarded, so a stale
+        hook never appeared in failing_checks and the probe exited 0.
+        BO-1700h-1 requires that the stale-hook condition is surfaced.
+
+        Both resolve_hooks_path and _resolve_config_path must succeed (return real
+        values) for the guard condition to pass — otherwise the False freshness
+        result is treated as "not installed" rather than "stale".
+        """
+        # covers: BO-1700h-1
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness()."
+            )
+
+        # resolve_hooks_path succeeds (hooks_resolved=True) and _resolve_config_path
+        # returns a real path (config_path_resolved is not None).  This satisfies the
+        # guard condition so that a False freshness result is reported as "stale", not
+        # "not installed".
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "resolve_hooks_path", return_value=Path("/tmp/hooks")),
+            patch.object(_vpa, "_resolve_config_path", return_value=Path("/tmp/.pre-commit-config.yaml")),
+            patch.object(_vpa, "validate_hook_name", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=False),  # stale hook
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        self.assertIn(
+            "hook_freshness",
+            result.get("failing_checks", []),
+            msg=(
+                "Expected 'hook_freshness' in failing_checks when check_hook_freshness() "
+                f"returns False (stale hook) and both paths resolved successfully. Got: {result}. "
+                "The return value of check_hook_freshness() must be captured and "
+                "'hook_freshness' appended to failing_checks when it is False and "
+                "both hooks and config paths were successfully resolved."
             ),
         )
 

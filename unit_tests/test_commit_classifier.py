@@ -5,11 +5,16 @@ Covers AC BO-1100a: staged files are grouped by type before a message is
 drafted; each recognised group gets its own proven message pattern applied
 automatically; the commit agent never produces a generic "update files"
 message when a specific pattern matches.
+
+Also covers the wiring requirement: TestCommitAgentInvokesClassifier asserts
+that templates/agents/commit.md Step 2 actually invokes classify_staged_files()
+instead of drafting messages free-hand (the phantom-done state pre-remediation).
 """
 # @ac-tag: BO-1100a
 
 import sys
 import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
@@ -187,6 +192,83 @@ class TestClassifyStagedFiles(unittest.TestCase):
         self.assertIn(FileGroup.IMPLEMENTATION_CODE, result.groups)
         self.assertIn(FileGroup.TICKETS, result.groups)
         self.assertIn(FileGroup.DOCS, result.groups)
+
+
+class TestCommitAgentInvokesClassifier(unittest.TestCase):
+    """AC BO-1100a-2/3/4 wiring tests: commit.md Step 2 must invoke the classifier library.
+
+    These tests assert that templates/agents/commit.md actually calls
+    classify_staged_files() as the PRIMARY message-drafting path in Step 2
+    (not free-hand prose generation). Before this ticket, the library existed
+    and had green tests, but commit.md never invoked it — the phantom-done
+    state. These tests are the RED baseline that the python-coder must satisfy.
+    """
+
+    _COMMIT_MD_PATH: Path = (
+        Path(__file__).resolve().parent.parent / "templates" / "agents" / "commit.md"
+    )
+
+    def test_commit_agent_invokes_classifier(self) -> None:
+        # covers: BO-1100a-2
+        """AC BO-1100a-2: commit.md Step 2 must invoke classify_staged_files() as the PRIMARY path.
+
+        The commit agent template must contain an explicit call to
+        classify_staged_files() so that every commit goes through the
+        pattern-routing library rather than being drafted free-hand.
+        """
+        content = self._COMMIT_MD_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "classify_staged_files",
+            content,
+            msg=(
+                "commit.md Step 2 must invoke classify_staged_files() as the PRIMARY "
+                "message-drafting path (BO-1100a-2). Currently Step 2 drafts messages "
+                "free-hand; the classifier library is never called (phantom-done)."
+            ),
+        )
+
+    def test_ac_bo1100a3_commit_delegates_to_learner_on_unknown(self) -> None:
+        # covers: BO-1100a-3
+        """AC BO-1100a-3: commit.md must delegate to maybe_propose_rule() when UNKNOWN fires.
+
+        When classify_staged_files() returns specific_pattern_matched=False,
+        the commit agent must call maybe_propose_rule() (from commit_pattern_learner)
+        to hand the unmatched shape to the pattern-learning specialist, rather
+        than falling back to a generic 'update files' subject.
+        """
+        content = self._COMMIT_MD_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "maybe_propose_rule",
+            content,
+            msg=(
+                "commit.md must call maybe_propose_rule() when the classifier "
+                "returns specific_pattern_matched=False (BO-1100a-3). The specialist "
+                "delegation is currently absent from the commit agent template."
+            ),
+        )
+
+    def test_ac_bo1100a4_classifier_skipped_when_subject_already_approved(self) -> None:
+        # covers: BO-1100a-4
+        """AC BO-1100a-4: classifier must NOT be re-invoked when a subject is already approved.
+
+        After a user approves a commit subject line (Step 3 confirmation gate),
+        the commit agent must not re-run classify_staged_files() when hooks
+        re-stage files in the precommit-autofix loop. The template must contain
+        an explicit guard that preserves the approved subject verbatim.
+        """
+        content = self._COMMIT_MD_PATH.read_text(encoding="utf-8")
+        # The step must contain an explicit check for an existing approved subject
+        # so that hook re-stages do not overwrite the user-approved message.
+        self.assertIn(
+            "already approved",
+            content.lower(),
+            msg=(
+                "commit.md Step 2 must explicitly check for a user-approved subject "
+                "before invoking the classifier (BO-1100a-4). Without this guard, "
+                "the router overwrites the approved subject on every hook re-stage cycle."
+            ),
+        )
+
 
 
 # ---------------------------------------------------------------------------
