@@ -1,6 +1,6 @@
 id: ACD-400a
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Scanner identifies todo, unblocked leaf ACs and presents them as a prioritized ready list"
@@ -55,4 +55,4 @@ product_truth:
       - Ac
       - AcStore
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

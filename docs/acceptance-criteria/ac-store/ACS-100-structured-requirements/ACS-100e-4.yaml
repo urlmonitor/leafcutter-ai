@@ -1,6 +1,6 @@
 id: ACS-100e-4
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Missing default_origin_agent falls back to the agent's own name"

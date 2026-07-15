@@ -146,7 +146,7 @@ class TestBootstrapPreDriveGate(unittest.TestCase):
 
     # ------------------------------------------------------------------
     def test_bootstrap_gate_passes_when_probe_passes(self) -> None:
-        # covers: UNKNOWN
+        # covers: BO-1700d-1
         """Gate must NOT raise BootstrapError when probe returns no failing checks.
 
         RED before implementation: the probe subprocess is never called from
@@ -201,7 +201,7 @@ class TestBootstrapPreDriveGate(unittest.TestCase):
 
     # ------------------------------------------------------------------
     def test_bootstrap_gate_raises_when_probe_reports_failing_checks(self) -> None:
-        # covers: UNKNOWN
+        # covers: BO-1700d-1
         """Gate must raise BootstrapError naming the failing checks when probe fails.
 
         RED before implementation: _bootstrap() makes no probe call, so no
@@ -243,7 +243,7 @@ class TestBootstrapPreDriveGate(unittest.TestCase):
 
     # ------------------------------------------------------------------
     def test_bootstrap_gate_raises_when_probe_exits_nonzero(self) -> None:
-        # covers: UNKNOWN
+        # covers: BO-1700d-1
         """Gate must raise BootstrapError when probe exits non-zero (any stdout).
 
         RED before implementation: _bootstrap() makes no probe call, so the
@@ -271,7 +271,7 @@ class TestBootstrapPreDriveGate(unittest.TestCase):
 
     # ------------------------------------------------------------------
     def test_bootstrap_gate_is_invoked_after_precommit_config(self) -> None:
-        # covers: UNKNOWN
+        # covers: BO-1700d-1
         """The probe subprocess call must occur after _establish_pre_commit_config.
 
         RED before implementation: _bootstrap() makes no probe subprocess call,

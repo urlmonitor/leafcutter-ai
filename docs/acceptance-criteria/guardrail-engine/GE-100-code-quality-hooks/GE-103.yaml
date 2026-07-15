@@ -1,6 +1,6 @@
 id: GE-103
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Every commit_guardian hook module imports cleanly so doc-frontmatter enforcement stays live"
@@ -8,7 +8,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-103.yaml"
 criteria: |
   Given the commit_guardian package is deployed into a consumer project
@@ -46,7 +46,9 @@ origin_agent: BrainCandy
 created: 2026-06-17
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_commit_guardian_imports.py::TestDiagramTypeValidatorsImportable
+implemented_by:
+  - templates/scripts/commit_guardian/diagram_type_validators.py
 change_target: code
 risk_surface: internal

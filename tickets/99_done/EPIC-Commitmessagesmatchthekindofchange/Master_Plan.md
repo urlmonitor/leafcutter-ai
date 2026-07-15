@@ -3,7 +3,7 @@ epic_name: EPIC-CommitMessagesMatchTheKindOfChange
 created: 2026-06-08
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 source_ac: BO-1100
 ---
 # EPIC-CommitMessagesMatchTheKindOfChange

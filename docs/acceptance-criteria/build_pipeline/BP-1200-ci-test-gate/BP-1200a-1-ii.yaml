@@ -1,12 +1,12 @@
 id: BP-1200a-1-ii
 components:
-  - build-pipeline
+  - build_pipeline
 title: "No test fails at collection time because a build-generated dependency is missing from the fresh clone"
 component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -60,7 +60,8 @@ amended_by:
     entry: "Set readiness: approved and priority: high per the final user gate. Recorded the DECIDED ADR-016 direction = Approach 1 (CI build step + install_shims shim_map extension) in the it_requirements, replacing the open-mechanism language; retained the consumer-install validation and ADR-001/004 boundary constraints. Criteria unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_guard_real_package.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260629-BP-1200a-1-ii.md
 notes: |

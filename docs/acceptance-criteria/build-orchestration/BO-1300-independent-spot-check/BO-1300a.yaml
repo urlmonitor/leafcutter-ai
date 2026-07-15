@@ -1,6 +1,6 @@
 id: BO-1300a
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Ask for an independent review of any finished feature on demand"

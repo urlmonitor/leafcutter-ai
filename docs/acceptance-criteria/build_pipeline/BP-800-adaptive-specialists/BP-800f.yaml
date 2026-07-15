@@ -1,6 +1,6 @@
 id: BP-800f
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Database specialists go beyond relational"
 component: build-pipeline
 level: L1

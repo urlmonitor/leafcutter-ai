@@ -1,6 +1,6 @@
 id: BO-1900b-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A premise with no attached reproduction command is treated as unfit"
 component: build-orchestration
 level: L3

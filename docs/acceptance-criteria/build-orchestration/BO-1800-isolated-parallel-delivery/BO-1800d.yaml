@@ -1,6 +1,6 @@
 id: BO-1800d
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Automatic cleanup never disturbs work in progress"
 component: build-orchestration
 level: L1

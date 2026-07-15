@@ -1,6 +1,6 @@
 id: ACD-1200a-3-ii
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "Apostrophes and quote characters in the goal title are stripped before PascalCasing the epic folder name"

@@ -1,24 +1,39 @@
 ---
 title: "Make the test suite green on a fresh clone so the CI test gate can become blocking"
-status: todo
+status: deferred
 components:
   - testing_quality
   - build_pipeline
 created: 2026-06-24
+last_updated: 2026-07-15
 depends_on: []
 priority: high
 roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
+change_target: pipeline
+risk_surface: internal
 ---
 
 # Make the test suite green on a fresh clone so the CI test gate can become blocking
 
-> **Wiring note:** this is a tracking ticket captured during the BP-1200a-1
-> finalize. It has no `agents:` map yet — run it through `/plan-feature` →
-> `/build-ac` (or split into an epic) before driving with `/build-feature`.
-> The scope below is almost certainly epic-sized.
+> **DEFERRED 2026-07-15 — superseded by three active epics; do NOT drive this ticket.**
+> A 2026-07-15 gap analysis (CI run `29405520992`) decomposed this scope. The original
+> premise here is stale (the "4 collection errors" are resolved; failures are ~81 and
+> cluster by root cause). The work is now owned by:
+>
+> - **`EPIC-RedTestClusterRepair`** — the residual red-test clusters (AC-schema drift,
+>   missing `check_ac_done_on_merge` hook, `produces:` frontmatter, commit_classifier
+>   cache, `verify_precommit_active`, psutil, deployed `plan-feature.js` parity,
+>   anti-`build/`-shadow guard, trustworthy-gate un-masking, fresh-clone verification).
+> - **`EPIC-BuildPipelinePhantomRemediation`** — the 6 phantom-done code fixes, incl.
+>   ticket 05 = **BP-1200b** (flip the CI `test` job to blocking) and BP-900c-3 / BP-100i-3.
+> - **`EPIC-BuildPipelineTestBackfill`** — CODE_NO_TEST coverage backfill.
+>
+> Plus the salvage merged in PR #300 (build→build_guards rename + related greens).
+> BP-1200c (branch protection) follows once the suite is green under `AC_ENFORCE_STRICT=1`.
+> Retained below as a historical record only.
 
 ## Actor / Goal
 

@@ -1,6 +1,6 @@
 id: ACD-300e-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "BA v3 queries the knowledge graph during S1 to discover related L2/L3 patterns and cross-component behaviors"

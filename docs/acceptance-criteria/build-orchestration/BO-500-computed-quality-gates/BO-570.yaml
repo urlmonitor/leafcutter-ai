@@ -1,6 +1,6 @@
 id: BO-570
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Render and lint defects are caught locally at sign-off, before the PR or CI"
 component: build-orchestration
 level: L1

@@ -99,6 +99,15 @@ The shim strategy is configurable via the `shim_strategy` key in `skills_config.
 `"symlink"` (default), `"copy"`, or `"auto"` (attempts symlinks, falls back to copies
 on `PermissionError`).
 
+The `.claude/workflows/` shim is a special case: its `.leafcutter/workflows/` target is
+itself a *build output*. The `build_workflow_scripts` phase compiles the workflow JS
+scripts from their source directory `templates/workflows-js/` into `.leafcutter/workflows/`,
+which the shim then exposes at the canonical `.claude/workflows/` path Claude Code reads.
+
+| Source | Output (shimmed) | Description |
+|---|---|---|
+| `templates/workflows-js/` | `.claude/workflows/` | Compiled workflow JS scripts (build-epic.js, build-ticket.js, create-ticket.js) |
+
 #### Non-shimmed outputs
 
 Files that only leafcutter's own code reads require no shim. They live directly

@@ -1,6 +1,6 @@
 id: BP-1200c-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Branch protection on main requires both the lint check and the new test check"
 component: build-pipeline
 level: L2

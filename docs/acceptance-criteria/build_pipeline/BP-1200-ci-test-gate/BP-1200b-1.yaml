@@ -1,6 +1,6 @@
 id: BP-1200b-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A blocking test check runs the full suite on every pull request and fails when any test fails"
 component: build-pipeline
 level: L2

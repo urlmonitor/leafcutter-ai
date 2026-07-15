@@ -3,7 +3,7 @@ epic_name: EPIC-QuickFixWorkflow
 created: 2026-06-08
 status: in_progress
 components:
-  - build-pipeline
+  - build_pipeline
 source_ac: BP-600
 ---
 # EPIC-QuickFixWorkflow

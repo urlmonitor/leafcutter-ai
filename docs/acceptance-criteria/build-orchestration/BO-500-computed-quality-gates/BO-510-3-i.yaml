@@ -2,13 +2,13 @@ id: BO-510-3-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "New agent template added without produces field is caught by validation"
 component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a developer adds a new agent template file at templates/agents/new-agent.md
     with valid YAML frontmatter containing name, description, model, and tools
@@ -47,7 +47,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_agent_produces_validation.py
 implemented_by: []
 change_target: code
 risk_surface: internal

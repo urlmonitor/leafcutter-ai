@@ -1,6 +1,6 @@
 id: BP-100k
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Unauthorized changes to compiled workflows are caught automatically"

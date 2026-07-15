@@ -2,7 +2,7 @@ id: BO-300c-1-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Nested epic path is reduced to just the epic name in the finalize command"
 component: build-orchestration
 level: L3

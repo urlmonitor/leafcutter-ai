@@ -1,6 +1,6 @@
 id: PER-100c-1
 components:
-  - persona-management
+  - persona_management
 title: "Query AC store by persona returns all ACs targeting that persona"
 component: persona-management
 level: L2

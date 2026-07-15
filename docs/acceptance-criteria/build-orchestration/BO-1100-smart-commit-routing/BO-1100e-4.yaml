@@ -1,6 +1,6 @@
 id: BO-1100e-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "History filter is invoked by the learning pipeline and enforces a positive commit bound"
 component: build-orchestration
 level: L2
@@ -8,7 +8,7 @@ status: active
 readiness: reviewed
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given an unmatched shape with directory pattern "docs/architecture/**" has reached
     the proposal threshold (10 occurrences),
@@ -58,7 +58,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: [BO-1100e-4-i]
+covered_by:
+- BO-1100e-4-i
+- unit_tests/test_defect_fixes.py
 implemented_by: []
 change_target: code
 risk_surface: cost

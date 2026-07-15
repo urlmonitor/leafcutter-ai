@@ -1,6 +1,6 @@
 id: BO-1600d-3-ii
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "When origin genuinely lacks the missing objects, recovery reports it as unrecoverable and does not loop"

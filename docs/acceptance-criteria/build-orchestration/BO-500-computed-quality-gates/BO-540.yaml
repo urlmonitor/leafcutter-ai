@@ -2,7 +2,7 @@ id: BO-540
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Flow changes get architecture review and documentation before coding starts"
 component: build-orchestration
 level: L1
@@ -39,7 +39,7 @@ product_truth:
     entities:
       - Ticket
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/how-acs-are-built
     node: diagram
     node_kind: step
@@ -49,4 +49,4 @@ product_truth:
     entities:
       - Ticket
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

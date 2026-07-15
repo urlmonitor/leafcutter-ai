@@ -2,7 +2,7 @@ id: BP-100g-3-i
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Validation accepts allowed-tools as comma-separated string or YAML list"
 component: build-pipeline
 level: L3

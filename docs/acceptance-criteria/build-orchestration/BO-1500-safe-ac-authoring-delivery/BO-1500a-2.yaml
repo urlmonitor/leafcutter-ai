@@ -1,6 +1,6 @@
 id: BO-1500a-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: The original checkout and any concurrent worktree are left untouched

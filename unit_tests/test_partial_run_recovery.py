@@ -1,5 +1,5 @@
 """
-Behavioral tests for the partial-run recovery feature in scripts/workflows/plan-feature.js.
+Behavioral tests for the partial-run recovery feature in templates/workflows-js/plan-feature.js (the E2 runtime file).
 
 AC reference: ACD-300g-2-i
 Ticket: 09_TICKET-20260622-Implement_Partial_Run_Recovery_In_Workflow.md

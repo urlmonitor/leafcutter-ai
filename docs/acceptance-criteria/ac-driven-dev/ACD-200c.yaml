@@ -1,6 +1,6 @@
 id: ACD-200c
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "PO v3 signals documentation intent at L0/L1 level"

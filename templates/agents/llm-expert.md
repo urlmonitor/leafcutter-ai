@@ -139,6 +139,8 @@ before signing off.
    either remove the reference or add the tool to the allowlist.
    - Violation pattern: body says "Run `mcp__jcodemunch__get_blast_radius`" but
      `mcp__jcodemunch__get_blast_radius` is absent from `tools:`.
+   - Correct form: remove the stray tool reference from the body, or add the tool
+     to the `tools:` allowlist so the two are consistent.
 
 4. **`spawn_allowlist` declared when spawning sub-agents** — any prompt that
    invokes the `Agent` tool must include a `## Your Available Sub-Agents` or
@@ -151,12 +153,16 @@ before signing off.
    section that references `signoff` skill §2 and §3.
    - Violation: `signoff: true` in frontmatter but no `## Sign-off` section in
      the body.
+   - Correct form: add a `## Sign-off` section that references `signoff` skill §2
+     (status enum) and §3 (atomic sign-off recipe).
 
 6. **Stop-and-ask rules present for scope boundaries** — every agent template
    must have a `## Stop-and-Ask Rule` (or equivalent) section that names what
    work the agent must defer to another agent or to the user.
    - Violation: a coding agent has no scope boundary definition, allowing it to
      edit infrastructure files like `agent_registry.json`.
+   - Correct form: add a `## Stop-and-Ask Rule` section naming the work the agent
+     must defer (e.g. registry/build edits → workflow-architect; ambiguous scope → user).
 
 ---
 

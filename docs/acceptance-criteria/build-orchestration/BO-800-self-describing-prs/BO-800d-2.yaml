@@ -2,7 +2,7 @@ id: BO-800d-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "An amended AC (amended_by non-empty) is read in its current state, not its original state"
 component: build-orchestration
 level: L2

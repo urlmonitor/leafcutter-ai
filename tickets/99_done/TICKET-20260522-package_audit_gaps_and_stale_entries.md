@@ -3,8 +3,8 @@ title: "Resolve package audit gaps: undeployed hooks, uninstalled partials, stal
 status: done
 components:
   - commit_guardian
-  - build_system
-  - registries
+  - build_pipeline
+  - agent_registry
 created: 2026-05-22
 depends_on: []
 priority: medium

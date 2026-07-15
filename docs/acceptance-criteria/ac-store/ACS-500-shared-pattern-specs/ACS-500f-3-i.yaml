@@ -1,6 +1,6 @@
 id: ACS-500f-3-i
 components:
-  - ac-store
+  - ac_store
 title: "Widened schema still rejects malformed ids and unknown fields"
 component: ac-store
 level: L3

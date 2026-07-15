@@ -1,6 +1,6 @@
 id: UXP-541
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "A mockup agent drafts each screen populated from the mock data"
 component: ux-prototyping
 level: L2
@@ -55,4 +55,4 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

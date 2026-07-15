@@ -1,6 +1,6 @@
 id: KM-KQS-013
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "SKILL.md documents exactly the implemented CLI flags with no drift"

@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
-CG_DIR = WORKTREE_ROOT / "scripts" / "commit_guardian"
+CG_DIR = WORKTREE_ROOT / "templates" / "scripts" / "commit_guardian"
 
 # Canonical values that real docs/architecture/*.md files declare today.
 CANONICAL_VALUES = ["data_flow", "user_flow", "agent_flow"]

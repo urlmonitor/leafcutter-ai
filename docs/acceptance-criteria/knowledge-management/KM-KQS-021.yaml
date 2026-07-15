@@ -2,7 +2,7 @@ id: KM-KQS-021
 readiness: reviewed
 priority: medium
 components:
-  - knowledge-management
+  - knowledge_management
 title: "Components frontmatter field produces edges from declaring node to component hub node"
 component: knowledge-management
 level: L2

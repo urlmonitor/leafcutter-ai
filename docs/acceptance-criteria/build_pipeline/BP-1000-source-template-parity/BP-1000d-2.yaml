@@ -1,6 +1,6 @@
 id: BP-1000d-2
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Reference doc defining which scripts are in scope for the parity check and which are exempt"

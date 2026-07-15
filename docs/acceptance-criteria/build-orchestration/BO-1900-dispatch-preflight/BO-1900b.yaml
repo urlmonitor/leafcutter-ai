@@ -1,6 +1,6 @@
 id: BO-1900b
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A ticket's stated premises are re-checked before a run is spent"
 component: build-orchestration
 level: L1

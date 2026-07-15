@@ -1,0 +1,44 @@
+id: BO-2100a-1-i
+components:
+  - build_orchestration
+title: "live-surface-tester is absent from the agents map unless both toggles are on"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket authored via the ticket-authoring skill in each of these states:
+    (a) frontmatter `live_surface_test: true` but `skills_config.json`
+        `live_surface_testing.enabled` is `false`,
+    (b) frontmatter `live_surface_test` false or absent while
+        `live_surface_testing.enabled` is `true`,
+    (c) neither toggle set,
+  When the business-analyst produces the ticket's `agents:` map
+  Then the map contains NO `live-surface-tester` key in any of states (a), (b), or (c)
+    And the key appears ONLY when the feature toggle and the project toggle are both true.
+depends_on: [BO-2100a-1]
+doc_links:
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The default must be fail-safe: when either toggle is false or absent, the phase must NOT be added."
+  - "Coverage must exercise all three negative states (a), (b), (c) plus the positive both-on case, so no single-toggle path can silently enable the phase."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-1-i.md

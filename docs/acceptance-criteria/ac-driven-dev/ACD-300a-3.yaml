@@ -1,6 +1,6 @@
 id: ACD-300a-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Triage detects already-covered requests and surfaces existing ACs"

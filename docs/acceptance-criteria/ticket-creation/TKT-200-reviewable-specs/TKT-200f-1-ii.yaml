@@ -1,6 +1,6 @@
 id: TKT-200f-1-ii
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "When the clean tree cannot be established the ticket is held, not passed on local"
 component: ticket-creation
 level: L3

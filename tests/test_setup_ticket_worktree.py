@@ -11,6 +11,7 @@ Tests use unittest.mock.patch to avoid filesystem or subprocess calls.
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 import unittest
@@ -20,6 +21,61 @@ from unittest.mock import MagicMock, patch
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SETUP_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
 _SCRIPTS_SETUP_SCRIPT = _REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
+
+
+# ---------------------------------------------------------------------------
+# Probe-aware subprocess.run wrapper.
+#
+# _bootstrap() now runs a create-time gate that invokes
+# verify_precommit_active.py --json and json.loads() its stdout. A generic
+# MagicMock stdout crashes json.loads with a TypeError. These helpers wrap a
+# test's existing subprocess mock so that ONLY the probe call is intercepted
+# (returning a realistic passing JSON verdict); every other call is delegated
+# unchanged to the test's own mock. Behavioural assertions are untouched.
+# ---------------------------------------------------------------------------
+_PROBE_SCRIPT_STEM = "verify_precommit_active"
+
+
+def _is_probe_call(cmd) -> bool:
+    """Return True when cmd looks like an invocation of verify_precommit_active.py."""
+    try:
+        return any(_PROBE_SCRIPT_STEM in str(part) for part in cmd)
+    except TypeError:
+        return False
+
+
+def _passing_probe_result() -> MagicMock:
+    """A subprocess result mimicking a passing verify_precommit_active.py --json run."""
+    result = MagicMock()
+    result.returncode = 0
+    result.stdout = json.dumps(
+        {
+            "binary": True,
+            "config": True,
+            "git_hook": True,
+            "canary": True,
+            "failing_checks": [],
+        }
+    )
+    result.stderr = ""
+    return result
+
+
+def _probe_aware(delegate=None):
+    """Return a subprocess.run side_effect that intercepts only the probe call.
+
+    Probe calls return a passing JSON verdict; all other calls are delegated to
+    ``delegate`` when provided, otherwise a default success MagicMock is returned.
+    """
+
+    def _side_effect(cmd, *args, **kwargs):
+        if _is_probe_call(cmd):
+            return _passing_probe_result()
+        if delegate is not None:
+            return delegate(cmd, *args, **kwargs)
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    return _side_effect
 
 
 def _load_setup_module():
@@ -243,7 +299,7 @@ class TestSetupTicketDoesNotMoveTicketFile(unittest.TestCase):
         fake_stdout = io.StringIO()
 
         with (
-            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             patch("sys.stdout", fake_stdout),
             patch.object(mod.os, "chdir"),
             patch.object(mod.Path, "mkdir"),
@@ -295,7 +351,7 @@ class TestSetupTicketDoesNotMoveTicketFile(unittest.TestCase):
         fake_stdout = io.StringIO()
 
         with (
-            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             patch("sys.stdout", fake_stdout),
             patch.object(mod.os, "chdir"),
             patch.object(mod.Path, "mkdir"),
@@ -462,7 +518,7 @@ class TestBootstrapPoetryRepo(unittest.TestCase):
         with (
             patch.object(mod.os, "symlink"),
             patch.object(mod.shutil, "copy"),
-            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware()) as mock_run,
             patch.object(mod.Path, "exists", fake_exists),
         ):
             mod._bootstrap(main_repo, worktree)
@@ -512,7 +568,7 @@ class TestBootstrapPipRepo(unittest.TestCase):
         with (
             patch.object(mod.os, "symlink"),
             patch.object(mod.shutil, "copy"),
-            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware()) as mock_run,
             patch.object(mod.Path, "exists", fake_exists),
         ):
             mod._bootstrap(main_repo, worktree)
@@ -559,7 +615,7 @@ class TestBootstrapNoManifestRepo(unittest.TestCase):
         with (
             patch.object(mod.os, "symlink"),
             patch.object(mod.shutil, "copy"),
-            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware()) as mock_run,
             patch.object(mod.Path, "exists", fake_exists),
         ):
             mod._bootstrap(main_repo, worktree)
@@ -617,7 +673,7 @@ class TestBootstrapInstallFailureNonFatal(unittest.TestCase):
         with (
             patch.object(mod.os, "symlink"),
             patch.object(mod.shutil, "copy"),
-            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             patch.object(mod.Path, "exists", fake_exists),
             patch("sys.stderr", fake_stderr),
         ):
@@ -717,7 +773,7 @@ class TestTemplateBootstrapInstallFailureNonFatal(unittest.TestCase):
         with (
             patch.object(mod.os, "symlink"),
             patch.object(mod.shutil, "copy"),
-            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             patch.object(mod.Path, "exists", fake_exists),
             patch("sys.stderr", fake_stderr),
         ):
@@ -837,7 +893,7 @@ class TestBootstrapAC5RaisesWhenConfigAbsent(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 with self.assertRaises(mod.BootstrapError) as cm:
                     mod._bootstrap(main_repo, worktree)
@@ -874,7 +930,7 @@ class TestBootstrapAC5RaisesWhenConfigAbsent(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 with self.assertRaises(mod.BootstrapError) as cm:
                     mod._bootstrap(main_repo, worktree)
@@ -906,7 +962,7 @@ class TestBootstrapAC5RaisesWhenConfigAbsent(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 with self.assertRaises(mod.BootstrapError) as cm:
                     mod._bootstrap(main_repo, worktree)
@@ -958,7 +1014,7 @@ class TestBootstrapAC1HappyPath(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 # Must not raise
                 try:
@@ -1003,7 +1059,7 @@ class TestBootstrapAC1HappyPath(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 mod._bootstrap(main_repo, worktree)
 
@@ -1062,7 +1118,7 @@ class TestBootstrapAC3Idempotency(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 mod._bootstrap(main_repo, worktree)
 
@@ -1106,7 +1162,7 @@ class TestBootstrapAC3Idempotency(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 try:
                     mod._bootstrap(main_repo, worktree)
@@ -1178,7 +1234,7 @@ class TestBootstrapAC2ProbeGuarantee(unittest.TestCase):
             with (
                 patch.object(mod.os, "symlink"),
                 patch.object(mod.shutil, "copy"),
-                patch.object(mod.subprocess, "run", side_effect=fake_run),
+                patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)),
             ):
                 mod._bootstrap(main_repo, worktree)
 
@@ -1272,7 +1328,7 @@ class TestEstablishPreCommitConfigSymlinkPath(unittest.TestCase):
                 # build.py not present — no config created by build
                 return MagicMock(returncode=0)
 
-            with patch.object(mod.subprocess, "run", side_effect=fake_run):
+            with patch.object(mod.subprocess, "run", side_effect=_probe_aware(fake_run)):
                 try:
                     mod._bootstrap(main_repo, worktree)
                 except mod.BootstrapError as exc:

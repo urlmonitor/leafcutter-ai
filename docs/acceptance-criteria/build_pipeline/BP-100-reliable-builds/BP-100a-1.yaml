@@ -1,6 +1,6 @@
 id: BP-100a-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Build emits a warning for each registered hook whose script file is absent"
@@ -38,7 +38,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_build_precommit.py"
 implemented_by:
   - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"
 change_target: pipeline

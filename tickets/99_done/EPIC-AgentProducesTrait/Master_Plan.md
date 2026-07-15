@@ -3,7 +3,7 @@ title: "EPIC: Agent Produces Trait"
 type: epic
 status: done
 components:
-  - build-orchestration
+  - build_orchestration
 created: 2026-06-07
 depends_on: []
 priority: medium

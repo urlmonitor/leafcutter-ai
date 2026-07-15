@@ -2,13 +2,13 @@ id: BO-610-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "change_target enum definition with 10 canonical values"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the guardrail engine schema defines a change_target field,
   When the schema is validated,
@@ -48,7 +48,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_ticket_frontmatter_guard.py
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

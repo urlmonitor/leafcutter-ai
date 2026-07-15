@@ -1,6 +1,6 @@
 id: ACS-300j
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Component dependency graph in the registry"

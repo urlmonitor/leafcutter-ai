@@ -23,6 +23,19 @@ ARCHITECTURE: Registered as a pytest plugin via pytest.ini addopts
         an AC with work_status != "done" has its report ``outcome`` set to
         ``"xfailed"`` with a ``wasxfail`` attribute so pytest shows XFAIL.
       - All other tests are unaffected.
+
+    Safety guarantees (BP-audit stage 5 — anti-silent-masking):
+      - A failure covering an AC whose work_status **is** ``"done"`` is NEVER
+        masked — it surfaces as a hard failure (a regression in shipped work).
+        Unknown / absent ACs are likewise enforced (fail-safe). This partition
+        is decided by :func:`scripts.ac_store.test_enforcement.classify_by_work_status`.
+      - Masking is **loud, never silent**: every downgrade prints a per-test
+        line during the run AND an end-of-session summary
+        (:func:`pytest_terminal_summary`) naming the masked-failure count and the
+        AC ids, so a masked regression can never hide behind a green suite.
+      - Masking is **opt-out**: set the environment variable ``AC_ENFORCE_STRICT``
+        to a truthy value (``1``/``true``/``yes``/``on``) to disable masking
+        entirely — every AC-tagged failure then surfaces as a real failure.
 """
 
 from __future__ import annotations
@@ -43,6 +56,62 @@ if TYPE_CHECKING:
 
 _ac_cache: dict[str, str] | None = None
 _cache_built: bool = False
+
+# Records every failure that was downgraded to xfail this session as
+# (nodeid, ac_id) tuples, so pytest_terminal_summary can announce them loudly.
+_masked_failures: list[tuple[str, str]] = []
+
+# Truthy tokens for the AC_ENFORCE_STRICT opt-out switch.
+_STRICT_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _strict_mode_enabled() -> bool:
+    """Return True when masking is disabled via ``AC_ENFORCE_STRICT``.
+
+    When enabled, every AC-tagged failure surfaces as a real failure — no
+    outcome is ever downgraded to xfail, regardless of the covered AC's
+    work_status.
+
+    Returns:
+        True when the ``AC_ENFORCE_STRICT`` env var holds a truthy token
+        (``1``/``true``/``yes``/``on``, case-insensitive); False otherwise.
+    """
+    return os.environ.get("AC_ENFORCE_STRICT", "").strip().lower() in _STRICT_TRUTHY
+
+
+def _emit_terminal_line(config: pytest.Config, message: str) -> None:
+    """Write *message* to the terminal, loudly and unconditionally.
+
+    Prefers pytest's terminal reporter so the line lands in the captured
+    terminal output; falls back to stderr when the reporter is unavailable
+    (e.g. ``-p no:terminal``).
+
+    Args:
+        config: The active pytest config (source of the terminal reporter).
+        message: The line to emit.
+    """
+    reporter = None
+    try:
+        reporter = config.pluginmanager.get_plugin("terminalreporter")
+    except (AttributeError, ValueError) as exc:  # pragma: no cover - defensive
+        print(
+            f"WARNING: pytest_ac_enforcement: cannot access terminalreporter: {exc}",
+            file=sys.stderr,
+        )
+        reporter = None
+
+    if reporter is not None:
+        try:
+            reporter.write_line(message)
+        except (AttributeError, OSError) as exc:  # pragma: no cover - defensive
+            print(
+                f"WARNING: pytest_ac_enforcement: terminalreporter write failed: {exc}",
+                file=sys.stderr,
+            )
+        else:
+            return
+
+    print(message, file=sys.stderr)
 
 
 def _get_enforcement():
@@ -128,6 +197,15 @@ def pytest_runtest_makereport(
     if report.when != "call" or report.outcome != "failed":
         return
 
+    # Only XFAIL-convert assertion failures (the "feature not done yet" semantic).
+    # Implementation errors — TypeError, ImportError, AttributeError, etc. — must
+    # remain RED so that a broken import or wrong function signature is never
+    # silently masked as XFAIL. call.excinfo carries the exception type when the
+    # test body raises; when it is None the hook proceeds with the XFAIL check as
+    # a safe default.
+    if call.excinfo is not None and not issubclass(call.excinfo.type, AssertionError):
+        return
+
     try:
         enforcement = _get_enforcement()
     except ImportError as exc:
@@ -144,10 +222,67 @@ def pytest_runtest_makereport(
     cache = _get_ac_cache()
     classification = enforcement.classify_by_work_status(ac_id, cache)
     if classification != "informational":
+        # AC is done (or absent → fail-safe enforcement): this is a real
+        # regression in shipped work. NEVER mask it — let it fail hard.
         return
 
-    # Downgrade to xfail so pytest does not count this as a run failure.
+    # The covered AC is not done. Masking a not-yet-implemented AC's failure is
+    # the TDD-convenience default, but it must never be SILENT and it must be
+    # possible to turn off entirely.
+    if _strict_mode_enabled():
+        # Opt-out: surface every AC-tagged failure as a real failure.
+        _emit_terminal_line(
+            item.config,
+            f"AC-ENFORCEMENT [STRICT]: {item.nodeid} covers not-done AC "
+            f"{ac_id} — NOT masked (AC_ENFORCE_STRICT=1); reported as a real "
+            f"failure.",
+        )
+        return
+
+    # Downgrade to xfail so pytest does not count this as a run failure — but
+    # record it and announce it loudly so a masked regression can never hide.
     report.outcome = "xfailed"
     report.wasxfail = (
         f"AC {ac_id} work_status is not done — test is informational"
     )
+    _masked_failures.append((item.nodeid, ac_id))
+    _emit_terminal_line(
+        item.config,
+        f"AC-ENFORCEMENT [MASKED FAILURE]: {item.nodeid} covers AC {ac_id} "
+        f"(work_status != done) — downgraded to xfail. Set AC_ENFORCE_STRICT=1 "
+        f"to treat this as a real failure.",
+    )
+
+
+def pytest_terminal_summary(
+    terminalreporter: pytest.TerminalReporter,
+    exitstatus: int,
+    config: pytest.Config,
+) -> None:
+    """Emit an end-of-session summary naming every masked AC-tagged failure.
+
+    A masked failure (a genuinely-red test downgraded to xfail because its
+    covered AC is not done) must be impossible to miss. This hook prints a
+    loud, red separator plus one line per masked failure at the very end of
+    the run, so the count and the AC ids are surfaced even in a "passing" run.
+
+    Args:
+        terminalreporter: pytest's terminal reporter (writes to the terminal).
+        exitstatus: The session exit status (unused; part of the hook contract).
+        config: The active pytest config (unused; part of the hook contract).
+    """
+    if not _masked_failures:
+        return
+
+    ac_ids = sorted({ac_id for _, ac_id in _masked_failures})
+    terminalreporter.write_sep(
+        "=", "AC ENFORCEMENT: MASKED FAILURES", red=True, bold=True
+    )
+    terminalreporter.write_line(
+        f"AC-ENFORCEMENT SUMMARY: {len(_masked_failures)} AC-tagged failure(s) "
+        f'were masked (downgraded to xfail) because their AC work_status != "done": '
+        f"{', '.join(ac_ids)}. "
+        f"Set AC_ENFORCE_STRICT=1 to surface them as real failures."
+    )
+    for nodeid, ac_id in _masked_failures:
+        terminalreporter.write_line(f"  - {nodeid}  [AC {ac_id}]")

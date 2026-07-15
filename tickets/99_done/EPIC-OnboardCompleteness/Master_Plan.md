@@ -3,8 +3,8 @@ title: "EPIC: Onboard Agent Completeness"
 type: epic
 status: done
 components:
-  - onboard
-  - build_system
+  - onboarding
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 requires_diagram: false

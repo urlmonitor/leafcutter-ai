@@ -1,6 +1,6 @@
 id: KM-VIS-008
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Sibling module import uses importlib.util pattern"

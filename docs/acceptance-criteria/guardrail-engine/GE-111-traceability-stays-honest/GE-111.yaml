@@ -1,6 +1,6 @@
 id: GE-111
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Refactoring can never silently break the link between your requirements and your code"

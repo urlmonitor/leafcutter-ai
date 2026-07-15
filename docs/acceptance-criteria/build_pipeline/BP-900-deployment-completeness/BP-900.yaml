@@ -1,4 +1,6 @@
 id: BP-900
+components:
+  - build_pipeline
 title: "Every leafcutter capability you install actually works when you use it"
 component: build_pipeline
 level: L0

@@ -1,0 +1,47 @@
+id: BO-2100a-2
+components:
+  - build_orchestration
+title: "ticket-supervisor Spawn Allowlist permits live-surface-tester"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the ticket-supervisor agent template (templates/agents/ticket-supervisor.md)
+    with its "Spawn Allowlist (is_ticket_phase agents)" section
+  When the supervisor reaches a phase whose agent is `live-surface-tester`
+  Then `live-surface-tester` appears as a listed entry in that Spawn Allowlist
+    alongside `user-surface-smoker`
+    And the supervisor is permitted to dispatch it rather than rejecting it as an
+    unlisted agent.
+depends_on: [BO-2100a]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The allowlist change must be additive: no existing allowlisted agent may be removed or reordered."
+  - "The listed agent key must exactly match the key emitted by the ticket-authoring skill (BO-2100a-1) and the build-ticket.js phaseOrder (BO-2100a-3): `live-surface-tester`."
+  - "Must be consistent with the registry entry marking live-surface-tester as an is_ticket_phase agent."
+delivers_to:
+  agent: test-runner
+  contract: "A ticket-supervisor Spawn Allowlist that lists live-surface-tester, so a real drive is permitted to dispatch the phase rather than rejecting it as unlisted"
+expects_from:
+  ac_id: BO-2100a-1
+  contract: "A ticket agents: map that names live-surface-tester as a phase to dispatch"
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-2.md

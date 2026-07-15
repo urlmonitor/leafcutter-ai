@@ -1,6 +1,6 @@
 id: ACD-1500b-2-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Confidence exactly at the floor is allowed to proceed"

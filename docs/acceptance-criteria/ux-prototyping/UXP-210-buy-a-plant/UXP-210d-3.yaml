@@ -43,7 +43,7 @@ product_truth:
       - Order
       - Plant
     source: mock
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: fern-and-fig/customer-buys-a-plant
     node: outOfStockAtCheckout
     node_kind: branch
@@ -54,4 +54,4 @@ product_truth:
       - Order
       - Plant
     source: mock
-    asof: '2026-07-14'
+    asof: '2026-07-15'

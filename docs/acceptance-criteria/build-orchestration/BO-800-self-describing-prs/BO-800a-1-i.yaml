@@ -2,7 +2,7 @@ id: BO-800a-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket with no source_ac field falls back to the ticket title"
 component: build-orchestration
 level: L3

@@ -1,0 +1,61 @@
+id: BP-006c-3
+components:
+  - build_pipeline
+title: "Deployed plan-feature.js matches the canonical templates/workflows-js source (no stale committed copy)"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+parent: BP-006c
+criteria: |
+  Given scripts/build_phases.py build_workflow_scripts() deploys workflow scripts,
+  And templates/workflows-js/plan-feature.js is the canonical source (82,834 bytes),
+  When the plan-feature deploy assertions in tests/test_build_phases.py run,
+  Then the deployed plan-feature.js is byte-identical to the canonical
+  templates/workflows-js/plan-feature.js,
+  And there is no stale committed deployed copy (observed at 61,383 bytes) that
+  overrides or diverges from the canonical source,
+  And the tests/test_build_phases.py plan-feature deploy tests pass with exit code 0.
+depends_on:
+  - BP-006c
+doc_links:
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: tests/test_build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Grounded (2026-07-10): build_workflow_scripts() currently yields a deployed plan-feature.js of 61,383 bytes while the canonical source templates/workflows-js/plan-feature.js is 82,834 bytes, so the plan-feature deploy assertions in tests/test_build_phases.py fail. Fix so deployed == canonical source."
+  - "The fix must make templates/workflows-js/plan-feature.js the single source of truth: either remove the stale committed deployed copy that shadows it, or correct build_workflow_scripts()'s deploy source so it reads the canonical file — never leave two divergent copies."
+  - "Per ADR-001/ADR-004 the deployed output is a build artifact (gitignored); do not commit the generated deployed copy into source control as the fix. If a stale copy is currently tracked in git, removing it from version control is in scope."
+  - "The build/deploy step must be idempotent: a repeated build produces a deployed plan-feature.js byte-identical to the canonical source every time."
+  - "Do not edit the canonical templates/workflows-js/plan-feature.js merely to satisfy a byte count — parity is achieved by deploying the canonical content faithfully, not by shrinking the source to match a stale artifact."
+test_spec:
+  - name: test_deployed_plan_feature_matches_canonical_source
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "After build_workflow_scripts(), the deployed plan-feature.js is byte-identical to templates/workflows-js/plan-feature.js (no stale 61,383-byte copy shadowing the 82,834-byte source)."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/test_build_phases.py"
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

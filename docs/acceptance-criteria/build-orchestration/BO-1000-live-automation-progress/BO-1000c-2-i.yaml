@@ -1,0 +1,48 @@
+id: BO-1000c-2-i
+components:
+  - build_orchestration
+title: "On a mid-flight halt the last conversation line reflects the halting step, live"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the background finalize run halts partway through the sequence,
+  When the user reads the main conversation,
+  Then the most recent progress line surfaced into the conversation reflects the
+    step that was underway when the run halted,
+  And the user learns where the run stopped from the live conversation stream,
+    not only from the terminal halt result returned at the end.
+depends_on: [BO-1000c-2]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface: the /finalize-feature launch contract (templates/commands/finalize-feature.md + main-loop poll/relay instruction) — llm-expert, same relay surface as BO-1000c-2."
+  - "The relay must surface the halting step's line into the conversation from the journal BEFORE (or independently of) the terminal halt result, so the last conversation line reflects the step that was underway at the halt — the user learns where it stopped from the live stream, not only the returned halt payload."
+  - "Relies on BO-1000a-1-i (the halting step's start-of-step line is emitted before the failure) and BO-1000c-1a (that line reaches the journal); the relay must flush any remaining unrelayed journal lines when it detects the run has halted, so the halting-step line is not dropped."
+  - "Keep the /finalize-feature command doc and its deployed copy in parity via build.py (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1000c-1a
+  contract: "The run-progress journal (from BO-1000c-1a), including the halting step's start-of-step line (guaranteed emitted before failure by BO-1000a-1-i), which the relay surfaces so the last conversation line reflects the halting step."
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Re-assigned to llm-expert (relay/launch-contract surface). Added it_requirements, doc_links, expects_from (journal + BO-1000a-1-i dependency). Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

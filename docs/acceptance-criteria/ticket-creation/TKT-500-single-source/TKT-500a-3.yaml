@@ -1,6 +1,6 @@
 id: TKT-500a-3
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "Amended AC is seen by the next agent without manual sync"

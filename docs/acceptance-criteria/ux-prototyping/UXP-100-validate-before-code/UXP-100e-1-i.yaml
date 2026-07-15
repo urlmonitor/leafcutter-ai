@@ -1,6 +1,6 @@
 id: UXP-100e-1-i
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Feature without UX involvement skips UX designer dispatch entirely"
 component: ux-prototyping
 level: L3

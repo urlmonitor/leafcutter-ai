@@ -1,6 +1,6 @@
 id: TQ-200a-1-i
 components:
-  - testing-quality
+  - testing_quality
 title: "The producer and AC-authoring agents are in scope for eval coverage"
 component: testing-quality
 level: L3

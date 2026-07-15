@@ -1,6 +1,6 @@
 id: TQ-100a-1-ii
 components:
-  - testing-quality
+  - testing_quality
 title: "A test file that raises at module scope does not stop the other files"
 component: testing-quality
 level: L3

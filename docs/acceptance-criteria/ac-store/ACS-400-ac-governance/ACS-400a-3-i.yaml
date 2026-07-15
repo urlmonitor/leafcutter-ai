@@ -2,7 +2,7 @@ id: ACS-400a-3-i
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Human user is always authorized regardless of agent registry membership"
 component: ac-store
 level: L3

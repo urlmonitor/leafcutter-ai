@@ -1,6 +1,6 @@
 id: ACD-1100c
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "The planning command is renamed from /create-ac to /plan-feature"

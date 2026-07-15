@@ -1,6 +1,6 @@
 id: BO-1800c
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Run as many features in parallel as your machine allows"
 component: build-orchestration
 level: L1

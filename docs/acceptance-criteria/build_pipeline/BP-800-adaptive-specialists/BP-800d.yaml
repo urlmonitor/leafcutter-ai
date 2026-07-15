@@ -1,6 +1,6 @@
 id: BP-800d
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Legacy language agents retire gracefully"
 component: build-pipeline
 level: L1

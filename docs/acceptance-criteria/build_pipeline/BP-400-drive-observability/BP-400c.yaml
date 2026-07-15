@@ -2,7 +2,7 @@ id: BP-400c
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Get a prioritized summary of what to fix next — on demand"
 component: build-pipeline
 level: L1

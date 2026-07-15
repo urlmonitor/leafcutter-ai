@@ -2,7 +2,7 @@ id: BO-400b
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A dedicated script manages all ticket status transitions"
 component: build-orchestration
 level: L1
@@ -45,4 +45,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

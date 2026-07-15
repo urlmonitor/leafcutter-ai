@@ -1,6 +1,6 @@
 id: GE-101c-1
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "diff-cover hook uses HEAD~1 as fallback when all compare branches are unreachable in a shallow clone"

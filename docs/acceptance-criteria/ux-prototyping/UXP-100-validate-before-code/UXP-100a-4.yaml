@@ -1,6 +1,6 @@
 id: UXP-100a-4
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Component diagram showing the prototype assembly data flow"
 component: ux-prototyping
 level: L2

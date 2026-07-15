@@ -1,6 +1,6 @@
 id: ACS-100c-6-i
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: medium
 title: "A parent whose children are all superseded has an effective count of zero"

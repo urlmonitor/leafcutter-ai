@@ -1,6 +1,6 @@
 id: ACS-300g-4a
 components:
-  - ac-store
+  - ac_store
 title: "Write tooling Python script for adding component entries to the registry"
 component: ac-store
 level: L2

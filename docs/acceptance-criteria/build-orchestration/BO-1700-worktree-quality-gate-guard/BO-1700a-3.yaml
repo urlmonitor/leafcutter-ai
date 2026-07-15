@@ -1,6 +1,6 @@
 id: BO-1700a-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "A present-but-inert chain fails Check D even when A, B and C pass"

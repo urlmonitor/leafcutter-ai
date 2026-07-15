@@ -1,6 +1,6 @@
 id: UXP-100c-3
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Request-changes feedback produces a revised prototype incorporating the feedback"
 component: ux-prototyping
 level: L2

@@ -36,6 +36,7 @@
       "enum": ["create", "extend"],
       "description": "Optional: whether the request creates a NEW artifact or EXTENDS an existing one (the store's add-vs-create protocol)."
     },
-    "extends": { "type": "string", "description": "Optional: artifact id this request extends (when decision=extend)." }
+    "extends": { "type": "string", "description": "Optional: artifact id this request extends (when decision=extend)." },
+    "ac": { "type": "string", "description": "Optional back-reference to the acceptance-criterion id this row exercises (bidirectional traceability to the AC store). Ignored by the scorer." }
   }
 }

@@ -2,7 +2,7 @@
 title: "Interactive vision.md and roadmap.json completion during onboard"
 status: done
 components:
-  - onboard
+  - onboarding
 created: 2026-05-19
 depends_on:
   - 01_placeholder_detection.md

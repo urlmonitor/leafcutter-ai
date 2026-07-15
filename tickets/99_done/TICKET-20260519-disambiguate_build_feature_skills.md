@@ -2,7 +2,7 @@
 title: "Disambiguate build-feature skill name collision and mark internal sub-skills"
 status: done
 components:
-  - build_system
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 priority: medium

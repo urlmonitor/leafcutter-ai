@@ -1,10 +1,12 @@
 id: BO-2000a-3
+components:
+  - build_orchestration
 title: "Sign-off degrades safely when the feedback sink is unreachable"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -35,5 +37,6 @@ origin_agent: BrainCandy
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_signoff_block_protocol.py
 implemented_by: []

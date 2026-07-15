@@ -1,6 +1,6 @@
 id: BO-1900b-1-ii
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A reproduction command that errors or times out fails closed"
 component: build-orchestration
 level: L3

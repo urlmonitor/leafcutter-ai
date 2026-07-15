@@ -1,13 +1,13 @@
 id: BP-600d-4-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow handles the case when no PR exists for the current branch"
 component: build-pipeline
 level: L3
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the commit has completed and the workflow reaches the close phase,
   When no open PR exists for the current branch,
@@ -40,7 +40,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

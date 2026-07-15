@@ -4,7 +4,7 @@ description: "Step-by-step guide for adopters migrating from the separate fronte
 type: how-to
 status: active
 created: 2026-06-18
-last_updated: 2026-06-18
+last_updated: 2026-07-15
 components:
   - build_pipeline
 related_docs:
@@ -43,8 +43,13 @@ principles were applied only when the skill was explicitly installed via `/onboa
 
 - `frontend-coder.md` contains the design principles directly. The agent always
   applies design principles; there is no "not installed" state for design.
-- The `frontend-design` skill directory is no longer produced by `build.py`. If the
-  directory still exists on disk from a previous build, `build.py --clean` removes it.
+- The `frontend-design` skill directory is no longer produced by `build.py`. The
+  template is retained in `templates/skills/frontend-design/` with `deprecated: true`,
+  so `build_skills()` skips it at deploy time and never writes it to
+  `.claude/skills/frontend-design/` on a fresh build. (Separately, because
+  `_build_source_manifests()` still lists the directory as managed,
+  `clean_stale_artifacts()` does not prune it on a `--clean` run either.) If the
+  directory exists from a previous installation it must be removed manually.
 - `skills_config.json` no longer needs (or accepts) `"frontend-design"` under
   `frontend.optional_skills`. The migration removes it automatically.
 
@@ -97,9 +102,15 @@ embedded design principles. The old version, which called out to the
 ### What `build.py` does NOT do automatically
 
 `build.py` does **not** delete the `.claude/skills/frontend-design/` directory
-during a standard run. The directory is simply no longer regenerated, so it
-becomes a stale artifact. To remove it, pass `--clean` (see verification steps
-below).
+during a standard run or a `--clean` run. The template is retained in
+`templates/skills/frontend-design/` with `deprecated: true`, so
+`_build_source_manifests()` treats it as still-managed and
+`clean_stale_artifacts()` never prunes it. If the directory already exists on
+disk from a previous installation, remove it manually:
+
+```bash
+rm -rf .claude/skills/frontend-design/
+```
 
 ---
 
@@ -114,8 +125,10 @@ ls .claude/skills/frontend-design/
 ```
 
 Expected result: `No such file or directory`. If the directory still exists, it
-is a leftover from the previous build and can be safely deleted (see rollback
-section for the exact command, or run `build.py --clean`).
+is a leftover from the previous build and can be safely deleted manually:
+`rm -rf .claude/skills/frontend-design/`. Note that `build.py --clean` does NOT
+remove this directory — `clean_stale_artifacts()` treats deprecated-but-still-managed
+templates as in-scope and skips them.
 
 **2. `skills_config.json` no longer lists `"frontend-design"`:**
 
@@ -138,16 +151,18 @@ the new template. If the count is zero, the template was not updated — re-run
 
 ### Full verification in one pass
 
-Run `build.py --clean` to simultaneously update the agent template, migrate the
-config, and remove the stale `frontend-design` skill directory:
+Run `build.py --clean` to simultaneously update the agent template and migrate the
+config. Note that `--clean` does **not** remove the `frontend-design` directory —
+the template carries `deprecated: true` so `_build_source_manifests()` treats it as
+still-managed at deploy time and `clean_stale_artifacts()` skips it. Remove the
+directory manually if it exists (see step 1 above).
 
 ```bash
 python leafcutter-ai/scripts/build.py --target-dir . --clean
 ```
 
 After a successful run, the output includes a "Config migration" heading confirming
-the `frontend-design` removal and a "Clean mode" heading listing any removed stale
-artifacts.
+the `frontend-design` entry was removed from `skills_config.json`.
 
 ---
 

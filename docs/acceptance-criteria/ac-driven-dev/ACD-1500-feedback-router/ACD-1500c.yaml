@@ -1,6 +1,6 @@
 id: ACD-1500c
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Acted-on feedback is marked done and traceable to the work it created"

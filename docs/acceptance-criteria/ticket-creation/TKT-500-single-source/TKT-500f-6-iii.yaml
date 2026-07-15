@@ -1,6 +1,6 @@
 id: TKT-500f-6-iii
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: high
 title: "An absent Test Requirements section must not silently skip test-writer when an implementation .py is in scope"

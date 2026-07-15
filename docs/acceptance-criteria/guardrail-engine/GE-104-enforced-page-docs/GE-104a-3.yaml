@@ -1,6 +1,6 @@
 id: GE-104a-3
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "A how-to guide ships with the page-documentation guardrail so operators can configure and respond to it"

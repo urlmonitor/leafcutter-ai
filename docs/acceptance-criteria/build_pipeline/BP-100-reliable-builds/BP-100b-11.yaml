@@ -1,6 +1,6 @@
 id: BP-100b-11
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Registry referential integrity: every commit-guardian hook entry points at a script that exists, and the deployed registry is derivable from the canonical template"

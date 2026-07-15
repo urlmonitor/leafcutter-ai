@@ -1,6 +1,6 @@
 id: BO-1900b-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A premise that no longer reproduces at dispatch halts the run"
 component: build-orchestration
 level: L2

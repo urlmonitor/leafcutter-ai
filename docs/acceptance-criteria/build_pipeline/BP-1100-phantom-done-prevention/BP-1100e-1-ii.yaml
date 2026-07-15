@@ -1,6 +1,6 @@
 id: BP-1100e-1-ii
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Path comparison is normalized for separators and case so NTFS/APFS paths are not false-flagged"
@@ -50,7 +50,9 @@ amended_by:
     confirmed_by: BrainCandy
     confirmed_at: 2026-07-07
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_pathcase.py"
+  - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/03_TICKET-20260706-BP-1100e-1-ii.md
 notes: |

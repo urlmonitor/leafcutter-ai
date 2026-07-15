@@ -2,7 +2,7 @@
 title: "Dependency wiring — AC depends_on to ticket depends_on with cycle detection"
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-GoalToEpic/01_tree-traversal-ticket-generation.md

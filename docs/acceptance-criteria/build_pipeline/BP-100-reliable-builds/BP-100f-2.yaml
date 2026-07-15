@@ -2,7 +2,7 @@ id: BP-100f-2
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "changelog-agent emits warning and skips git steps outside a git worktree"
 component: build-pipeline
 level: L2

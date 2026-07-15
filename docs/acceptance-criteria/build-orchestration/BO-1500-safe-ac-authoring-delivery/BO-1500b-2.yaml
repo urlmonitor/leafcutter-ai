@@ -1,6 +1,6 @@
 id: BO-1500b-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: A crash mid-pipeline leaves completed stages committed and resumable

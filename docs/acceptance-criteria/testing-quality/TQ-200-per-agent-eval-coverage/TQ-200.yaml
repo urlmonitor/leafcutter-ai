@@ -1,6 +1,6 @@
 id: TQ-200
 components:
-  - testing-quality
+  - testing_quality
 title: "Every AI agent that writes or judges is guarded by an eval set, so its quality can be measured and never silently regresses"
 component: testing-quality
 level: L0

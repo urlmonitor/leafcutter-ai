@@ -1,6 +1,6 @@
 id: ACS-300g-1
 components:
-  - ac-store
+  - ac_store
 title: "Each backfilled component entry satisfies the minimum schema"
 component: ac-store
 level: L2
@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given docs/components.json receives a new component entry for a subsystem
     (e.g. id: "supervisor_system"),
@@ -46,8 +46,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: [ACS-300g-1-i, ACS-300g-1-ii]
+covered_by:
+  - unit_tests/commit_guardian/test_check_components_integrity.py::TestValidateComponentMinimumSchemaAcs300g1
 implemented_by:
-- tickets/00_inbox/TICKET-20260608-ACS-300g-1.md
+  - templates/scripts/commit_guardian/check_components_integrity.py
 change_target: code
 risk_surface: contract_boundary

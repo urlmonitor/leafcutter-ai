@@ -2,7 +2,7 @@ id: ACS-400a
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Only requirement authors can define what 'done' means"
 component: ac-store
 level: L1
@@ -38,4 +38,4 @@ product_truth:
     entities:
       - Ac
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

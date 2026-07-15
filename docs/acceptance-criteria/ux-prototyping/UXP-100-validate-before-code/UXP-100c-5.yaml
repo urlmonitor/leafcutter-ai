@@ -1,6 +1,6 @@
 id: UXP-100c-5
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "How-to guide for reviewing and deciding on a prototype"
 component: ux-prototyping
 level: L2

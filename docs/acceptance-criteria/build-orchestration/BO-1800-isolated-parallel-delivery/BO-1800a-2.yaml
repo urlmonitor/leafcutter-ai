@@ -1,6 +1,6 @@
 id: BO-1800a-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Drive copies are created by the fastest safe strategy available, in a fixed preference order"

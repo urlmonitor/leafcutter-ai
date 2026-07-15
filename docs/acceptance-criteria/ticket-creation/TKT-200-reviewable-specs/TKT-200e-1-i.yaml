@@ -1,6 +1,6 @@
 id: TKT-200e-1-i
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A ticket with no factual claims is not falsely flagged"
 component: ticket-creation
 level: L3

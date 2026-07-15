@@ -1,13 +1,13 @@
 id: BP-600a-3-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow permits uncommitted changes in unrelated files"
 component: build-pipeline
 level: L3
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the user's worktree has unstaged changes in "docs/README.md",
   When the user invokes /quick-fix with a diagnosis targeting
@@ -39,7 +39,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

@@ -1,6 +1,6 @@
 id: KM-KGS-100b
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: approved
 priority: high
 title: "Jump from a requirement straight to the code and tests that deliver it"

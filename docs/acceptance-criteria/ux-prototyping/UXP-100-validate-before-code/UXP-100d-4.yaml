@@ -1,6 +1,6 @@
 id: UXP-100d-4
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Sequence diagram showing prototype-to-implementation handoff data flow"
 component: ux-prototyping
 level: L2

@@ -1,6 +1,6 @@
 id: BP-800f-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Document database detected and specialist generated with document-specific best practices"
 component: build-pipeline
 level: L2

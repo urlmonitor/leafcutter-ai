@@ -2,13 +2,13 @@ id: BO-610-5
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Unrecognized change_target or risk_surface value is rejected at validation"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a ticket file has change_target set to "database" (not in the enum),
   When the frontmatter validation runs,
@@ -50,7 +50,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_ticket_frontmatter_guard.py
 implemented_by: []
 change_target: code
 risk_surface: internal

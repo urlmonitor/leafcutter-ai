@@ -1,6 +1,6 @@
 id: BO-2000e
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A code ticket cannot be authored or dispatched without a test-requirements section"
 component: build-orchestration
 level: L1

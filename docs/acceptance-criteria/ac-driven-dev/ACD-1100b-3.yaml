@@ -1,6 +1,6 @@
 id: ACD-1100b-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "All cross-references to v3 agent names are updated to canonical names"

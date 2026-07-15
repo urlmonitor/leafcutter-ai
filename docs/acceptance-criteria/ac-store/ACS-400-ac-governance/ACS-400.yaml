@@ -2,7 +2,7 @@ id: ACS-400
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Trust that requirements cannot be silently rewritten by the wrong agent"
 component: ac-store
 level: L0

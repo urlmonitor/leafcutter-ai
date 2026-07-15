@@ -3,7 +3,7 @@ title: "EPIC: goal_to_epic leaf-filter & cycle-resilient scan"
 type: epic
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-22
 depends_on: []
 priority: high

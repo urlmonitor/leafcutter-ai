@@ -1,6 +1,6 @@
 id: ACS-900b-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Leftover live code behind a retired AC blocks the commit"

@@ -1,0 +1,76 @@
+id: BO-2100d-2
+components:
+  - build_orchestration
+title: "Enabled with empty or missing startup_command is rejected as a config error"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a `live_surface_testing` config block whose `enabled` is `true` but whose
+    `startup_command` is missing or an empty/whitespace-only string
+  When the config is validated (config_loader.py validate_config)
+  Then validation raises a ConfigValidationError whose message states that
+    `startup_command` must be a non-empty string when `enabled` is true
+    And the misconfiguration is reported rather than the pipeline proceeding as if
+    the check could run.
+depends_on: [BO-2100d]
+doc_links:
+  - path: scripts/config_loader.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    live_surface_testing:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        startup_command:
+          type: string
+      required:
+        - enabled
+      allOf:
+        - if:
+            properties:
+              enabled:
+                const: true
+          then:
+            properties:
+              startup_command:
+                type: string
+                minLength: 1
+            required:
+              - startup_command
+  reference_file_path: "scripts/config_loader.py"
+  n_location_rule: "1"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python -m pytest unit_tests/test_config_loader_live_surface_testing.py -q"
+  notes: |
+    Validation must reject enabled:true with a missing, empty, or whitespace-only
+    startup_command by raising ConfigValidationError whose message names the
+    `startup_command` field. The rejection must happen at config-validation time, before
+    any server-start attempt, so a misconfiguration never masquerades as a runtime
+    failure. This AC places existing behavior under explicit coverage (see top-level
+    notes); the coverage must fail loudly if the safeguard regresses.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100d-2.md
+notes: "Behavior already implemented by _validate_live_surface_testing() in config_loader.py; this AC exists to place the existing safeguard under explicit coverage so it cannot silently regress."

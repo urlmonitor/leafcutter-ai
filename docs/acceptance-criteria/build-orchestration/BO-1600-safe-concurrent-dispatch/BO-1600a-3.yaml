@@ -1,6 +1,6 @@
 id: BO-1600a-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Concurrent commits no longer produce a zero-byte object or a broken index"

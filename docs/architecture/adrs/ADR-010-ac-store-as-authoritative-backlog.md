@@ -8,8 +8,8 @@ last_updated: "2026-06-22"
 deciders:
   - BrainCandy
 components:
-  - ac-store
-  - ticket-creation
+  - ac_store
+  - ticket_creation_pipeline
   - build_pipeline
 related_docs:
   - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md

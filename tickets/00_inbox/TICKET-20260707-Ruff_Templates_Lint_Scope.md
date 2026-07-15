@@ -2,7 +2,7 @@
 title: "Decide whether ruff should lint templates/ directly (currently excluded)"
 status: todo
 components:
-  - build-pipeline
+  - build_pipeline
 created: 2026-07-07
 depends_on: []
 priority: low

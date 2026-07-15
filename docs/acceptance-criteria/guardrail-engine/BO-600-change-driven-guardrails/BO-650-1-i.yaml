@@ -2,7 +2,7 @@ id: BO-650-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Architect notices missing architecture docs and flags the gap"
 component: build-orchestration
 level: L3

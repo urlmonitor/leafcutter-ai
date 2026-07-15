@@ -1,6 +1,8 @@
 id: BP-200c-1
 readiness: reviewed
 priority: medium
+components:
+  - build_pipeline
 title: "Registry entry declares llm-expert as a phase agent with correct tier and role"
 component: build_pipeline
 level: L2
@@ -46,7 +48,9 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
 amended_by: []
 superseded_by: null
-covered_by: [BP-200c-1-i]
+covered_by:
+  - "unit_tests/agents/test_llm_expert_artifacts.py"
+  - BP-200c-1-i
 implemented_by:
   - "config/agent_registry.json"
 change_target: config

@@ -1,6 +1,6 @@
 id: ACS-100d-4
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "origin_agent accepts any string value without closed enum restriction"

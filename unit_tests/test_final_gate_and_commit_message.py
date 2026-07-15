@@ -1,6 +1,7 @@
 """
-Behavioral tests for the four bugs in run() / commitStageOutput() in
-scripts/workflows/plan-feature.js.
+Behavioral tests for the four bugs in the workflow body / commitStageOutput() in
+templates/workflows-js/plan-feature.js (the E2 runtime file), driven via the
+E2 harness.
 
 AC reference: ACD-300g-3, ACD-300g-4
 Ticket: 10_TICKET-20260622-Fix_Final_Gate_Edit_And_Commit_Message.md

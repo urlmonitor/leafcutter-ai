@@ -2,7 +2,7 @@ id: BO-800e
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Every PR links back to the goal it serves"
 component: build-orchestration
 level: L1

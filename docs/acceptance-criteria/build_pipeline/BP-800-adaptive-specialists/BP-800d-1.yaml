@@ -1,6 +1,6 @@
 id: BP-800d-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Legacy hardcoded agent is superseded when a generated specialist exists for the same technology"
 component: build-pipeline
 level: L2

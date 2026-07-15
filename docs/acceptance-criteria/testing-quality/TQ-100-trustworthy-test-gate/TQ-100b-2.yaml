@@ -1,6 +1,6 @@
 id: TQ-100b-2
 components:
-  - testing-quality
+  - testing_quality
 title: "A test linked to a done AC is enforced and its failure fails the run"
 component: testing-quality
 level: L2

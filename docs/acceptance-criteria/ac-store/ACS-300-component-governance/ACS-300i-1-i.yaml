@@ -1,6 +1,6 @@
 id: ACS-300i-1-i
 components:
-  - ac-store
+  - ac_store
 title: "Interface path referencing a non-existent file emits a warning but is accepted"
 component: ac-store
 level: L3

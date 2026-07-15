@@ -2009,6 +2009,8 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     - ``scripts/knowledge_query.py`` — used by the knowledge-query skill.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
+    - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
+    - ``scripts/live_surface_startup.py`` — used by the live-surface-tester agent.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -2028,6 +2030,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   knowledge_query.py, set_ticket_status.py, ticket_prioritizer.py from
     #   package source to scripts/. Closes the Class B deploy gap for these
     #   four workflow-tool scripts. (#EPIC-BuildGuardFalsePositive/03)
+    # - 2026-07-10 [claude/revive]: Added port_registry.py and
+    #   live_surface_startup.py to the deploy list so the live-surface-tester
+    #   agent's referenced scripts are deployed to consumers (registry-completeness
+    #   build-guard). (#EPIC-LiveSurfaceTesting)
     """
     scripts_src = PACKAGE_ROOT / "scripts"
     deploy_scripts = [
@@ -2035,6 +2041,8 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
         "knowledge_query.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
+        "port_registry.py",
+        "live_surface_startup.py",
     ]
     output_dir = target_root / "scripts"
     written = 0

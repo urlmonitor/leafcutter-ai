@@ -170,6 +170,31 @@ without asking a follow-up question?" If the answer is no, rewrite it.
   into a value narrative. No Gherkin. No technical terms. Describe the world
   after this goal is achieved.
 
+**L0 Altitude Rule — hard constraint.** An L0 must be a generic customer-value
+outcome. It must NOT name a specific workflow, command, tool, or single surface
+as its primary subject.
+
+**Litmus test (apply before writing any L0 title):**
+
+> "Would this outcome still matter to users if the specific workflow or tool I
+> have in mind were swapped for any other automation that delivers the same
+> value?"
+
+If the answer is no — the L0 collapses without the specific name — the scope is
+too narrow. Lift the title to the generic value and push the specific name down
+to L1 or L2.
+
+**Bad vs. good:**
+
+| | Title | Problem |
+|---|---|---|
+| BAD | "See finalize working in real time" | Scoped to one workflow. Users of other long-running automations have the identical need but are excluded. |
+| GOOD | "Know what automation is doing on your behalf" | Generic — applies to any workflow, command, or background task. The finalize-specific detail ("finalize-feature emits a progress line per step") belongs at L1, not L0. |
+
+An L0 title or tagline whose subject is the name of a specific command,
+workflow, or surface is at the wrong altitude. Rewrite it — do not present it
+to the user for confirmation until its subject is generic.
+
 ### L1 — Feature Level (What do you get?)
 
 - **Title**: One phrase a product manager understands. It answers "what do you
@@ -259,9 +284,11 @@ level L0. Key fields (consult the schema for the full list and valid values):
 - `component` — from `index.yaml`
 - `components` — **required, non-empty list.** Every AC MUST include a `components:`
   list, not just the scalar `component`. This is the field the knowledge graph reads
-  to build `component_membership` edges. Every value must be a component `id` from
-  `docs/acceptance-criteria/index.yaml`. For a single-component AC, set
-  `components: [<same value as component>]`. Normative source: `docs/reference/ac-schema.md`.
+  to build `component_membership` edges. Every value must be an `id` from
+  `docs/components.json` (the 42 underscore ids, e.g. `knowledge_system`,
+  `build_pipeline`). Note: the scalar `component` field is the AC-store namespace key
+  from `docs/acceptance-criteria/index.yaml` (kebab ids) and is NOT the graph
+  vocabulary. Normative source: `docs/reference/ac-schema.md`.
 - `level` — `L0`
 - `status`, `req_status`, `work_status` — lifecycle fields per schema enums
 - `criteria` — tagline (under 80 chars) + 2-4 sentence value narrative
@@ -277,9 +304,11 @@ level L1. Key fields (consult the schema for the full list and valid values):
 - `component` — from `index.yaml`
 - `components` — **required, non-empty list.** Every AC MUST include a `components:`
   list, not just the scalar `component`. This is the field the knowledge graph reads
-  to build `component_membership` edges. Every value must be a component `id` from
-  `docs/acceptance-criteria/index.yaml`. For a single-component AC, set
-  `components: [<same value as component>]`. Normative source: `docs/reference/ac-schema.md`.
+  to build `component_membership` edges. Every value must be an `id` from
+  `docs/components.json` (the 42 underscore ids, e.g. `knowledge_system`,
+  `build_pipeline`). Note: the scalar `component` field is the AC-store namespace key
+  from `docs/acceptance-criteria/index.yaml` (kebab ids) and is NOT the graph
+  vocabulary. Normative source: `docs/reference/ac-schema.md`.
 - `level` — `L1`
 - `criteria` — tagline (under 80 chars) + 1-2 sentence expansion
 - `depends_on` — must include parent L0 ID

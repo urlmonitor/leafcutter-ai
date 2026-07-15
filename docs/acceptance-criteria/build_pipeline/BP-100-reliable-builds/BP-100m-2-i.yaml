@@ -1,6 +1,6 @@
 id: BP-100m-2-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "One template deployed to different per-platform directories is not a collision"
 component: build-pipeline
 level: L3
@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100m-2.yaml"
 criteria: |
   Given a source template that is deployed for two different platforms,
@@ -43,5 +43,6 @@ origin_agent: business-analyst
 created: 2026-07-07
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/build_guards/test_deploy_collision_guard.py"
 implemented_by: []

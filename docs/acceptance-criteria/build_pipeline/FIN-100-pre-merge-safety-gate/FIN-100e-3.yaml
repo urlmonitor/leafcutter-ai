@@ -34,7 +34,8 @@ doc_links:
 depends_on: []
 superseded_by: null
 amended_by: []
-covered_by: []
+covered_by:
+  - "unit_tests/test_finalize_feature_step6a.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

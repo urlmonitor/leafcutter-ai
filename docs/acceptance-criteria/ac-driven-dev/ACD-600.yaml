@@ -1,6 +1,6 @@
 id: ACD-600
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "AC store stays current automatically when implementing tickets are completed"

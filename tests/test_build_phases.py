@@ -36,8 +36,11 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _BUILD_PHASES_PATH = _SCRIPTS_DIR / "build_phases.py"
+# The E2 template is the single source of truth; build_workflow_scripts copies
+# templates/workflows-js/*.js verbatim to <root>/workflows/. The legacy
+# scripts/workflows/plan-feature.js was retired (one-canonical-file cleanup).
 _TEMPLATES_WORKFLOWS_JS = _REPO_ROOT / "templates" / "workflows-js"
-_SOURCE_PLAN_FEATURE = _REPO_ROOT / "scripts" / "workflows" / "plan-feature.js"
+_SOURCE_PLAN_FEATURE = _TEMPLATES_WORKFLOWS_JS / "plan-feature.js"
 
 
 def _load_build_phases():
@@ -123,7 +126,7 @@ class TestBuildWorkflowScriptsIncludesPlanFeature(unittest.TestCase):
             self.assertTrue(
                 _SOURCE_PLAN_FEATURE.exists(),
                 f"Source file missing: {_SOURCE_PLAN_FEATURE}. "
-                "This is the source-of-truth that must be copied to templates/.",
+                "This is the E2 source-of-truth that build_workflow_scripts deploys.",
             )
             self.assertEqual(
                 _sha256(dest),

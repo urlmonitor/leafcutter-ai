@@ -1,6 +1,6 @@
 id: BO-1600a-4
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Sequence diagram of serialized concurrent commits into the shared worktree"

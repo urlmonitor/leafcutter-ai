@@ -1,6 +1,6 @@
 id: BP-100b-6
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Parity test cross-validates all four infrastructure layers against each other"
@@ -39,8 +39,7 @@ amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
-  - tests/test_build_artifact_parity.py
-  - BP-100b-6-i
+  - "tests/test_build_artifact_parity.py"
 implemented_by:
   - tests/test_build_artifact_parity.py
 change_target: code

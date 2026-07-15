@@ -8,7 +8,7 @@ created: 2026-06-16
 last_updated: 2026-06-16
 components:
   - ticket_creation_pipeline
-  - ac-store
+  - ac_store
 related_docs:
   - docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
   - docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md

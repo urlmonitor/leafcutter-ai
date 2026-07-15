@@ -1,6 +1,6 @@
 id: BO-100d-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Missing log directory is created and re-probed rather than hard-failing on first miss"

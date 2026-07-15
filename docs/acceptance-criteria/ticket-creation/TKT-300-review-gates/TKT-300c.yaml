@@ -1,6 +1,6 @@
 id: TKT-300c
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "You approve the plan before any building starts"

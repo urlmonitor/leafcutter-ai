@@ -1,6 +1,6 @@
 id: BO-1800b-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The hub's main accepts changes only through a pull request; direct push, force-push, and branch deletion are rejected server-side"

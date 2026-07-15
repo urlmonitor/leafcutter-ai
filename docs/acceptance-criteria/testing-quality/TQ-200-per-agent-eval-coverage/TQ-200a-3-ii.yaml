@@ -1,6 +1,6 @@
 id: TQ-200a-3-ii
 components:
-  - testing-quality
+  - testing_quality
 title: "Held-out cases give a novel input and assert on it without an exact expected output"
 component: testing-quality
 level: L3

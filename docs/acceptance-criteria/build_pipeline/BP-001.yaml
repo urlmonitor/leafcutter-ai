@@ -1,4 +1,6 @@
 id: BP-001
+components:
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "_resolve_precommit_cmd() validates executability of known-path candidates"

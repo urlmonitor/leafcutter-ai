@@ -1,6 +1,6 @@
 id: ACS-500d
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Pattern updates propagate automatically through shared components"

@@ -1,6 +1,6 @@
 id: BP-900g
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Every command you run can reach what it calls"
 component: build-pipeline
 level: L1

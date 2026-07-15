@@ -2,7 +2,7 @@ id: ACS-100c-3
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "L0 and L1 ACs are authored by product-owner-class agents only"
 component: ac-store
 level: L2

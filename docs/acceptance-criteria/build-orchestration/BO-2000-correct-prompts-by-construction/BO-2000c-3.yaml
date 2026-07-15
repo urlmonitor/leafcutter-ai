@@ -1,4 +1,6 @@
 id: BO-2000c-3
+components:
+  - build_orchestration
 title: "The reference file is emitted as a resolved path, not a raw pattern"
 component: build-orchestration
 level: L2

@@ -1,6 +1,6 @@
 id: BO-1700b-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "A commit made with --no-verify is still refused where the main repo has gates"

@@ -1,6 +1,6 @@
 id: BO-1300c
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Reviewers exercise the feature instead of re-running your tests"
@@ -44,4 +44,4 @@ product_truth:
       - Diff
       - Ticket
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

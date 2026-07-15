@@ -1,5 +1,5 @@
 """
-Behavioral tests for commitStageOutput() in scripts/workflows/plan-feature.js.
+Behavioral tests for commitStageOutput() in templates/workflows-js/plan-feature.js (the E2 runtime file).
 
 AC reference: ACD-300g-1, ACD-300g-1-i
 Ticket: 07_TICKET-20260622-Fix_Commit_Delegation_And_Failclosed.md

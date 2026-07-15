@@ -2,7 +2,7 @@ id: BO-700d
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Read the changelog in the format that suits your context"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: GE-102b-1-i
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Description-field transform fails open when no title exists and no-ops on absent layout"

@@ -1,6 +1,6 @@
 id: ACS-500f-1-ii
 components:
-  - ac-store
+  - ac_store
 title: "Phase 2 field-preservation binds its git diff to the project root, not process cwd"
 component: ac-store
 level: L3

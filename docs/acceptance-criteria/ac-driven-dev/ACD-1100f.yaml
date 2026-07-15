@@ -1,6 +1,6 @@
 id: ACD-1100f
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "Existing AC stores and tickets continue working after upgrade"

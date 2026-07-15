@@ -1,6 +1,6 @@
 id: BO-1700g-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The probe covers every stage that carries required hooks, or states its scope"

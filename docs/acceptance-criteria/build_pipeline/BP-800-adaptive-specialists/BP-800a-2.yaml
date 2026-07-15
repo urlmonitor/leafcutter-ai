@@ -1,6 +1,6 @@
 id: BP-800a-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Framework detection from dependency declarations"
 component: build-pipeline
 level: L2

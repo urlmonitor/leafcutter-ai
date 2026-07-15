@@ -2,7 +2,7 @@ id: ACS-400b-2
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Implementation agents can update implemented_by and covered_by fields"
 component: ac-store
 level: L2

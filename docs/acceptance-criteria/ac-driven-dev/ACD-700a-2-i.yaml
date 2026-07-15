@@ -1,6 +1,6 @@
 id: ACD-700a-2-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Ticket generation failure when AC already has a ticket offers recovery"

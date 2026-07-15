@@ -1,6 +1,6 @@
 id: TQ-200a-2
 components:
-  - testing-quality
+  - testing_quality
 title: "An eval result is scored by the output type the agent produces"
 component: testing-quality
 level: L2

@@ -1,10 +1,12 @@
 id: BO-2000a-2-i
+components:
+  - build_orchestration
 title: "Sign-off comment heading uses an em-dash so the parser can find it"
 component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -33,5 +35,6 @@ origin_agent: BrainCandy
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_signoff_block_protocol.py
 implemented_by: []

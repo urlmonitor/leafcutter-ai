@@ -52,8 +52,8 @@ following fields:
 |---|---|---|
 | `id` | string | AC identifier matching regex `^[A-Z]{2,6}-[0-9]{3}$` |
 | `title` | string | One-line human description of the criterion |
-| `component` | string | Primary component name (must match an `id` in `docs/acceptance-criteria/index.yaml`). Retained for backward compatibility. |
-| `components` | array of strings | Authoritative component-membership list — the field the knowledge graph reads for `component_membership` edges. Must be non-empty; every value must be an `id` in `docs/acceptance-criteria/index.yaml`. Enforced by the AC schema (`config/ac_store_schema.json`) and the agent-side validator. See KM-KGS-100e. |
+| `component` | string | AC-store namespace/prefix key — must match a kebab `id` in `docs/acceptance-criteria/index.yaml`. Used for file placement and ID-prefix resolution. Retained for backward compatibility; the graph reads `components` (below). |
+| `components` | array of strings | Authoritative **graph-membership** list — the field the knowledge graph reads for `component_membership` edges. Must be non-empty; every value must be an underscore `id` in `docs/components.json` (e.g. `knowledge_system`, `build_pipeline`). This is a distinct axis from the scalar `component` field: the two registries are intentionally separate. Enforced by the AC schema (`config/ac_store_schema.json`) and the agent-side validator. See KM-KGS-100e. |
 | `status` | enum | `active`, `deprecated`, or `superseded_by` |
 | `created_by` | string | Path to the ticket that first introduced this AC |
 | `criteria` | string | Multi-line Gherkin scenario body |

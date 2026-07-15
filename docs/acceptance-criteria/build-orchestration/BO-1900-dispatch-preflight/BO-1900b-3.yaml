@@ -1,6 +1,6 @@
 id: BO-1900b-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Sequence diagram documents the dispatch-time premise re-check"
 component: build-orchestration
 level: L2

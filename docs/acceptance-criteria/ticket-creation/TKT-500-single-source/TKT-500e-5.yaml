@@ -1,6 +1,6 @@
 id: TKT-500e-5
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: low
 title: "Sequence diagram: inject model within a goal"

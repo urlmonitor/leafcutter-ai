@@ -2,7 +2,7 @@ id: BP-300b-4
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Planner recognizes failed sign-off lines and derives failed status"
 component: build-pipeline
 level: L2

@@ -2,7 +2,7 @@ id: BO-300
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Know exactly what was built and what to do next after every successful drive"
 component: build-orchestration
 level: L0

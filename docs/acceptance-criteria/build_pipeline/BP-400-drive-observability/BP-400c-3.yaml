@@ -2,13 +2,13 @@ id: BP-400c-3
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "trend_report.py computes week-over-week trend indicators"
 component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
 criteria: |
   Given feedback.jsonl contains entries spanning at least 14 days,
@@ -41,7 +41,8 @@ created: 2026-06-05
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_trend_report.py"
 implemented_by: []
 change_target: code
 risk_surface: internal

@@ -2,7 +2,7 @@ id: ACS-400c
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Every criteria change is traceable to the agent that made it"
 component: ac-store
 level: L1
@@ -39,4 +39,4 @@ product_truth:
     entities:
       - Ac
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

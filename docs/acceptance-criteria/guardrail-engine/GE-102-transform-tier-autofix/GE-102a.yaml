@@ -1,6 +1,6 @@
 id: GE-102a
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Doc-frontmatter transform hook fills missing dates and defaults in place, stages, and exits clean"

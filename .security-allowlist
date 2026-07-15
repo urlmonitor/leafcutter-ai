@@ -22,3 +22,5 @@ ENTROPY_HIGH:templates/agents/llm-expert.md:39
 ENTROPY_HIGH:templates/agents/llm-expert.md:104
 # False positives: guardrail config path constant passed as kwarg in unit tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:*
+# False positive: file path string in module docstring of test_llm_expert_artifacts.py (PROJECT_CONTEXT.md path, not a secret)
+ENTROPY_HIGH:unit_tests/agents/test_llm_expert_artifacts.py:*

@@ -1,6 +1,6 @@
 id: BP-1000e-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: medium
 title: "Any diff between a workflow source script and its shipped mirror blocks the merge"

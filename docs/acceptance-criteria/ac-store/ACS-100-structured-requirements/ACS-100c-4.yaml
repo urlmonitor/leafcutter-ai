@@ -2,7 +2,7 @@ id: ACS-100c-4
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Child ACs can be amended without modifying the parent AC"
 component: ac-store
 level: L2

@@ -1,6 +1,6 @@
 id: BO-202
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "Auto-fix work_status and implemented_by/covered_by when diff evidence exists"
@@ -53,4 +53,4 @@ product_truth:
       - Ac
       - Diff
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

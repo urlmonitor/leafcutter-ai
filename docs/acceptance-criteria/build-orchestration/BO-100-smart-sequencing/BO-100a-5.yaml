@@ -1,6 +1,6 @@
 id: BO-100a-5
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "Unknown dependency references are treated as satisfied (not blocking)"

@@ -1,6 +1,6 @@
 id: BO-1900a-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Preflight runs before spawn and holds back an unfit ticket with a reason"
 component: build-orchestration
 level: L2

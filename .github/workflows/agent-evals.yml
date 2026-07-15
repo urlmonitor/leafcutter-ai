@@ -1,0 +1,160 @@
+# Affected-agent eval gate for leafcutter-ai (TQ-200b-2 / -b-3 / -b-4).
+#
+# WHAT THIS GATES
+#   On every PR to main this job re-scores ONLY the agent evals whose declared
+#   dependency closure the PR touched (TQ-200b-3: an eval runs whenever any file
+#   in its trigger-glob closure changes), then enforces that no triggered agent
+#   is left with a missing or stale result (TQ-200b-4: a triggering change with a
+#   missing/stale result is a HARD FAILURE, never a skip). Together with the
+#   per-agent threshold gate in run_agent_eval.py this is the CI quality gate of
+#   TQ-200b-2 (blocks the change when a golden score drops below baseline).
+#
+#   The affected/unaffected split is decided by scripts/evals/eval_selector.py
+#   (owned by a sibling; this workflow only calls its documented CLI). Both the
+#   selection and the --check freshness pass diff against the PR base ref, so the
+#   set is exactly "what this PR changed", computed deterministically.
+#
+# WHY IT IS A SEPARATE, SINGLE-JOB WORKFLOW
+#   The live eval invokes the model (see MODEL ACCESS below), so it is slower and
+#   has a secret dependency the lint/schema gates do not. Keeping it in its own
+#   workflow lets it be promoted to a REQUIRED status check independently, next to
+#   the existing required "Lint (ruff)" check. The per-agent eval gates AND the
+#   --check freshness gate run as sequential steps of ONE job, so the single
+#   status check fails if EITHER surface fails (both must pass to merge).
+#
+# ── MODEL ACCESS — OPERATOR ACTION REQUIRED ────────────────────────────────────
+#   (a) SECRET: this job needs Anthropic model access. Add a repository secret
+#       named ANTHROPIC_API_KEY (Settings → Secrets and variables → Actions).
+#       It is exposed to the job via the `env:` block below. WITHOUT this secret
+#       the live eval step cannot reach the model and the job fails — by design,
+#       never a silent skip (TQ-200b-4).
+#
+#   (b) REQUIRED CHECK: for this gate to actually block merges it must be marked a
+#       REQUIRED status check in branch protection (Settings → Branches → main →
+#       "Require status checks to pass" → add "Agent evals (affected)"). That is a
+#       GitHub repository-settings change a human with admin rights must make; a
+#       workflow file cannot make itself required. Until then the job runs and
+#       reports but does not block (mirrors TQ-200b-2's "cannot be silently
+#       bypassed" once the branch-protection entry is added).
+#
+#   (c) BACKEND: run_agent_eval.py's choose_backend() uses the `claude` CLI unless
+#       BOTH ANTHROPIC_API_KEY and LEAFCUTTER_EVAL_USE_API are set (the direct-API
+#       path invoke_via_api is currently a documented stub in the harness). This
+#       workflow therefore installs the `claude` CLI and authenticates it with
+#       ANTHROPIC_API_KEY (the CLI's headless auth env var). If/when the harness'
+#       invoke_via_api is implemented, set LEAFCUTTER_EVAL_USE_API=1 in the env
+#       block to switch to the direct-API backend and drop the CLI install step.
+#       Both are harness/environment concerns owned by scripts/evals/**; this file
+#       only supplies the credential and the CLI.
+
+name: Agent Evals
+
+on:
+  pull_request:
+    branches: [main]
+
+# One in-flight run per PR; cancel superseded runs to save model spend.
+concurrency:
+  group: agent-evals-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  agent-evals:
+    name: Agent evals (affected)
+    runs-on: ubuntu-latest
+    env:
+      # Consumed by run_agent_eval.py (choose_backend) and by the `claude` CLI
+      # for headless auth. MUST be added as a repo secret — see header (a).
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          # Need history + the PR base ref to diff against (selector --diff-base).
+          fetch-depth: 0
+
+      - name: Fetch PR base ref
+        # Ensure origin/<base> resolves for `--diff-base origin/${{ github.base_ref }}`
+        # (mirrors the ci.yml typecheck job's base-fetch pattern).
+        run: git fetch --no-tags origin "${{ github.base_ref }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        # Pins jsonschema/pyyaml (harness runtime deps for artifact-mode scoring)
+        # plus lint/type tooling.
+        run: pip install -r requirements-dev.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install the claude CLI (live model backend)
+        # run_agent_eval.py invokes the model through the headless `claude` CLI
+        # (choose_backend() -> "cli"), authenticated by ANTHROPIC_API_KEY. See
+        # header (c) for the direct-API alternative.
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run evals for affected agents
+        # 1. Compute the affected set from the PR diff (TQ-200b-3). Log affected
+        #    AND unaffected so nothing is silently truncated out of the run.
+        # 2. Run the LIVE per-agent eval for each affected agent; each run exits
+        #    non-zero when the agent's golden score drops below its threshold
+        #    (TQ-200b-2). Every affected agent runs; failures are collected and
+        #    surfaced together so one regression does not mask another.
+        # 3. If no agent is affected, pass fast and say so.
+        run: |
+          set -euo pipefail
+          BASE="origin/${{ github.base_ref }}"
+          echo "Diffing affected agents against ${BASE} ..."
+          python scripts/evals/eval_selector.py --diff-base "${BASE}" > /tmp/selection.json
+          echo "--- selector output ---"
+          cat /tmp/selection.json
+          echo "-----------------------"
+          AFFECTED="$(python -c "import json; print(' '.join(json.load(open('/tmp/selection.json')).get('affected', [])))")"
+          UNAFFECTED="$(python -c "import json; print(' '.join(json.load(open('/tmp/selection.json')).get('unaffected', [])))")"
+          echo "AFFECTED   (will run): ${AFFECTED:-<none>}"
+          echo "UNAFFECTED (skipped as unaffected): ${UNAFFECTED:-<none>}"
+          if [ -z "${AFFECTED}" ]; then
+            echo "No affected agents — nothing to eval. Fast pass."
+            exit 0
+          fi
+          FAILED=""
+          for agent in ${AFFECTED}; do
+            echo "::group::eval ${agent}"
+            if python scripts/evals/run_agent_eval.py --agent "${agent}"; then
+              echo "${agent}: PASS"
+            else
+              echo "${agent}: FAIL"
+              FAILED="${FAILED} ${agent}"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "${FAILED}" ]; then
+            echo "Eval gate FAILED for:${FAILED}"
+            exit 1
+          fi
+          echo "All affected agent evals passed their thresholds."
+
+      - name: Enforce freshness — no missing/stale result for a triggering change
+        # TQ-200b-4: a triggering change whose agent has a MISSING or STALE result
+        # is a hard failure (selector --check exits 3), never a skip/implicit pass.
+        # This runs after the per-agent evals so a fresh result written above is
+        # visible to the check. Job success requires BOTH this AND the eval step.
+        run: python scripts/evals/eval_selector.py --check --diff-base "origin/${{ github.base_ref }}"
+
+      - name: Upload eval results
+        # Always upload so a failed gate can be debugged from the run artifacts.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-results
+          path: scripts/evals/results/
+          if-no-files-found: warn

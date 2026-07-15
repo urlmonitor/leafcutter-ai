@@ -2,7 +2,7 @@ id: BO-700a-2-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Duplicate completion events do not produce duplicate changelog entries"
 component: build-orchestration
 level: L3

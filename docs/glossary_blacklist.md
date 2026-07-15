@@ -5,8 +5,9 @@ description: Terms excluded from the project glossary, managed automatically by 
   jargon candidates.
 type: reference
 created: '2026-07-09'
-last_updated: '2026-07-09'
+last_updated: '2026-07-15'
 status: active
+components: []
 ---
 # Glossary Blacklist
 
@@ -72,3 +73,4 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | nWrites | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
 | agentType | JavaScript named parameter in agent() call syntax, not a standalone domain concept | 2026-07-09 |
 | phaseName | JavaScript named parameter placeholder in agent() call syntax, not a standalone domain concept | 2026-07-09 |
+| clean_stale_artifacts | Python function name in build_phases.py (code identifier), not a domain concept | 2026-07-15 |

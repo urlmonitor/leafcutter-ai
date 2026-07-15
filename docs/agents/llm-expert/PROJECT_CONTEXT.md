@@ -1,18 +1,18 @@
 ---
-title: "Project Context — llm-expert"
+title: Project Context — llm-expert
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-04
+last_updated: 2026-07-15
 components:
-  - infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/agents/README.md"
-  - "templates/skills/signoff/SKILL.md"
-  - "CLAUDE.md"
+- docs/agents/conventions.md
+- docs/agents/README.md
+- templates/skills/signoff/SKILL.md
+- CLAUDE.md
+description: Overview of Project Context — llm-expert.
 ---
-
 # Project Context — `llm-expert`
 
 This file is read by the `llm-expert` agent at startup (runtime discovery) before any write operation. It provides project-specific rules that every LLM-instructions specialist must know: shell conventions, frontmatter schemas, signoff protocol, nesting/spawn-allowlist rules, and the expanded Prompt-Quality Checklist with concrete examples.
@@ -268,7 +268,7 @@ Every agent template that invokes the `Agent` tool MUST declare a `spawn_allowli
 1. An agent that calls the `Agent` tool without a declared `spawn_allowlist` is a Prompt-Quality Checklist failure (Section 6, item 4).
 2. The `spawn_allowlist` must contain only agent IDs that exist in `config/agent_registry.json`.
 3. When ticket-supervisor spawns a phase agent from a ticket's `agents:` map, it validates the name against the registry's `is_ticket_phase: true` entries. Non-existent or non-phase agents are blocked with a structured payload.
-4. The `llm-expert` agent's spawn_allowlist (as defined in `config/agent_registry.json`) is: `[]` — the `llm-expert` agent does not spawn sub-agents by default. If a ticket requires `llm-expert` to spawn a `research-agent`, the registry entry must be updated first.
+4. The `llm-expert` agent's spawn_allowlist (as defined in `config/agent_registry.json`) is: `["research-agent"]` — the `llm-expert` agent may spawn `research-agent` for context-gathering during authoring tasks. An agent with no permitted sub-agents uses the empty allowlist `[]` as its `spawn_allowlist` value.
 
 **Example: spawn_allowlist in registry JSON:**
 

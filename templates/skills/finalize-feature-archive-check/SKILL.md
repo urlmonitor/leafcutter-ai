@@ -54,48 +54,55 @@ files recursively, including any legacy `done/` subfolder.
 
 ### §2.1 Scan
 
-1. Find all `*.md` files recursively under `<epic_folder>` (excluding `Master_Plan.md`
-   and `README.md`):
+Do **not** hand-roll the scan with `find`+parse. Invoke the single authoritative
+implementation — the `--scan-epic` mode of `set_ticket_status.py` — and consume its
+JSON output:
 
-   ```bash
-   find <epic_folder> -name "*.md" ! -name "Master_Plan.md" ! -name "README.md" -type f
-   ```
+```bash
+python scripts/set_ticket_status.py --scan-epic <epic_folder>
+```
 
-2. For each file found, parse the YAML frontmatter block (content between the
-   first and second `---` delimiters) and extract the `status:` field value.
+This is the same `scan_epic_archive_readiness()` function that BO-400c-2's tests
+cover, so the finalize gate and the tested behaviour can never drift apart. The
+command:
 
-   **Backward-compat rule:** If the file lives under a `done/` subfolder and has no
-   `status:` field, treat its effective status as `done`.
+- scans all `*.md` files at the epic root **and** inside a legacy `done/` subfolder;
+- excludes `Master_Plan.md` and `README.md`;
+- reads each file's frontmatter `status:` as the authoritative signal (BO-400a-3),
+  never folder position;
+- counts `done` and `deferred` as ready;
+- applies the backward-compat rule: a `done/` ticket with no `status:` field is
+  treated as `done`;
+- **raises / exits 2 when `<epic_folder>` does not exist** (a mistyped path is an
+  operator error, never a silent "all clear").
 
-3. Build two lists:
-   - `ok_tickets`: files where effective status is `done` or `deferred`.
-   - `missing_tickets`: files where effective status is any other value (or `null` if
-     absent outside a `done/` subfolder).
+**Exit codes:** `0` = all_clear, `1` = one or more tickets not done, `2` = the
+directory does not exist (surface the error to the user and halt — do not archive).
 
 ### §2.2 Report
 
-Return a structured result:
+The command prints the structured result to stdout:
 
 ```json
 {
-  "epic_folder": "<path>",
+  "all_clear": <true if missing_count == 0>,
   "ok_count": <N>,
   "missing_count": <M>,
-  "ok_tickets": ["<path>", ...],
   "missing_tickets": [
     {
       "path": "<path>",
-      "current_status": "<value or null if absent>"
+      "current_status": "<value, null if absent, or (read error)>"
     },
     ...
-  ],
-  "all_clear": <true if missing_count == 0>
+  ]
 }
 ```
 
-- **`all_clear: true`**: proceed with epic completion. No user input needed.
-- **`all_clear: false`**: surface the `missing_tickets` list to the caller and offer
-  the auto-fix described in §2.3.
+- **`all_clear: true`** (exit 0): proceed with epic completion. No user input needed.
+- **`all_clear: false`** (exit 1): surface the `missing_tickets` list to the caller and
+  offer the auto-fix described in §2.3.
+- **exit 2** (directory does not exist): halt archival and report the bad path to the
+  user. Do NOT treat this as ready.
 
 ### §2.3 Auto-fix (confirmation-gated)
 
@@ -149,15 +156,17 @@ if (closeInfo.scope === "epic") {
     input: {
       instructions:
         "Run the finalize-feature-archive-check skill on <epic_folder>.\n" +
-        "Scan ALL .md files recursively (not just done/ subfolder).\n" +
-        "Use frontmatter status: as the authoritative signal (BO-400a-3).\n" +
-        "Return the structured JSON result (all_clear, missing_tickets, etc.).\n" +
+        "Run `python scripts/set_ticket_status.py --scan-epic <epic_folder>` and\n" +
+        "parse its JSON stdout — do NOT hand-roll a find+parse scan.\n" +
+        "Exit 0 = all_clear (proceed); exit 1 = tickets not done (surface\n" +
+        "missing_tickets); exit 2 = directory does not exist (halt, report bad path).\n" +
         "If all_clear is false, surface the missing_tickets list and ask for " +
         "user confirmation before applying auto-fix via set_ticket_status.py.",
     },
   });
 
   // Parse archiveCheck result
+  // If exit 2 / directory-missing: return { status: "halted", halted_at_step: 5, reason: "epic folder not found" }
   // If status === "halted": return { status: "halted", halted_at_step: 5, reason: archiveCheck.reason }
   // If all_clear !== true: block archival
 }
@@ -172,7 +181,8 @@ if (closeInfo.scope === "epic") {
 
 | Case | Behaviour |
 |------|-----------|
-| Epic has no `.md` files at all | `ok_count: 0`, `missing_count: 0`, `all_clear: true` — proceed |
+| `<epic_folder>` does not exist (mistyped path) | `--scan-epic` raises / exits 2 — halt archival, report the bad path. NEVER a silent "all clear" (review finding H-1) |
+| Epic exists but has no `.md` files at all | `ok_count: 0`, `missing_count: 0`, `all_clear: true` — proceed |
 | `done/` subfolder exists (legacy) | Include in recursive scan; frontmatter `status:` is authoritative |
 | Legacy `done/` ticket has no `status:` field | Treat as `status: done` (backward compat — it was moved there under old convention) |
 | `status` field is present but empty (`status: ""`) | Treat as missing — include in `missing_tickets` |

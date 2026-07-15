@@ -1,6 +1,6 @@
 id: ACD-1100b
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "V3 agents are promoted to canonical names without version suffixes"

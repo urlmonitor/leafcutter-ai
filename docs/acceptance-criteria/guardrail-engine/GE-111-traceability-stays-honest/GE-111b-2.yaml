@@ -1,6 +1,6 @@
 id: GE-111b-2
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Symbol tier: a #symbol anchor that no longer resolves in a surviving file is drift"

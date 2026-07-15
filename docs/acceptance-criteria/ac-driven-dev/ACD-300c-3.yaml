@@ -1,6 +1,6 @@
 id: ACD-300c-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Final gate after IT PO v3 allows the user to set priority and promote to approved"

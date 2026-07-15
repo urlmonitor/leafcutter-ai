@@ -1,0 +1,55 @@
+id: BO-2100c-3-i
+components:
+  - build_orchestration
+title: "Orphan scan never kills unrelated processes and guards against PID reuse"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a host running unrelated processes whose command lines partially resemble
+    the configured `startup_command`
+  When live_surface_startup.py `scan-orphans` runs to reap orphaned servers
+  Then the match pattern (startup_command with `{port}` widened) is anchored tightly
+    enough that no unrelated process is selected
+    And only PIDs that both match the pattern AND are absent from the registry are
+    killed
+    And before killing a PID the scan verifies it still refers to a live-surface
+    server (guarding against PID reuse where the OS has reassigned a recorded PID to
+    an unrelated process).
+depends_on: [BO-2100c-3]
+doc_links:
+  - path: scripts/live_surface_startup.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/live_surface_startup.py"
+  n_location_rule: "1"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python -m pytest tests/test_live_surface_startup.py -q"
+  notes: |
+    The orphan-match pattern must be anchored tightly enough that no unrelated process
+    is ever selected — a partial command-line resemblance must not be sufficient to
+    match. Only PIDs that BOTH match the pattern AND are absent from the registry may be
+    killed. Before killing, the scan must verify the PID still refers to a live-surface
+    server, guarding against OS PID reuse of a recorded PID. Process inspection and kill
+    must follow the project error-handling policy (handle ProcessLookupError /
+    permission errors explicitly, no bare or silent excepts).
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100c-3-i.md

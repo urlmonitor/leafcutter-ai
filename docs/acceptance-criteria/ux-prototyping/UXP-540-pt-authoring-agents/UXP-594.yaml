@@ -1,6 +1,6 @@
 id: UXP-594
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "A feature draft is produced by the product-truth authoring agents — only the ones the request needs"
 component: ux-prototyping
 level: L1

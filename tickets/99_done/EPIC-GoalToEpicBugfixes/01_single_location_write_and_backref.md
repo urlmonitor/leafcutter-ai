@@ -3,7 +3,7 @@ title: "Each epic ticket is written only inside the epic folder, with its back-r
 status: done
 source_ac: ACD-1200a-9
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-22
 depends_on: []
 priority: high

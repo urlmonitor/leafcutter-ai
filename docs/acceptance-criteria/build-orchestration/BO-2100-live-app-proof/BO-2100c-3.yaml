@@ -1,0 +1,59 @@
+id: BO-2100c-3
+components:
+  - build_orchestration
+title: "Teardown kills the whole server process group, not just the shell wrapper"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the development server is started through a shell wrapper (subprocess with
+    shell=True), so the recorded PID is the shell's PID and the actual server runs
+    as a child of that shell
+  When teardown stops the server (via stop or finalize)
+  Then the entire process group is terminated — the server is launched in its own
+    session (start_new_session) and teardown signals the group (os.killpg), not only
+    the single shell PID
+    And after teardown no child server process from that group remains running
+    And the port previously held by the server is free.
+depends_on: [BO-2100c]
+doc_links:
+  - path: scripts/live_surface_startup.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/live_surface_startup.py"
+  n_location_rule: "2"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python -m pytest tests/test_live_surface_startup.py -q"
+  notes: |
+    The server must be launched in its own session (start_new_session=True) so a process
+    group exists to signal. Teardown must signal the whole process group (os.killpg), not
+    only the recorded shell PID; after teardown no member of that group may remain
+    running. Subprocess and signal handling must follow the project error-handling policy
+    — an already-dead process (ProcessLookupError) must be handled gracefully, not
+    swallowed silently. The port previously held by the group must be free after
+    teardown. This change spans two locations: the Popen spawn (start_new_session) and
+    the kill path (os.killpg).
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2100c-3-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100c-3.md

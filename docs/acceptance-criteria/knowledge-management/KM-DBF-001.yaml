@@ -1,6 +1,6 @@
 id: KM-DBF-001
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Dry-run prints files lacking description without writing"

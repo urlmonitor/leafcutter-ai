@@ -1,13 +1,13 @@
 id: BP-600e-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow warns when the fix modifies more than the target file"
 component: build-pipeline
 level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the python-coder has been dispatched to apply the fix,
   When the coder's changes touch 2 or more source files (excluding
@@ -43,7 +43,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BP-600e-1-i]
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
+  - BP-600e-1-i
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600e-1.md
 change_target: pipeline

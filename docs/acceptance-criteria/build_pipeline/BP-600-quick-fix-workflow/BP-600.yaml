@@ -2,7 +2,7 @@ id: BP-600
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Fix known bugs in minutes, not hours — without losing quality discipline"
 component: build-pipeline
 level: L0

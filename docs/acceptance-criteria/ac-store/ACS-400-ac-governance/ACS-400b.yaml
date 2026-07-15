@@ -2,7 +2,7 @@ id: ACS-400b
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Implementation agents can report progress without changing scope"
 component: ac-store
 level: L1

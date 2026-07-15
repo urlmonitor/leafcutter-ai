@@ -1,12 +1,12 @@
 id: BP-1300a-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A resolvable skill pointer passes the build check"
 component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -39,5 +39,6 @@ created: 2026-07-07
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/build_guards/test_self_description_descriptive_only.py"
 implemented_by: []

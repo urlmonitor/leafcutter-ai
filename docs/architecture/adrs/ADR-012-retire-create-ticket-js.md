@@ -9,7 +9,7 @@ deciders:
   - BrainCandy
 components:
   - ticket_creation_pipeline
-  - ac-store
+  - ac_store
   - build_pipeline
 related_docs:
   - docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md

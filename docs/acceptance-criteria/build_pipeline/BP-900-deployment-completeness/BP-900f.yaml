@@ -1,6 +1,6 @@
 id: BP-900f
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Build catches deployable scripts whose source is present on disk but not tracked in git"
 component: build-pipeline
 level: L1

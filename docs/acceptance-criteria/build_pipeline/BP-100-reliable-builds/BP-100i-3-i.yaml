@@ -1,6 +1,6 @@
 id: BP-100i-3-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Parity check degrades gracefully when the deployed output directory does not exist"
@@ -8,7 +8,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
 criteria: |
   Given the canonical template directory exists and contains hook scripts
@@ -53,7 +53,9 @@ created: 2026-06-05
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_hook_parity.py"
+implemented_by:
+  - templates/scripts/commit_guardian/check_hook_parity.py
 change_target: code
 risk_surface: internal

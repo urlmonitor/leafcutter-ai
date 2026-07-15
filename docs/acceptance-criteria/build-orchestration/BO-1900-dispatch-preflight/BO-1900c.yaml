@@ -1,6 +1,6 @@
 id: BO-1900c
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The assigned agent actually fits the work the ticket requires"
 component: build-orchestration
 level: L1

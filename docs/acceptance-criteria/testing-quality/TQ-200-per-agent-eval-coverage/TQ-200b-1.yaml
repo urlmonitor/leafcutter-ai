@@ -1,6 +1,6 @@
 id: TQ-200b-1
 components:
-  - testing-quality
+  - testing_quality
 title: "A shared runner dispatches an agent per eval row, scores it, and reports the result"
 component: testing-quality
 level: L2

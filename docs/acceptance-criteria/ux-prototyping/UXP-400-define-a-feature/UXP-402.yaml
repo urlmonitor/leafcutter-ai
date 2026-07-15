@@ -50,7 +50,7 @@ product_truth:
       - Ac
       - Flow
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/define-a-feature
     node: approve
     node_kind: step
@@ -61,4 +61,4 @@ product_truth:
       - Ac
       - Flow
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

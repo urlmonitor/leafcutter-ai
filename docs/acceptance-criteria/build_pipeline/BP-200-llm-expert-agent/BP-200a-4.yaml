@@ -1,6 +1,8 @@
 id: BP-200a-4
 readiness: reviewed
 priority: medium
+components:
+  - build_pipeline
 title: "Agent template pre-flight reads load PROJECT_CONTEXT and signoff skill before any write"
 component: build_pipeline
 level: L2
@@ -40,7 +42,9 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
 amended_by: []
 superseded_by: null
-covered_by: [BP-200a-4-i]
+covered_by:
+  - "unit_tests/agents/test_llm_expert_artifacts.py"
+  - BP-200a-4-i
 implemented_by:
   - "templates/agents/llm-expert.md"
 change_target: prompt

@@ -2,8 +2,8 @@
 title: "Cross-reference audit — backfill implemented_by from existing tickets"
 status: done
 components:
-  - ac-store
-  - ticket-creation
+  - ac_store
+  - ticket_creation_pipeline
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md

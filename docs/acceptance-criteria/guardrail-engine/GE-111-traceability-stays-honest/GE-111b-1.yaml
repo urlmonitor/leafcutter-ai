@@ -1,6 +1,6 @@
 id: GE-111b-1
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "File-path floor: a vanished implemented_by path is drift, with no external tooling"

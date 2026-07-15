@@ -1,6 +1,6 @@
 id: BO-1600c-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The halt message names what is wrong and what the operator should do"

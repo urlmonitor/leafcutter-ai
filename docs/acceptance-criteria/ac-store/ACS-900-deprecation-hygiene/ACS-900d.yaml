@@ -1,6 +1,6 @@
 id: ACS-900d
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Honestly reconciled retirements pass cleanly"

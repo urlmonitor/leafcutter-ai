@@ -2,7 +2,7 @@ id: BP-600f
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 status: active
 component: build-pipeline
 origin_agent: BrainCandy

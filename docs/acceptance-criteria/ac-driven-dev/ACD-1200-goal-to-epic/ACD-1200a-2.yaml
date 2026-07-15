@@ -1,6 +1,6 @@
 id: ACD-1200a-2
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "One ticket file is generated per leaf AC in the collected set"

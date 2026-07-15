@@ -1,6 +1,6 @@
 id: TKT-200f-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A premise that reproduces in the clean tree is confirmed and the ticket may proceed"
 component: ticket-creation
 level: L2

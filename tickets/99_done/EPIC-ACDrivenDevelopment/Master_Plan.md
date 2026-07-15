@@ -3,9 +3,9 @@ title: "EPIC: AC-Driven Development — Invert the Backlog"
 type: epic
 status: done
 components:
-  - ac-store
-  - ticket-creation
-  - build-orchestration
+  - ac_store
+  - ticket_creation_pipeline
+  - build_orchestration
 created: 2026-06-05
 depends_on: []
 priority: high

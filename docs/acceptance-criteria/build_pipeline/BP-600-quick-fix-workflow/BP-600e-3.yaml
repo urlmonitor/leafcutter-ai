@@ -1,13 +1,13 @@
 id: BP-600e-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow preserves progress when escalating to full build pipeline"
 component: build-pipeline
 level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the workflow has paused with a scope-exceeded warning
     (from BP-600e-1 or BP-600e-2),
@@ -48,7 +48,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BP-600e-3-i]
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
+  - BP-600e-3-i
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600e-3.md
 change_target: pipeline

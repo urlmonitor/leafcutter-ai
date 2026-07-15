@@ -1,6 +1,6 @@
 id: ACS-300j-1-i
 components:
-  - ac-store
+  - ac_store
 title: "Self-referencing dependency is rejected"
 component: ac-store
 level: L3

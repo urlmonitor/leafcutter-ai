@@ -1,6 +1,6 @@
 id: TKT-500f-6-ii
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: high
 title: "Test files and tickets-path .py do not trigger the Test Requirements section"
