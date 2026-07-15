@@ -49,6 +49,15 @@ logger = logging.getLogger(__name__)
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
 _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 
+#: doc_links relationships that represent a real edit surface (i.e. the linked
+#: file is a file the implementing agent must modify or create). Paths with these
+#: relationships enter ``files_touched``. Relationships not in this set (e.g.
+#: ``describes``, ``related``) are informational only and must NOT enter
+#: ``files_touched``.
+_EDIT_SURFACE_RELATIONSHIPS: frozenset[str] = frozenset(
+    {"constrains", "modifies", "specifies"}
+)
+
 #: Canonical support agents always added to every generated ticket.
 _CANONICAL_SUPPORT_AGENTS: list[str] = [
     "test-writer",
@@ -200,14 +209,24 @@ def _find_existing_ticket(tickets_root: Path, ac_id: str) -> Path | None:
 # ---------------------------------------------------------------------------
 
 
-def _extract_local_paths(doc_links: list[Any]) -> list[str]:
+def _extract_local_paths(
+    doc_links: list[Any],
+    *,
+    relationships: frozenset[str] | None = None,
+) -> list[str]:
     """Extract local file paths from a doc_links list.
 
-    Filters out entries whose path starts with 'http' (URLs).
+    Filters out entries whose path starts with 'http' (URLs).  When
+    *relationships* is provided, only entries whose ``relationship`` field is
+    a member of that set are included; entries with an absent or non-matching
+    relationship are skipped.
 
     Args:
         doc_links: List of doc_link dicts (each has at least a 'path' key)
                    or None/empty.
+        relationships: Optional frozenset of relationship strings to include.
+                       When ``None`` (default) no relationship filtering is
+                       applied.
 
     Returns:
         List of local path strings (may be empty).
@@ -218,10 +237,55 @@ def _extract_local_paths(doc_links: list[Any]) -> list[str]:
     for link in doc_links:
         if not isinstance(link, dict):
             continue
+        if relationships is not None:
+            rel = link.get("relationship", "")
+            if rel not in relationships:
+                continue
         path_val = link.get("path", "")
         if isinstance(path_val, str) and path_val and not path_val.startswith("http"):
             local.append(path_val)
     return local
+
+
+def _build_files_touched(ac: dict[str, Any]) -> list[str]:
+    """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
+
+    The list is the union of:
+
+    1. The ``reference_file_path`` named in ``it_requirements`` (structured form).
+    2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
+       relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
+       ``modifies``, ``specifies``).
+
+    Doc_links with ``relationship`` set to ``describes`` or ``related`` are
+    informational only and are excluded from ``files_touched``.  Paths that
+    appear in both sources are deduplicated so each path is listed exactly once.
+    The returned list is sorted deterministically so that regenerating the same
+    AC always yields byte-identical output.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        Sorted list of unique local path strings (may be empty).
+    """
+    paths: set[str] = set()
+
+    # Source 1 — it_requirements.reference_file_path (structured form)
+    it_req = ac.get("it_requirements")
+    if isinstance(it_req, dict):
+        ref_path = it_req.get("reference_file_path", "")
+        if isinstance(ref_path, str) and ref_path:
+            paths.add(ref_path)
+
+    # Source 2 — doc_links edit-surface entries
+    doc_links = ac.get("doc_links") or []
+    for path_val in _extract_local_paths(
+        doc_links, relationships=_EDIT_SURFACE_RELATIONSHIPS
+    ):
+        paths.add(path_val)
+
+    return sorted(paths)
 
 
 def _resolve_reference_patterns(it_req: dict, ac_id: str) -> dict:
@@ -1416,7 +1480,7 @@ def main(argv: list[str] | None = None) -> int:
     # Dry-run / verify: build the ticket in memory, print it, and (for --verify)
     # append a readiness report. Neither path writes a file.
     if args.dry_run or args.verify:
-        files_touched = _extract_local_paths(ac.get("doc_links") or [])
+        files_touched = _build_files_touched(ac)
         assigned_agent = ac.get("assigned_agent", "python-coder")
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
@@ -1450,7 +1514,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # Build ticket content
-    files_touched = _extract_local_paths(ac.get("doc_links") or [])
+    files_touched = _build_files_touched(ac)
     assigned_agent = ac.get("assigned_agent", "python-coder")
     change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
