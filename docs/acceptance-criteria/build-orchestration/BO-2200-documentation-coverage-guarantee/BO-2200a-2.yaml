@@ -2,7 +2,7 @@ id: BO-2200a-2
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "A boundary, safety, auth, or privacy risk surface also demands documentation"
 component: build-orchestration
@@ -31,14 +31,41 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  Extend the documentation_gates policy evaluation so the triggering risk_surface set
-  {contract_boundary, safety, auth, privacy} raises the documentation demand
-  independently of change_target (OR semantics between the two dimensions).
+it_requirements:
+  config_schema_fragment:
+    risk_surface_triggers:
+      type: array
+      items:
+        type: string
+        enum: [contract_boundary, safety, auth, privacy]
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Extend the documentation_gates policy evaluation in _build_agents_map so the triggering risk_surface set {contract_boundary, safety, auth, privacy} raises the documentation demand independently of change_target."
+    - "OR semantics between the two dimensions: documentation-expert is required if EITHER change_target OR risk_surface matches its triggering set."
 delivers_to: null
 expects_from:
   ac_id: BO-2200a-1
   contract: "The declarative documentation_gates policy and generator read-path this behavior extends with the risk_surface trigger dimension."
+test_spec:
+  - name: test_risk_surface_contract_boundary_triggers_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target=code, risk_surface=contract_boundary yields documentation-expert in the generated agents map."
+  - name: test_each_triggering_risk_surface_requires_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "risk_surface in {safety, auth, privacy} each independently triggers documentation-expert even when change_target=code would not."
+  - name: test_change_target_and_risk_surface_are_ORed
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A non-triggering change_target combined with a triggering risk_surface still yields documentation-expert (independent OR evaluation)."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

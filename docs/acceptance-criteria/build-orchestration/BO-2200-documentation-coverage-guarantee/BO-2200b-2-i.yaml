@@ -2,7 +2,7 @@ id: BO-2200b-2-i
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "Partial documentation coverage still fails, naming the specific missing doc"
 component: build-orchestration
@@ -23,15 +23,22 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements: |
-  The verifier must evaluate EACH required doc independently and fail if ANY is missing,
-  reporting precisely which ones. One satisfied doc must not mask an unsatisfied sibling.
+  Extend the documentation-verifier template instructions so the agent evaluates EACH
+  required doc independently and fails if ANY is missing, reporting precisely which ones.
+  One satisfied doc must not mask an unsatisfied sibling. This is template-prompt
+  hardening of the diff-presence behavior authored in BO-2200b-2.
 delivers_to: null
 expects_from:
   ac_id: BO-2200b-2
   contract: "The diff-presence assertion this edge case extends to the multi-doc partial-coverage case."
+test_required: false
+test_rationale: |
+  Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
+  per-doc independence judgment is exercised behaviorally at drive time, not by pytest —
+  same trust model as user-surface-smoker. No executable Python surface of its own.
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

@@ -8,7 +8,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -31,6 +31,7 @@ covered_by:
   - BO-2200d-2
   - BO-2200d-1-i
   - BO-2200d-2-i
+  - BO-2200d-3
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

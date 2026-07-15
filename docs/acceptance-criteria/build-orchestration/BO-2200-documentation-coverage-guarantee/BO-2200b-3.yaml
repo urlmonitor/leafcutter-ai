@@ -2,7 +2,7 @@ id: BO-2200b-3
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "The verifier fails placeholder documentation and passes real content"
 component: build-orchestration
@@ -27,17 +27,28 @@ doc_links:
   - path: docs/architecture/components/doc-compliance.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: M
 it_requirements: |
-  Placeholder detection must recognise TODO/TBD markers, empty or heading-only stubs, and
-  unfilled template signatures (e.g. residual `{placeholder}` tokens). Real, non-placeholder
-  content is the ONLY passing outcome (fail-closed): an exception or an ambiguous parse must
-  not emit status: ok. Mirror the BP-1100 phantom-done posture.
+  Author the documentation-verifier template's placeholder-detection instructions so the
+  agent recognises TODO/TBD markers, empty or heading-only stubs, and unfilled template
+  signatures (e.g. residual `{placeholder}` tokens). Real, non-placeholder content is the
+  ONLY passing outcome (fail-closed): an exception or an ambiguous parse must not emit
+  status: ok. Mirror the BP-1100 phantom-done posture. Reuse the existing deterministic
+  helper scripts/build_placeholder_detection.py (scan_for_placeholders / TODO-TBD regexes)
+  via Bash rather than re-implementing placeholder scanning in the prompt, so detection is
+  consistent and testable at the helper level.
 delivers_to: null
 expects_from:
   ac_id: BO-2200b-1
-  contract: "The documentation-verifier phase slot this behavior populates with placeholder-signature detection."
+  contract: "The documentation-verifier phase slot this behavior populates with placeholder-signature detection in the agent template."
+test_required: false
+test_rationale: |
+  documentation-verifier is a prompt-driven signoff LLM agent; its pass/fail judgment is
+  exercised behaviorally at drive time (like user-surface-smoker), not by a pytest unit.
+  The deterministic placeholder helper it reuses
+  (scripts/build_placeholder_detection.py) is already covered by its own tests, so the
+  signature-matching logic is unit-tested at that layer.
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

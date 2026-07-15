@@ -2,7 +2,7 @@ id: BO-2200b-1
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "A documentation-verifier phase runs after writing and before commit"
 component: build-orchestration
@@ -29,15 +29,40 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  Introduce a new phase agent `documentation-verifier` with priority 11.9 so it sorts
-  after the coder / test-runner / documentation-expert and before commit. This is the
-  documentation analogue of the BP-1100 phantom-done enforcement — cite that family,
-  do NOT fold this into it.
+it_requirements:
+  config_schema_fragment:
+    documentation-verifier:
+      type: object
+      properties:
+        priority: {const: 11.9}
+        conditional: {const: true}
+        is_ticket_phase: {const: true}
+        signoff: {const: true}
+  reference_file_path: "config/agent_registry.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Register a new phase agent documentation-verifier in config/agent_registry.json at priority 11.9 (clone the user-surface-smoker entry ~priority 11.5: conditional:true, conditional_field, selection_criteria.trigger_conditions, default_status, skills_used:[signoff]) so it sorts after the coder / test-runner / documentation-expert and before commit."
+    - "This is the documentation analogue of the BP-1100 phantom-done enforcement — cite that family, do NOT fold this into it."
+    - "Also add documentation-verifier to templates/config/feedback_categories.yaml allowed_writers (omission caused a production incident for user-surface-smoker)."
+    - "The documentation-verifier agent template (templates/agents/documentation-verifier.md) is authored under BO-2200b-2 (llm-expert); its frontmatter priority must match this registry entry."
 delivers_to:
   agent: python-coder
   contract: "The documentation-verifier phase agent registered at priority 11.9 (post-write, pre-commit). Its existence is required by BO-2200b-2/b-3 (behavior), BO-2200b-6 (multi-source ordering), and BO-2200d-2 (relative-order assertion)."
 expects_from: null
+test_spec:
+  - name: test_documentation_verifier_registered_at_priority_11_9
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "config/agent_registry.json contains a documentation-verifier phase agent with priority 11.9, conditional:true, and signoff:true."
+  - name: test_documentation_verifier_sorts_after_doc_expert_before_commit
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "In the resolved phase order, documentation-verifier's index is greater than documentation-expert and less than commit."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

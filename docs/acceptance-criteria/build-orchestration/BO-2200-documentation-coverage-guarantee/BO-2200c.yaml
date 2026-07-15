@@ -8,7 +8,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -35,6 +35,7 @@ covered_by:
   - BO-2200c-5
   - BO-2200c-3-i
   - BO-2200c-4-i
+  - BO-2200c-6
 implemented_by: []
 documentation_triggers:
   - reference-doc

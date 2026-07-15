@@ -2,7 +2,7 @@ id: BO-2200d-2
 components:
   - build_orchestration
   - documentation_system
-readiness: draft
+readiness: approved
 priority: medium
 title: "On a doc-required ticket, the writer runs after code and tests and the verifier runs last before commit"
 component: build-orchestration
@@ -29,15 +29,34 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  Assert the resolved relative order on a real doc-required ticket: index(documentation-expert)
-  > index(python-coder) and > index(test-runner); documentation-verifier immediately precedes
-  commit. This depends on both the post-coder placement (BO-2200d-1) and the verifier's
-  11.9 priority (BO-2200b-1).
+it_requirements:
+  config_schema_fragment:
+    resolved_phase_order:
+      type: object
+      description: "On a real doc-required ticket: index(documentation-expert) > index(python-coder) and > index(test-runner); documentation-verifier immediately precedes commit."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Assert the resolved relative order on a real doc-required ticket: index(documentation-expert) > index(python-coder) and > index(test-runner); documentation-verifier immediately precedes commit."
+    - "This depends on both the post-coder placement (BO-2200d-1) and the verifier's 11.9 priority (BO-2200b-1)."
 delivers_to: null
 expects_from:
   ac_id: BO-2200d-1
   contract: "The post-coder placement of documentation-expert whose resulting relative order this behavior asserts."
+test_spec:
+  - name: test_doc_expert_ordered_after_coder_and_test_runner
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "On a resolved doc-required ticket, index(documentation-expert) > index(python-coder) and > index(test-runner)."
+  - name: test_verifier_is_last_phase_before_commit
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-verifier is the last phase immediately before the commit phase."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

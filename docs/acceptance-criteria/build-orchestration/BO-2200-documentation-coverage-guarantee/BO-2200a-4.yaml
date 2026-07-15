@@ -2,7 +2,7 @@ id: BO-2200a-4
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "A list-valued change target triggers documentation if any element triggers (union semantics)"
 component: build-orchestration
@@ -31,14 +31,37 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  `change_target` may be a scalar or a list (per the AC schema). The policy evaluation
-  must normalise a scalar to a single-element list and apply union semantics across the
-  elements so a multi-target AC is handled without crashing and triggers correctly.
+it_requirements:
+  config_schema_fragment:
+    change_target:
+      oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "change_target may be a scalar or a list per the AC schema; normalise a scalar to a single-element list before evaluating."
+    - "Apply union semantics across list elements so a multi-target AC is handled without crashing and triggers documentation-expert when ANY element is in the triggering set."
 delivers_to: null
 expects_from:
   ac_id: BO-2200a-1
   contract: "The declarative documentation_gates policy and generator read-path this behavior exercises with list-valued change_target."
+test_spec:
+  - name: test_list_change_target_no_triggering_element_no_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target=[config, code] with risk_surface=internal yields no documentation-expert."
+  - name: test_list_change_target_any_triggering_element_requires_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target=[config, ui] yields documentation-expert (union semantics — any element in the triggering set triggers)."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

@@ -2,7 +2,7 @@ id: BO-2200a-3-i
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "A cost risk surface and an unclassified AC do not demand documentation"
 component: build-orchestration
@@ -31,14 +31,34 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  Guard the two easy-to-miss negatives: `risk_surface: cost` must be excluded from the
-  triggering set, and a missing/None classification must not raise KeyError or default
-  to a documentation demand. Fail safe toward no-demand when there is nothing to classify.
+it_requirements:
+  config_schema_fragment:
+    edge_negatives:
+      type: object
+      description: "risk_surface=cost is excluded from the triggering set; a missing/None change_target and risk_surface must not raise or force a documentation demand."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "risk_surface: cost must be excluded from the triggering set."
+    - "A missing/None classification must not raise KeyError and must not default to a documentation demand — fail safe toward no-demand when there is nothing to classify."
 delivers_to: null
 expects_from:
   ac_id: BO-2200a-3
   contract: "The non-triggering documentation-policy path this edge case hardens against cost and unclassified inputs."
+test_spec:
+  - name: test_risk_surface_cost_does_not_trigger_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target=code, risk_surface=cost yields no documentation-expert."
+  - name: test_unclassified_ac_completes_without_forcing_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "An AC with neither change_target nor risk_surface generates without error and does not force documentation-expert from the doc policy."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

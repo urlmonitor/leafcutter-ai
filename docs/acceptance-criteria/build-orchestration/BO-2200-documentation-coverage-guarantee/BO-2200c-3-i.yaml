@@ -2,7 +2,7 @@ id: BO-2200c-3-i
 components:
   - build_orchestration
   - documentation_system
-readiness: draft
+readiness: approved
 priority: medium
 title: "An unresolved or absent parent L1 yields a genre-less contract line, not a crash"
 component: build-orchestration
@@ -26,14 +26,35 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  Parent resolution must fail soft: derive_parent_id returning None, a missing parent
-  file, or an absent documentation_triggers must produce a genre-less line, not a crash.
-  Log at WARNING per the error-handling policy; never swallow silently.
+it_requirements:
+  config_schema_fragment:
+    parent_resolution_failsoft:
+      type: object
+      description: "Unresolved parent (derive_parent_id None, missing file, or absent documentation_triggers) yields a genre-less line with an explicit marker, not a crash."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Parent resolution must fail soft: derive_parent_id returning None, a missing parent file, or an absent documentation_triggers must produce a genre-less line (path and content constraint still written), not a crash."
+    - "Represent the missing genre explicitly (e.g. an '(unspecified genre)' marker) so the omission is visible."
+    - "Log at WARNING per the error-handling policy; never swallow silently."
 delivers_to: null
 expects_from:
   ac_id: BO-2200c-3
   contract: "The parent-genre resolution this edge case hardens against unresolved/absent parents."
+test_spec:
+  - name: test_unresolved_parent_yields_genre_less_line_no_crash
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "When the parent L1 cannot be resolved, the generator emits a contract line without a genre (path + constraint retained) and does not raise."
+  - name: test_missing_genre_marked_explicitly
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The genre-less line carries an explicit marker (e.g. '(unspecified genre)') rather than a silently blank genre."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

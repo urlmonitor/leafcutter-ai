@@ -2,7 +2,7 @@ id: BO-2200b-3-i
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "A short but genuine doc passes while a heading-only or token-filled stub fails"
 component: build-orchestration
@@ -24,16 +24,23 @@ doc_links:
   - path: docs/architecture/components/doc-compliance.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements: |
-  Placeholder detection must key on placeholder SIGNATURES (heading-only, residual tokens,
-  TODO/TBD), not on length. A legitimately short doc must pass; brevity is not a stub.
-  Avoid a naive minimum-character rule that would false-fail concise real docs.
+  Refine the documentation-verifier template so placeholder detection keys on placeholder
+  SIGNATURES (heading-only, residual tokens, TODO/TBD), not on length. A legitimately short
+  doc must pass; brevity is not a stub. Avoid instructing any naive minimum-character rule
+  that would false-fail concise real docs.
 delivers_to: null
 expects_from:
   ac_id: BO-2200b-3
   contract: "The placeholder-signature detection this edge case pins to signature-based (not length-based) judgement."
+test_required: false
+test_rationale: |
+  Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
+  signature-vs-length judgment is exercised behaviorally at drive time, not by pytest; the
+  deterministic signature helper (scripts/build_placeholder_detection.py) carries its own
+  unit tests.
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

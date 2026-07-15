@@ -2,7 +2,7 @@ id: BO-2200c-3
 components:
   - build_orchestration
   - documentation_system
-readiness: draft
+readiness: approved
 priority: medium
 title: "The genre is sourced from the parent L1's documentation_triggers"
 component: build-orchestration
@@ -29,14 +29,34 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  The generator today loads only the single leaf AC. It must additionally resolve the
-  parent L1 (via derive_parent_id / depends_on) and read its documentation_triggers, since
-  documentation_triggers is an L1-only field. Handle multiple triggers on the parent.
+it_requirements:
+  config_schema_fragment:
+    parent_genre_resolution:
+      type: object
+      description: "Genre sourced from the parent L1's documentation_triggers (an L1-only field), resolved via derive_parent_id/depends_on; multiple triggers each reflected."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The generator today loads only the single leaf AC (via _find_ac_by_id / main); it must additionally resolve the parent L1 (via ac_parent_id.derive_parent_id / depends_on) and read its documentation_triggers, since documentation_triggers is an L1-only field."
+    - "Handle multiple triggers declared on the parent L1 — reflect each declared genre in the contract."
 delivers_to: null
 expects_from:
   ac_id: BO-2200c-2
   contract: "The contract-line genre slot this behavior populates from the parent L1's documentation_triggers."
+test_spec:
+  - name: test_genre_resolved_from_parent_l1_documentation_triggers
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "Generating a contract line for a leaf AC resolves the parent L1 and sources the genre from the parent's documentation_triggers."
+  - name: test_multiple_parent_triggers_each_reflected
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "When the parent L1 declares multiple documentation_triggers, the contract reflects each declared genre."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

@@ -2,7 +2,7 @@ id: BO-2200c-4-i
 components:
   - build_orchestration
   - documentation_system
-readiness: draft
+readiness: approved
 priority: medium
 title: "A doc_link that is a bare path or is missing optional fields is surfaced gracefully"
 component: build-orchestration
@@ -26,14 +26,34 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  doc_links entries are heterogeneous per the schema (plain strings OR objects with
-  optional relationship/status/relevance). Normalise both shapes; omit absent optional
-  fields rather than rendering None. Never crash on a bare-string entry.
+it_requirements:
+  config_schema_fragment:
+    heterogeneous_doc_links:
+      type: object
+      description: "doc_links entries may be plain path strings OR objects with optional relationship/status/relevance; normalise both, omit absent optional fields, never emit None or crash."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "doc_links entries are heterogeneous per the schema (plain strings OR objects with optional relationship/status/relevance). Normalise both shapes."
+    - "Omit absent optional fields rather than rendering None; never crash on a bare-string entry."
 delivers_to: null
 expects_from:
   ac_id: BO-2200c-4
   contract: "The doc_links surfacing this edge case hardens against mixed/partial entry shapes."
+test_spec:
+  - name: test_bare_path_doc_link_surfaced_without_crash
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A plain-string doc_links entry is surfaced with just its path (no fabricated metadata) and does not crash the generator."
+  - name: test_object_missing_optional_field_omits_absent
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "An object doc_links entry missing relevance/status is surfaced with only the fields it has, omitting absent ones (no None/empty values)."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

@@ -2,7 +2,7 @@ id: BO-2200b-5
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "Once triggered, the writer and verifier cannot be suppressed by a not_needed override"
 component: build-orchestration
@@ -28,15 +28,37 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  Make documentation-expert and documentation-verifier non-suppressible once the trigger
-  fires: a not_needed override must not strip them, mirroring the existing TDD-mandatory
-  protection for test-writer/test-runner. Locate the protection at the same layer that
-  already guards the TDD agents so the two behave identically.
+it_requirements:
+  config_schema_fragment:
+    documentation_mandatory_agents:
+      type: array
+      items:
+        type: string
+        enum: [documentation-expert, documentation-verifier]
+      description: "Protected set (analogue of _TDD_MANDATORY) whose members cannot be downgraded to not_needed once the trigger fires."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Make documentation-expert and documentation-verifier non-suppressible once the trigger fires: a not_needed override must not strip them."
+    - "Locate the protection at the same layer that already guards the TDD agents (the _TDD_MANDATORY protected set in _build_agents_map, ~line 454) so the two behave identically."
 delivers_to: null
 expects_from:
   ac_id: BO-2200b-4
   contract: "The injected documentation-expert + documentation-verifier this behavior protects from suppression."
+test_spec:
+  - name: test_not_needed_override_does_not_strip_doc_expert_or_verifier
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "After the trigger fires, attempting to set documentation-expert or documentation-verifier to not_needed leaves both at needed."
+  - name: test_doc_agents_protected_like_tdd_mandatory
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-expert/documentation-verifier are protected by the same mandatory-agent mechanism that protects test-writer/test-runner."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

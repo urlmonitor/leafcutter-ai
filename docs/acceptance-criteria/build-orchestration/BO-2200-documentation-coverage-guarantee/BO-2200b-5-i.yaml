@@ -2,7 +2,7 @@ id: BO-2200b-5-i
 components:
   - build_orchestration
   - doc_compliance
-readiness: draft
+readiness: approved
 priority: medium
 title: "A hand-edited not_needed on the verifier is restored to needed at generation time"
 component: build-orchestration
@@ -26,14 +26,34 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  The non-suppressibility guard must survive a manual downgrade in the ticket file, exactly
-  as the TDD-mandatory guard restores test-writer/test-runner. Re-generation or re-validation
-  must re-assert needed rather than trust the on-disk not_needed.
+it_requirements:
+  config_schema_fragment:
+    restore_on_regenerate:
+      type: object
+      description: "Re-generation/re-validation must re-assert documentation-expert and documentation-verifier to needed rather than trust an on-disk not_needed."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The non-suppressibility guard must survive a manual downgrade in the ticket file, exactly as the TDD-mandatory guard restores test-writer/test-runner."
+    - "Re-generation or re-validation must re-assert needed; a hand-edited not_needed must be overwritten or surfaced as a validation error, never silently accepted."
 delivers_to: null
 expects_from:
   ac_id: BO-2200b-5
   contract: "The non-suppressibility protection this edge case exercises against a hand-edited not_needed."
+test_spec:
+  - name: test_hand_edited_not_needed_restored_on_regeneration
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A ticket hand-edited to documentation-verifier: not_needed is restored to needed when re-generated/re-validated."
+  - name: test_downgrade_not_silently_accepted
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The manual downgrade is either overwritten or surfaced as a validation error — never silently accepted."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

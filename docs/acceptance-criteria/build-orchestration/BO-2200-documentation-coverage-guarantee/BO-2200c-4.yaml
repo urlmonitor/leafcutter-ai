@@ -2,7 +2,7 @@ id: BO-2200c-4
 components:
   - build_orchestration
   - documentation_system
-readiness: draft
+readiness: approved
 priority: medium
 title: "doc_links richness is surfaced as existing docs to update or cross-link"
 component: build-orchestration
@@ -30,14 +30,40 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-it_requirements: |
-  Current behavior strips doc_links to bare paths. Preserve the structured fields
-  (relationship / status / relevance) and render them as 'existing docs to update /
-  cross-link' in the Agent Contracts block so the writer knows how each linked doc relates.
+it_requirements:
+  config_schema_fragment:
+    existing_docs_cross_link:
+      type: array
+      items:
+        type: object
+        properties:
+          path: {type: string}
+          relationship: {type: string}
+          status: {type: string}
+          relevance: {type: string}
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Current behavior (_extract_local_paths) strips doc_links to bare paths, discarding relationship/status/relevance."
+    - "Preserve the structured fields (relationship / status / relevance) and render them as 'existing docs to update / cross-link' in the Agent Contracts block so the writer knows how each linked doc relates."
 delivers_to: null
 expects_from:
   ac_id: BO-2200c-1
   contract: "The Agent Contracts block into which this behavior injects the enriched existing-docs cross-link list."
+test_spec:
+  - name: test_doc_links_relationship_status_relevance_preserved
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "doc_links entries with relationship/status/relevance are surfaced with those fields intact in the Agent Contracts block."
+  - name: test_doc_links_not_reduced_to_bare_paths
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The rendered existing-docs list preserves structured metadata rather than collapsing to bare files_touched paths."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []

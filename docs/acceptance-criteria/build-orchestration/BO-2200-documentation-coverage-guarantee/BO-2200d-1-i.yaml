@@ -2,7 +2,7 @@ id: BO-2200d-1-i
 components:
   - build_orchestration
   - documentation_system
-readiness: draft
+readiness: approved
 priority: medium
 title: "Removing documentation-expert from the flow-change gates leaves the other pre-coder gates intact"
 component: build-orchestration
@@ -26,15 +26,34 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  Guard against two regressions from the surgical removal: (1) accidentally dropping
-  architect-review or another pre-coder gate while removing documentation-expert, and
-  (2) leaving documentation-expert in a flow-change list so it is injected twice. Assert
-  the flow-change lists retain architect-review and contain no documentation-expert.
+it_requirements:
+  config_schema_fragment:
+    surgical_removal_guard:
+      type: object
+      description: "Flow-change lists retain architect-review (and other pre-coder gates) and contain no documentation-expert; documentation-expert appears exactly once (no double-injection)."
+  reference_file_path: "config/guardrail_gates.yaml"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Guard against two regressions from the surgical removal: (1) accidentally dropping architect-review or another pre-coder gate, and (2) leaving documentation-expert in a flow-change list so it is injected twice."
+    - "Assert the flow-change lists retain architect-review and contain no documentation-expert."
 delivers_to: null
 expects_from:
   ac_id: BO-2200d-1
   contract: "The surgical flow_change_gates edit this edge case verifies for collateral-damage safety."
+test_spec:
+  - name: test_architect_review_still_injected_pre_coder
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "On a flow-change ticket, architect-review is still injected and ordered before the coder after the documentation-expert removal."
+  - name: test_documentation_expert_never_double_injected
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-expert appears in no flow-change-gate list and exactly once in the resolved agents map (no pre-coder + post-coder duplication)."
 origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []
