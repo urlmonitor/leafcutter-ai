@@ -66,6 +66,24 @@ Then the hook enforces the real ACD-600b invariant (it actually blocks/acts on t
 |----|------|----------------|-----------|
 | AC-1 | tests/commit_guardian/test_check_ac_done_on_merge.py | templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_marks_done_for_source_ac_tickets
+    file: tests/commit_guardian/test_check_ac_done_on_merge.py
+    covers: [ACD-600b]
+    asserts: the check_ac_done_on_merge hook marks source-AC tickets done on merge (happy path).
+  - name: test_skips_tickets_without_source_ac
+    file: tests/commit_guardian/test_check_ac_done_on_merge.py
+    covers: [ACD-600b]
+    asserts: the hook skips tickets that have no source AC.
+  - name: test_hook_exits_0_on_mark_failure
+    file: tests/commit_guardian/test_check_ac_done_on_merge.py
+    covers: [ACD-600b]
+    asserts: the hook fails soft (exit 0) when a mark operation fails, rather than blocking the merge.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

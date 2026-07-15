@@ -81,6 +81,28 @@ Then each still verifies the real schema contract (a deliberately-invalid AC —
 | AC-1 | test_check_ac_schema.py | ac_store_schema.json / check_ac_schema.py | |
 | AC-2 | test_readiness_gate.py | validate_ac_schema.py | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_valid_ac_passes
+    file: unit_tests/commit_guardian/test_check_ac_schema.py
+    covers: [ACS-100a-1]
+    asserts: a valid AC carrying a non-empty components list + axis fields passes check-ac-schema (exit 0).
+  - name: test_ac1_valid_change_target_str_passes
+    file: unit_tests/commit_guardian/test_check_ac_schema.py
+    covers: [ACS-100a-1]
+    asserts: an AC with change_target/risk_surface axes is accepted by ac_store_schema.json (not rejected as additional property).
+  - name: test_schema_rejects_missing_readiness
+    file: tests/ac_store/test_readiness_gate.py
+    covers: [ACS-100a-1]
+    asserts: validate_ac_schema still REJECTS a genuinely-invalid AC (negative case preserved — fix does not loosen the schema to accept anything).
+  - name: test_schema_accepts_readiness_approved
+    file: tests/ac_store/test_readiness_gate.py
+    covers: [ACS-100a-1]
+    asserts: a components-bearing valid AC is accepted and the readiness gate behaves correctly.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

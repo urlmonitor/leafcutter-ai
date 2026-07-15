@@ -72,6 +72,16 @@ Then normal local/dev pytest behavior (mask on) is preserved for non-gate runs; 
 |----|------|----------------|-----------|
 | AC-1 | test_pytest_ac_enforcement_strict_on_ci.py | ci.yml / pytest_ac_enforcement.py | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_gate_runs_ac_enforce_strict
+    file: unit_tests/ac_store/test_pytest_ac_enforcement_strict_on_ci.py
+    covers: [testing_quality]
+    asserts: the CI test job is configured to run with AC_ENFORCE_STRICT=1 (or the plugin disabled) so a failing test whose covering AC is not done makes the job RED — verified by a probe that a masked real failure is not hidden.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

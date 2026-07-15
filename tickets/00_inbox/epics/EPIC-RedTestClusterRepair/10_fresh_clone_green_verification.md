@@ -87,6 +87,32 @@ Then a short diagnosis note records the result and explicitly authorizes BP-1200
 | AC-1 | full suite (strict) | (verification) | |
 | AC-2 | 5 named files | (verification) | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_readiness_gate
+    file: tests/ac_store/test_readiness_gate.py
+    covers: [testing_quality]
+    asserts: passes under AC_ENFORCE_STRICT=1 on a fresh origin/main after all deps merged.
+  - name: test_check_ac_done_on_merge
+    file: tests/commit_guardian/test_check_ac_done_on_merge.py
+    covers: [testing_quality]
+    asserts: passes strict (hook now exists).
+  - name: test_build_tracked_source_guard
+    file: unit_tests/test_build_tracked_source_guard.py
+    covers: [testing_quality]
+    asserts: passes strict (6/7 via #300, bp900c3 via PhantomRemediation-01) — confirm cross-ref landed.
+  - name: test_generate_ticket_from_ac
+    file: unit_tests/test_generate_ticket_from_ac.py
+    covers: [testing_quality]
+    asserts: passes strict (produces: frontmatter added).
+  - name: test_check_components_minimum_schema
+    file: unit_tests/commit_guardian/test_check_components_minimum_schema.py
+    covers: [testing_quality]
+    asserts: remains green (1 intentional in-file xfail) — verify-only.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

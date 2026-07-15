@@ -81,6 +81,36 @@ Then parity is achieved by fixing the deployed output, NOT by editing the source
 | AC-1 | test_partial_run_recovery / test_final_gate / test_commit_stage | scripts/workflows/plan-feature.js | |
 | AC-2 | test_build_phases.py | scripts/workflows/plan-feature.js | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_run_function_parity
+    file: unit_tests/test_partial_run_recovery.py
+    covers: [build_pipeline]
+    asserts: deployed scripts/workflows/plan-feature.js run() body is in parity with the E2 source template.
+  - name: test_scan_orphaned_ac_drafts_function_parity
+    file: unit_tests/test_partial_run_recovery.py
+    covers: [build_pipeline]
+    asserts: scanOrphanedAcDrafts parity between deployed and source.
+  - name: test_resolve_orphaned_drafts_function_parity
+    file: unit_tests/test_partial_run_recovery.py
+    covers: [build_pipeline]
+    asserts: resolveOrphanedDrafts parity between deployed and source.
+  - name: test_scripts_and_templates_run_function_are_in_parity
+    file: unit_tests/test_final_gate_and_commit_message.py
+    covers: [build_pipeline]
+    asserts: deployed vs template run() are in parity (E2 top-level-body form).
+  - name: test_scripts_and_templates_are_in_parity
+    file: unit_tests/test_commit_stage_output_behavioral.py
+    covers: [build_pipeline]
+    asserts: deployed vs template commit-stage-output are in parity.
+  - name: test_plan_feature_deployed_in_consumer_config
+    file: tests/test_build_phases.py
+    covers: [build_pipeline]
+    asserts: the deployed plan-feature.js matches source sha (no silent truncation) after build.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
