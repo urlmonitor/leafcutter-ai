@@ -1,0 +1,77 @@
+id: FIN-100c-7
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "Failures that also fail on main HEAD are pre_existing; only failures that pass on main are regressions"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the triage stage receives a recovered baseline built from the main-HEAD rerun
+  And the post-merge failure set (for example the 3 deploy-dependent tests from
+    2026-07-15, all of which also failed on main HEAD)
+  When the triage agent compares each post-merge failure against the recovered baseline
+  Then every failing test that ALSO fails on main HEAD is classified as "pre_existing"
+  And a failing test that PASSES on main HEAD but fails post-merge is classified as "regression"
+  And each test's classification appears in the triage report with its category
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "test-failure-triage"
+estimated_complexity: S
+it_requirements: |
+  - NO NEW TRIAGE CODE PATH (instance-specific integration constraint): a recovered
+    baseline is a non-null list, so the triage agent's Step 1 null-baseline
+    short-circuit does NOT fire and the EXISTING Step 2 partition / Step 5
+    pre_existing rule (FIN-100c-1) and set-difference regression rule (FIN-100c-2)
+    apply unchanged. Do NOT add a special-case branch for the recovered baseline —
+    it must be indistinguishable from a normally-captured baseline to the triage
+    agent. (These behavioral rules are inherited from FIN-100c-1/FIN-100c-2 and are
+    NOT restated here.)
+  - The recovered baseline arrives as file::test_name IDs and is compared by exact
+    string match, identical to the captured-baseline path.
+  - OBSERVABLE OUTPUT: each post-merge failure appears in triage_report with its
+    category (pre_existing | regression), preserving the existing per-test report
+    shape — no schema change.
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "provides a triage_report classifying each rerun failure as pre_existing (fails on main) or regression (passes on main)"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides baseline_failures = the recovered baseline (subset of failing IDs that fail on main HEAD) plus post_merge_failures"
+test_spec:
+  - name: test_recovered_baseline_failures_on_main_classified_pre_existing
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Given a recovered baseline, every post-merge failure that also fails on main HEAD is classified pre_existing (2026-07-15 case: all 3 deploy-dependent tests)."
+  - name: test_recovered_baseline_pass_on_main_classified_regression
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "A post-merge failure whose test passes on main HEAD (absent from the recovered baseline) is classified regression."
+  - name: test_triage_report_includes_category_per_test
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Each post-merge failure appears in the triage_report with its category field set."
+doc_links:
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 2 partition, Step 5 pre_existing classification, and regression classification via set difference — consumed unchanged for a recovered (non-null) baseline"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "triage classification categories reported to the operator"
+depends_on:
+  - FIN-100c
+  - FIN-100c-6
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added estimated_complexity (S), it_requirements (instance-specific integration only: recovered baseline is non-null so Step 1 does not fire and the existing Step 2/Step 5 partition applies unchanged — no new triage branch, no schema change; behavioral rules inherited from FIN-100c-1/2 are deliberately NOT restated), and test_spec (3 descriptors). assigned_agent test-failure-triage kept per the read-only classification boundary and sibling convention (FIN-100c-1/2/3); contracts and criteria unchanged."
+    by: it-po
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+work_status: todo
