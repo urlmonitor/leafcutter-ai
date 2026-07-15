@@ -8,7 +8,7 @@ last_updated: "2026-07-15"
 deciders:
   - BrainCandy
 components:
-  - ux-prototyping
+  - ux_prototyping
   - build_pipeline
 related_docs:
   - docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md
