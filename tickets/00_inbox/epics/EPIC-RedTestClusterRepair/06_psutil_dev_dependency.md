@@ -118,6 +118,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 
+### 2026-07-15 15:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-15_74201ed8
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #307 (https://github.com/urlmonitor/leafcutter-ai/pull/307) was already open for branch chore/redtest-test-requirements targeting main. Verified urlmonitor is the active GitHub CLI account. Pushed 5 unpushed commits (including the psutil fix commit 7510a380 and the partial sign-off cf75be31) to origin. This comment entry completes the three-place parity requirement (frontmatter + Sign-offs checkbox + Comments heading) for the pull-request phase.
+
 ## Implementation Tasks
 
 - [x] Add a pinned `psutil` to `requirements-dev.txt` (preferred), OR add a

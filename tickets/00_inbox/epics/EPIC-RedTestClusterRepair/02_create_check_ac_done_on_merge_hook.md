@@ -137,6 +137,25 @@ completion_manifest:
   pr_body_complete: true
 PR #307 ("Repair red-test cluster: merge hook, classifier fix, strict CI") was already open for branch chore/redtest-test-requirements at https://github.com/urlmonitor/leafcutter-ai/pull/307. No new PR creation was needed. Sign-off committed and pushed to keep the PR HEAD current.
 
+### 2026-07-15 15:57 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-15_57362b74
+completion_manifest:
+  diff_reviewed: true
+  high_confidence_findings: false
+  medium_findings_count: 4
+  escalation_triggered: false
+  escalation_blocked_reason: "Agent tool not in pr-reviewer toolset; 4 medium findings documented below"
+  ac_satisfied: true
+Second review pass (re-verification). No high-confidence findings. Medium count is 4 (threshold > 3 would trigger Opus escalation; Agent tool unavailable here so all 4 are surfaced as-is): (M-1) no timeout= in subprocess.run calls in _get_diff_paths and _mark_ac_done_for_ticket — a hung git or mark_ac_done.py stalls the terminal; (M-2) content.startswith("---") passes "---word" without newline, yielding unexpected split segments (safe fallback returns {} but guard is loose); (M-3) real git diff paths are repo-root-relative, ticket_path.exists() silently skips all tickets when CWD is not repo root; (M-4) _get_diff_paths catches subprocess.SubprocessError but not OSError/FileNotFoundError — git-not-in-PATH propagates through the local handler, bypassing the "git diff failed" warning (caught in __main__ and exits 0, so behavior is correct but violates error handling policy Rule 1). All 3 AC requirements satisfied per test-runner sign-off.
+
+### 2026-07-15 16:15 — commit (status: ok)
+feedback-id: fb_2026-07-15_65a23951
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (supervised path). Staged ticket file 02_create_check_ac_done_on_merge_hook.md with second pr-reviewer pass (15:57 entry). Implementation files (check_ac_done_on_merge.py, test_check_ac_done_on_merge.py) were already committed in a1ff82bb. Probe git_hook: false is a known worktree false positive (canary: true confirms hook IS active); documented in ticket 05.
+
 ## Implementation Tasks
 
 - [x] Read `test_check_ac_done_on_merge.py` to extract the exact contract (args, exit
