@@ -1,6 +1,6 @@
 ---
 title: "Fix 3 accuracy findings from the build_pipeline test-coverage backfill"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-07-15
