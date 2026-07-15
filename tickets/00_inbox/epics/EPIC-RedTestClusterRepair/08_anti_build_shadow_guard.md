@@ -1,6 +1,6 @@
 ---
 title: "Make the build→build_guards rename stick: anti-shadow guard + fix re-entry points"
-status: todo
+status: done
 components:
   - build_pipeline
   - testing_quality
@@ -23,7 +23,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 08: Make the build→build_guards rename durable
@@ -143,6 +143,14 @@ completion_manifest:
   ticket_staged: true
 Auto-authorized commit gate (supervised path, re-run): implementation commit already landed as 24dd29b6; committing ticket update from second pr-reviewer pass (comment at 16:00). Probe git_hook: false is the known worktree false-negative (binary/config/canary all pass; actual hook confirmed at leafcutter-ai/.git/hooks/pre-commit).
 
+### 2026-07-15 17:00 — pull-request (status: ok)
+feedback-id: fb_2026-07-15_69b074aa
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #307 ("Repair red-test cluster: merge hook, classifier fix, strict CI") already open for branch chore/redtest-test-requirements; pushed 1 pending commit (7108bbb5) then sign-off committed and pushed. Ticket 08 is the last needed agent — status flipped to done.
+
 ## Implementation Tasks
 
 - [x] Add `unit_tests/build_guards/test_no_build_package_shadow.py`: fail if
@@ -165,4 +173,4 @@ Auto-authorized commit gate (supervised path, re-run): implementation commit alr
 - [x] test-runner — 2026-07-15 14:15
 - [x] pr-reviewer — 2026-07-15 15:30
 - [x] commit — 2026-07-15 15:45
-- [ ] pull-request
+- [x] pull-request — 2026-07-15 17:00
