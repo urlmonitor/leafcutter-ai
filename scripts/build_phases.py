@@ -1998,10 +1998,11 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
                          dry_run: bool, force: bool) -> int:
     """Deploy workflow tool scripts to ``<target_root>/scripts/``.
 
-    Copies the four workflow-tool Python scripts from the package source
+    Copies workflow-tool Python scripts from the package source
     (``scripts/<name>.py``) to the consumer project's ``scripts/`` directory.
-    These scripts are referenced by ticket-lifecycle agents and skills but were
-    not previously deployed by any build phase (Class B gap, EPIC-BuildGuardFalsePositive).
+    These scripts are referenced by ticket-lifecycle agents, skills, and
+    pre-commit hooks, but were not previously deployed by any build phase
+    (Class B gap, EPIC-BuildGuardFalsePositive).
 
     Scripts deployed:
 
@@ -2011,6 +2012,7 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
     - ``scripts/live_surface_startup.py`` — used by the live-surface-tester agent.
+    - ``scripts/generate_doc_index.py`` — used by the transform-doc-index pre-commit hook.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -2034,6 +2036,11 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   live_surface_startup.py to the deploy list so the live-surface-tester
     #   agent's referenced scripts are deployed to consumers (registry-completeness
     #   build-guard). (#EPIC-LiveSurfaceTesting)
+    # - 2026-07-15 [TICKET-20260715-DocIndexAutoRegen / defect-remediation]:
+    #   Added generate_doc_index.py so the transform-doc-index pre-commit hook
+    #   can import it in consumer projects. Previously absent from the deployed
+    #   .leafcutter/scripts/ tree, making the hook a silent no-op outside the
+    #   source tree. Parity with _manifest_workflow_tool_scripts() in build.py.
     """
     scripts_src = PACKAGE_ROOT / "scripts"
     deploy_scripts = [
@@ -2043,6 +2050,7 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
         "ticket_prioritizer.py",
         "port_registry.py",
         "live_surface_startup.py",
+        "generate_doc_index.py",
     ]
     output_dir = target_root / "scripts"
     written = 0

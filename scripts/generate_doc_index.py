@@ -33,6 +33,15 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _HEADER_TEMPLATE = """\
+---
+title: "Documentation Index"
+type: reference
+status: active
+created: {created}
+components: []
+description: "Auto-generated index of all documentation files in the docs/ directory."
+---
+
 # Documentation Index
 
 > **Auto-generated — do not edit manually.**
@@ -67,6 +76,49 @@ _CATEGORIES = [
 
 # Files that are explicitly excluded from every category scan.
 _ALWAYS_EXCLUDE = {"README.md", "INDEX.md"}
+
+
+# ---------------------------------------------------------------------------
+# Created-date extraction (for frontmatter idempotency)
+# ---------------------------------------------------------------------------
+
+
+def _extract_created_date(index_path: Path) -> str | None:
+    """Extract the ``created`` date from an existing INDEX.md frontmatter.
+
+    Reads the existing INDEX.md (if present) and extracts the ``created:``
+    field value from its YAML frontmatter block.  Returns None when the
+    file is absent, has no frontmatter, or has no ``created:`` field.
+
+    Args:
+        index_path: Path to the existing ``docs/INDEX.md`` file.
+
+    Returns:
+        The ``created`` date string (e.g. ``"2026-07-15"``) if found,
+        else None.
+    """
+    if not index_path.exists():
+        return None
+    try:
+        text = index_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        log.warning("Cannot read %s for created date: %s", index_path, exc)
+        return None
+    if not text.startswith("---"):
+        return None
+    # Find the closing --- delimiter (search from position 3 to skip opener)
+    end = text.find("\n---", 3)
+    if end == -1:
+        return None
+    # Frontmatter body: skip the opening "---\n" (4 chars)
+    frontmatter = text[4:end]
+    for line in frontmatter.splitlines():
+        m = re.match(r"^created:\s*(.+?)\s*$", line)
+        if m:
+            val = m.group(1).strip().strip("'\"")
+            if val:
+                return val
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -230,17 +282,28 @@ def generate_index(repo_root: Path) -> str:
 
     Walks each canonical category defined in ``_CATEGORIES``, builds one
     Markdown section per category, and prepends the standard auto-generated
-    header.
+    header with a stable YAML frontmatter block.
+
+    The ``created`` field in the frontmatter is preserved from the existing
+    ``docs/INDEX.md`` when it contains a ``created:`` value, so repeated
+    regeneration does not reset the original creation date.
 
     Args:
         repo_root: Absolute path to the repository root.  All relative paths
             in the generated index are computed relative to this directory.
 
     Returns:
-        Complete INDEX.md content as a UTF-8 string.
+        Complete INDEX.md content as a UTF-8 string (starting with YAML
+        frontmatter delimited by ``---``).
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    sections: list[str] = [_HEADER_TEMPLATE.format(timestamp=timestamp)]
+    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Preserve existing created date for idempotency across regeneration runs.
+    existing_index = repo_root / "docs" / "INDEX.md"
+    created = _extract_created_date(existing_index) or today_date
+
+    sections: list[str] = [_HEADER_TEMPLATE.format(timestamp=timestamp, created=created)]
 
     for heading, rel_path, recursive in _CATEGORIES:
         abs_path = repo_root / rel_path
