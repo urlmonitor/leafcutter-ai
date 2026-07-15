@@ -64,6 +64,16 @@ Then if (b) skip-when-absent is chosen instead, the test SKIPS (not passes vacuo
 |----|------|----------------|-----------|
 | AC-1 | tests/test_sweep_processes.py | requirements-dev.txt | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_sweep_result_shape
+    file: tests/test_sweep_processes.py
+    covers: [testing_quality]
+    asserts: with psutil installed (via requirements-dev.txt) the sweep returns the real result shape, not the "psutil is not installed" fallback; skips cleanly (not false-passes) if psutil is intentionally absent.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

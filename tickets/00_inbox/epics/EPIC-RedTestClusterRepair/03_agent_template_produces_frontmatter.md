@@ -60,6 +60,16 @@ Then produces: reflects the agent's ACTUAL output artifacts (not a placeholder a
 |----|------|----------------|-----------|
 | AC-1 | unit_tests/test_generate_ticket_from_ac.py | templates/agents/sql-view-creator.md | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_bo510_2_all_agent_templates_have_produces_in_frontmatter
+    file: unit_tests/test_generate_ticket_from_ac.py
+    covers: [BO-510-2]
+    asserts: every templates/agents/*.md declares a produces: key in its YAML frontmatter (incl. sql-view-creator.md).
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

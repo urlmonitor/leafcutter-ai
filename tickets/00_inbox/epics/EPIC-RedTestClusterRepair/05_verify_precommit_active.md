@@ -66,6 +66,20 @@ Then the freshness check still genuinely detects a stale/inactive pre-commit set
 |----|------|----------------|-----------|
 | AC-1 | test_verify_precommit_active.py | verify_precommit_active.py | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_all_checks_pass
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    covers: [BP-100i]
+    asserts: verify_precommit_active reports no violations (empty list, incl. no hook_freshness) when the pre-commit setup is active/fresh.
+  - name: test_exit_code_all_pass
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    covers: [BP-100i]
+    asserts: verify_precommit_active exits 0 when all checks pass; still exits non-zero on a genuinely stale/inactive setup (negative case preserved).
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

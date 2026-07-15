@@ -60,6 +60,20 @@ Then classification correctness is preserved for the normal (unchanged-config) p
 |----|------|----------------|-----------|
 | AC-1 | unit_tests/test_defect_fixes.py | commit_classifier.py | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_ac3_updated_config_used_by_second_call
+    file: unit_tests/test_defect_fixes.py
+    covers: [BO-1100c-4]
+    asserts: classify_staged_files() re-reads config so a change between two calls is reflected on the second call.
+  - name: test_ac3_deleted_config_uses_fallback_not_cached_patterns
+    file: unit_tests/test_defect_fixes.py
+    covers: [BO-1100c-4]
+    asserts: after config deletion, classification uses the fallback, not stale import-time cached patterns.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_

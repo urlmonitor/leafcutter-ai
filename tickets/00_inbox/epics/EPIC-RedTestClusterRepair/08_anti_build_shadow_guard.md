@@ -75,6 +75,16 @@ Then it genuinely detects a re-added build/ package (verify by temporarily creat
 | AC-1 | unit_tests/build_guards/test_no_build_package_shadow.py | (self) | |
 | AC-2 | (ticket edits) | backfill tickets 05/06 | |
 
+## Test Requirements
+
+```yaml
+tests:
+  - name: test_no_build_package_shadow
+    file: unit_tests/build_guards/test_no_build_package_shadow.py
+    covers: [build_pipeline]
+    asserts: FAILS if an importable unit_tests/build/ package exists (an __init__.py or any test_*.py under unit_tests/build/); PASSES when absent — proven by creating one in a sandbox and confirming the guard trips.
+```
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
