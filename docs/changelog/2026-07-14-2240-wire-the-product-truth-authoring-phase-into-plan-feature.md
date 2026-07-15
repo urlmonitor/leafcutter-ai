@@ -4,7 +4,7 @@ date: "2026-07-14"
 time: "22:40"
 type: feature
 components: 
-  - ux-prototyping
+  - ux_prototyping
   - ac_store
   - build_pipeline
 summary: "Added an always-on product-truth phase to /plan-feature: classify the request, draft the needed artifacts (mock-data, mockup, flow) behind gates and surgical commits, then derive ACs from the approved flow and reconcile step.implements back-links."
