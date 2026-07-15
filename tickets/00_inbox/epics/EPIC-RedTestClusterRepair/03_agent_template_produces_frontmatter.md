@@ -118,6 +118,23 @@ completion_manifest:
   ticket_staged: true
 Auto-authorized commit gate: subject "fix(templates): move produces: key to YAML frontmatter in sql-view-creator.md"; staged files: templates/agents/sql-view-creator.md tickets/00_inbox/epics/EPIC-RedTestClusterRepair/03_agent_template_produces_frontmatter.md. Note: probe git_hook check reported false due to worktree path resolution bug (resolve_hooks_path reads .git/config but .git is a file in worktrees); actual hook verified at shared git dir /home/henzeh/projects/leafcutter/leafcutter-ai/.git/hooks/pre-commit.
 
+### 2026-07-15 15:51 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-15_d1502d76
+completion_manifest:
+  fix_is_correct: true
+  no_high_confidence_blockers: true
+  medium_findings_count: 3
+  opus_escalation_triggered: false
+Second pr-reviewer pass (re-invocation). Committed diff (61c73614) reviewed: produces: production_code relocated before behavioral_patterns: in sql-view-creator.md frontmatter — fix is correct and minimal. Three medium-confidence findings: (M-1) registry-consistency test still silently skips sql-view-creator.md via same naive-split issue; (M-2) unit_tests/test_generate_ticket_from_ac.py listed in files_touched but has zero changes in the committed diff; (M-3) naive content.split("---", 2) fragility persists for other templates. Medium count is 3 (threshold is > 3); no Opus escalation. No high-confidence blockers.
+
+### 2026-07-15 16:00 — commit (status: ok)
+feedback-id: fb_2026-07-15_4e5a9d26
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Re-invocation to commit ticket update: staged and committed the second pr-reviewer comment (15:51) appended after the initial implementation commit (61c73614). probe git_hook: false is the known worktree path-resolution false positive; actual hook confirmed present at shared git dir.
+
 ## Implementation Tasks
 
 - [ ] Add a correct `produces:` block to `sql-view-creator.md`'s YAML frontmatter
