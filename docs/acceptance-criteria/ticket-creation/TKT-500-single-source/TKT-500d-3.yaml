@@ -1,6 +1,6 @@
 id: TKT-500d-3
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "No epic folder or ticket grouping mechanism is required"

@@ -2,7 +2,7 @@ id: BO-650-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Architect discovers and reads existing architecture docs before producing artifacts"
 component: build-orchestration
 level: L2

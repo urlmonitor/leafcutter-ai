@@ -2,7 +2,7 @@ id: BP-300b
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "The build planner uses current sign-off state, not stale frontmatter"
 component: build-pipeline
 level: L1
@@ -43,4 +43,4 @@ product_truth:
     entities:
       - Ticket
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

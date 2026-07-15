@@ -1,4 +1,6 @@
 id: BP-900c-3
+components:
+  - build_pipeline
 title: "When the source directory exists but the script file is missing or untracked, the suggested action says to commit the source under templates/scripts/"
 component: build_pipeline
 level: L2

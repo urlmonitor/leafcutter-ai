@@ -1,6 +1,6 @@
 id: BO-1400a-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Sequence diagram documents the pre-PR real-data and deployable-placement verification flow"

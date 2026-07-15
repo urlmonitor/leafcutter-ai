@@ -4,7 +4,7 @@ priority: medium
 title: "A drift guard validates fixtures against real schemas and parses each through its native-format loader in CI"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L2
 status: active
 req_status: draft

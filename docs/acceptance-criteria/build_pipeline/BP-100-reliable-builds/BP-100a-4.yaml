@@ -1,6 +1,6 @@
 id: BP-100a-4
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Test verifies warning is emitted when a hook script is missing"
@@ -36,7 +36,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_build_precommit.py"
 implemented_by:
   - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"
 change_target: code

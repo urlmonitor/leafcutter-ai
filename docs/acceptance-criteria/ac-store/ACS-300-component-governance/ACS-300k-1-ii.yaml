@@ -1,6 +1,6 @@
 id: ACS-300k-1-ii
 components:
-  - ac-store
+  - ac_store
 title: "build.py fails gracefully when components.json is malformed JSON"
 component: ac-store
 level: L3

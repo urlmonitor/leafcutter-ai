@@ -3,7 +3,7 @@ epic_name: EPIC-RegistryCompletenessGate
 created: 2026-06-22
 status: in_progress
 components:
-  - build-pipeline
+  - build_pipeline
 source_ac: BP-900e
 ---
 # EPIC-RegistryCompletenessGate

@@ -2,7 +2,7 @@ id: ACS-400a-1
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Authorized requirement agents can create the criteria field"
 component: ac-store
 level: L2

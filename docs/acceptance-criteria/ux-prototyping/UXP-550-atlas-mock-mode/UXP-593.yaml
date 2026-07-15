@@ -4,7 +4,7 @@ priority: medium
 title: "A person can review the whole Atlas in mock mode from bundled fixtures, with no live repo"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L1
 status: active
 req_status: draft

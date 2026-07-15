@@ -2,7 +2,7 @@ id: BO-700a-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Changelog entries are emitted at ticket completion (done-link closure)"
 component: build-orchestration
 level: L2

@@ -1,6 +1,6 @@
 id: BP-1300b-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A guardrail that cannot locate the canonical source fails closed"
 component: build-pipeline
 level: L3

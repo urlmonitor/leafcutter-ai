@@ -2,7 +2,7 @@ id: BP-600d
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "One command from diagnosis to done"
 component: build-pipeline
 level: L1

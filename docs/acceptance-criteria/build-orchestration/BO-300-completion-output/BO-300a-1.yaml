@@ -2,7 +2,7 @@ id: BO-300a-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Step 6 return object includes worktree_path and manual_tests fields"
 component: build-orchestration
 level: L2

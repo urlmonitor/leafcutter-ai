@@ -1,6 +1,6 @@
 id: ACD-1200c-3-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "The store-wide cycle warning lists the full cycle path and the scan still exits 0 when the cycle is outside the requested scope"

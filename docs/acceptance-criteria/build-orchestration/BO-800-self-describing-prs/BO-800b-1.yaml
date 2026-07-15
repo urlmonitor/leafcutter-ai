@@ -2,7 +2,7 @@ id: BO-800b-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "PR summary section contains the L0 criteria text (goal) and the L1 criteria text (feature)"
 component: build-orchestration
 level: L2

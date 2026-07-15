@@ -1,6 +1,6 @@
 id: TKT-500f-5-i
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: high
 title: "Generator substitutes a safe default when assigned_agent is absent from the registry"

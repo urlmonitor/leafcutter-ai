@@ -1,6 +1,6 @@
 id: GE-100b
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "jscpd hook reports duplicate code blocks that overlap with staged files"

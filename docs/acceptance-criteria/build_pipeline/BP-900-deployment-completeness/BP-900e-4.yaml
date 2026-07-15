@@ -1,6 +1,6 @@
 id: BP-900e-4
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "The failure report names each undeployed script, where it was promised, and the action to resolve it"

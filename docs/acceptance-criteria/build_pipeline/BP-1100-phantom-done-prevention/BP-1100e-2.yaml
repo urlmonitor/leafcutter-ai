@@ -1,6 +1,6 @@
 id: BP-1100e-2
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "The reconciliation is advisory and fails open by default; strict blocking is opt-in"
@@ -55,6 +55,7 @@ amended_by:
     confirmed_at: 2026-07-07
 superseded_by: null
 covered_by:
+  - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py"
   - BP-1100e-2-a
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/06_TICKET-20260706-BP-1100e-2.md

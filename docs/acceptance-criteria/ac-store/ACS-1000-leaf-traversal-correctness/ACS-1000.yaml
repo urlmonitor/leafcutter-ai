@@ -2,7 +2,7 @@ id: ACS-1000
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 status: active
 component: ac-store
 level: L2

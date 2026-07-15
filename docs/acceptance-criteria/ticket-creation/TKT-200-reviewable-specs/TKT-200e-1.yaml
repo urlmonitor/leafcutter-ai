@@ -1,6 +1,6 @@
 id: TKT-200e-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A motivating claim missing its command or result is flagged before the ticket leaves the inbox"
 component: ticket-creation
 level: L2

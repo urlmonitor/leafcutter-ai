@@ -1,6 +1,6 @@
 id: BO-1100d
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Unfamiliar commit shapes are analysed and learned over time"

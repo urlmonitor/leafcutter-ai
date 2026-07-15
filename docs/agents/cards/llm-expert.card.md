@@ -6,6 +6,8 @@ type: card
 status: active
 created: 2026-07-01
 card_version: "generated"
+components:
+  - llm_authoring
 ---
 # llm-expert
 

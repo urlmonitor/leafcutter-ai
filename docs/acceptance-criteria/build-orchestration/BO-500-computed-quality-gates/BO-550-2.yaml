@@ -2,7 +2,7 @@ id: BO-550-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "test-writer reads test_constraints and adjusts its testing strategy"
 component: build-orchestration
 level: L2

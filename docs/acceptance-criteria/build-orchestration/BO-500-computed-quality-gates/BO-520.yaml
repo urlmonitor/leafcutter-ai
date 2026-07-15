@@ -2,7 +2,7 @@ id: BO-520
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Classify what kind of change this is, and the system handles the rest"
 component: build-orchestration
 level: L1

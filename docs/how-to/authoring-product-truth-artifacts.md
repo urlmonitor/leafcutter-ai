@@ -6,7 +6,7 @@ status: active
 created: 2026-07-14
 last_updated: 2026-07-14
 components:
-  - ux-prototyping
+  - ux_prototyping
 related_docs:
   - docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md
   - docs/architecture/components/ux-prototyping.md

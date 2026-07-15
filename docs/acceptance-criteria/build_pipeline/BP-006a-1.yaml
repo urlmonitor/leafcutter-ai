@@ -1,6 +1,8 @@
 id: BP-006a-1
 readiness: reviewed
 priority: medium
+components:
+  - build_pipeline
 title: "Each skill directory has a registry entry with all required fields"
 component: build_pipeline
 level: L2
@@ -30,7 +32,8 @@ created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "tests/test_skill_registry.py"
 implemented_by: []
 change_target: config
 risk_surface: contract_boundary

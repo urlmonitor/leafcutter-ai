@@ -2,7 +2,7 @@
 title: "check-doc-frontmatter resolves project root to the workspace parent in worktrees (false read failure)"
 status: todo
 components:
-  - commit-guardian
+  - commit_guardian
 created: 2026-07-07
 depends_on: []
 priority: medium

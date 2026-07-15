@@ -2,7 +2,7 @@ id: ACS-400d
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Governance rules travel with the package into every project"
 component: ac-store
 level: L1

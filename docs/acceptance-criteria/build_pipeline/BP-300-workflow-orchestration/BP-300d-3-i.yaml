@@ -1,6 +1,6 @@
 id: BP-300d-3-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "The unsupported-runtime prose fallback deploys without error — fallback is not treated as a build failure"
 component: build-pipeline
 level: L3

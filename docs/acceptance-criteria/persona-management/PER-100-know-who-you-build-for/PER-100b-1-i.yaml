@@ -1,6 +1,6 @@
 id: PER-100b-1-i
 components:
-  - persona-management
+  - persona_management
 title: "persona_for field with non-string value is rejected by schema validator"
 component: persona-management
 level: L3

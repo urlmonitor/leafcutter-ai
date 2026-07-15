@@ -1,6 +1,6 @@
 id: BP-1300c-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Ticket sign-off parity outside the done state fails the drive instead of warning"
 component: build-pipeline
 level: L2

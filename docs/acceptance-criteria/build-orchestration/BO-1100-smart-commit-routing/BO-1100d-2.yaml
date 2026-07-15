@@ -1,6 +1,6 @@
 id: BO-1100d-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "After 10 occurrences of the same unmatched shape, a new routing rule is proposed"
 component: build-orchestration
 level: L2

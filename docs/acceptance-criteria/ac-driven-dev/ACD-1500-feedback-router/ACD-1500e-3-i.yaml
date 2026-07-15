@@ -1,6 +1,6 @@
 id: ACD-1500e-3-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Router-emitted process-feedback cannot drive an infinite self-referential loop"

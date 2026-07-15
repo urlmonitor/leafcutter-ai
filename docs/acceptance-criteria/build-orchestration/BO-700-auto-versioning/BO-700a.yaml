@@ -2,7 +2,7 @@ id: BO-700a
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "See what changed in every release without anyone writing release notes"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: ACS-100h
 components:
-  - ac-store
+  - ac_store
 title: "Grow your requirements without outgrowing your folders"
 component: ac-store
 level: L1

@@ -4,7 +4,7 @@ priority: medium
 title: "The JSON entity mock-data records are repurposed directly as test fixtures, no separate authoring"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L3
 status: active
 req_status: draft

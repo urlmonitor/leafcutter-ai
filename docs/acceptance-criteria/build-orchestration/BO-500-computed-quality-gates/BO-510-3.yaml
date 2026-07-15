@@ -2,13 +2,13 @@ id: BO-510-3
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Validation test fails when any agent entry or template lacks the produces field"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a test file exists that scans all entries in agent_registry.json
     and all .md files in templates/agents/,
@@ -56,7 +56,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: [BO-510-3-i]
+covered_by:
+- BO-510-3-i
+- unit_tests/test_agent_produces_validation.py
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

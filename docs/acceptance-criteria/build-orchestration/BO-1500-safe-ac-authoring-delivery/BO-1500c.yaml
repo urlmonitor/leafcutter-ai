@@ -1,6 +1,6 @@
 id: BO-1500c
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Approved requirements reach main through a reviewed pull request"

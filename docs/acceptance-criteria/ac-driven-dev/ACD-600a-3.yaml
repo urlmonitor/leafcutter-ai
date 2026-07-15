@@ -1,6 +1,6 @@
 id: ACD-600a-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "mark_ac_done rejects a non-existent AC ID with exit code 1"

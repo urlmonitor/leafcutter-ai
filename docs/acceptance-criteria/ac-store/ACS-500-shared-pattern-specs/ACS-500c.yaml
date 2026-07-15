@@ -1,6 +1,6 @@
 id: ACS-500c
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Agents recognize shared behavior and reference the pattern instead of re-specifying it"

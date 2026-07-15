@@ -1,6 +1,6 @@
 id: TKT-200b
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Component responsibilities are documented before review begins"

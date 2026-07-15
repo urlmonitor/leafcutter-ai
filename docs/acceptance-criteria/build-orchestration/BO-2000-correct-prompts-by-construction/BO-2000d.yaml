@@ -1,6 +1,6 @@
 id: BO-2000d
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Package-surface ACs must carry a machine-checkable implementation spec"
 component: build-orchestration
 level: L1

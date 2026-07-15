@@ -1,6 +1,6 @@
 id: BO-1700b
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "A workspace with unrunnable checks stops the work instead of waving it through"

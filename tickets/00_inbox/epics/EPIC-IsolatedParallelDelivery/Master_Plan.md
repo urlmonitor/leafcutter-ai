@@ -3,7 +3,7 @@ epic_name: EPIC-IsolatedParallelDelivery
 created: 2026-07-07
 status: in_progress
 components:
-  - build-orchestration
+  - build_orchestration
 source_ac: BO-1800
 ---
 # EPIC-IsolatedParallelDelivery

@@ -1,6 +1,6 @@
 id: ACD-1000b
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Ticket creation understands existing ACs from the start"

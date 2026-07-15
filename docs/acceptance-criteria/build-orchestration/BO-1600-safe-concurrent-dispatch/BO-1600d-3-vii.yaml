@@ -1,6 +1,6 @@
 id: BO-1600d-3-vii
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "The fresh-worktree fallback is idempotent — a re-run creates a distinct recovered worktree, never a collision"

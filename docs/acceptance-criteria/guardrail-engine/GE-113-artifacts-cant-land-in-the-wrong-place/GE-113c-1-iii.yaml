@@ -1,6 +1,6 @@
 id: GE-113c-1-iii
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "check-secrets resolves its scripts_dir and project root so scan_secrets imports and runs in a fresh worktree from both layouts"
 component: guardrail-engine
 level: L3

@@ -3,7 +3,7 @@ title: "A ticket whose basename already exists at the epic-folder path is resolv
 status: done
 source_ac: ACD-1200a-9-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-22
 depends_on:
   - 01_single_location_write_and_backref.md

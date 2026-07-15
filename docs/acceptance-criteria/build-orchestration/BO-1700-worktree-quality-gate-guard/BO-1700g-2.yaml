@@ -1,6 +1,6 @@
 id: BO-1700g-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "The canary token is only trusted when the canary hook actually executed"

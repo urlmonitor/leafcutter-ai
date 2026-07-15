@@ -4,7 +4,7 @@ priority: high
 title: "Registry-declared items (agents, skills, roadmap) must declare a component too"
 component: knowledge-management
 components:
-  - knowledge-management
+  - knowledge_management
 level: L2
 status: active
 req_status: draft

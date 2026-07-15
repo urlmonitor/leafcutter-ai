@@ -1,6 +1,6 @@
 id: TKT-100l
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Specifications describe what happens, not how to code it"

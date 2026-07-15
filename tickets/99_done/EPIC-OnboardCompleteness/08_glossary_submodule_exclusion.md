@@ -3,7 +3,7 @@ title: "Exclude submodule paths from glossary bootstrap scan"
 status: done
 components:
   - glossary
-  - build_system
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 priority: high

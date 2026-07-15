@@ -1,6 +1,6 @@
 id: ACD-300e-2-ii
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Agent degrades gracefully when knowledge-query fails with an error"

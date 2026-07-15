@@ -7,9 +7,9 @@ status: active
 created: 2026-06-06
 last_updated: 2026-06-06
 components:
-  - ac-driven-dev
-  - build-orchestration
-  - ticket-creation
+  - ac_driven_dev
+  - build_orchestration
+  - ticket_creation_pipeline
 related_docs:
   - docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
   - docs/architecture/diagrams/c2-004-build-ac-flow.md

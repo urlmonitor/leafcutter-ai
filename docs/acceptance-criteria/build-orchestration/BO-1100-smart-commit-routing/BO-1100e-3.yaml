@@ -1,6 +1,6 @@
 id: BO-1100e-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Each candidate commit includes subject line and list of files changed"
 component: build-orchestration
 level: L2

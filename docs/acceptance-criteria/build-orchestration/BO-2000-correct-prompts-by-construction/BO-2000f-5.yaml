@@ -1,12 +1,12 @@
 id: BO-2000f-5
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Rewiring /build-feature to the flattened driver preserves worktree guard, batching, ordering, and failure adjudication"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -55,7 +55,8 @@ created: 2026-07-08
 amended_by: []
 superseded_by: null
 covered_by:
-  - BO-2000f-5-i
+- BO-2000f-5-i
+- unit_tests/prompt_assembly/test_build_feature_flatten_wiring.py
 implemented_by: []
 product_truth:
   - flow: leafcutter/how-acs-are-built
@@ -67,4 +68,4 @@ product_truth:
     entities:
       - Ticket
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

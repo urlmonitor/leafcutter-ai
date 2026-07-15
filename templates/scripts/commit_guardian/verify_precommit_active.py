@@ -34,6 +34,12 @@ DECISION HISTORY
   is_guardian_complete() (BO-1700e-3 — partial-build detection),
   check_guardian_scripts_complete() (BO-1700e-5 — authoritative no-config detection),
   and graceful_skip_if_incomplete() (BO-1700e-3 — gate guard rail with WARNING log).
+- 2026-07-14 00:00 [EPIC-BOPhantomDoneRemediation/02]: Wire helpers + fail-closed remediation.
+  Wired validate_hook_name (BO-1700g-1), check_hook_freshness (BO-1700h-1), and
+  resolve_hooks_path (BO-1700h-3) into run_checks() — previously dead code not called
+  by the orchestrator. Flipped graceful_skip_if_incomplete to fail-closed: incomplete
+  guardian deployment now sets incomplete_build: True in result and appends to
+  failing_checks so main() exits non-zero (BO-1700e-3 anti-criterion fix).
 ====================================================================
 """
 
@@ -179,22 +185,40 @@ def _resolve_git_commondir(cwd: Path) -> Path:
     return gitdir
 
 
-def check_c_git_hook() -> bool:
-    """Check C: the shared git pre-commit hook contains the pre-commit sentinel.
+def check_c_git_hook(hook_path: Path | None = None) -> bool:
+    """Check C: the git pre-commit hook contains the pre-commit sentinel.
 
-    Resolves the git commondir from cwd via _resolve_git_commondir, reads the
-    hooks/pre-commit file from the commondir, and checks for the sentinel string.
+    When ``hook_path`` is provided (e.g. pre-resolved by ``run_checks()`` via
+    ``resolve_hooks_path()``), reads the sentinel directly from that path,
+    honouring any ``core.hooksPath`` override (BO-1700h-3). When ``hook_path``
+    is ``None``, falls back to legacy behaviour: resolves the git commondir from
+    cwd and reads ``hooks/pre-commit`` from there.
+
+    Args:
+        hook_path: Path to the pre-commit hook file to inspect.  When provided
+            the commondir resolution is skipped and this path is used directly.
+            Defaults to ``None`` for backward compatibility with call sites that
+            do not supply rename information.
 
     Returns:
         True if the hook file exists and contains the pre-commit sentinel.
     """
-    cwd = Path.cwd()
+    if hook_path is None:
+        cwd = Path.cwd()
+        try:
+            commondir = _resolve_git_commondir(cwd)
+            hook_path = commondir / "hooks" / "pre-commit"
+        except FileNotFoundError as exc:
+            _log.warning("check_c_git_hook: git structure not found: %s", exc)
+            return False
+        except OSError as exc:
+            _log.warning("check_c_git_hook: cannot read git structure: %s", exc)
+            return False
+
     try:
-        commondir = _resolve_git_commondir(cwd)
-        hook_path = commondir / "hooks" / "pre-commit"
         hook_content = hook_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
-        _log.warning("check_c_git_hook: git structure not found: %s", exc)
+        _log.warning("check_c_git_hook: hook file not found: %s", exc)
         return False
     except OSError as exc:
         _log.warning("check_c_git_hook: cannot read git hook: %s", exc)
@@ -543,7 +567,13 @@ def graceful_skip_if_incomplete(root: Path) -> bool:
 
 
 def run_checks() -> dict[str, Any]:
-    """Orchestrate checks A through D and return a structured result dict.
+    """Orchestrate checks A–D and return a structured result dict.
+
+    Wires integrity helpers into the check flow per the BO-1700 wiring
+    requirements (BO-1700g-1, BO-1700h-1, BO-1700h-3). Checks
+    is_guardian_complete first and fails closed when the guardian deployment
+    is incomplete — adds incomplete_build: True to failing_checks so main()
+    exits non-zero (BO-1700e-3 fail-closed criterion).
 
     Invokes check_a_binary_on_path, check_b_config, check_c_git_hook, and
     check_d_canary in order. Any exception (including subprocess.TimeoutExpired)
@@ -551,9 +581,14 @@ def run_checks() -> dict[str, Any]:
     failing_checks. No exceptions propagate out of this function.
 
     Returns:
-        Dict with keys: binary, config, git_hook, canary (each bool), and
-        failing_checks (list[str] naming each failed check key).
+        Dict with keys: binary, config, git_hook, canary (each bool),
+        incomplete_build (bool — present and True only when guardian scripts
+        are absent), and failing_checks (list[str] naming each failed key).
+        The string ``"hook_freshness"`` is appended to failing_checks when
+        ``check_hook_freshness`` returns False (hook is older than config).
     """
+    cwd = Path.cwd()
+
     results: dict[str, Any] = {
         "binary": False,
         "config": False,
@@ -562,10 +597,49 @@ def run_checks() -> dict[str, Any]:
         "failing_checks": [],
     }
 
+    # BO-1700e-3: Fail closed when guardian scripts are not fully deployed.
+    # Incomplete deployment means the probe results cannot be trusted.
+    if not is_guardian_complete(cwd):
+        _log.warning(
+            "run_checks: guardian scripts incomplete at %s — "
+            "marking incomplete_build and failing closed (BO-1700e-3). "
+            "Run build.py to deploy the guardian scripts.",
+            cwd,
+        )
+        results["incomplete_build"] = True
+        results["failing_checks"].append("incomplete_build")
+
+    # BO-1700h-3: Resolve the effective hooks directory (honours core.hooksPath).
+    hooks_resolved = True
+    try:
+        hooks_dir = resolve_hooks_path(cwd)
+    except (OSError, configparser.Error) as exc:
+        _log.warning(
+            "run_checks: cannot resolve hooks path from %s: %s — using default fallback",
+            cwd,
+            exc,
+        )
+        hooks_dir = cwd / ".git" / "hooks"
+        hooks_resolved = False
+    hook_path = hooks_dir / "pre-commit"
+
+    # BO-1700g-1: Validate hook name (anti-spoofing guard).
+    validate_hook_name(hook_path)
+
+    # BO-1700h-1: Check hook freshness (config-drift detection).
+    # Capture the return value: when False, report hook_freshness in failing_checks.
+    # The failure is only meaningful when both the hooks path and config were resolved
+    # successfully; a False result when either resolution used a fallback indicates
+    # "not installed" rather than "stale", and must not be surfaced as a violation.
+    config_path_resolved = _resolve_config_path(cwd)
+    config_path = config_path_resolved or (cwd / ".pre-commit-config.yaml")
+    freshness_ok = check_hook_freshness(hook_path, config_path)
+    if not freshness_ok and hooks_resolved and config_path_resolved is not None:
+        results["failing_checks"].append("hook_freshness")
+
     checks = [
         ("binary", check_a_binary_on_path),
         ("config", check_b_config),
-        ("git_hook", check_c_git_hook),
         ("canary", check_d_canary),
     ]
 
@@ -586,6 +660,25 @@ def run_checks() -> dict[str, Any]:
 
         if not results[key]:
             results["failing_checks"].append(key)
+
+    # BO-1700h-3: Run Check C with the already-resolved hook_path so that any
+    # core.hooksPath override is honoured. Special-cased outside the generic fn()
+    # loop because check_c_git_hook accepts an optional hook_path argument.
+    try:
+        results["git_hook"] = check_c_git_hook(hook_path)
+    except subprocess.TimeoutExpired as exc:
+        _log.warning("run_checks: check 'git_hook' timed out: %s", exc)
+        results["git_hook"] = False
+    except Exception as exc:  # noqa: BLE001
+        _log.warning(
+            "run_checks: check 'git_hook' raised unexpected exception (%s): %s",
+            type(exc).__name__,
+            exc,
+        )
+        results["git_hook"] = False
+
+    if not results["git_hook"]:
+        results["failing_checks"].append("git_hook")
 
     return results
 

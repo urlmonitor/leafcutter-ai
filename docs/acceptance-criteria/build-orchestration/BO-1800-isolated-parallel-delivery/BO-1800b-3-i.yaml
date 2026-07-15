@@ -1,6 +1,6 @@
 id: BO-1800b-3-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "An admin merge attempt on main is rejected outside the gate"

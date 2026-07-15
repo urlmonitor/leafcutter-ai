@@ -1,6 +1,6 @@
 id: TKT-500d
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: draft
 priority: medium
 title: "A goal is the unit of delivery that supervisors walk"

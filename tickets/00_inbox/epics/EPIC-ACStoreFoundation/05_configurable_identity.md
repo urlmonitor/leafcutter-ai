@@ -2,7 +2,7 @@
 title: "Configurable origin_agent defaults per agent and skill"
 status: todo
 components:
-  - ac-store
+  - ac_store
 created: 2026-06-05
 depends_on:
   - 04_authorship_tracking.md

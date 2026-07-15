@@ -1,6 +1,6 @@
 id: ACD-1500d-2
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "A configurable per-run cap limits how many artifacts the router auto-creates"

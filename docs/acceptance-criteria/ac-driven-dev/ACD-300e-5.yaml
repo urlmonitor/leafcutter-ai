@@ -1,6 +1,6 @@
 id: ACD-300e-5
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Agents cite knowledge-graph findings in their output to support deduplication and cross-referencing"

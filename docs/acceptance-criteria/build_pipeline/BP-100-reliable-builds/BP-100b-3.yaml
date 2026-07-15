@@ -1,6 +1,6 @@
 id: BP-100b-3
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Stale workflow artifacts are removed during build cleanup"
@@ -32,7 +32,7 @@ amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
-  - tests/test_build_artifact_parity.py::TestManagedArtifactDirsCoversAllCategories
+  - "tests/test_build_clean.py"
 implemented_by:
   - scripts/build_phases.py
 change_target: pipeline

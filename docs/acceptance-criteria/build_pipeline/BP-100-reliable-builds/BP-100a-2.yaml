@@ -1,6 +1,6 @@
 id: BP-100a-2
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Build emits no integrity warnings when all hook scripts are present"
@@ -40,7 +40,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_build_precommit.py"
 implemented_by:
   - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"
 change_target: pipeline

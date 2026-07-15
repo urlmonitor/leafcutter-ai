@@ -3,7 +3,7 @@ title: "Deploy plan-feature.js to consumer installs via templates/workflows-js"
 status: done
 components:
   - build_pipeline
-  - workflow_deployment
+  - build_pipeline
 created: 2026-06-16
 depends_on: []
 priority: high

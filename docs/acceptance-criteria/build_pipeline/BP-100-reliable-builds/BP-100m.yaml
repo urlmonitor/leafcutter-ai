@@ -1,6 +1,6 @@
 id: BP-100m
 components:
-  - build-pipeline
+  - build_pipeline
 title: "No build artifact is ever silently overwritten by another"
 component: build-pipeline
 level: L1

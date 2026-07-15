@@ -1,6 +1,6 @@
 id: ACS-500b-1-i
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "AC with implements_pattern but empty criteria is valid"

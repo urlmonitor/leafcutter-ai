@@ -1,12 +1,12 @@
 id: BP-900f-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Guard classifies every deployable-script source path as tracked or untracked in git"
 component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: not_started
+work_status: done
 readiness: approved
 priority: high
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
@@ -49,7 +49,9 @@ origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_tracked_source_guard.py"
+  - "unit_tests/test_build_guard_real_package.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260624-BP-900f-1.md
 change_target: pipeline

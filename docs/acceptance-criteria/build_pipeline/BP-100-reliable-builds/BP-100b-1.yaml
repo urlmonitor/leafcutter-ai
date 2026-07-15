@@ -1,6 +1,6 @@
 id: BP-100b-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Build creates a symlink so agents reach compiled workflows at .claude/workflows/"
@@ -34,7 +34,8 @@ amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
-  - tests/test_build_artifact_parity.py::TestShimMapCoversAllUserFacingCategories
+  - "unit_tests/test_build_workflow_output_paths.py"
+  - "unit_tests/test_build_workflow_phase.py"
 implemented_by:
   - scripts/build_helpers.py
 change_target: pipeline

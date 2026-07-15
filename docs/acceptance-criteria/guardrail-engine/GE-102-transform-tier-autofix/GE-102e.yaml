@@ -1,6 +1,6 @@
 id: GE-102e
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "The pre-commit hooks how-to documents the new transform hooks and their silent auto-fix behavior"

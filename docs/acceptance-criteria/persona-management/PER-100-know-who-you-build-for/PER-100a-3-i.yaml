@@ -1,6 +1,6 @@
 id: PER-100a-3-i
 components:
-  - persona-management
+  - persona_management
 title: "Persona file with invalid YAML syntax produces a parse error"
 component: persona-management
 level: L3

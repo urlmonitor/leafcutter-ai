@@ -2,8 +2,8 @@
 title: "/create-ac workflow — triage, orchestrate, and gate AC authoring"
 status: done
 components:
-  - ac-store
-  - ticket-creation
+  - ac_store
+  - ticket_creation_pipeline
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/00_ac_readiness_gate_and_authoring_pipeline.md

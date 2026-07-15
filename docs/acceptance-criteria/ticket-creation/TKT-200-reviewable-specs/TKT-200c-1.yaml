@@ -2,7 +2,7 @@ id: TKT-200c-1
 readiness: reviewed
 priority: medium
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Review package assembles specs, diagrams, and docs into a single location"
 component: ticket-creation
 level: L2

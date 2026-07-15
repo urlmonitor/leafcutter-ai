@@ -6,11 +6,16 @@ Covers AC BO-1100b: if staged files belong to multiple unrelated groups, the
 system warns the user instead of mashing them into one commit with a generic
 or inaccurate message. The user can then split the commit or confirm the mixed
 set intentionally.
+
+Also covers the wiring requirement: TestMixedCommitWarningSurfaced asserts
+that templates/agents/commit.md actually calls detect_mixed_set() and surfaces
+the enumerated warning with explicit Proceed/Abort options per BO-1100b-1/2/3.
 """
 # @ac-tag: BO-1100b
 
 import sys
 import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
@@ -286,6 +291,115 @@ class TestDetectMixedSetWarningContent(unittest.TestCase):
         self.assertEqual(result.warning, "")
         self.assertEqual(result.recommendation, "")
         self.assertEqual(result.unrelated_groups, [])
+
+
+class TestMixedCommitWarningSurfaced(unittest.TestCase):
+    """AC BO-1100b-1/2/3 wiring + content tests.
+
+    BO-1100b-1: commit.md must invoke detect_mixed_set() BEFORE composing any
+    message, presenting the warning to the user.
+
+    BO-1100b-2: The warning must enumerate the name of each conflicting group
+    AND list the individual files in each group — not just a count.
+
+    BO-1100b-3: The user must be offered explicit "Proceed" and "Abort" options
+    (not just free-form wording about splitting).
+
+    These tests are the RED baseline for the phantom-done remediation: the
+    detect_mixed_set() library exists and has green tests, but commit.md never
+    invokes it, and the warning format does not yet conform to BO-1100b spec.
+    """
+
+    _COMMIT_MD_PATH: Path = (
+        Path(__file__).resolve().parent.parent / "templates" / "agents" / "commit.md"
+    )
+
+    def test_mixed_commit_warning_surfaced(self) -> None:
+        # covers: BO-1100b-1
+        """AC BO-1100b-1: commit.md must invoke detect_mixed_set() before message composition.
+
+        The commit agent template must reference detect_mixed_set() so that the
+        warning is presented BEFORE any subject line is drafted in Step 2.
+        """
+        content = self._COMMIT_MD_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "detect_mixed_set",
+            content,
+            msg=(
+                "commit.md must call detect_mixed_set() before Step 2 message "
+                "composition (BO-1100b-1). The mixed-set library is currently never "
+                "invoked from the commit agent template (phantom-done)."
+            ),
+        )
+
+    def test_ac_bo1100b2_warning_lists_all_filenames_per_group(self) -> None:
+        # covers: BO-1100b-2
+        """AC BO-1100b-2: warning must enumerate each file per group, not just a count.
+
+        When a group contains 2+ files, all filenames must appear in the warning
+        string — not only a count like '2 files'. This allows the user to see
+        exactly which files belong to each group before deciding to split.
+        """
+        groups = {
+            FileGroup.TICKETS: ["tickets/02_in_progress/TICKET-001.md"],
+            FileGroup.IMPLEMENTATION_CODE: [
+                "scripts/commit_guardian/new_hook.py",
+                "scripts/commit_guardian/utils.py",
+            ],
+        }
+        result = detect_mixed_set(groups)
+        self.assertTrue(result.is_mixed)
+        # Both individual filenames from the implementation group must appear in
+        # the warning (not just "2 files").
+        self.assertIn(
+            "new_hook.py",
+            result.warning,
+            msg=(
+                "BO-1100b-2: warning must list 'new_hook.py' explicitly for the "
+                "implementation group, not just '2 files'."
+            ),
+        )
+        self.assertIn(
+            "utils.py",
+            result.warning,
+            msg=(
+                "BO-1100b-2: warning must list 'utils.py' explicitly for the "
+                "implementation group, not just '2 files'."
+            ),
+        )
+
+    def test_ac_bo1100b3_warning_offers_explicit_proceed_and_abort(self) -> None:
+        # covers: BO-1100b-3
+        """AC BO-1100b-3: user must be offered explicit 'Proceed' and 'Abort' options.
+
+        The MixedSetWarning recommendation must contain the literal keywords
+        'Proceed' and 'Abort' so the user sees unambiguous decision labels.
+        The current recommendation only says 'split' and 'confirm intentionally',
+        which does not satisfy BO-1100b-3's explicit two-option requirement.
+        """
+        groups = {
+            FileGroup.TICKETS: ["tickets/00_inbox/my_ticket.md"],
+            FileGroup.IMPLEMENTATION_CODE: ["scripts/build.py"],
+        }
+        result = detect_mixed_set(groups)
+        self.assertTrue(result.is_mixed)
+        combined = (result.warning + " " + result.recommendation).lower()
+        self.assertIn(
+            "proceed",
+            combined,
+            msg=(
+                "BO-1100b-3: MixedSetWarning must offer an explicit 'Proceed' option. "
+                "Current recommendation uses 'confirm intentionally' instead."
+            ),
+        )
+        self.assertIn(
+            "abort",
+            combined,
+            msg=(
+                "BO-1100b-3: MixedSetWarning must offer an explicit 'Abort' option. "
+                "The word 'abort' does not currently appear in the warning or recommendation."
+            ),
+        )
 
 
 if __name__ == "__main__":

@@ -37,7 +37,9 @@ doc_links:
 depends_on: []
 superseded_by: null
 amended_by: []
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_finalize_pre_merge_safety_gate.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: safety
+work_status: done

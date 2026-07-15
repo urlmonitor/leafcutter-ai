@@ -1,6 +1,6 @@
 id: TKT-300a-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "IT PO adds policy-level requirements without implementation prescriptions"

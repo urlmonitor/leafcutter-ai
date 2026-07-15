@@ -2,7 +2,7 @@ id: BO-200b-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "All envelope files are staged and committed as a single atomic unit"
 component: build-orchestration
 level: L2

@@ -2,7 +2,7 @@ id: BP-200
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Agent authors get a specialist peer that catches prompt mistakes before they ship"
 component: build-pipeline
 level: L0

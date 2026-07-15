@@ -1,6 +1,6 @@
 id: BP-800c-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Corrupted best-practice file does not crash the build"
 component: build-pipeline
 level: L3

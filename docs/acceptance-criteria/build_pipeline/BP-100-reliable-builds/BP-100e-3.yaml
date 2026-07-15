@@ -2,7 +2,7 @@ id: BP-100e-3
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Pre-commit hook accepts signed-off lines with valid YYYY-MM-DD HH:MM timestamps"
 component: build-pipeline
 level: L2

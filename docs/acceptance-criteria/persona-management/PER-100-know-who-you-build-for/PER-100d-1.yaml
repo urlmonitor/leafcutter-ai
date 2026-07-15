@@ -1,6 +1,6 @@
 id: PER-100d-1
 components:
-  - persona-management
+  - persona_management
 title: "Persona summary is injected into PO and BA agent context at spawn"
 component: persona-management
 level: L2

@@ -2,7 +2,7 @@
 title: "Agentic split guidelines in write-c4-diagram skill + architecture-diagram-author"
 status: done
 components:
-  - architecture_docs
+  - documentation_system
 created: 2026-05-26
 last_updated: 2026-05-26
 depends_on: []

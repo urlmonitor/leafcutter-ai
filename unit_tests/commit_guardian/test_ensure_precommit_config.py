@@ -121,7 +121,7 @@ class TestConfigAlreadyExistsSubprocess(unittest.TestCase):
     """Subprocess-level no-op test: script must exit 0 when config already exists."""
 
     def test_config_present_subprocess_exits_0(self):
-        # covers: UNKNOWN
+        # covers: BO-1700c-1
         """Running the hook in a directory that already has .pre-commit-config.yaml
         must result in exit code 0 (no-op path).
 
@@ -198,7 +198,7 @@ class TestConfigMissingSymlinkFailsCopySucceeds(unittest.TestCase):
     """When symlink raises OSError (NTFS), the hook copies the config directly."""
 
     def test_config_missing_symlink_fails_copy_succeeds(self):
-        # covers: UNKNOWN
+        # covers: BO-1700c-1-i
         """Config absent, os.symlink raises OSError, file copy succeeds →
         .pre-commit-config.yaml copied into worktree root, function returns True.
 
@@ -239,8 +239,12 @@ class TestConfigMissingSymlinkFailsCopySucceeds(unittest.TestCase):
             config_src = main_tree / ".pre-commit-config.yaml"
             config_src.write_text("repos: []\n", encoding="utf-8")
 
-            # Patch os.symlink to simulate NTFS failure
-            with patch("os.symlink", side_effect=OSError("NTFS: symlinks not supported")):
+            # Patch os.symlink to simulate NTFS failure, and inject the fixture
+            # main_tree so _find_main_tree_root does not fall back to _PACKAGE_ROOT.
+            with (
+                patch("os.symlink", side_effect=OSError("NTFS: symlinks not supported")),
+                patch.object(_epc, "_find_main_tree_root", return_value=main_tree),
+            ):
                 try:
                     result = _epc.ensure_config(worktree)
                 except AttributeError:
@@ -274,17 +278,25 @@ class TestConfigMissingBothFailExitNonzero(unittest.TestCase):
     """When both symlink and copy fail, the hook must exit non-zero (fail-closed)."""
 
     def test_config_missing_both_fail_exit_nonzero(self):
-        # covers: UNKNOWN
-        """Config absent, symlink raises OSError, copy also fails →
-        ensure_config() returns False and main() exits non-zero.
+        # covers: BO-1700c-1-ii
+        """Config absent, symlink raises OSError, copy source missing →
+        ensure_config() returns False and main() exits 1 (fail-closed).
 
-        Fail-closed invariant: no silent success when the config cannot be
-        established. The hook must surface the failure explicitly.
+        Both re-materialization strategies fail:
+        1. Symlink creation raises OSError (patched to simulate NTFS).
+        2. No .pre-commit-config.yaml source in the empty main tree root
+           returned by the patched _find_main_tree_root.
 
-        Must implement:
-        - Return False when both symlink and copy attempts fail.
-        - main() must sys.exit(1) (or non-zero) in this case.
+        The hook must:
+        - Return False (not silently succeed, never exit 0 unresolved).
+        - Log a loud error naming why restoration failed (via WARNING logging).
+        - main() must sys.exit(1).
+
+        This is the fail-closed invariant (BO-1700b-1): config unresolvable
+        → hard fail, never exit 0 with config still missing (BO-1700c-1-ii).
         """
+        import tempfile
+
         if not _IMPORT_OK:
             self.fail(
                 "ImportError: cannot import scripts.commit_guardian.ensure_precommit_config. "
@@ -293,14 +305,55 @@ class TestConfigMissingBothFailExitNonzero(unittest.TestCase):
         if not hasattr(_epc, "ensure_config"):
             self.fail(
                 "AttributeError: ensure_precommit_config does not expose ensure_config(). "
-                "Implement ensure_config(worktree_root: Path) -> bool that returns False "
-                "when both symlink and copy fail."
+                "Implement ensure_config(worktree_root: Path) -> bool."
             )
         if not hasattr(_epc, "main"):
             self.fail(
                 "AttributeError: ensure_precommit_config does not expose main(). "
                 "Implement main() that calls sys.exit(1) when ensure_config() returns False."
             )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            worktree = tmp_path / "worktree"
+            # Empty main tree: no .leafcutter and no .pre-commit-config.yaml.
+            # _find_main_tree_root is patched to return this path so the
+            # copy fallback cannot locate a source config — both strategies fail.
+            main_tree_empty = tmp_path / "main_tree_empty"
+            worktree.mkdir()
+            main_tree_empty.mkdir()
+
+            with (
+                patch("os.symlink", side_effect=OSError("NTFS: symlinks not supported")),
+                patch.object(_epc, "_find_main_tree_root", return_value=main_tree_empty),
+            ):
+                result = _epc.ensure_config(worktree)
+
+        self.assertFalse(
+            result,
+            msg=(
+                "BO-1700c-1-ii: Expected ensure_config() to return False when both symlink "
+                "and copy fail (fail-closed invariant — never exit 0 while config unresolved). "
+                f"Got: {result!r}. Implement the fail-closed return-False path."
+            ),
+        )
+
+        # Verify main() exits 1 (non-zero) when ensure_config() returns False.
+        # The AC requires the hook print a loud error and exit non-zero so the commit
+        # is blocked. main() reads Path.cwd(); we patch ensure_config directly so
+        # the cwd resolution is bypassed and the non-zero path is tested cleanly.
+        with patch.object(_epc, "ensure_config", return_value=False):
+            with self.assertRaises(SystemExit) as ctx:
+                _epc.main()
+        self.assertEqual(
+            ctx.exception.code,
+            1,
+            msg=(
+                f"BO-1700c-1-ii: Expected main() to sys.exit(1) when ensure_config() "
+                f"returns False (fail-closed). Got exit code: {ctx.exception.code!r}. "
+                "Implement main() to call sys.exit(1) on ensure_config() failure."
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -312,7 +365,7 @@ class TestIdempotencyCallTwice(unittest.TestCase):
     """Calling the hook twice when config exists must succeed both times (no-op on second)."""
 
     def test_idempotency_call_twice(self):
-        # covers: UNKNOWN
+        # covers: BO-1700c-1-iv
         """Hook invoked twice with config already present → both calls exit 0.
 
         The hook must not fail, raise, or modify files on repeated invocations.
@@ -385,7 +438,7 @@ class TestAtomicityPartialFailureCleanState(unittest.TestCase):
     """If the write operation fails midway, no partial or temp files are left behind."""
 
     def test_atomicity_partial_failure_clean_state(self):
-        # covers: UNKNOWN
+        # covers: BO-1700c-1-iv
         """Simulated write failure mid-copy → no temp file left in worktree root.
 
         The atomic write-temp-then-rename pattern must ensure that if the rename
@@ -462,7 +515,7 @@ class TestManifestIndex0(unittest.TestCase):
     """ensure-precommit-config must be the FIRST entry in hooks_manifest.hooks."""
 
     def test_manifest_index_0(self):
-        # covers: UNKNOWN
+        # covers: BO-1700c-1
         """assert ensure_precommit_config is registered first (index 0) in commit_guardian.json.
 
         The ticket requires that ensure_precommit_config be listed at index 0

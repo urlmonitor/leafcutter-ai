@@ -1,6 +1,6 @@
 id: UXP-100b
 components:
-  - ux-prototyping
+  - ux_prototyping
 readiness: approved
 priority: medium
 title: "Know immediately when a new component is needed"

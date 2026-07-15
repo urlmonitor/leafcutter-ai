@@ -5,7 +5,7 @@ status: active
 created: 2026-05-22
 last_updated: 2026-05-22
 components:
-  - build_system
+  - build_pipeline
 related_docs:
   - docs/explanation/why-feedback-system.md
 related_code:

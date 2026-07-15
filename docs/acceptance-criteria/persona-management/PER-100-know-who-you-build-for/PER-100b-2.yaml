@@ -1,6 +1,6 @@
 id: PER-100b-2
 components:
-  - persona-management
+  - persona_management
 title: "persona_for value must reference an existing persona directory"
 component: persona-management
 level: L2

@@ -1,6 +1,6 @@
 id: ACS-500a
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Recognized patterns are defined in one place"

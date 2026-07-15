@@ -2,7 +2,7 @@
 title: "Fix done-folder-move prohibition: move-not-presence semantics (BO-400c-3)"
 status: todo
 components:
-  - guardrail-engine
+  - commit_guardian
 created: 2026-07-07
 depends_on: []
 priority: high

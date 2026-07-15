@@ -2,7 +2,7 @@ id: BO-800
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Pull requests explain themselves using what was already decided"
 component: build-orchestration
 level: L0
@@ -44,4 +44,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

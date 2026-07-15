@@ -1,6 +1,6 @@
 id: PER-100
 components:
-  - persona-management
+  - persona_management
 readiness: approved
 priority: medium
 title: "Always know exactly who you are building for"

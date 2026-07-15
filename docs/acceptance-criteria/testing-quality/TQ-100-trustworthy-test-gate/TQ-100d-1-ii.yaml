@@ -1,6 +1,6 @@
 id: TQ-100d-1-ii
 components:
-  - testing-quality
+  - testing_quality
 title: "An allowlisted test that has started passing is flagged so the stale entry is removed"
 component: testing-quality
 level: L3

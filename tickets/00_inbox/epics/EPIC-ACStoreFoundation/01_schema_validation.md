@@ -2,7 +2,7 @@
 title: "Full schema validation at commit time"
 status: todo
 components:
-  - ac-store
+  - ac_store
 created: 2026-06-05
 depends_on: []
 priority: high

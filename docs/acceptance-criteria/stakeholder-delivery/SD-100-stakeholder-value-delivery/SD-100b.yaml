@@ -1,6 +1,6 @@
 id: SD-100b
 components:
-  - stakeholder-delivery
+  - stakeholder_delivery
 readiness: draft
 priority: medium
 title: "Hand stakeholders a single file they can open anywhere"

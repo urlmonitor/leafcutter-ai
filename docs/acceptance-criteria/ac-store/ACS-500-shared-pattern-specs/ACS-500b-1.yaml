@@ -1,6 +1,6 @@
 id: ACS-500b-1
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "A consuming AC declares pattern reference and page-specific bindings"

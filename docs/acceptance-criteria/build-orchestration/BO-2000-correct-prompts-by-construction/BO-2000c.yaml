@@ -1,6 +1,6 @@
 id: BO-2000c
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The task-specific implementation spec is authored into the ticket body and the dispatch points to it"
 component: build-orchestration
 level: L1

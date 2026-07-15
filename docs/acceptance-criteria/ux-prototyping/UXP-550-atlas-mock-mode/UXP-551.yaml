@@ -4,7 +4,7 @@ priority: medium
 title: "A bundled fixture repo mirrors each loader input's native format so all Atlas views render populated"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L2
 status: active
 req_status: draft

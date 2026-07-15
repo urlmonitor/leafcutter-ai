@@ -1,6 +1,6 @@
 id: ACS-100f
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Agents find the requirements they need without manual lookups"

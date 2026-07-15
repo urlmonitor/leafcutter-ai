@@ -4,7 +4,7 @@ priority: medium
 title: "A visible mock-mode badge tells the reviewer the Atlas is showing fixtures"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L2
 status: active
 req_status: draft

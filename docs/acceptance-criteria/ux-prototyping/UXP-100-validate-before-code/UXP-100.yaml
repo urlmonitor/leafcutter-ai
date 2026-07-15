@@ -1,6 +1,6 @@
 id: UXP-100
 components:
-  - ux-prototyping
+  - ux_prototyping
 readiness: approved
 priority: medium
 title: "See what you are getting before a single line of code is written"

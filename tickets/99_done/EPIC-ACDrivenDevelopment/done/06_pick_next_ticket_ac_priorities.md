@@ -2,8 +2,8 @@
 title: "pick-next-ticket skill: incorporate AC priorities into ticket selection"
 status: done
 components:
-  - ac-store
-  - ticket-creation
+  - ac_store
+  - ticket_creation_pipeline
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md

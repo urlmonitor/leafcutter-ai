@@ -2,7 +2,7 @@ id: BO-800c
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The test plan is the acceptance criteria"
 component: build-orchestration
 level: L1

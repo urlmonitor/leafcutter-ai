@@ -1,6 +1,6 @@
 id: TQ-100d-1-i
 components:
-  - testing-quality
+  - testing_quality
 title: "An allowlist entry whose expiry date has passed is flagged and fails the check"
 component: testing-quality
 level: L3

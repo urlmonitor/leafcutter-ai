@@ -1,6 +1,6 @@
 id: BO-1300b-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Findings from all three reviewers are aggregated into one consolidated result"

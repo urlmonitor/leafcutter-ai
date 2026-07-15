@@ -1,13 +1,13 @@
 id: ACS-300g-2
 components:
-  - ac-store
+  - ac_store
 title: "Existing component entries are preserved unmodified during backfill"
 component: ac-store
 level: L2
 status: active
 readiness: approved
 priority: medium
-req_status: active
+req_status: superseded
 work_status: todo
 criteria: |
   Given docs/components.json already contains entries for
@@ -31,10 +31,34 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by:
+- it-po-v3
+- "req_status:superseded 2026-07-15 — literal count==20 obsolete after components.json canonicalization (now 43 entries); byte-for-byte baseline was never snapshotted. Still-true preservation invariant (3 originals present + valid) is regression-covered by test_acs_300g2_components_preserved.py."
 superseded_by: null
-covered_by: []
+test_spec:
+- name: test_sync_platforms_is_present
+  target_dir: unit_tests
+  type: unit
+  description: "Verify sync_platforms entry is present in docs/components.json."
+  covers: [ACS-300g-2]
+- name: test_build_pipeline_is_present
+  target_dir: unit_tests
+  type: unit
+  description: "Verify build_pipeline entry is present in docs/components.json."
+  covers: [ACS-300g-2]
+- name: test_config_loader_is_present
+  target_dir: unit_tests
+  type: unit
+  description: "Verify config_loader entry is present in docs/components.json."
+  covers: [ACS-300g-2]
+- name: test_all_three_originals_pass_minimum_schema
+  target_dir: unit_tests
+  type: unit
+  description: "Verify all three original components pass the minimum-schema check."
+  covers: [ACS-300g-2]
+covered_by:
+- unit_tests/test_acs_300g2_components_preserved.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260608-ACS-300g-2.md
+- docs/components.json
 change_target: config
 risk_surface: internal

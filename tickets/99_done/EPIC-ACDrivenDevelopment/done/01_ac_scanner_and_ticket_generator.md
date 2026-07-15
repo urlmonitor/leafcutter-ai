@@ -2,8 +2,8 @@
 title: "AC scanner and ticket generator"
 status: done
 components:
-  - ac-store
-  - ticket-creation
+  - ac_store
+  - ticket_creation_pipeline
 created: 2026-06-05
 depends_on: []
 priority: high

@@ -1,6 +1,6 @@
 id: BO-1900a
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A fit-to-dispatch check runs before any agent is spawned"
 component: build-orchestration
 level: L1

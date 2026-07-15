@@ -1,6 +1,6 @@
 id: BP-1300b-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A guardrail resolves its inputs from canonical source and catches a source-only defect"
 component: build-pipeline
 level: L2

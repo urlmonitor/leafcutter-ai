@@ -1,0 +1,44 @@
+id: BO-2100a-5
+components:
+  - build_orchestration
+title: "Sequence diagram of the live-surface-tester dispatch path"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the dispatch chain from ticket authoring through to a running live-app check
+  When an author needs to understand how an opted-in ticket reaches the
+    live-surface-tester phase
+  Then a sequence diagram exists showing the ordered interaction:
+    business-analyst writes `live-surface-tester: needed` into the ticket agents map,
+    ticket-supervisor reads the map and checks its Spawn Allowlist,
+    build-ticket.js sorts the phase to priority 11.8,
+    and the live-surface-tester phase is dispatched after user-surface-smoker and
+    before commit.
+depends_on: [BO-2100a, BO-2100a-3]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: extends
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The diagram must reflect the actual wired dispatch order (11.5 smoker -> 11.8 live-surface-tester -> 12 commit) as implemented in BO-2100a-1, a-2, a-3 — not an aspirational ordering."
+  - "Participants must be named exactly as they appear in the code and templates (business-analyst, ticket-supervisor, build-ticket.js, live-surface-tester)."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-5.md

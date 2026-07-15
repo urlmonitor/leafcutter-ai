@@ -1,6 +1,6 @@
 id: GE-113a-1
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "A staged test outside the configured test root blocks the commit with a fix-it message"
 component: guardrail-engine
 level: L2

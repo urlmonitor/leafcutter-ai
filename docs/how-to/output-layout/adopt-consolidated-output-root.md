@@ -5,7 +5,7 @@ status: active
 created: 2026-05-27
 last_updated: 2026-05-27
 components:
-  - build_system
+  - build_pipeline
   - infrastructure
 related_docs:
   - docs/architecture/adrs/ADR-004-consolidated-output-root.md

@@ -1788,5 +1788,1367 @@ class TestRemoveCanaryFromManifestFileNotFound(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# TICKET 02 (BO-1700 PHANTOM-DONE REMEDIATION) — BO-1700g-1, BO-1700h-1,
+# BO-1700h-3, BO-1700e-3
+# Added: 2026-07-14 [EPIC-BOPhantomDoneRemediation/02]
+# Tests below are RED until the following are wired into run_checks():
+#   validate_hook_name   — must be called during the check flow (BO-1700g-1)
+#   check_hook_freshness — must be called during the check flow (BO-1700h-1)
+#   resolve_hooks_path   — must be called during Check C (BO-1700h-3)
+#   is_guardian_complete — must gate run_checks() to fail closed (BO-1700e-3)
+# Additionally:
+#   run_checks() must add 'incomplete_build': True to its result dict when the
+#   guardian deployment is incomplete, and append 'incomplete_build' to
+#   failing_checks so the CLI exits non-zero (BO-1700e-3 fail-closed criterion).
+# ---------------------------------------------------------------------------
+
+
+class TestRunChecksInvokesHookIdValidation(unittest.TestCase):
+    """BO-1700g-1/h-1/h-3: run_checks must wire validate helpers into the check flow."""
+
+    def test_run_checks_invokes_hook_id_validation(self):
+        # covers: BO-1700g-1
+        # covers: BO-1700h-1
+        # covers: BO-1700h-3
+        """run_checks() must call validate_hook_name, check_hook_freshness, and
+        resolve_hooks_path during its execution. All three are currently dead code
+        (not called by run_checks()) — this test is RED until they are wired in.
+
+        Wiring criteria:
+          BO-1700g-1: validate_hook_name is the required hook-ID anti-spoofing guard
+                      that must run as part of Check B/C orchestration.
+          BO-1700h-1: check_hook_freshness detects config-drift and must be called
+                      to report the worktree config as stale when it diverges.
+          BO-1700h-3: resolve_hooks_path must be called so Check C honours any
+                      core.hooksPath override rather than assuming a default path.
+
+        The four canonical check functions (check_a–d) are mocked so the test does
+        not require a live git repo or pre-commit installation. The helpers are spied
+        upon via patch.object; their mock.called flags confirm wiring. If the coder
+        wires the helpers inside check_b_config/check_c_git_hook rather than inside
+        run_checks() directly, these mocks will prevent the helpers from firing —
+        in that case update the test to call the check functions directly without
+        mocking them.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        for fn_name in ("validate_hook_name", "check_hook_freshness", "resolve_hooks_path"):
+            if not hasattr(_vpa, fn_name):
+                self.fail(
+                    f"AttributeError: verify_precommit_active does not expose {fn_name}(). "
+                    f"Implement this helper first (tickets 03/04)."
+                )
+        # Spy on the three helpers that must be wired into run_checks().
+        # The four check functions are mocked so no live environment is needed.
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "validate_hook_name", return_value=True) as spy_vhn,
+            patch.object(
+                _vpa, "check_hook_freshness", return_value=True
+            ) as spy_chf,
+            patch.object(
+                _vpa, "resolve_hooks_path", return_value=Path("/tmp/hooks")
+            ) as spy_rhp,
+        ):
+            _vpa.run_checks()
+
+        # BO-1700g-1: validate_hook_name must be called (required hook-ID guard)
+        self.assertTrue(
+            spy_vhn.called,
+            msg=(
+                "validate_hook_name was NOT called during run_checks(). "
+                "Wire validate_hook_name into the check flow per BO-1700g-1. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+        # BO-1700h-1: check_hook_freshness must be called (drift detection)
+        self.assertTrue(
+            spy_chf.called,
+            msg=(
+                "check_hook_freshness was NOT called during run_checks(). "
+                "Wire check_hook_freshness into the check flow per BO-1700h-1. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+        # BO-1700h-3: resolve_hooks_path must be called (core.hooksPath honour)
+        self.assertTrue(
+            spy_rhp.called,
+            msg=(
+                "resolve_hooks_path was NOT called during run_checks(). "
+                "Wire resolve_hooks_path into Check C per BO-1700h-3. "
+                "This helper is currently dead code — not invoked from run_checks()."
+            ),
+        )
+
+
+class TestIncompleteBuildFailsClosed(unittest.TestCase):
+    """BO-1700e-3: Incomplete guardian-scripts build must fail closed, not skip."""
+
+    def test_incomplete_build_fails_closed(self):
+        # covers: BO-1700e-3
+        """When is_guardian_complete() returns False (incomplete deploy), run_checks()
+        must fail closed: the result must contain incomplete_build: True AND
+        failing_checks must be non-empty with 'incomplete_build' in it.
+
+        Must NOT return a passing result — the fail-open graceful_skip_if_incomplete
+        pattern (returns True and lets the gate proceed silently) is the exact
+        OPPOSITE of the required fail-closed behaviour (BO-1700e-3 anti-criterion).
+
+        RED until:
+          1. run_checks() calls is_guardian_complete() before running checks A–D.
+          2. When is_guardian_complete() returns False, run_checks() adds
+             'incomplete_build': True to the result dict (architect-review §3).
+          3. 'incomplete_build' is appended to failing_checks so the CLI exits non-zero.
+
+        Current state: run_checks() never calls is_guardian_complete() → the result
+        dict has no 'incomplete_build' key → result.get('incomplete_build', False) is
+        False → first assertion fails → RED.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "is_guardian_complete(). Implement this helper first (ticket 07)."
+            )
+        # Simulate an incomplete build: one or more guard scripts are absent.
+        # All four checks return True to isolate the incomplete_build detection path.
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=False),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        # BO-1700e-3: Fail closed — incomplete_build must be True in result
+        self.assertTrue(
+            result.get("incomplete_build", False),
+            msg=(
+                "Expected result['incomplete_build'] == True when is_guardian_complete() "
+                "returns False. run_checks() must fail closed on an incomplete build. "
+                f"Got result: {result}"
+            ),
+        )
+        # BO-1700e-3: Fail closed — failing_checks must be non-empty
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                "Expected failing_checks to be non-empty when build is incomplete "
+                "(fail-closed). The fail-open graceful_skip_if_incomplete pattern "
+                f"(empty failing_checks) must be replaced. Got result: {result}"
+            ),
+        )
+        # BO-1700e-3: 'incomplete_build' must appear in failing_checks
+        self.assertIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "Expected 'incomplete_build' in failing_checks when is_guardian_complete() "
+                "returns False. The probe must name the missing-deploy condition in its "
+                f"failing_checks output. Got result: {result}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# REMEDIATION TESTS — BO-1700h-3 (check_c uses resolved hook_path),
+#                     BO-1700h-1 (hook_freshness in failing_checks)
+# Added: 2026-07-14 [EPIC-BOPhantomDoneRemediation]
+# Tests below verify the two behavioural defects fixed in run_checks():
+#   1. check_c_git_hook must be called with the hook_path resolved by
+#      resolve_hooks_path() — not its own internal commondir path (BO-1700h-3).
+#   2. When check_hook_freshness() returns False, "hook_freshness" must appear
+#      in failing_checks so the probe exits non-zero (BO-1700h-1).
+# ---------------------------------------------------------------------------
+
+
+class TestCheckCGitHookUsesResolvedPath(unittest.TestCase):
+    """BO-1700h-3: Check C must inspect the hook_path resolved by resolve_hooks_path."""
+
+    def test_check_c_called_with_resolved_hook_path(self):
+        """When core.hooksPath is set to a custom dir, run_checks() must pass the
+        resolved hook_path to check_c_git_hook(), NOT let check_c resolve its own
+        commondir path.
+
+        Verifies the call-site wiring: run_checks() must call
+        check_c_git_hook(hook_path) with the path returned by resolve_hooks_path(),
+        not fn() with no arguments.
+        """
+        # covers: BO-1700h-3
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_c_git_hook"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_c_git_hook()."
+            )
+
+        custom_hooks_dir = Path("/custom/hooks/dir")
+        custom_hook_path = custom_hooks_dir / "pre-commit"
+
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "resolve_hooks_path", return_value=custom_hooks_dir),
+            patch.object(_vpa, "validate_hook_name", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True) as spy_check_c,
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            _vpa.run_checks()
+
+        self.assertTrue(
+            spy_check_c.called,
+            msg="check_c_git_hook was not called during run_checks().",
+        )
+        call_args = spy_check_c.call_args
+        self.assertIsNotNone(
+            call_args,
+            msg="check_c_git_hook was called but call_args is None (unexpected).",
+        )
+        # The hook_path passed must be the one from the resolved hooks dir.
+        # It may be passed as a positional or keyword argument.
+        if call_args.args:
+            passed_path = call_args.args[0]
+        else:
+            passed_path = call_args.kwargs.get("hook_path")
+        self.assertEqual(
+            passed_path,
+            custom_hook_path,
+            msg=(
+                f"Expected check_c_git_hook to be called with {custom_hook_path!r} "
+                f"(from core.hooksPath override via resolve_hooks_path), "
+                f"but was called with: {passed_path!r}. "
+                "run_checks() must pass the already-resolved hook_path to check_c_git_hook() "
+                "rather than calling fn() with no arguments."
+            ),
+        )
+
+
+class TestHookFreshnessAppendsToFailingChecks(unittest.TestCase):
+    """BO-1700h-1: A stale hook must append 'hook_freshness' to failing_checks."""
+
+    def test_stale_hook_appends_hook_freshness_to_failing_checks(self):
+        """When check_hook_freshness() returns False (hook older than config),
+        run_checks() must append 'hook_freshness' to failing_checks.
+
+        Previously, check_hook_freshness() return value was discarded, so a stale
+        hook never appeared in failing_checks and the probe exited 0.
+        BO-1700h-1 requires that the stale-hook condition is surfaced.
+
+        Both resolve_hooks_path and _resolve_config_path must succeed (return real
+        values) for the guard condition to pass — otherwise the False freshness
+        result is treated as "not installed" rather than "stale".
+        """
+        # covers: BO-1700h-1
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness()."
+            )
+
+        # resolve_hooks_path succeeds (hooks_resolved=True) and _resolve_config_path
+        # returns a real path (config_path_resolved is not None).  This satisfies the
+        # guard condition so that a False freshness result is reported as "stale", not
+        # "not installed".
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "resolve_hooks_path", return_value=Path("/tmp/hooks")),
+            patch.object(_vpa, "_resolve_config_path", return_value=Path("/tmp/.pre-commit-config.yaml")),
+            patch.object(_vpa, "validate_hook_name", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=False),  # stale hook
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        self.assertIn(
+            "hook_freshness",
+            result.get("failing_checks", []),
+            msg=(
+                "Expected 'hook_freshness' in failing_checks when check_hook_freshness() "
+                f"returns False (stale hook) and both paths resolved successfully. Got: {result}. "
+                "The return value of check_hook_freshness() must be captured and "
+                "'hook_freshness' appended to failing_checks when it is False and "
+                "both hooks and config paths were successfully resolved."
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# EPIC-BOTestCoverageBackfill ticket 01 — author-test ACs
+# Added: 2026-07-14 [EPIC-BOTestCoverageBackfill/01_bo1700_test_coverage]
+# These five test classes cover ACs that had NO prior test asserting their
+# behaviour (classified "author test" in the ticket audit).  All classes are
+# RED until verify_precommit_active.py is implemented (BO-1700a-1), which makes
+# _IMPORT_OK True and the subprocess tests receive valid JSON.
+#
+# AC surface notes:
+#   BO-1700b-3, BO-1700d-2, BO-1700d-3, BO-1700d-3-i: llm-expert surfaces
+#     (commit.md / SKILL.md prose).  The unit tests here verify the probe's
+#     Python-side contract that the prose invokes; the human-facing refusal
+#     messages cannot be unit-tested at this layer.
+#   BO-1700e-1-i: python-coder surface — tests path-resolution in the
+#     consumer-subdirectory layout.
+# ---------------------------------------------------------------------------
+
+
+class TestNoVerifyBypassRefused(unittest.TestCase):
+    """BO-1700b-3: Commit with --no-verify is refused because probe runs outside the hook.
+
+    The probe is invoked by the commit DRIVER (commit.md prose) before git commit,
+    at a level that --no-verify cannot skip.  This class verifies the probe's
+    behaviour when called in that driver context: it exits non-zero on any failing
+    check, so the driver can refuse to proceed regardless of --no-verify.
+    """
+
+    def test_bo1700b3_probe_exits_nonzero_when_called_outside_hook(self):
+        # covers: BO-1700b-3
+        """Probe invoked directly (as the commit driver would call it) exits non-zero
+        when a check fails — proving --no-verify cannot bypass the gate.
+
+        Simulates the commit driver calling the probe with empty PATH (Check A fails).
+        The probe must exit non-zero and emit a non-empty failing_checks list so the
+        driver can refuse the commit and name the offending check.
+
+        RED until scripts/commit_guardian/verify_precommit_active.py is implemented:
+        the script is absent, so the subprocess call produces no JSON on stdout and
+        _json_or_fail raises AssertionError.
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        self.assertNotEqual(
+            result.returncode,
+            0,
+            msg=(
+                f"BO-1700b-3: The probe must exit non-zero when invoked outside the "
+                f"pre-commit hook (as the commit driver does) and a check fails. "
+                f"Got returncode={result.returncode}. output={output}"
+            ),
+        )
+        self.assertGreater(
+            len(output.get("failing_checks", [])),
+            0,
+            msg=(
+                f"BO-1700b-3: failing_checks must be non-empty so the commit driver "
+                f"can name the failing check in its refusal message. Got: {output}"
+            ),
+        )
+
+    def test_bo1700b3_failing_checks_names_the_check_that_failed(self):
+        # covers: BO-1700b-3
+        """When Check A fails (binary absent), the probe's failing_checks list must
+        contain a string naming that check, not just be non-empty.
+
+        The commit driver uses this to produce the message
+        "the gate cannot be bypassed with --no-verify: Check A failed".
+
+        RED until verify_precommit_active.py is implemented (no JSON on stdout).
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        failing = output.get("failing_checks", [])
+        # At minimum the first failing check should be present and be a non-empty string
+        self.assertTrue(
+            any(isinstance(c, str) and len(c) > 0 for c in failing),
+            msg=(
+                f"BO-1700b-3: Each entry in failing_checks must be a non-empty string "
+                f"naming the check that failed (e.g. 'binary', 'A', etc.), so the "
+                f"commit driver can include it in the refusal message. Got: {output}"
+            ),
+        )
+
+
+class TestPreDriveGateBlocksOnProbeFail(unittest.TestCase):
+    """BO-1700d-2: Pre-drive gate returns blocked status when probe exits non-zero.
+
+    The pre-drive gate (building-epics SKILL.md prose, §1.0.1) calls the probe
+    before dispatching any phase agent.  When the probe exits non-zero, the gate
+    must return {status: blocked, reason: <failing check>}.  This class verifies
+    the probe's contract that the gate depends on: non-zero exit plus a non-empty
+    failing_checks list carrying the reason payload.
+    """
+
+    def test_bo1700d2_probe_returns_nonzero_for_gate_to_block(self):
+        # covers: BO-1700d-2
+        """Pre-drive gate calls probe; probe exits non-zero so the gate blocks dispatch.
+
+        Runs the probe as a subprocess against a misconfigured environment
+        (PATH='', simulating a worktree where Check A fails).  The probe must exit
+        non-zero with a non-empty failing_checks list — the gate reads these to
+        construct its blocked payload.
+
+        RED until scripts/commit_guardian/verify_precommit_active.py is implemented.
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        self.assertNotEqual(
+            result.returncode,
+            0,
+            msg=(
+                f"BO-1700d-2: Probe must exit non-zero when the pre-drive gate runs "
+                f"it against a misconfigured worktree (no ticket dispatch until probe "
+                f"passes). Got returncode={result.returncode}. output={output}"
+            ),
+        )
+        self.assertGreater(
+            len(output.get("failing_checks", [])),
+            0,
+            msg=(
+                f"BO-1700d-2: failing_checks must be non-empty so the pre-drive gate "
+                f"can build its {{status: blocked, reason: <failing check>}} payload. "
+                f"Got: {output}"
+            ),
+        )
+
+    def test_bo1700d2_probe_returns_zero_and_empty_failing_when_all_pass(self):
+        # covers: BO-1700d-2
+        """Pre-drive gate calls probe; probe exits 0 with empty failing_checks, gate proceeds.
+
+        Uses the module-level run_checks() with all four checks mocked to True,
+        then asserts failing_checks == [] so the gate would proceed to dispatch.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1) so the pre-drive gate "
+                "(BO-1700d-2) can call run_checks() and evaluate the result."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks(). "
+                "Implement run_checks() returning the five-key dict."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertEqual(
+            result.get("failing_checks"),
+            [],
+            msg=(
+                f"BO-1700d-2: When all checks pass, failing_checks must be [] so the "
+                f"pre-drive gate proceeds to dispatch phase agents. Got: {result}"
+            ),
+        )
+
+
+class TestCommitPhaseGateRefusesOnProbeFail(unittest.TestCase):
+    """BO-1700d-3: Commit-phase gate refuses git commit when probe returns non-zero.
+
+    The commit driver (commit.md prose, llm-expert surface) runs the probe before
+    git commit.  When the probe returns a non-zero verdict, the driver refuses the
+    commit and names the failing check.  This class verifies the probe's side of
+    the contract: it returns a dict with the correct failing_checks payload when
+    any check fails at commit time.
+    """
+
+    def test_bo1700d3_probe_reports_failing_check_at_commit_time(self):
+        # covers: BO-1700d-3
+        """At commit time, probe with Check A forced False returns binary=False and
+        'binary' in failing_checks, giving the commit driver the payload it needs
+        to name the check in its refusal message.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1) so the commit-phase gate "
+                "(BO-1700d-3) can call run_checks() before git commit."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=False),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("binary"),
+            msg=(
+                f"BO-1700d-3: binary must be False at commit time when Check A fails. "
+                f"Got: {result}"
+            ),
+        )
+        self.assertIn(
+            "binary",
+            result.get("failing_checks", []),
+            msg=(
+                f"BO-1700d-3: 'binary' must be in failing_checks at commit time so the "
+                f"commit driver can name it in the refusal message. Got: {result}"
+            ),
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                f"BO-1700d-3: failing_checks must be non-empty at commit time "
+                f"(proceed only on exit 0 + empty failing_checks). Got: {result}"
+            ),
+        )
+
+    def test_bo1700d3_probe_passes_at_commit_time_when_all_checks_ok(self):
+        # covers: BO-1700d-3
+        """At commit time, when all four checks pass, the probe returns failing_checks=[]
+        so the commit driver proceeds to run git commit.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertEqual(
+            result.get("failing_checks"),
+            [],
+            msg=(
+                f"BO-1700d-3: At commit time, when all checks pass, failing_checks "
+                f"must be [] so the commit driver proceeds. Got: {result}"
+            ),
+        )
+
+
+class TestCommitPhaseGateReRunsProbeNoCaching(unittest.TestCase):
+    """BO-1700d-3-i: Commit-phase gate re-runs probe independently; no cached pre-drive result.
+
+    A mutation of the hook/config between the pre-drive gate (first run) and the
+    commit-phase gate (second run) must be caught at commit time.  This requires
+    the probe to be stateless and re-evaluable — each gate call produces a fresh
+    result, never trusting a prior pass verdict.
+    """
+
+    def test_bo1700d3i_second_run_catches_between_gates_mutation(self):
+        # covers: BO-1700d-3-i
+        """Two sequential run_checks() calls with different check_c return values
+        produce two different results, proving the probe is stateless.
+
+        First run: all True (simulates pre-drive gate PASS).
+        Second run: check_c mutated to False (simulates a between-gates hook mutation).
+
+        The second run must independently report git_hook=False and 'git_hook' in
+        failing_checks — it does NOT cache the first-run pass verdict.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the probe module (BO-1700a-1). "
+                "This test verifies the probe is stateless so between-gates "
+                "mutations are caught at the commit-phase gate (BO-1700d-3-i)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        # First invocation — pre-drive gate: all checks pass
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            first_result = _vpa.run_checks()
+        self.assertEqual(
+            first_result.get("failing_checks"),
+            [],
+            msg=(
+                f"BO-1700d-3-i: First probe run (pre-drive) must pass when all checks "
+                f"return True. Got: {first_result}"
+            ),
+        )
+        # Second invocation — commit-phase gate: check_c mutated to fail
+        # (simulates the shared git hook having been removed between gates)
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=False),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            second_result = _vpa.run_checks()
+        self.assertFalse(
+            second_result.get("git_hook"),
+            msg=(
+                f"BO-1700d-3-i: Second probe run (commit-phase) must catch the "
+                f"between-gates mutation of check_c (git_hook=False). "
+                f"Got: {second_result}"
+            ),
+        )
+        self.assertIn(
+            "git_hook",
+            second_result.get("failing_checks", []),
+            msg=(
+                f"BO-1700d-3-i: 'git_hook' must appear in failing_checks of the "
+                f"second probe run, proving the commit-phase gate re-ran the probe "
+                f"rather than trusting the cached pre-drive pass verdict. "
+                f"Got: {second_result}"
+            ),
+        )
+
+    def test_bo1700d3i_first_result_and_second_result_are_independent_objects(self):
+        # covers: BO-1700d-3-i
+        """Two calls to run_checks() return two separate dict objects (not the same
+        reference), proving there is no module-level caching of the result.
+
+        RED until verify_precommit_active.py is implemented (_IMPORT_OK=False).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            first_result = _vpa.run_checks()
+            second_result = _vpa.run_checks()
+        self.assertIsNot(
+            first_result,
+            second_result,
+            msg=(
+                "BO-1700d-3-i: Each call to run_checks() must return a NEW dict "
+                "object (no module-level singleton caching). "
+                f"first_result id={id(first_result)}, second_result id={id(second_result)}"
+            ),
+        )
+
+
+class TestProbeDiscoverableInSubdirLayout(unittest.TestCase):
+    """BO-1700e-1-i: The probe script is locatable when the package is in a consumer subdirectory.
+
+    When leafcutter-ai is installed as my-project/leafcutter-ai/, bootstrap must
+    locate the probe at scripts/commit_guardian/verify_precommit_active.py relative
+    to the package root.  _REPO_ROOT (derived from __file__ via parents[2]) is the
+    probe discovery mechanism; this class verifies it resolves to the correct path.
+    """
+
+    def test_bo1700e1i_probe_script_exists_at_canonical_path(self):
+        # covers: BO-1700e-1-i
+        """The probe script must exist at its canonical path under the package root.
+
+        _SCRIPT = _REPO_ROOT / 'scripts' / 'commit_guardian' / 'verify_precommit_active.py'
+
+        When this path does not exist, bootstrap in a subdirectory layout would fail
+        to find the probe.  The test fails RED until the script is implemented and
+        deployed at the expected path (BO-1700a-1 + BO-1700e-1).
+        """
+        self.assertTrue(
+            _SCRIPT.exists(),
+            msg=(
+                f"BO-1700e-1-i: The probe script must exist at its canonical path "
+                f"so bootstrap can locate it in a consumer subdirectory layout. "
+                f"Expected: {_SCRIPT}. "
+                "Implement verify_precommit_active.py (BO-1700a-1) and ensure "
+                "BO-1700e-1 deploys it to scripts/commit_guardian/."
+            ),
+        )
+
+    def test_bo1700e1i_repo_root_resolves_via_parents_two(self):
+        # covers: BO-1700e-1-i
+        """_REPO_ROOT = Path(__file__).resolve().parents[2] must resolve to the
+        package root (the directory containing scripts/ and templates/).
+
+        When the package is installed as my-project/leafcutter-ai/, this
+        resolution correctly finds the package root regardless of where the consumer
+        project root is, because it navigates relative to the test file itself.
+
+        This test is a structural assertion: if it fails, the path-resolution
+        convention is broken for all subdir-layout consumers.
+        """
+        self.assertTrue(
+            _REPO_ROOT.is_dir(),
+            msg=(
+                f"BO-1700e-1-i: _REPO_ROOT must resolve to a real directory. "
+                f"Got: {_REPO_ROOT}"
+            ),
+        )
+        # The package root must contain known structural markers
+        has_scripts = (_REPO_ROOT / "scripts").is_dir()
+        has_templates = (_REPO_ROOT / "templates").is_dir()
+        self.assertTrue(
+            has_scripts or has_templates,
+            msg=(
+                f"BO-1700e-1-i: _REPO_ROOT ({_REPO_ROOT}) must contain scripts/ or "
+                "templates/ to confirm it is the package root. If neither exists, "
+                "Path(__file__).resolve().parents[2] resolves to the wrong directory "
+                "in this layout."
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# EPIC-BOTestCoverageBackfill ticket 01 — BO-1700e-2, e-4, e-5, f-1, f-1-i
+# Added: 2026-07-14 [EPIC-BOTestCoverageBackfill/01_bo1700_test_coverage]
+# Five test classes covering ACs that had NO prior assertion on their behaviour.
+# All tests verify production code that already exists in verify_precommit_active.py.
+#
+# AC targets:
+#   BO-1700e-2: _resolve_git_commondir resolves shared dir from inside a worktree
+#               AND run_hook._get_main_worktree_root resolves correctly via subprocess
+#   BO-1700e-4: plain-clone topology — _resolve_git_commondir returns .git itself,
+#               is_worktree returns False (no false chain-broken verdict)
+#   BO-1700e-5: main tree is gated — run_checks() has no main-tree exemption branch
+#   BO-1700f-1: no pre-commit config (guardian absent) → graceful skip, exit 0
+#   BO-1700f-1-i: main has config, worktree chain broken → hard fail (not graceful skip)
+# ---------------------------------------------------------------------------
+
+
+class TestGitCommonDirResolverWorktree(unittest.TestCase):
+    """BO-1700e-2: git-common-dir resolver resolves shared hooks dir from a worktree."""
+
+    def test_ac_e2_resolve_commondir_from_worktree_git_as_file(self):
+        # covers: BO-1700e-2
+        """_resolve_git_commondir correctly traverses the linked-worktree topology.
+
+        Topology under test (.git is a file):
+          tmp/
+            main_git/                  ← simulates the main .git directory
+              worktrees/
+                wt/
+                  commondir            ← content: "../.." (two levels up → main_git)
+            worktree/
+              .git                     ← file: "gitdir: <abs_path>/main_git/worktrees/wt"
+
+        Expected: _resolve_git_commondir(worktree) == main_git.resolve()
+
+        BO-1700e-2 criterion: the resolver reads the shared git directory (commondir)
+        to the main checkout, making it available to both the probe and the self-
+        healing hook.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1) so _resolve_git_commondir is available."
+            )
+        if not hasattr(_vpa, "_resolve_git_commondir"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "_resolve_git_commondir(). Implement this helper (BO-1700e-2)."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # Create simulated main .git directory (the shared commondir)
+            main_git = tmp_path / "main_git"
+            main_git.mkdir()
+            # Create the linked-worktree gitdir inside main .git
+            wt_gitdir = main_git / "worktrees" / "wt"
+            wt_gitdir.mkdir(parents=True)
+            # commondir file points two levels up from wt_gitdir → main_git
+            (wt_gitdir / "commondir").write_text("..\\.." if os.name == "nt" else "../..", encoding="utf-8")
+            # Worktree root: .git is a file pointing to the worktree gitdir
+            worktree = tmp_path / "worktree"
+            worktree.mkdir()
+            (worktree / ".git").write_text(
+                f"gitdir: {wt_gitdir}\n", encoding="utf-8"
+            )
+
+            result = _vpa._resolve_git_commondir(worktree)
+            expected = main_git.resolve()
+
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                "BO-1700e-2: _resolve_git_commondir must resolve the shared git directory "
+                "(main checkout's .git) from inside a linked worktree. "
+                f"Expected: {expected}. Got: {result}."
+            ),
+        )
+
+    def test_ac_e2_run_hook_resolver_returns_main_worktree_root(self):
+        # covers: BO-1700e-2
+        """run_hook._get_main_worktree_root() returns the parent of the commondir path.
+
+        When git rev-parse --git-common-dir returns e.g. /main/.git,
+        _get_main_worktree_root() must return /main (the main working tree root).
+
+        This tests the subprocess-based resolver in scripts/commit_guardian/run_hook.py
+        (and its templates/ mirror) which is the entry point for hook dispatch.
+        """
+        try:
+            import scripts.commit_guardian.run_hook as _rh  # type: ignore[import]
+        except (ImportError, ModuleNotFoundError):
+            self.fail(
+                "ImportError: cannot import scripts.commit_guardian.run_hook. "
+                "Implement the module (BO-1700e-2)."
+            )
+        if not hasattr(_rh, "_get_main_worktree_root"):
+            self.fail(
+                "AttributeError: run_hook does not expose _get_main_worktree_root(). "
+                "Implement _get_main_worktree_root() -> Path | None (BO-1700e-2)."
+            )
+
+        # Simulate: git rev-parse --git-common-dir returns "/fake/main_repo/.git"
+        # so _get_main_worktree_root() should return Path("/fake/main_repo")
+        fake_commondir = "/fake/main_repo/.git"
+
+        class _FakeProc:
+            """Minimal subprocess.CompletedProcess stand-in for this test."""
+            stdout = fake_commondir + "\n"
+            returncode = 0
+
+        with patch("subprocess.run", return_value=_FakeProc()):
+            result = _rh._get_main_worktree_root()
+
+        expected = Path(fake_commondir).resolve().parent
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                "BO-1700e-2: _get_main_worktree_root() must return the parent of the "
+                "git-common-dir path (the main working tree root). "
+                f"Expected: {expected}. Got: {result}."
+            ),
+        )
+
+
+class TestGitCommonDirResolverPlainClone(unittest.TestCase):
+    """BO-1700e-4: plain clone (.git is a dir) — no false chain-broken verdict."""
+
+    def test_ac_e4_plain_clone_commondir_equals_git_dir(self):
+        # covers: BO-1700e-4
+        """In a plain clone, _resolve_git_commondir returns the .git directory itself.
+
+        When .git is a real directory (not a file), the resolver MUST return that
+        directory as the commondir without raising or emitting a false chain-broken
+        verdict. The equality common-dir == .git is correct for a plain clone.
+
+        BO-1700e-4 criterion: shared-git-dir resolution handles the case where
+        git-common-dir equals .git (plain clone) WITHOUT treating equality as an
+        anomaly or a chain-broken condition.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "_resolve_git_commondir"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose _resolve_git_commondir()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            clone = tmp_path / "plain_clone"
+            clone.mkdir()
+            # .git is a directory (plain clone topology — no commondir file)
+            git_dir = clone / ".git"
+            git_dir.mkdir()
+
+            result = _vpa._resolve_git_commondir(clone)
+            expected = git_dir.resolve()
+
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                "BO-1700e-4: In a plain clone, _resolve_git_commondir must return the .git "
+                "directory itself (no commondir file → commondir IS .git). "
+                f"Expected: {expected}. Got: {result}. "
+                "A false chain-broken verdict would return a different path or raise."
+            ),
+        )
+
+    def test_ac_e4_is_worktree_returns_false_for_plain_clone(self):
+        # covers: BO-1700e-4
+        """is_worktree() returns False when .git is a directory (plain clone).
+
+        A plain clone must not be detected as a worktree. Returning True would cause
+        the gate to behave differently for main-tree clones (false positive).
+
+        BO-1700e-4: a genuinely broken chain in a plain clone still fails uniformly
+        (covered by other tests); this test confirms the topology detection is correct
+        so the appropriate gate path is taken.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "is_worktree"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose is_worktree(). "
+                "Implement is_worktree(root: Path) -> bool (BO-1700e-4)."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            clone = tmp_path / "plain_clone"
+            clone.mkdir()
+            (clone / ".git").mkdir()  # directory → not a worktree
+
+            result = _vpa.is_worktree(clone)
+
+        self.assertFalse(
+            result,
+            msg=(
+                "BO-1700e-4: is_worktree() must return False for a plain clone "
+                "(.git is a directory, not a file). "
+                f"Got: {result!r}. A False return ensures the resolver does not "
+                "emit a false chain-broken verdict for plain clones."
+            ),
+        )
+
+    def test_ac_e4_is_worktree_returns_true_for_linked_worktree(self):
+        # covers: BO-1700e-4
+        """is_worktree() returns True when .git is a file pointing to a worktrees/ gitdir.
+
+        This positive case completes the contrast: linked worktrees are detected
+        correctly so the probe can apply the full gate chain to them.
+        A genuinely broken chain in a worktree must still fail as it would in a plain
+        clone — this topology detection is the precursor to uniform gate application.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "is_worktree"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose is_worktree()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            worktree = tmp_path / "linked_worktree"
+            worktree.mkdir()
+            # .git file contains "gitdir: ../main/.git/worktrees/wt" (worktree topology)
+            fake_gitdir = tmp_path / "main" / ".git" / "worktrees" / "wt"
+            fake_gitdir.mkdir(parents=True)
+            (worktree / ".git").write_text(
+                f"gitdir: {fake_gitdir}\n", encoding="utf-8"
+            )
+
+            result = _vpa.is_worktree(worktree)
+
+        self.assertTrue(
+            result,
+            msg=(
+                "BO-1700e-4: is_worktree() must return True for a linked worktree "
+                "(.git file whose gitdir path contains '/worktrees/'). "
+                f"Got: {result!r}."
+            ),
+        )
+
+
+class TestMainTreeGatedNotExempt(unittest.TestCase):
+    """BO-1700e-5: main tree is NOT exempt from the gate — no worktree bypass in run_checks()."""
+
+    def test_ac_e5_check_failure_still_fails_when_not_in_worktree(self):
+        # covers: BO-1700e-5
+        """run_checks() reports failure when a check fails, regardless of tree topology.
+
+        Simulates a 'main tree' scenario: is_guardian_complete returns True (guardian
+        is installed), resolve_hooks_path raises OSError (no .git/config in cwd), and
+        check_a_binary_on_path returns False. The probe must still report binary=False
+        and 'binary' in failing_checks — no main-tree exemption path.
+
+        BO-1700e-5 criterion: there is no branch that exempts the main tree from the
+        gate. The gate runs the probe and refuses on non-zero verdict exactly as it
+        does for a worktree commit.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(
+                _vpa,
+                "resolve_hooks_path",
+                side_effect=OSError("no .git/config in main tree"),
+            ),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=False),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        self.assertFalse(
+            result.get("binary"),
+            msg=(
+                "BO-1700e-5: binary must be False when check_a returns False, "
+                "regardless of whether this is a main tree or worktree commit. "
+                f"Got: {result}."
+            ),
+        )
+        self.assertIn(
+            "binary",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700e-5: 'binary' must be in failing_checks when check_a fails — "
+                "no main-tree exemption path is permitted. "
+                f"Got: {result}."
+            ),
+        )
+        # Confirm incomplete_build is NOT the reason for failure (guardian IS complete)
+        self.assertNotIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700e-5: 'incomplete_build' must NOT be in failing_checks when "
+                "is_guardian_complete returns True — this would be a mis-classification. "
+                f"Got: {result}."
+            ),
+        )
+
+    def test_ac_e5_run_checks_source_contains_no_worktree_exemption(self):
+        # covers: BO-1700e-5
+        """run_checks() source must NOT call is_worktree() for a main-tree exemption.
+
+        A source-level guard against the specific regression where a developer adds
+        an early-return branch 'if not is_worktree(cwd): return passing_result'.
+        Such a branch would let main-tree commits bypass all four checks — the exact
+        failure mode BO-1700e-5 forbids.
+
+        BO-1700e-5 criterion: 'there is no branch that exempts the main tree from
+        the gate'.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        import inspect
+        source = inspect.getsource(_vpa.run_checks)
+        self.assertNotIn(
+            "is_worktree",
+            source,
+            msg=(
+                "BO-1700e-5: run_checks() must NOT call is_worktree() — that would "
+                "create a main-tree exemption branch forbidden by this AC. "
+                "Found 'is_worktree' in run_checks() source:\n" + source
+            ),
+        )
+
+
+class TestNoPrecommitConfigGracefulSkip(unittest.TestCase):
+    """BO-1700f-1: No pre-commit config at all → graceful skip (exit 0), no hard fail."""
+
+    def test_ac_f1_is_guardian_incomplete_when_scripts_missing(self):
+        # covers: BO-1700f-1
+        """is_guardian_complete() returns False when all three guard scripts are absent.
+
+        The authoritative 'no config' determination: if the guardian scripts are not
+        deployed, the project does not use the framework's quality gates. The gate
+        must treat this as a graceful no-op (exit 0) rather than a hard failure.
+
+        BO-1700f-1 criterion: the main tree has no pre-commit configuration at all
+        → the guard exits 0, drive proceeds.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "is_guardian_complete(). Implement is_guardian_complete(root: Path) -> bool."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # No scripts/commit_guardian/ directory at all
+            result = _vpa.is_guardian_complete(tmp_path)
+
+        self.assertFalse(
+            result,
+            msg=(
+                "BO-1700f-1: is_guardian_complete() must return False when the three "
+                "guardian scripts are absent (project has no pre-commit configuration). "
+                f"Got: {result!r}. "
+                "This False return triggers the graceful no-op path (exit 0)."
+            ),
+        )
+
+    def test_ac_f1_graceful_skip_returns_true_when_scripts_absent(self):
+        # covers: BO-1700f-1
+        """graceful_skip_if_incomplete() returns True (skip/exit-0) when guard absent.
+
+        When the guardian scripts are not deployed, graceful_skip_if_incomplete()
+        must return True so the gate exits 0 and the drive proceeds. It must also
+        log a WARNING/INFO notice (not raise or block).
+
+        BO-1700f-1 criterion: prints an INFO/notice message and exits 0 without
+        raising a failure or blocking the work.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "graceful_skip_if_incomplete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "graceful_skip_if_incomplete(). Implement this guard-rail function."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # No scripts/commit_guardian/ directory → guardian absent
+            result = _vpa.graceful_skip_if_incomplete(tmp_path)
+
+        self.assertTrue(
+            result,
+            msg=(
+                "BO-1700f-1: graceful_skip_if_incomplete() must return True "
+                "(skip = exit 0, drive proceeds) when guardian scripts are absent. "
+                f"Got: {result!r}. "
+                "Returning False here would incorrectly hard-fail on a project that "
+                "simply has not installed the commit-guardian framework."
+            ),
+        )
+
+    def test_ac_f1_graceful_skip_does_not_raise(self):
+        # covers: BO-1700f-1
+        """graceful_skip_if_incomplete() does not raise when guardian is absent.
+
+        The AC requires that the guard 'does not raise a failure or block the work'
+        when no config is configured. Any exception (KeyError, OSError, etc.) would
+        be a violation of the graceful-no-op requirement.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active."
+            )
+        if not hasattr(_vpa, "graceful_skip_if_incomplete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose graceful_skip_if_incomplete()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            try:
+                _vpa.graceful_skip_if_incomplete(tmp_path)
+            except Exception as exc:  # noqa: BLE001
+                self.fail(
+                    f"BO-1700f-1: graceful_skip_if_incomplete() must not raise when "
+                    f"guardian scripts are absent. Got {type(exc).__name__}: {exc}. "
+                    "The graceful no-op path must be exception-free."
+                )
+
+
+class TestMainHasConfigButWorktreeCannotFireHardFail(unittest.TestCase):
+    """BO-1700f-1-i: main has config, worktree chain broken → hard fail, NOT graceful skip."""
+
+    def test_ac_f1_i_guardian_complete_no_graceful_skip(self):
+        # covers: BO-1700f-1-i
+        """When guardian scripts ARE present, graceful_skip_if_incomplete returns False.
+
+        The no-op path (BO-1700f-1) is taken ONLY when the main tree genuinely has
+        no config. When the guardian scripts are deployed (main has config), any chain
+        failure is a hard fail — graceful_skip_if_incomplete must return False so the
+        gate proceeds to run the checks and fail on any broken condition.
+
+        BO-1700f-1-i criterion: 'it does NOT take the no-op path; it fails closed'.
+        This is the production silent-skip bug the guard exists to catch.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "graceful_skip_if_incomplete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose graceful_skip_if_incomplete()."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose is_guardian_complete()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # Deploy all three guardian scripts so the guardian is 'complete'
+            guardian_dir = tmp_path / "scripts" / "commit_guardian"
+            guardian_dir.mkdir(parents=True)
+            for script_name in (
+                "verify_precommit_active.py",
+                "precommit_canary.py",
+                "ensure_precommit_config.py",
+            ):
+                (guardian_dir / script_name).write_text("# placeholder\n", encoding="utf-8")
+
+            # Guardian is now complete: is_guardian_complete must return True
+            guardian_complete = _vpa.is_guardian_complete(tmp_path)
+            self.assertTrue(
+                guardian_complete,
+                msg=(
+                    "Test setup: is_guardian_complete must return True when all three "
+                    f"scripts are present. Got: {guardian_complete!r}."
+                ),
+            )
+
+            # graceful_skip_if_incomplete must return False (no skip — hard fail applies)
+            skip = _vpa.graceful_skip_if_incomplete(tmp_path)
+
+        self.assertFalse(
+            skip,
+            msg=(
+                "BO-1700f-1-i: graceful_skip_if_incomplete() must return False when the "
+                "guardian scripts ARE present (main tree has config). Returning True here "
+                "would silently permit the broken-worktree-chain bug. "
+                f"Got: {skip!r}."
+            ),
+        )
+
+    def test_ac_f1_i_broken_chain_produces_hard_fail_not_graceful_skip(self):
+        # covers: BO-1700f-1-i
+        """run_checks() reports a check failure when guardian is complete but chain broken.
+
+        Scenario: guardian IS installed (is_guardian_complete=True) but check_b_config
+        returns False (config unresolved in the worktree — the 'silent-skip bug' scenario
+        where .pre-commit-config.yaml is missing from the worktree despite being present
+        in the main tree).
+
+        The probe must:
+        - NOT take the graceful no-op path (incomplete_build must NOT be in failing_checks)
+        - Report 'config' in failing_checks (hard fail naming the broken check)
+
+        This is precisely the production silent-skip bug (BO-1700f-1-i): a fresh worktree
+        with no .leafcutter symlink runs zero hooks under PRE_COMMIT_ALLOW_NO_CONFIG=1,
+        silently bypassing all quality gates.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+
+        with (
+            # Guardian IS complete (main tree has config — not the graceful-skip path)
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            # resolve_hooks_path raises OSError (no .git/config) — uses fallback, hooks_resolved=False
+            patch.object(
+                _vpa,
+                "resolve_hooks_path",
+                side_effect=OSError("no .git/config in worktree"),
+            ),
+            # check_a passes (binary present)
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            # check_b fails — config unresolved in the worktree (the silent-skip bug scenario)
+            patch.object(_vpa, "check_b_config", return_value=False),
+            # check_c passes (shared hook present in main)
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            # check_d passes (canary fires)
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        # Hard fail: 'config' must be in failing_checks (broken chain detected)
+        self.assertIn(
+            "config",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700f-1-i: 'config' must be in failing_checks when check_b_config "
+                "returns False and the guardian is complete (hard fail, not graceful skip). "
+                f"Got: {result}. "
+                "This is the production silent-skip bug the gate must catch."
+            ),
+        )
+        self.assertFalse(
+            result.get("config"),
+            msg=(
+                "BO-1700f-1-i: config must be False in the result when check_b fails. "
+                f"Got: {result}."
+            ),
+        )
+        # The graceful-skip path (incomplete_build) must NOT be taken
+        self.assertNotIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700f-1-i: 'incomplete_build' must NOT be in failing_checks when "
+                "is_guardian_complete returns True. The probe took the wrong (graceful-skip) "
+                "path instead of the hard-fail path. "
+                f"Got: {result}."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 id: BP-100b-9
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Consolidated output root doc lists .claude/workflows/ as a shimmed output"
@@ -30,7 +30,8 @@ created: 2026-06-05
 amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/build/test_bp100_drift_docs_compile.py"
 implemented_by:
   - docs/explanation/consolidated-output-root.md
 change_target: docs

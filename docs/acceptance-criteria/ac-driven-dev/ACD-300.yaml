@@ -1,6 +1,6 @@
 id: ACD-300
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "New requirements flow into the AC store through a single command"
@@ -47,4 +47,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

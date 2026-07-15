@@ -1,12 +1,12 @@
 id: BO-2000f-3
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A code ticket driven via /build-feature runs test-writer and coder as separate phase agents"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -54,5 +54,6 @@ origin_agent: BrainCandy
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_build_feature_flatten_wiring.py
 implemented_by: []

@@ -1,6 +1,6 @@
 id: ACS-900a
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Retiring a requirement triggers a check that its claimed code is gone"
@@ -49,4 +49,4 @@ product_truth:
     entities:
       - Ac
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

@@ -2,7 +2,7 @@ id: BO-510-5
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket-supervisor reads the produces trait to determine which guardrails apply"
 component: build-orchestration
 level: L2

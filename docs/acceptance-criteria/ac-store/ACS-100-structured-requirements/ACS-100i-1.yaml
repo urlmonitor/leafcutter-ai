@@ -2,7 +2,7 @@ id: ACS-100i-1
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Parent ID is derived from child ID by stripping the last segment"
 component: ac-store
 level: L2

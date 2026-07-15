@@ -1,6 +1,6 @@
 id: BO-1300a-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "On-demand command dispatches exactly three spot-check reviewers in parallel"

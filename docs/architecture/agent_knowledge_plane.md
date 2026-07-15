@@ -8,8 +8,8 @@ last_updated: "2026-05-30"
 flight_level: "L2-Container"
 diagram_type: data_flow
 components:
-  - "agent-infrastructure"
-  - "knowledge-management"
+  - agent_registry
+  - knowledge_system
 related_code:
   - "config/skills_config.default.json"
   - "config/settings.json"

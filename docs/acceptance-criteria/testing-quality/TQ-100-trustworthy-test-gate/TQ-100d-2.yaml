@@ -1,6 +1,6 @@
 id: TQ-100d-2
 components:
-  - testing-quality
+  - testing_quality
 title: "State diagram of an allowlist entry's added-tracked-flagged lifecycle"
 component: testing-quality
 level: L2

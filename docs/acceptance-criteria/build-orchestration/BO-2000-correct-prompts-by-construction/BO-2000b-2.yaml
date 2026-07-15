@@ -1,10 +1,12 @@
 id: BO-2000b-2
+components:
+  - build_orchestration
 title: "python-coder treats templates as source and generated dirs as build outputs"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -37,5 +39,6 @@ origin_agent: BrainCandy
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_python_coder_template.py
 implemented_by: []

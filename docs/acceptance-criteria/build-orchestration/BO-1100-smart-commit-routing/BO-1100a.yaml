@@ -1,6 +1,6 @@
 id: BO-1100a
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The right message style is chosen for you based on what changed"
@@ -48,4 +48,4 @@ product_truth:
       - Commit
       - Diff
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

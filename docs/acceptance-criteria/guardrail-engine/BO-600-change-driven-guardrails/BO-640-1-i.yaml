@@ -2,7 +2,7 @@ id: BO-640-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Challenge produces a structured rationale regardless of outcome"
 component: build-orchestration
 level: L3

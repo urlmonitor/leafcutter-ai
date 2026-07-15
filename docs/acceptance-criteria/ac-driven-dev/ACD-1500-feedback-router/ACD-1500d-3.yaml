@@ -1,6 +1,6 @@
 id: ACD-1500d-3
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "The router never auto-commits on a protected branch"

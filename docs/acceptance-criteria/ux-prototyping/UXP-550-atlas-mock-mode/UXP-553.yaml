@@ -4,7 +4,7 @@ priority: medium
 title: "LEAFCUTTER_MOCK env sets the default mock state; a runtime override takes precedence"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L2
 status: active
 req_status: draft

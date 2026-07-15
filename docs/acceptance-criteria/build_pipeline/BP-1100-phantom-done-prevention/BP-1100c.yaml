@@ -1,6 +1,6 @@
 id: BP-1100c
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Behavioral epics are angle-tested from the outside before merge"
 component: build-pipeline
 level: L1

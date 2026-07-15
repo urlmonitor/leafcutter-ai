@@ -4,7 +4,7 @@ priority: medium
 title: "An optional production lock forbids runtime overrides so a deployment can guarantee real data"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L3
 status: active
 req_status: draft

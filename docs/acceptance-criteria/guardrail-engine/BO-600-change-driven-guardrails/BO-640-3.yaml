@@ -2,7 +2,7 @@ id: BO-640-3
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Challenge failure (irreducible complexity) accepts high and routes to deeper model"
 component: build-orchestration
 level: L2

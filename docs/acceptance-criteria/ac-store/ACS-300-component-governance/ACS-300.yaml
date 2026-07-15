@@ -1,6 +1,6 @@
 id: ACS-300
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Every requirement lives in one place and connects to a bigger picture"

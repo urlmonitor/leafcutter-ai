@@ -1,6 +1,6 @@
 id: TKT-004
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "create-ticket-v2 writes AC YAML files when ac_creations is non-empty"

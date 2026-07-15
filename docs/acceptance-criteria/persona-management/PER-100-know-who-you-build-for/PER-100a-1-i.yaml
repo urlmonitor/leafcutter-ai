@@ -1,6 +1,6 @@
 id: PER-100a-1-i
 components:
-  - persona-management
+  - persona_management
 title: "Duplicate persona directory name is rejected"
 component: persona-management
 level: L3

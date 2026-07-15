@@ -1,6 +1,6 @@
 id: BO-1100e-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Fewer than 10 commits in filtered path set returns all available without error"
 component: build-orchestration
 level: L3

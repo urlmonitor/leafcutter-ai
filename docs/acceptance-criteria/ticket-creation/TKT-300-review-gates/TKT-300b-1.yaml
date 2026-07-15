@@ -1,6 +1,6 @@
 id: TKT-300b-1
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Sign-off requires at least one concrete artifact reference"

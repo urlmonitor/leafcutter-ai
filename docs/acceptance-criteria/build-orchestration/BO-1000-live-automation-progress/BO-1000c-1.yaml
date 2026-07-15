@@ -1,0 +1,41 @@
+id: BO-1000c-1
+components:
+  - build_orchestration
+title: "Background finalize progress is surfaced into the main conversation, no separate view needed"
+component: build-orchestration
+level: L2
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow is running in the background while the
+    user remains in the main conversation,
+  When the workflow emits a start-of-step or per-step-outcome progress line,
+  Then that progress line is surfaced into the main conversation where the user
+    already is,
+  And the user does not have to open or watch the separate live-workflows view
+    in order to receive the progress.
+depends_on: [BO-1000c]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-split
+    note: "Split by IT-PO across a hard technical surface boundary: a background workflow cannot inject into the main conversation. BO-1000c-1a (python-coder) makes the workflow emit each progress line to a durable, pollable run-progress journal as it happens; BO-1000c-1b (llm-expert) makes the /finalize-feature launcher poll that journal in flight and relay lines into the main conversation. Criteria preserved verbatim; union of the two children equals this behavior."
+superseded_by: [BO-1000c-1a, BO-1000c-1b]
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

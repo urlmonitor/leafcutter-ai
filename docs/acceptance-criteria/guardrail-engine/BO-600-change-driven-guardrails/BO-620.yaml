@@ -2,7 +2,7 @@ id: BO-620
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Each combination of target and risk surface maps to a known set of guardrails"
 component: build-orchestration
 level: L1

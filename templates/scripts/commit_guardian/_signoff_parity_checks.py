@@ -10,6 +10,7 @@ ARCHITECTURE: Imported by check_ticket_signoff_parity.py via a relative-style
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -510,29 +511,70 @@ def _check_done_folder(ticket_path: str, agents: dict) -> list[str]:
     return violations
 
 
-def _check_done_folder_prohibition(ticket_path: str) -> list[str]:
-    """Report a violation when a ticket is physically located in a done/ subfolder.
+def _check_done_folder_prohibition(
+    ticket_path: str, *, old_path: str | None = None
+) -> list[str]:
+    """Report a violation when a ticket is moved into a done/ or 99_done/ subfolder.
 
     BO-400c-3: Tickets must NOT be moved into done/ subfolders via filesystem
-    moves. Use the frontmatter ``status: done`` field instead. This check fires
-    regardless of agent status — even a fully signed-off ticket must not be
-    placed at a done/ path, because the done/ filesystem convention is superseded
-    by the frontmatter-status convention.
+    moves. Use the frontmatter ``status: done`` field instead.
+
+    Detection is move-based when ``old_path`` is provided: the prohibition fires
+    only when the ticket was NOT already in a done/ folder before this commit.
+    This prevents false positives on in-place edits of files that legitimately
+    reside at a done/ path (BO-400c-3-i). When ``old_path`` is absent the check
+    falls back to presence-based detection for backward compatibility with
+    call sites that do not supply rename information.
+
+    BO-400c-3-ii: moves into ``tickets/99_done/`` are also blocked. The finalize
+    archive step is exempted when the ``LEAFCUTTER_FINALIZE_ARCHIVE`` environment
+    variable is set to a non-empty value.
 
     Handles both forward-slash and backslash path separators so Windows paths
     work correctly.
 
     Args:
-        ticket_path: The file path as provided by pre-commit (may use either
-            slash style).
+        ticket_path: The staged (new) file path as provided by pre-commit (may
+            use either slash style).
+        old_path: The pre-move (HEAD) path of the file, or ``None`` when the
+            caller does not have rename information. When equal to ``ticket_path``
+            the commit is an in-place edit of a file already in a done folder and
+            no violation is raised (BO-400c-3-i). When the caller omits this
+            argument, presence-based detection is used for backward compatibility.
 
     Returns:
-        A list with one violation string when the path contains ``/done/``;
-        empty list otherwise.
+        A list with one violation string when the path change represents a move
+        into a done/ or 99_done/ folder; empty list otherwise.
     """
-    normalised = ticket_path.replace("\\", "/").lower()
-    if "/done/" not in normalised:
+    normalised_new = ticket_path.replace("\\", "/").lower()
+
+    in_plain_done = "/done/" in normalised_new
+    in_99_done = "/99_done/" in normalised_new
+
+    if not (in_plain_done or in_99_done):
         return []
+
+    # Move-based check: when old_path is provided, only fire for actual moves.
+    if old_path is not None:
+        normalised_old = old_path.replace("\\", "/").lower()
+        old_in_done = "/done/" in normalised_old or "/99_done/" in normalised_old
+        if old_in_done:
+            # In-place edit — the file already lived at a done/ path before this
+            # commit. No move, no prohibition (BO-400c-3-i).
+            return []
+
+    # 99_done move: honour the finalize env-flag carve-out (BO-400c-3-ii).
+    if in_99_done:
+        if os.environ.get("LEAFCUTTER_FINALIZE_ARCHIVE"):
+            return []
+        return [
+            f"Prohibited: ticket physically moved into a tickets/99_done/ path "
+            f"('{ticket_path}'). Use frontmatter 'status: done' instead; "
+            f"the finalize archive step sets LEAFCUTTER_FINALIZE_ARCHIVE=1 to "
+            f"exempt itself (BO-400c-3-ii)."
+        ]
+
+    # Plain done/ move prohibition (BO-400c-3).
     return [
         f"Prohibited: ticket physically located at a done/ path ('{ticket_path}'). "
         f"Use frontmatter 'status: done' instead of moving the file into a done/ "
@@ -597,6 +639,12 @@ def _check_unchecked_tasks(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-07-14 [python-coder/BO-400c-3]: Extended _check_done_folder_prohibition
+  with an ``old_path`` keyword-only argument for move-based detection (BO-400c-3-i),
+  added ``/99_done/`` detection (BO-400c-3-ii), and added the
+  LEAFCUTTER_FINALIZE_ARCHIVE env-flag carve-out. When old_path is absent, the
+  check falls back to the original presence-based logic for backward compat with
+  callers that do not supply rename info. Added ``import os`` at module level.
 - 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted from check_ticket_signoff_parity.py
   to keep each file under the 400-line budget. Contains all parsing helpers
   (load_components_registry, load_agent_registry, _parse_frontmatter,

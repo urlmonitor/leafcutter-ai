@@ -1,13 +1,13 @@
 id: BP-600c-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow runs the test after the fix and confirms it passes (green phase)"
 component: build-pipeline
 level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the python-coder has applied the fix to the diagnosed file,
   When the workflow reaches the green-phase verification step,
@@ -46,7 +46,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BP-600c-3-i]
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
+  - BP-600c-3-i
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

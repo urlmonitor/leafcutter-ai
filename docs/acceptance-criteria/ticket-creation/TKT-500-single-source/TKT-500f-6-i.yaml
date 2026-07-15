@@ -1,6 +1,6 @@
 id: TKT-500f-6-i
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: high
 title: "A mix of one implementation .py and several docs/config files still requires Test Requirements"

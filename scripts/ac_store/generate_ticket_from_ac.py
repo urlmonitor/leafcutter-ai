@@ -28,6 +28,7 @@ AC-6: Ticket passes ticket_frontmatter_guard without errors.
 from __future__ import annotations
 
 import argparse
+import glob as _glob
 import json
 import logging
 import re
@@ -223,6 +224,52 @@ def _extract_local_paths(doc_links: list[Any]) -> list[str]:
     return local
 
 
+def _resolve_reference_patterns(it_req: dict, ac_id: str) -> dict:
+    """Resolve ``reference_pattern`` globs in an it_requirements dict to concrete paths.
+
+    When the ``reference_pattern`` key is present, the glob is expanded against
+    the filesystem.  Exactly one match is required — zero matches raises
+    ``ValueError`` (authoring error: the pattern resolves to nothing, or the
+    target file is missing).
+
+    The function returns a shallow copy of *it_req* with ``reference_pattern``
+    replaced by the single resolved concrete path string.  When the key is
+    absent the original dict is returned unchanged.
+
+    Args:
+        it_req: The ``it_requirements`` dict from the AC record.
+        ac_id: AC identifier, included in error messages so the author can
+               trace the broken pattern back to its source AC.
+
+    Returns:
+        Shallow copy of *it_req* with ``reference_pattern`` replaced by the
+        resolved concrete path, or *it_req* unchanged when the key is absent.
+
+    Raises:
+        ValueError: When ``reference_pattern`` resolves to zero files.
+    """
+    if "reference_pattern" not in it_req:
+        return it_req
+
+    pattern = str(it_req["reference_pattern"])
+    try:
+        matches = _glob.glob(pattern)
+    except OSError as exc:
+        raise ValueError(  # noqa: TRY003
+            f"AC '{ac_id}': error expanding reference_pattern {pattern!r}: {exc}"
+        ) from exc
+
+    if not matches:
+        raise ValueError(  # noqa: TRY003
+            f"AC '{ac_id}': reference_pattern {pattern!r} resolves to no files. "
+            "Ensure the referenced file exists or correct the pattern in the AC."
+        )
+
+    resolved_req = dict(it_req)
+    resolved_req["reference_pattern"] = matches[0]
+    return resolved_req
+
+
 def _load_guardrail_gates(guardrail_config_path: Path) -> dict[str, Any]:
     """Load and return the guardrail gates configuration from YAML.
 
@@ -298,8 +345,10 @@ def _build_agents_map(
     The returned dict is ordered according to _CANONICAL_PHASE_ORDER.
     test-writer is auto-injected before, and test-runner after, any agent
     whose produces field equals 'production_code' in agent_registry.json.
-    Explicit not_needed_overrides are always preserved — they are never
-    recomputed to 'needed'.
+    Explicit not_needed_overrides are preserved for non-TDD agents and never
+    recomputed to 'needed'. TDD-mandated agents (test-writer and test-runner)
+    cannot be excluded via not_needed_overrides when the computed chain requires
+    them — the computed chain wins (BO-550-1-i).
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
@@ -398,9 +447,18 @@ def _build_agents_map(
                 all_needed.add("test-runner")
                 break
 
-        # Remove any agent that has an explicit not_needed override
+        # Determine TDD-mandated agents that cannot be overridden (BO-550-1-i).
+        # When the computed chain requires test-writer or test-runner (via guardrail
+        # lookup or auto-inject), those agents cannot be excluded by not_needed_overrides.
+        # Non-TDD agents (e.g. architect-review) remain freely overridable.
+        _TDD_MANDATORY: frozenset[str] = frozenset({"test-writer", "test-runner"})
+        tdd_protected: set[str] = all_needed & _TDD_MANDATORY
+
+        # Remove any agent that has an explicit not_needed override,
+        # but protect TDD-mandated agents (BO-550-1-i: computed chain wins).
         for agent in overrides:
-            all_needed.discard(agent)
+            if agent not in tdd_protected:
+                all_needed.discard(agent)
 
         # Build ordered result according to the chosen phase order.
         # Non-canonical agents (not in phase_order) are inserted in stable
@@ -426,7 +484,10 @@ def _build_agents_map(
                     agents[nc_agent] = "needed"
                 for nc_agent in non_canonical_not_needed:
                     agents[nc_agent] = "not_needed"
-            if phase_agent in overrides:
+            if phase_agent in tdd_protected:
+                # TDD-mandated agents are never overridable (BO-550-1-i).
+                agents[phase_agent] = "needed"
+            elif phase_agent in overrides:
                 agents[phase_agent] = "not_needed"
             elif phase_agent in all_needed:
                 agents[phase_agent] = "needed"
@@ -500,7 +561,7 @@ def _agent_produces_production_code(
         return agent_id in producers
 
 
-def _build_implementation_notes_section(ac: AcRecord) -> str:
+def _build_implementation_notes_section(ac: AcRecord, ac_id: str = "") -> str:
     """Build the ## Implementation Notes section from it_requirements in the AC record.
 
     Emits a verbatim reproduction of every field in ``it_requirements`` as a
@@ -508,20 +569,36 @@ def _build_implementation_notes_section(ac: AcRecord) -> str:
     guesswork.  Returns an empty string when ``it_requirements`` is absent from
     the AC record, so that no empty stub is ever written (AC-2 / BO-2000c-1-i).
 
+    Before serialising, any ``reference_pattern`` glob in ``it_requirements``
+    is resolved to the single concrete path it matches (BO-2000c-3).  When the
+    pattern resolves to zero files a ``ValueError`` is raised so the authoring
+    error surfaces immediately rather than silently emitting a broken wildcard
+    into the ticket body (BO-2000c-3-i).
+
     The section is placed consistently in the ticket body just before the
     ``## Sign-offs`` block so that phase agents can locate it with a simple
     heading search (AC-3 / BO-2000c-2).
 
     Args:
         ac: Parsed AC record.
+        ac_id: The AC id; used in ``reference_pattern`` error messages so the
+               author can trace the broken pattern back to its source AC.
 
     Returns:
         Formatted ``## Implementation Notes`` markdown block, or ``""`` when
         ``it_requirements`` is absent.
+
+    Raises:
+        ValueError: When a ``reference_pattern`` glob in ``it_requirements``
+                    resolves to zero files (authoring error).
     """
     it_req = ac.get("it_requirements")
     if not it_req:
         return ""
+    # Resolve reference_pattern globs before serialising (BO-2000c-3 / BO-2000c-3-i).
+    # _resolve_reference_patterns raises ValueError on unresolvable patterns;
+    # that exception propagates to the caller (not caught here — Rule 4).
+    it_req = _resolve_reference_patterns(it_req, ac_id)
     try:
         spec_yaml = yaml.dump(
             it_req,
@@ -923,7 +1000,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         if test_requirements:
             lines.append(test_requirements)
 
-    impl_notes = _build_implementation_notes_section(ac)
+    impl_notes = _build_implementation_notes_section(ac, ac_id)
     if impl_notes:
         lines.append(impl_notes)
 

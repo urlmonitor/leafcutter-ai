@@ -1,6 +1,6 @@
 id: GE-113b-2
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "The structural-change bypass still governs only the structural-change check"
 component: guardrail-engine
 level: L2

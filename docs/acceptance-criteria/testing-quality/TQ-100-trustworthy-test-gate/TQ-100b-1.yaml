@@ -1,6 +1,6 @@
 id: TQ-100b-1
 components:
-  - testing-quality
+  - testing_quality
 title: "A test linked to a not-done AC runs informationally and never fails the run"
 component: testing-quality
 level: L2

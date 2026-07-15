@@ -1,6 +1,6 @@
 id: BO-1100c
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Message patterns are defined in one place you can read and edit"

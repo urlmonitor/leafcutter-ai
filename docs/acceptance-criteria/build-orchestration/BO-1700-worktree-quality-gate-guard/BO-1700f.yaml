@@ -1,6 +1,6 @@
 id: BO-1700f
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Projects that genuinely don't use these checks are left alone, without false alarms"

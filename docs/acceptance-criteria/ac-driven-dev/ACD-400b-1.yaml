@@ -1,6 +1,6 @@
 id: ACD-400b-1
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Generator produces a valid ticket file with correct frontmatter, agents map, and criteria body"

@@ -1,6 +1,6 @@
 id: BP-1200
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Every pull request gets trustworthy proof it didn't break the test suite"
 component: build-pipeline
 level: L0

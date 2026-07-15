@@ -1,6 +1,6 @@
 id: BO-1900c-1
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A run-and-report task assigned to test-writer is caught as a mis-assignment"
 component: build-orchestration
 level: L2

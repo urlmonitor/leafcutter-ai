@@ -1,6 +1,6 @@
 id: SD-100e
 components:
-  - stakeholder-delivery
+  - stakeholder_delivery
 readiness: draft
 priority: medium
 title: "Stakeholder material appears the moment a decision is approved"

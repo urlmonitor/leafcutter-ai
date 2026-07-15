@@ -14,7 +14,10 @@
         "Consecutive builds produce zero git diff (idempotent)",
         "Self-hosting parity: leafcutter development uses its own compiled agents"
       ],
-      "tickets_advancing_outcome": []
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap"
+      ]
     },
     {
       "id": "phase_2",
@@ -26,7 +29,10 @@
         "Documented contribution workflow for adding agents and skills to the package",
         "Config schema validation rejects unknown keys with actionable error messages"
       ],
-      "tickets_advancing_outcome": []
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap"
+      ]
     },
     {
       "id": "phase_3",
@@ -38,7 +44,10 @@
         "Versioned releases with auto-generated changelogs",
         "Extension mechanism documented and tested with at least one community-contributed agent"
       ],
-      "tickets_advancing_outcome": []
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap"
+      ]
     }
   ]
 }

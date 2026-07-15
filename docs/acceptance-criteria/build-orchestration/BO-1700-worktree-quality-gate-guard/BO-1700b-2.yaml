@@ -1,6 +1,6 @@
 id: BO-1700b-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Setting PRE_COMMIT_ALLOW_NO_CONFIG cannot produce a passing verdict"

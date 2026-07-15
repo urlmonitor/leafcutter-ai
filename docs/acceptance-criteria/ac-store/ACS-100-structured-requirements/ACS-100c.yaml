@@ -1,6 +1,6 @@
 id: ACS-100c
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "The right person owns each level of detail"

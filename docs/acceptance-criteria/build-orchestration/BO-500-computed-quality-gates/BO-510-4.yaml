@@ -2,7 +2,7 @@ id: BO-510-4
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "llm-expert populates the produces trait on every existing agent template"
 component: build-orchestration
 level: L2

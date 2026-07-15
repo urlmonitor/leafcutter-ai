@@ -1,6 +1,6 @@
 id: BO-1600b-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "An interrupted commit leaves no poisoned index or stranded lock"

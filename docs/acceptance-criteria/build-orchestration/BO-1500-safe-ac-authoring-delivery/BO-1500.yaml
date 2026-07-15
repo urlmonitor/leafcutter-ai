@@ -1,6 +1,6 @@
 id: BO-1500
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Authoring requirements never disturbs your work and always lands safely on main"

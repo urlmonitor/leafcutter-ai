@@ -2,7 +2,7 @@ id: ACS-100h-1
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Overcrowded parent triggers the split procedure with the correct pattern"
 component: ac-store
 level: L2

@@ -2,7 +2,7 @@ id: BO-700a-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket completed without a source_ac produces a placeholder entry"
 component: build-orchestration
 level: L3

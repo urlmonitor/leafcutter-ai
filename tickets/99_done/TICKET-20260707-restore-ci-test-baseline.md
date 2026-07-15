@@ -4,8 +4,8 @@ priority: high
 roadmap_phase: phase_1
 advances_current_outcome: true
 components:
-  - build-pipeline
-  - guardrail-engine
+  - build_pipeline
+  - commit_guardian
 agents:
   test-writer: signed_off
   python-coder: signed_off

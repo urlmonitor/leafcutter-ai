@@ -1,6 +1,6 @@
 id: ACD-1200b
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "See what needs approval before you can build"

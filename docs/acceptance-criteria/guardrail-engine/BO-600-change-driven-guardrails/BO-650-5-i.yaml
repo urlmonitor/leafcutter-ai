@@ -2,7 +2,7 @@ id: BO-650-5-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Architect's model tier follows the same complexity routing as all other agents"
 component: build-orchestration
 level: L3

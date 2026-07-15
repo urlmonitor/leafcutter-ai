@@ -2,13 +2,13 @@ id: BO-400b-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Script refuses done when agents map has needed entries"
 component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a ticket file with frontmatter:
     status: in_progress
@@ -51,7 +51,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/commit_guardian/test_set_ticket_status.py
 implemented_by: []
 change_target: code
 risk_surface: internal

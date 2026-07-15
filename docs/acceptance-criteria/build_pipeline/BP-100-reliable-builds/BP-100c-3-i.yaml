@@ -1,6 +1,6 @@
 id: BP-100c-3-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Partial config overlay leaves unspecified paths at their defaults"
@@ -32,7 +32,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "tests/test_config_driven_build_paths.py"
 implemented_by:
   - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"
 change_target: config

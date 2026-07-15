@@ -2,7 +2,7 @@ id: ACS-100h-5
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Post-split validation confirms no cycles, no dangling refs, and limits respected"
 component: ac-store
 level: L2

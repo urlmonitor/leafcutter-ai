@@ -1,0 +1,44 @@
+id: BO-2100b-3
+components:
+  - build_orchestration
+title: "Both toggles on means the check runs"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project `skills_config.json` whose `live_surface_testing.enabled` is `true`
+    And a ticket whose frontmatter sets `live_surface_test: true`
+  When the ticket is authored and driven
+  Then the `live-surface-tester` phase is added to the ticket's `agents:` map as needed
+    And the phase is dispatched during the drive
+    And the live-app check actually runs.
+depends_on: [BO-2100b]
+doc_links:
+  - path: scripts/config_loader.py
+    relationship: describes
+    status: exists
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "When both toggles are true the agents-map entry must be present as `live-surface-tester: needed`; this is the authoring-side guarantee."
+  - "The end-to-end 'phase actually dispatched and check runs' guarantee is proven by the real-run behavioral gate BO-2100e-1; this AC must not be marked satisfied by authoring alone if the wiring downstream is absent."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100b-3.md

@@ -2,8 +2,8 @@
 title: "Implement self-hosting: separate config targets for leafcutter development"
 status: done
 components:
-  - build_system
-  - onboard
+  - build_pipeline
+  - onboarding
 created: 2026-05-19
 depends_on: []
 priority: high

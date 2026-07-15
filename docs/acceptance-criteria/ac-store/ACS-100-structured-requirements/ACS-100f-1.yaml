@@ -1,6 +1,6 @@
 id: ACS-100f-1
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Query by flight level returns ACs at the requested level(s)"

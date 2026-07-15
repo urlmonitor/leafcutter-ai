@@ -909,6 +909,173 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# AC-1: Content-hash enforcement in check_deployed_parity
+# ---------------------------------------------------------------------------
+
+
+class TestDeployedParityContentHash(unittest.TestCase):
+    """AC-1 (TICKET-20260709-CommitGuardianHardeningFollowups):
+    Content-hash enforcement for check_deployed_parity.
+
+    When the deployed directory exists (build has been done), scripts present
+    in BOTH canonical and deployed are byte-content compared via SHA-256.
+    Divergent content blocks the commit. Pre-build state (deployed dir absent)
+    is never blocking — this is the build-freshness signal gate.
+    """
+
+    def setUp(self) -> None:
+        """Set up canonical and deployed dirs (deployed EXISTS — build-done signal)."""
+        _require_mod(self)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.canonical = self.tmp / "canonical"
+        self.deployed = self.tmp / "deployed"
+        self.canonical.mkdir()
+        self.deployed.mkdir()  # deployed dir EXISTS — build-freshness signal is active
+
+    def tearDown(self) -> None:
+        """Remove temporary directories."""
+        self._tmp.cleanup()
+
+    def test_identical_content_no_violation(self) -> None:
+        """AC-1: canonical and deployed have identical byte content → no violation."""
+        content = "# identical script content\nprint('hello')\n"
+        (self.canonical / "check_alpha.py").write_text(content, encoding="utf-8")
+        (self.deployed / "check_alpha.py").write_text(content, encoding="utf-8")
+
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
+
+        self.assertEqual(
+            violations,
+            [],
+            msg="AC-1: identical content must produce no violations.",
+        )
+
+    def test_diverged_content_is_blocking_violation(self) -> None:
+        """AC-1: deployed dir exists, script present in both but content differs → violation."""
+        (self.canonical / "check_alpha.py").write_text(
+            "# canonical — updated version\n", encoding="utf-8"
+        )
+        (self.deployed / "check_alpha.py").write_text(
+            "# deployed — stale old version\n", encoding="utf-8"
+        )
+
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
+
+        self.assertGreater(
+            len(violations),
+            0,
+            msg="AC-1: content divergence with deployed dir present must block.",
+        )
+        combined = " ".join(violations)
+        self.assertIn("check_alpha.py", combined)
+
+    def test_diverged_content_violation_message_contains_paths(self) -> None:
+        """AC-1: violation message includes both canonical and deployed paths."""
+        (self.canonical / "check_beta.py").write_text("# new\n", encoding="utf-8")
+        (self.deployed / "check_beta.py").write_text("# old\n", encoding="utf-8")
+
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
+
+        combined = " ".join(violations)
+        self.assertIn(str(self.canonical), combined)
+        self.assertIn(str(self.deployed), combined)
+
+    def test_deployed_dir_absent_no_content_hash_check(self) -> None:
+        """AC-1: deployed dir absent (pre-build state) → no violation regardless of content.
+
+        The deployed dir's absence is the signal that build.py has not yet run,
+        so the content-hash check is skipped entirely.
+        """
+        canonical2 = self.tmp / "canonical2"
+        canonical2.mkdir()
+        deployed_absent = self.tmp / "deployed_absent"  # does NOT exist
+        (canonical2 / "check_alpha.py").write_text("# canonical only\n", encoding="utf-8")
+
+        violations = _mod.check_deployed_parity(
+            canonical2, deployed_absent, _DEFAULT_PATTERNS, set()
+        )
+
+        self.assertEqual(
+            violations,
+            [],
+            msg="AC-1: absent deployed dir (pre-build state) must never block.",
+        )
+
+    def test_multiple_scripts_all_diverged_all_reported(self) -> None:
+        """AC-1: multiple diverged scripts each produce their own violation entry."""
+        for name in ("check_alpha.py", "check_beta.py", "check_gamma.py"):
+            (self.canonical / name).write_text(f"# canonical {name}\n", encoding="utf-8")
+            (self.deployed / name).write_text(f"# stale {name}\n", encoding="utf-8")
+
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
+
+        self.assertEqual(
+            len(violations),
+            3,
+            msg="AC-1: each diverged script must produce one violation entry.",
+        )
+        combined = " ".join(violations)
+        self.assertIn("check_alpha.py", combined)
+        self.assertIn("check_beta.py", combined)
+        self.assertIn("check_gamma.py", combined)
+
+    def test_only_in_canonical_missing_from_deployed_stays_nonblocking(self) -> None:
+        """AC-1: script in canonical but absent from deployed stays non-blocking (INFO only).
+
+        Missing scripts in deployed remain a non-blocking INFO warning. Only
+        scripts present in BOTH locations with differing content block.
+        """
+        (self.canonical / "check_new.py").write_text("# new script\n", encoding="utf-8")
+        # deployed dir exists but does NOT have check_new.py
+
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
+
+        self.assertEqual(
+            violations,
+            [],
+            msg="AC-1: script only in canonical (missing from deployed) must not block.",
+        )
+
+    def test_compute_file_hash_returns_consistent_digest(self) -> None:
+        """AC-1: _compute_file_hash returns a consistent hex digest for the same content."""
+        script = self.canonical / "check_test_hash.py"
+        script.write_text("print('hello')\n", encoding="utf-8")
+
+        hash1 = _mod._compute_file_hash(script)
+        hash2 = _mod._compute_file_hash(script)
+
+        self.assertIsNotNone(hash1)
+        self.assertEqual(hash1, hash2, msg="Hash must be deterministic for the same content.")
+        self.assertIsInstance(hash1, str)
+        self.assertGreater(len(hash1), 8)
+
+    def test_compute_file_hash_differs_for_different_content(self) -> None:
+        """AC-1: _compute_file_hash returns different digests for different content."""
+        script_a = self.canonical / "check_a.py"
+        script_b = self.canonical / "check_b.py"
+        script_a.write_text("# content A\n", encoding="utf-8")
+        script_b.write_text("# content B\n", encoding="utf-8")
+
+        hash_a = _mod._compute_file_hash(script_a)
+        hash_b = _mod._compute_file_hash(script_b)
+
+        self.assertIsNotNone(hash_a)
+        self.assertIsNotNone(hash_b)
+        self.assertNotEqual(hash_a, hash_b)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -932,4 +1099,11 @@ if __name__ == "__main__":
 #   (H-1), test_main_returns_0_on_malformed_hooks_manifest (H-1),
 #   test_all_in_sync_silent_stdout_stderr (BP-100i-5 silence),
 #   test_manifest_entry_has_required_fields (BP-100i-4 registration).
+# - 2026-07-14 [python-coder/TICKET-20260709-CommitGuardianHardeningFollowups]:
+#   AC-1: Added TestDeployedParityContentHash class with 8 behavioral tests
+#   covering the new content-hash enforcement in check_deployed_parity().
+#   Tests verify: identical content → no violation; diverged content → blocking
+#   violation; absent deployed dir → no violation (pre-build state); multiple
+#   diverged scripts → all reported; missing scripts in deployed → still non-
+#   blocking; _compute_file_hash consistency and differentiation.
 # ====================================================================

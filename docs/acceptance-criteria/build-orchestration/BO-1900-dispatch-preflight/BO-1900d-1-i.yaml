@@ -1,6 +1,6 @@
 id: BO-1900d-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A payload missing a required pointer is held back"
 component: build-orchestration
 level: L3

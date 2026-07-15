@@ -1,12 +1,12 @@
 id: BO-2000f-2
 components:
-  - build-orchestration
+  - build_orchestration
 title: "The /build-feature single-ticket path runs the ticket's phases through the flattened driver, not an inline supervisor"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -54,5 +54,6 @@ origin_agent: BrainCandy
 created: 2026-07-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_build_feature_flatten_wiring.py
 implemented_by: []

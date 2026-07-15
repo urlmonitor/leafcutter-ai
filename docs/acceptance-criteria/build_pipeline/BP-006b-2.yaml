@@ -1,6 +1,8 @@
 id: BP-006b-2
 readiness: reviewed
 priority: medium
+components:
+  - build_pipeline
 title: "Edge case: duplicate sys.path insertion is prevented by guard"
 component: build_pipeline
 level: L3
@@ -29,7 +31,8 @@ created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "tests/test_install_hooks.py"
 implemented_by: []
 change_target: code
 risk_surface: internal

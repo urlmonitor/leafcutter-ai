@@ -1,6 +1,6 @@
 id: GE-108b
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: medium
 title: "Blind-catch handler is cleared only by genuine WARNING-or-higher logging"

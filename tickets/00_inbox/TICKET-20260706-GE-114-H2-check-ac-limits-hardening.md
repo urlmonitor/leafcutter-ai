@@ -6,7 +6,7 @@ priority: medium
 roadmap_phase: phase_1
 advances_current_outcome: true
 components:
-  - guardrail-engine
+  - commit_guardian
 agents:
   test-writer: signed_off
   python-coder: signed_off

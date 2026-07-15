@@ -1,6 +1,6 @@
 id: TKT-200e
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "Every factual claim a spec makes comes with a way to reproduce it"
 component: ticket-creation
 level: L1

@@ -1,6 +1,6 @@
 id: GE-113c
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "Guards work correctly even in the installed copy"
 component: guardrail-engine
 level: L1

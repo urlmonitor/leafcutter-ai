@@ -1,6 +1,6 @@
 id: BP-100i-1
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "Script parity: every .py file in the runtime commit_guardian directory has a counterpart in the canonical template directory"
@@ -8,7 +8,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
 criteria: |
   Given the runtime source directory contains 5 hook scripts:
@@ -59,7 +59,11 @@ created: 2026-06-05
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: [BP-100i-1-i, BP-100i-1-ii]
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_hook_parity.py"
+  - BP-100i-1-i
+  - BP-100i-1-ii
+implemented_by:
+  - templates/scripts/commit_guardian/check_hook_parity.py
 change_target: code
 risk_surface: internal

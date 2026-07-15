@@ -2,8 +2,8 @@
 title: "Scaffold missing config-referenced files during onboard"
 status: done
 components:
-  - onboard
-  - build_system
+  - onboarding
+  - build_pipeline
 created: 2026-05-19
 depends_on:
   - 02_referential_integrity.md

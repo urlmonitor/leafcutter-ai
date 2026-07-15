@@ -1,6 +1,6 @@
 id: TKT-100e
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Your product vision shapes every requirement from the top down"

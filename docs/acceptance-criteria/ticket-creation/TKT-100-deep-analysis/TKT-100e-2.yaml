@@ -1,6 +1,6 @@
 id: TKT-100e-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "PO agent decomposes L0 into 3-7 L1 ACs with single agent ownership"

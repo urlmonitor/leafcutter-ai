@@ -1,6 +1,6 @@
 id: BP-1000e
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Shipped workflow scripts match their tested source too"
 component: build-pipeline
 level: L1

@@ -1,0 +1,79 @@
+id: BP-1200a-1-iv
+components:
+  - build_pipeline
+title: "On a fresh clone / in CI the commit_guardian deploy-dependent tests resolve their scripts via the build+shim and do not error"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1200-ci-test-gate/BP-1200a-1.yaml"
+criteria: |
+  Given a brand-new checkout in which the deployed scripts/commit_guardian/*
+  directory is not present (a plain clone omits the gitignored build output)
+  And the documented CI test command runs the build preparation step (build.py +
+  install_shims shim bridge) before the suite
+  When tests/commit_guardian/test_check_ac_done_on_merge.py and
+  unit_tests/commit_guardian/test_check_ac_schema.py run
+  Then neither test errors at collection or execution for want of a deployed
+  commit_guardian script
+  And both tests run and report a passing result
+  And the outcome is identical whether or not a stale local scripts/commit_guardian/
+  working copy happens to be present.
+depends_on:
+  - BP-1200a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1200-ci-test-gate/BP-1200a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: tests/commit_guardian/test_check_ac_done_on_merge.py
+    relationship: describes
+    status: exists
+  - path: unit_tests/commit_guardian/test_check_ac_schema.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Grounded (2026-07-10): tests/commit_guardian/test_check_ac_done_on_merge.py and unit_tests/commit_guardian/test_check_ac_schema.py require `python scripts/build.py` to have run (they invoke the deployed commit_guardian scripts). The CI pytest job must run the build preparation step first (ADR-016 Approach 1: build.py + install_shims shim_map bridge), or the tests must resolve their scripts build-independently."
+  - "SAME ROOT CAUSE as FIN-100a-4's Step-3 build gap in finalize-feature.js (deploy-dependent tests failing when build.py has not run). Keep the two fixes consistent: the CI job and finalize both establish the build/deploy state before running these tests. Cross-link, do not diverge."
+  - "Consistent with ADR-016 Approach 1 and ADR-001/ADR-004: the deployed scripts/commit_guardian/ output stays gitignored and is bridged via the install_shims shim_map; do not resolve this by committing build outputs into source control."
+  - "This L3 is a thin observable over BP-1200a-1's build+shim prerequisite for the specific commit_guardian test class; do not re-specify the shim/build mechanism here (owned by BP-1200a-1 / ADR-016)."
+  - "The fresh-clone determinism this asserts must not depend on a leftover working-tree scripts/commit_guardian/ copy: the result must be identical with or without a stale local copy."
+test_spec:
+  - name: test_commit_guardian_deploy_dependent_tests_pass_on_fresh_clone
+    target_dir: tests/commit_guardian/
+    framework: pytest
+    type: integration
+    description: "On a fresh clone after the build+shim prepare step, test_check_ac_done_on_merge.py and test_check_ac_schema.py resolve their deployed commit_guardian scripts and pass, identically with or without a stale local scripts/commit_guardian copy."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200a-1
+  contract: "The fresh-clone green run via the build+shim prepare step; this edge case pins the commit_guardian deploy-dependent test class (test_check_ac_done_on_merge, test_check_ac_schema) that the prerequisite must make pass without collection/execution errors."
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_build_guard_real_package.py"
+implemented_by: []
+notes: |
+  Cross-tree link: the same "deploy-dependent test needs build.py first" root is
+  fixed in the finalize path by FIN-100a-4 (Step 0/Step 3 build+command+scope
+  symmetry) and in the CI-gate path here. BP-1200a-1-iii pins the feedback
+  preflight edge; this -iv pins the commit_guardian test edge — same Approach 1
+  build+shim prerequisite, different consuming test set.
+change_target: pipeline
+risk_surface: internal

@@ -1,6 +1,6 @@
 id: BP-100d
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Hooks never block their own source code changes"

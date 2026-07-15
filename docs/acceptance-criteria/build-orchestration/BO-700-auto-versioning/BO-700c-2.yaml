@@ -2,7 +2,7 @@ id: BO-700c-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Entries sharing the same L0 parent are grouped under a goal heading"
 component: build-orchestration
 level: L2

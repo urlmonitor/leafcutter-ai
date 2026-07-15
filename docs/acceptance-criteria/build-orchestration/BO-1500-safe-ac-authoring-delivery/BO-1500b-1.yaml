@@ -1,6 +1,6 @@
 id: BO-1500b-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: Each authoring stage commits its AC files before the next stage starts

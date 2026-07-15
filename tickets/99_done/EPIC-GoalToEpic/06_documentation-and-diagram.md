@@ -2,7 +2,7 @@
 title: "Documentation and sequence diagram for ACD-1200 goal-to-epic features"
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-GoalToEpic/01_tree-traversal-ticket-generation.md

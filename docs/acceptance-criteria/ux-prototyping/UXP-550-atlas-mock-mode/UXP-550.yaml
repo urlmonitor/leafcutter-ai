@@ -4,7 +4,7 @@ priority: medium
 title: "One repoRoot() seam swaps the entire Atlas to the fixture repo when mock mode is active"
 component: ux-prototyping
 components:
-  - ux-prototyping
+  - ux_prototyping
 level: L2
 status: active
 req_status: draft

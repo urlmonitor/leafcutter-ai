@@ -1,6 +1,6 @@
 id: BO-1500e-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: PR creation tolerates the active gh account silently reverting to an EMU account

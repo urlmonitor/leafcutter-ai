@@ -1,6 +1,6 @@
 id: UXP-540
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "A mock-data agent drafts or extends the one canonical dataset for the classified entities"
 component: ux-prototyping
 level: L2
@@ -57,4 +57,4 @@ product_truth:
     entities:
       - MockData
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

@@ -2,7 +2,7 @@ id: BO-800a
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "PR titles come from the benefit statement, not from a commit summary"
 component: build-orchestration
 level: L1
@@ -38,4 +38,4 @@ product_truth:
       - Commit
       - PR
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

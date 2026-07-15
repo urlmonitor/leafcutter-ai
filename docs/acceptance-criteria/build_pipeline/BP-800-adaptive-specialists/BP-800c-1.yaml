@@ -1,6 +1,6 @@
 id: BP-800c-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Best-practice files are versioned independently from agent templates"
 component: build-pipeline
 level: L2

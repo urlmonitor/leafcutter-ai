@@ -1,6 +1,6 @@
 id: ACS-100i-2
 components:
-  - ac-store
+  - ac_store
 title: "Pre-commit hook blocks a child AC whose parent covered_by omits it"
 component: ac-store
 level: L2

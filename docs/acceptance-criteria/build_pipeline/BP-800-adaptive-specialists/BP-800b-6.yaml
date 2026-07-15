@@ -1,6 +1,6 @@
 id: BP-800b-6
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Sequence diagram for the specialist generation pipeline"
 component: build-pipeline
 level: L2
