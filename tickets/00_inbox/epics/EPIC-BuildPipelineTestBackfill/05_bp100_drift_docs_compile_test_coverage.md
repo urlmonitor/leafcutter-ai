@@ -30,7 +30,7 @@ files_touched:
   - docs/build-drift-hook.md
 agents:
   architect-review: not_needed
-  test-writer: needed
+  test-writer: signed_off
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: needed
@@ -38,6 +38,8 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+change_target: code
+risk_surface: internal
 ---
 
 # 05: Green test coverage for BP-100 (drift-hook / docs / compile)
@@ -121,10 +123,67 @@ tests:
 
 ## Sign-offs
 
-- [ ] test-writer
+- [x] test-writer — 2026-07-15 10:23
 - [ ] test-runner
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-15 10:23 — test-writer (status: ok)
+feedback-id: fb_2026-07-15_d4ad3060
+completion_manifest:
+  test_file_written: true
+  tests_red_on_run: true
+  ruff_clean: true
+  covers_all_seven_acs: true
+Wrote `unit_tests/build/test_bp100_drift_docs_compile.py` covering all 7 ACs. Overall run is red (exit 1): BP-100b-8 fails because `build_workflow_scripts` node ID is absent from the Mermaid diagram (current diagram uses generic `N`); BP-100b-9 fails because `templates/scripts/workflows/` is not in the consolidated-output-root.md shimmed-outputs table. The remaining 6 tests pass immediately (code is already correct — CODE_NO_TEST backfill).
+
+## Test Writer — Completion Report
+
+### Tests Written
+| File | Directory | Framework | Status |
+|---|---|---|---|
+| test_bp100_drift_docs_compile.py | unit_tests/build/ | unittest | written |
+
+### Verification Run
+- Command: `python3 -m unittest discover -s unit_tests/build -t . -p "test_bp100_drift_docs_compile.py"`
+- Result: red (2 failures — BP-100b-8, BP-100b-9; 6 pass immediately; exit 1)
+
+### Notes
+- BP-100b-8 and BP-100b-9 are genuinely red: the docs do not yet satisfy the AC-specified content (`build_workflow_scripts` node ID; `templates/scripts/workflows/` source column).
+- BP-100b-5, BP-100b-5-i, BP-100b-6-i, BP-100b-10, BP-100c-4 pass immediately (CODE_NO_TEST backfill — implementation already exists).
+- Added `change_target: code` and `risk_surface: internal` to ticket frontmatter (required fields missing from original scaffold).
+
+red_baseline:
+  - test_name: test_ac_bp100b8_mermaid_graph_has_build_workflow_scripts_node_id
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "AssertionError: 'build_workflow_scripts' not found in '...' : docs/build-pipeline.md must contain 'build_workflow_scripts' as a Mermaid node identifier"
+  - test_name: test_ac_bp100b9_shimmed_outputs_table_has_workflows_source_path
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "AssertionError: 'templates/scripts/workflows/' not found in '...' : consolidated-output-root.md shimmed-outputs table must include 'templates/scripts/workflows/' as the source path"
+  - test_name: test_ac_bp100b5_drift_reported_for_mutated_workflow_file
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "(none)"
+    note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
+  - test_name: test_ac_bp100b5_passes_silently_when_all_workflow_files_match
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "(none)"
+    note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
+  - test_name: test_ac_bp100b5_i_no_false_positive_when_agents_workflows_absent
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "(none)"
+    note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
+  - test_name: test_ac_bp100b6_i_assertion_messages_reference_category_and_layer
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "(none)"
+    note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
+  - test_name: test_ac_bp100b10_new_category_section_has_all_four_layers
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "(none)"
+    note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
+  - test_name: test_ac_bp100c4_config_inbox_path_appears_in_compiled_paths_table
+    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    error: "(none)"
+    note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
