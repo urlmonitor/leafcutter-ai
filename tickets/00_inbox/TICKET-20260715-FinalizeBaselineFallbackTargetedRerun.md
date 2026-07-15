@@ -18,6 +18,16 @@ tags:
 files_touched:
   - templates/workflows-js/finalize-feature.js
   - templates/agents/test-failure-triage.md
+agents:
+  architect-review: not_needed
+  test-writer: needed
+  python-coder: needed
+  sql-coder: not_needed
+  test-runner: needed
+  documentation-expert: needed
+  pr-reviewer: needed
+  commit: needed
+  pull-request: needed
 ac_traceability:
   l2:
     - FIN-100c-4
@@ -25,6 +35,7 @@ ac_traceability:
     - FIN-100c-6
     - FIN-100c-7
     - FIN-100c-8
+    - FIN-100c-10
   l3:
     - FIN-100c-9
   ac_path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/
@@ -103,6 +114,144 @@ own Step 3 note already acknowledges it but still halts.
       post-merge failure whose test is not modified by the branch and fails on main
       HEAD, triage returns `pre_existing`/`blocks_finalization: false` (not
       `regression`).
+
+## Test Requirements
+
+```yaml
+tests:
+  # --- FIN-100c-4: null baseline → targeted main-HEAD rerun (with build.py parity) ---
+  - name: test_null_baseline_with_failures_does_not_blanket_regress
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-4
+    asserts: "With baseline_failures=null and a non-empty post-merge failure set, the workflow does not immediately mark every failure regression; it enters the recovery branch instead of the blanket-regression path."
+  - name: test_null_baseline_establishes_main_head_checkout
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-4
+    asserts: "The recovery branch establishes a detached checkout of origin/main HEAD before re-running the failing tests."
+  - name: test_null_baseline_runs_build_before_rerun
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-4
+    asserts: "The recovery branch runs python3 scripts/build.py --target-dir <checkout> against the main-HEAD checkout before executing the tests, matching the Step 0 / Step 3 build/deploy step."
+  - name: test_null_baseline_reexecutes_failing_tests_on_main
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-4
+    asserts: "The recovery branch re-executes the post-merge failing tests against main HEAD and records each test's pass/fail result on main."
+  # --- FIN-100c-5: rerun scoped to only the failing test IDs → bounded runtime ---
+  - name: test_rerun_executes_only_failing_test_ids
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-5
+    asserts: "The main-HEAD rerun is invoked with exactly the K post-merge failing test node IDs and no other tests."
+  - name: test_rerun_does_not_run_full_suite
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-5
+    asserts: "The recovery path never invokes the full test suite (no bare pytest / discover) — only the scoped node-ID invocation."
+  - name: test_rerun_completes_when_full_suite_baseline_timed_out
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-5
+    asserts: "Given the Step 0 full-suite baseline timed out (baseline_failures null), the scoped rerun of K IDs still completes and yields a recovered baseline."
+  # --- FIN-100c-6: recovered baseline built from rerun, forwarded as non-null ---
+  - name: test_recovered_baseline_contains_only_ids_that_fail_on_main
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-6
+    asserts: "The recovered baseline equals the intersection of post_merge_failures and the set of tests that failed on the main-HEAD rerun."
+  - name: test_recovered_baseline_supplied_as_baseline_failures
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-6
+    asserts: "The triage dispatch receives the recovered baseline as baseline_failures in place of null."
+  - name: test_ids_passing_on_main_excluded_from_recovered_baseline
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-6
+    asserts: "Test IDs that pass on main HEAD are excluded from the recovered baseline so they remain in the regression set-difference."
+  - name: test_recovered_baseline_empty_list_when_none_fail_on_main
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-6
+    asserts: "When no failing test fails on main, baseline_failures is forwarded as [] (clean baseline → all regressions), never as null."
+  # --- FIN-100c-7: classify pre_existing (fails on main) vs regression (passes on main) ---
+  - name: test_recovered_baseline_failures_on_main_classified_pre_existing
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-7
+    asserts: "Given a recovered baseline, every post-merge failure that also fails on main HEAD is classified pre_existing (2026-07-15 case: all 3 deploy-dependent tests)."
+  - name: test_recovered_baseline_pass_on_main_classified_regression
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-7
+    asserts: "A post-merge failure whose test passes on main HEAD (absent from the recovered baseline) is classified regression."
+  - name: test_triage_report_includes_category_per_test
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-7
+    asserts: "Each post-merge failure appears in the triage_report with its category field set."
+  # --- FIN-100c-8: only real regressions set blocks_finalization=true ---
+  - name: test_all_pre_existing_does_not_block_finalization
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-8
+    asserts: "When every post-merge failure is classified pre_existing against the recovered baseline, blocks_finalization is false and finalization proceeds."
+  - name: test_any_regression_blocks_finalization
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-8
+    asserts: "When at least one post-merge failure is classified regression, blocks_finalization is true (finalize HALTs)."
+  - name: test_2026_07_15_three_deploy_dependent_all_pre_existing_no_false_halt
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-8
+    asserts: "The 2026-07-15 case (3 deploy-dependent tests, all pre-existing on main) yields blocks_finalization=false — no false test_regression halt."
+  # --- FIN-100c-9 (L3): rerun-unavailable → conservative fallback + modified_by_branch ---
+  - name: test_rerun_checkout_failure_falls_back_to_conservative_halt
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-9
+    asserts: "When the main-HEAD checkout fails, the workflow falls back to the conservative null-baseline path (all failures regression, blocks_finalization=true)."
+  - name: test_rerun_build_failure_falls_back_to_conservative_halt
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-9
+    asserts: "When the build/deploy step against the main-HEAD checkout errors, the workflow falls back to the conservative halt."
+  - name: test_conservative_fallback_sets_blocks_finalization_true
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-9
+    asserts: "The fallback halt sets blocks_finalization=true and treats every post-merge failure as regression."
+  - name: test_halt_message_lists_modified_by_branch_per_test
+    file: unit_tests/workflows/test_finalize_baseline_recovery.py
+    covers:
+      - FIN-100c-9
+    asserts: "The conservative halt message lists each failing test together with its modified_by_branch flag."
+  # --- FIN-100c-10: how-to guide describes the null-baseline targeted rerun ---
+  - name: test_howto_step0_drops_blanket_regression_as_current
+    file: unit_tests/docs/test_finalize_howto.py
+    covers:
+      - FIN-100c-10
+    asserts: "The Step 0 narrative no longer presents an unavailable baseline as causing triage to classify all post-merge failures conservatively as regressions as the current behavior."
+  - name: test_howto_step3_describes_targeted_rerun_recovered_baseline
+    file: unit_tests/docs/test_finalize_howto.py
+    covers:
+      - FIN-100c-10
+    asserts: "The Step 3 row and the test_regression halt section describe the targeted per-test rerun against main HEAD that recovers a baseline and distinguishes pre_existing from regression when the Step 0 baseline is null."
+  - name: test_howto_conservative_halt_narrowed_to_fallback_with_modified_by_branch
+    file: unit_tests/docs/test_finalize_howto.py
+    covers:
+      - FIN-100c-10
+    asserts: "The guide describes the conservative all-regressions halt as the narrowed rerun-unavailable fallback and states it surfaces each failing test's modified_by_branch flag for human adjudication."
+  - name: test_howto_has_no_stale_null_baseline_all_regressions_as_current
+    file: unit_tests/docs/test_finalize_howto.py
+    covers:
+      - FIN-100c-10
+    asserts: "No remaining passage presents the old 'null baseline -> all post-merge failures are regressions -> halt' behavior as the current Step 3 behavior (including the misclassification-troubleshooting text)."
+```
 
 ## AC Traceability
 
