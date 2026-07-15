@@ -8,7 +8,7 @@ status: active
 req_status: approved
 readiness: approved
 priority: critical
-work_status: not_started
+work_status: done
 criteria: |
   Given an agent template references a script path "scripts/external_tool.py"
   And that path is listed in the external-dependency allowlist
@@ -38,7 +38,8 @@ created: 2026-06-11
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_guard_real_package.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900b-1-1.md
 change_target: pipeline

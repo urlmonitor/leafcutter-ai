@@ -8,7 +8,7 @@ status: active
 req_status: approved
 readiness: approved
 priority: critical
-work_status: not_started
+work_status: done
 criteria: |
   Given the build-time guard has detected that "scripts/ac_store/ac_prioritizer.py"
   is referenced in the compiled template "agents/build-ac.md"
@@ -43,7 +43,8 @@ created: 2026-06-11
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: [BP-900c-1-1]
+covered_by:
+  - "unit_tests/test_build_tracked_source_guard.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900c-1.md
 change_target: pipeline

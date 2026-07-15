@@ -62,6 +62,7 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by:
+  - "unit_tests/commit_guardian/test_check_files_touched_reconciliation.py"
   - BP-1100e-1-i
   - BP-1100e-1-ii
   - BP-1100e-1-iii

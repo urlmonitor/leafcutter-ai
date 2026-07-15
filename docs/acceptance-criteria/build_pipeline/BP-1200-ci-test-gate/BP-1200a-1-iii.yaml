@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -61,7 +61,8 @@ amended_by:
     entry: "Corrected ADR-016 doc_link status from 'planned' to 'exists' (the ADR was authored under BP-1200a-1 and is now present and active). Added two it_requirements pinning the observable-only scope (defer the relocation mechanism to BP-1000a-5) and the leftover-working-tree-independence of the fresh-clone verdict. Criteria unchanged; assigned_agent (python-coder), complexity (S), and the BP-1000a-5 expects_from contract validated and kept."
     by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_guard_real_package.py"
 implemented_by: []
 notes: |
   Cross-tree link: the root cause guarded here (gitignored feedback source with

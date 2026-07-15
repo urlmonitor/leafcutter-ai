@@ -54,7 +54,7 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by:
-  - unit_tests/commit_guardian/test_check_hook_parity.py::TestDeployedParity
+  - "unit_tests/commit_guardian/test_check_hook_parity.py"
 implemented_by:
   - templates/scripts/commit_guardian/check_hook_parity.py
 change_target: code
