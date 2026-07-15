@@ -1,6 +1,6 @@
 ---
 title: "Fix test_sweep_processes: psutil dev-dependency / skip-when-absent"
-status: todo
+status: done
 components:
   - testing_quality
 created: 2026-07-15
@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 06: Fix test_sweep_processes (psutil)
@@ -80,7 +80,7 @@ tests:
 - [x] test-runner — 2026-07-15 14:45
 - [x] pr-reviewer — 2026-07-15 15:00
 - [x] commit — 2026-07-15 15:05
-- [ ] pull-request
+- [x] pull-request — 2026-07-15 15:30
 
 ## Comments
 
