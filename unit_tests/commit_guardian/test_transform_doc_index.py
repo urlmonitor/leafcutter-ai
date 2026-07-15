@@ -38,6 +38,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -468,6 +470,186 @@ class TestTransformDocIndexHookRegistration(unittest.TestCase):
                 v_idx,
                 f"'transform-doc-index' (position {t_idx}) must appear before "
                 f"'{validator_id}' (position {v_idx}) in hooks_manifest.hooks.",
+            )
+
+
+# ---------------------------------------------------------------------------
+# AC-2 diff-filter: hook must use ACDMR so deletions/renames trigger regen
+# ---------------------------------------------------------------------------
+
+
+class TestTransformDocIndexDiffFilter(unittest.TestCase):
+    """AC-2 diff-filter: the git diff --cached call must use --diff-filter=ACDMR
+    so that staged doc deletions and renames also trigger INDEX.md regeneration.
+    A filter of only AM (Added, Modified) silently misses deleted docs, leaving
+    stale INDEX entries.
+    """
+
+    def test_ac2_diff_filter_includes_deletions(self):
+        # covers: AC-2 (fix: --diff-filter=ACDMR)
+        """AC-2: git diff --cached must be called with --diff-filter=ACDMR, not AM.
+
+        This test FAILS against the pre-fix code (which uses --diff-filter=AM)
+        and passes after the fix. 'D' must be present in the filter value so
+        that deleted docs trigger INDEX.md regeneration.
+        """
+        tdi = _import_transform_doc_index()
+
+        diff_commands: list[list[str]] = []
+
+        def capture_subprocess_run(cmd, **kwargs):
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            if cmd[:3] == ["git", "diff", "--cached"]:
+                diff_commands.append(list(cmd))
+                mock_result.stdout = ""
+            else:
+                mock_result.stdout = ""
+            return mock_result
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with patch("subprocess.run", side_effect=capture_subprocess_run):
+                tdi.main(repo_root=repo_root)
+
+        self.assertTrue(
+            diff_commands,
+            "Expected at least one 'git diff --cached' call from the hook.",
+        )
+        diff_cmd = diff_commands[0]
+        filter_args = [a for a in diff_cmd if a.startswith("--diff-filter=")]
+        self.assertTrue(
+            filter_args,
+            f"git diff --cached must include a '--diff-filter=...' argument. "
+            f"Command was: {diff_cmd}",
+        )
+        filter_val = filter_args[0].split("=", 1)[1]
+        self.assertIn(
+            "D",
+            filter_val,
+            f"--diff-filter must include 'D' (deletions) to catch deleted docs "
+            f"and prevent stale INDEX entries. Current filter: {filter_val!r}. "
+            "Fix: change --diff-filter=AM to --diff-filter=ACDMR.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Deployed-layout regression: hook must work in .leafcutter/scripts/ layout
+# ---------------------------------------------------------------------------
+
+
+class TestDeployedLayoutRegression(unittest.TestCase):
+    """Regression guard: hook must work in the deployed (.leafcutter/scripts/)
+    layout — not only in the source tree where parents[3] happened to resolve
+    correctly by coincidence.
+
+    Pre-fix behaviour: the hook used Path(__file__).resolve().parents[3] to
+    locate generate_doc_index.py.  In the deployed layout the hook lives at
+    .leafcutter/scripts/commit_guardian/transform_doc_index.py; parents[3]
+    resolves to the project root itself (not <project>/.leafcutter/scripts/).
+    generate_doc_index.py is NOT at <project-root>/scripts/ in a consumer, so
+    ImportError was silently swallowed and the hook returned 0 doing nothing.
+    """
+
+    def test_deployed_layout_regenerates_and_stages_index(self):
+        # covers: AC-2 (fix: candidate-search import + git-rev-parse root)
+        """Hook deployed to .leafcutter/scripts/commit_guardian/ with
+        generate_doc_index.py only in .leafcutter/scripts/ must regenerate
+        docs/INDEX.md and stage it in the git index.
+
+        Runs the hook AS A SUBPROCESS (no mocking) against a real tmp git repo
+        to exercise the full deployed code path.
+
+        This test FAILS against the pre-fix code (silent no-op) and PASSES
+        after the fix (correct candidate-search import).
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            # --- Build the deployed layout ---
+            leafcutter_scripts = tmp_path / ".leafcutter" / "scripts"
+            hook_dir = leafcutter_scripts / "commit_guardian"
+            hook_dir.mkdir(parents=True, exist_ok=True)
+
+            # Copy the real hook to the deployed location
+            shutil.copy2(
+                _TRANSFORM_DOC_INDEX_PATH,
+                hook_dir / "transform_doc_index.py",
+            )
+
+            # Deploy generate_doc_index.py ONLY to .leafcutter/scripts/
+            # (NOT to a top-level scripts/ — consumer projects don't have one
+            # containing this file before build.py fixes it)
+            shutil.copy2(
+                _SCRIPTS_DIR / "generate_doc_index.py",
+                leafcutter_scripts / "generate_doc_index.py",
+            )
+
+            # --- Init a real git repo ---
+            subprocess.run(
+                ["git", "init", str(tmp_path)],
+                check=True, capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(tmp_path), "config", "user.email", "test@test.test"],
+                check=True, capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(tmp_path), "config", "user.name", "Test"],
+                check=True, capture_output=True,
+            )
+
+            # --- Create and stage a real docs/*.md file ---
+            docs_dir = tmp_path / "docs"
+            docs_dir.mkdir(parents=True, exist_ok=True)
+            doc_file = docs_dir / "sample.md"
+            doc_file.write_text(
+                "---\ntitle: Sample\ndescription: A sample doc.\n---\n\n# Sample\n\nContent.\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["git", "-C", str(tmp_path), "add", str(doc_file)],
+                check=True, capture_output=True,
+            )
+
+            # --- Run the deployed hook as a subprocess with CWD = tmp_path ---
+            hook_path = hook_dir / "transform_doc_index.py"
+            result = subprocess.run(
+                [sys.executable, str(hook_path)],
+                cwd=str(tmp_path),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            # Hook must exit 0 (fail-open contract)
+            self.assertEqual(
+                result.returncode,
+                0,
+                f"Hook must exit 0 (fail-open). stderr: {result.stderr!r}",
+            )
+
+            # docs/INDEX.md must have been created on disk
+            index_path = tmp_path / "docs" / "INDEX.md"
+            self.assertTrue(
+                index_path.exists(),
+                "docs/INDEX.md must be created on disk by the hook. "
+                f"Hook stderr: {result.stderr!r}",
+            )
+
+            # docs/INDEX.md must be staged in the git index
+            staged_result = subprocess.run(
+                ["git", "-C", str(tmp_path), "diff", "--cached", "--name-only"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            self.assertIn(
+                "docs/INDEX.md",
+                staged_result.stdout,
+                f"docs/INDEX.md must be staged in the git index after hook runs. "
+                f"Staged files: {staged_result.stdout!r}. "
+                f"Hook stderr: {result.stderr!r}",
             )
 
 

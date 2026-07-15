@@ -393,8 +393,10 @@ def _manifest_feedback_scripts(package_root: Path) -> set[str]:
 def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
 
-    Scans the package source for the four workflow-tool scripts and returns
-    manifest entries for those that exist.
+    Scans the package source for the workflow-tool scripts and returns
+    manifest entries for those that exist.  Must be kept in parity with the
+    ``deploy_scripts`` list inside ``build_workflow_tools()`` in
+    ``build_phases.py`` — a mismatch trips the manifest/deploy parity guard.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
@@ -411,6 +413,7 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
         "ticket_prioritizer.py",
         "port_registry.py",
         "live_surface_startup.py",
+        "generate_doc_index.py",
     ):
         if (scripts_src / fname).is_file():
             result.add(f"scripts/{fname}")
