@@ -75,12 +75,14 @@ def _spawn_sleeping_child(tmp_path: Path, seconds: int = 60) -> "subprocess.Pope
 # test_sweep_result_shape
 # ===========================================================================
 
+@_PSUTIL_REQUIRED
 def test_sweep_result_shape(tmp_path: Path) -> None:
     """SweepResult dataclass has all four required fields with correct defaults.
 
     Covers: ``test_sweep_result_shape`` from the Test Requirements table.
     Calls sweep() on an empty directory with no matching processes and asserts
-    the result shape is correct.
+    the result shape is correct.  Requires psutil (added to requirements-dev.txt
+    as a dev dependency) so the real sweep path exercises correctly.
     """
     result = sweep(str(tmp_path))
 
