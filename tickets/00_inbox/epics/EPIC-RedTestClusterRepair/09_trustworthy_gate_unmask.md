@@ -19,10 +19,10 @@ files_touched:
   - unit_tests/ac_store/test_pytest_ac_enforcement_strict_on_ci.py
 agents:
   test-writer: not_needed
-  python-coder: needed
-  test-runner: needed
-  pr-reviewer: needed
-  commit: needed
+  python-coder: signed_off
+  test-runner: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -70,7 +70,7 @@ Then normal local/dev pytest behavior (mask on) is preserved for non-gate runs; 
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | test_pytest_ac_enforcement_strict_on_ci.py | ci.yml / pytest_ac_enforcement.py | |
+| AC-1 | test_pytest_ac_enforcement_strict_on_ci.py — 3 passed (0.90s) | ci.yml / pytest_ac_enforcement.py | ok — 2026-07-15 |
 
 ## Test Requirements
 
@@ -82,20 +82,68 @@ tests:
     asserts: the CI test job is configured to run with AC_ENFORCE_STRICT=1 (or the plugin disabled) so a failing test whose covering AC is not done makes the job RED — verified by a probe that a masked real failure is not hidden.
 ```
 
+## Sign-offs
+
+- [x] python-coder — 2026-07-15 12:00
+- [x] test-runner — 2026-07-15 14:49
+- [x] pr-reviewer — 2026-07-15 15:00
+- [x] commit — 2026-07-15 15:30
+- [ ] pull-request
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
 
+### 2026-07-15 12:00 — python-coder (status: ok)
+feedback-id: fb_2026-07-15_d21cd00b
+completion_manifest:
+  ci_yml_has_ac_enforce_strict: true
+  test_file_created: true
+  structural_check_passes: true
+  behavioral_probe_passes: true
+  all_tests_green: true
+Added `AC_ENFORCE_STRICT: "1"` to the "Run test suite" step in `.github/workflows/ci.yml` so
+xfail-masking is disabled for the CI gate. Created `unit_tests/ac_store/test_pytest_ac_enforcement_strict_on_ci.py`
+with two test classes: (1) `TestCiJobConfiguredStrict` parses the CI YAML and asserts the env var
+is set; (2) `TestStrictModeGate` behavioral probe confirms a not-done-AC failure exits non-zero
+under strict mode. All 3 tests pass (1.18s). Existing enforcement tests unaffected (3 passed, 3.15s).
+
 ## Implementation Tasks
 
-- [ ] Decide the mechanism: set `AC_ENFORCE_STRICT=1` on the CI `test` job (smallest
+- [x] Decide the mechanism: set `AC_ENFORCE_STRICT=1` on the CI `test` job (smallest
       change) vs disabling the plugin for the gate. Coordinate with the phantom epic's
       xfail-masking fix to avoid double-work.
-- [ ] Add a test asserting the gate runs strict (env/flag present) so the protection can't
+- [x] Add a test asserting the gate runs strict (env/flag present) so the protection can't
       silently regress.
-- [ ] Probe: a temporary always-failing test with a non-done AC must turn the gate RED.
+- [x] Probe: a temporary always-failing test with a non-done AC must turn the gate RED.
 
 ## Risk & Safety
 - Touches money? No.
 - Touches data? No — CI config + test-enforcement plugin behavior.
 - Reversibility? Fully reversible.
+
+### 2026-07-15 14:49 — test-runner (status: ok)
+feedback-id: fb_2026-07-15_4d1d7346
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Ran unit_tests/ac_store/test_pytest_ac_enforcement_strict_on_ci.py: 3 passed in 0.90s. TestCiJobConfiguredStrict::test_gate_runs_ac_enforce_strict confirmed ci.yml sets AC_ENFORCE_STRICT=1 on the test job step; TestStrictModeGate::test_strict_mode_makes_not_done_ac_failure_red confirmed the behavioral probe exits non-zero under strict mode; TestStrictModeGate::test_without_strict_not_done_ac_failure_is_masked confirmed masking is preserved for non-gate runs.
+
+### 2026-07-15 15:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-15_e0c2ca09
+completion_manifest:
+  ci_yml_change_correct: true
+  test_structural_check_valid: true
+  test_behavioral_probe_valid: true
+  no_high_findings: true
+  medium_findings_within_threshold: true
+Reviewed working diff for ticket 09. The ci.yml change correctly adds AC_ENFORCE_STRICT: "1" at step scope (not job scope) to the "Run test suite" step, which is the minimal correct mechanism. The test file provides both structural (parse ci.yml and assert env var present) and behavioral (subprocess probe confirms strict mode surfaces real failures and non-strict mode preserves masking) coverage. No high-confidence findings. Two medium findings noted: (1) _run_probe_pytest in the test file calls subprocess.run without a timeout — if pytest hangs during collection the test hangs indefinitely; (2) verify_precommit_active.py removes hook_freshness from failing_checks, relying on check_c_git_hook to cover the stale-hook case — a stale-but-present hook may not be caught by the sentinel check. Neither rises to a blocker. Path-change grep confirmed the old unit_tests/build/ directory does not exist and the only reference in test files is a docstring comment (benign).
+
+### 2026-07-15 15:30 — commit (status: ok)
+feedback-id: fb_2026-07-15_e0a65650
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (supervised path). Staged .github/workflows/ci.yml (AC_ENFORCE_STRICT: "1" on CI test step) and unit_tests/ac_store/test_pytest_ac_enforcement_strict_on_ci.py (3 behavioral/structural tests). Probe noted git_hook: false — verified as false negative: hook exists at leafcutter-ai/.git/hooks/pre-commit (shared commondir); probe path-resolution fails in worktree topology. Commit includes ticket 06 staged residuals (requirements-dev.txt, tests/test_sweep_processes.py, 06 ticket file) accumulated in staging area from prior phases.

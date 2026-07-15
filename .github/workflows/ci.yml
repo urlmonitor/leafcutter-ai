@@ -122,6 +122,12 @@ jobs:
         run: python scripts/build.py --target-dir .
 
       - name: Run test suite
+        # AC_ENFORCE_STRICT=1 disables xfail-masking by the AC enforcement plugin
+        # so a genuinely-failing test whose covering AC is not "done" surfaces as a
+        # real failure — not silently hidden in the "xfailed" bucket. This protects
+        # the gate from phantom-done masking (BP-1200b integrity requirement, ticket 09).
+        env:
+          AC_ENFORCE_STRICT: "1"
         run: python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors
 
   typecheck:

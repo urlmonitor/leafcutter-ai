@@ -489,6 +489,8 @@ class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
             id: FIN-001
             title: "Historical origin agent"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -557,6 +559,8 @@ class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):
             id: FIN-001
             title: "Historical origin_agent edge case"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -712,6 +716,8 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
             id: PAG-001
             title: "Users list page — standard CRUD table (PTN-001)"
             component: users-ui
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: "No page-specific behavior — all behavior inherited from pattern."
@@ -748,6 +754,8 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
             id: PAG-002
             title: "Login page — standard Gherkin"
             component: users-ui
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -782,6 +790,8 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
             id: PAG-003
             title: "Products list page — inherits PTN-001"
             component: products-ui
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: "No page-specific behavior — all behavior inherited from pattern."
@@ -1130,6 +1140,8 @@ class TestPatternSlotsAcceptedAfterWidening(unittest.TestCase):
             id: PTN-010
             title: "Pattern AC with slots"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
