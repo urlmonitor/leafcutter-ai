@@ -431,6 +431,20 @@
       "components": [
         "skills_system"
       ]
+    },
+    {
+      "id": "ac-audit",
+      "name": "AC Audit",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ac-audit/",
+      "dependencies": [
+        "ac-scanner"
+      ],
+      "description": "Evidence-based implementation audit of an AC area (component, id-prefix, or store subpath). Answers per AC: is it really implemented, by which code, and by which green unit test? Treats work_status/implemented_by/covered_by as untrusted and verifies against the repo (grep citation maps, ticket files_touched, a live test run) plus skeptical per-group agents that catch phantom-done code. Produces a per-AC verdict report and, on request, evidence-anchored reconciliation and remediation/test-backfill work orders.",
+      "components": [
+        "skills_system"
+      ]
     }
   ]
 }

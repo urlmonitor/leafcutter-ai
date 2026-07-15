@@ -174,6 +174,31 @@ Do not rely on memory — the ADR is the single source of truth. Key summary:
 
 ---
 
+## Section 3b: Existing-Diagram Check (MANDATORY before scaffold)
+
+Before running the scaffold script (Section 4), scan `docs/architecture/` for an
+existing diagram that covers the same component and flight level:
+
+1. **Search for an existing diagram.** Check whether any file under `docs/architecture/`
+   has a frontmatter `components:` list that includes the target component AND whose
+   `flight_level` matches the level you computed in Section 2.
+
+   ```bash
+   grep -rl "components:" docs/architecture/ | xargs grep -l "<component-id>" 2>/dev/null
+   ```
+
+2. **If a matching diagram is found:** update that existing file instead of creating a
+   new one. Skip the scaffold script (Section 4) entirely and go directly to editing
+   the existing file. This avoids creating duplicate diagram files for the same component.
+
+3. **Only create a new file** (proceed to Section 4 scaffold) when no existing diagram
+   is found covering the same component and flight level.
+
+This check prevents duplicate diagrams. The AC criteria: "Then the update is made to
+the existing diagram file (not a duplicate)."
+
+---
+
 ## Section 4: Always scaffold first (MANDATORY)
 
 **Do not hand-author frontmatter, the legend block, or the mermaid skeleton.**
@@ -331,8 +356,15 @@ components:                             # required; one or more ids from docs/co
   - candle_data
 created: 2026-05-11                     # required; ISO date
 last_updated: 2026-05-11                # required; update on each edit
+source_ticket: "<ticket_path>"          # required; the ticket ID that triggered this create/update
 ---
 ```
+
+- `source_ticket` MUST be populated from the `ticket_path` parameter on every create or
+  update. This field records the triggering ticket so every diagram update is traceable
+  to its originating ticket. Use the relative ticket path (e.g.
+  `tickets/00_inbox/epics/EPIC-Foo/01_foo.md`). If no ticket triggered the update
+  (e.g. a standalone diagram authoring request), set `source_ticket: null`.
 
 - `last_updated` MUST equal `currentDate` from your context (never a
   future date). If the generated file carries a `last_updated` > `currentDate`,

@@ -10,7 +10,7 @@ agents:
   test-runner: signed_off
   test-writer: signed_off
 components:
-- ac-driven-dev
+- ac_driven_dev
 created: '2026-06-22'
 depends_on:
 - 01_TICKET-20260618-ACD-300g-1.md

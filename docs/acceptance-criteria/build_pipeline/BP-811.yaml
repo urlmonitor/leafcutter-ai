@@ -8,7 +8,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a consumer build runs with workflows enabled (config.workflows.enabled = true)
     and a supported Claude Code version,
@@ -29,8 +29,10 @@ origin_agent: quick-fix
 created: 2026-06-17
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/test_build_workflow_output_paths.py
+implemented_by:
+  - scripts/build_phases.py
 notes: "Authored by /quick-fix. Root cause: build_workflow_scripts() in scripts/build_phases.py writes the .js files to <root>/.claude/workflows, but every other artifact phase writes to <output_root>/<name> and install_shims() maps the workflows shim source to output_root/workflows (see the line-353 comment, which already documents the intended output_root/workflows/ destination). Because the artifact phases are invoked with output_root as their first arg (build.py artifact_phases loop), the files land in output_root/.claude/workflows while the shim looks in output_root/workflows — so the .claude/workflows shim is skipped and deployed workflow scripts are unreachable in a consumer install. Fix: build_workflow_scripts() must write to target_root/'workflows' (matching the shim map and the sibling phases), not target_root/'.claude'/'workflows'. Found by manual behavioral spot-check during EPIC-AcPipelineDeployGaps."
 change_target: pipeline
 risk_surface: internal
