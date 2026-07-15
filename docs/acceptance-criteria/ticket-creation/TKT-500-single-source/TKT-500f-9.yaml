@@ -1,0 +1,46 @@
+id: TKT-500f-9
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "Generated ticket frontmatter carries an ac_traceability entry (AC id + store path)"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC with id "BO-1000c-1b" stored at a known path in the AC store
+    (for example
+    "docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000c-1b.yaml"),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket frontmatter carries an ac_traceability entry that
+    names both the AC id "BO-1000c-1b" and the AC's store path,
+  And the ac_traceability entry is present in addition to (not merely) a bare
+    source_ac scalar,
+  And the ac_traceability entry is structured so ac-validator and
+    ac-fulfillment-gate can resolve the source AC from the ticket rather than
+    silently no-opping when only a bare source_ac is present.
+
+  Given a leaf AC for which a ticket is generated,
+  When ac-fulfillment-gate or ac-validator later reads that ticket,
+  Then it can locate the source AC file from the ac_traceability entry's store
+    path without scanning the whole store.
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

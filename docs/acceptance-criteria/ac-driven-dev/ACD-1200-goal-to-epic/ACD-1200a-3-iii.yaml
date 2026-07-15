@@ -1,0 +1,60 @@
+id: ACD-1200a-3-iii
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Epic slug is ASCII-safe for non-ASCII punctuation, is not truncated mid-word, and is identical in dry-run and real run"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-3.yaml"
+criteria: |
+  This AC complements ACD-1200a-3-ii (which strips apostrophes and quote
+  characters) by covering non-ASCII punctuation, over-long titles, and
+  dry-run/real-run consistency in the epic folder-name derivation.
+
+  Given a goal AC whose title contains non-ASCII punctuation, for example an
+    em-dash: "Ship parts tree — the fast path",
+  When goal_to_epic.py derives the epic folder name from that title,
+  Then the derived folder name contains only ASCII alphanumeric characters
+    (the em-dash and any surrounding stray punctuation are stripped or
+    normalized to a word boundary, not carried through literally),
+  And the derived folder is named exactly EPIC-ShipPartsTreeTheFastPath
+    (no em-dash, en-dash, or other non-ASCII code point appears in the name).
+
+  Given a goal AC whose title is long (for example a title exceeding 60
+    characters), and the derivation applies a length limit,
+  When goal_to_epic.py derives the epic folder name from that title,
+  Then the name is truncated only at a word boundary (never in the middle of a
+    PascalCase word),
+  And the name does not end in a partial word, a dangling separator, or an empty
+    segment.
+
+  Given the same goal AC,
+  When goal_to_epic.py is invoked once with --dry-run and once as a real run,
+  Then the epic folder name reported by the dry-run is byte-for-byte identical to
+    the folder name created by the real run (same casing, same length limit, no
+    drift between the two code paths).
+depends_on: [ACD-1200a-3]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-3
+  contract: "str — the goal AC's title string fed into the PascalCase epic-name derivation; this AC constrains how non-ASCII punctuation and length are handled and requires dry-run/real-run parity of the result."
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

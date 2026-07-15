@@ -1,0 +1,49 @@
+id: TKT-500f-8
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "Generated ticket's files_touched includes the AC's real edit surface, unioned with doc_links"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose it_requirements is in structured form and names a source
+    file as its edit surface (for example reference_file_path:
+    "scripts/ac_store/generate_ticket_from_ac.py"),
+  And whose doc_links names a documentation path
+    (for example "docs/reference/ac-schema.md"),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's files_touched list contains
+    "scripts/ac_store/generate_ticket_from_ac.py" (the source edit surface named
+    by it_requirements),
+  And the generated ticket's files_touched list also contains
+    "docs/reference/ac-schema.md" (the doc_links path),
+  And files_touched is the de-duplicated union of the it_requirements edit
+    surface(s) and the doc_links paths: a path named in both it_requirements and
+    doc_links appears exactly once in files_touched.
+
+  Given a leaf AC whose it_requirements names a source file that is identical to
+    a path also listed in doc_links,
+  When a ticket is generated from that AC,
+  Then that path appears exactly once in files_touched (no duplicate entry).
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500f-8-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

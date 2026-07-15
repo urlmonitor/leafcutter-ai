@@ -1,0 +1,46 @@
+id: TKT-500f-11
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "Acceptance Criteria section emits machine-parseable '- [ ] AC-N:' checkbox lines"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose criteria expresses one or more distinct acceptance
+    conditions,
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's "## Acceptance Criteria" section contains at least
+    one machine-parseable checkbox line of the exact form "- [ ] AC-N: <text>"
+    (the form ac-validator parses), where N is a 1-based index,
+  And each checkbox line's text is derived from the source AC's criteria,
+  And when a human-readable Gherkin block is also emitted, the checkbox lines
+    are present in addition to it (the checkbox lines are not replaced by, and do
+    not replace, the Gherkin block).
+
+  Given a generated ticket's "## Acceptance Criteria" section,
+  When ac-validator parses that section,
+  Then every emitted "- [ ] AC-N:" line is recognized as an acceptance-criterion
+    checkbox (so ac-validator has criteria to assert against rather than finding
+    none).
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

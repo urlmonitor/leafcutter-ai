@@ -23,9 +23,10 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "added leaf ACs ACD-1200b-4 (non-interactive approval flag / no-TTY gate) and ACD-1200b-5 (reviewed->approved promotion mechanism), 2026-07-15"
 superseded_by: null
-covered_by: [ACD-1200b-1, ACD-1200b-2, ACD-1200b-3]
+covered_by: [ACD-1200b-1, ACD-1200b-2, ACD-1200b-3, ACD-1200b-4, ACD-1200b-5]
 implemented_by: []
 documentation_triggers:
   - how-to

@@ -1,0 +1,53 @@
+id: ACD-1200b-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Non-interactive run with an approval flag clears the readiness gate; without a flag and without a TTY it fails clearly"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200b.yaml"
+criteria: |
+  Given goal_to_epic.py is invoked non-interactively (no controlling TTY on
+    standard input) with an explicit approval flag (for example --yes or
+    --approved-only),
+  When execution reaches the readiness gate that would otherwise prompt the user,
+  Then the command proceeds past the gate without prompting for input,
+  And the command does not exit non-zero merely because no interactive input is
+    available,
+  And when --approved-only is the chosen flag, generation proceeds with only the
+    already-approved leaf ACs and excludes the unapproved ones.
+
+  Given goal_to_epic.py is invoked with no controlling TTY on standard input and
+    with no approval flag supplied,
+  When execution reaches the readiness gate,
+  Then the command exits with a non-zero status and prints a clear message
+    stating that approval input is required and naming the flag to pass, rather
+    than hanging waiting for input that can never arrive.
+
+  Given goal_to_epic.py is invoked interactively (a TTY is present) with no
+    approval flag,
+  When execution reaches the readiness gate,
+  Then the existing interactive prompt behavior is unchanged.
+depends_on: [ACD-1200b]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

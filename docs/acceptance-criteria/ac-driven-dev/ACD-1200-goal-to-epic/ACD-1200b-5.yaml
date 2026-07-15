@@ -1,0 +1,51 @@
+id: ACD-1200b-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A supported approval mechanism promotes reviewed leaf ACs to approved without hand-editing YAML"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200b.yaml"
+criteria: |
+  Given a goal AC with two leaf children at readiness: reviewed
+    (for example ACD-050a-2-i and ACD-050b-1),
+  When a supported approval mechanism is invoked against that goal (a new
+    approval script under scripts/ac_store/, for example approve_acs.py, and/or
+    an --approve flag on the goal-to-epic command),
+  Then each of those reviewed leaf ACs has its readiness field promoted from
+    reviewed to approved in its stored YAML,
+  And the promotion is performed by the mechanism, not by any hand-edit of the
+    YAML files,
+  And the change is append-only with respect to history: an amended_by entry is
+    added recording the promotion, and no other field of the AC is altered.
+
+  Given the same two leaf ACs after a first successful promotion run,
+  When the approval mechanism is invoked a second time against the same goal,
+  Then the already-approved leaves remain approved and are not duplicated,
+    re-stamped, or otherwise modified (the operation is idempotent).
+depends_on: [ACD-1200b]
+doc_links:
+  - path: scripts/ac_store/approve_acs.py
+    relationship: modifies
+    status: planned
+  - path: scripts/goal_to_epic.py
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1200b-5-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

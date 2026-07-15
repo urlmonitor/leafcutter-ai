@@ -46,9 +46,10 @@ expects_from:
   contract: "list[str] — absolute file paths of generated ticket .md files on disk, one per leaf AC"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "added L3 ACD-1200a-3-iii (non-ASCII punctuation, no mid-word truncation, dry-run/real-run slug parity), complementing ACD-1200a-3-ii, 2026-07-15"
 superseded_by: null
-covered_by: [ACD-1200a-3-i, ACD-1200a-3-ii]
+covered_by: [ACD-1200a-3-i, ACD-1200a-3-ii, ACD-1200a-3-iii]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

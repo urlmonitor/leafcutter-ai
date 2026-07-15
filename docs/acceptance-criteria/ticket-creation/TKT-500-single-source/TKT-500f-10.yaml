@@ -1,0 +1,47 @@
+id: TKT-500f-10
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "Generated ticket renders the AC's delivers_to and expects_from contracts"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC that carries a delivers_to contract
+    (agent: "python-coder", contract: "a de-duplicated files_touched list")
+    and an expects_from contract
+    (ac_id: "TKT-500f-8", contract: "the union edit surface"),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket renders the delivers_to contract, naming the
+    downstream counterpart agent "python-coder" and the contract text,
+  And the generated ticket renders the expects_from contract, naming the
+    upstream counterpart AC id "TKT-500f-8" and the contract text,
+  And both contracts appear in the ticket (in the body and/or frontmatter) so
+    the implementing agent receives the producer to consumer hand-off instead
+    of re-deriving it from the source AC.
+
+  Given a leaf AC whose delivers_to is null and whose expects_from is null,
+  When a ticket is generated from that AC,
+  Then no delivers_to or expects_from contract content is rendered into the
+    ticket, and generation completes without error.
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

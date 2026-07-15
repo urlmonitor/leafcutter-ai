@@ -1,0 +1,47 @@
+id: TKT-500f-8-i
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "List-form it_requirements: the named source surface is extracted into files_touched too"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-8.yaml"
+criteria: |
+  Given a leaf AC whose it_requirements is a list of prose bullet strings
+    (the list form used on BO-1000c-1b and BO-1000c-2), not the structured
+    reference_file_path form,
+  And one of those bullets names a source file path within its prose text
+    (for example a bullet reading "Modify scripts/goal_to_epic.py to ..."
+    naming "scripts/goal_to_epic.py"),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's files_touched list contains
+    "scripts/goal_to_epic.py" (the source path extracted from the prose bullet),
+  And the extraction of a named source surface happens for list-form
+    it_requirements, not only for the structured reference_file_path form.
+
+  Given a leaf AC whose list-form it_requirements bullets name no source file
+    path (prose with no file reference),
+  When a ticket is generated from that AC,
+  Then no phantom source path is invented in files_touched, and files_touched
+    still contains the AC's doc_links paths.
+depends_on: [TKT-500f-8]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

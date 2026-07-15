@@ -1,0 +1,45 @@
+id: TKT-500f-12
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "Code-AC ticket's agents map wires ac-validator and ac-fulfillment-gate"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC at level L2 or L3 whose generated ticket has a files_touched
+    list containing at least one implementation .py file (an AC whose work
+    changes code, not docs/config only),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's agents map wires the ac-validator phase and the
+    ac-fulfillment-gate phase as needed phases,
+  And those two phases appear in the agents map so the AC-traceability gates run
+    against the ticket rather than being absent.
+
+  Given a leaf AC whose generated ticket has a files_touched list containing no
+    implementation .py file (docs/config-only work),
+  When a ticket is generated from that AC,
+  Then ac-validator and ac-fulfillment-gate are wired only as the pipeline's
+    existing rules require for such tickets (this AC does not force them onto
+    docs/config-only tickets).
+depends_on: [TKT-500f, TKT-500f-9, TKT-500f-11]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
