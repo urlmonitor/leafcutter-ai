@@ -561,6 +561,7 @@
             },
             {
                 "id": "check-predone-scope",
+                "tier": "judgment",
                 "name": "Check Pre-Done Scope Reconciliation (files_touched vs actual diff)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py",
                 "language": "system",
@@ -970,6 +971,7 @@
             },
             {
                 "id": "check-hook-parity",
+                "tier": "judgment",
                 "name": "Check Hook Parity (leafcutter)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_parity.py",
                 "language": "system",
