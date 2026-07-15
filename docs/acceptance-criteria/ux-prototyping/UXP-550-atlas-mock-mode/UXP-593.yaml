@@ -23,7 +23,7 @@ criteria: |
 depends_on:
   - UXP-591
 doc_links:
-  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
     relationship: specified-by
     status: exists
 delivers_to: null

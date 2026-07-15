@@ -26,7 +26,7 @@ criteria: |
 depends_on:
   - UXP-593
 doc_links:
-  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
     relationship: specified-by
     status: exists
 assigned_agent: frontend-coder
