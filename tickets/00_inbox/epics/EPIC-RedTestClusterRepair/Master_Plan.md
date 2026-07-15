@@ -1,10 +1,11 @@
 ---
-title: "EPIC: Repair the residual red-test clusters blocking the blocking CI gate"
+title: "EPIC: Make the pytest suite green + trustworthy so the CI test gate can block"
 type: epic
 status: todo
 components:
   - testing_quality
   - build_pipeline
+  - commit_guardian
 created: 2026-07-15
 depends_on: []
 requires_diagram: false
@@ -13,69 +14,91 @@ change_target: code
 risk_surface: internal
 ---
 
-# EPIC: Residual Red-Test Cluster Repair
+# EPIC: Residual Red-Test Repair + Trustworthy Blocking Gate
 
 ## Goal
 
-Turn the currently-RED pytest clusters GREEN on a fresh `origin/main` so the CI
-`test` job can become a blocking gate (BP-1200b) and be added to branch
-protection (BP-1200c). This epic covers **only the residual clusters that no
-other epic or branch owns** — see the coverage map below. It deliberately does
-**not** duplicate work already owned by the two 2026-07-14 build_pipeline audit
-epics or the `fix/testsuite-green-clusters` salvage branch.
+Drive the leafcutter-ai pytest suite to genuinely green on a fresh `origin/main`,
+and make that green **trustworthy** (no xfail-masking hiding real failures), so the
+CI `test` job can be flipped to blocking (BP-1200b) and added to branch protection
+(BP-1200c). This epic owns **only the residual** not fixed by the salvage PR #300 or
+the two 2026-07-14 build_pipeline audit epics — see the evidence-based coverage map.
 
-## Context
+## Context — how this scope was derived
 
-Ground truth from CI `test` job on `origin/main` (run `29403216629`, 2026-07-15):
-`81 failed, 2930 passed, 10 skipped, 26 xfailed`. There are **zero collection
-errors** — `install_shims` resolves every module on CI's Linux runner (the local
-WSL `build.py` hang that produces spurious collection errors is not in scope).
-The count is *rising* over time because the phantom-remediation work is removing
-xfail masks, so previously-hidden genuine tests now run RED.
+A 5-agent review (2026-07-15) mapped every failing test on `origin/main` CI (run
+`29405520992`: `81 failed, 3116 passed, 10 skipped, 27 xfailed`) against the salvage
+PR #300, the phantom-remediation epic, and the backfill epic. Two critical findings
+shaped this epic:
 
-The failures cluster into root causes. This epic was scoped by a gap analysis
-(2026-07-15) that mapped every cluster against the two audit epics and the
-in-flight `fix/testsuite-green-clusters` branch.
+1. **A `pytest_ac_enforcement` plugin (`pytest.ini` `addopts`) xfail-masks any failing
+   test whose covering AC's `work_status != "done"`** (unless `AC_ENFORCE_STRICT=1`).
+   So the true failure set is LARGER than the CI "81 failed" — several genuinely-broken
+   tests hide in the "27 xfailed" bucket. Any real health check must run with
+   `AC_ENFORCE_STRICT=1` (or `-o addopts=""`). This is why the user's named files
+   (`test_readiness_gate`, `test_check_ac_done_on_merge`, `test_generate_ticket_from_ac`)
+   were "invisible" in the CI failed count.
+2. **Salvage PR #300 originally contained a production regression** (it reverted the E2
+   `plan-feature.js` source to E1 and masked the guard) — now corrected (commit
+   `a9819e15`). The correction means the plan-feature **deployed** copy is still stale,
+   so its parity tests are residual here (ticket 07).
 
-## Coverage map (why these tickets and not others)
+## Coverage map (verified by running each file in the salvage worktree)
 
-**Owned elsewhere — NOT in this epic:**
+**Owned by SALVAGE PR #300 (`salvage/testsuite-green-clusters`) — NOT in this epic:**
+build-module shadow cluster via the `unit_tests/build → build_guards` rename
+(`test_build_package_version`, `test_build_guard_real_package`, `test_build_version_wiring`,
+`test_build_changelog_placeholder`, 6/7 of `test_build_tracked_source_guard`),
+`test_setup_ticket_worktree`, `test_workflow_variant_transform`,
+`test_check_surface_components_e3`, `test_skill_registry`, `test_build_artifact_parity`,
+`test_transform_hooks_and_autofix_emission`. **Gate: #300 must merge for these.**
 
-| Cluster / tests | Owner | Notes |
-|---|---|---|
-| Flip `.github/workflows/ci.yml` `test` job to blocking (BP-1200b) | `EPIC-BuildPipelinePhantomRemediation` ticket 05 | The gate-flip itself; depends on the suite being green first. |
-| `test_build_tracked_source_guard` (BP-900c-3) | `EPIC-BuildPipelinePhantomRemediation` ticket 01 | `_suggest_action` branch-order code fix. |
-| `test_verify_precommit_active` / deployed hook parity (BP-100i-3) | `EPIC-BuildPipelinePhantomRemediation` ticket 03 | Missing-deployed-script promoted INFO→blocking. |
-| Cluster 1 (`test_build_package_version`, `test_build_guard_real_package`, `test_build_version_wiring`, `test_build_changelog_placeholder`) — `AttributeError: module 'build' has no attribute …` | **Candidate fix exists** in `fix/testsuite-green-clusters` commit `c990bb89` (the `unit_tests/build → build_guards` rename that removes the `import build` shadowing of `scripts/build.py`). | Pending salvage/rebase+merge of that branch. If it does NOT land, re-scope into this epic. |
-| Cluster 2 (`test_check_ac_schema`, 14) | Candidate fix in `c990bb89` | Pending salvage. |
-| Cluster 3 (`test_setup_ticket_worktree`, 10) | Candidate fix in `c990bb89` | Pending salvage. |
-| Cluster 6 partial (`test_skill_registry`, `test_check_surface_components_e3`, `test_build_artifact_parity`) | Candidate fix in `c990bb89` | Pending salvage. |
+**Owned by EPIC-BuildPipelinePhantomRemediation (on origin/main) — NOT in this epic:**
+`test_build_tracked_source_guard::…bp900c3` (ticket 01, BP-900c-3); the CI gate flip
+BP-1200b (ticket 05); deployed hook parity BP-100i-3 (ticket 03).
 
-> `fix/testsuite-green-clusters` (worktree `testfix-reassess`) is ~20 PRs stale
-> (branched at #290) and is one un-reviewed ~1,500-line commit authored as
-> `Test User`. It must be rebased onto current `origin/main` and reviewed before
-> its fixes can be trusted/merged. Tracking that salvage is out of scope here;
-> this epic assumes it lands and covers what it does NOT touch.
+**Already GREEN (no fix) — verify only:** `test_check_components_minimum_schema`
+(25 pass + 1 intentional in-file xfail).
 
-**Residual — owned by THIS epic** (no ticket or branch touches these):
+**Residual — owned by THIS epic:**
 
-| # | File | Cluster | Failing tests | Status |
-|---|------|---------|---------------|--------|
-| 01 | [01_workflow_parity_tests.md](./01_workflow_parity_tests.md) | 4 | `test_partial_run_recovery` (3), `test_final_gate_and_commit_message` (1), `test_commit_stage_output_behavioral` (1) | `[ ]` |
-| 02 | [02_workflow_variant_transform.md](./02_workflow_variant_transform.md) | 5 | `test_workflow_variant_transform` (4) | `[ ]` |
-| 03 | [03_component_and_hook_schema_drift.md](./03_component_and_hook_schema_drift.md) | 6 | `test_check_components_minimum_schema` (1), `test_transform_hooks_and_autofix_emission` (1), `test_build_phases` (2) | `[ ]` |
-| 04 | [04_psutil_dev_dependency.md](./04_psutil_dev_dependency.md) | 6 | `test_sweep_processes` (1) | `[ ]` |
-| 05 | [05_defect_fixes_misc.md](./05_defect_fixes_misc.md) | misc | `test_defect_fixes` (2) + verify `test_verify_precommit_active` ownership | `[ ]` |
+| # | File | Failing tests | Root cause | Named? |
+|---|------|---------------|------------|--------|
+| 01 | [01_ac_schema_components_and_axes.md](./01_ac_schema_components_and_axes.md) | `test_check_ac_schema` (13), `test_readiness_gate` (3) | post-#277 schema tightening: `components` now required + `change_target`/`risk_surface`/`pattern_slots`/`implements_pattern`/free-form `origin_agent` not accepted; `validate_manually()` stricter than schema | ✅ readiness_gate, check_ac_schema |
+| 02 | [02_create_check_ac_done_on_merge_hook.md](./02_create_check_ac_done_on_merge_hook.md) | `test_check_ac_done_on_merge` (3) | hook script `check_ac_done_on_merge.py` does not exist anywhere (AC ACD-600b) | ✅ check_ac_done_on_merge |
+| 03 | [03_agent_template_produces_frontmatter.md](./03_agent_template_produces_frontmatter.md) | `test_generate_ticket_from_ac` (1) | `sql-view-creator.md` (+audit all templates) missing `produces:` in YAML frontmatter (BO-510-2/4) | ✅ generate_ticket_from_ac |
+| 04 | [04_commit_classifier_import_cache.md](./04_commit_classifier_import_cache.md) | `test_defect_fixes` (2) | `classify_staged_files()` caches config at import time, not per call (BO-1100c-4) | |
+| 05 | [05_verify_precommit_active.md](./05_verify_precommit_active.md) | `test_verify_precommit_active` (2) | `hook_freshness` check / deployed `verify_precommit_active.py` | |
+| 06 | [06_psutil_dev_dependency.md](./06_psutil_dev_dependency.md) | `test_sweep_processes` (1) | `psutil` absent from `requirements-dev.txt` (CI has no psutil) | |
+| 07 | [07_deployed_plan_feature_e2_parity.md](./07_deployed_plan_feature_e2_parity.md) | `test_partial_run_recovery` (3), `test_final_gate_and_commit_message` (1), `test_commit_stage_output_behavioral` (1), `test_build_phases` (2) | deployed `scripts/workflows/plan-feature.js` is stale E1 vs the E2 source template — regenerate deployed from source (the proper fix #300 deferred) | |
+| 08 | [08_anti_build_shadow_guard.md](./08_anti_build_shadow_guard.md) | (regression guard) | make the `build→build_guards` rename stick: guard test + update backfill tickets + retarget #287's new test | |
+| 09 | [09_trustworthy_gate_unmask.md](./09_trustworthy_gate_unmask.md) | (gate integrity) | the blocking gate must not be fooled by `pytest_ac_enforcement` xfail-masking | |
+| 10 | [10_fresh_clone_green_verification.md](./10_fresh_clone_green_verification.md) | (verification) | confirm fresh-clone green under strict mode; re-diagnose; hand off to BP-1200b | |
+
+## Salvage dependency (blocking gate for this epic)
+
+This epic's coverage map assumes **PR #300 merges**. If it does not, the clusters it
+owns fall back to unowned — re-scope them here. Do not close this epic until #300 (or
+an equivalent) has landed and CI is re-diagnosed (ticket 10).
+
+## Recommended merge order (from risk review)
+
+1. Close competing PR #301 (partial duplicate of #300).
+2. Merge #300 (corrected). Verify no `unit_tests/build/test_*.py` remain.
+3. Land this epic's fixes (tickets 01–09), driven in isolated worktrees off `origin/main`.
+4. Ticket 10: confirm fresh-clone green **under `AC_ENFORCE_STRICT=1`**.
+5. THEN EPIC-BuildPipelinePhantomRemediation ticket 05 flips BP-1200b — never before 4.
 
 ## Parallel-safety
 
-The five tickets touch disjoint test files and disjoint source/config areas
-(workflow JS parity, workflow-variant build output, commit_guardian component
-schema, `requirements-dev.txt`, misc). No `depends_on` edges — parallel-safe.
+Tickets touch disjoint files (see each `files_touched`). 01/02/05/09 touch
+`commit_guardian`/AC-store code; 07 touches workflow JS; 03 touches an agent template;
+04 touches `commit_classifier`; 06 touches `requirements-dev.txt`; 08 touches
+`unit_tests/` layout + backfill tickets. No cross-ticket file overlap → parallel-safe.
 
-## Exit criteria
+## Test-truth guardrail (applies to every ticket)
 
-- Every residual test above passes on a fresh `origin/main` CI run.
-- Combined with the salvage of `c990bb89` and the two audit epics, `pytest
-  tests/ unit_tests/` is green and deterministic — unblocking BP-1200b/BP-1200c.
-- Re-run the live CI diagnosis before closing: the count is a moving target.
+Every ticket's exit criteria require the assertion to still verify the **real invariant**,
+proven against the **real artifact** in a fresh process — not greened by weakening or
+deleting the check, and not by adding an xfail. Green sign-off proves the code runs, not
+that it works (this repo's recurring phantom-done failure mode).
