@@ -1248,20 +1248,27 @@ async function recoverFlowRefFromCommit(authoringWorktreePath) {
       return null;
     }
     const out = parsed.output || "";
-    // Split into per-commit blocks (blank-line separated); find the FLOW commit,
-    // then the first *.flow.json path in its name-only file list.
-    const blocks = out.split(/\n{2,}/);
-    for (const block of blocks) {
-      const lines = block.split("\n").filter((l) => l.length > 0);
-      if (lines.length === 0) { continue; }
-      const header = lines[0].split("\x00");
-      const subject = (header[1] || "").trim();
-      if (/^plan-feature\(FLOW\):/i.test(subject)) {
-        for (const candidate of lines.slice(1)) {
-          if (candidate.trim().endsWith(".flow.json")) {
-            return candidate.trim();
-          }
-        }
+    // Parse per-commit by scanning lines. Real `git log --name-only
+    // --format=%H%x00%s` output is: a header line `<hash>\x00<subject>`, a BLANK
+    // line, then the commit's file list — with NO blank line between one commit's
+    // last file and the next commit's header. A blank-line split therefore
+    // misaligns headers and files. Instead, treat any line containing \x00 as a
+    // new commit header (recording its subject) and collect the subsequent
+    // non-empty lines as that commit's files until the next header. Return the
+    // first *.flow.json belonging to a commit whose subject matches the FLOW stage.
+    const lines = out.split("\n");
+    let currentSubjectIsFlow = false;
+    for (const rawLine of lines) {
+      const nulIdx = rawLine.indexOf("\x00");
+      if (nulIdx !== -1) {
+        const subject = rawLine.slice(nulIdx + 1).trim();
+        currentSubjectIsFlow = /^plan-feature\(FLOW\):/i.test(subject);
+        continue;
+      }
+      const candidate = rawLine.trim();
+      if (candidate.length === 0) { continue; }
+      if (currentSubjectIsFlow && candidate.endsWith(".flow.json")) {
+        return candidate;
       }
     }
     return null;
@@ -1312,7 +1319,15 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   } catch (err) {
     return { status: "error", message: "reconciliation dispatch failed: " + err.message };
   }
-  const runParsed = typeof runResult === "string" ? JSON.parse(runResult) : runResult;
+  // Guard the parse: a non-JSON reconcile-run response must NOT throw out of the
+  // top-level body (the ACs are already committed by this point). Reconciliation
+  // is intentionally non-fatal — the caller only logs on status:error.
+  let runParsed;
+  try {
+    runParsed = typeof runResult === "string" ? JSON.parse(runResult) : runResult;
+  } catch (_runParseErr) {
+    return { status: "error", message: "reconcile result unparseable" };
+  }
   if (!runParsed || (runParsed.exit_code != null && runParsed.exit_code !== 0)) {
     return {
       status: "error",
@@ -1631,11 +1646,15 @@ if (ptRunSet.skip) {
       let ptResult;
       let ptEditRetries = 0;
       let ptApproved = false;
+      let ptFeedback = "";
 
       while (!ptApproved) {
         ptResult = await agent(
           `You are running as part of the /plan-feature product-truth phase (outcome: ${ptRunSet.outcome}). ` +
           `Draft or extend the ${ptStep.stage} artifact for this request in the product-truth store at ${ptStoreDir}. ` +
+          (ptFeedback
+            ? `The user reviewed your previous attempt and requested changes — address this feedback: ${ptFeedback}. `
+            : "") +
           "Do NOT write any acceptance-criteria files. " +
           "After writing, return a JSON object: " +
           "{ \"status\": \"ok\", \"artifact_paths\": [\"docs/product-truth/...\"], \"flow_ref\": \"<path or null>\" } " +
@@ -1647,7 +1666,15 @@ if (ptRunSet.skip) {
           { agentType: ptStep.agent, label: `pt-${ptStep.stage}-author` }
         );
 
-        const reportedPaths = (ptResult && Array.isArray(ptResult.artifact_paths)) ? ptResult.artifact_paths : [];
+        // Tolerant parse: the PT author may return a JSON STRING; read fields off
+        // the parsed object so artifact_paths/flow_ref aren't silently dropped.
+        let ptResultObj;
+        try {
+          ptResultObj = typeof ptResult === "string" ? JSON.parse(ptResult) : ptResult;
+        } catch (_ptResultParseErr) {
+          ptResultObj = {};
+        }
+        const reportedPaths = (ptResultObj && Array.isArray(ptResultObj.artifact_paths)) ? ptResultObj.artifact_paths : [];
 
         // Gate: approve / edit / cancel.
         const ptGateResult = await agent(
@@ -1679,6 +1706,8 @@ if (ptRunSet.skip) {
           };
         } else if (ptAction === "edit" && ptEditRetries < MAX_EDIT_RETRIES) {
           ptEditRetries++;
+          // Thread the user's edit feedback into the next re-dispatch (m4).
+          ptFeedback = (ptGate && typeof ptGate.feedback === "string") ? ptGate.feedback.trim() : "";
           continue;
         } else if (ptAction === "edit" && ptEditRetries >= MAX_EDIT_RETRIES) {
           return {
@@ -1706,7 +1735,7 @@ if (ptRunSet.skip) {
           ptApproved = true;
           if (ptStep.stage === "flow") {
             ptFlowProduced = true;
-            const fr = (ptResult && typeof ptResult.flow_ref === "string" && ptResult.flow_ref) ? ptResult.flow_ref : null;
+            const fr = (ptResultObj && typeof ptResultObj.flow_ref === "string" && ptResultObj.flow_ref) ? ptResultObj.flow_ref : null;
             ptFlowRef = fr || (reportedPaths.find((p) => typeof p === "string" && p.endsWith(".flow.json")) || null);
           }
         }
@@ -1794,26 +1823,32 @@ for (const step of pipeline) {
           : resumeLogResult;
       if (resumeLogParsed && resumeLogParsed.exit_code === 0) {
         const logBody = resumeLogParsed.output || "";
-        // Split into individual commit messages.
-        const commitBlocks = logBody.split(/\n{2,}/);
-        for (const block of commitBlocks) {
-          // Match commits whose subject line is for this stage.
-          const subjectMatch = block.match(
-            new RegExp(
-              `^plan-feature\\(${stageDisplayLabel}(?:[^)]*)?\\):`,
-              "im"
-            )
-          );
-          if (subjectMatch) {
-            // Extract the "AC IDs: ..." line from this commit's body.
-            const acIdsMatch = block.match(/^AC IDs:\s*(.+)$/m);
-            if (acIdsMatch) {
-              const ids = acIdsMatch[1]
-                .split(",")
-                .map((s) => s.trim())
-                .filter((s) => s.length > 0 && s !== "(none)");
-              resumedAcIds = ids;
-            }
+        // Scan line-by-line. Real `git log --format=%B` concatenates commit
+        // bodies with a BLANK line between each subject and the rest of its body
+        // (and between commits), so a blank-line split shatters the subject away
+        // from the `AC IDs:` line and resumedAcIds is always []. Instead, track
+        // whether we are inside a commit whose subject is for THIS stage — any
+        // plan-feature(...) subject line resets the state — and read the
+        // `AC IDs:` line from within that commit.
+        const stageSubjectRe = new RegExp(
+          `^plan-feature\\(${stageDisplayLabel}(?:[^)]*)?\\):`,
+          "i"
+        );
+        const anyStageSubjectRe = /^plan-feature\([^)]*\):/i;
+        let inTargetStage = false;
+        for (const rawLine of logBody.split("\n")) {
+          const line = rawLine.trim();
+          if (anyStageSubjectRe.test(line)) {
+            inTargetStage = stageSubjectRe.test(line);
+            continue;
+          }
+          if (!inTargetStage) { continue; }
+          const acIdsMatch = line.match(/^AC IDs:\s*(.+)$/);
+          if (acIdsMatch) {
+            resumedAcIds = acIdsMatch[1]
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0 && s !== "(none)");
             break;
           }
         }
@@ -1828,6 +1863,27 @@ for (const step of pipeline) {
     // Also add to committedAcs so cancel messages distinguish prior commits.
     committedAcs.push(...resumedAcIds);
 
+    // m6 — the flow reconciliation lives in the BA approve branch below; a
+    // crash-resumed (already-committed) BA stage `continue`s past it, so
+    // baFlowBacklinks is lost and step.implements would never be reconciled.
+    // Emit an OBSERVABLE, non-silent signal that reconciliation must be run
+    // manually rather than silently dropping it. (A full re-derivation on
+    // resume is out of scope; the observable signal is the required minimum.)
+    if (step.stage === "ba" && ptFlowProduced) {
+      await emitPtTelemetry(
+        "pt_reconciliation_skipped_on_resume",
+        {
+          component: ptComponent,
+          flow_ref: ptFlowRef,
+          run_id: runId,
+          note:
+            "BA stage was crash-resumed (already committed); flow step.implements " +
+            "reconciliation was NOT run — run docs/product-truth/scripts/apply_flow_backlinks.py manually.",
+        },
+        authoringWorktreePath
+      );
+    }
+
     stageResults.push({ stage: step.stage, agent: step.agent, acs: resumedAcIds, skipped: true });
     continue;
   }
@@ -1835,12 +1891,16 @@ for (const step of pipeline) {
   let stepResult;
   let editRetries = 0;
   let approved = false;
+  let acFeedback = "";
 
   while (!approved) {
     // Dispatch the authoring agent, directing AC writes to the dedicated
     // authoring worktree's AC store path (AC BO-1500a-1).
     stepResult = await agent(
       `You are running as part of the /plan-feature pipeline (route: ${effectiveRoute}). ` +
+      (acFeedback
+        ? `The user reviewed your previous attempt and requested changes — address this feedback: ${acFeedback}. `
+        : "") +
       `Write AC YAML files ONLY to ${acStoreDir}. ` +
       "Do NOT write AC files to docs/acceptance-criteria/ relative to the current checkout — " +
       `use the absolute path ${acStoreDir} instead. ` +
@@ -1870,12 +1930,20 @@ for (const step of pipeline) {
       { agentType: step.agent, label: `stage-${step.stage}-author` }
     );
 
-    const written = (stepResult && stepResult.acs_written) ? stepResult.acs_written : [];
+    // Tolerant parse: the authoring agent may return a JSON STRING; read fields
+    // off the parsed object so acs_written/flow_backlinks aren't silently dropped.
+    let stepResultObj;
+    try {
+      stepResultObj = typeof stepResult === "string" ? JSON.parse(stepResult) : stepResult;
+    } catch (_stepResultParseErr) {
+      stepResultObj = {};
+    }
+    const written = (stepResultObj && stepResultObj.acs_written) ? stepResultObj.acs_written : [];
     allAcsWritten.push(...written);
 
     // Capture the BA's reported flow_backlinks for the post-BA reconciliation step.
-    if (step.stage === "ba" && stepResult && stepResult.flow_backlinks && typeof stepResult.flow_backlinks === "object") {
-      baFlowBacklinks = stepResult.flow_backlinks;
+    if (step.stage === "ba" && stepResultObj && stepResultObj.flow_backlinks && typeof stepResultObj.flow_backlinks === "object") {
+      baFlowBacklinks = stepResultObj.flow_backlinks;
     }
 
     // Present gate to the user.
@@ -1910,7 +1978,8 @@ for (const step of pipeline) {
         };
       } else if (action === "edit" && editRetries < MAX_EDIT_RETRIES) {
         editRetries++;
-        // Re-dispatch same agent with feedback (loop continues)
+        // Thread the user's edit feedback into the re-dispatched author prompt (m4).
+        acFeedback = (gateDecision && typeof gateDecision.feedback === "string") ? gateDecision.feedback.trim() : "";
         continue;
       } else if (action === "edit" && editRetries >= MAX_EDIT_RETRIES) {
         // Max retries exhausted — abort without committing the draft.

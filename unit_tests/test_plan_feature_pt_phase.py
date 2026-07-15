@@ -46,7 +46,12 @@ async function mockAgent(call) {
     }
     if (label === 'pt-telemetry') { return { exit_code: 0 }; }
     if (label === 'resume-flow-ref') { return { output: (CFG.flowRefLog || ''), exit_code: 0 }; }
-    if (label === 'pt-reconcile-run') { return { output: 'reconciled', exit_code: 0 }; }
+    if (label === 'pt-reconcile-run') {
+      // reconcileRunRaw lets a test return a NON-JSON string from the reconcile
+      // script dispatch (exercises the unguarded-parse crash / M2 fix).
+      if (CFG.reconcileRunRaw !== undefined && CFG.reconcileRunRaw !== null) { return CFG.reconcileRunRaw; }
+      return { output: 'reconciled', exit_code: 0 };
+    }
     if (instructions.includes('log --oneline origin/main..HEAD')) {
       return { output: (CFG.committedLog || ''), exit_code: 0 };
     }
@@ -61,8 +66,21 @@ async function mockAgent(call) {
       globalThis.__ptGateCounts = globalThis.__ptGateCounts || {};
       globalThis.__ptGateCounts[stage] = (globalThis.__ptGateCounts[stage] || 0) + 1;
       if (CFG.cancelStage === stage) { return { action: 'cancel' }; }
-      if (CFG.editStage === stage && globalThis.__ptGateCounts[stage] === 1) { return { action: 'edit' }; }
+      if (CFG.editStage === stage && globalThis.__ptGateCounts[stage] === 1) {
+        return { action: 'edit', feedback: (CFG.editFeedback || 'pt gate feedback text') };
+      }
       return { action: (CFG.ptGateDefault || 'approve') };
+    }
+    // AC-pipeline gate (label 'gate-<stage>', distinct from 'pt-gate-<stage>').
+    // Only overrides the default approve path when a test opts into acEditStage.
+    if (CFG.acEditStage && label && label.indexOf('gate-') === 0 && label.indexOf('pt-gate-') !== 0) {
+      const stage = label.slice('gate-'.length);
+      globalThis.__acGateCounts = globalThis.__acGateCounts || {};
+      globalThis.__acGateCounts[stage] = (globalThis.__acGateCounts[stage] || 0) + 1;
+      if (CFG.acEditStage === stage && globalThis.__acGateCounts[stage] === 1) {
+        return { action: 'edit', feedback: (CFG.acEditFeedback || 'ac gate feedback text') };
+      }
+      return { action: 'approve' };
     }
     if (instructions.includes('update their YAML files')) {
       return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] };
@@ -80,20 +98,24 @@ async function mockAgent(call) {
     if (CFG.classifierRaw !== undefined && CFG.classifierRaw !== null) { return CFG.classifierRaw; }
     return CFG.classifier;
   }
+  // maybeStr returns obj as a JSON STRING when the relevant CFG flag is set, so a
+  // test can prove the workflow tolerantly parses string-typed agent responses
+  // (m5) instead of silently dropping fields off a string.
+  const maybeStr = (obj, flag) => (CFG[flag] ? JSON.stringify(obj) : obj);
   if (agentType === 'mock-data-author') {
-    return { status: 'ok', artifact_paths: ['docs/product-truth/mock-data/x.mock.json'] };
+    return maybeStr({ status: 'ok', artifact_paths: ['docs/product-truth/mock-data/x.mock.json'] }, 'ptAuthorReturnsString');
   }
   if (agentType === 'mockup-author') {
-    return { status: 'ok', artifact_paths: ['docs/product-truth/mockups/x.mockup.json'] };
+    return maybeStr({ status: 'ok', artifact_paths: ['docs/product-truth/mockups/x.mockup.json'] }, 'ptAuthorReturnsString');
   }
   if (agentType === 'flow-author') {
-    return { status: 'ok', artifact_paths: ['docs/product-truth/flows/x/y.flow.json'], flow_ref: 'flows/x/y.flow.json' };
+    return maybeStr({ status: 'ok', artifact_paths: ['docs/product-truth/flows/x/y.flow.json'], flow_ref: 'flows/x/y.flow.json' }, 'ptAuthorReturnsString');
   }
   if (agentType === 'business-analyst') {
-    return { status: 'ok', acs_written: ['ACD-BA'], flow_backlinks: { review: ['ACD-BA'] } };
+    return maybeStr({ status: 'ok', acs_written: ['ACD-BA'], flow_backlinks: { review: ['ACD-BA'] } }, 'acAuthorReturnsString');
   }
-  if (agentType === 'product-owner') { return { status: 'ok', acs_written: ['ACD-PO'] }; }
-  if (agentType === 'it-po') { return { status: 'ok', acs_written: ['ACD-ITPO'] }; }
+  if (agentType === 'product-owner') { return maybeStr({ status: 'ok', acs_written: ['ACD-PO'] }, 'acAuthorReturnsString'); }
+  if (agentType === 'it-po') { return maybeStr({ status: 'ok', acs_written: ['ACD-ITPO'] }, 'acAuthorReturnsString'); }
   if (agentType === 'ac-triage') {
     return { route: (CFG.triageRoute || 'technical'), existing_acs: [], parent_l1_id: null, rationale: 't' };
   }
@@ -339,9 +361,19 @@ class TestPtCrashResume(unittest.TestCase):
             "bbbbbbb plan-feature(MOCKUP): ux-prototyping\n"
             "ccccccc plan-feature(FLOW): ux-prototyping\n"
         )
-        # recoverFlowRefFromCommit reads: <hash>\x00<subject>\n<file>\n\n
+        # REAL `git log --name-only --format=%H%x00%s` shape (verified against
+        # the live repo): each commit is a header line `<hash>\x00<subject>`,
+        # then a BLANK line, then its file list — and there is NO blank line
+        # between one commit's last file and the next commit's header.
         flow_ref_log = (
+            "aaaaaaa\x00plan-feature(MOCK-DATA): ux-prototyping\n"
+            "\n"
+            "docs/product-truth/mock-data/x.mock.json\n"
+            "bbbbbbb\x00plan-feature(MOCKUP): ux-prototyping\n"
+            "\n"
+            "docs/product-truth/mockups/x.mockup.json\n"
             "ccccccc\x00plan-feature(FLOW): ux-prototyping\n"
+            "\n"
             "docs/product-truth/flows/x/y.flow.json\n"
         )
         cfg = {
@@ -357,6 +389,161 @@ class TestPtCrashResume(unittest.TestCase):
         # …and the recovered flowRef flows into the forced BA prompt.
         ba = next(c for c in side["allCalls"] if c.get("label") == "stage-ba-author")
         self.assertIn("docs/product-truth/flows/x/y.flow.json", ba["instr"])
+
+
+# ---------------------------------------------------------------------------
+# M2 — unguarded JSON.parse of the reconcile-run result must not crash the run.
+# ---------------------------------------------------------------------------
+class TestReconcileRunUnparseable(unittest.TestCase):
+    def test_non_json_reconcile_result_does_not_crash_workflow(self) -> None:
+        # full-set + technical route → a flow is produced, the BA stage is forced,
+        # and reconciliation runs after BA. The reconcile-run dispatch returns a
+        # NON-JSON string. The workflow must still complete (no throw) and must
+        # NOT proceed to commit the reconciliation (it reported error).
+        cfg = {
+            "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
+            "triageRoute": "technical",
+            "reconcileRunRaw": "this is not json at all",
+        }
+        res, side = _run(cfg)
+        # Workflow ran to completion despite the unparseable reconcile result.
+        self.assertEqual(res.get("status"), "ok")
+        # Reconciliation WAS attempted…
+        self.assertIn("pt-reconcile-run", _labels(side))
+        # …but reported error → the dedicated reconciliation commit never ran.
+        self.assertNotIn("commit-flow-reconciliation", _labels(side))
+
+
+# ---------------------------------------------------------------------------
+# m5 — PT/AC author results returned as JSON STRINGS must be tolerantly parsed
+#      (not read as `.field` off a string → dropped to []).
+# ---------------------------------------------------------------------------
+class TestAuthorResultTolerantParse(unittest.TestCase):
+    def test_pt_author_json_string_artifact_paths_are_staged(self) -> None:
+        cfg = {
+            "classifier": {"outcome": "mock-data-only", "component": "ux-prototyping"},
+            "ptAuthorReturnsString": True,
+        }
+        res, side = _run(cfg)
+        self.assertEqual(res.get("status"), "ok")
+        # The mockdata commit must stage the reported artifact path — proving the
+        # string response was parsed rather than dropped to [] (index.json only).
+        md_commit = next(
+            c for c in side.get("commitCalls", [])
+            if "plan-feature(MOCK-DATA)" in c["instructions"]
+        )
+        self.assertIn("docs/product-truth/mock-data/x.mock.json", md_commit["instructions"])
+
+    def test_ac_author_json_string_acs_are_approved(self) -> None:
+        # it-po returns a JSON STRING; its acs_written must still reach the
+        # approved set (technical route → it-po only).
+        cfg = {
+            "classifier": {"outcome": "none", "component": "ux-prototyping"},
+            "triageRoute": "technical",
+            "acAuthorReturnsString": True,
+        }
+        res, _side = _run(cfg)
+        self.assertEqual(res.get("status"), "ok")
+        self.assertIn("ACD-ITPO", res.get("acs_approved", []))
+
+
+# ---------------------------------------------------------------------------
+# m3 — AC-ID crash-resume recovery must parse the REAL `%B` body format.
+# ---------------------------------------------------------------------------
+class TestAcIdResumeRecovery(unittest.TestCase):
+    def test_resumed_ac_ids_recovered_from_real_body_format(self) -> None:
+        # behavioral route → pipeline [ba, itpo]. The BA stage is already
+        # committed (committedLog) → crash-resume path reads `--format=%B`.
+        committed = "bbbbbbb plan-feature(BA): ux-prototyping\n"
+        # REAL `git log --format=%B` shape: each commit body has a BLANK line
+        # between the subject and the `AC IDs:` line, and commit bodies are
+        # separated from each other by a BLANK line.
+        resume_body = (
+            "plan-feature(BA): ux-prototyping\n"
+            "\n"
+            "AC IDs: ACD-BA-RESUMED, ACD-BA-2\n"
+            "run-id: test-run\n"
+            "mid-pipeline commit\n"
+            "\n"
+            "chore: an unrelated earlier commit\n"
+            "\n"
+            "some body text\n"
+        )
+        cfg = {
+            "classifier": {"outcome": "none", "component": "ux-prototyping"},
+            "triageRoute": "behavioral",
+            "committedLog": committed,
+            "resumeBodyLog": resume_body,
+        }
+        res, _side = _run(cfg)
+        self.assertEqual(res.get("status"), "ok")
+        approved = res.get("acs_approved", [])
+        self.assertIn("ACD-BA-RESUMED", approved)
+        self.assertIn("ACD-BA-2", approved)
+
+
+# ---------------------------------------------------------------------------
+# m4 — edit gate must thread the user's feedback into the re-dispatched prompt.
+# ---------------------------------------------------------------------------
+class TestEditFeedbackThreaded(unittest.TestCase):
+    def test_pt_edit_feedback_reaches_redispatch_prompt(self) -> None:
+        cfg = {
+            "classifier": {"outcome": "mock-data-only", "component": "ux-prototyping"},
+            "editStage": "mockdata",
+            "editFeedback": "MAKE-THE-CART-EMPTY-STATE-EXPLICIT",
+        }
+        _res, side = _run(cfg)
+        md_calls = [c for c in side["allCalls"] if c["agentType"] == "mock-data-author"]
+        self.assertEqual(len(md_calls), 2)
+        # The SECOND dispatch (post-edit) must carry the feedback text.
+        self.assertIn("MAKE-THE-CART-EMPTY-STATE-EXPLICIT", md_calls[1]["instr"])
+
+    def test_ac_edit_feedback_reaches_redispatch_prompt(self) -> None:
+        cfg = {
+            "classifier": {"outcome": "none", "component": "ux-prototyping"},
+            "triageRoute": "behavioral",
+            "acEditStage": "ba",
+            "acEditFeedback": "SPLIT-THE-REFUND-BEHAVIOUR",
+        }
+        _res, side = _run(cfg)
+        ba_calls = [c for c in side["allCalls"] if c.get("label") == "stage-ba-author"]
+        self.assertEqual(len(ba_calls), 2)
+        self.assertIn("SPLIT-THE-REFUND-BEHAVIOUR", ba_calls[1]["instr"])
+
+
+# ---------------------------------------------------------------------------
+# m6 — crash-resume past a committed BA stage must emit an observable signal
+#      that flow reconciliation was NOT run (instead of silently dropping it).
+# ---------------------------------------------------------------------------
+class TestResumeReconciliationSignal(unittest.TestCase):
+    def test_resume_skipping_ba_emits_reconciliation_signal(self) -> None:
+        # All PT stages + the BA stage already committed. On resume the BA stage
+        # is skipped BEFORE the reconciliation branch, so the workflow must emit
+        # an observable telemetry signal noting reconciliation must be run manually.
+        committed = (
+            "aaaaaaa plan-feature(MOCK-DATA): ux-prototyping\n"
+            "bbbbbbb plan-feature(MOCKUP): ux-prototyping\n"
+            "ccccccc plan-feature(FLOW): ux-prototyping\n"
+            "ddddddd plan-feature(BA): ux-prototyping\n"
+        )
+        flow_ref_log = (
+            "ccccccc\x00plan-feature(FLOW): ux-prototyping\n"
+            "\n"
+            "docs/product-truth/flows/x/y.flow.json\n"
+        )
+        cfg = {
+            "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
+            "triageRoute": "technical",
+            "committedLog": committed,
+            "flowRefLog": flow_ref_log,
+        }
+        res, side = _run(cfg)
+        self.assertEqual(res.get("status"), "ok")
+        # An observable, non-silent telemetry signal was emitted…
+        self.assertIn("pt-telemetry", _labels(side))
+        # …and it names the reconciliation-skipped event.
+        telem = next(c for c in side["allCalls"] if c.get("label") == "pt-telemetry")
+        self.assertIn("pt_reconciliation_skipped_on_resume", telem["instr"])
 
 
 if __name__ == "__main__":
