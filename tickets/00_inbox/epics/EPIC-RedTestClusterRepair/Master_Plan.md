@@ -102,3 +102,26 @@ Every ticket's exit criteria require the assertion to still verify the **real in
 proven against the **real artifact** in a fresh process — not greened by weakening or
 deleting the check, and not by adding an xfail. Green sign-off proves the code runs, not
 that it works (this repo's recurring phantom-done failure mode).
+
+## Drive outcome — 2026-07-15 (`/build-feature`)
+
+**Verified GREEN (target tests re-run unmasked with `-o addopts=""`) and landed:**
+tickets **01, 02, 03, 04, 06, 08, 09** — real fixes, not phantom-done.
+
+**Deferred — still `todo`, NOT done:**
+
+- **05 (`verify_precommit_active`)** — the drive's coder made `hook_freshness`
+  *advisory*, which **broke** `test_stale_hook_appends_hook_freshness_to_failing_checks`
+  (a test-weakening the anti-weakening AC forbids). That commit was **reverted**. Proper
+  fix: make freshness detection actually correct so both `test_all_checks_pass` AND the
+  stale-detection test pass — do **not** make the check advisory. Separately, the file's
+  `test_ac_e2_run_hook_resolver...` needs `scripts.commit_guardian.run_hook` (**BO-1700e-2**,
+  a different AC) — decide whether that belongs here or in its own ticket.
+- **07 (deployed `plan-feature.js` parity)** — the coder died on a transient API error
+  mid-edit, leaving a `SyntaxError: Illegal return statement` in the deployed file
+  (a botched E1→E2 hand-conversion). Partial work **discarded**. Proper fix: **regenerate**
+  the deployed `scripts/workflows/plan-feature.js` from the E2 source template via the
+  build's workflow-deploy transform — NOT by hand-editing. Requires the build environment
+  (`build.py` hangs under WSL; run on a Linux/CI box).
+- **10 (verification)** — not run (was gated behind 07). Re-run once 05 + 07 land, under
+  `AC_ENFORCE_STRICT=1` on a fresh checkout.
