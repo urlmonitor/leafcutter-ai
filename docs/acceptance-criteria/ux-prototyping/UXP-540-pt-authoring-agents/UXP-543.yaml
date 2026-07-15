@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: approved
-work_status: todo
+work_status: done
 criteria: |
   Given a request classified by the product-truth classifier,
   When the authoring pipeline runs,
@@ -40,8 +40,10 @@ origin_agent: BrainCandy
 created: 2026-07-14
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
 change_target: pipeline
 risk_surface: internal
 product_truth:

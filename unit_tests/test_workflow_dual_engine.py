@@ -545,11 +545,15 @@ def test_dispatch_order_plan_feature() -> None:
       Stage 0:
         5. ac-triage       label='stage-0-triage'
 
+      Product-Truth phase (always-on classifier; stub returns no 'outcome' so the
+      PT phase self-skips straight to the AC pipeline):
+        6. pt-classifier   label='pt-classify'
+
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
-        6. it-po           label='stage-itpo-author'
+        7. it-po           label='stage-itpo-author'
 
       Final gate (stub returns action=defer):
-        7. status-checker  label='final-gate'
+        8. status-checker  label='final-gate'
 
     A dropped, reordered, or mis-typed agent type FAILS this test (AC-2 / M-1).
     """
@@ -569,6 +573,10 @@ def test_dispatch_order_plan_feature() -> None:
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),
+        # Always-on product-truth classifier runs between triage and the AC
+        # pipeline; with the default stub it returns no valid `outcome`, so the
+        # PT phase self-skips (no store-check, no PT authors) and continues.
+        ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
         ("status-checker", "final-gate"),
     ]

@@ -8,7 +8,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: in_progress
 criteria: |
   Given a natural-language feature request,
   When the classifier runs,
@@ -39,7 +39,9 @@ amended_by: []
 superseded_by: null
 covered_by:
   - docs/product-truth/classifier/eval.jsonl
-implemented_by: []
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
 change_target: code
 risk_surface: internal
 product_truth:

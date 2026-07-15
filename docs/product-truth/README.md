@@ -124,6 +124,15 @@ The same rule applies to flows: a new screen that belongs to an existing journey
 
 ## Who consumes these
 
+- **`/plan-feature`** is the **orchestrator** of the product-truth authoring set.
+  On every invocation it runs an always-on product-truth phase (between `ac-triage`
+  and the AC pipeline) that dispatches `pt-classifier`, then — filtered to the
+  classifier's outcome — the `mock-data-author`, `mockup-author`, and `flow-author`
+  agents (fixed order, each behind an approve/edit/cancel gate and a surgical
+  commit), hands the approved flow to the `business-analyst`, and reconciles the
+  reported back-links via `scripts/apply_flow_backlinks.py`. When this store is
+  absent the phase self-skips non-silently and AC authoring still proceeds. See
+  ADR-021 and `templates/skills/plan-feature/SKILL.md`.
 - **`business-analyst`** derives L2/L3 Gherkin ACs from a Flow's steps + branches
   (each branch → a scenario). See `acceptance_scenarios` on the flow.
 - **`test-writer`** builds fixtures from a Mock Data artifact's `records` — the tests

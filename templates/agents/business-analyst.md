@@ -312,6 +312,19 @@ This step is read-only and best-effort. Skip gracefully if the store is absent.
    your sign-off — one row per flow node → the AC ids you authored for it — so
    the flow's `implements` back-links can be reconciled by the store's owner.
 
+5. **Parent every flow-derived AC under an L1 (orphan-prevention — MANDATORY).** The
+   L2/L3 ACs you derive from flow steps are still ordinary ACs and MUST have an L1
+   parent, or `scan_ac_orphans.py` / `check_ac_parent_covered_by` (pre-commit hooks)
+   will reject them. Anchor them under the run's L1:
+   - When `/plan-feature` passes a `parent_l1_id`, parent the flow-derived L2/L3 under
+     that L1.
+   - When `parent_l1_id` is null (e.g. a net-new capability), parent them under the run's
+     L1 for the target component — on the strategic route the product-owner authored that
+     L1 earlier in the run; otherwise use the flow's covering L1 (found via `index.json`
+     `by_component`).
+   - If no component L1 exists at all, do NOT emit orphaned ACs: report the missing L1 in
+     your sign-off so an L1 is authored first. You author L2/L3 only — never invent an L1.
+
 Behaviors already covered by a §3a pattern still use `implements_pattern`; the
 flow input changes WHAT behaviors you find, not HOW you express shared ones.
 

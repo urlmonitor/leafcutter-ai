@@ -50,7 +50,7 @@
       "implements": [
         "UXP-530"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-15"
     },
     {
@@ -170,7 +170,7 @@
       "implements": [
         "UXP-402"
       ],
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_asof": "2026-07-15"
     }
   ],
@@ -191,7 +191,7 @@
       "implements": [
         "UXP-543"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-15"
     },
     {
@@ -210,7 +210,7 @@
       "implements": [
         "UXP-543"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-15"
     },
     {
@@ -229,7 +229,7 @@
       "implements": [
         "UXP-543"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-15"
     },
     {
@@ -248,14 +248,14 @@
       "implements": [
         "UXP-543"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-07-15"
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 10,
+    "done": 4,
+    "in_progress": 2,
+    "not_started": 4,
     "total": 10,
     "asof": "2026-07-15"
   },

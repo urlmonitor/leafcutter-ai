@@ -363,7 +363,7 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/plan-feature/",
       "dependencies": [],
-      "description": "Triage, orchestrate, and gate AC authoring for a user's feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then routes through the correct authoring agents (PO v3, BA v3, IT PO v3) with user confirmation gates between stages. All output goes exclusively to the AC store — no ticket files are produced.",
+      "description": "Triage, orchestrate, and gate AC authoring for a user's feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then runs an always-on product-truth phase (classify via pt-classifier, draft the needed artifacts via mock-data-author, mockup-author, and flow-author in fixed order behind approve/edit/cancel gates and surgical commits, then derive ACs from the approved flow) before routing through the AC authoring agents (PO v3, BA v3, IT PO v3) with user confirmation gates between stages. Self-skips non-silently when the product-truth store is absent. Output goes exclusively to the AC store and the product-truth store — no ticket files are produced.",
       "invocation_surface": "/plan-feature",
       "workflow_script": ".claude/workflows/plan-feature.js",
       "components": [

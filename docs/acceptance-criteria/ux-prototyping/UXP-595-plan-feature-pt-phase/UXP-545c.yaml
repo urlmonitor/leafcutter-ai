@@ -1,0 +1,50 @@
+id: UXP-545c
+components:
+  - ux_prototyping
+title: "Cancelling at a product-truth gate opens no PR and preserves prior committed stages"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given a product-truth stage is presented at its review gate,
+  When the user chooses cancel,
+  Then no pull request is opened,
+  And every product-truth stage committed before the cancelled one is preserved,
+  And the cancelled stage's draft is left uncommitted,
+  And the run reports where it was cancelled.
+depends_on:
+  - UXP-545
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  The PT gate handling in templates/workflows-js/plan-feature.js returns on the cancel
+  action with cancelled_at set and a "No PR" message, without dispatching pull-request;
+  prior stage commits are already on the branch and are not rolled back, and the
+  cancelled stage's draft is not committed.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_cancel_no_pr_prior_commits_preserved
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "cancel at the mockup gate keeps the mock-data commit, skips the mockup commit, and opens no PR."

@@ -171,5 +171,8 @@ Rules:
 - **Never writes a file.** No Write/Edit tools; the decision is the returned JSON.
 - **Never drafts an artifact.** It routes; the authoring agents draft.
 - **Never invents an entity.** Unknown entity → map to the closest registered name
-  or flag it; do not add to `entity_registry` (the generator/validator own it).
+  or flag it; do not add to `entity_registry` here. `entity_registry` is authoritative,
+  hand-maintained vocabulary that the **mock-data-author** admits genuinely-new entities
+  to when it drafts the dataset (the generator/validator never add entities). As the
+  classifier you only name entities; assume the mock-data-author will admit any new one.
 - **Never emits an inconsistent (booleans, outcome) pair.**

@@ -1,0 +1,71 @@
+id: UXP-547
+components:
+  - ux_prototyping
+title: "An approved flow is handed to the business-analyst to derive ACs, forcing BA in when the route skipped it"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth phase produced and committed a flow,
+  When the AC pipeline reaches the decomposition stage,
+  Then the flow (and its regenerated index.json) is committed before the
+  business-analyst stage so the BA can self-discover it via index.json,
+  And the BA is given a flow-derivation instruction,
+  And when the triage route is technical (which normally skips the BA) but a flow was
+  produced, the BA stage is forced in with an L1 anchor so the derived L2s are not
+  orphaned,
+  And the flow→BA handoff instruction explicitly parents every flow-derived L2/L3 under
+  the run's L1 — under the triage parent_l1_id when present, and otherwise under the
+  component L1 (the product-owner-authored L1 on the strategic route, else the flow's
+  covering L1) — so no flow-derived AC is left orphaned,
+  And when no flow was produced the BA runs normally per the triage route.
+depends_on:
+  - UXP-595
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  templates/workflows-js/plan-feature.js commits the flow + regenerated index before the
+  BA stage, passes a free-text flow-derivation instruction (flow_ref is inert; the BA
+  self-discovers via index.json), and on the technical route with a produced flow forces
+  the BA stage in supplying an L1 anchor (the flow's covering L1, else the classifier
+  component L1).
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_force_ba_on_technical_when_flow_produced
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "a produced flow forces the BA stage in on the technical route."
+  - name: test_flow_committed_before_ba_author
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "the flow is committed before the BA stage is dispatched."
+  - name: test_ba_prompt_parents_under_parent_l1_when_present
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "when triage supplies a parent_l1_id, the flow→BA handoff explicitly parents flow-derived L2/L3 under it (orphan-prevention)."
