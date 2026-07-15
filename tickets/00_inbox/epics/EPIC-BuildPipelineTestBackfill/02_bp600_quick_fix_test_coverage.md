@@ -46,7 +46,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -151,7 +151,7 @@ tests:
 - [x] test-writer — 2026-07-15 07:30
 - [x] test-runner — 2026-07-15 07:45
 - [x] pr-reviewer — 2026-07-15 10:24
-- [ ] commit
+- [x] commit — 2026-07-15 10:29
 - [ ] pull-request
 
 ## Comments
@@ -212,3 +212,11 @@ completion_manifest:
   no_high_confidence_findings: true
   medium_findings_within_threshold: true
 Reviewed unit_tests/workflows/test_quick_fix_workflow.py (81 tests, 13 classes, all 21 BP-600 ACs covered). All 81 tests pass; ruff reports clean. Three medium-confidence findings noted (weak fallback disjuncts in test_ac_bp600d1i_checks_for_missing_fields, test_ac_bp600a1_final_return_includes_branch, and test_ac_bp600b3_js_does_not_delete_ac) — none are blockers; all are inherent limitations of source-contract testing for a JS runtime. Medium count (3) is at threshold (not > 3); Opus escalation not triggered.
+
+### 2026-07-15 10:29 — commit (status: ok)
+feedback-id: fb_2026-07-15_a9f1d9c7
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "test(BP-600): backfill 81-test source-contract suite for quick-fix workflow ACs"; staged files: unit_tests/workflows/test_quick_fix_workflow.py.
