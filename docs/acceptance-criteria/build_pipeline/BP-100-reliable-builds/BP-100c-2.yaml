@@ -31,7 +31,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BP-100c-2-i]
+covered_by:
+  - "tests/test_config_driven_build_paths.py"
+  - BP-100c-2-i
 implemented_by:
   - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"
 change_target: config

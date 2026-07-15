@@ -6,7 +6,7 @@ component: build_pipeline
 level: L3
 status: active
 req_status: active
-work_status: not_started
+work_status: done
 readiness: approved
 priority: high
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-3.yaml"
@@ -46,7 +46,8 @@ origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_tracked_source_guard.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -66,7 +66,8 @@ origin_agent: BrainCandy
 created: 2026-07-10
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_guard_real_package.py"
 implemented_by: []
 notes: |
   Cross-tree link: the same "deploy-dependent test needs build.py first" root is

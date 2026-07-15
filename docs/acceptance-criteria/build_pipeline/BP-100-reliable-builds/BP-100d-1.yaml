@@ -45,9 +45,7 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by:
-  - "unit_tests/commit_guardian/test_check_contract_shrinking.py::test_contract_shrinking_excludes_commit_guardian_paths"
-  - "unit_tests/commit_guardian/test_check_contract_shrinking.py::test_contract_shrinking_excludes_legacy_commit_guardian_path"
-  - "unit_tests/commit_guardian/test_check_contract_shrinking.py::test_non_commit_guardian_py_still_detected_as_production"
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py"
   - BP-100d-1-i
 implemented_by:
   - "templates/scripts/commit_guardian/check_contract_shrinking.py"

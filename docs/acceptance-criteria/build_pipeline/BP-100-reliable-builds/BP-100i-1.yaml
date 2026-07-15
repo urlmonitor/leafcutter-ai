@@ -60,7 +60,7 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by:
-  - unit_tests/commit_guardian/test_check_hook_parity.py::TestScriptParity
+  - "unit_tests/commit_guardian/test_check_hook_parity.py"
   - BP-100i-1-i
   - BP-100i-1-ii
 implemented_by:

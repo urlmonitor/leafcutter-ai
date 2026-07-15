@@ -90,6 +90,7 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Grounded the it_requirements against the observed 3x false-HALT (Step 0 `pytest --tb=no -q` ~L440 vs Step 3 test-runner full suite ~L671-677; neither runs build.py/install_shims); flagged PR #234 Step-3 build symmetry as incomplete (command+scope still differ); reasserted genuine regressions still HALT. Reassigned assigned_agent finalize-feature-workflow -> python-coder (the .js workflow body is python-coder surface per repo convention) and complexity S -> M. Tightened delivers_to and the finalize-feature.js doc_link relevance to name the concrete line numbers and the FIN-100c baseline-validity contract. Criteria unchanged."
     by: it-po
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_finalize_feature_preflight.py"
 implemented_by:
   - tickets/00_inbox/TICKET-20260707-FinalizeFeaturePreflightAndBuildSymmetry.md

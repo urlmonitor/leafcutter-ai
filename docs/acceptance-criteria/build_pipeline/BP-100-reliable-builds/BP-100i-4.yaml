@@ -61,7 +61,7 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by:
-  - unit_tests/commit_guardian/test_check_hook_parity.py::TestIntegrationMain
+  - "unit_tests/commit_guardian/test_check_hook_parity.py"
 implemented_by:
   - templates/scripts/commit_guardian/check_hook_parity.py
   - templates/scripts/commit_guardian/commit_guardian.json

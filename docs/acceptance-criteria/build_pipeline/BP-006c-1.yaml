@@ -31,7 +31,8 @@ created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_build_workflow_phase.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

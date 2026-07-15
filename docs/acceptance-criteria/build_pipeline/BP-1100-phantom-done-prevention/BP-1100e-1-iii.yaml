@@ -45,6 +45,7 @@ amended_by:
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/04_TICKET-20260706-BP-1100e-1-iii.md

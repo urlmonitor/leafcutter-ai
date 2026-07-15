@@ -28,7 +28,7 @@ expects_from: null
 amended_by: []
 superseded_by: null
 covered_by:
-  - unit_tests/commit_guardian/test_check_secrets_template_prose_prefixes.py
+  - "unit_tests/commit_guardian/test_check_secrets_template_prose_prefixes.py"
 implemented_by:
   - templates/scripts/commit_guardian/check_secrets.py
 notes: "Authored by /quick-fix. Root cause: the templates/skills/ prose-prefix exemption was added to scripts/commit_guardian/check_secrets.py (dev-runtime copy) but never forward-ported to templates/scripts/commit_guardian/check_secrets.py — the copy build.py actually deploys to consumers and the self-build. So the deployed hook still lacks templates/skills/ in _PROSE_FILE_PREFIXES and false-positives on documentation placeholders. Surfaced during EPIC-AcPipelineDeployGaps retrospective commit (c355f80), where the commit agent had to add a .security-allowlist entry as a workaround. Fix forward-ports the four prose-prefix tuple entries (templates/skills/ + the Windows backslash variant) into the template copy. Legacy fallback templates/commit-guardian/check_secrets.py is out of quick-fix scope (inert while the canonical templates/scripts/commit_guardian/ exists; kept in sync by check-build-drift)."

@@ -33,7 +33,7 @@ amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
-  - tests/test_build_artifact_parity.py::TestSourceManifestsCoversAllCategories
+  - "tests/test_build_artifact_parity.py"
 implemented_by:
   - scripts/build.py
 change_target: pipeline
