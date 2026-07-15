@@ -1,0 +1,94 @@
+id: FIN-100c-9
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "When the targeted rerun cannot run, fall back to conservative classification and surface modified_by_branch"
+level: L3
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given baseline_failures is null and the post-merge run reports failing tests
+  And the targeted main-HEAD rerun cannot be performed
+    (for example the main-HEAD checkout fails, or the build/deploy step errors)
+  When the workflow cannot determine which failures are pre-existing
+  Then it falls back to the conservative classification: all post-merge failures
+    are treated as regression and blocks_finalization is set to true
+  And the halt message lists each failing test together with its modified_by_branch flag
+    so a human can adjudicate which failures the branch actually touched
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "python-coder"
+estimated_complexity: M
+it_requirements: |
+  - NARROWED SUCCESSOR TO FIN-100c-3: this AC is the sole surviving conservative
+    null-baseline path. Its trigger is narrower than FIN-100c-3's (now superseded_by
+    this AC): the conservative halt fires ONLY when baseline_failures is null AND the
+    targeted main-HEAD rerun cannot be performed — not on an ordinary null baseline
+    (which now triggers the FIN-100c-4 recovery) and not on ordinary test failures
+    during the rerun.
+  - FALLBACK MECHANICS: on rerun-unavailable, the workflow leaves baselineFailures
+    null (does NOT build a recovered baseline) and proceeds to the existing triage
+    dispatch, so the triage agent's Step 1 null-baseline path classifies all
+    post-merge failures as regression and sets blocks_finalization=true. This reuses
+    the pre-existing conservative behavior rather than re-implementing it.
+  - modified_by_branch SURFACING: the halt payload must list each failing test with
+    its modified_by_branch flag (already emitted per-entry by triage Step 3 and
+    forwarded in the halt payload ~L808) so a human can adjudicate which failures the
+    branch touched.
+  - TRIGGER SIGNALS: "rerun cannot be performed" = the main-HEAD `git worktree add`
+    /checkout fails, OR `python3 scripts/build.py` against the checkout errors. Catch
+    these SPECIFIC I/O failures, log at WARNING+ per the project error-handling
+    policy, and fall back — never crash finalize.
+  - CLEANUP: guarantee the temporary main-HEAD worktree is removed on the fallback
+    path (no /tmp leak).
+  - DISTINCT OBSERVABILITY: emit a log line distinguishing "targeted rerun
+    unavailable — conservative fallback" from a genuine recovered-baseline regression
+    halt, so operators can tell the two halt causes apart.
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "on rerun failure, provides a conservative halt (blocks_finalization=true) whose message includes each failing test's modified_by_branch flag for human adjudication"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "signals that the main-HEAD rerun could not be performed (checkout or build/deploy failure)"
+test_spec:
+  - name: test_rerun_checkout_failure_falls_back_to_conservative_halt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When the main-HEAD checkout fails, the workflow falls back to the conservative null-baseline path (all failures regression, blocks_finalization=true)."
+  - name: test_rerun_build_failure_falls_back_to_conservative_halt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When the build/deploy step against the main-HEAD checkout errors, the workflow falls back to the conservative halt."
+  - name: test_conservative_fallback_sets_blocks_finalization_true
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The fallback halt sets blocks_finalization=true and treats every post-merge failure as regression."
+  - name: test_halt_message_lists_modified_by_branch_per_test
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The conservative halt message lists each failing test together with its modified_by_branch flag."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "rerun-failure fallback branch keeps baselineFailures null (~L490-495) and proceeds to triage forwarding (~L759-761); this AC is the narrowed successor to FIN-100c-3 (which it supersedes) — the conservative path now fires only when the rerun is unavailable"
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 1 conservative null-baseline path (all regressions, blocks_finalization=true) and the modified_by_branch field emitted per entry in Step 3"
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added estimated_complexity (M), it_requirements (narrowed-successor role vs FIN-100c-3; fallback reuses the existing null-baseline triage Step 1 rather than re-implementing; modified_by_branch surfaced in the halt payload ~L808; specific checkout/build failure signals + graceful degradation + worktree cleanup; distinct observability log), and test_spec (4 descriptors). RECONCILIATION: dropped depends_on FIN-100c-3 because this AC now supersedes it (a superseded AC cannot be a live dependency) and updated the finalize-feature.js doc_link to state the supersession. assigned_agent python-coder and criteria unchanged."
+    by: it-po
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+work_status: todo

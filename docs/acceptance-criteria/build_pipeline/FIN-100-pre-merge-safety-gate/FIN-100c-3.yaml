@@ -6,7 +6,7 @@ components:
 title: "Null baseline causes all failures to be treated as regressions"
 level: L3
 component: finalize
-status: active
+status: superseded_by
 parent: FIN-100c-2
 criteria: |
   Given Step 0 failed to capture a baseline (baseline_failures is null)
@@ -39,8 +39,11 @@ doc_links:
     relevance: "Step 0 graceful degradation and its downstream consequence on triage"
 depends_on:
   - FIN-100a-2
-superseded_by: null
-amended_by: []
+superseded_by: FIN-100c-9
+amended_by:
+  - reason: "it-po-reconciliation"
+    entry: "SUPERSEDED by FIN-100c-9. This AC specified the conservative null-baseline path (baseline null -> ALL failures regression, HALT) as the PRIMARY/only behavior, which directly contradicts the new FIN-100c-4 primary path (baseline null -> targeted main-HEAD rerun to recover a baseline instead of blanket regression). Reconciliation chosen: Option (b) — supersede FIN-100c-3 by FIN-100c-9 rather than narrow its criteria trigger (narrowing the trigger would require editing the BA-owned criteria field, which is out of IT-PO lane; superseding is a metadata operation). FIN-100c-9 is the narrowed successor: it preserves the exact conservative behavior described here (all failures regression, blocks_finalization=true, triage Step 1) but fires ONLY when the targeted main-HEAD rerun cannot be performed, and additionally surfaces modified_by_branch per failing test. The triage agent template's Step 1 null-baseline behavior is unchanged and is now reached only via the FIN-100c-9 fallback. Set status: superseded_by and superseded_by: FIN-100c-9. Criteria and it_requirements left intact for lineage."
+    by: it-po
 covered_by:
   - "unit_tests/workflows/test_finalize_pre_merge_safety_gate.py"
 implemented_by: []

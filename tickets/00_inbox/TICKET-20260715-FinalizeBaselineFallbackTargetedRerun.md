@@ -18,6 +18,16 @@ tags:
 files_touched:
   - templates/workflows-js/finalize-feature.js
   - templates/agents/test-failure-triage.md
+ac_traceability:
+  l2:
+    - FIN-100c-4
+    - FIN-100c-5
+    - FIN-100c-6
+    - FIN-100c-7
+    - FIN-100c-8
+  l3:
+    - FIN-100c-9
+  ac_path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/
 ---
 
 # finalize-feature: targeted per-test rerun when baseline capture fails, not blanket regression
@@ -67,6 +77,12 @@ This is the documented `finalize_false_test_regression` pattern; the workflow's
 own Step 3 note already acknowledges it but still halts.
 
 ## Acceptance Criteria
+
+> These Gherkin ACs are for human readability. The **canonical, test-coverable
+> ACs live in the store** under `docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/`
+> (FIN-100c-4..9, children of L1 `FIN-100c`). Where the two diverge, the store
+> YAML wins. See the AC Traceability table below for the mapping.
+
 - [ ] AC-1: When the Step 0 baseline is unavailable (`baseline_failures == null`),
       the Step 3 triage does NOT blanket-classify all post-merge failures as
       regressions. Instead, for each post-merge failing test it performs a
@@ -87,6 +103,23 @@ own Step 3 note already acknowledges it but still halts.
       post-merge failure whose test is not modified by the branch and fails on main
       HEAD, triage returns `pre_existing`/`blocks_finalization: false` (not
       `regression`).
+
+## AC Traceability
+
+Canonical ACs in the store (L1 parent `FIN-100c` — "Test failures are triaged into
+regression, pre-existing, or flaky"):
+
+| Store AC | Level | Behavior | Agent | Body AC |
+|----------|-------|----------|-------|---------|
+| FIN-100c-4 | L2 | Null baseline → targeted main-HEAD rerun (with `build.py` parity) instead of blanket regression | python-coder | AC-1, AC-3 |
+| FIN-100c-5 | L2 | Rerun scoped to only the failing test IDs → bounded runtime | python-coder | AC-2 |
+| FIN-100c-6 | L2 | Build a recovered baseline (IDs that also fail on main), forward as non-null (`[]` when clean) | python-coder | AC-1 |
+| FIN-100c-7 | L2 | Classify: fails-on-main → `pre_existing`; passes-on-main-but-fails-post-merge → `regression` | test-failure-triage | AC-1 |
+| FIN-100c-8 | L2 | Only real regressions set `blocks_finalization=true` | test-failure-triage | AC-5 |
+| FIN-100c-9 | L3 | Rerun-unavailable → conservative fallback + surface each test's `modified_by_branch` | python-coder | AC-4 |
+
+Supersession: `FIN-100c-3` (the prior "null baseline → all regressions, halt" path) is
+`superseded_by: FIN-100c-9`.
 
 ## AC Coverage
 
