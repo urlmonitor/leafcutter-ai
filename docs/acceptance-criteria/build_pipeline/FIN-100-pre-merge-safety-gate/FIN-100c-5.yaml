@@ -1,0 +1,43 @@
+id: FIN-100c-5
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "The main-HEAD rerun is scoped to only the failing test IDs so it completes in bounded time"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the full-suite baseline run timed out, leaving baseline_failures null
+  And the post-merge run reports exactly K failing test IDs
+    (K = 3 in the 2026-07-15 case)
+  When the workflow performs the main-HEAD rerun
+  Then the rerun executes only those K specific test IDs and no others
+  And it does NOT re-run the full test suite
+  And the rerun therefore completes even when the full-suite baseline did not
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "python-coder"
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "provides a bounded-time recovered baseline covering exactly the post-merge failing test IDs"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides the K post-merge failing test IDs to rerun (baseline_failures=null)"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "null-baseline rerun branch must pass only the failing test node IDs (not the full suite) to the runner"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "baseline capture can time out on the full suite; the targeted rerun must remain bounded"
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+work_status: todo

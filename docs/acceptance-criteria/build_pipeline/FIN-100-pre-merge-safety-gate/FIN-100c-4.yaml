@@ -1,0 +1,54 @@
+id: FIN-100c-4
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "Null baseline triggers a targeted main-HEAD rerun instead of blanket regression"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given Step 0 failed to capture a baseline (baseline_failures is null)
+  And the post-merge test run reports a non-empty set of failing tests
+    (for example the 3 deploy-dependent tests observed on 2026-07-15:
+     "test_plan_feature_sha_matches", "test_plan_feature_size_matches",
+     "test_commit_guardian_imports")
+  When the finalize workflow reaches the regression-triage stage
+  Then it does NOT immediately classify every post-merge failure as a regression
+  And it establishes a checkout of main HEAD
+  And it runs the project build/deploy step against that checkout so that
+    deploy-dependent tests are evaluated under the same build/deploy conditions
+    as the post-merge run
+  And it re-executes the failing tests against main HEAD to determine which of
+    them also fail there
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "python-coder"
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "provides a recovered baseline derived from a main-HEAD rerun in place of the null baseline, so triage can distinguish pre-existing from new failures"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides baseline_failures=null and a non-empty post_merge_failures list"
+  - agent: "test-runner"
+    contract: "returns the post-merge failure list with test IDs in file::test_name format"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "null-baseline handling (~L490-495) and triage forwarding (~L660-664) — the rerun branch replaces the blanket-regression path"
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 1 null-baseline conservative path that this behavior supersedes as the primary path"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Step 0 baseline capture and its downstream consequence on triage"
+depends_on:
+  - FIN-100c
+  - FIN-100a-2
+  - FIN-100a-4
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+work_status: todo

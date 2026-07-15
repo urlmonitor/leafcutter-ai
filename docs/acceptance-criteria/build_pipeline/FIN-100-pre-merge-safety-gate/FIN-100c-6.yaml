@@ -1,0 +1,44 @@
+id: FIN-100c-6
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "A recovered baseline is built from the rerun and supplied to triage in place of the null baseline"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the main-HEAD rerun of the K failing tests has completed
+  And each rerun test has a known pass/fail result on main HEAD
+  When the workflow assembles the input for the triage stage
+  Then it builds a recovered baseline containing exactly the failing test IDs
+    that ALSO failed on main HEAD
+  And it supplies that recovered baseline to the triage stage as baseline_failures
+    (in place of the null baseline)
+  And test IDs that PASSED on main HEAD are excluded from the recovered baseline
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "python-coder"
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "provides baseline_failures = the subset of post-merge failing test IDs that also fail on main HEAD, so the existing set-difference triage (FIN-100c-1/FIN-100c-2) classifies correctly"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides the per-test pass/fail results of the main-HEAD rerun"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "triage forwarding (~L660-664) must pass the recovered baseline as baseline_failures instead of null"
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Input Contract baseline_failures field and Step 2 partition consume the recovered baseline"
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+work_status: todo

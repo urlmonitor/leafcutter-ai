@@ -1,0 +1,43 @@
+id: FIN-100c-8
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "Only real regressions block finalization; pre_existing failures do not halt"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the triage report classifies the post-merge failures against the recovered baseline
+  When the workflow evaluates whether to halt finalization
+  Then blocks_finalization is set to true only if at least one failure was classified "regression"
+  And when every failure is classified "pre_existing" (all also fail on main HEAD),
+    blocks_finalization is false and finalization proceeds
+  And in the 2026-07-15 case (all 3 deploy-dependent tests pre-existing on main),
+    finalization is NOT halted with a false test_regression
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "test-failure-triage"
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "provides blocks_finalization=false when all failures are pre_existing, and blocks_finalization=true only when a real regression exists"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides the per-test triage classifications derived from the recovered baseline"
+doc_links:
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 6 compute blocks_finalization (true iff any regression/stale_test)"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "test_regression halt gate consumes blocks_finalization"
+depends_on:
+  - FIN-100c
+  - FIN-100c-7
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+work_status: todo

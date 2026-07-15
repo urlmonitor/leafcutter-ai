@@ -1,0 +1,45 @@
+id: FIN-100c-9
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "When the targeted rerun cannot run, fall back to conservative classification and surface modified_by_branch"
+level: L3
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given baseline_failures is null and the post-merge run reports failing tests
+  And the targeted main-HEAD rerun cannot be performed
+    (for example the main-HEAD checkout fails, or the build/deploy step errors)
+  When the workflow cannot determine which failures are pre-existing
+  Then it falls back to the conservative classification: all post-merge failures
+    are treated as regression and blocks_finalization is set to true
+  And the halt message lists each failing test together with its modified_by_branch flag
+    so a human can adjudicate which failures the branch actually touched
+origin_agent: "business-analyst"
+created: 2026-07-15
+created_by_ticket: null
+assigned_agent: "python-coder"
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "on rerun failure, provides a conservative halt (blocks_finalization=true) whose message includes each failing test's modified_by_branch flag for human adjudication"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "signals that the main-HEAD rerun could not be performed (checkout or build/deploy failure)"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "rerun-failure fallback branch preserves the conservative null-baseline behavior (FIN-100c-3) as the narrowed fallback"
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 1 conservative null-baseline path and modified_by_branch field in the triage report"
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+  - FIN-100c-3
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+work_status: todo
