@@ -378,17 +378,18 @@ class TestBP100b9ConsolidatedOutputDocWorkflowsRow(unittest.TestCase):
 
     def test_ac_bp100b9_shimmed_outputs_table_has_workflows_source_path(self):
         # covers: BP-100b-9
-        """docs/explanation/consolidated-output-root.md shimmed-outputs table must
-        contain a row with:
-          source = 'templates/scripts/workflows/'
+        """docs/explanation/consolidated-output-root.md shimmed-outputs section must
+        name the workflow-scripts source→output mapping:
+          source = 'templates/workflows-js/'
           output = '.claude/workflows/'
           description mentioning compiled workflow JS scripts.
 
-        NOTE: As of 2026-07-15 the table has columns 'Canonical path | Points to |
-        Why the shim is needed' showing .claude/workflows/ → .leafcutter/workflows/.
-        There is no column or row for the source template directory
-        'templates/scripts/workflows/'. This test is expected to fail until the
-        table is updated to include the source column/row required by BP-100b-9.
+        AC-ACCURACY NOTE: BP-100b-9's criteria states the source is
+        'templates/scripts/workflows/', but that directory does not exist. The real
+        source dir (build_phases.py:685 `workflows_js_src = TEMPLATES_DIR / "workflows-js"`)
+        is 'templates/workflows-js/'. This test asserts the REAL source path so the doc
+        stays factually correct; the AC criterion's stale path needs a
+        governance-approved correction (flagged in the audit report).
         """
         doc_path = (
             _REPO_ROOT / "docs" / "explanation" / "consolidated-output-root.md"
@@ -399,14 +400,14 @@ class TestBP100b9ConsolidatedOutputDocWorkflowsRow(unittest.TestCase):
         )
         content = doc_path.read_text(encoding="utf-8")
 
-        # The AC requires the source template directory in the table.
+        # The doc must name the REAL workflow-scripts source template directory.
         self.assertIn(
-            "templates/scripts/workflows/",
+            "templates/workflows-js/",
             content,
-            "consolidated-output-root.md shimmed-outputs table must include "
-            "'templates/scripts/workflows/' as the source path for the "
-            ".claude/workflows/ row. Currently the table only shows the canonical "
-            "shim path and its .leafcutter/ target, not the template source dir.",
+            "consolidated-output-root.md must name 'templates/workflows-js/' as the "
+            "source directory for the .claude/workflows/ shimmed output (the real "
+            "source per build_phases.py; BP-100b-9's criteria path "
+            "'templates/scripts/workflows/' is stale and does not exist).",
         )
 
         # The row must reference .claude/workflows/ as the output (canonical) path.
