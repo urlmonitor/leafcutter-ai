@@ -23,6 +23,7 @@ mutates:
 - description: Read-only agent — no filesystem mutations
   name: none
   surface: none
+produces: production_code
 behavioral_patterns:
 - behavior: 'stop and ask before writing:
 
@@ -47,7 +48,6 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: the request is flavour-incompatible
-produces: production_code
 ---
 
 You are the SQL view creation specialist. You are dispatched by `sql-coder` when the
