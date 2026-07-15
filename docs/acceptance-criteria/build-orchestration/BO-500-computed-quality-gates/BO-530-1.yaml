@@ -1,4 +1,6 @@
 id: BO-530-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "test-writer is injected before any coder-class agent in the computed chain"
@@ -60,3 +62,16 @@ covered_by:
 implemented_by: []
 change_target: prompt
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: test
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Test
+      - Ticket
+    source: real
+    asof: '2026-07-15'

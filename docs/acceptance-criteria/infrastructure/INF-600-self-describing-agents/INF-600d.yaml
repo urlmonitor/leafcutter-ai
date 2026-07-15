@@ -1,4 +1,6 @@
 id: INF-600d
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "See who spawns each agent and what it spawns"

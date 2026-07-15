@@ -1,0 +1,37 @@
+id: UXP-491
+readiness: reviewed
+priority: medium
+title: "Define a feature the product-truth way — describe it, review the draft, and get ACs from the flow"
+component: ux-prototyping
+level: L1
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  As a product owner, I can define a feature by saying what I want in plain language,
+  have the system draft a flow (plus mock data and mockups) I can actually look at,
+  and — once I review and approve it — have the acceptance criteria generated from the
+  flow's steps, so the flow I approved stays the reviewable source of truth the rest
+  of the pipeline builds from.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/define-a-feature.flow.json
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-400
+  - UXP-400a
+  - UXP-401
+  - UXP-401a
+  - UXP-402
+  - UXP-402a
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

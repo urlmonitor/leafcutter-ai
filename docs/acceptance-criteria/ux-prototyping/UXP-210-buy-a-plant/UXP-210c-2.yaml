@@ -1,0 +1,44 @@
+id: UXP-210c-2
+readiness: reviewed
+priority: medium
+title: "Empty cart shows an empty state instead of a checkout"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a cart with no items,
+  When the customer views the cart,
+  Then an empty-cart message is shown, no total or pay button is offered, and a link back to the catalogue is provided.
+depends_on: [UXP-210c]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Empty-state branch of the cart screen; reads Order to detect that no pending
+  cart order exists and suppresses the total + pay affordances.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/customer-buys-a-plant
+    node: emptyCart
+    node_kind: branch
+    flow_kind: user
+    screen: cart
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+    source: mock
+    asof: '2026-07-15'

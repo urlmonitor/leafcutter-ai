@@ -1,4 +1,6 @@
 id: TKT-200d-2
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Only affected documentation is regenerated, not the entire package"

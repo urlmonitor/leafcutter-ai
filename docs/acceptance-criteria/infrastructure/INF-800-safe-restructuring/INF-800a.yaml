@@ -1,4 +1,6 @@
 id: INF-800a
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Know what breaks before you change it"

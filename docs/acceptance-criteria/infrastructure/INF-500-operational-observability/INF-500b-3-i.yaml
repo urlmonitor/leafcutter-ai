@@ -1,4 +1,6 @@
 id: INF-500b-3-i
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Trend detection uses >20% threshold for rising/falling classification"

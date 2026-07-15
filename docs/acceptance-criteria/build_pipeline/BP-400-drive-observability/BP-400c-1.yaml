@@ -1,4 +1,6 @@
 id: BP-400c-1
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Build system deploys all feedback analysis pipeline artifacts"

@@ -916,6 +916,78 @@
                 "_comment": "EPIC-FinalizeFeatureHardening/02: Blocks commits when any templates/workflows-js/*.js file contains a non-literal value (string concatenation, template-literal substitution, spread operator, call expression, or bare identifier) in its `export const meta` block. The Workflow runtime requires pure literals; any deviation causes a silent runtime failure. See docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md addendum (pure-literal meta contract)."
             },
             {
+                "id": "ensure-precommit-config",
+                "name": "Ensure Pre-commit Config (self-healing hook)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/ensure_precommit_config.py",
+                "language": "system",
+                "stages": ["pre-commit"],
+                "pass_filenames": false,
+                "always_run": true,
+                "_comment": "EPIC-WorktreeQualityGateGuard/05: Re-materializes .pre-commit-config.yaml when absent."
+            },
+            {
+                "id": "check-product-truth-validate",
+                "tier": "judgment",
+                "name": "Validate Product-Truth Store (schema + anti-phantom-done truth gate)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/validate_product_truth.py --quiet",
+                "language": "system",
+                "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ProductTruthTrust: jsonschema is a HARD dependency (exit 2 if absent). Enforces schema, cross-ref integrity, derived-vs-source parity, and the anti-phantom-done truth-evidence gate (done/in_progress AC in a BUILT flow must carry implemented_by or covered_by; mock/spec flows exempt)."
+            },
+            {
+                "id": "check-product-truth-generate",
+                "tier": "judgment",
+                "name": "Check Product-Truth Derived-Data Drift (generator --check)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/generate_product_truth.py --check --quiet",
+                "language": "system",
+                "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ProductTruthTrust: Single-writer generator in --check mode — exits non-zero if any derived field (flow impl_status/impl_summary, AC product_truth, index by_* maps) would change, making live-status drift a hard commit failure."
+            },
+            {
+                "id": "check-eval-staleness",
+                "tier": "judgment",
+                "name": "Check Agent-Eval Staleness (fast local freshness gate, no model)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_eval_staleness.py",
+                "language": "system",
+                "files": "(^scripts/evals/|^docs/product-truth/|^templates/agents/)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "TQ-200b-4: Fast local staleness guard. Delegates to scripts/evals/eval_selector.py --check --changed-files <staged> (SSOT selector + freshness gate) and BLOCKS when any affected agent's eval result is missing/stale, naming offenders + pointing at `python scripts/evals/run_agent_eval.py --agent <agent>`. No model call. Broad path filter = union of the three roots holding every trigger glob (scripts/evals/, docs/product-truth/, templates/agents/); over-firing is harmless (selector exits 0 when no agent's triggers match). Selector exit 2 / launch failure fails open; the REQUIRED CI eval check is the non-bypassable backstop (this block is bypassable with --no-verify)."
+            },
+            {
+                "id": "precommit-canary",
+                "name": "Pre-commit canary (PRECOMMIT_CANARY_OK probe)",
+                "entry": "python scripts/commit_guardian/precommit_canary.py",
+                "language": "system",
+                "stages": ["manual"],
+                "always_run": true,
+                "pass_filenames": false
+            },
+            {
+                "id": "check-hook-parity",
+                "name": "Check Hook Parity (leafcutter)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_parity.py",
+                "language": "system",
+                "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "script": "check_hook_parity.py",
+                "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
+                "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
+            },
+            {
                 "id": "check-ac-schema",
                 "tier": "judgment",
                 "name": "Check AC Store Schema, Binding Completeness, and Field Preservation (ACS-500f-1)",

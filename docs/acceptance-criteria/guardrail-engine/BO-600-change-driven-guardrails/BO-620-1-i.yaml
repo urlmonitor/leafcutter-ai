@@ -1,4 +1,6 @@
 id: BO-620-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Multi-value change_target unions all guardrails from each target's mapping"

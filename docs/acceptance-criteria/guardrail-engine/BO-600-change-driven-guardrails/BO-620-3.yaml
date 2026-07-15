@@ -1,4 +1,6 @@
 id: BO-620-3
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Infra-contract pair maps to plan review + blast-radius label"

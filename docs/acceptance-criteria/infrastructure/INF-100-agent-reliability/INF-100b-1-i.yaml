@@ -1,4 +1,6 @@
 id: INF-100b-1-i
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Fix uses .exists() not .is_dir() to check .git presence"

@@ -1,4 +1,6 @@
 id: BO-560-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Computed chain places mandatory agents in correct priority order"

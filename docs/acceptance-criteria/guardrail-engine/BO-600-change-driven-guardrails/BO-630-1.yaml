@@ -1,4 +1,6 @@
 id: BO-630-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Low and medium complexity tasks route to the faster model tier"

@@ -1,4 +1,6 @@
 id: TKT-200a-3
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Diagram generation runs without manual invocation after spec completion"

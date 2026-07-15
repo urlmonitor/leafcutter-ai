@@ -1,4 +1,6 @@
 id: BP-100f-1
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "finalize-feature emits warning and skips git steps outside a git worktree"

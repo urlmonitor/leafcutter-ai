@@ -1,4 +1,6 @@
 id: TKT-200c-2
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Review package cross-references specs to their diagrams and docs"

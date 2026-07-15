@@ -1,4 +1,6 @@
 id: BP-600
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Fix known bugs in minutes, not hours — without losing quality discipline"

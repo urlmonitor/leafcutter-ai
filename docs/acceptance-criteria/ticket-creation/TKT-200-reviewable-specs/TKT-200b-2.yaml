@@ -1,4 +1,6 @@
 id: TKT-200b-2
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Boundary doc is derived from specs, not manually written"

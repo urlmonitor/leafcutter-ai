@@ -1,4 +1,6 @@
 id: BP-600d
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "One command from diagnosis to done"

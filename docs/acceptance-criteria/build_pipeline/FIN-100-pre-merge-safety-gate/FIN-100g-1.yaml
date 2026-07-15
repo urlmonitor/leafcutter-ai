@@ -1,4 +1,6 @@
 id: FIN-100g-1
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Target branch/worktree resolved from input even when invoked outside the worktree"

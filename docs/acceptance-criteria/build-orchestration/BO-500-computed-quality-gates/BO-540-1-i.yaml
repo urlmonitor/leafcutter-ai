@@ -1,4 +1,6 @@
 id: BO-540-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Coder dispatch is blocked if architect-review has not signed off"

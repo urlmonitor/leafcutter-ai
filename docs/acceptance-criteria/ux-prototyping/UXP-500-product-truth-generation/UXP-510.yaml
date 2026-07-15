@@ -1,0 +1,51 @@
+id: UXP-510
+readiness: reviewed
+priority: medium
+title: "Generator recomputes each flow step's impl_status from its ACs' work_status"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the AC store and the product-truth flows,
+  When generate_product_truth.py runs,
+  Then it builds one {ac_id -> work_status} map in a single pass over the AC store,
+  And each flow step/branch impl_status is recomputed from the work_status of every AC
+  in its implements list (all done -> done; none started -> not_started; otherwise
+  in_progress),
+  And each flow's impl_summary is the counted rollup of those statuses.
+depends_on:
+  - UXP-590
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The generator makes a single pass over docs/acceptance-criteria/ to build the
+  ac_id -> work_status map, then derives each node's impl_status via the shared
+  WORK_STATUS_TO_IMPL mapping and rolls up impl_summary. This derivation logic is
+  importable so the validator agrees by construction.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/generate_product_truth.py
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: map
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

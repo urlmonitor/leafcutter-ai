@@ -1,0 +1,19 @@
+{
+  "id": "fern-and-fig/notify-me",
+  "component": "ux-prototyping",
+  "screen": "notify-me",
+  "title": "Notify me",
+  "summary": "STUB — registered so the customer-buys-a-plant flow's `notify` branch resolves. Replaces add-to-cart with a notify-me action for an out-of-stock plant. Not yet drawn; see plant-listing for the gold-reference shape.",
+  "entities": ["Customer", "Plant"],
+  "source": "mock",
+  "renders": null,
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 1,
+  "tags": ["catalog", "stub"],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "provenance": [
+    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Stub registration for flow screen resolution; HTML to be authored by the mockup agent, matching plant-listing quality." }
+  ]
+}

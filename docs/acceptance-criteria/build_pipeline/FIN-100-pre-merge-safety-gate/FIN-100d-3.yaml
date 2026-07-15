@@ -1,4 +1,6 @@
 id: FIN-100d-3
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Defensive guard at Step 4 catches blocks_finalization=true that bypassed Step 3 halt"

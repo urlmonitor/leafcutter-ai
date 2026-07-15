@@ -1,4 +1,6 @@
 id: FIN-100e-1
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "One tracking ticket is created per pre-existing or flaky failure"

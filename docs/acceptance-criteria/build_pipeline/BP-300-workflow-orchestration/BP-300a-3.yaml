@@ -1,4 +1,6 @@
 id: BP-300a-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Workflow prompts user for clarification when investigators disagree or have low confidence"

@@ -1,4 +1,6 @@
 id: BO-540-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "flow_change injects documentation-expert before any coder in the computed chain"
@@ -57,3 +59,15 @@ covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: docs
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Diff
+      - Ticket
+    source: real
+    asof: '2026-07-15'

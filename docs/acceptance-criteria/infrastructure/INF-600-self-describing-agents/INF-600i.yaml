@@ -1,4 +1,6 @@
 id: INF-600i
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Agent template declares its knowledge and skills"

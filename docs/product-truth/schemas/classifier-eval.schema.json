@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Classifier eval row",
+  "description": "One labelled example for the artifact-need classifier (the 'bridge' decision). Given a plain request, which product-truth artifacts must be drafted, and which agent builds it. `outcome` must be consistent with `expected{}` (validated by scripts/validate_product_truth.py).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "request", "expected", "outcome", "reason", "builds_with", "component", "entities"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^clf-[0-9]{3}$" },
+    "request": { "type": "string", "minLength": 5 },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["needs_flow", "needs_mock_data", "needs_mockup"],
+      "properties": {
+        "needs_flow": { "type": "boolean" },
+        "needs_mock_data": { "type": "boolean" },
+        "needs_mockup": { "type": "boolean" }
+      }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["full-set", "mockup+data", "mockup-only", "mock-data-only", "none"],
+      "description": "Derived from expected{}: TTT=full-set, FTT=mockup+data, FFT=mockup-only, FTF=mock-data-only, FFF=none. Other combos are flagged by the validator."
+    },
+    "reason": { "type": "string", "minLength": 5 },
+    "builds_with": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["frontend-coder", "python-coder", "sql-coder", "documentation-expert", "business-analyst", "test-writer"] },
+      "description": "The existing leafcutter agent(s) that build the result — the bridge to today's system."
+    },
+    "component": { "type": "string" },
+    "entities": { "type": "array", "items": { "type": "string" } },
+    "decision": {
+      "type": "string",
+      "enum": ["create", "extend"],
+      "description": "Optional: whether the request creates a NEW artifact or EXTENDS an existing one (the store's add-vs-create protocol)."
+    },
+    "extends": { "type": "string", "description": "Optional: artifact id this request extends (when decision=extend)." },
+    "ac": { "type": "string", "description": "Optional back-reference to the acceptance-criterion id this row exercises (bidirectional traceability to the AC store). Ignored by the scorer." }
+  }
+}

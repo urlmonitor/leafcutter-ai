@@ -1,0 +1,369 @@
+{
+  "id": "leafcutter/ac-lifecycle",
+  "component": "ac-driven-dev",
+  "product": "Leafcutter",
+  "name": "How an acceptance criterion is born, built & retired",
+  "level": "pipeline",
+  "summary": "The data flow of an acceptance criterion through the AC-driven pipeline: a plain-language request is triaged, the authoring agents (PO → BA → IT PO) write the AC records into the store, you approve each stage, the scanner surfaces ready ACs, a wired ticket is generated, and once its implementation merges the AC is marked done automatically. Around that spine sit the update paths — scope stays locked to the author, existing code is discovered and back-linked, ACs can be re-homed without breaking references, and retiring an AC forces its code to be reconciled.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": [
+    "ac-driven-dev",
+    "acceptance-criteria",
+    "lifecycle",
+    "pipeline"
+  ],
+  "entities": [
+    "Request",
+    "Ac",
+    "Ticket",
+    "AcStore"
+  ],
+  "steps": [
+    {
+      "id": "triage",
+      "label": "Triage the request",
+      "human": "A new feature request enters through /plan-feature; a fast triage agent classifies it (strategic / behavioral / technical / covered) and checks the store for duplicates before any AC is written.",
+      "order": 1,
+      "agent": "ac-triage",
+      "consumes": [
+        "Request",
+        "AcStore"
+      ],
+      "produces": [
+        "routing_decision"
+      ],
+      "reads": [
+        "Request",
+        "AcStore"
+      ],
+      "implements": [
+        "ACD-300a"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "author",
+      "label": "Author the AC tree (PO → BA → IT PO)",
+      "human": "The workflow runs the authoring agents in sequence — the Product Owner writes L0/L1 value, the Business Analyst decomposes them into L2/L3 Gherkin, the IT PO adds the technical fields — writing AC YAML records into the store, never into ticket files.",
+      "order": 2,
+      "agent": "plan-feature (product-owner → business-analyst → it-po)",
+      "consumes": [
+        "routing_decision",
+        "Request"
+      ],
+      "produces": [
+        "Ac.criteria (L0-L3)",
+        "Ac.assigned_agent",
+        "Ac.delivers_to",
+        "Ac.expects_from"
+      ],
+      "reads": [
+        "Request"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-300b",
+        "ACD-300d"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "approve",
+      "label": "Review, approve & commit each stage",
+      "human": "You confirm each authoring stage before the next agent runs; on approval the AC's readiness advances and the stage's output is committed to git, so the store moves forward one reviewed step at a time.",
+      "order": 3,
+      "agent": "plan-feature gate + commit",
+      "consumes": [
+        "Ac.criteria (L0-L3)"
+      ],
+      "produces": [
+        "Ac.readiness=approved",
+        "commit (AC YAML)"
+      ],
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-300c",
+        "ACD-300g"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "scan",
+      "label": "Scan the store for ready work",
+      "human": "The scanner walks the store for todo, unblocked leaf ACs and presents them as a prioritized backlog of what can be built next.",
+      "order": 4,
+      "agent": "scan_ac_store.py + ac_prioritizer.py",
+      "consumes": [
+        "Ac.readiness=approved",
+        "Ac.work_status",
+        "Ac.depends_on"
+      ],
+      "produces": [
+        "ranked ready ACs"
+      ],
+      "reads": [
+        "AcStore",
+        "Ac"
+      ],
+      "implements": [
+        "ACD-400a"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "generate",
+      "label": "Generate a wired ticket",
+      "human": "For a chosen ready AC the generator produces a fully-wired ticket and writes the implemented_by back-reference onto the AC, so the ticket and the AC point at each other.",
+      "order": 5,
+      "agent": "generate_ticket_from_ac.py",
+      "consumes": [
+        "ranked ready ACs"
+      ],
+      "produces": [
+        "Ticket (wired)",
+        "Ac.implemented_by"
+      ],
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ticket",
+        "Ac"
+      ],
+      "implements": [
+        "ACD-400b"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "complete",
+      "label": "Implement, then mark the AC done",
+      "human": "Once the implementing ticket merges, the AC store is updated automatically — mark_ac_done sets work_status to done and a post-merge hook flips every AC the completed ticket covered.",
+      "order": 6,
+      "agent": "mark_ac_done.py + post-merge hook",
+      "consumes": [
+        "Ticket (merged)",
+        "Ac.covered_by"
+      ],
+      "produces": [
+        "Ac.work_status=done"
+      ],
+      "reads": [
+        "Ticket",
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-600a",
+        "ACD-600b"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-15"
+    }
+  ],
+  "branches": [
+    {
+      "id": "govern",
+      "agent": "check-ac-schema hook / ac-fulfillment-gate",
+      "consumes": [
+        "Ac.criteria (L0-L3)",
+        "origin_agent"
+      ],
+      "produces": [
+        "rejected scope edit",
+        "attributed work_status change"
+      ],
+      "from": "author",
+      "condition": "an implementation agent tries to change an AC's scope",
+      "label": "Scope stays locked to the author",
+      "human": "Only the requirement's author can change what 'done' means; implementation agents may report progress via work_status but not rewrite the criteria, and every change is traceable to the agent that made it.",
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACS-400a",
+        "ACS-400c"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "backfill",
+      "agent": "ac discovery audit",
+      "consumes": [
+        "Ac.criteria (L0-L3)",
+        "existing code"
+      ],
+      "produces": [
+        "Ac.covered_by",
+        "Ac.implemented_by"
+      ],
+      "from": "scan",
+      "condition": "code for an AC already exists",
+      "label": "Discover & link existing code",
+      "human": "When implementing code already exists, the audit matches it to the AC by exact-criteria text and backfills the covered_by / implemented_by links instead of generating a duplicate ticket.",
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-800a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "rehome",
+      "agent": "ac re-home tool",
+      "consumes": [
+        "Ac.id"
+      ],
+      "produces": [
+        "Ac.component (moved, id stable)"
+      ],
+      "from": "author",
+      "condition": "the AC tree is reorganized",
+      "label": "Re-home without breaking links",
+      "human": "Each AC has a permanent id independent of its place in the tree, so a requirement can be moved to another component with a single change and every existing reference keeps working.",
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACS-800a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "retire",
+      "agent": "ac retire check",
+      "consumes": [
+        "Ac (deprecated)",
+        "Ac.implemented_by"
+      ],
+      "produces": [
+        "code-reconciliation gate"
+      ],
+      "from": "complete",
+      "condition": "a requirement is retired",
+      "label": "Retire & reconcile the code",
+      "human": "Retiring an AC triggers a check that the code it claimed is actually gone, so a deprecated requirement can't quietly leave live code behind.",
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACS-900a"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    }
+  ],
+  "impl_summary": {
+    "done": 3,
+    "in_progress": 3,
+    "not_started": 4,
+    "total": 10,
+    "asof": "2026-07-15"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "triage",
+      "given": "a new plain-language feature request",
+      "when": "/plan-feature triages it",
+      "then": "it is classified and checked against the store for duplicates before any AC is authored"
+    },
+    {
+      "for": "author",
+      "given": "a triaged request",
+      "when": "the authoring agents run in sequence",
+      "then": "L0-L3 acceptance criteria are written to the AC store and never to ticket files"
+    },
+    {
+      "for": "approve",
+      "given": "a completed authoring stage",
+      "when": "you approve it",
+      "then": "the AC's readiness advances and the stage output is committed to git before the next agent runs"
+    },
+    {
+      "for": "scan",
+      "given": "a store of acceptance criteria",
+      "when": "the scanner runs",
+      "then": "every todo, unblocked leaf AC is surfaced as prioritized ready work"
+    },
+    {
+      "for": "generate",
+      "given": "a ready AC",
+      "when": "a ticket is generated from it",
+      "then": "the ticket is fully wired and the AC records the implemented_by back-reference"
+    },
+    {
+      "for": "complete",
+      "given": "an implementing ticket that has merged",
+      "when": "the store is updated",
+      "then": "the covered ACs' work_status is set to done automatically"
+    },
+    {
+      "for": "govern",
+      "given": "an implementation agent editing an AC",
+      "when": "it tries to change the criteria text",
+      "then": "the change is rejected unless it is the author, and any allowed change is attributed to the agent that made it"
+    },
+    {
+      "for": "backfill",
+      "given": "an AC whose implementing code already exists",
+      "when": "the discovery audit runs",
+      "then": "the implementation is matched and linked via covered_by/implemented_by instead of generating a new ticket"
+    },
+    {
+      "for": "rehome",
+      "given": "an AC referenced from many places",
+      "when": "it is moved elsewhere in the tree",
+      "then": "its permanent id keeps every existing reference working"
+    },
+    {
+      "for": "retire",
+      "given": "a retired AC",
+      "when": "its retirement is checked",
+      "then": "leftover code the AC claimed blocks the commit until it is reconciled"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "BrainCandy (product-truth Atlas session)",
+      "date": "2026-07-14",
+      "note": "Real data-flow of the AC lifecycle (create -> approve -> scan -> ticket -> done) plus the governance, backfill, re-home and retire update paths, linked to the ac-driven-dev / ac-store ACs."
+    }
+  ]
+}

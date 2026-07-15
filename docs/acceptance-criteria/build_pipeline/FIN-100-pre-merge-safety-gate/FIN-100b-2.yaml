@@ -1,4 +1,6 @@
 id: FIN-100b-2
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Merge conflict halts workflow with clear error listing conflicting files"

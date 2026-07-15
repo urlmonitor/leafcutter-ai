@@ -1,4 +1,6 @@
 id: BP-200b-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Agent and skill frontmatter schemas distinguish required from build-injected fields"

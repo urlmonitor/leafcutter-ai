@@ -1,4 +1,6 @@
 id: KM-VIS-014
+readiness: reviewed
+priority: medium
 components:
   - knowledge_management
 status: active

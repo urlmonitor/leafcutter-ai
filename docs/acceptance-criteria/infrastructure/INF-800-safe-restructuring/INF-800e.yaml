@@ -1,4 +1,6 @@
 id: INF-800e
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Clear boundary between writing new code and restructuring existing code"

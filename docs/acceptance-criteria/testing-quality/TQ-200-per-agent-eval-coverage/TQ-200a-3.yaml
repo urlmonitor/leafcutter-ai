@@ -1,0 +1,46 @@
+id: TQ-200a-3
+components:
+  - testing_quality
+title: "Each eval set contains both golden and held-out cases"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an eval set for an agent,
+  When its rows are categorized,
+  Then the set contains at least one GOLDEN case and at least one HELD-OUT case,
+  And each row declares which kind it is,
+  And golden cases guard against regression while held-out cases probe
+    generalization (see TQ-200a-3-i and TQ-200a-3-ii).
+depends_on:
+  - TQ-200a
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Every eval set must carry both case kinds, each row tagged golden|held-out. The
+  runner may report scores split by kind (regression vs generalization). A set that
+  is all-golden or all-held-out is a coverage gap.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200a-3-i
+  - TQ-200a-3-ii
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: internal

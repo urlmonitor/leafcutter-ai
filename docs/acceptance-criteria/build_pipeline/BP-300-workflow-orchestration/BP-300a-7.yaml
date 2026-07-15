@@ -1,4 +1,6 @@
 id: BP-300a-7
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "debug.md falls back to prose skill for older Claude Code runtimes"

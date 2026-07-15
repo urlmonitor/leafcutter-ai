@@ -1,4 +1,6 @@
 id: BP-200a-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Agent template defines stop-and-ask boundaries deferring infrastructure edits"
@@ -38,7 +40,7 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
 amended_by: []
 superseded_by: null
-covered_by: [BP-200a-3-i]
+covered_by:
   - "unit_tests/agents/test_llm_expert_artifacts.py"
   - BP-200a-3-i
 implemented_by:

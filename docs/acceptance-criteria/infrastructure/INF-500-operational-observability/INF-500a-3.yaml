@@ -1,4 +1,6 @@
 id: INF-500a-3
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Manual SHA overrides bypass git log path queries"

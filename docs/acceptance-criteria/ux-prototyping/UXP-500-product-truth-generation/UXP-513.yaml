@@ -1,0 +1,49 @@
+id: UXP-513
+readiness: reviewed
+priority: medium
+title: "Generator is idempotent and offers --check for CI"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth store,
+  When generate_product_truth.py runs a second time with no source change,
+  Then it writes nothing (the derived data is byte-stable across runs),
+  And running with --check computes everything, writes nothing, and exits non-zero if and
+  only if any derived file would change,
+  So CI and pre-commit can gate on stale derived data.
+depends_on:
+  - UXP-590
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Every write step compares the newly serialized text against the current file text and
+  only writes on difference; --check short-circuits the write and returns exit code 1 when
+  changed is True.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/generate_product_truth.py
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: backref
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

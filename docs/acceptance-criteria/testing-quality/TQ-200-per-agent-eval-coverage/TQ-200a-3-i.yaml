@@ -1,0 +1,50 @@
+id: TQ-200a-3-i
+components:
+  - testing_quality
+title: "Golden cases are reverse-engineered from the gold artifacts and guard against regression"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the hand-walked gold artifacts in the product-truth store are the eval
+    oracle,
+  When a golden case is authored for an agent,
+  Then its input and expected outcome are reverse-engineered from a gold artifact
+    the agent must be able to reproduce,
+  And scoring a golden case asserts the agent reproduces an artifact of at least
+    the shape and quality of the gold reference,
+  And a golden case that once passed and later fails is treated as a regression.
+depends_on:
+  - TQ-200a-3
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The gold artifacts (e.g. fern-and-fig/customer-buys-a-plant flow, fern-and-fig/catalog
+  mock data, the approved mockups, and the classifier eval seed) are the oracle.
+  Golden cases derive their expected outcome from these; the README already states
+  agents "must reproduce artifacts of at least this shape and quality." A regression
+  is a golden case whose score drops below its recorded baseline.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+risk_surface: contract_boundary

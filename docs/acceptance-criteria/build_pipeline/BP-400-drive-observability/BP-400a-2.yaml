@@ -1,4 +1,6 @@
 id: BP-400a-2
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "emit_event.py creates missing log directories automatically"

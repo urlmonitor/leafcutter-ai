@@ -1,4 +1,6 @@
 id: BP-300a-6-i
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "debug.js is syntactically valid JavaScript"

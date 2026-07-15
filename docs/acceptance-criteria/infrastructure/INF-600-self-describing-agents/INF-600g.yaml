@@ -1,4 +1,6 @@
 id: INF-600g
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "An agent that cannot describe itself does not pass the build"

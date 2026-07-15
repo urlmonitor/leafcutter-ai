@@ -1,0 +1,36 @@
+id: UXP-492
+readiness: reviewed
+priority: medium
+title: "A flow renders live in the Atlas, coloured by each step's acceptance-criteria status"
+component: ux-prototyping
+level: L1
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  As a product owner, when I open the Atlas /flows view I see each stored flow drawn
+  as a graph whose steps are coloured by the live work_status of the acceptance criteria
+  that implement them, so the picture always reflects the real, current implementation
+  status rather than a badge someone has to remember to update.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-410
+  - UXP-410a
+  - UXP-411
+  - UXP-411a
+  - UXP-412
+  - UXP-412a
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

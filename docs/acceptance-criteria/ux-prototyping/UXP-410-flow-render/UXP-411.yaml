@@ -1,0 +1,49 @@
+id: UXP-411
+readiness: reviewed
+priority: medium
+title: "Each flow step resolves to its acceptance criterion's live work_status"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given a loaded flow whose steps carry implements links,
+  When the pipeline resolves each step,
+  Then the step's status is derived from the live work_status of its acceptance criteria,
+  And no hand-maintained per-step status is trusted over the AC work_status.
+depends_on:
+  - UXP-492
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  For each step, look up the ACs in step.implements and resolve the step's status
+  from those ACs' live work_status (done -> done, in_progress -> in_progress,
+  todo -> not_started).
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-411a
+implemented_by:
+  - leafcutter-web/lib/data/flows.ts
+  - leafcutter-web/lib/data/graph.ts
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/flow-render-pipeline
+    node: resolve
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

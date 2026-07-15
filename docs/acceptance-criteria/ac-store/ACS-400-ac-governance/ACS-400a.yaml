@@ -1,4 +1,6 @@
 id: ACS-400a
+readiness: reviewed
+priority: medium
 components:
   - ac_store
 title: "Only requirement authors can define what 'done' means"
@@ -26,3 +28,14 @@ covered_by: [ACS-400a-1, ACS-400a-2, ACS-400a-3, ACS-400a-3-i]
 implemented_by: []
 change_target: code
 risk_surface: auth
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: govern
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-07-15'

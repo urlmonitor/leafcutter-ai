@@ -1,4 +1,6 @@
 id: FIN-100a-1
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Successful baseline capture records failing tests from main HEAD"

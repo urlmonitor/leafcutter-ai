@@ -1,4 +1,6 @@
 id: BP-200d-2
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Prompt-audit skill implements six distinct detection checks"
@@ -44,7 +46,7 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
 amended_by: []
 superseded_by: null
-covered_by: [BP-200d-2-i, BP-200d-2-ii]
+covered_by:
   - "unit_tests/agents/test_llm_expert_artifacts.py"
   - BP-200d-2-i
   - BP-200d-2-ii

@@ -1,4 +1,6 @@
 id: BP-200a-1
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Agent template frontmatter declares all required fields for a phase agent"

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fern &amp; Fig — Checkout</title>
+  <!--
+    REFERENCE MOCKUP — screen: checkout
+    Populated by hand from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json
+    (Customer alex-green + the pending open-cart Order 1050 → zz-plant, EUR 28).
+    Shows the honest failure states this screen owns:
+      branch paymentFailed          → declined-payment error banner
+      branch outOfStockAtCheckout   → sold-out-at-checkout error banner
+    Self-contained, low-fidelity, no external assets.
+  -->
+  <style>
+    :root {
+      --bg: #f6f5f1; --card: #ffffff; --ink: #23301f; --muted: #6c7a63;
+      --line: #e4e1d7; --leaf: #3f6b3a;
+      --err-bg: #f7e1df; --err-fg: #9a3b33; --err-line: #e6b8b2;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    header.site { padding: 28px 32px 20px; border-bottom: 1px solid var(--line); background: var(--card); }
+    header.site .brand { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; color: var(--leaf); }
+    header.site .tag { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    main { max-width: 860px; margin: 0 auto; padding: 28px 24px 48px; }
+    h1 { font-size: 20px; margin: 0 0 18px; }
+    .cols { display: grid; grid-template-columns: 1fr 300px; gap: 22px; align-items: start; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 20px 22px; }
+    .panel h2 { font-size: 15px; margin: 0 0 14px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+    .field input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: #fbfbf9; color: var(--ink); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .summary .line { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
+    .summary .line.grand { font-size: 18px; font-weight: 700; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+    .btn { width: 100%; margin-top: 14px; border: 1px solid var(--leaf); background: var(--leaf); color: #fff; border-radius: 8px; padding: 13px 18px; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; }
+    .btn[disabled] { background: #eceae3; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+    .banner { display: flex; gap: 10px; align-items: flex-start; background: var(--err-bg); color: var(--err-fg); border: 1px solid var(--err-line); border-radius: 10px; padding: 12px 14px; font-size: 14px; margin-bottom: 16px; }
+    .banner strong { display: block; }
+    .state-label { margin: 34px 0 12px; font-size: 13px; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="brand">Fern &amp; Fig</div>
+    <p class="tag">Houseplants, delivered.</p>
+  </header>
+  <main>
+    <h1>Checkout</h1>
+
+    <!-- Happy path: signed-in Customer alex-green paying for Order 1050 -->
+    <div class="cols">
+      <div class="panel">
+        <h2>Delivery &amp; payment</h2>
+        <div class="field">
+          <label>Name</label>
+          <input type="text" value="Alex Green" readonly />
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="text" value="alex@fernfig.shop" readonly />
+        </div>
+        <div class="field">
+          <label>Card number</label>
+          <input type="text" placeholder="1234 5678 9012 3456" />
+        </div>
+        <div class="row2">
+          <div class="field"><label>Expiry</label><input type="text" placeholder="MM / YY" /></div>
+          <div class="field"><label>CVC</label><input type="text" placeholder="123" /></div>
+        </div>
+      </div>
+      <div class="panel summary">
+        <h2>Order summary</h2>
+        <div class="line"><span>ZZ Plant &times; 1</span><span>&euro;28</span></div>
+        <div class="line"><span>Shipping</span><span>&euro;0</span></div>
+        <div class="line grand"><span>Total</span><span>&euro;28</span></div>
+        <button class="btn">Pay &euro;28</button>
+      </div>
+    </div>
+
+    <!-- Branch: paymentFailed — card declined, no order created, cart kept -->
+    <p class="state-label">Payment-declined state (branch: paymentFailed)</p>
+    <div class="cols">
+      <div class="panel">
+        <div class="banner">
+          <span aria-hidden="true">&#9888;</span>
+          <span><strong>Your payment was declined.</strong>No order was placed and your cart is safe. Try a different card or payment method.</span>
+        </div>
+        <div class="field"><label>Card number</label><input type="text" value="4000 0000 0000 0002" /></div>
+        <div class="row2">
+          <div class="field"><label>Expiry</label><input type="text" value="04 / 27" /></div>
+          <div class="field"><label>CVC</label><input type="text" value="123" /></div>
+        </div>
+      </div>
+      <div class="panel summary">
+        <h2>Order summary</h2>
+        <div class="line"><span>ZZ Plant &times; 1</span><span>&euro;28</span></div>
+        <div class="line grand"><span>Total</span><span>&euro;28</span></div>
+        <button class="btn">Try payment again</button>
+      </div>
+    </div>
+
+    <!-- Branch: outOfStockAtCheckout — plant sold out after being carted -->
+    <p class="state-label">Sold-out-at-checkout state (branch: outOfStockAtCheckout)</p>
+    <div class="cols">
+      <div class="panel">
+        <div class="banner">
+          <span aria-hidden="true">&#9888;</span>
+          <span><strong>Snake Plant is no longer available.</strong>It sold out while it was in your cart, so we can't complete this order. Remove it to continue, or browse similar plants.</span>
+        </div>
+      </div>
+      <div class="panel summary">
+        <h2>Order summary</h2>
+        <div class="line"><span>Snake Plant &times; 1</span><span>&euro;22</span></div>
+        <div class="line grand"><span>Total</span><span>&euro;22</span></div>
+        <button class="btn" disabled>Pay &euro;22</button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

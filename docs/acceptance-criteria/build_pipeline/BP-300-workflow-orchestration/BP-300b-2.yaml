@@ -1,4 +1,6 @@
 id: BP-300b-2
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Planner derives needed status from Sign-offs checklist when frontmatter says signed_off"

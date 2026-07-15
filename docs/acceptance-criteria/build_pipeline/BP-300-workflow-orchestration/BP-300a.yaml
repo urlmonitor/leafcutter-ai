@@ -1,4 +1,6 @@
 id: BP-300a
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "The debug workflow dispatches parallel investigators and synthesises findings deterministically"

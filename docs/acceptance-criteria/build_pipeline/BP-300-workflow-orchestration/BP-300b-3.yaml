@@ -1,4 +1,6 @@
 id: BP-300b-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Planner emits no drift warnings when frontmatter and Sign-offs are consistent"

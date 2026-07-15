@@ -1,4 +1,6 @@
 id: FIN-100b-1
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Clean merge of main into worktree produces post-merge state for testing"

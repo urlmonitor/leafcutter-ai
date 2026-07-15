@@ -1,4 +1,6 @@
 id: BO-650-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Architect discovers and reads existing architecture docs before producing artifacts"

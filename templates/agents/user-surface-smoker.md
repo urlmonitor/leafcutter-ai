@@ -173,6 +173,39 @@ If ANY stanza FAILs: emit `(status: blocker)` with:
 - The diff hunks that caused the failure
 - Named responsible agent: `python-coder` (for respawn)
 
+## Product-Truth Mockup Check (when the flow step has an approved Mockup)
+
+When the ticket implements a product-truth flow step whose `screen` has an
+**approved** Mockup, add a mockup-conformance check — assert the built surface
+matches the screen the Product Owner approved. This is **additive**: it runs
+alongside the `## Smoke Fixture` stanzas and never replaces them. You remain
+read-and-invoke only (`Read` the known store paths; no `Write` / `Edit`).
+
+**Resolution (skip gracefully if the store, the ref, or an approved mockup is
+absent):**
+
+1. `Bash ls docs/product-truth/index.json` — absent → skip this check; the smoke
+   result depends solely on the `## Smoke Fixture` stanzas.
+2. **Find the screen** via `index.json` `by_ac["<AC-id>"]` (the matched entry
+   names the `flow`, `node`, `screen`), or by reading the flow JSON and finding
+   the step/branch whose `implements` contains the ticket's AC.
+3. Read `docs/product-truth/mockups/<product>/<screen>.mockup.json`. If it is
+   missing or `readiness != approved`, **skip** and note "no approved mockup" in
+   your comment — only an approved mockup is a gate.
+4. **Derive expected markers** from the mockup: its `title`, plus the key values
+   from its `mock_data_ref` records
+   (`docs/product-truth/mock-data/<product>/<name>.mock.json`) that the screen
+   must display (e.g. plant names, prices, stock badges).
+5. **Assert** those markers appear in the invoked surface's observable output
+   (the rendered HTML / response body captured in `observed_output`). If a
+   required marker is absent → treat it as a stanza failure: reason "built
+   surface does not match approved mockup `<id>` — missing: `<markers>`", and
+   paste the excerpt.
+
+Fold the result into Step 6 aggregation: a missing-marker failure blocks exactly
+as an assertion-regex failure does. If no approved mockup resolves, this check is
+a no-op.
+
 ## Signoff Comment Schema
 
 ```

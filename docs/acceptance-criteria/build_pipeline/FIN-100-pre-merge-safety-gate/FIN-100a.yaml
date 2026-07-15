@@ -1,4 +1,6 @@
 id: FIN-100a
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Pre-merge test baseline is captured from main HEAD"
@@ -33,3 +35,13 @@ implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/finalize-feature
+    node: baseline
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

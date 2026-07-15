@@ -1,4 +1,6 @@
 id: BP-300a-6
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Workflow return object contains all required structured fields"

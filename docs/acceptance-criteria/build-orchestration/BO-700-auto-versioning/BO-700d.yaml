@@ -1,4 +1,6 @@
 id: BO-700d
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Read the changelog in the format that suits your context"

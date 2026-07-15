@@ -1,4 +1,6 @@
 id: INF-600a-6
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Agent frontmatter declares structured behavioral patterns"

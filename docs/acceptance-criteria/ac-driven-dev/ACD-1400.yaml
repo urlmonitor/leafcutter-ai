@@ -1,4 +1,6 @@
 id: ACD-1400
+readiness: reviewed
+priority: medium
 components:
   - ac_driven_dev
 status: active

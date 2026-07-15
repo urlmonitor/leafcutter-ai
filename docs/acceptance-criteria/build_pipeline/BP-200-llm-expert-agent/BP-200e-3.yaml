@@ -1,4 +1,6 @@
 id: BP-200e-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Prompt-audit skill compound-bash check distinguishes side-effect pipes from read-only pipes"

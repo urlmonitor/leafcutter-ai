@@ -1,0 +1,47 @@
+id: UXP-411a
+readiness: reviewed
+priority: medium
+title: "A step whose acceptance-criteria id does not resolve renders as an unknown/fallback status"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given a flow step whose implements list references an AC id that does not resolve in the AC store,
+  When the pipeline resolves that step,
+  Then the step is rendered with an explicit unknown/fallback status rather than being silently treated as done,
+  And the rest of the flow still resolves and renders normally.
+depends_on:
+  - UXP-411
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Unresolved AC ids degrade gracefully to a distinct fallback status (never defaulting to done);
+  a single bad reference does not break resolution of the other steps.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - leafcutter-web/lib/data/flows.ts
+  - leafcutter-web/lib/data/graph.ts
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/flow-render-pipeline
+    node: resolve
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

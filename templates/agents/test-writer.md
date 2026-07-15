@@ -422,6 +422,43 @@ functions or parametrize decorators.
 See `docs/testing/README.md` §Fixture Convention for the full layout and
 `load_fixture()` signature.
 
+### 2h.1 — Product-Truth Mock Data as the fixture source (mandatory when a `mock_data_ref` exists)
+
+The AC / flow this ticket implements may point at a reviewed **Mock Data**
+artifact — the exact dataset the Product Owner approved. When one exists, build
+your fixtures from its `records` rather than inventing synthetic data.
+
+**Why (repo failure-mode rationale — brief):** synthetic fixtures reproduce the
+same bias as the code under test, so green sign-offs pass on features that are
+actually broken against real data. This repo has shipped that failure repeatedly
+(EPIC-PhantomDoneFilesTouched; see CLAUDE.md "Real-artifact behavioral spot-check
+before declaring done"). The product-truth Mock Data store exists to kill it:
+tests run against the same records the PO reviewed, not against a hand-authored
+literal that happens to match the code's wrong assumption.
+
+**Resolution (read-only, best-effort — skip if the store is absent):**
+
+1. `Bash ls docs/product-truth/index.json` — if absent, skip this subsection and
+   author fixtures normally (2h).
+2. Find the `mock_data_ref`:
+   - **Via the flow/AC:** look up `by_ac["<source_ac>"]` in
+     `docs/product-truth/index.json` — the matched entry names its `flow` and
+     `mock_data`. Or read the flow at
+     `docs/product-truth/flows/<product>/<name>.flow.json` and take its top-level
+     `mock_data_ref`.
+   - **Directly:** the ticket or AC may carry a `mock_data_ref` field.
+3. Read `docs/product-truth/mock-data/<product>/<name>.mock.json`. Each
+   `entities.<Entity>.records` array holds the canonical fixture rows. Use the
+   entity names a flow step `reads` / `writes` to pick which records matter.
+4. Materialize per rule 2h: write the **exact** records (do not paraphrase or
+   round values) to `tests/fixtures/<module>/<name>.json` and load them via
+   `load_fixture('<module>/<name>')`. Assert against these exact values (e.g. the
+   Snake Plant record with `stock: 0` must yield `status: "out-of-stock"`).
+5. Where the artifact declares `invariants`, assert them too — they are the
+   properties the PO signed off (e.g. `status == 'out-of-stock' iff stock == 0`).
+
+If no `mock_data_ref` resolves, fall back to normal fixture authoring (2h).
+
 ### 2i — `# covers:` tag placement (mandatory for every test function)
 
 For every test function you write, add a `# covers: <AC-ID>` comment as the

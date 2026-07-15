@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Leafcutter Atlas — design tokens.
+ * A dark, botanical "cut-leaf" palette. Deep canopy-green canvas, a signature
+ * chlorophyll accent, amber for in-flight work, desaturated slate for settled/done.
+ * Variables are HSL channels (no hsl() wrapper) so Tailwind opacity modifiers work:
+ *   bg-primary/40, text-muted-foreground, etc.
+ */
+
+@layer base {
+  :root {
+    /* Surfaces — green identity kept, but low saturation so it never competes
+       with text; canvas slightly warmer/less loud than before */
+    --background: 158 16% 7%;        /* canopy floor */
+    --foreground: 150 6% 98%;        /* crisp near-white (was greyish 14%/92%) */
+    --card: 158 12% 13%;             /* raised surface — clearly above the canvas */
+    --card-foreground: 150 6% 98%;
+    --popover: 158 13% 13%;
+    --popover-foreground: 150 6% 98%;
+
+    /* Brand */
+    --primary: 150 64% 56%;          /* leaf / chlorophyll */
+    --primary-foreground: 160 40% 6%;
+    --secondary: 156 12% 19%;        /* hover/fill — reads distinctly on card */
+    --secondary-foreground: 150 6% 97%;
+
+    /* Neutrals */
+    --muted: 156 12% 18%;
+    --muted-foreground: 155 7% 80%;  /* secondary text — bright, near-neutral */
+    --accent: 168 55% 46%;           /* teal-leaf accent */
+    --accent-foreground: 150 14% 96%;
+
+    /* Signals */
+    --destructive: 356 78% 64%;      /* blocked / failed — lifted for small-text AA */
+    --destructive-foreground: 0 0% 98%;
+    --warning: 38 94% 60%;           /* in-flight / approved-not-built */
+    --warning-foreground: 40 60% 8%;
+    --success: 150 62% 52%;          /* done */
+    --success-foreground: 160 40% 6%;
+    --info: 205 82% 64%;
+
+    /* Lines & focus — visible dividers/outlines against the surfaces */
+    --border: 155 10% 30%;
+    --input: 155 10% 32%;
+    --ring: 150 64% 56%;
+
+    /* Data-viz ramp (categorical, botanical) */
+    --chart-1: 150 64% 52%;   /* leaf green */
+    --chart-2: 168 60% 46%;   /* teal */
+    --chart-3: 38 92% 58%;    /* amber */
+    --chart-4: 265 60% 66%;   /* orchid */
+    --chart-5: 200 78% 60%;   /* sky */
+    --chart-6: 20 80% 60%;    /* clay */
+    --chart-7: 320 55% 62%;   /* magenta */
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Explicit so the variable (defined on <body>) always resolves — never
+       falls back to the browser default serif. */
+    font-family: var(--font-geist-sans, ui-sans-serif), ui-sans-serif, system-ui,
+      -apple-system, "Segoe UI", Roboto, sans-serif;
+    /* subtle canopy vignette */
+    background-image:
+      radial-gradient(1200px 800px at 85% -10%, hsl(150 64% 52% / 0.06), transparent 60%),
+      radial-gradient(900px 700px at -10% 110%, hsl(168 60% 46% / 0.05), transparent 55%);
+    background-attachment: fixed;
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection {
+    background: hsl(var(--primary) / 0.28);
+  }
+  /* Refined scrollbars */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(156 16% 38%); }
+}
+
+@layer components {
+  /* Glass panel — the core surface of the Atlas. Near-opaque so content sits on
+     a distinct raised surface (not floating on the canvas), with a visible edge. */
+  .panel {
+    @apply rounded-xl border border-border bg-card/95 backdrop-blur-sm;
+    box-shadow:
+      0 1px 0 0 hsl(150 40% 90% / 0.04) inset,
+      0 20px 40px -24px hsl(0 0% 0% / 0.6);
+  }
+  .panel-hover {
+    @apply transition-all duration-200 hover:border-primary/50 hover:bg-card;
+  }
+  /* Section eyebrow — slightly brighter than plain muted text for legibility */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
+  }
+  /* Leaf-vein grid texture (used by hero backgrounds) */
+  .veins {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+  }
+  .text-balance { text-wrap: balance; }
+}
+
+/* React Flow theming to match the Atlas (loaded where reactflow is used) */
+.react-flow__background { background: transparent; }
+.react-flow__attribution { display: none; }
+.react-flow__controls {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px -12px hsl(0 0% 0% / 0.7);
+}
+.react-flow__controls-button {
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  fill: hsl(var(--foreground));
+}
+.react-flow__controls-button:hover { background: hsl(var(--secondary)); }

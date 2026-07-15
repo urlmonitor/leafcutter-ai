@@ -1,4 +1,6 @@
 id: BO-700d-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "A Markdown CHANGELOG file is rendered from the release data"

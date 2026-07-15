@@ -1,0 +1,83 @@
+id: UXP-543
+components:
+  - ux_prototyping
+title: "Only the artifact-agents the classifier calls for are run"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: todo
+criteria: |
+  Given a request classified by the product-truth classifier,
+  When the authoring pipeline runs,
+  Then only the artifact-agents the classifier calls for are dispatched,
+  And a mockup-only request runs the mockup agent but not the mock-data or flow agents,
+  And a mock-data-only request runs the mock-data agent but not the mockup or flow agents,
+  And a mockup+data request runs the mock-data and mockup agents but not the flow agent,
+  And a request classified 'none' drafts no product-truth artifacts and goes straight to normal AC authoring.
+depends_on:
+  - UXP-594
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: specifies
+    status: exists
+assigned_agent: pt-classifier
+estimated_complexity: M
+it_requirements: |
+  The routing that skips unneeded agents does not exist yet and must be built. The pipeline reads
+  the classifier outcome (full-set / mockup+data / mock-data-only / mockup-only / none — see
+  docs/product-truth/classifier/eval.jsonl) and dispatches only the corresponding authoring agents.
+  The pt-classifier agent that produces the outcome also does not exist yet (its needed inputs are
+  specced in docs/product-truth/mock-data/pipeline-prompts/classify-request.prompt.json).
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/author-product-truth
+    node: dataOnly
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/author-product-truth
+    node: mockupOnly
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/author-product-truth
+    node: noFlow
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/author-product-truth
+    node: none
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

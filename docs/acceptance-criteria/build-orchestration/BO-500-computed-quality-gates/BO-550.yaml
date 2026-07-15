@@ -1,4 +1,6 @@
 id: BO-550
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Unusual testing needs are expressed as constraints, not agent assignments"

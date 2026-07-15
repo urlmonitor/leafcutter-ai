@@ -1,4 +1,6 @@
 id: ACS-1000
+readiness: reviewed
+priority: medium
 components:
   - ac_store
 status: active

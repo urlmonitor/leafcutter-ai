@@ -1,4 +1,6 @@
 id: BP-100e-2
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Pre-commit hook rejects signed-off lines with imprecise timestamp suffixes"

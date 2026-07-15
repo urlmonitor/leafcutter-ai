@@ -1,4 +1,6 @@
 id: BP-100e-5
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Pre-commit hook rejects comment headings with imprecise timestamps"

@@ -1,4 +1,6 @@
 id: BO-300a-4
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "build-feature.md inline fallback template includes all four sections with placeholders"

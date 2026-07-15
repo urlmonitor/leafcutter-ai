@@ -1,4 +1,6 @@
 id: BP-100f-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "finalize-feature happy path is unchanged inside a valid git worktree"

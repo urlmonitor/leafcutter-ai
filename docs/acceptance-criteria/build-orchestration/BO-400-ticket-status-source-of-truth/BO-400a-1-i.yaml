@@ -1,4 +1,6 @@
 id: BO-400a-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Ticket already in_progress from a previous failed run"

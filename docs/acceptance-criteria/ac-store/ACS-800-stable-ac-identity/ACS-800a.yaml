@@ -46,3 +46,14 @@ notes: |
   the id-derivation logic this capability replaces.
 change_target: schema
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: rehome
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-07-15'

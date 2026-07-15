@@ -1,4 +1,6 @@
 id: FIN-100c-2
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Failures absent from baseline are classified as regressions"

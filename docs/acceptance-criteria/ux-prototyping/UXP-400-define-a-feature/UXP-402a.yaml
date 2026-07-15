@@ -1,0 +1,48 @@
+id: UXP-402a
+readiness: reviewed
+priority: medium
+title: "If the person rejects the drafted flow at review, no acceptance criteria are generated"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a drafted flow under review,
+  When the person rejects it outright rather than approving,
+  Then no acceptance criteria are generated from the flow,
+  And the flow remains in a draft (unapproved) state,
+  And nothing is written into the acceptance-criteria store for that flow.
+depends_on:
+  - UXP-402
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/define-a-feature.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: business-analyst
+estimated_complexity: S
+it_requirements: |
+  AC generation is strictly gated on approval: a rejected draft produces no AC files and
+  leaves the flow's readiness at draft, so the AC store never fills up from unapproved flows.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/define-a-feature
+    node: approve
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Flow
+    source: real
+    asof: '2026-07-15'

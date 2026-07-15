@@ -1,4 +1,6 @@
 id: FIN-100d-1
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "blocks_finalization=true causes immediate halt with non-zero exit"

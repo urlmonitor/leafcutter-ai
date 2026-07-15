@@ -1,4 +1,6 @@
 id: INF-400g-2-ii
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "emit_event.py appends (not overwrites) on subsequent calls"

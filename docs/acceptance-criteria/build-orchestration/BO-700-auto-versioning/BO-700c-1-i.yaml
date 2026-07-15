@@ -1,4 +1,6 @@
 id: BO-700c-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "An L3 fix with no L0 ancestor renders under an Ungrouped fixes heading"

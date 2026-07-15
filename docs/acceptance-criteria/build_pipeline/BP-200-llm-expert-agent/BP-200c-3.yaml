@@ -1,4 +1,6 @@
 id: BP-200c-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Ticket-supervisor spawn_allowlist includes llm-expert for automatic dispatch"

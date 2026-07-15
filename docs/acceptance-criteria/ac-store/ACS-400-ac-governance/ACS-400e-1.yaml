@@ -1,4 +1,6 @@
 id: ACS-400e-1
+readiness: reviewed
+priority: medium
 components:
   - ac_store
 title: "Blocked commit produces a clear, actionable error message"

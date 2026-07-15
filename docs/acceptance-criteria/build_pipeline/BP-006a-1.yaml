@@ -1,4 +1,6 @@
 id: BP-006a-1
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Each skill directory has a registry entry with all required fields"

@@ -1,0 +1,44 @@
+id: UXP-210f
+readiness: reviewed
+priority: high
+title: "Customer signs in before checkout and keeps their cart"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given an unauthenticated customer with items in their cart,
+  When they proceed toward checkout,
+  Then they are asked to sign in (or create an account) and their cart is preserved once signed in.
+depends_on: [UXP-210c]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Renders the sign-in screen between the cart and checkout; reads Customer to
+  authenticate, and the cart (pending Order) is preserved across the sign-in.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/customer-buys-a-plant
+    node: signin
+    node_kind: step
+    flow_kind: user
+    screen: sign-in
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Customer
+    source: mock
+    asof: '2026-07-15'

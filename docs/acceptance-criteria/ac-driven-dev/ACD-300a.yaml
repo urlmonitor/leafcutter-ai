@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Before any heavyweight authoring agent is invoked, a Haiku-tier pre-triage
   agent reads the user's request and the existing AC store to determine:
@@ -36,6 +36,20 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [ACD-300a-1, ACD-300a-2, ACD-300a-3]
-implemented_by: []
+implemented_by:
+- scripts/ac_store/ac_triage.py
+- templates/agents/ac-triage.md
 change_target: prompt
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: triage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - AcStore
+      - Request
+    source: real
+    asof: '2026-07-15'

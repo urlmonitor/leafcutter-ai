@@ -1,0 +1,51 @@
+{
+  "$comment": "GOLD pipeline-prompt: the required inputs and expected output of the pt-classifier agent (UXP-530 / UXP-543). Hand-authored reference. The classifier is scored against docs/product-truth/classifier/eval.jsonl; this file shows the I/O contract one row exercises. See docs/product-truth/schemas/classifier-eval.schema.json for the output shape.",
+  "agent": "pt-classifier",
+  "implements": ["UXP-530", "UXP-543"],
+  "purpose": "Given a plain-language feature request, decide which product-truth artifacts must be drafted (needs_flow / needs_mock_data / needs_mockup), derive the routing outcome, and name the target component + entities + add-vs-create decision, so the pipeline dispatches ONLY the authoring agents the request needs.",
+  "input": {
+    "user_request": "Add a stock badge (in stock / low / out) to each plant card.",
+    "store_context": {
+      "index_ref": "docs/product-truth/index.json",
+      "note": "The classifier reads the request only for the need booleans; component/entities/decision are grounded against the store's entity_registry and existing artifacts[]."
+    }
+  },
+  "expected_output": {
+    "id": "clf-003",
+    "request": "Add a stock badge (in stock / low / out) to each plant card.",
+    "expected": {
+      "needs_flow": false,
+      "needs_mock_data": true,
+      "needs_mockup": true
+    },
+    "outcome": "mockup+data",
+    "reason": "A single UI component, not a journey. Needs a Mockup and Mock Data to show the states; no Flow.",
+    "builds_with": ["frontend-coder"],
+    "component": "ux-prototyping",
+    "entities": ["Plant"],
+    "decision": "create"
+  },
+  "outcome_derivation": {
+    "$comment": "outcome is a pure function of the three booleans (needs_flow, needs_mock_data, needs_mockup). The validator (OUTCOME_BY_COMBO) rejects any inconsistent row.",
+    "TTT": "full-set",
+    "FTT": "mockup+data",
+    "FFT": "mockup-only",
+    "FTF": "mock-data-only",
+    "FFF": "none"
+  },
+  "routing_contract": {
+    "full-set": ["mock-data-author", "mockup-author", "flow-author"],
+    "mockup+data": ["mock-data-author", "mockup-author"],
+    "mockup-only": ["mockup-author"],
+    "mock-data-only": ["mock-data-author"],
+    "none": []
+  },
+  "rules": [
+    "Return exactly one boolean each for needs_flow / needs_mock_data / needs_mockup.",
+    "outcome MUST match the three booleans per outcome_derivation — never emit an inconsistent pair.",
+    "component MUST be a component id from docs/acceptance-criteria/index.yaml.",
+    "Every entity MUST be a member of index.json entity_registry (a typo is a hard failure, not a new entity).",
+    "decision is 'extend' when the store already holds a canonical artifact for the component+entities, else 'create'; when 'extend', name the artifact id in 'extends'.",
+    "A backend/API/job request with no screen is mock-data-only; a static screen with no records is mockup-only; a config/schema/docs change is none (straight to normal AC authoring)."
+  ]
+}

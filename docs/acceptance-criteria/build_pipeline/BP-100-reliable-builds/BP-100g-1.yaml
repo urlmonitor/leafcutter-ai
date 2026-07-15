@@ -1,4 +1,6 @@
 id: BP-100g-1
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "build.py exits non-zero when a SKILL.md has invalid YAML frontmatter"

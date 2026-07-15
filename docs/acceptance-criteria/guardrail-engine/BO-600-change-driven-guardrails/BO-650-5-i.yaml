@@ -1,4 +1,6 @@
 id: BO-650-5-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Architect's model tier follows the same complexity routing as all other agents"

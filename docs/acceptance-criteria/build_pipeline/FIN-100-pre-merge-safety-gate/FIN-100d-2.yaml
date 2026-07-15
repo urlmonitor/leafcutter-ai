@@ -1,4 +1,6 @@
 id: FIN-100d-2
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "blocks_finalization=false allows workflow to proceed to PR merge"

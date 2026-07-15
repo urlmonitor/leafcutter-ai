@@ -44,8 +44,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BP-600c-2-i]
+covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
+  - BP-600c-2-i
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

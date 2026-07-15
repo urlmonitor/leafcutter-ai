@@ -1,4 +1,6 @@
 id: BO-610-3-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Empty change_target or risk_surface field is rejected"

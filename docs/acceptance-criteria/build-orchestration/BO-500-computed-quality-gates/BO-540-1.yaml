@@ -1,4 +1,6 @@
 id: BO-540-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "flow_change injects architect-review before any coder in the computed chain"
@@ -55,3 +57,14 @@ covered_by: [BO-540-1-i]
 implemented_by: []
 change_target: prompt
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: architect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ticket
+    source: real
+    asof: '2026-07-15'

@@ -1,4 +1,6 @@
 id: BP-400c
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Get a prioritized summary of what to fix next — on demand"

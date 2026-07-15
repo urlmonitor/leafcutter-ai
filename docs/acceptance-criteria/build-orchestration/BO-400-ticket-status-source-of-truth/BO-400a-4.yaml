@@ -1,4 +1,6 @@
 id: BO-400a-4
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Dependency graph uses frontmatter status to determine completed tickets"

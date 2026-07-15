@@ -1,4 +1,6 @@
 id: BP-100e-4
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Pre-commit hook accepts failed sign-off lines with valid timestamps"

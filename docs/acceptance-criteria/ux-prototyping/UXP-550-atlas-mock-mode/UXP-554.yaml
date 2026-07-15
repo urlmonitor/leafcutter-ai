@@ -1,0 +1,53 @@
+id: UXP-554
+readiness: draft
+priority: medium
+title: "A drift guard validates fixtures against real schemas and parses each through its native-format loader in CI"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the bundled fixture repo under leafcutter-web/fixtures/,
+  When CI runs the drift guard,
+  Then every fixture artifact is validated against the SAME schemas that govern the real
+  data (the AC store schema, the product-truth schemas, and the components.json /
+  roadmap.json / agent_registry.json shapes),
+  And every fixture artifact is parsed through the SAME Atlas loader for its native format
+  (YAML for the AC store, markdown for tickets, JSON for roadmap / components /
+  agent_registry / product-truth) that parses the real data, so the mock output is
+  shape-identical to the real output,
+  And CI fails the build when any fixture is schema-invalid or fails to parse through its
+  native-format loader,
+  So mock data can never silently drift from the real shape.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  A CI check exercises the fixture repo two ways: (1) schema validation reusing the
+  existing validators (e.g. scripts/ac_store/validate_ac_schema.py for
+  docs/acceptance-criteria/**, docs/product-truth/scripts/validate_product_truth.py for
+  flows/mock-data/mockups, plus the components.json / roadmap.json / agent_registry.json
+  shapes); (2) parse-through by pointing repoRoot() at leafcutter-web/fixtures/ and
+  invoking the real loaders (getAtlas + getFlows/getMockData), asserting each fixture
+  parses through the loader for its native on-disk format (YAML AC store via ac-store.ts,
+  markdown tickets via tickets.ts, JSON via roadmap.ts/components.ts/agents.ts/flows.ts)
+  without error and produces populated, well-typed snapshots. The guard runs in CI and
+  fails the build on any schema violation or loader parse failure.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

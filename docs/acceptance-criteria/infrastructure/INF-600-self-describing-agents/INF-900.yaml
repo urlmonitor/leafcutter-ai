@@ -1,4 +1,6 @@
 id: INF-900
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Find any agent's full profile in seconds"

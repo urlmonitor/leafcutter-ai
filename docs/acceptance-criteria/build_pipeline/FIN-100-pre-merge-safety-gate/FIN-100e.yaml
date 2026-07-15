@@ -1,4 +1,6 @@
 id: FIN-100e
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Pre-existing failures are auto-ticketed, not ignored"

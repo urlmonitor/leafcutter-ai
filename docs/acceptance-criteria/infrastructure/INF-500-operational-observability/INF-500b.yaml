@@ -1,4 +1,6 @@
 id: INF-500b
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "The feedback analysis pipeline deploys and produces a prioritised report from available data"

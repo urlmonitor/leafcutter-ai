@@ -1,0 +1,49 @@
+id: TQ-200b-1
+components:
+  - testing_quality
+title: "A shared runner dispatches an agent per eval row, scores it, and reports the result"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an eval set for any in-scope agent,
+  When the shared eval runner is invoked on that set,
+  Then it dispatches the agent once per row with that row's input,
+  And it scores each result using the scoring method for the set's output type
+    (label, artifact, or markup),
+  And it emits a machine-readable report giving, per row, a pass/fail plus a score,
+    and an aggregate score for the set,
+  And the same runner handles every in-scope agent regardless of output type.
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements: |
+  One runner, output-type-aware: it reads a set, dispatches the named agent per row,
+  routes results to the LABEL / ARTIFACT / MARKUP scorer (TQ-200a-2-i/-ii/-iii), and
+  writes a structured report (per-row pass/fail + score, plus set aggregate). The
+  report is consumed by the CI gate (TQ-200b-2). Agent dispatch must respect the
+  Claude Code sub-agent nesting limit.
+delivers_to:
+  agent: ci
+  contract: "A machine-readable eval report (per-row pass/fail + score, set aggregate) the CI quality gate reads to pass or fail the change."
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary

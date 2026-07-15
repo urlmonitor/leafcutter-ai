@@ -1,0 +1,36 @@
+id: UXP-591
+readiness: reviewed
+priority: medium
+title: "A person can explore product-truth flows visually in the Atlas"
+component: ux-prototyping
+level: L1
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  As a person browsing the Atlas, I can open a Flows view that lists every product-truth
+  flow, filter them by source and kind, select one to render as a graph, open any step to
+  see its acceptance criteria's live status alongside the mock records and mockup it uses,
+  and jump from an acceptance criterion to the flows it appears in — so I understand what
+  the product does and how built it is without reading JSON or code.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-520
+  - UXP-521
+  - UXP-522
+  - UXP-523
+  - UXP-524
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

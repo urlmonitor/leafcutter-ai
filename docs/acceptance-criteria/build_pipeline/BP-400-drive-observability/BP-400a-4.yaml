@@ -1,4 +1,6 @@
 id: BP-400a-4
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Post-drive aggregation for subagent-quality returns non-empty results"

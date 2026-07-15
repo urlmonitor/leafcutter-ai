@@ -1,4 +1,6 @@
 id: BP-300a-8
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "SKILL.md contains supersession note for debug.js"

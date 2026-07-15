@@ -1,0 +1,160 @@
+{
+  "id": "fern-and-fig/track-an-order",
+  "component": "ux-prototyping",
+  "product": "Fern & Fig",
+  "name": "Customer tracks an order",
+  "level": "journey",
+  "summary": "A returning customer opens their past orders, drills into one, and tracks its shipment. The journey is honest about the two states a real account hits: a customer with no orders sees an empty state, and a paid-but-not-yet-dispatched order shows a 'tracking not available yet' state rather than a fake delivery stage. Reuses the same Plant / Customer / Order dataset as the buy-a-plant flow (extended, not duplicated).",
+  "kind": "user",
+  "source": "mock",
+  "realization": "mock",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 2,
+  "tags": [
+    "orders",
+    "post-purchase"
+  ],
+  "entities": [
+    "Order",
+    "Customer"
+  ],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "steps": [
+    {
+      "id": "orders",
+      "label": "My orders",
+      "human": "The customer sees a list of their past orders with number, item, total and status.",
+      "order": 1,
+      "screen": "orders-list",
+      "reads": [
+        "Order",
+        "Customer"
+      ],
+      "implements": [
+        "UXP-220a"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "orderDetail",
+      "label": "Order detail",
+      "human": "The customer opens one order to see item, quantity, total, payment status and date.",
+      "order": 2,
+      "screen": "order-detail",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-220b"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "track",
+      "label": "Track shipment",
+      "human": "The customer sees the current delivery stage for the order — the carrier, tracking number and where the parcel is (shipped / in transit / delivered).",
+      "order": 3,
+      "screen": "shipment-tracking",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-220c"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    }
+  ],
+  "branches": [
+    {
+      "id": "noOrders",
+      "from": "orders",
+      "condition": "the customer has no orders",
+      "label": "No orders yet",
+      "human": "A customer who has never ordered opens 'My orders' and sees a friendly empty state inviting them to browse the catalogue, rather than an empty table.",
+      "screen": "orders-list",
+      "reads": [
+        "Customer",
+        "Order"
+      ],
+      "implements": [
+        "UXP-220a-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "trackingUnavailable",
+      "from": "track",
+      "condition": "the order is paid but not yet dispatched (stage 'not-shipped', no tracking number)",
+      "label": "Tracking not available yet",
+      "human": "The order has been paid but not yet handed to the carrier, so there is no tracking number: the customer sees a 'not shipped yet — tracking will appear once it's on its way' state instead of a fake delivery stage.",
+      "screen": "shipment-tracking",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-220c-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    }
+  ],
+  "impl_summary": {
+    "done": 1,
+    "in_progress": 1,
+    "not_started": 3,
+    "total": 5,
+    "asof": "2026-07-15"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "orders",
+      "given": "a customer with past orders",
+      "when": "they open 'My orders'",
+      "then": "each order shows its number, item, total and status"
+    },
+    {
+      "for": "noOrders",
+      "given": "a customer who has never placed an order",
+      "when": "they open 'My orders'",
+      "then": "an empty state is shown inviting them to browse the catalogue, with no order rows"
+    },
+    {
+      "for": "orderDetail",
+      "given": "the orders list",
+      "when": "the customer opens one order",
+      "then": "the order detail shows item, quantity, total, payment status and date"
+    },
+    {
+      "for": "track",
+      "given": "a paid order that has been dispatched",
+      "when": "the customer opens 'Track shipment'",
+      "then": "they see the carrier, tracking number and the current delivery stage for that order"
+    },
+    {
+      "for": "trackingUnavailable",
+      "given": "a paid order that has not yet been dispatched (no tracking number)",
+      "when": "the customer opens 'Track shipment'",
+      "then": "they see a 'not shipped yet' state explaining tracking will appear once the parcel is on its way, and no fake delivery stage is shown"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "walked-by-hand (art-director session)",
+      "date": "2026-07-10",
+      "note": "Second seed flow; reuses fern-and-fig/catalog to demonstrate extend-not-duplicate + the flow selector."
+    },
+    {
+      "action": "extended",
+      "by": "BrainCandy (product-truth hardening pass)",
+      "date": "2026-07-14",
+      "note": "v2: added the no-orders empty-state branch and the tracking-unavailable (paid-but-not-dispatched) branch so the flow stops assuming every account has a shipped order. The track step now reads the Order shipment fields (carrier / tracking_number / stage) added to the catalog dataset in the same pass. Set realization=mock."
+    }
+  ]
+}

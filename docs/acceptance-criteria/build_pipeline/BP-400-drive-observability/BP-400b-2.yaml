@@ -1,4 +1,6 @@
 id: BP-400b-2
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Non-zero exit and stderr warning when no commits found after all fallbacks"

@@ -1,4 +1,6 @@
 id: BO-400b-3
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Script stages the modified ticket file after a successful update"

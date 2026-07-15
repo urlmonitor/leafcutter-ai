@@ -40,3 +40,43 @@ covered_by:
   - BO-2000b-1-i
 implemented_by:
   - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/02_python_coder_craft.md
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: code
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Diff
+      - Test
+      - Ticket
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/python-coder-internal
+    node: complexity
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/python-coder-internal
+    node: conventions
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/python-coder-internal
+    node: docenforce
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

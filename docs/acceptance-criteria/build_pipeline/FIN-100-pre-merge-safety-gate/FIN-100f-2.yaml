@@ -1,4 +1,6 @@
 id: FIN-100f-2
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Step execution order is strictly sequential: 2 before 3 before 4"

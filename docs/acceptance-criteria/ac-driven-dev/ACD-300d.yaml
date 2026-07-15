@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 criteria: |
   The /create-ac workflow produces only AC YAML files in
   docs/acceptance-criteria/<component>/. It never creates ticket files in
@@ -28,6 +28,20 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [ACD-300d-1]
-implemented_by: []
+implemented_by:
+- scripts/workflows/plan-feature.js
+- scripts/ac_store/create_ac_workflow.py
 change_target: pipeline
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-07-15'

@@ -1,4 +1,6 @@
 id: BP-100f
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Git-dependent workflows degrade gracefully outside a repository"

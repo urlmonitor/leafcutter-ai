@@ -1,0 +1,67 @@
+{
+  "$comment": "GOLD pipeline-prompt: the required inputs and expected output of the mock-data-author agent (UXP-540). Hand-authored reference showing the add-vs-create EXTEND path (clf-018). Output conforms to docs/product-truth/schemas/mock-data.schema.json. The agent NEVER creates a second dataset for an entity a component already has — it extends the one canonical dataset in place.",
+  "agent": "mock-data-author",
+  "implements": ["UXP-540", "UXP-422a"],
+  "purpose": "Draft or EXTEND the one canonical dataset for the classified entities — realistic records the mockups and flow are built on, never a duplicate dataset.",
+  "input": {
+    "classification": {
+      "user_request": "Add a 'care level' (easy/medium/hard) field to plants.",
+      "needs_mock_data": true,
+      "component": "ux-prototyping",
+      "entities": ["Plant"],
+      "decision": "extend",
+      "extends": "fern-and-fig/catalog"
+    },
+    "search_result": {
+      "index_ref": "docs/product-truth/index.json",
+      "matched_artifact": "fern-and-fig/catalog",
+      "match_basis": "by_component=ux-prototyping AND by_entity=Plant already resolves to fern-and-fig/catalog",
+      "action": "extend_in_place"
+    },
+    "extend_target_path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json"
+  },
+  "expected_output": {
+    "action": "extend",
+    "target_id": "fern-and-fig/catalog",
+    "changes": {
+      "entities.Plant.fields.care_level": "enum: easy | medium | hard",
+      "entities.Plant.records[*].care_level": "each existing Plant record gains a realistic care_level value",
+      "version": "1 -> 2",
+      "provenance": "append one { action: extended, ... } entry"
+    },
+    "excerpt": {
+      "id": "fern-and-fig/catalog",
+      "component": "ux-prototyping",
+      "version": 2,
+      "entities": {
+        "Plant": {
+          "fields": {
+            "id": "string — stable slug",
+            "name": "string",
+            "price": "number — in euros",
+            "currency": "string",
+            "stock": "integer — units on hand",
+            "status": "enum: in-stock | low-stock | out-of-stock (derived from stock)",
+            "care_level": "enum: easy | medium | hard"
+          },
+          "records": [
+            { "id": "monstera-deliciosa", "name": "Monstera Deliciosa", "price": 34, "currency": "EUR", "stock": 12, "status": "in-stock", "care_level": "easy" },
+            { "id": "fiddle-leaf-fig", "name": "Fiddle-leaf Fig", "price": 59, "currency": "EUR", "stock": 3, "status": "low-stock", "care_level": "hard" },
+            { "id": "snake-plant", "name": "Snake Plant", "price": 22, "currency": "EUR", "stock": 0, "status": "out-of-stock", "care_level": "easy" }
+          ]
+        }
+      },
+      "provenance": [
+        { "action": "extended", "by": "mock-data-author", "date": "2026-07-14", "note": "Added Plant.care_level (easy/medium/hard) to the canonical catalog dataset — extended in place, not duplicated." }
+      ]
+    }
+  },
+  "rules": [
+    "ALWAYS search index.json (by_component + by_entity) before writing — the add-vs-create decision from the classifier is a proposal you re-verify against the store.",
+    "If a canonical dataset exists for these entities in this component: EXTEND it in place — add fields/records, bump version, append provenance, keep the id. NEVER create a second file.",
+    "Only CREATE a new <product>/<name>.mock.json when no canonical dataset exists for the entities.",
+    "Every entity key MUST be a member of index.json entity_registry.",
+    "Records must satisfy the dataset's invariants[] (e.g. Plant.status is derived from stock); keep new records realistic and consistent, not placeholder text.",
+    "Do NOT hand-edit the derived index maps (by_component / by_entity / by_flow / by_ac) or any impl_status / impl_summary — after writing the artifact and registering it in index.json artifacts[], run docs/product-truth/scripts/generate_product_truth.py to rebuild the derived data, then validate_product_truth.py."
+  ]
+}

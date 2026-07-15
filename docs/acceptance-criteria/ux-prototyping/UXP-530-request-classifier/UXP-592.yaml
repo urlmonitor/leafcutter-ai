@@ -1,0 +1,32 @@
+id: UXP-592
+readiness: reviewed
+priority: medium
+title: "The system decides which product-truth artifacts a request needs"
+component: ux-prototyping
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  As a product owner defining a feature, I want the system to decide which product-truth
+  artifacts a request needs — a flow, mock data, a mockup, or some combination — so that
+  the define-a-feature pipeline only drafts the artifacts that are actually warranted, and
+  the decision is measured against a gold eval set rather than guessed.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: implemented-by-step
+    status: exists
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-530
+  - UXP-531
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -1,4 +1,6 @@
 id: BO-300a-3
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "build-feature.md On-ok block renders all four sections from the return value"

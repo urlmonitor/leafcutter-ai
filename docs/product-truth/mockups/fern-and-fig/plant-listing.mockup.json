@@ -1,0 +1,20 @@
+{
+  "id": "fern-and-fig/plant-listing",
+  "component": "ux-prototyping",
+  "screen": "plant-listing",
+  "title": "Plant listing",
+  "summary": "The Fern & Fig catalogue landing screen: the whole plant catalogue as a responsive grid of cards, each showing the plant's name, price and a colour-coded stock badge (in stock / low stock / out of stock). Populated directly from the fern-and-fig/catalog Plant records. This is THE reference mockup for the product-truth store — the gold shape and quality the mockup agent must reproduce.",
+  "entities": ["Plant"],
+  "source": "mock",
+  "renders": "plant-listing.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "approved",
+  "version": 1,
+  "tags": ["catalog", "listing", "gold-reference"],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "provenance": [
+    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Complete exemplar mockup; HTML populated by hand from the fern-and-fig/catalog Plant records (Monstera / Fiddle-leaf / Snake)." },
+    { "action": "approved", "by": "product-owner (persona)", "date": "2026-07-14", "note": "Gold reference for the future mockup agent." }
+  ]
+}

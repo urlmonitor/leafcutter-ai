@@ -1,4 +1,6 @@
 id: BP-400c-4
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Date filtering via --since limits report to matching entries only"

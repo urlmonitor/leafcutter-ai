@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Flow artifact",
+  "description": "A reviewable user journey. Machine-readable for agents AND human-readable via summary/human fields. business-analyst derives L2/L3 Gherkin ACs from steps + branches; each step links back to those ACs via `implements`, and impl_status is derived from the ACs' work_status.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "component", "name", "summary", "kind", "source", "status", "readiness", "version", "entities", "steps"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+/[a-z0-9-]+$", "description": "<product>/<name>, path-stable." },
+    "component": { "type": "string" },
+    "product": { "type": "string" },
+    "name": { "type": "string" },
+    "level": { "type": "string", "enum": ["journey", "pipeline", "agent"], "description": "Altitude in the drill-down hierarchy: journey = end-to-end; pipeline = a stage's phase chain; agent = an agent's internal workflow. OPTIONAL." },
+    "kind": { "type": "string", "enum": ["user", "data", "architecture"], "description": "What the flow describes: a user journey, a data pipeline, or an architecture process." },
+    "source": { "type": "string", "enum": ["mock", "real"], "description": "Whether the flow is a mock/demo journey or a real system process." },
+    "realization": { "type": "string", "enum": ["built", "spec", "mock"], "description": "Does the described system/process EXIST in the repo today (independent of AC bookkeeping)? built = it exists and is enforced by the anti-phantom-done truth check; spec = aspirational, not-yet-built; mock = sample/demo product content. OPTIONAL — absent defaults to 'built'. spec/mock flows are EXEMPT from the truth-evidence gate (their steps may badge done/in_progress from seed ACs without implementation evidence)." },
+    "summary": { "type": "string", "description": "HUMAN: one-paragraph plain-language description of the whole journey." },
+    "status": { "type": "string", "enum": ["active", "deprecated"], "description": "Lifecycle: is this journey live or retired." },
+    "readiness": { "type": "string", "enum": ["draft", "reviewed", "approved"], "description": "Review state: has a persona approved it yet." },
+    "superseded_by": { "type": ["string", "null"], "description": "id of the artifact replacing this one when status=deprecated." },
+    "version": { "type": "integer", "minimum": 1 },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "entities": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" } },
+    "mock_data_ref": { "type": "string", "pattern": "^[a-z0-9-]+/[a-z0-9-]+$", "description": "id of the Mock Data artifact populating this flow." },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "human", "order"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string", "description": "Short title (tab-label)." },
+          "human": { "type": "string", "description": "HUMAN: one-line 'what the user is doing/seeing' on this step." },
+          "order": { "type": "integer" },
+          "screen": { "type": "string", "description": "mockup id this step renders, if any." },
+          "agent": { "type": "string", "description": "The actor that runs this step — an agent id (config/agent_registry.json) or a script/workflow name. The subject of the handoff." },
+          "produces": { "type": "array", "items": { "type": "string" }, "description": "Named data artifacts/fields this step hands DOWNSTREAM (the output side of the agent→agent handoff contract), e.g. 'Ticket.test_requirements', 'red_baseline'." },
+          "consumes": { "type": "array", "items": { "type": "string" }, "description": "Named data artifacts/fields this step requires from UPSTREAM (the input side of the handoff contract). A consumes value with no matching upstream produces is a broken handoff." },
+          "reads": { "type": "array", "items": { "type": "string" } },
+          "writes": { "type": "array", "items": { "type": "string" } },
+          "implements": { "type": "array", "items": { "type": "string" }, "description": "AC ids (docs/acceptance-criteria/) derived from this step's acceptance_scenarios. AUTHORED link — the source of truth for graph↔AC linkage." },
+          "expands_to": { "type": "string", "pattern": "^[a-z0-9-]+/[a-z0-9-]+$", "description": "id of the child flow this step drills into (C4-style sub-flow). When set, this step's impl_status is DERIVED from the child flow's rollup, taking precedence over `implements`. OPTIONAL." },
+          "impl_status": { "type": "string", "enum": ["not_started", "in_progress", "done"], "description": "DERIVED from work_status of every AC in `implements`, OR (when `expands_to` is set) from the child flow's rollup. Regenerated by the impl-status generator; never hand-edited." },
+          "impl_asof": { "type": "string", "description": "Date impl_status was last recomputed." }
+        }
+      }
+    },
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from", "condition", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "from": { "type": "string", "description": "step id this branches from." },
+          "condition": { "type": "string" },
+          "label": { "type": "string" },
+          "human": { "type": "string" },
+          "screen": { "type": "string" },
+          "agent": { "type": "string", "description": "The actor that runs this branch — an agent id or a script/workflow name." },
+          "produces": { "type": "array", "items": { "type": "string" }, "description": "Named data artifacts/fields this branch hands downstream (output side of the handoff contract)." },
+          "consumes": { "type": "array", "items": { "type": "string" }, "description": "Named data artifacts/fields this branch requires from upstream (input side of the handoff contract)." },
+          "reads": { "type": "array", "items": { "type": "string" } },
+          "writes": { "type": "array", "items": { "type": "string" } },
+          "implements": { "type": "array", "items": { "type": "string" } },
+          "impl_status": { "type": "string", "enum": ["not_started", "in_progress", "done"] },
+          "impl_asof": { "type": "string" }
+        }
+      }
+    },
+    "impl_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "DERIVED rollup across steps + branches, for the visualizer to badge the whole journey.",
+      "properties": {
+        "done": { "type": "integer" },
+        "in_progress": { "type": "integer" },
+        "not_started": { "type": "integer" },
+        "total": { "type": "integer" },
+        "asof": { "type": "string" }
+      }
+    },
+    "acceptance_scenarios": {
+      "type": "array",
+      "description": "Given/When/Then seeds the business-analyst turns into L2/L3 ACs. Double as human documentation.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["for", "given", "when", "then"],
+        "properties": {
+          "for": { "type": "string", "description": "id of the step OR branch this scenario covers (steps + branches share one id namespace)." },
+          "given": { "type": "string" },
+          "when": { "type": "string" },
+          "then": { "type": "string" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action": { "type": "string", "enum": ["authored", "reviewed", "approved", "extended", "deprecated", "superseded"] },
+          "by": { "type": "string" },
+          "date": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

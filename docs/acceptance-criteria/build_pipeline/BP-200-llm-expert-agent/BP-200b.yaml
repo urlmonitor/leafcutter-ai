@@ -1,4 +1,6 @@
 id: BP-200b
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Every convention the expert knows is written down, not tribal knowledge"

@@ -1,4 +1,6 @@
 id: BO-700e-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "The done-link closure invokes changelog emission as a mandatory step"

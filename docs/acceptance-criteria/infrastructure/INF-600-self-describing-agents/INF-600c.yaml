@@ -1,4 +1,6 @@
 id: INF-600c
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "See where each agent gets its knowledge"

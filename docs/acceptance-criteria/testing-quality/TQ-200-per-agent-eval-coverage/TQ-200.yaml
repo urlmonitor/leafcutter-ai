@@ -1,0 +1,49 @@
+id: TQ-200
+components:
+  - testing_quality
+title: "Every AI agent that writes or judges is guarded by an eval set, so its quality can be measured and never silently regresses"
+component: testing-quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A trustworthy gate for the AI agents themselves: every agent that generates an
+  artifact or makes a judgment call can be tested, scored, and regression-guarded
+  the same way code is.
+
+  Today the code the pipeline produces is protected by a test suite, but the
+  generative and judgment agents that DRIVE the pipeline (the request classifier,
+  the mock-data / mockup / flow authors, and the AC-authoring product-owner /
+  business-analyst / it-po) have no equivalent safety net — a prompt tweak or a
+  model change can quietly make their output worse and nothing catches it. After
+  this goal, each such agent has its own eval set of input->expected cases, scored
+  by the kind of output it produces, so we can answer "did this agent get better or
+  worse?" with a number rather than a hunch, and a regression blocks the change.
+  This is the trustworthy-test-gate idea (TQ-100) extended from code tests to the
+  agents that write the code's inputs. The hand-walked gold artifacts in the
+  product-truth store are the oracle every eval measures against.
+depends_on: []
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200a
+  - TQ-200b
+implemented_by: []
+change_target:
+  - code
+  - config
+  - pipeline
+risk_surface: contract_boundary

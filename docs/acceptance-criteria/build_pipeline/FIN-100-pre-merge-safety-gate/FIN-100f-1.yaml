@@ -1,4 +1,6 @@
 id: FIN-100f-1
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "PR merge (Step 4) is structurally unreachable when regressions halt Step 3"

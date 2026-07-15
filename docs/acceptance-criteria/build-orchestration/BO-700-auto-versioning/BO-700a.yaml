@@ -1,4 +1,6 @@
 id: BO-700a
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "See what changed in every release without anyone writing release notes"

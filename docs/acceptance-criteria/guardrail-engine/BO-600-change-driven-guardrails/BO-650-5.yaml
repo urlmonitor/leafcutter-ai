@@ -1,4 +1,6 @@
 id: BO-650-5
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Architect runs at L0/L1 level, before implementation tickets are created"

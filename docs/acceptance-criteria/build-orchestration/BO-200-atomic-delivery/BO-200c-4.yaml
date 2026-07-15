@@ -24,6 +24,7 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: S
 readiness: approved
+priority: medium
 it_requirements:
   - "The commit agent template must check for a user-approved subject line before composing a new one"
   - "Pre-commit autofix retry (Step 5 of commit.md) must preserve the original subject from Step 3"

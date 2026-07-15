@@ -1,4 +1,6 @@
 id: FIN-100e-3
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "No tickets are created when all tests pass (triageReport is null)"

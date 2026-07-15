@@ -1,4 +1,6 @@
 id: BP-100g
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Malformed skill files fail the build with clear diagnostics"

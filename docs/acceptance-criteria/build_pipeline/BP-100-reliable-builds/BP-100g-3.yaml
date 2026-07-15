@@ -1,4 +1,6 @@
 id: BP-100g-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "build.py exits non-zero when SKILL.md allowed-tools contains unrecognised tool"

@@ -1,0 +1,297 @@
+{
+  "id": "fern-and-fig/customer-buys-a-plant",
+  "component": "ux-prototyping",
+  "product": "Fern & Fig",
+  "name": "Customer buys a plant",
+  "level": "journey",
+  "summary": "A customer browses the Fern & Fig plant catalogue, opens a plant they like, adds it to their cart, signs in and pays — finishing on an order-confirmation screen. The journey is honest about the ways a purchase can fail: an empty cart has nothing to check out, a plant can sell out between the cart and payment, and a payment can be declined. If the plant they want is already sold out on the detail page, they can ask to be notified instead of buying.",
+  "kind": "user",
+  "source": "mock",
+  "realization": "mock",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 3,
+  "tags": [
+    "checkout",
+    "catalog",
+    "purchase",
+    "auth"
+  ],
+  "entities": [
+    "Plant",
+    "Customer",
+    "Order"
+  ],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "steps": [
+    {
+      "id": "browse",
+      "label": "Browse plants",
+      "human": "The customer sees the whole plant catalogue as a grid of cards — each shows the plant's name, photo, price and a stock badge.",
+      "order": 1,
+      "screen": "plant-listing",
+      "reads": [
+        "Plant"
+      ],
+      "implements": [
+        "UXP-210a"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "detail",
+      "label": "Plant detail",
+      "human": "The customer opens one plant to see its photo, price and stock, and can add it to the cart.",
+      "order": 2,
+      "screen": "plant-detail",
+      "reads": [
+        "Plant"
+      ],
+      "implements": [
+        "UXP-210b"
+      ],
+      "impl_status": "done",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "cart",
+      "label": "Add to cart",
+      "human": "The customer adds the plant to their cart and reviews what they're about to buy before paying.",
+      "order": 3,
+      "screen": "cart",
+      "reads": [
+        "Plant"
+      ],
+      "writes": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210c"
+      ],
+      "impl_status": "in_progress",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "signin",
+      "label": "Sign in",
+      "human": "Before paying, the customer signs in (or creates an account) so the order can be tied to them; the cart is preserved across sign-in.",
+      "order": 4,
+      "screen": "sign-in",
+      "reads": [
+        "Customer"
+      ],
+      "implements": [
+        "UXP-210f"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "checkout",
+      "label": "Checkout",
+      "human": "The customer confirms their details and pays; an order is created. This single step drills into the checkout-and-pay child flow for the fine-grained payment sub-journey.",
+      "order": 5,
+      "screen": "checkout",
+      "reads": [
+        "Customer",
+        "Order"
+      ],
+      "writes": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210d"
+      ],
+      "expands_to": "fern-and-fig/checkout-and-pay",
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "confirmed",
+      "label": "Order confirmed",
+      "human": "The customer sees a confirmation with the order number and what they bought.",
+      "order": 6,
+      "screen": "order-confirmation",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210e"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    }
+  ],
+  "branches": [
+    {
+      "id": "notify",
+      "from": "detail",
+      "condition": "plant is out of stock",
+      "label": "Notify me",
+      "human": "Because the plant is sold out, the 'Add to cart' button is replaced with a 'Notify me' button so the customer can be emailed when it is back.",
+      "screen": "notify-me",
+      "reads": [
+        "Plant",
+        "Customer"
+      ],
+      "implements": [
+        "UXP-210b-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "emptyCart",
+      "from": "cart",
+      "condition": "the cart has no items",
+      "label": "Empty cart",
+      "human": "The customer opens the cart with nothing in it: instead of a total and a pay button, they see an empty-cart message and a link back to the catalogue.",
+      "screen": "cart",
+      "reads": [
+        "Order"
+      ],
+      "implements": [
+        "UXP-210c-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "paymentFailed",
+      "from": "checkout",
+      "condition": "the payment is declined",
+      "label": "Payment declined",
+      "human": "The card is declined at checkout: no order is placed, the cart is kept intact, and the customer is shown a clear error with a way to try a different payment method.",
+      "screen": "checkout",
+      "reads": [
+        "Customer",
+        "Order"
+      ],
+      "implements": [
+        "UXP-210d-2"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    },
+    {
+      "id": "outOfStockAtCheckout",
+      "from": "checkout",
+      "condition": "the plant sold out after it was added to the cart",
+      "label": "Sold out at checkout",
+      "human": "Between adding to the cart and paying, the plant sold out: payment is blocked, no order is created, and the customer is told the item is no longer available.",
+      "screen": "checkout",
+      "reads": [
+        "Order",
+        "Plant"
+      ],
+      "implements": [
+        "UXP-210d-3"
+      ],
+      "impl_status": "not_started",
+      "impl_asof": "2026-07-15"
+    }
+  ],
+  "impl_summary": {
+    "done": 2,
+    "in_progress": 1,
+    "not_started": 7,
+    "total": 10,
+    "asof": "2026-07-15"
+  },
+  "acceptance_scenarios": [
+    {
+      "for": "browse",
+      "given": "the catalog has in-stock and out-of-stock plants",
+      "when": "the customer opens the listing",
+      "then": "each plant shows its price and a stock badge (in stock / low / out of stock)"
+    },
+    {
+      "for": "detail",
+      "given": "an in-stock plant",
+      "when": "the customer opens its detail page",
+      "then": "they can add it to the cart"
+    },
+    {
+      "for": "cart",
+      "given": "a plant has been added to the cart",
+      "when": "the customer views the cart",
+      "then": "the cart shows the plant, quantity, unit price and a running total before they pay"
+    },
+    {
+      "for": "notify",
+      "given": "an out-of-stock plant",
+      "when": "the customer opens its detail page",
+      "then": "the add-to-cart button is replaced by a 'Notify me' action"
+    },
+    {
+      "for": "emptyCart",
+      "given": "a cart with no items",
+      "when": "the customer views the cart",
+      "then": "an empty-cart message is shown, no total or pay button is offered, and a link back to the catalogue is provided"
+    },
+    {
+      "for": "signin",
+      "given": "an unauthenticated customer with items in their cart",
+      "when": "they proceed toward checkout",
+      "then": "they are asked to sign in (or create an account) and their cart is preserved once signed in"
+    },
+    {
+      "for": "checkout",
+      "given": "a cart with at least one item and a signed-in customer",
+      "when": "the customer pays and the payment is approved",
+      "then": "an Order is created with status 'paid' and the confirmation screen is shown"
+    },
+    {
+      "for": "paymentFailed",
+      "given": "a cart with at least one item and a signed-in customer",
+      "when": "the customer pays and the payment is declined",
+      "then": "no Order is created, the cart is preserved, and a clear payment-declined error offers another payment method"
+    },
+    {
+      "for": "outOfStockAtCheckout",
+      "given": "a cart holding a plant that has since dropped to zero stock",
+      "when": "the customer attempts to pay",
+      "then": "payment is blocked, no Order is created, and the customer is told the item is no longer available"
+    },
+    {
+      "for": "confirmed",
+      "given": "payment has succeeded",
+      "when": "the order is created",
+      "then": "the confirmation screen shows the order number and the paid items"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "walked-by-hand (art-director session)",
+      "date": "2026-07-10",
+      "note": "Seed / gold reference for the future flow agent."
+    },
+    {
+      "action": "reviewed",
+      "by": "product-owner (persona)",
+      "date": "2026-07-10",
+      "note": "Approved 5/5 in the persona-review loop."
+    },
+    {
+      "action": "extended",
+      "by": "hardening pass (3-agent review)",
+      "date": "2026-07-10",
+      "note": "Added human fields, implements/impl_status AC linkage, missing scenarios, for-ref fix."
+    },
+    {
+      "action": "extended",
+      "by": "BrainCandy (product-truth hardening pass)",
+      "date": "2026-07-14",
+      "note": "v2: added a sign-in step (auth) and three honest failure branches — empty-cart, payment-declined, and sold-out-at-checkout — so the gold reference stops teaching a happy-path-only journey. Each new node carries reads/writes backed by the catalog dataset and a Given/When/Then scenario, and links to a new UXP L3 AC. Set realization=mock."
+    },
+    {
+      "action": "extended",
+      "by": "BrainCandy (product-truth-way plan-feature session)",
+      "date": "2026-07-14",
+      "note": "v3: the checkout step now expands_to the new fern-and-fig/checkout-and-pay child flow (C4 drill-down). Its impl_status now rolls up from that child's payment sub-journey rather than from UXP-210d alone — extend-not-duplicate: the checkout detail lives in one place and this journey references it."
+    }
+  ]
+}

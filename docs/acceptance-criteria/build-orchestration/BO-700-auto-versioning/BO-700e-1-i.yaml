@@ -1,4 +1,6 @@
 id: BO-700e-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "A ticket moved to done/ manually (bypassing done-link) is detected by the validation scan"

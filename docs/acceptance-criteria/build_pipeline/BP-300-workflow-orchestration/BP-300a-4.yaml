@@ -1,4 +1,6 @@
 id: BP-300a-4
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Phase 3 calls build-ticket workflow, not build-epic"

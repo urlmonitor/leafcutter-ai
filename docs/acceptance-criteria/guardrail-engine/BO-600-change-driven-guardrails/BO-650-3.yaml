@@ -1,4 +1,6 @@
 id: BO-650-3
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Architect produces C4 diagrams for structural changes"

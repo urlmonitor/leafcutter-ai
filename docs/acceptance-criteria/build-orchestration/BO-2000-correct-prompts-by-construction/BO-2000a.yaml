@@ -40,3 +40,13 @@ covered_by:
   - BO-2000a-4-i
 implemented_by:
   - tickets/00_inbox/epics/EPIC-PromptAssemblyHardening/01_signoff_block_protocol.md
+product_truth:
+  - flow: leafcutter/python-coder-internal
+    node: signoff
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

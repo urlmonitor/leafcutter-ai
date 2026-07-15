@@ -1,4 +1,6 @@
 id: BP-400
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Understand how every drive performed — never fly blind"

@@ -1,4 +1,6 @@
 id: BP-300a-2
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Synthesis proceeds without prompt when all investigators agree with high confidence"

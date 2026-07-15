@@ -1,0 +1,43 @@
+id: UXP-220c
+readiness: reviewed
+priority: medium
+title: "Customer can track the shipment of a paid order"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a paid order,
+  When the customer opens 'Track shipment',
+  Then they see the current delivery stage for that order.
+depends_on: [UXP-220b]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/track-an-order.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Renders the shipment-tracking screen; reads the Order status.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/track-an-order
+    node: track
+    node_kind: step
+    flow_kind: user
+    screen: shipment-tracking
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+    source: mock
+    asof: '2026-07-15'

@@ -1,4 +1,6 @@
 id: BP-006a-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Edge case: new skill directory added without registry entry is detected"

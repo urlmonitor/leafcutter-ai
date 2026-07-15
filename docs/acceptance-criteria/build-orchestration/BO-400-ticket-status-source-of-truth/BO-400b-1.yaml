@@ -1,4 +1,6 @@
 id: BO-400b-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "set_ticket_status.py accepts a ticket path and target status"

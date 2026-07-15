@@ -1,4 +1,6 @@
 id: BO-610-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "risk_surface enum definition with 6 canonical values"

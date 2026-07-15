@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a standalone script accepts --ticket or --ac arguments,
   When invoked with a valid ticket path that has a source_ac field,
@@ -36,6 +36,28 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [ACD-600a-1, ACD-600a-2, ACD-600a-3, ACD-600a-4]
-implemented_by: []
+implemented_by:
+- scripts/ac_store/mark_ac_done.py
 change_target: code
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: complete
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Ticket
+    source: real
+    asof: '2026-07-15'
+  - flow: leafcutter/finalize-feature
+    node: closeacs
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

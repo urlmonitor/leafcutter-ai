@@ -1,4 +1,6 @@
 id: BO-700a-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Changelog entry content is assembled from AC fields of completed tickets"

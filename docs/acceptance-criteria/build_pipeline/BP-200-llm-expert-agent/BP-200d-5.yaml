@@ -1,4 +1,6 @@
 id: BP-200d-5
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Prompt-audit skill supports both single-file and batch audit invocation"

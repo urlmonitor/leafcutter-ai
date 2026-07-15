@@ -1,4 +1,6 @@
 id: BP-100g-6
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "pr-reviewer template includes skill-file checklist items"

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fern &amp; Fig — Plant listing</title>
+  <!--
+    REFERENCE MOCKUP — screen: plant-listing
+    Populated by hand from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json
+    (entity Plant). Self-contained, low-fidelity, no external assets.
+  -->
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --card: #ffffff;
+      --ink: #23301f;
+      --muted: #6c7a63;
+      --line: #e4e1d7;
+      --leaf: #3f6b3a;
+      --in-stock-bg: #e5f2e2;   --in-stock-fg: #2f6b2a;
+      --low-bg: #fdf1d6;        --low-fg: #8a6410;
+      --out-bg: #f7e1df;        --out-fg: #9a3b33;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    header.site {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--card);
+    }
+    header.site .brand {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--leaf);
+    }
+    header.site .tag { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    main { max-width: 960px; margin: 0 auto; padding: 28px 24px 48px; }
+    h1 { font-size: 18px; font-weight: 600; margin: 0 0 18px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 2px rgba(35, 48, 31, 0.04);
+    }
+    .thumb {
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+      background: linear-gradient(135deg, #eef3ea, #dfe8d8);
+    }
+    .body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .name { font-size: 16px; font-weight: 600; margin: 0; }
+    .row { display: flex; align-items: center; justify-content: space-between; }
+    .price { font-size: 16px; font-weight: 700; }
+    .badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge.in-stock { background: var(--in-stock-bg); color: var(--in-stock-fg); }
+    .badge.low-stock { background: var(--low-bg); color: var(--low-fg); }
+    .badge.out-of-stock { background: var(--out-bg); color: var(--out-fg); }
+    .btn {
+      margin-top: 4px;
+      border: 1px solid var(--leaf);
+      background: var(--leaf);
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn[disabled] {
+      background: #eceae3;
+      color: var(--muted);
+      border-color: var(--line);
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="brand">Fern &amp; Fig</div>
+    <p class="tag">Houseplants, delivered.</p>
+  </header>
+  <main>
+    <h1>All plants</h1>
+    <section class="grid">
+
+      <!-- Plant: monstera-deliciosa (stock 12 → in-stock) -->
+      <article class="card">
+        <div class="thumb" aria-hidden="true">&#127807;</div>
+        <div class="body">
+          <p class="name">Monstera Deliciosa</p>
+          <div class="row">
+            <span class="price">&euro;34</span>
+            <span class="badge in-stock">In stock</span>
+          </div>
+          <button class="btn">Add to cart</button>
+        </div>
+      </article>
+
+      <!-- Plant: fiddle-leaf-fig (stock 3 → low-stock) -->
+      <article class="card">
+        <div class="thumb" aria-hidden="true">&#127807;</div>
+        <div class="body">
+          <p class="name">Fiddle-leaf Fig</p>
+          <div class="row">
+            <span class="price">&euro;59</span>
+            <span class="badge low-stock">Low stock &middot; 3 left</span>
+          </div>
+          <button class="btn">Add to cart</button>
+        </div>
+      </article>
+
+      <!-- Plant: snake-plant (stock 0 → out-of-stock) -->
+      <article class="card">
+        <div class="thumb" aria-hidden="true">&#127793;</div>
+        <div class="body">
+          <p class="name">Snake Plant</p>
+          <div class="row">
+            <span class="price">&euro;22</span>
+            <span class="badge out-of-stock">Out of stock</span>
+          </div>
+          <button class="btn" disabled>Notify me</button>
+        </div>
+      </article>
+
+    </section>
+  </main>
+</body>
+</html>

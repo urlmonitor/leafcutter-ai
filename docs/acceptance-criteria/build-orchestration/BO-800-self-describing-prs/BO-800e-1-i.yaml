@@ -1,4 +1,6 @@
 id: BO-800e-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "A ticket whose source_ac chain has multiple L0 ancestors lists all of them"

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fern &amp; Fig — Cart</title>
+  <!--
+    REFERENCE MOCKUP — screen: cart
+    Populated by hand from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json
+    (the pending open-cart Order 1050 → zz-plant, qty 1, total EUR 28).
+    The empty-cart state (branch: emptyCart) is shown as a second state below.
+    Self-contained, low-fidelity, no external assets.
+  -->
+  <style>
+    :root {
+      --bg: #f6f5f1; --card: #ffffff; --ink: #23301f; --muted: #6c7a63;
+      --line: #e4e1d7; --leaf: #3f6b3a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    header.site { padding: 28px 32px 20px; border-bottom: 1px solid var(--line); background: var(--card); }
+    header.site .brand { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; color: var(--leaf); }
+    header.site .tag { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    main { max-width: 720px; margin: 0 auto; padding: 28px 24px 48px; }
+    h1 { font-size: 20px; margin: 0 0 18px; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .line { display: grid; grid-template-columns: 56px 1fr auto auto; gap: 16px; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .thumb { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 30px; border-radius: 8px; background: linear-gradient(135deg, #eef3ea, #dfe8d8); }
+    .lname { font-weight: 600; }
+    .lsub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .qty { font-size: 14px; color: var(--muted); }
+    .lprice { font-weight: 700; }
+    .totals { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+    .totals .row { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+    .totals .row.grand { font-size: 18px; font-weight: 700; color: var(--ink); }
+    .actions { padding: 6px 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .btn { border: 1px solid var(--leaf); background: var(--leaf); color: #fff; border-radius: 8px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    a.back { color: var(--leaf); text-decoration: none; font-size: 14px; }
+    .state-label { margin: 34px 0 12px; font-size: 13px; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); }
+    .empty { padding: 44px 18px; text-align: center; }
+    .empty .icon { font-size: 44px; }
+    .empty p { color: var(--muted); margin: 12px 0 18px; }
+    .btn.secondary { background: #fff; color: var(--leaf); display: inline-block; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="brand">Fern &amp; Fig</div>
+    <p class="tag">Houseplants, delivered.</p>
+  </header>
+  <main>
+    <h1>Your cart</h1>
+
+    <!-- Populated cart from pending Order 1050 (zz-plant, qty 1, EUR 28) -->
+    <div class="panel">
+      <div class="line">
+        <div class="thumb" aria-hidden="true">&#127793;</div>
+        <div>
+          <div class="lname">ZZ Plant</div>
+          <div class="lsub">&euro;28 each</div>
+        </div>
+        <div class="qty">Qty 1</div>
+        <div class="lprice">&euro;28</div>
+      </div>
+      <div class="totals">
+        <div class="row"><span>Subtotal</span><span>&euro;28</span></div>
+        <div class="row"><span>Shipping</span><span>Calculated at checkout</span></div>
+        <div class="row grand"><span>Total</span><span>&euro;28</span></div>
+      </div>
+      <div class="actions">
+        <a class="back" href="plant-listing.html">&larr; Keep shopping</a>
+        <button class="btn">Proceed to checkout</button>
+      </div>
+    </div>
+
+    <!-- Branch: emptyCart — nothing in the cart -->
+    <p class="state-label">Empty-cart state (branch: emptyCart)</p>
+    <div class="panel">
+      <div class="empty">
+        <div class="icon" aria-hidden="true">&#128230;</div>
+        <p>Your cart is empty — no plants to check out yet.</p>
+        <a class="btn secondary" href="plant-listing.html">Browse the catalogue</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

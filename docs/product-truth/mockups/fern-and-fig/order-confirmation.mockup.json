@@ -1,0 +1,20 @@
+{
+  "id": "fern-and-fig/order-confirmation",
+  "component": "ux-prototyping",
+  "screen": "order-confirmation",
+  "title": "Order confirmation",
+  "summary": "The confirmation screen after a captured payment: a success check, the paid order number (#1042) with a 'Paid' badge, the payment method + processor reference (pay-1042 / auth_9f2a1042), and the paid line items with the total. Populated by hand from Customer alex-green + the genuinely-paid Order 1042 (monstera-deliciosa, EUR 34). Order 1050 is the open cart used by the cart / declined states, so it is not rendered here as paid. This is the `confirmed` step of both customer-buys-a-plant and the checkout-and-pay child flow.",
+  "entities": ["Order", "Payment"],
+  "source": "mock",
+  "renders": "order-confirmation.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "reviewed",
+  "version": 2,
+  "tags": ["checkout", "payment"],
+  "mock_data_ref": "fern-and-fig/catalog",
+  "provenance": [
+    { "action": "authored", "by": "BrainCandy (product-truth linking session)", "date": "2026-07-14", "note": "Stub registration for flow screen resolution; HTML to be authored by the mockup agent, matching plant-listing quality." },
+    { "action": "extended", "by": "BrainCandy (product-truth-way plan-feature session)", "date": "2026-07-14", "note": "Drawn: order-confirmation.html authored by hand from the paid Order 1042 + captured Payment, matching the checkout / plant-listing gold-reference style; stub promoted to gold, readiness draft → reviewed, renders set." }
+  ]
+}

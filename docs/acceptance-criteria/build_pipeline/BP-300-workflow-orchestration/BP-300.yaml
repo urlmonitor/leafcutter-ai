@@ -1,4 +1,6 @@
 id: BP-300
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Workflow scripts orchestrate agents deterministically — no silent skips, no stale state"
@@ -27,3 +29,13 @@ covered_by: [BP-300a, BP-300b, BP-300c, BP-300d]
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/deliver-a-feature
+    node: build
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

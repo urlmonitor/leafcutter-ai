@@ -1,4 +1,6 @@
 id: BP-400c-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "trend_report.py computes week-over-week trend indicators"

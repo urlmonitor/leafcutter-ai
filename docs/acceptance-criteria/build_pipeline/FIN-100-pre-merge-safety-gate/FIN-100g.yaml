@@ -1,4 +1,6 @@
 id: FIN-100g
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Pre-flight resolves the target branch and worktree from explicit input, not ambient CWD"

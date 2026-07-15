@@ -1,0 +1,49 @@
+id: UXP-520
+readiness: reviewed
+priority: medium
+title: "The Flows view lists flows and renders the selected one as a graph"
+component: ux-prototyping
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth store has flows,
+  When the person opens the Atlas /flows view,
+  Then every flow is listed,
+  And the selected flow is rendered as a graph built from its steps and branches,
+  reading the flows and their derived status straight from the store.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  app/flows/page.tsx is the /flows route; lib/data/flows.ts loads the flow + index JSON
+  from the store; lib/data/graph.ts turns a flow into the renderable graph model.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - leafcutter-web/app/flows/page.tsx
+  - leafcutter-web/lib/data/flows.ts
+  - leafcutter-web/lib/data/graph.ts
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: open
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

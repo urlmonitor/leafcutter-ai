@@ -39,3 +39,14 @@ notes: |
   ACS-900d owns the legitimate-reconciliation cases.
 change_target: code
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: retire
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-07-15'

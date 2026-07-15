@@ -1,0 +1,54 @@
+id: TQ-200a-2-ii
+components:
+  - testing_quality
+title: "ARTIFACT output is scored by deterministic assertions plus an LLM-judge rubric"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose output is a structured artifact — mock-data-author,
+    flow-author, or an AC-authoring agent (business-analyst / product-owner / it-po),
+  When its eval rows are scored,
+  Then the produced artifact is first checked by deterministic assertions:
+    it is schema-valid,
+    every entity it names is a member of the entity registry,
+    an existing artifact was EXTENDED in place rather than duplicated,
+    every referenced record actually exists,
+    every step and every branch carries an acceptance_scenario,
+    and any ACs it produces are testable Gherkin,
+  And the artifact is then scored by an LLM-judge rubric for faithfulness and
+    quality,
+  And a row passes only when the deterministic assertions all hold and the judge
+    score meets the rubric threshold.
+depends_on:
+  - TQ-200a-2
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements: |
+  The deterministic assertions reuse the product-truth validator's existing checks
+  (schema conformance, entity-registry membership, add-vs-create / extend-not-
+  duplicate, referenced-record resolution, acceptance_scenario presence per
+  step/branch) plus a Gherkin-testability check for AC-authoring output. The
+  LLM-judge applies a rubric for faithfulness to the input and overall quality; the
+  rubric and its threshold are declared per eval set. Both gates must pass.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary

@@ -1,4 +1,6 @@
 id: BP-600a
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Stay where you are while fixing"

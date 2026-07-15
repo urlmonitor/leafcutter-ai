@@ -413,6 +413,46 @@ is needed.
 > principles (see Embedded Design Principles section) always apply regardless
 > of environment.
 
+## Product-Truth Mockup Alignment (when the ticket implements a flow screen)
+
+When the ticket implements a product-truth flow **step that names a `screen`**,
+the store holds an approved **Mockup** for that screen — the visual target the
+Product Owner reviewed — and the **Mock Data** that populated it. Build the UI to
+match that mockup, populated from the same Mock Data. This is an additional spec
+input; the Embedded Design Principles and any `## Agent Contracts` block still
+apply on top of it.
+
+**Resolution (read-only; skip gracefully if the store or a ref is absent).** Read
+the known store paths directly with `Read` — do NOT use `Grep`/`Glob`, and you do
+not need `research-agent` for these fixed-path lookups:
+
+1. `Bash ls docs/product-truth/index.json` — absent → skip; build from the ticket
+   + design principles only.
+2. **Find the screen.** Look up the ticket's AC in `index.json`
+   `by_ac["<AC-id>"]`; a matched entry names its `flow`, `node`, and `screen`.
+   (Or read `docs/product-truth/flows/<product>/<name>.flow.json` and find the
+   step/branch whose `implements` contains the AC — its `screen` is the mockup
+   key.)
+3. **Read the mockup manifest**
+   `docs/product-truth/mockups/<product>/<screen>.mockup.json`. Use it only when
+   `readiness: approved` (note in your report if it is `draft`). Its `renders`
+   field names the reference HTML
+   (`docs/product-truth/mockups/<product>/<renders>`) — read that file to see the
+   exact layout, labels, and structure to reproduce.
+4. **Populate from Mock Data.** Read the mockup's `mock_data_ref` →
+   `docs/product-truth/mock-data/<product>/<name>.mock.json` and render the same
+   `entities.<Entity>.records` (identical field values, stock badges, prices,
+   etc.). Do NOT substitute invented placeholder content when approved records
+   exist.
+5. **Build to match**, then apply the Embedded Design Principles for anything the
+   mockup leaves unspecified (interactive states, focus rings, spacing,
+   accessibility). Where the project design system and the mockup conflict, defer
+   to the project design system and note the divergence.
+
+Record which mockup id and dataset you built against in your Completion Report
+`### Notes`. If no approved mockup resolves, build per the ticket and design
+principles as usual.
+
 ## Contract-Aware Mode
 
 **Activation:** Contract-Aware Mode activates automatically when the ticket body

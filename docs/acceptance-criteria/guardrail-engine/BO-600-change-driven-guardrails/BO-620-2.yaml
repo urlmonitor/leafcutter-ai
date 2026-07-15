@@ -1,4 +1,6 @@
 id: BO-620-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Code-internal pair maps to standard TDD guardrail only"

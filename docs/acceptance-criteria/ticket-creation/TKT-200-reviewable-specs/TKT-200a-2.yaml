@@ -1,4 +1,6 @@
 id: TKT-200a-2
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Diagram generation captures data flow from delivers_to and expects_from contracts"

@@ -1,4 +1,6 @@
 id: INF-600j
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Agent template declares its contracts and behaviors"

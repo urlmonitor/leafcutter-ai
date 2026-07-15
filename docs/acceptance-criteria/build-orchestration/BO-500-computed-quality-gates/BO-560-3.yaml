@@ -1,4 +1,6 @@
 id: BO-560-3
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Manually-authored agents map is overwritten by the computed chain"

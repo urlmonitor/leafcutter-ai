@@ -1,0 +1,45 @@
+id: UXP-210d-4
+readiness: approved
+priority: medium
+title: "Order summary is shown before payment"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a cart with at least one item and a signed-in customer,
+  When the customer reaches the checkout screen,
+  Then a final order summary shows the plant, quantity, unit price and total,
+  And it is shown before any payment details are entered.
+depends_on: [UXP-210d]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/checkout-and-pay.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  Renders the review state of the checkout screen; reads the open-cart Order and its
+  line item. Read-only summary — no writes on this step.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/checkout-and-pay
+    node: review
+    node_kind: step
+    flow_kind: user
+    screen: checkout
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Order
+    source: mock
+    asof: '2026-07-15'

@@ -1,4 +1,6 @@
 id: BP-100g-1-i
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Error message for invalid YAML includes the file path in stderr output"

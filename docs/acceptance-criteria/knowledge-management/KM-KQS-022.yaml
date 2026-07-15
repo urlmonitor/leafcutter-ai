@@ -1,4 +1,6 @@
 id: KM-KQS-022
+readiness: reviewed
+priority: medium
 components:
   - knowledge_management
 title: "depends_on file paths are resolved to node IDs by stripping to filename stem"

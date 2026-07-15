@@ -1,4 +1,6 @@
 id: BO-640-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Successful decomposition reduces complexity to medium and routes to faster model"

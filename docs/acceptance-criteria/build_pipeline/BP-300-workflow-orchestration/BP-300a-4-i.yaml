@@ -1,4 +1,6 @@
 id: BP-300a-4-i
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Workflow returns error when create-ticket does not return a ticket_path"

@@ -1,4 +1,6 @@
 id: INF-700
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Raw agent emissions are routed, recorded, and available for analysis"

@@ -1,4 +1,6 @@
 id: FIN-100a-2
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Baseline capture degrades gracefully on failure"

@@ -1,4 +1,6 @@
 id: ACS-400d-1
+readiness: reviewed
+priority: medium
 components:
   - ac_store
 title: "Governance rules appear in deployed agent instructions after build"

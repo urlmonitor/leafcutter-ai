@@ -1,4 +1,6 @@
 id: BP-400c-2-i
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "trend_report.py handles empty or absent feedback.jsonl gracefully"

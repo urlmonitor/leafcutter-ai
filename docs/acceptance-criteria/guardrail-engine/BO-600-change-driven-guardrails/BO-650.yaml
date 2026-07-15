@@ -1,4 +1,6 @@
 id: BO-650
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "The architect actively produces design artifacts, not just reviews"

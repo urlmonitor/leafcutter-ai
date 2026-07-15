@@ -1,0 +1,43 @@
+id: TQ-200a-1-ii
+components:
+  - testing_quality
+title: "Deterministic gate agents are excluded from eval coverage"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the coverage check enumerates the agents that require an eval set,
+  When it encounters a deterministic gate agent such as a validator or the
+    ac-fulfillment-gate,
+  Then that agent is excluded from eval coverage,
+  And its absence from the eval sets is NOT reported as a coverage gap,
+  And the exclusion is justified on the basis that deterministic gate agents are
+    covered by unit tests rather than by evals.
+depends_on:
+  - TQ-200a-1
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Exclusion covers the deterministic gate agents (validators, ac-validator,
+  ac-fulfillment-gate and similar) whose output is a pass/fail computed by rule,
+  not generated or judged by the model. The coverage check treats these as
+  out-of-scope-by-design, distinct from an in-scope agent that is simply missing
+  a set.
+delivers_to: null
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+risk_surface: internal

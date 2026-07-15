@@ -1,4 +1,6 @@
 id: BO-700b
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Get the right version number without deciding it yourself"

@@ -1,4 +1,6 @@
 id: BO-400a-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "ticket-supervisor sets status to done when all agents complete"

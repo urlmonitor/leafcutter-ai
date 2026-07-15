@@ -1,4 +1,6 @@
 id: BP-200a
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Get expert-level prompt review without being an expert yourself"

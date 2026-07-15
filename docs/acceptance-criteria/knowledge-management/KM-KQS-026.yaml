@@ -1,4 +1,6 @@
 id: KM-KQS-026
+readiness: reviewed
+priority: medium
 components:
   - knowledge_management
 title: "depends_on path that matches no existing node is silently dropped"

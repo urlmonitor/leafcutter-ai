@@ -1,4 +1,6 @@
 id: BO-660-2
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "New change_target value inherits guardrails from its declared risk_surface"

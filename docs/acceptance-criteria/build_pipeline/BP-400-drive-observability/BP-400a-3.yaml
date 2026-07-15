@@ -1,4 +1,6 @@
 id: BP-400a-3
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "Supervisor templates contain imperative feedback emission instructions"

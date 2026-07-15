@@ -1,4 +1,6 @@
 id: TKT-200b-3
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Boundary doc for a new component is created; existing component doc is updated"

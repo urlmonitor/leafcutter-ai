@@ -1,0 +1,48 @@
+id: UXP-210d-5
+readiness: approved
+priority: medium
+title: "Entering payment details creates a Payment record"
+component: ux-prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the order summary is shown to a signed-in customer,
+  When the customer enters valid card details,
+  Then a Payment record is created for the order in the 'authorized' state,
+  And the Payment is tied to the signed-in customer's order,
+  And no Order is yet marked 'paid' (capture has not happened).
+depends_on: [UXP-210d]
+doc_links:
+  - path: docs/product-truth/flows/fern-and-fig/checkout-and-pay.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  Reads Customer + Order; writes a new Payment (status 'authorized') linked to the
+  order. Payment.amount must equal Order.total per the catalog dataset invariants.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+product_truth:
+  - flow: fern-and-fig/checkout-and-pay
+    node: payDetails
+    node_kind: step
+    flow_kind: user
+    screen: checkout
+    mock_data: fern-and-fig/catalog
+    entities:
+      - Customer
+      - Order
+      - Payment
+    source: mock
+    asof: '2026-07-15'

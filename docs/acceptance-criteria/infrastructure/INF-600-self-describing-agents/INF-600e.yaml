@@ -1,4 +1,6 @@
 id: INF-600e
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "See what goes in and what comes out"

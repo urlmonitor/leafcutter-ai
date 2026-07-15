@@ -1,4 +1,6 @@
 id: BP-600f
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 status: active

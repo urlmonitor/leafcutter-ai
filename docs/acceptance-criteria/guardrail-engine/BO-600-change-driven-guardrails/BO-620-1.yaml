@@ -1,4 +1,6 @@
 id: BO-620-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Schema-contract pair maps to migration plan + backward-compat check + consumer notification"

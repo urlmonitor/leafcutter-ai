@@ -1,4 +1,6 @@
 id: FIN-100
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Integration failures are caught before code reaches main"
@@ -37,3 +39,13 @@ implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
 risk_surface: safety
+product_truth:
+  - flow: leafcutter/deliver-a-feature
+    node: finalize
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'

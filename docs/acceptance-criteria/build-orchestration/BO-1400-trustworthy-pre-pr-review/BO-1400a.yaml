@@ -37,3 +37,14 @@ documentation_triggers:
   - sequence-diagram
 change_target: prompt
 risk_surface: contract_boundary
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: review
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Diff
+    source: real
+    asof: '2026-07-15'

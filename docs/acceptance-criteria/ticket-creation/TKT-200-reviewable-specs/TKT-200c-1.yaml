@@ -1,4 +1,6 @@
 id: TKT-200c-1
+readiness: reviewed
+priority: medium
 components:
   - ticket_creation_pipeline
 title: "Review package assembles specs, diagrams, and docs into a single location"

@@ -1,4 +1,6 @@
 id: INF-600b
+readiness: reviewed
+priority: medium
 components:
   - infrastructure
 title: "Agent cards are assembled during the build"

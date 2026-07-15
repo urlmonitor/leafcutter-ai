@@ -1,4 +1,6 @@
 id: SD-100
+readiness: reviewed
+priority: medium
 components:
   - stakeholder_delivery
 title: "Stakeholders see the value of what you are building, not raw requirements"

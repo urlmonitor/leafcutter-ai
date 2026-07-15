@@ -3212,6 +3212,146 @@
             "components": [
                 "knowledge_system"
             ]
+        },
+        {
+            "id": "pt-classifier",
+            "name": "Product-Truth Classifier",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/pt-classifier.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Product-truth request classifier. Given a plain-language feature request, decides needs_flow / needs_mock_data / needs_mockup (a boolean each), derives the routing outcome (full-set / mockup+data / mockup-only / mock-data-only / none), and names the target component, entities, and add-vs-create decision. Read-only — returns a structured JSON decision the authoring pipeline routes on so only the needed authoring agents run. Scored against docs/product-truth/classifier/eval.jsonl.",
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, eval.jsonl, schemas, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (reads of docs/product-truth/)"
+                }
+            ],
+            "produces": "analysis"
+        },
+        {
+            "id": "mock-data-author",
+            "name": "Mock Data Author",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/mock-data-author.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Mock-data authoring agent for the product-truth store. Given a classified request naming a component and entities, drafts or EXTENDS the one canonical dataset for those entities (realistic *.mock.json records conforming to mock-data.schema.json), enforcing the add-vs-create rule: one canonical dataset per entity per component, extended in place, never duplicated. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py; never hand-edits derived index maps.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, schema, gold seed, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
+                }
+            ],
+            "produces": "analysis"
+        },
+        {
+            "id": "mockup-author",
+            "name": "Mockup Author",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/mockup-author.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "Mockup authoring agent for the product-truth store. Given drafted mock data and a request that involves screens, drafts or extends in place a mockup per screen (*.mockup.json conforming to mockup.schema.json plus a self-contained HTML rendering), populated from the mock records rather than placeholder text, registering a screen id the flow's steps resolve. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py; never hand-edits derived index maps.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, schema, gold seed, mock data, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
+                }
+            ],
+            "produces": "analysis"
+        },
+        {
+            "id": "flow-author",
+            "name": "Flow Author",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/flow-author.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Flow authoring agent for the product-truth store. Given drafted mock data and mockups for a multi-step request, assembles a draft flow (*.flow.json conforming to flow.schema.json): ordered steps wired to their screens and read/write entities, with one acceptance_scenario per step for the business-analyst to turn into ACs. Follows the add-vs-create rule (extends an existing journey rather than creating a new flow). Leaves step.implements and impl_status to the business-analyst / generator. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, schema, gold seed, mockups, mock data, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
+                }
+            ],
+            "produces": "analysis"
         }
     ]
 }

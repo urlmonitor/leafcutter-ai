@@ -1,4 +1,6 @@
 id: BO-610-4
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "Every ticket frontmatter includes change_target and risk_surface fields"

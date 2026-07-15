@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mock Data artifact",
+  "description": "The canonical sample dataset for a set of entities in a component. ONE per entity per component; it grows, it is never duplicated. test-writer builds fixtures from records; frontend-coder populates mockups from records.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "component", "status", "readiness", "entities"],
+  "properties": {
+    "id": { "type": "string", "description": "<product>/<name>, path-stable." },
+    "component": { "type": "string" },
+    "status": { "type": "string", "enum": ["active", "deprecated"] },
+    "readiness": { "type": "string", "enum": ["draft", "reviewed", "approved"] },
+    "superseded_by": { "type": ["string", "null"], "description": "id of the artifact replacing this one when status=deprecated." },
+    "version": { "type": "integer", "minimum": 1 },
+    "reusable": { "type": "boolean", "description": "true if other flows/components may reuse this dataset." },
+    "realization": { "type": "string", "enum": ["built", "spec", "mock"], "description": "Origin of the dataset: mock = sample/demo product content (the default meaning for mock-data); spec = aspirational shape for a not-yet-built dataset; built = mirrors a real on-disk dataset. OPTIONAL — absent defaults to 'built'. Parallels flow.realization." },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "invariants": { "type": "array", "items": { "type": "string" }, "description": "Human/machine rules the records must satisfy (e.g. 'Plant.status==out-of-stock iff stock==0'). Checked by the validator." },
+    "entities": {
+      "type": "object",
+      "description": "Keyed by entity name (e.g. Plant). Each has a field spec and sample records.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fields", "records"],
+        "properties": {
+          "fields": {
+            "type": "object",
+            "description": "field name → type/description string.",
+            "additionalProperties": { "type": "string" }
+          },
+          "records": {
+            "type": "array",
+            "items": { "type": "object" }
+          }
+        }
+      }
+    },
+    "used_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mockups": { "type": "array", "items": { "type": "string" } },
+        "tests": { "type": "array", "items": { "type": "string" } },
+        "flows": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action": { "type": "string", "enum": ["authored", "reviewed", "approved", "extended", "deprecated", "superseded"] },
+          "by": { "type": "string" },
+          "date": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

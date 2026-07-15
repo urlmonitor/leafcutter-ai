@@ -1,4 +1,6 @@
 id: BP-006c
+readiness: reviewed
+priority: medium
 components:
   - build_pipeline
 title: "build_workflow_scripts() writes compiled workflows to .claude/workflows/, not workflows/"

@@ -1,4 +1,6 @@
 id: BO-800e-1
+readiness: reviewed
+priority: medium
 components:
   - build_orchestration
 title: "PR body includes a Goal line with the L0 AC ID and title, linking to the AC file path"

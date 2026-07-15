@@ -1,4 +1,6 @@
 id: ACS-400a-2
+readiness: reviewed
+priority: medium
 components:
   - ac_store
 title: "Authorized agents can modify the criteria field on an existing AC"

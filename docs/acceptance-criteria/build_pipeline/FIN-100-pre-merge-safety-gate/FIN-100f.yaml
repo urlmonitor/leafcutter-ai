@@ -1,4 +1,6 @@
 id: FIN-100f
+readiness: reviewed
+priority: medium
 components:
   - finalize
 title: "Step ordering guarantees tests complete before PR merge"
@@ -34,3 +36,13 @@ implemented_by:
   - scripts/finalize-feature.js
 change_target: pipeline
 risk_surface: safety
+product_truth:
+  - flow: leafcutter/finalize-feature
+    node: mergepr
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-07-15'
