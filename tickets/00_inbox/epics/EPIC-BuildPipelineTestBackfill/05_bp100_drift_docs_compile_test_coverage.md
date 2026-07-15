@@ -20,7 +20,7 @@ ac_coverage:
   - BP-100b-10
   - BP-100c-4
 files_touched:
-  - unit_tests/build/test_bp100_drift_docs_compile.py
+  - unit_tests/build_guards/test_bp100_drift_docs_compile.py
   - templates/scripts/commit_guardian/check_output_drift.py
   - scripts/template_compiler.py
   - scripts/injection_builders.py
@@ -112,7 +112,7 @@ behaviour/artifact; its `covered_by` records the test path (`::test_function`);
 ```yaml
 tests:
   - name: test_bp100_drift_docs_compile
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     covers: [BP-100b-5, BP-100b-5-i, BP-100b-6-i, BP-100b-8, BP-100b-9, BP-100b-10, BP-100c-4]
     asserts: >
       Each listed AC has at least one green test naming it: b-5/b-5-i drive
@@ -138,17 +138,17 @@ completion_manifest:
   tests_red_on_run: true
   ruff_clean: true
   covers_all_seven_acs: true
-Wrote `unit_tests/build/test_bp100_drift_docs_compile.py` covering all 7 ACs. Overall run is red (exit 1): BP-100b-8 fails because `build_workflow_scripts` node ID is absent from the Mermaid diagram (current diagram uses generic `N`); BP-100b-9 fails because `templates/scripts/workflows/` is not in the consolidated-output-root.md shimmed-outputs table. The remaining 6 tests pass immediately (code is already correct — CODE_NO_TEST backfill).
+Wrote `unit_tests/build_guards/test_bp100_drift_docs_compile.py` covering all 7 ACs. Overall run is red (exit 1): BP-100b-8 fails because `build_workflow_scripts` node ID is absent from the Mermaid diagram (current diagram uses generic `N`); BP-100b-9 fails because `templates/scripts/workflows/` is not in the consolidated-output-root.md shimmed-outputs table. The remaining 6 tests pass immediately (code is already correct — CODE_NO_TEST backfill).
 
 ## Test Writer — Completion Report
 
 ### Tests Written
 | File | Directory | Framework | Status |
 |---|---|---|---|
-| test_bp100_drift_docs_compile.py | unit_tests/build/ | unittest | written |
+| test_bp100_drift_docs_compile.py | unit_tests/build_guards/ | unittest | written |
 
 ### Verification Run
-- Command: `python3 -m unittest discover -s unit_tests/build -t . -p "test_bp100_drift_docs_compile.py"`
+- Command: `python3 -m unittest discover -s unit_tests/build_guards -t . -p "test_bp100_drift_docs_compile.py"`
 - Result: red (2 failures — BP-100b-8, BP-100b-9; 6 pass immediately; exit 1)
 
 ### Notes
@@ -158,32 +158,32 @@ Wrote `unit_tests/build/test_bp100_drift_docs_compile.py` covering all 7 ACs. Ov
 
 red_baseline:
   - test_name: test_ac_bp100b8_mermaid_graph_has_build_workflow_scripts_node_id
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "AssertionError: 'build_workflow_scripts' not found in '...' : docs/build-pipeline.md must contain 'build_workflow_scripts' as a Mermaid node identifier"
   - test_name: test_ac_bp100b9_shimmed_outputs_table_has_workflows_source_path
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "AssertionError: 'templates/scripts/workflows/' not found in '...' : consolidated-output-root.md shimmed-outputs table must include 'templates/scripts/workflows/' as the source path"
   - test_name: test_ac_bp100b5_drift_reported_for_mutated_workflow_file
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "(none)"
     note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
   - test_name: test_ac_bp100b5_passes_silently_when_all_workflow_files_match
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "(none)"
     note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
   - test_name: test_ac_bp100b5_i_no_false_positive_when_agents_workflows_absent
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "(none)"
     note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
   - test_name: test_ac_bp100b6_i_assertion_messages_reference_category_and_layer
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "(none)"
     note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
   - test_name: test_ac_bp100b10_new_category_section_has_all_four_layers
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "(none)"
     note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"
   - test_name: test_ac_bp100c4_config_inbox_path_appears_in_compiled_paths_table
-    file: unit_tests/build/test_bp100_drift_docs_compile.py
+    file: unit_tests/build_guards/test_bp100_drift_docs_compile.py
     error: "(none)"
     note: "passes immediately — may be under-specified (CODE_NO_TEST backfill: implementation already correct)"

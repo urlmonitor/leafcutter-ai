@@ -16,7 +16,7 @@ ac_coverage:
   - BP-400c-1
   - BP-900c-1-1
 files_touched:
-  - unit_tests/build/test_bp_stragglers_backfill.py
+  - unit_tests/build_guards/test_bp_stragglers_backfill.py
   - scripts/build.py
   - scripts/build_phases.py
   - scripts/build_propagation_audit.py
@@ -82,7 +82,7 @@ behaviour; `covered_by` records the test path; `work_status: done` only after gr
 ```yaml
 tests:
   - name: test_bp_stragglers_backfill
-    file: unit_tests/build/test_bp_stragglers_backfill.py
+    file: unit_tests/build_guards/test_bp_stragglers_backfill.py
     covers: [BP-400c-1, BP-900c-1-1]
     asserts: >
       BP-400c-1: a build deploy produces all four feedback-analysis artifacts.
@@ -109,10 +109,10 @@ red_baseline: []
 ### Tests Written
 | File | Directory | Framework | Status |
 |---|---|---|---|
-| test_bp_stragglers_backfill.py | unit_tests/build/ | pytest | written |
+| test_bp_stragglers_backfill.py | unit_tests/build_guards/ | pytest | written |
 
 ### Verification Run
-- Command: `python -m pytest unit_tests/build/test_bp_stragglers_backfill.py -v`
+- Command: `python -m pytest unit_tests/build_guards/test_bp_stragglers_backfill.py -v`
 - Result: GREEN (8/8 passed — expected for CODE_NO_TEST backfill; implementation already exists)
 
 ### Notes
