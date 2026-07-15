@@ -2218,5 +2218,612 @@ class TestProbeDiscoverableInSubdirLayout(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# EPIC-BOTestCoverageBackfill ticket 01 — BO-1700e-2, e-4, e-5, f-1, f-1-i
+# Added: 2026-07-14 [EPIC-BOTestCoverageBackfill/01_bo1700_test_coverage]
+# Five test classes covering ACs that had NO prior assertion on their behaviour.
+# All tests verify production code that already exists in verify_precommit_active.py.
+#
+# AC targets:
+#   BO-1700e-2: _resolve_git_commondir resolves shared dir from inside a worktree
+#               AND run_hook._get_main_worktree_root resolves correctly via subprocess
+#   BO-1700e-4: plain-clone topology — _resolve_git_commondir returns .git itself,
+#               is_worktree returns False (no false chain-broken verdict)
+#   BO-1700e-5: main tree is gated — run_checks() has no main-tree exemption branch
+#   BO-1700f-1: no pre-commit config (guardian absent) → graceful skip, exit 0
+#   BO-1700f-1-i: main has config, worktree chain broken → hard fail (not graceful skip)
+# ---------------------------------------------------------------------------
+
+
+class TestGitCommonDirResolverWorktree(unittest.TestCase):
+    """BO-1700e-2: git-common-dir resolver resolves shared hooks dir from a worktree."""
+
+    def test_ac_e2_resolve_commondir_from_worktree_git_as_file(self):
+        # covers: BO-1700e-2
+        """_resolve_git_commondir correctly traverses the linked-worktree topology.
+
+        Topology under test (.git is a file):
+          tmp/
+            main_git/                  ← simulates the main .git directory
+              worktrees/
+                wt/
+                  commondir            ← content: "../.." (two levels up → main_git)
+            worktree/
+              .git                     ← file: "gitdir: <abs_path>/main_git/worktrees/wt"
+
+        Expected: _resolve_git_commondir(worktree) == main_git.resolve()
+
+        BO-1700e-2 criterion: the resolver reads the shared git directory (commondir)
+        to the main checkout, making it available to both the probe and the self-
+        healing hook.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1) so _resolve_git_commondir is available."
+            )
+        if not hasattr(_vpa, "_resolve_git_commondir"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "_resolve_git_commondir(). Implement this helper (BO-1700e-2)."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # Create simulated main .git directory (the shared commondir)
+            main_git = tmp_path / "main_git"
+            main_git.mkdir()
+            # Create the linked-worktree gitdir inside main .git
+            wt_gitdir = main_git / "worktrees" / "wt"
+            wt_gitdir.mkdir(parents=True)
+            # commondir file points two levels up from wt_gitdir → main_git
+            (wt_gitdir / "commondir").write_text("..\\.." if os.name == "nt" else "../..", encoding="utf-8")
+            # Worktree root: .git is a file pointing to the worktree gitdir
+            worktree = tmp_path / "worktree"
+            worktree.mkdir()
+            (worktree / ".git").write_text(
+                f"gitdir: {wt_gitdir}\n", encoding="utf-8"
+            )
+
+            result = _vpa._resolve_git_commondir(worktree)
+            expected = main_git.resolve()
+
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                "BO-1700e-2: _resolve_git_commondir must resolve the shared git directory "
+                "(main checkout's .git) from inside a linked worktree. "
+                f"Expected: {expected}. Got: {result}."
+            ),
+        )
+
+    def test_ac_e2_run_hook_resolver_returns_main_worktree_root(self):
+        # covers: BO-1700e-2
+        """run_hook._get_main_worktree_root() returns the parent of the commondir path.
+
+        When git rev-parse --git-common-dir returns e.g. /main/.git,
+        _get_main_worktree_root() must return /main (the main working tree root).
+
+        This tests the subprocess-based resolver in scripts/commit_guardian/run_hook.py
+        (and its templates/ mirror) which is the entry point for hook dispatch.
+        """
+        try:
+            import scripts.commit_guardian.run_hook as _rh  # type: ignore[import]
+        except (ImportError, ModuleNotFoundError):
+            self.fail(
+                "ImportError: cannot import scripts.commit_guardian.run_hook. "
+                "Implement the module (BO-1700e-2)."
+            )
+        if not hasattr(_rh, "_get_main_worktree_root"):
+            self.fail(
+                "AttributeError: run_hook does not expose _get_main_worktree_root(). "
+                "Implement _get_main_worktree_root() -> Path | None (BO-1700e-2)."
+            )
+
+        # Simulate: git rev-parse --git-common-dir returns "/fake/main_repo/.git"
+        # so _get_main_worktree_root() should return Path("/fake/main_repo")
+        fake_commondir = "/fake/main_repo/.git"
+
+        class _FakeProc:
+            """Minimal subprocess.CompletedProcess stand-in for this test."""
+            stdout = fake_commondir + "\n"
+            returncode = 0
+
+        with patch("subprocess.run", return_value=_FakeProc()):
+            result = _rh._get_main_worktree_root()
+
+        expected = Path(fake_commondir).resolve().parent
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                "BO-1700e-2: _get_main_worktree_root() must return the parent of the "
+                "git-common-dir path (the main working tree root). "
+                f"Expected: {expected}. Got: {result}."
+            ),
+        )
+
+
+class TestGitCommonDirResolverPlainClone(unittest.TestCase):
+    """BO-1700e-4: plain clone (.git is a dir) — no false chain-broken verdict."""
+
+    def test_ac_e4_plain_clone_commondir_equals_git_dir(self):
+        # covers: BO-1700e-4
+        """In a plain clone, _resolve_git_commondir returns the .git directory itself.
+
+        When .git is a real directory (not a file), the resolver MUST return that
+        directory as the commondir without raising or emitting a false chain-broken
+        verdict. The equality common-dir == .git is correct for a plain clone.
+
+        BO-1700e-4 criterion: shared-git-dir resolution handles the case where
+        git-common-dir equals .git (plain clone) WITHOUT treating equality as an
+        anomaly or a chain-broken condition.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "_resolve_git_commondir"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose _resolve_git_commondir()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            clone = tmp_path / "plain_clone"
+            clone.mkdir()
+            # .git is a directory (plain clone topology — no commondir file)
+            git_dir = clone / ".git"
+            git_dir.mkdir()
+
+            result = _vpa._resolve_git_commondir(clone)
+            expected = git_dir.resolve()
+
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                "BO-1700e-4: In a plain clone, _resolve_git_commondir must return the .git "
+                "directory itself (no commondir file → commondir IS .git). "
+                f"Expected: {expected}. Got: {result}. "
+                "A false chain-broken verdict would return a different path or raise."
+            ),
+        )
+
+    def test_ac_e4_is_worktree_returns_false_for_plain_clone(self):
+        # covers: BO-1700e-4
+        """is_worktree() returns False when .git is a directory (plain clone).
+
+        A plain clone must not be detected as a worktree. Returning True would cause
+        the gate to behave differently for main-tree clones (false positive).
+
+        BO-1700e-4: a genuinely broken chain in a plain clone still fails uniformly
+        (covered by other tests); this test confirms the topology detection is correct
+        so the appropriate gate path is taken.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "is_worktree"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose is_worktree(). "
+                "Implement is_worktree(root: Path) -> bool (BO-1700e-4)."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            clone = tmp_path / "plain_clone"
+            clone.mkdir()
+            (clone / ".git").mkdir()  # directory → not a worktree
+
+            result = _vpa.is_worktree(clone)
+
+        self.assertFalse(
+            result,
+            msg=(
+                "BO-1700e-4: is_worktree() must return False for a plain clone "
+                "(.git is a directory, not a file). "
+                f"Got: {result!r}. A False return ensures the resolver does not "
+                "emit a false chain-broken verdict for plain clones."
+            ),
+        )
+
+    def test_ac_e4_is_worktree_returns_true_for_linked_worktree(self):
+        # covers: BO-1700e-4
+        """is_worktree() returns True when .git is a file pointing to a worktrees/ gitdir.
+
+        This positive case completes the contrast: linked worktrees are detected
+        correctly so the probe can apply the full gate chain to them.
+        A genuinely broken chain in a worktree must still fail as it would in a plain
+        clone — this topology detection is the precursor to uniform gate application.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "is_worktree"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose is_worktree()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            worktree = tmp_path / "linked_worktree"
+            worktree.mkdir()
+            # .git file contains "gitdir: ../main/.git/worktrees/wt" (worktree topology)
+            fake_gitdir = tmp_path / "main" / ".git" / "worktrees" / "wt"
+            fake_gitdir.mkdir(parents=True)
+            (worktree / ".git").write_text(
+                f"gitdir: {fake_gitdir}\n", encoding="utf-8"
+            )
+
+            result = _vpa.is_worktree(worktree)
+
+        self.assertTrue(
+            result,
+            msg=(
+                "BO-1700e-4: is_worktree() must return True for a linked worktree "
+                "(.git file whose gitdir path contains '/worktrees/'). "
+                f"Got: {result!r}."
+            ),
+        )
+
+
+class TestMainTreeGatedNotExempt(unittest.TestCase):
+    """BO-1700e-5: main tree is NOT exempt from the gate — no worktree bypass in run_checks()."""
+
+    def test_ac_e5_check_failure_still_fails_when_not_in_worktree(self):
+        # covers: BO-1700e-5
+        """run_checks() reports failure when a check fails, regardless of tree topology.
+
+        Simulates a 'main tree' scenario: is_guardian_complete returns True (guardian
+        is installed), resolve_hooks_path raises OSError (no .git/config in cwd), and
+        check_a_binary_on_path returns False. The probe must still report binary=False
+        and 'binary' in failing_checks — no main-tree exemption path.
+
+        BO-1700e-5 criterion: there is no branch that exempts the main tree from the
+        gate. The gate runs the probe and refuses on non-zero verdict exactly as it
+        does for a worktree commit.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+
+        with (
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(
+                _vpa,
+                "resolve_hooks_path",
+                side_effect=OSError("no .git/config in main tree"),
+            ),
+            patch.object(_vpa, "check_a_binary_on_path", return_value=False),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        self.assertFalse(
+            result.get("binary"),
+            msg=(
+                "BO-1700e-5: binary must be False when check_a returns False, "
+                "regardless of whether this is a main tree or worktree commit. "
+                f"Got: {result}."
+            ),
+        )
+        self.assertIn(
+            "binary",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700e-5: 'binary' must be in failing_checks when check_a fails — "
+                "no main-tree exemption path is permitted. "
+                f"Got: {result}."
+            ),
+        )
+        # Confirm incomplete_build is NOT the reason for failure (guardian IS complete)
+        self.assertNotIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700e-5: 'incomplete_build' must NOT be in failing_checks when "
+                "is_guardian_complete returns True — this would be a mis-classification. "
+                f"Got: {result}."
+            ),
+        )
+
+    def test_ac_e5_run_checks_source_contains_no_worktree_exemption(self):
+        # covers: BO-1700e-5
+        """run_checks() source must NOT call is_worktree() for a main-tree exemption.
+
+        A source-level guard against the specific regression where a developer adds
+        an early-return branch 'if not is_worktree(cwd): return passing_result'.
+        Such a branch would let main-tree commits bypass all four checks — the exact
+        failure mode BO-1700e-5 forbids.
+
+        BO-1700e-5 criterion: 'there is no branch that exempts the main tree from
+        the gate'.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        import inspect
+        source = inspect.getsource(_vpa.run_checks)
+        self.assertNotIn(
+            "is_worktree",
+            source,
+            msg=(
+                "BO-1700e-5: run_checks() must NOT call is_worktree() — that would "
+                "create a main-tree exemption branch forbidden by this AC. "
+                "Found 'is_worktree' in run_checks() source:\n" + source
+            ),
+        )
+
+
+class TestNoPrecommitConfigGracefulSkip(unittest.TestCase):
+    """BO-1700f-1: No pre-commit config at all → graceful skip (exit 0), no hard fail."""
+
+    def test_ac_f1_is_guardian_incomplete_when_scripts_missing(self):
+        # covers: BO-1700f-1
+        """is_guardian_complete() returns False when all three guard scripts are absent.
+
+        The authoritative 'no config' determination: if the guardian scripts are not
+        deployed, the project does not use the framework's quality gates. The gate
+        must treat this as a graceful no-op (exit 0) rather than a hard failure.
+
+        BO-1700f-1 criterion: the main tree has no pre-commit configuration at all
+        → the guard exits 0, drive proceeds.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "is_guardian_complete(). Implement is_guardian_complete(root: Path) -> bool."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # No scripts/commit_guardian/ directory at all
+            result = _vpa.is_guardian_complete(tmp_path)
+
+        self.assertFalse(
+            result,
+            msg=(
+                "BO-1700f-1: is_guardian_complete() must return False when the three "
+                "guardian scripts are absent (project has no pre-commit configuration). "
+                f"Got: {result!r}. "
+                "This False return triggers the graceful no-op path (exit 0)."
+            ),
+        )
+
+    def test_ac_f1_graceful_skip_returns_true_when_scripts_absent(self):
+        # covers: BO-1700f-1
+        """graceful_skip_if_incomplete() returns True (skip/exit-0) when guard absent.
+
+        When the guardian scripts are not deployed, graceful_skip_if_incomplete()
+        must return True so the gate exits 0 and the drive proceeds. It must also
+        log a WARNING/INFO notice (not raise or block).
+
+        BO-1700f-1 criterion: prints an INFO/notice message and exits 0 without
+        raising a failure or blocking the work.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "graceful_skip_if_incomplete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "graceful_skip_if_incomplete(). Implement this guard-rail function."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # No scripts/commit_guardian/ directory → guardian absent
+            result = _vpa.graceful_skip_if_incomplete(tmp_path)
+
+        self.assertTrue(
+            result,
+            msg=(
+                "BO-1700f-1: graceful_skip_if_incomplete() must return True "
+                "(skip = exit 0, drive proceeds) when guardian scripts are absent. "
+                f"Got: {result!r}. "
+                "Returning False here would incorrectly hard-fail on a project that "
+                "simply has not installed the commit-guardian framework."
+            ),
+        )
+
+    def test_ac_f1_graceful_skip_does_not_raise(self):
+        # covers: BO-1700f-1
+        """graceful_skip_if_incomplete() does not raise when guardian is absent.
+
+        The AC requires that the guard 'does not raise a failure or block the work'
+        when no config is configured. Any exception (KeyError, OSError, etc.) would
+        be a violation of the graceful-no-op requirement.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active."
+            )
+        if not hasattr(_vpa, "graceful_skip_if_incomplete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose graceful_skip_if_incomplete()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            try:
+                _vpa.graceful_skip_if_incomplete(tmp_path)
+            except Exception as exc:  # noqa: BLE001
+                self.fail(
+                    f"BO-1700f-1: graceful_skip_if_incomplete() must not raise when "
+                    f"guardian scripts are absent. Got {type(exc).__name__}: {exc}. "
+                    "The graceful no-op path must be exception-free."
+                )
+
+
+class TestMainHasConfigButWorktreeCannotFireHardFail(unittest.TestCase):
+    """BO-1700f-1-i: main has config, worktree chain broken → hard fail, NOT graceful skip."""
+
+    def test_ac_f1_i_guardian_complete_no_graceful_skip(self):
+        # covers: BO-1700f-1-i
+        """When guardian scripts ARE present, graceful_skip_if_incomplete returns False.
+
+        The no-op path (BO-1700f-1) is taken ONLY when the main tree genuinely has
+        no config. When the guardian scripts are deployed (main has config), any chain
+        failure is a hard fail — graceful_skip_if_incomplete must return False so the
+        gate proceeds to run the checks and fail on any broken condition.
+
+        BO-1700f-1-i criterion: 'it does NOT take the no-op path; it fails closed'.
+        This is the production silent-skip bug the guard exists to catch.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "graceful_skip_if_incomplete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose graceful_skip_if_incomplete()."
+            )
+        if not hasattr(_vpa, "is_guardian_complete"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose is_guardian_complete()."
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            # Deploy all three guardian scripts so the guardian is 'complete'
+            guardian_dir = tmp_path / "scripts" / "commit_guardian"
+            guardian_dir.mkdir(parents=True)
+            for script_name in (
+                "verify_precommit_active.py",
+                "precommit_canary.py",
+                "ensure_precommit_config.py",
+            ):
+                (guardian_dir / script_name).write_text("# placeholder\n", encoding="utf-8")
+
+            # Guardian is now complete: is_guardian_complete must return True
+            guardian_complete = _vpa.is_guardian_complete(tmp_path)
+            self.assertTrue(
+                guardian_complete,
+                msg=(
+                    "Test setup: is_guardian_complete must return True when all three "
+                    f"scripts are present. Got: {guardian_complete!r}."
+                ),
+            )
+
+            # graceful_skip_if_incomplete must return False (no skip — hard fail applies)
+            skip = _vpa.graceful_skip_if_incomplete(tmp_path)
+
+        self.assertFalse(
+            skip,
+            msg=(
+                "BO-1700f-1-i: graceful_skip_if_incomplete() must return False when the "
+                "guardian scripts ARE present (main tree has config). Returning True here "
+                "would silently permit the broken-worktree-chain bug. "
+                f"Got: {skip!r}."
+            ),
+        )
+
+    def test_ac_f1_i_broken_chain_produces_hard_fail_not_graceful_skip(self):
+        # covers: BO-1700f-1-i
+        """run_checks() reports a check failure when guardian is complete but chain broken.
+
+        Scenario: guardian IS installed (is_guardian_complete=True) but check_b_config
+        returns False (config unresolved in the worktree — the 'silent-skip bug' scenario
+        where .pre-commit-config.yaml is missing from the worktree despite being present
+        in the main tree).
+
+        The probe must:
+        - NOT take the graceful no-op path (incomplete_build must NOT be in failing_checks)
+        - Report 'config' in failing_checks (hard fail naming the broken check)
+
+        This is precisely the production silent-skip bug (BO-1700f-1-i): a fresh worktree
+        with no .leafcutter symlink runs zero hooks under PRE_COMMIT_ALLOW_NO_CONFIG=1,
+        silently bypassing all quality gates.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module (BO-1700a-1)."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+
+        with (
+            # Guardian IS complete (main tree has config — not the graceful-skip path)
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            # resolve_hooks_path raises OSError (no .git/config) — uses fallback, hooks_resolved=False
+            patch.object(
+                _vpa,
+                "resolve_hooks_path",
+                side_effect=OSError("no .git/config in worktree"),
+            ),
+            # check_a passes (binary present)
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            # check_b fails — config unresolved in the worktree (the silent-skip bug scenario)
+            patch.object(_vpa, "check_b_config", return_value=False),
+            # check_c passes (shared hook present in main)
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            # check_d passes (canary fires)
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+
+        # Hard fail: 'config' must be in failing_checks (broken chain detected)
+        self.assertIn(
+            "config",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700f-1-i: 'config' must be in failing_checks when check_b_config "
+                "returns False and the guardian is complete (hard fail, not graceful skip). "
+                f"Got: {result}. "
+                "This is the production silent-skip bug the gate must catch."
+            ),
+        )
+        self.assertFalse(
+            result.get("config"),
+            msg=(
+                "BO-1700f-1-i: config must be False in the result when check_b fails. "
+                f"Got: {result}."
+            ),
+        )
+        # The graceful-skip path (incomplete_build) must NOT be taken
+        self.assertNotIn(
+            "incomplete_build",
+            result.get("failing_checks", []),
+            msg=(
+                "BO-1700f-1-i: 'incomplete_build' must NOT be in failing_checks when "
+                "is_guardian_complete returns True. The probe took the wrong (graceful-skip) "
+                "path instead of the hard-fail path. "
+                f"Got: {result}."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
