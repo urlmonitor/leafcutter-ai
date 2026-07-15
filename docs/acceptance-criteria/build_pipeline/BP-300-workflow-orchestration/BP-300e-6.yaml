@@ -1,0 +1,86 @@
+id: BP-300e-6
+components:
+  - build_pipeline
+title: "Agents dispatched for a machine-parsed result return only the structured payload, with any anomaly carried inside it"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Given a delivery workflow (/plan-feature, /build-feature, /finalize-feature,
+    or the epic and ticket workflows behind them) dispatches an internal helper
+    agent whose reply the workflow will machine-parse as a structured result
+    (a single JSON object or array) — for example the status-checker agent that
+    reports ticket state,
+  When that agent completes its task and returns its reply,
+  Then the agent's reply is exactly one structured JSON value (a single object or
+    array) and nothing else — no leading or trailing prose, no markdown headings
+    (such as a "## Anomalies" section), no explanatory notes, and no commentary
+    before or after the payload,
+  And any anomaly, warning, or caveat the agent needs to report is carried INSIDE
+    the structured payload (for example in an "anomalies" or "warnings" field of
+    the returned object) rather than appended as free text outside it,
+  And this contract applies to every agent used as a machine-parsed producer by
+    these workflows — it is a requirement on the class "agents whose reply a
+    delivery workflow parses", not on any single named agent.
+depends_on:
+  - BP-300e
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Update templates/agents/status-checker.md so that, when dispatched for a machine-parsed result, its output instruction reads: return ONLY the single JSON object/array — no prose and no markdown headings (including the existing '## Anomalies' and '## Verdict' sections) before or after the payload. status-checker is the confirmed trigger case: it currently appends an '## Anomalies' markdown section after its structured output."
+  - "Anomalies/warnings/caveats must be relocated to a field INSIDE the returned JSON payload (e.g. an 'anomalies' or 'warnings' array) rather than emitted as a trailing markdown section. Do not remove the agent's ability to report anomalies — change only where they are carried."
+  - "Identify the full class of machine-parsed producer agents by grepping the delivery workflow scripts (templates/workflows-js/*.js) for agent dispatches whose result is JSON.parse'd, and apply the same output contract to every member. Known members at authoring time: status-checker (primary; ~48 dispatch sites), ac-triage, pt-classifier, worktree-agent. Do NOT hard-code this list in the templates — re-derive it from the dispatch sites so newly added producers inherit the contract (data-driven, not by-name)."
+  - "Edit only the canonical source templates under templates/agents/*.md; rebuild via build.py so the deployed .claude/agents/*.md copies stay byte-identical (compiled-output drift guard) — never hand-edit the deployed copy."
+  - "Preserve each agent's human-facing / sign-off behavior (e.g. the signoff-skill path when a ticket_path is provided). The 'return ONLY JSON' contract applies to the machine-parsed dispatch path; it must not strip the sign-off or completion-manifest behavior these agents also perform."
+  - "This AC is defense-in-depth and independent of the parseAgentJson tolerant reader (BP-300e-1): it hardens the producer side while BP-300e-1 hardens the consumer side of the same contract. The template change must not assume, require, or be blocked by that helper, and must remain correct whether or not BP-300e-1 has shipped."
+delivers_to: null
+expects_from: null
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_status_checker_template_instructs_json_only_when_machine_parsed
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "status-checker.md's body contains an explicit 'return ONLY the JSON object/array, no prose or headings before or after' instruction for the machine-parsed dispatch path (template-content check, in the style of test_agent_self_description_validation.py)."
+  - name: test_status_checker_template_carries_anomalies_inside_payload
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "status-checker.md's structured/example output carries anomalies inside the JSON payload (e.g. an 'anomalies' field) and no longer appends a trailing '## Anomalies' markdown section on the machine-parsed path."
+  - name: test_all_machine_parsed_producer_templates_instruct_json_only
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Every agent template dispatched as a JSON.parse'd producer by templates/workflows-js/*.js (status-checker, ac-triage, pt-classifier, worktree-agent) carries the 'return ONLY JSON' output contract — class-level assertion derived from the workflow dispatch sites, not a hard-coded name list."
+origin_agent: it-po
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: >-
+  Belt-and-suspenders / defense-in-depth complement to BP-300e-1..5. Those ACs
+  make the ORCHESTRATOR side of the contract tolerant of prose around otherwise
+  valid JSON; this AC tightens the OTHER side — the dispatched agent templates —
+  so machine-parsed producers emit only their structured payload with no
+  surrounding prose. The trigger case was the status-checker agent appending a
+  "## Anomalies" markdown section after its JSON. This is AGENT-TEMPLATE (prompt)
+  work, NOT engine JS — hence change_target: prompt. IT-PO enrichment set
+  assigned_agent: llm-expert, estimated_complexity: M (coordinated edit across the
+  status-checker template plus the ac-triage / pt-classifier / worktree-agent
+  producers and a template-content test), it_requirements, and a template-content
+  test_spec. delivers_to/expects_from are null: this AC has no hard contract
+  dependency on the parseAgentJson helper (BP-300e-1) — it independently hardens
+  the producer side of the same contract.

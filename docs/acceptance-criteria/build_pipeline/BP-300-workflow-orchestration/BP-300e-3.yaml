@@ -6,8 +6,8 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 criteria: |
   Given a workflow run dispatches a helper agent whose structured result is a JSON
@@ -19,6 +19,38 @@ criteria: |
   And the run continues to its next stage rather than stopping on the extra wording.
 depends_on:
   - BP-300e
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Edit only the canonical source templates/workflows-js/*.js; rebuild via build.py so the deployed .claude/workflows/*.js copy stays byte-identical (BP-100k drift guard) — never hand-edit the deployed copy."
+  - "The tolerant reader is a pure, synchronous, dependency-free function (no I/O); confine try/except to the JSON.parse boundary only, per the project error-handling policy."
+  - "The balanced scanner must handle a top-level '[' ... ']' array with the same depth logic used for objects, preserving element count and contents."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness, not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-1
+  contract: >-
+    Inline tolerant reader parseAgentJson(raw, {stage, agent}) whose balanced-scan
+    extraction covers both {...} objects and [...] arrays (string/escape-aware) and
+    returns the first balanced top-level value.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_parse_array_with_surrounding_prose_returns_array
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given '<prose>\\n[ {...}, {...} ]\\n<prose>' returns the array with the same element count and contents."
+  - name: test_run_continues_after_prose_wrapped_array
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Stubbed agent returns a prose-wrapped array; the run consumes every element and continues."
 origin_agent: BrainCandy
 created: 2026-07-15
 amended_by: []

@@ -6,8 +6,8 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 criteria: |
   Given a helper agent returns an empty string or a reply consisting only of
@@ -19,6 +19,36 @@ criteria: |
     failure is surfaced, not hidden.
 depends_on:
   - BP-300e-4
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Empty-string and whitespace-only replies must raise the SAME typed stage/agent error as the prose-only case (BP-300e-4); never returned as None/empty and never swallowed or treated as skippable."
+  - "The tolerant reader stays a pure, synchronous, dependency-free function; confine try/except to the JSON.parse boundary only."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness with '' and a whitespace-only string, not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-4
+  contract: >-
+    Inline tolerant reader parseAgentJson whose typed stage/agent-named error path also
+    covers empty and whitespace-only inputs.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_empty_string_raises_typed_stage_agent_error
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given '' raises the same typed stage/agent-named error as the prose-only case, not None/empty."
+  - name: test_whitespace_only_raises_typed_stage_agent_error
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given a whitespace-only string raises the same typed stage/agent-named error, never a silent skip."
 origin_agent: BrainCandy
 created: 2026-07-15
 amended_by: []

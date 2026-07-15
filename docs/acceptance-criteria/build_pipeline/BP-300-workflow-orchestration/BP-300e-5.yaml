@@ -6,8 +6,8 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 criteria: |
   Given the delivery commands are backed by multiple workflow scripts
@@ -24,6 +24,48 @@ criteria: |
     otherwise-valid JSON.
 depends_on:
   - BP-300e
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Every agent-reply parse site across plan-feature.js, build-feature.js, finalize-feature.js, build-epic.js and build-ticket.js must route through the single tolerant reader; no residual inline `typeof x === 'string' ? JSON.parse(x) : x` ternary or bare JSON.parse of agent output may remain."
+  - "Coverage must be asserted by a structural audit test that enumerates agent-reply parse sites (not a hard-coded count); the authoring-time surface is 26 JSON.parse sites in plan-feature.js, 5 in finalize-feature.js, 1 each in build-epic.js and build-ticket.js, and 0 in build-feature.js (it dispatches via schema-enforced agent() calls, so it is trivially compliant)."
+  - "HELPER PLACEMENT (open design decision — recommendation, needs ratification at the gate): E2 workflow scripts are self-contained — the engine forbids require()/import in the script body — so the tolerant reader cannot be a shared import. Choose either (a) inline a byte-identical parseAgentJson into each workflow script, guarded by a parity test asserting the helper body is identical across all scripts, or (b) have build.py inject a shared prelude at deploy time. RECOMMEND (a): the test harness (unit_tests/_plan_feature_e2_runner.py / _workflow_engine_harness.py) executes the TEMPLATE source directly via vm.Script, so a deploy-time-only prelude (b) would leave templates/workflows-js/*.js non-runnable and break the harness; inlining keeps each script independently runnable and neutralizes drift via the parity test, matching the repo's established source<->template parity pattern (BP-1000)."
+  - "Edit only the canonical source templates/workflows-js/*.js; rebuild via build.py so every deployed .claude/workflows/*.js copy stays byte-identical (BP-100k drift guard)."
+  - "Resilience must be verified by per-script runtime behavioral tests (replay a prose-wrapped reply through build-feature and finalize-feature and assert each run continues), not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-1
+  contract: >-
+    Inline tolerant reader parseAgentJson(raw, {stage, agent}) — the single reader every
+    parse site across all five workflow scripts must route through.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_all_agent_parse_sites_route_through_tolerant_reader
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Structural audit: every enumerated agent-reply parse site across the five workflow scripts routes through parseAgentJson; no bare JSON.parse or strict ternary on agent output remains."
+  - name: test_tolerant_reader_body_identical_across_workflow_scripts
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Parity: the inlined parseAgentJson body is byte-identical across every workflow script that contains it (guards the chosen inline placement against drift)."
+  - name: test_build_feature_run_tolerates_prose_wrapped_reply
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Replay a prose-wrapped reply through build-feature; the run continues to its next stage."
+  - name: test_finalize_feature_run_tolerates_prose_wrapped_reply
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Replay a prose-wrapped reply through finalize-feature; the run continues to its next stage."
 origin_agent: BrainCandy
 created: 2026-07-15
 amended_by: []

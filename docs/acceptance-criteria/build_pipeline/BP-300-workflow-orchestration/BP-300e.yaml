@@ -1,7 +1,7 @@
 id: BP-300e
-readiness: draft
+readiness: approved
 req_status: draft
-priority: medium
+priority: high
 components:
   - build_pipeline
 title: "Delivery commands finish even when an agent adds extra wording to its reply"
@@ -20,7 +20,13 @@ criteria: |
   wording never costs you a lost run and real problems are never hidden.
 depends_on:
   - BP-300
-doc_links: []
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
 documentation_triggers: []
 documentation_rationale: >-
   Reliability hardening of existing delivery commands — introduces no new
@@ -37,6 +43,7 @@ covered_by:
   - BP-300e-3
   - BP-300e-4
   - BP-300e-5
+  - BP-300e-6
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
