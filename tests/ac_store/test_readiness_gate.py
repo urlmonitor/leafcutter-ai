@@ -48,6 +48,7 @@ def _make_ac_yaml(**overrides) -> str:
         "id": "TEST-001",
         "title": "Test AC",
         "component": "ac-store",
+        "components": ["ac_store"],
         "level": "L2",
         "status": "active",
         "work_status": "todo",
