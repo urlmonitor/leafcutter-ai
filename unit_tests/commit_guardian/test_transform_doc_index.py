@@ -653,5 +653,164 @@ class TestDeployedLayoutRegression(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# Finding 1 regression: fail-open contract for non-(OSError/ImportError/ValueError)
+# ---------------------------------------------------------------------------
+
+
+class TestFailOpenFinding1(unittest.TestCase):
+    """Finding 1 regression: the __main__ fail-open guard must catch ANY exception
+    raised by the generator, including AttributeError from a broken or incomplete
+    generate_doc_index module.  Before the fix, only (OSError, ImportError,
+    ValueError) were caught; AttributeError escaped → non-zero exit → blocked commits.
+    """
+
+    def test_failopen_on_attributeerror_from_generator(self):
+        # covers: Finding 1 (fail-open not airtight)
+        """Hook must exit 0 when generate_index raises AttributeError.
+
+        Runs as a subprocess with a deliberately broken generator (valid Python file
+        whose generate_index raises AttributeError) placed in <tmp>/scripts/ so the
+        hook's candidate search picks it up.  Exercises the full __main__ guard.
+
+        Fails against the pre-fix code (AttributeError escaped the typed except
+        → non-zero exit) and passes after broadening the __main__ guard to
+        except Exception.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            # Init a real git repo
+            subprocess.run(
+                ["git", "init", str(tmp_path)], check=True, capture_output=True
+            )
+            subprocess.run(
+                ["git", "-C", str(tmp_path), "config", "user.email", "test@test.test"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(tmp_path), "config", "user.name", "Test"],
+                check=True,
+                capture_output=True,
+            )
+
+            # Stage a docs/*.md file so the hook fires past the early-exit guard
+            docs_dir = tmp_path / "docs"
+            docs_dir.mkdir(parents=True, exist_ok=True)
+            doc_file = docs_dir / "sample.md"
+            doc_file.write_text("# Sample\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(tmp_path), "add", str(doc_file)],
+                check=True,
+                capture_output=True,
+            )
+
+            # Place a broken generator in <tmp>/scripts/ — valid syntax but
+            # generate_index raises AttributeError so the import succeeds and the
+            # error surfaces only when main() calls gdi.generate_index().
+            scripts_dir = tmp_path / "scripts"
+            scripts_dir.mkdir(parents=True, exist_ok=True)
+            (scripts_dir / "generate_doc_index.py").write_text(
+                "def generate_index(repo_root):\n"
+                "    raise AttributeError('simulated broken generator attribute')\n",
+                encoding="utf-8",
+            )
+
+            # Run the hook as a subprocess (CWD = tmp_path, as pre-commit does)
+            result = subprocess.run(
+                [sys.executable, str(_TRANSFORM_DOC_INDEX_PATH)],
+                cwd=str(tmp_path),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            "Hook must exit 0 (fail-open) even when generate_index raises "
+            f"AttributeError.  exit={result.returncode!r}, "
+            f"stderr={result.stderr!r}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Finding 2 regression: decoupled staging — restage even when disk content matches
+# ---------------------------------------------------------------------------
+
+
+class TestIdempotencyDecoupledStaging(unittest.TestCase):
+    """Finding 2 regression: the idempotency guard must call _restage_index even
+    when the generated content is byte-identical to the on-disk INDEX.md.
+    Before the fix, the guard returned 0 without staging, leaving a
+    correct-but-unstaged INDEX.md in the working tree — the commit would use
+    the stale HEAD version instead (AC-2 violation).
+    """
+
+    def test_restage_called_when_content_identical_but_unstaged(self):
+        # covers: Finding 2 (idempotency guard drops needed re-stage)
+        """Restage must be called when INDEX.md is byte-identical on disk but unstaged.
+
+        Scenario: a prior hook run wrote the correct INDEX.md to disk, but the user
+        later unstaged it.  The hook fires again (a new docs file is staged).
+        Generated content == on-disk content → no write needed, BUT git add must
+        still be called so INDEX.md is in the commit.
+
+        Fails against the pre-fix code (returns 0 without calling git add when
+        content matches) and passes after the fix (git add is always called when
+        triggered and an existing matching file is found).
+        """
+        tdi = _import_transform_doc_index()
+
+        expected_content = "# Generated INDEX\n\nSome content.\n"
+        staged_output = "docs/some-guide.md\n"
+        git_add_calls: list[list[str]] = []
+
+        def fake_subprocess_run(cmd, **kwargs):
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            if cmd[:3] == ["git", "diff", "--cached"]:
+                mock_result.stdout = staged_output
+            elif list(cmd)[:2] == ["git", "add"]:
+                git_add_calls.append(list(cmd))
+                mock_result.stdout = ""
+            else:
+                mock_result.stdout = ""
+            return mock_result
+
+        fake_gdi = MagicMock()
+        fake_gdi.generate_index.return_value = expected_content
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            docs_dir = repo_root / "docs"
+            docs_dir.mkdir(parents=True, exist_ok=True)
+
+            # Pre-write byte-identical content to disk to simulate a prior run,
+            # but do NOT stage it (no git add) — it is correct-but-unstaged.
+            index_path = docs_dir / "INDEX.md"
+            index_path.write_text(expected_content, encoding="utf-8")
+
+            with patch("subprocess.run", side_effect=fake_subprocess_run):
+                with patch.object(tdi, "_find_generator_module", return_value=fake_gdi):
+                    exit_code = tdi.main(repo_root=repo_root)
+
+        self.assertEqual(
+            exit_code,
+            0,
+            f"main() must return 0 (fail-open). Got {exit_code}.",
+        )
+
+        # _restage_index must have been called even though content was identical
+        index_add_calls = [c for c in git_add_calls if any("INDEX.md" in arg for arg in c)]
+        self.assertTrue(
+            len(index_add_calls) > 0,
+            "Expected 'git add ... docs/INDEX.md' to be called even when "
+            "INDEX.md was byte-identical on disk (decoupled staging — Finding 2 fix). "
+            f"git add calls seen: {git_add_calls}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

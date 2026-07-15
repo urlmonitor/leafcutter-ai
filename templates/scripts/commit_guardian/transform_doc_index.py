@@ -274,13 +274,17 @@ def main(repo_root: Path | None = None) -> int:
         )
         return 0
 
-    # Idempotency guard: only write and re-stage when content actually changed.
+    # Idempotency guard: skip disk write when content unchanged, but always
+    # restage so INDEX.md is in the git index even if it was correct-but-unstaged
+    # (e.g. a prior run wrote it, then the user unstaged it — AC-2 requires staging
+    # whenever at least one docs/ file is staged, regardless of disk content).
     if index_path.exists():
         try:
             existing_content = index_path.read_text(encoding="utf-8")
             if existing_content == new_content:
+                _restage_index(index_path)
                 return 0
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             print(
                 f"[transform-doc-index] WARNING: cannot read existing {index_path}, "
                 f"proceeding to overwrite: {exc}",
@@ -308,6 +312,8 @@ def main(repo_root: Path | None = None) -> int:
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (OSError, ImportError, ValueError) as exc:
-        print(f"[transform-doc-index] unexpected error, skipping: {exc}", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001
+        # Fail-open outermost boundary: any unexpected exception (AttributeError,
+        # SyntaxError in the generator, etc.) must never block an unrelated commit.
+        print(f"[transform-doc-index] WARNING: unexpected error, skipping: {exc}", file=sys.stderr)
         sys.exit(0)
