@@ -126,6 +126,23 @@ completion_manifest:
 Auto-authorized commit gate (supervised path): subject "test(build_guards): add unit_tests/build shadow guard; retarget BP-backfill paths"; staged files: unit_tests/build_guards/test_no_build_package_shadow.py, tickets/00_inbox/epics/EPIC-BuildPipelineTestBackfill/05_bp100_drift_docs_compile_test_coverage.md, tickets/00_inbox/epics/EPIC-BuildPipelineTestBackfill/06_stragglers_test_coverage.md, tickets/00_inbox/epics/EPIC-RedTestClusterRepair/08_anti_build_shadow_guard.md.
 [probe-override] verify_precommit_active.py reports git_hook: false — known false negative in worktree topology: resolve_hooks_path falls back to cwd/.git/hooks when .git/config is absent (worktree .git is a file), producing an invalid path. Actual hook at /home/henzeh/projects/leafcutter/leafcutter-ai/.git/hooks/pre-commit contains the sentinel; binary/config/canary all pass. Mixed-set (TESTS+TICKETS) is intentional per ticket files_touched declaration and upstream sign-offs.
 
+### 2026-07-15 16:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-15_98a31280
+completion_manifest:
+  ac1_satisfied: true
+  ac2_satisfied: true
+  no_high_confidence_findings: true
+  medium_finding_noted: true
+Second review pass (re-execution of pr-reviewer phase). No high-confidence findings. AC-1 satisfied: guard test has 3 tests covering __init__.py detection, test_*.py detection, and sandbox spot-check; all green per test-runner sign-off. AC-2 satisfied: tickets 05/06 files_touched and test-block file: paths updated from unit_tests/build/ to unit_tests/build_guards/ in committed diff (24dd29b6). One medium finding consistent with prior reviewer: test_guard_genuinely_detects_shadow operates on tmp_path, not _SHADOW_DIR/_REPO_ROOT constants — the sandbox spot-check validates pathlib detection logic but does not exercise the module-level path resolution; a miscalculated _REPO_ROOT would cause tests 1 and 2 to pass vacuously. Medium count = 1 (threshold > 3); no Opus escalation. No blockers.
+
+### 2026-07-15 16:30 — commit (status: ok)
+feedback-id: fb_2026-07-15_7b7a3ec6
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate (supervised path, re-run): implementation commit already landed as 24dd29b6; committing ticket update from second pr-reviewer pass (comment at 16:00). Probe git_hook: false is the known worktree false-negative (binary/config/canary all pass; actual hook confirmed at leafcutter-ai/.git/hooks/pre-commit).
+
 ## Implementation Tasks
 
 - [x] Add `unit_tests/build_guards/test_no_build_package_shadow.py`: fail if
