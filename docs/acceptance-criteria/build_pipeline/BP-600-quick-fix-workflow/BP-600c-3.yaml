@@ -7,7 +7,7 @@ level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the python-coder has applied the fix to the diagnosed file,
   When the workflow reaches the green-phase verification step,
@@ -47,6 +47,7 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [BP-600c-3-i]
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

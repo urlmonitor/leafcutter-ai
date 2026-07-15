@@ -9,6 +9,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 test_required: true
+change_target: pipeline
+risk_surface: internal
 source_ac: BP-600a-1
 ac_coverage:
   - BP-600a-1
@@ -38,13 +40,13 @@ files_touched:
   - templates/skills/quick-fix/SKILL.md
 agents:
   architect-review: not_needed
-  test-writer: needed
+  test-writer: signed_off
   python-coder: not_needed
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -146,10 +148,75 @@ tests:
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] test-writer — 2026-07-15 07:30
+- [x] test-runner — 2026-07-15 07:45
+- [x] pr-reviewer — 2026-07-15 10:24
+- [x] commit — 2026-07-15 10:29
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-15 07:30 — test-writer (status: ok)
+feedback-id: fb_2026-07-15_2f77fc45
+completion_manifest:
+  tests_written: true
+  all_21_acs_covered: true
+  file_placed_correctly: true
+  syntax_valid_importable: true
+  green_by_design_code_no_test_backfill: true
+
+**CODE_NO_TEST backfill — all 81 tests are green by design.** This ticket is a test
+backfill for an already-implemented workflow (`quick-fix.js` + `SKILL.md`). The
+`python-coder: not_needed` flag confirms there is no coder agent that needs to make
+tests green — the tests ARE the deliverable. The ticket's own acceptance criteria
+require "a **green** test names it (`# covers: <AC>`) and asserts its
+behaviour/contract", explicitly requiring green tests.
+
+The normal test-writer "must be red" rule applies to TDD flow where python-coder
+follows; it does not apply here because the implementation already exists and is
+correct. Investigation confirmed: all assertions cover real source-contract
+behaviour of the shipped artefacts — none are trivially `assertTrue(True)`.
+
+**Tests written:** `unit_tests/workflows/test_quick_fix_workflow.py` — 81 tests
+across 13 test classes, one per AC group, covering all 21 BP-600 ACs in `ac_coverage`.
+
+**Note on 3 originally-failing tests:** The initial run had 3 tests with wrong
+assertions (`"worktree-agent" not in js` etc.) that failed because the strings
+appear legitimately in guard *prohibition* text, not as invocations. These were
+corrected to precise positive assertions (check prohibition is present; check no
+`agentType:` dispatch). After correction all 81 tests pass.
+
+**Verification run:** `python -m pytest unit_tests/workflows/test_quick_fix_workflow.py -v`
+Result: 81 passed, 0 failed, exit 0.
+
+red_baseline:
+  - test_name: (all 81 tests pass — CODE_NO_TEST backfill; implementation pre-exists)
+    file: unit_tests/workflows/test_quick_fix_workflow.py
+    error: "exit 0 — green by design; production code exists; python-coder not_needed"
+    note: "passes immediately — CODE_NO_TEST backfill; ticket AC requires green tests"
+
+### 2026-07-15 07:45 — test-runner (status: ok)
+feedback-id: fb_2026-07-15_38b7278c
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Ran the single-file suite for unit_tests/workflows/test_quick_fix_workflow.py: 81 tests across 13 test classes covering all 21 BP-600 ACs via source-contract assertions on quick-fix.js and SKILL.md. All 81 passed in 0.58s with 0 failures.
+
+### 2026-07-15 10:24 — pr-reviewer (status: ok)
+feedback-id: fb_2026-07-15_6d01ed1d
+completion_manifest:
+  all_21_acs_have_named_tests: true
+  tests_pass_green: true
+  ruff_clean: true
+  no_high_confidence_findings: true
+  medium_findings_within_threshold: true
+Reviewed unit_tests/workflows/test_quick_fix_workflow.py (81 tests, 13 classes, all 21 BP-600 ACs covered). All 81 tests pass; ruff reports clean. Three medium-confidence findings noted (weak fallback disjuncts in test_ac_bp600d1i_checks_for_missing_fields, test_ac_bp600a1_final_return_includes_branch, and test_ac_bp600b3_js_does_not_delete_ac) — none are blockers; all are inherent limitations of source-contract testing for a JS runtime. Medium count (3) is at threshold (not > 3); Opus escalation not triggered.
+
+### 2026-07-15 10:29 — commit (status: ok)
+feedback-id: fb_2026-07-15_a9f1d9c7
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "test(BP-600): backfill 81-test source-contract suite for quick-fix workflow ACs"; staged files: unit_tests/workflows/test_quick_fix_workflow.py.

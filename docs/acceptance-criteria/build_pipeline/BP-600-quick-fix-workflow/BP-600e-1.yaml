@@ -7,7 +7,7 @@ level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the python-coder has been dispatched to apply the fix,
   When the coder's changes touch 2 or more source files (excluding
@@ -44,6 +44,7 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [BP-600e-1-i]
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600e-1.md
 change_target: pipeline

@@ -37,6 +37,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - tests/test_build_artifact_parity.py
+  - "unit_tests/build/test_bp100_drift_docs_compile.py"
 implemented_by:
   - tests/test_build_artifact_parity.py
 change_target: code

@@ -38,7 +38,8 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/agents/test_llm_expert_artifacts.py"
 implemented_by:
   - "docs/agents/README.md"
 change_target: docs

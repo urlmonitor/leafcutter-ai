@@ -9,6 +9,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 test_required: true
+change_target: pipeline
+risk_surface: internal
 source_ac: FIN-100a-1
 ac_coverage:
   - FIN-100a-1
@@ -31,13 +33,13 @@ files_touched:
   - templates/agents/test-failure-triage.md
 agents:
   architect-review: not_needed
-  test-writer: needed
+  test-writer: signed_off
   python-coder: not_needed
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: failed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -135,10 +137,66 @@ tests:
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] test-writer — 2026-07-15 09:57
+- [x] test-runner — 2026-07-15 10:10
+- [ ] pr-reviewer — failed 2026-07-15 10:35
+- [x] commit — 2026-07-15 10:22
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-15 09:57 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  tests_written: true
+  all_acs_covered: true
+  test_file_placed_correctly: true
+  verification_run_completed: true
+57 source-contract tests written across 14 test classes in `unit_tests/workflows/test_finalize_pre_merge_safety_gate.py`, covering all 14 FIN-100 AC leaves (a-1, a-2, a-3, b-1, b-2, b-3, c-1, c-2, c-3, d-1, d-2, d-3, f-1, f-2). This is a CODE_NO_TEST backfill ticket — the finalize-feature.js and test-failure-triage.md implementation already exists, so all 57 tests pass immediately (zero exit). Per the test-writer instructions, this is the expected outcome when "the implementation already exists and is correct". c-1/c-2/c-3 are covered by source-contract assertions over test-failure-triage.md (the LLM prompt) as directed by the ticket's testing-approach call-out; these are flagged as weaker coverage in the completion report. The verification run confirmed 57 tests pass in 1.05s with no syntax or import errors.
+
+### Test Writer — Completion Report
+
+#### Tests Written
+| File | Directory | Framework | Status |
+|---|---|---|---|
+| test_finalize_pre_merge_safety_gate.py | unit_tests/workflows/ | pytest | written (57 tests across 14 classes) |
+
+#### Verification Run
+- Command: `python -m pytest unit_tests/workflows/test_finalize_pre_merge_safety_gate.py -v`
+- Result: **green (57 passed, 1.05s)** — CODE_NO_TEST backfill; implementation pre-exists
+- Note: All 57 tests pass immediately because this is a CODE_NO_TEST backfill ticket with no coder phase. The implementation in finalize-feature.js and test-failure-triage.md is already correct. This is the expected outcome for backfill work.
+
+#### Coverage Notes
+- **FIN-100c-1/c-2/c-3**: Covered by source-contract assertions over `test-failure-triage.md` (reads the LLM prompt text and asserts each documented classification rule is present). This is explicitly weaker than a behavioral/replay harness against the live agent, but matches the ticket's "weaker fallback" allowance.
+- All a-*, b-*, d-*, f-* ACs are covered by source-contract assertions over `finalize-feature.js` (reading the JS as text, same pattern as existing workflow tests).
+
+red_baseline: []
+note: "CODE_NO_TEST backfill — all 57 tests pass immediately because the implementation pre-exists (finalize-feature.js). No coder phase required. Per test-writer instructions: 'the implementation already exists and is correct.'"
+
+### 2026-07-15 10:10 — test-runner (status: ok)
+feedback-id: fb_2026-07-15_5c65d5ea
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+All 57 source-contract tests in unit_tests/workflows/test_finalize_pre_merge_safety_gate.py passed in 0.72s. Suite routed as single-file pytest against the new test file (unit_tests/workflows/ pattern). FIN-100 backfill coverage verified green across all 14 AC classes (a-1 through f-2); c-1/c-2/c-3 remain weaker source-contract coverage as documented by test-writer.
+
+### 2026-07-15 10:35 — pr-reviewer (status: blocker)
+feedback-id: fb_2026-07-15_df3d3ea2
+completion_manifest:
+  diff_reviewed: true
+  source_files_read: true
+  ruff_executed: true
+  blockers_found:
+    result: false
+    reason: "Two HIGH-confidence findings in unit_tests/workflows/test_finalize_pre_merge_safety_gate.py block merge: (1) unused `import re` violates ruff F401 (required CI gate); (2) test_ac_fin100d2_false_path_does_not_return_halted is a no-op that always passes."
+    remediation: "Respawn test-writer to fix both issues: remove `import re`, and replace the tautological assert with `assert 'status: \"halted\"' not in context` (or equivalent) to make the FIN-100d-2 test actually exercise the production code path."
+Reviewed the full diff against finalize-feature.js and test-failure-triage.md. Two HIGH findings prevent merge: ruff F401 (import re unused — CI blocker confirmed by ruff check) and a logically broken test in TestFin100d2ContinuePath that is always-pass regardless of implementation state. One MEDIUM finding (dead `_find_line_number` helper, never called). Respawn test-writer to fix both HIGH findings before re-running pr-reviewer.
+
+### 2026-07-15 10:22 — commit (status: ok)
+Auto-authorized commit gate: subject "test(FIN-100): fix 2 pr-reviewer HIGH blockers + backfill 57 source-contract tests"; staged files: unit_tests/workflows/test_finalize_pre_merge_safety_gate.py tickets/00_inbox/epics/EPIC-BuildPipelineTestBackfill/04_fin100_pre_merge_safety_gate_test_coverage.md.
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true

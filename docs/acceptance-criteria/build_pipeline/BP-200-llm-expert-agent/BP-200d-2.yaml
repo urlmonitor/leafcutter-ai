@@ -45,6 +45,9 @@ created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_ski
 amended_by: []
 superseded_by: null
 covered_by: [BP-200d-2-i, BP-200d-2-ii]
+  - "unit_tests/agents/test_llm_expert_artifacts.py"
+  - BP-200d-2-i
+  - BP-200d-2-ii
 implemented_by:
   - "templates/skills/prompt-audit/SKILL.md"
 change_target: prompt

@@ -7,7 +7,7 @@ level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the user invokes /quick-fix with text containing "In
     scripts/build_helpers.py line 42, _resolve_precommit_cmd() returns
@@ -47,6 +47,8 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [BP-600d-1-i]
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
+  - BP-600d-1-i
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
