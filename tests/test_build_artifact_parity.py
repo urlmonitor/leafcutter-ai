@@ -205,6 +205,7 @@ class TestTemplateDirectoriesHaveCategories(unittest.TestCase):
             "acceptance-criteria",
             "commands",
             "commit-guardian",
+            "config",
             "scripts",
             "doc-compliance",
             "ticket-lifecycle",
