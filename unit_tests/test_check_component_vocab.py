@@ -82,6 +82,37 @@ class TestCheckComponentVocab(unittest.TestCase):
             self.assertEqual(len(violations), 1)
             self.assertEqual(violations[0][1], "bogus-kebab")
 
+    def test_changed_scope_ignores_unchanged_drift(self):
+        # Diff-scoped: only the listed files are checked; pre-existing drift in
+        # files NOT in the changed set is ignored (the PR-gate behaviour).
+        with tempfile.TemporaryDirectory() as d:
+            root = _make_repo(Path(d))
+            (root / "docs" / "acceptance-criteria" / "base_drift.yaml").write_text(
+                "id: B\ncomponents:\n  - build-orchestration\n", encoding="utf-8")
+            (root / "docs" / "acceptance-criteria" / "pr_clean.yaml").write_text(
+                "id: P\ncomponents:\n  - ac_store\n", encoding="utf-8")
+            registry = ccv.load_registry_ids(root)
+            # Scanning only the PR's (clean) changed file -> no violations,
+            # even though base_drift.yaml is off-registry.
+            clean = ccv.scan(root, registry,
+                             files=["docs/acceptance-criteria/pr_clean.yaml"])
+            self.assertEqual(clean, [])
+            # Full-tree scan still catches the base drift.
+            full = ccv.scan(root, registry)
+            self.assertEqual(len(full), 1)
+            self.assertEqual(full[0][1], "build-orchestration")
+
+    def test_changed_scope_catches_drift_in_changed_file(self):
+        # A PR that ADDS drift has that file in its changed set -> caught.
+        with tempfile.TemporaryDirectory() as d:
+            root = _make_repo(Path(d))
+            (root / "tickets" / "new.md").write_text(
+                "---\nid: N\ncomponents:\n- build-orchestration\n---\nx\n", encoding="utf-8")
+            registry = ccv.load_registry_ids(root)
+            v = ccv.scan(root, registry, files=["tickets/new.md"])
+            self.assertEqual(len(v), 1)
+            self.assertEqual(v[0][1], "build-orchestration")
+
 
 if __name__ == "__main__":
     unittest.main()
