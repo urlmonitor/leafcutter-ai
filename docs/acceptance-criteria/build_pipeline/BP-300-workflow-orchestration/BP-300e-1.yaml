@@ -1,0 +1,42 @@
+id: BP-300e-1
+components:
+  - build_pipeline
+title: "Valid JSON object followed by trailing prose is still parsed and the run continues"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a /plan-feature run dispatches a helper agent to return a structured result,
+  And that agent replies with a complete, valid JSON object immediately followed by
+    a trailing explanatory markdown section (for example a "## Anomalies" heading and
+    a paragraph of prose after the closing brace),
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the intended JSON object with all of its fields intact
+    and ignores the trailing prose,
+  And the run continues to its next stage and produces the requirements it was asked
+    for rather than stopping on the extra wording.
+depends_on:
+  - BP-300e
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300e-1-i
+  - BP-300e-1-ii
+  - BP-300e-1-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with
+  an input string of the form '{"...": "..."}\n\n## Anomalies\n<prose>' asserting the
+  returned value equals the intended object. Also coverable by a workflow-level
+  integration test that dispatches a stubbed agent returning object-plus-trailing-prose
+  and asserts the run reaches its next stage. Belt-and-suspenders: the dispatched
+  agents' "return ONLY structured JSON, no surrounding prose" contract is a separate
+  reinforcement, not the guarantee this AC tests.

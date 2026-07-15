@@ -1,0 +1,35 @@
+id: BP-300e-1-i
+components:
+  - build_pipeline
+title: "Nested braces inside the JSON object do not truncate extraction"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a helper agent returns a valid JSON object that itself contains nested objects
+    (braces within braces — for example a "contract" field whose value is another
+    object), followed by trailing explanatory prose,
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the complete top-level object including every nested
+    level, stopping extraction only at the matching top-level closing brace and not
+    at the first nested closing brace,
+  And the run continues with the fully intact nested result.
+depends_on:
+  - BP-300e-1
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with an
+  input containing a deeply nested object plus trailing prose, asserting the returned
+  value is the full top-level object (depth preserved) — proving the balanced-brace
+  scanner counts nesting depth rather than stopping at the first '}'.

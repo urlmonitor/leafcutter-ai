@@ -1,0 +1,33 @@
+id: BP-300e-1-iii
+components:
+  - build_pipeline
+title: "An already-parsed (non-string) result is passed through unchanged"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a workflow dispatches a helper agent and receives its result already as a
+    structured object or array rather than as a string of text (the runtime handed
+    back an already-parsed value),
+  When the workflow reads that result through the same tolerant reply reader,
+  Then the value is returned unchanged with no attempt to re-parse it as text,
+  And the run continues normally.
+depends_on:
+  - BP-300e-1
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader by
+  passing a native object and a native array (not strings) and asserting each is
+  returned identical (same reference/value) with no string parsing attempted. Guards
+  the degenerate "input is not a string" branch that must precede any parse attempt.

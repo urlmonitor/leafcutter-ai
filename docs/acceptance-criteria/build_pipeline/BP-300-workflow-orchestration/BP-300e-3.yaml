@@ -1,0 +1,37 @@
+id: BP-300e-3
+components:
+  - build_pipeline
+title: "Valid JSON array surrounded by prose is still parsed and the run continues"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a workflow run dispatches a helper agent whose structured result is a JSON
+    array (for example a list of ticket objects),
+  And that agent returns the valid JSON array with explanatory prose before and/or
+    after it,
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the intended JSON array with every element intact,
+  And the run continues to its next stage rather than stopping on the extra wording.
+depends_on:
+  - BP-300e
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with an
+  input string of the form '<prose>\n[ {...}, {...} ]\n<prose>' asserting the returned
+  value equals the intended array (same element count and contents). Also coverable by a
+  workflow-level integration test that dispatches a stubbed agent returning a
+  prose-wrapped array and asserts the run consumes every element and continues. This AC
+  isolates the array shape from the object shape (BP-300e-1 / BP-300e-2) because the
+  extractor must balance '[' ... ']' as well as '{' ... '}'.

@@ -1,0 +1,38 @@
+id: BP-300e-2
+components:
+  - build_pipeline
+title: "Valid JSON wrapped in leading and surrounding prose is still parsed and the run continues"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a /plan-feature run dispatches a helper agent to return a structured result,
+  And that agent wraps a complete, valid JSON object in surrounding prose — an
+    explanatory sentence or heading BEFORE the opening brace and additional prose
+    AFTER the closing brace,
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the intended JSON object with every field intact,
+    disregarding the text before and after it,
+  And the run continues to its next stage instead of stopping on the surrounding
+    wording.
+depends_on:
+  - BP-300e
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300e-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with
+  an input string of the form '<prose>\n{"...": "..."}\n<prose>' asserting the returned
+  value equals the intended object. Also coverable by a workflow-level integration test
+  that dispatches a stubbed agent returning prose-wrapped JSON and asserts the run
+  reaches its next stage.

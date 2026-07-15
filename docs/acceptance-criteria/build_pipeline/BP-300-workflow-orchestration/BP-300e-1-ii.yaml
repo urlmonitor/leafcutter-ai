@@ -1,0 +1,36 @@
+id: BP-300e-1-ii
+components:
+  - build_pipeline
+title: "Brace and hash characters inside string values do not fool the extractor"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a helper agent returns a valid JSON object in which a string value literally
+    contains a '{', '}', or '#' character (for example a description reading
+    "use {placeholder} — see ## notes"), surrounded by explanatory prose,
+  When the workflow reads the agent's reply,
+  Then the extraction treats those characters as ordinary text inside the string and
+    does not mistake them for the object's own structural braces or for a prose
+    delimiter,
+  And the workflow recovers the intended object with the string value intact.
+depends_on:
+  - BP-300e-1
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with an
+  object whose string values embed '{', '}', and '#', asserting the returned object's
+  string field equals the original text exactly — proving the scanner does not count
+  braces that appear inside JSON string literals and does not treat '#' as a
+  comment/section delimiter.

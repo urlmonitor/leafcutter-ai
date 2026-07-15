@@ -1,0 +1,35 @@
+id: BP-300e-4-i
+components:
+  - build_pipeline
+title: "An empty or whitespace-only reply stops the run with the clear named error, never a silent skip"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given a helper agent returns an empty string or a reply consisting only of
+    whitespace,
+  When the workflow reads the agent's reply,
+  Then the run stops with the same clear, typed error that names the stage and the
+    agent,
+  And the empty reply is never treated as an acceptable or skippable result — the
+    failure is surfaced, not hidden.
+depends_on:
+  - BP-300e-4
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with ''
+  and with a whitespace-only string, asserting each raises the same typed
+  stage/agent-named error as the prose-only case (BP-300e-4) rather than returning
+  None/empty or being swallowed. Closes the boundary case where "nothing came back"
+  could otherwise read as "nothing to do".

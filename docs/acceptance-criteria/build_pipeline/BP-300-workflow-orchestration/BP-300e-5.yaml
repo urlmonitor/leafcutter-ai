@@ -1,0 +1,44 @@
+id: BP-300e-5
+components:
+  - build_pipeline
+title: "Prose-tolerant reply reading is applied uniformly across every delivery workflow script"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+work_status: todo
+criteria: |
+  Given the delivery commands are backed by multiple workflow scripts
+    (/plan-feature, /build-feature, /finalize-feature, and the epic and ticket
+    workflows behind them),
+  And each script reads structured results from the agents it dispatches at every
+    such reply-reading point,
+  When any of these scripts reads an agent reply that wraps a valid JSON object or
+    array in surrounding prose,
+  Then every reply-reading point in every one of these scripts tolerates the extra
+    wording identically — a /build-feature or /finalize-feature run is exactly as
+    resilient as a /plan-feature run,
+  And no reply-reading point retains the brittle behavior of stopping on prose around
+    otherwise-valid JSON.
+depends_on:
+  - BP-300e
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: coverable by a structural/audit test that asserts every
+  agent-reply parse point across the delivery workflow scripts routes through the single
+  tolerant reader rather than an inline strict-parse expression (i.e. no reply-reading
+  site parses agent output without the tolerant path). At authoring time the known
+  surface is 34 such sites (26 in plan-feature.js) across plan-feature.js,
+  build-feature.js, finalize-feature.js, build-epic.js and build-ticket.js; the test
+  should assert coverage of the parse sites rather than hard-code that count. Also
+  coverable by per-script integration tests that replay a prose-wrapped reply through
+  build-feature and finalize-feature and assert each run continues.
