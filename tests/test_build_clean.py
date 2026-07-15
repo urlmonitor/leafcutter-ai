@@ -25,6 +25,14 @@ _BUILD_PATH = _REPO_ROOT / "scripts" / "build.py"
 
 def _load_build_phases():
     """Load build_phases module from the scripts directory."""
+    # Reuse the already-loaded module if present. Unconditionally reassigning
+    # sys.modules["build_phases"] to a fresh importlib instance at test-execution
+    # time desyncs other tests (e.g. test_workflow_variant_transform) that bound
+    # build_workflow_scripts from the earlier instance at collection — their
+    # monkeypatch of build_phases.TEMPLATES_DIR would then no-op. This guard
+    # matches the convention in the sibling loaders.
+    if "build_phases" in sys.modules:
+        return sys.modules["build_phases"]
     # build_phases imports from several sibling modules; ensure scripts/ is on sys.path
     scripts_dir = str(_REPO_ROOT / "scripts")
     if scripts_dir not in sys.path:

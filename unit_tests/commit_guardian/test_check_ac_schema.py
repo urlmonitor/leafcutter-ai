@@ -38,6 +38,8 @@ _VALID_AC_YAML = textwrap.dedent("""\
     id: FIN-001
     title: "Merge main before running tests"
     component: finalize
+    components:
+      - finalize
     status: active
     created_by: "tickets/00_inbox/epics/EPIC-Test/01_test.md"
     criteria: |
@@ -213,6 +215,8 @@ class TestDeprecatedAcPasses(unittest.TestCase):
             id: FIN-002
             title: "Deprecated criterion"
             component: finalize
+            components:
+              - finalize
             status: deprecated
             created_by: "tickets/test.md"
             criteria: |
@@ -262,6 +266,8 @@ class TestOriginAgentValidString(unittest.TestCase):
             id: FIN-001
             title: "With origin agent"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -373,6 +379,8 @@ class TestActivePatternReferenceAllowed(unittest.TestCase):
             id: PTN-002
             title: "Active pattern"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -386,6 +394,8 @@ class TestActivePatternReferenceAllowed(unittest.TestCase):
             id: FIN-011
             title: "Consuming AC referencing active pattern"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -479,6 +489,8 @@ class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
             id: FIN-001
             title: "Historical origin agent"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -547,6 +559,8 @@ class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):
             id: FIN-001
             title: "Historical origin_agent edge case"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -702,6 +716,8 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
             id: PAG-001
             title: "Users list page — standard CRUD table (PTN-001)"
             component: users-ui
+            components:
+              - ux_prototyping
             status: active
             created_by: "tickets/test.md"
             criteria: "No page-specific behavior — all behavior inherited from pattern."
@@ -738,6 +754,8 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
             id: PAG-002
             title: "Login page — standard Gherkin"
             component: users-ui
+            components:
+              - ux_prototyping
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -772,6 +790,8 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
             id: PAG-003
             title: "Products list page — inherits PTN-001"
             component: products-ui
+            components:
+              - ux_prototyping
             status: active
             created_by: "tickets/test.md"
             criteria: "No page-specific behavior — all behavior inherited from pattern."
@@ -1120,6 +1140,8 @@ class TestPatternSlotsAcceptedAfterWidening(unittest.TestCase):
             id: PTN-010
             title: "Pattern AC with slots"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -1221,6 +1243,8 @@ class TestSchemaAuthoritativeOverManual(unittest.TestCase):
             id: ACS-300g-1
             title: "Schema-valid AC with hierarchical id and no created_by"
             component: ac-store
+            components:
+              - ac_store
             status: active
             criteria: |
               Given a hierarchical AC id
@@ -1328,6 +1352,8 @@ class TestAC1UnstagedFilesNotValidated(unittest.TestCase):
             id: FIN-002
             title: "Valid staged file"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -1376,6 +1402,8 @@ class TestAC1UnstagedFilesNotValidated(unittest.TestCase):
             id: FIN-004
             title: "Valid staged"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -1687,6 +1715,8 @@ class TestAC4CrossFilePatternChecksUseFullStore(unittest.TestCase):
             id: FIN-098
             title: "Consuming AC referencing active pattern — staged"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -1946,6 +1976,8 @@ _VALID_AC_WITH_CHANGE_TARGET_CODE = textwrap.dedent("""\
     id: FIN-050
     title: "AC with valid change_target str"
     component: finalize
+    components:
+      - finalize
     status: active
     created_by: "tickets/test.md"
     criteria: |
@@ -1961,6 +1993,8 @@ _VALID_AC_WITH_RISK_SURFACE_INTERNAL = textwrap.dedent("""\
     id: FIN-051
     title: "AC with valid risk_surface"
     component: finalize
+    components:
+      - finalize
     status: active
     created_by: "tickets/test.md"
     criteria: |
@@ -2014,6 +2048,8 @@ class TestAcChangeTargetSchemaValidationAc1(unittest.TestCase):
             id: FIN-052
             title: "AC with change_target list"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |
@@ -2069,6 +2105,8 @@ class TestAcChangeTargetSchemaValidationAc1(unittest.TestCase):
             id: FIN-056
             title: "AC with both axes valid"
             component: finalize
+            components:
+              - finalize
             status: active
             created_by: "tickets/test.md"
             criteria: |

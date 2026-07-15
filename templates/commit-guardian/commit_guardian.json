@@ -29,6 +29,19 @@
                 "script": "check_hook_parity.py",
                 "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
                 "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
+            },
+            {
+                "id": "check-output-drift",
+                "tier": "judgment",
+                "name": "Check Output Drift (leafcutter Direction B)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_output_drift.py",
+                "language": "system",
+                "files": "^(\\.claude/agents/|\\.claude/skills/|\\.claude/commands/|\\.claude/hooks/|\\.claude/workflows/|\\.agents/rules/)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). Fires when any .claude/ or .agents/ output directory files are staged."
             }
         ]
     }

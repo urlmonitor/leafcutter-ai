@@ -321,17 +321,56 @@ class TestRealFixtureBehavior(unittest.TestCase):
     _AGENT_REGISTRY = _REPO_ROOT / "config" / "agent_registry.json"
 
     def test_real_agent_registry_violations_detected(self) -> None:
-        """Real agent_registry entries lack components; hook must detect this."""
+        """Stripping components from the real registry must flag EXACTLY every entry.
+
+        The real agent_registry.json was backfilled (PR #268) so every entry now
+        carries a `components` field. Two guarantees are asserted against
+        real-shaped data:
+
+        1. Companion assertion: the real (backfilled) registry yields ZERO
+           violations — the hook does not spuriously flag valid entries.
+        2. Anti-silent-skip guard: when `components` is stripped from a copy of
+           every real entry, the hook flags EXACTLY that many entries (count-exact).
+           This proves the hook genuinely detects missing components on the real
+           registry's structure rather than silently skipping entries.
+        """
         if not self._AGENT_REGISTRY.exists():
             self.skipTest("Real agent_registry.json not present in this environment")
 
-        errs = _check_registry_file(str(self._AGENT_REGISTRY), "agents", None)
-        # All 52 agents lack components — we expect at least 1 violation
+        # (1) The real, backfilled registry must produce no violations.
+        real_errs = _check_registry_file(str(self._AGENT_REGISTRY), "agents", None)
+        self.assertEqual(
+            real_errs,
+            [],
+            "Real agent_registry.json is backfilled (PR #268): every entry must "
+            "carry a non-empty `components` field, so the hook must report 0 "
+            f"violations. Got: {real_errs}",
+        )
+
+        # (2) Strip `components` from a copy of every real entry and assert the
+        #     hook flags EXACTLY every stripped entry (count-exact).
+        data = json.loads(self._AGENT_REGISTRY.read_text(encoding="utf-8"))
+        entries = _extract_entries(data, "agents")
+        dict_entries = [e for e in entries if isinstance(e, dict)]
         self.assertGreater(
-            len(errs),
+            len(dict_entries),
             0,
-            "Expected violations: real agent_registry has no `components` fields. "
-            "If this is 0 the hook may be silently skipping entries.",
+            "Expected at least 1 agent entry in the real registry",
+        )
+        for entry in dict_entries:
+            entry.pop("components", None)
+
+        with tempfile.TemporaryDirectory() as d:
+            stripped_path = Path(d) / "agent_registry_stripped.json"
+            stripped_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            stripped_errs = _check_registry_file(str(stripped_path), "agents", None)
+
+        self.assertEqual(
+            len(stripped_errs),
+            len(dict_entries),
+            "Every entry with `components` stripped must be flagged exactly once. "
+            f"Expected {len(dict_entries)} violations, got {len(stripped_errs)}. "
+            "A lower count means the hook is silently skipping entries.",
         )
 
     def test_real_agent_registry_is_parseable(self) -> None:
