@@ -45,9 +45,11 @@ principles were applied only when the skill was explicitly installed via `/onboa
   applies design principles; there is no "not installed" state for design.
 - The `frontend-design` skill directory is no longer produced by `build.py`. The
   template is retained in `templates/skills/frontend-design/` with `deprecated: true`,
-  causing deploy-time exclusion — `_build_source_manifests()` treats it as still-managed
-  and `build.py` simply never writes it to `.claude/skills/frontend-design/` on a fresh
-  build. If the directory exists from a previous installation it must be removed manually.
+  so `build_skills()` skips it at deploy time and never writes it to
+  `.claude/skills/frontend-design/` on a fresh build. (Separately, because
+  `_build_source_manifests()` still lists the directory as managed,
+  `clean_stale_artifacts()` does not prune it on a `--clean` run either.) If the
+  directory exists from a previous installation it must be removed manually.
 - `skills_config.json` no longer needs (or accepts) `"frontend-design"` under
   `frontend.optional_skills`. The migration removes it automatically.
 

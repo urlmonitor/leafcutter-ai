@@ -605,7 +605,7 @@ def test_ac1_bp100b9_criteria_names_workflows_js():
 
 
 def test_ac2_llm_expert_spawn_allowlist_surfaces_agree():
-    # covers: UNKNOWN
+    # covers: TICKET-20260715-BuildPipelineAuditFindings AC-2
     """AC-2: The spawn_allowlist value stated in PROJECT_CONTEXT.md §5 for llm-expert
     must match the value in config/agent_registry.json.
 
@@ -647,7 +647,7 @@ def test_ac2_llm_expert_spawn_allowlist_surfaces_agree():
 
 
 def test_ac3_frontend_coder_howto_no_false_clean_prune_claim():
-    # covers: UNKNOWN
+    # covers: TICKET-20260715-BuildPipelineAuditFindings AC-3
     """AC-3: The how-to must NOT claim that 'build.py --clean' removes the
     .claude/skills/frontend-design/ directory.
 
@@ -667,9 +667,30 @@ def test_ac3_frontend_coder_howto_no_false_clean_prune_claim():
         "templates. Remove this false --clean prune sentence from the doc."
     )
 
+    # Concept-level guard: no single line may pair `--clean` with a removal verb
+    # AND `frontend-design` UNLESS it is explicitly negated. This catches a
+    # reworded false claim (e.g. "`--clean` deletes the stale skill dir") that
+    # the verbatim check above would miss, while still allowing the doc's true
+    # statements that `--clean` does NOT remove the directory.
+    removal_verbs = ("remove", "prune", "delete")
+    negations = ("not", "never", "n't", "no ")
+    for line in text.splitlines():
+        low = line.lower()
+        if (
+            "--clean" in low
+            and "frontend-design" in low
+            and any(v in low for v in removal_verbs)
+        ):
+            assert any(n in low for n in negations), (
+                "The how-to appears to claim `build.py --clean` removes/prunes "
+                "the frontend-design directory. That is false — "
+                "clean_stale_artifacts() skips deprecated-but-still-managed "
+                f"templates. Offending line: {line.strip()!r}"
+            )
+
 
 def test_ac3_frontend_coder_howto_describes_real_removal_mechanism():
-    # covers: UNKNOWN
+    # covers: TICKET-20260715-BuildPipelineAuditFindings AC-3
     """AC-3: The how-to must describe the REAL removal mechanism for frontend-design/:
     deploy-time exclusion (deprecated: true causes _build_source_manifests() to skip
     deployment) + skills_config.json migration + template overwrite — not --clean.
