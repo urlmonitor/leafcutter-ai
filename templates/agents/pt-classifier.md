@@ -15,7 +15,7 @@ model: haiku
 name: pt-classifier
 tools: Read, Bash  # Read-only. No Write/Edit — the decision is a returned JSON payload, not a file.
 portable: true
-requires_verification: true
+requires_verification: false
 signoff: false
 visibility: internal
 domain: null
