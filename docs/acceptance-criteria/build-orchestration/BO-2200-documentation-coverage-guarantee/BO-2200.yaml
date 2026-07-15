@@ -1,0 +1,37 @@
+id: BO-2200
+components:
+  - build_orchestration
+  - doc_compliance
+  - documentation_system
+title: "Documentation stays correct and complete, automatically"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Trust that your docs are there and right -- just like you trust your tests.
+
+  When a change matters to the people who use or operate your software, the build
+  makes sure its documentation is required, actually written, well-specified, and
+  faithful to what was really built -- the same guarantee you already have that
+  tests exist. Documentation never silently goes stale on the changes that matter,
+  and you are never left trusting a "done" that shipped no docs. This is the
+  documentation-specific hardening of the computed quality gates in BO-500: BO-500
+  derives WHICH gates apply from the kind of change; BO-2200 makes the
+  documentation gate broad enough, enforced, and precise enough to be trustworthy.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: [BO-2200a, BO-2200b, BO-2200c, BO-2200d]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

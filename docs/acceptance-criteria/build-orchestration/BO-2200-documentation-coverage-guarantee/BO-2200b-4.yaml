@@ -1,0 +1,67 @@
+id: BO-2200b-4
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "Generating a ticket from a doc-triggering AC injects both the writer and the verifier"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given the ticket generator building a ticket from a leaf AC whose classification
+    triggers a documentation demand (per the BO-2200a policy),
+  When the generator injects `documentation-expert` into the ticket's agents map,
+  Then it also sets the ticket frontmatter flag `documentation_required: true`.
+  And it injects `documentation-verifier` into the same agents map with status `needed`.
+  And when the AC does NOT trigger a documentation demand, the generator sets neither
+    `documentation_required: true` nor `documentation-verifier`.
+depends_on: [BO-2200b, BO-2200a-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    documentation_required:
+      type: boolean
+      description: "Frontmatter flag set true whenever documentation-expert is injected; documentation-verifier is injected with status needed alongside it."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Wire the generator (_build_agents_map / _build_frontmatter) so that whenever it injects documentation-expert it ALSO sets documentation_required: true in frontmatter and injects documentation-verifier: needed."
+    - "When the AC does not trigger a documentation demand, set neither the flag nor the verifier — the injection is gated on the BO-2200a-1 trigger decision."
+delivers_to:
+  agent: python-coder
+  contract: "Generated tickets carry documentation_required: true frontmatter and documentation-verifier: needed whenever documentation-expert is injected. Consumed by BO-2200b-5 (non-suppressibility) and BO-2200d (ordering)."
+expects_from:
+  ac_id: BO-2200a-1
+  contract: "The documentation-trigger decision that gates when this injection fires."
+test_spec:
+  - name: test_doc_triggering_ac_sets_documentation_required_and_verifier
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "Generating a ticket from a doc-triggering AC yields frontmatter documentation_required: true and documentation-verifier: needed in the agents map."
+  - name: test_non_triggering_ac_sets_neither_flag_nor_verifier
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "Generating a ticket from a non-triggering AC produces neither documentation_required: true nor a documentation-verifier entry."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

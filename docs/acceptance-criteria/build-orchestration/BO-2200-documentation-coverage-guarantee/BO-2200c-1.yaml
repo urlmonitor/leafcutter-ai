@@ -1,0 +1,72 @@
+id: BO-2200c-1
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "The generated ticket carries an Agent Contracts documentation-expert section in a fixed position"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given the ticket generator building a ticket that requires documentation,
+  When it writes the ticket body,
+  Then the body contains an `## Agent Contracts` section with a `### documentation-expert`
+    subsection.
+  And that section appears AFTER the `## Acceptance Criteria` section and BEFORE the
+    `## Sign-offs` section.
+  And the subsection lists one checklist item per documented AC using globally numbered
+    `- [ ] AC-N:` lines (numbered across the whole ticket, not restarting per subsection).
+depends_on: [BO-2200c]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/documentation_system.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    agent_contracts_block:
+      type: object
+      description: "Ticket-body '## Agent Contracts' -> '### documentation-expert' section placed after '## Acceptance Criteria' and before '## Sign-offs', with globally numbered '- [ ] AC-N:' lines."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The generator (_build_ticket_body) emits an '## Agent Contracts' -> '### documentation-expert' block, placed after '## Acceptance Criteria' and before '## Sign-offs' (there is no '## Agent Contracts' section today)."
+    - "Lines are globally numbered '- [ ] AC-N:' across the whole ticket, not restarting per subsection."
+    - "This block is the single source of truth for both the writer's brief (BO-2200c) and the verifier's checklist (BO-2200b)."
+delivers_to:
+  agent: python-coder
+  contract: "The `## Agent Contracts` -> `### documentation-expert` block (positioned after Acceptance Criteria, before Sign-offs, one globally-numbered AC-N line per documented AC). Consumed by BO-2200c-2/3/4 (line content) and BO-2200c-5 (shared source of truth)."
+expects_from: null
+test_spec:
+  - name: test_agent_contracts_documentation_expert_section_present
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A generated doc-required ticket body contains an '## Agent Contracts' section with a '### documentation-expert' subsection."
+  - name: test_agent_contracts_positioned_after_ac_before_signoffs
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The '## Agent Contracts' section appears after '## Acceptance Criteria' and before '## Sign-offs'."
+  - name: test_contract_lines_globally_numbered
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The subsection lists one '- [ ] AC-N:' line per documented AC, numbered globally across the ticket."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

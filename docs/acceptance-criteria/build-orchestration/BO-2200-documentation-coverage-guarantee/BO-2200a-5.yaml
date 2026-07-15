@@ -1,0 +1,76 @@
+id: BO-2200a-5
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "The schema validator rejects documentation_triggers on any AC that is not level L1"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given the agent-side AC schema validator,
+  When it validates an AC whose `level` is `L2` (or `L3`, or `L0`) that carries a
+    non-empty `documentation_triggers` field,
+  Then validation fails with an error stating that `documentation_triggers` is
+    permitted only on L1 ACs, and naming the offending AC id and its level.
+  And when it validates an L1 AC that carries `documentation_triggers`, the L1-only
+    rule does not fire (an L1 is permitted to declare triggers).
+  And the pre-existing enum-value validation of `documentation_triggers` still applies
+    on L1 ACs, so a value outside the allowed set is still rejected.
+depends_on: [BO-2200a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    documentation_triggers:
+      type: array
+      x-level-constraint: "permitted only on level L1 ACs"
+      items:
+        type: string
+        enum: [how-to, sequence-diagram, state-diagram, component-diagram, reference-doc]
+  reference_file_path: "scripts/ac_store/validate_ac_schema.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The L1-only constraint is currently only claimed in prompts, not enforced in code. Add the level check to the agent-side schema validator IN ADDITION TO the existing enum-value validation (do not replace it)."
+    - "Per the ac-schema reference, enforcement is not single-sourced: if the same rule is meant to gate at commit time, add it to every enforcement point that should reject the field, not only the agent-side validator."
+    - "Error message must name the offending AC id and its level."
+delivers_to:
+  agent: python-coder
+  contract: "A level-aware documentation_triggers validation rule (L1-only) added alongside the existing enum-value check in the AC schema validator."
+expects_from: null
+test_spec:
+  - name: test_documentation_triggers_on_l2_is_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An L2 AC carrying documentation_triggers fails validation with an error naming the AC id and level and stating the field is L1-only."
+  - name: test_documentation_triggers_on_l1_is_permitted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An L1 AC carrying documentation_triggers passes the L1-only rule."
+  - name: test_enum_validation_still_applies_on_l1
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An L1 AC with an out-of-enum documentation_triggers value is still rejected by the pre-existing enum check."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

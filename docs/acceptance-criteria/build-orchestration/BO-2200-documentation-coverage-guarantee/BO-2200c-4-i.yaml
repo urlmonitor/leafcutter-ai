@@ -1,0 +1,62 @@
+id: BO-2200c-4-i
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "A doc_link that is a bare path or is missing optional fields is surfaced gracefully"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given a documented AC whose `doc_links` mixes entry shapes -- some are plain path
+    strings, some are objects missing `relevance` or `status`,
+  When the generator renders the 'existing docs to update / cross-link' list,
+  Then a plain-path entry is surfaced with just its path (no fabricated metadata) and
+    does not crash the generator.
+  And an object entry missing an optional field is surfaced with the fields it does have,
+    omitting the absent ones rather than emitting empty or `None` values.
+depends_on: [BO-2200c-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    heterogeneous_doc_links:
+      type: object
+      description: "doc_links entries may be plain path strings OR objects with optional relationship/status/relevance; normalise both, omit absent optional fields, never emit None or crash."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "doc_links entries are heterogeneous per the schema (plain strings OR objects with optional relationship/status/relevance). Normalise both shapes."
+    - "Omit absent optional fields rather than rendering None; never crash on a bare-string entry."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200c-4
+  contract: "The doc_links surfacing this edge case hardens against mixed/partial entry shapes."
+test_spec:
+  - name: test_bare_path_doc_link_surfaced_without_crash
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A plain-string doc_links entry is surfaced with just its path (no fabricated metadata) and does not crash the generator."
+  - name: test_object_missing_optional_field_omits_absent
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "An object doc_links entry missing relevance/status is surfaced with only the fields it has, omitting absent ones (no None/empty values)."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,61 @@
+id: BO-2200c-6
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "A reference doc explains the documentation-coverage gate, the verifier, and the Agent Contracts brief"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given the documentation-coverage guarantee has been implemented (the documentation_gates
+    trigger policy, the documentation-verifier phase, and the Agent Contracts brief),
+  When a maintainer needs to understand how documentation is demanded, produced, and
+    enforced,
+  Then a reference document exists that explains: which change classifications trigger a
+    documentation demand (the documentation_gates policy), how the documentation-verifier
+    phase enforces that docs really exist and are not placeholders, and how the
+    `## Agent Contracts` -> `### documentation-expert` block serves as the single brief the
+    writer reads and the verifier asserts against.
+  And the reference doc cross-links the doc-compliance and build-orchestration component
+    docs and the computed-quality-gates ADR.
+depends_on: [BO-2200c, BO-2200a-1, BO-2200b-1, BO-2200b-4, BO-2200c-1]
+doc_links:
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements: |
+  Author a reference document (Diataxis reference genre) describing the documentation-
+  coverage guarantee end to end: the declarative documentation_gates trigger policy
+  (change_target + risk_surface triggering sets), the documentation-verifier phase
+  (priority 11.9, post-write pre-commit, fails on missing/placeholder docs), the
+  non-suppressibility guarantee, and the Agent Contracts documentation-expert block as the
+  single source of truth for brief + enforcement. This AC satisfies the reference-doc
+  documentation_trigger declared on the BO-2200a / BO-2200b / BO-2200c parent L1s (S7b
+  documentation gate). Cross-link the doc-compliance and build-orchestration component docs
+  and ADR-017.
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: |
+  Documentation authoring (change_target: docs) — a reference document has no executable
+  surface to unit-test. Created to satisfy the S7b documentation gate for the reference-doc
+  documentation_trigger on the BO-2200a/b/c parent L1s.
+origin_agent: it-po
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

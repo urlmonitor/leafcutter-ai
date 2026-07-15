@@ -1,0 +1,83 @@
+id: BO-2200a-1
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "A declarative documentation-gates policy demands docs for user-facing, data, flow, and docs changes"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given a declarative `documentation_gates` policy section exists in the guardrail
+    gates configuration, and the ticket generator builds the agents map for a leaf AC,
+  When the AC's `change_target` is `ui`,
+  Then the generated agents map includes `documentation-expert`.
+  And the same result holds when `change_target` is `schema`, `pipeline`, or `docs`
+    (each of these four values, on its own, causes `documentation-expert` to be required).
+  And the requirement is driven entirely by the declarative policy data, not by a
+    value hard-coded in the generator, so adding or removing a triggering value is a
+    configuration edit rather than a code change.
+depends_on: [BO-2200a]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    documentation_gates:
+      type: object
+      properties:
+        change_target_triggers:
+          type: array
+          items:
+            type: string
+            enum: [ui, schema, pipeline, docs]
+        risk_surface_triggers:
+          type: array
+          items:
+            type: string
+            enum: [contract_boundary, safety, auth, privacy]
+  reference_file_path: "config/guardrail_gates.yaml"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Add a new declarative `documentation_gates` section to config/guardrail_gates.yaml; the ticket generator (_build_agents_map in scripts/ac_store/generate_ticket_from_ac.py) reads it to decide whether documentation-expert is required."
+    - "This is the documentation-specific trigger policy layered on the BO-500 computed-quality-gate engine — do NOT re-derive the general gate-selection engine."
+    - "The triggering change_target set must be data-driven {ui, schema, pipeline, docs}; adding/removing a value is a config edit, not a code change (no hard-coded list in the generator)."
+delivers_to:
+  agent: python-coder
+  contract: "The declarative documentation_gates policy + the generator read-path that turns a leaf AC's change_target/risk_surface into a documentation-expert requirement. Consumed by BO-2200a-2/3/4 (same policy) and by BO-2200b-4 (generator injection when the trigger fires)."
+expects_from: null
+test_spec:
+  - name: test_change_target_ui_triggers_documentation_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "Run generate_ticket_from_ac on a fixture AC with change_target=ui; the emitted ticket's agents map includes documentation-expert."
+  - name: test_each_triggering_change_target_requires_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target in {schema, pipeline, docs} each independently yields documentation-expert in the generated agents map."
+  - name: test_documentation_gates_is_data_driven_not_hardcoded
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "Removing a value from the documentation_gates change_target_triggers policy makes that change_target no longer require documentation-expert, proving the trigger is config-driven."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

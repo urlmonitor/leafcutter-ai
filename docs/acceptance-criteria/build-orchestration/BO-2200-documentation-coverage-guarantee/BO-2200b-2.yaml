@@ -1,0 +1,64 @@
+id: BO-2200b-2
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "The verifier fails the ticket when a required documentation file was not changed"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given a ticket that requires documentation and the documentation-verifier phase runs,
+  When the ticket's git diff contains NO change to any of the required documentation
+    files named in its documentation brief,
+  Then the verifier reports a failure with `status: blocker`.
+  And the blocker message names each required documentation file that is missing a
+    real change.
+  And the ticket cannot advance to commit or be reported as complete while the blocker
+    stands.
+depends_on: [BO-2200b, BO-2200b-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements: |
+  Author the documentation-verifier agent template
+  (templates/agents/documentation-verifier.md) by cloning the user-surface-smoker.md
+  skeleton: tools Bash + Read (no Write/Edit), signoff: true, produces: test_artifact,
+  priority 11.9 matching the BO-2200b-1 registry entry. The template instructs the agent
+  to read the `## Agent Contracts` -> `### documentation-expert` block (BO-2200c) for the
+  list of required docs, run `git diff` via Bash, and assert a real doc-file change exists
+  for each required doc. A missing required doc must yield status: blocker (not a warning),
+  and the blocker message must name each missing file. Fail-closed: an exception or
+  ambiguous parse must NOT emit status: ok. The required-docs list comes solely from the
+  Agent Contracts brief (single source of truth with BO-2200c) — do not maintain a second
+  list. Mirror the BP-1100 phantom-done posture; where deterministic detection helps,
+  reuse scripts/build_placeholder_detection.py rather than re-implementing scanning.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-1
+  contract: "The documentation-verifier phase slot (priority 11.9 registry entry) this behavior populates with the diff-presence assertion in the agent template."
+test_required: false
+test_rationale: |
+  documentation-verifier is a prompt-driven signoff LLM agent (cloned from
+  user-surface-smoker), not a Python module — its diff-presence judgment is exercised
+  behaviorally at drive time (like user-surface-smoker), not by a pytest unit. The
+  generator-side wiring that makes the verifier `needed` and non-suppressible IS unit
+  tested under BO-2200b-4/b-5; the ordering is asserted under BO-2200b-1/b-6/d-2. Any
+  deterministic helper the template calls (scripts/build_placeholder_detection.py) is
+  already covered by its own tests.
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,47 @@
+id: BO-2200b-2-i
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "Partial documentation coverage still fails, naming the specific missing doc"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given a ticket whose documentation brief requires two documentation files,
+  When the git diff contains a real change to the first required file but no change to
+    the second,
+  Then the verifier reports `status: blocker` rather than passing on partial coverage.
+  And the blocker message names the second file as the one still missing a real change,
+    and does not name the first file (which was satisfied).
+depends_on: [BO-2200b-2]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements: |
+  Extend the documentation-verifier template instructions so the agent evaluates EACH
+  required doc independently and fails if ANY is missing, reporting precisely which ones.
+  One satisfied doc must not mask an unsatisfied sibling. This is template-prompt
+  hardening of the diff-presence behavior authored in BO-2200b-2.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-2
+  contract: "The diff-presence assertion this edge case extends to the multi-doc partial-coverage case."
+test_required: false
+test_rationale: |
+  Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
+  per-doc independence judgment is exercised behaviorally at drive time, not by pytest —
+  same trust model as user-surface-smoker. No executable Python surface of its own.
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

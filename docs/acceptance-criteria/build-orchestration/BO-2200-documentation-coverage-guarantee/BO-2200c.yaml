@@ -1,0 +1,43 @@
+id: BO-2200c
+components:
+  - build_orchestration
+  - documentation_system
+title: "The writer gets a precise brief, not a vague nudge"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every doc request says exactly what to write, where, and what to link.
+
+  When documentation is required, whoever writes it receives a clear brief: the
+  kind of document needed (how-to, reference, diagram, or explanation), where it
+  belongs, what it must contain, and which existing docs to update or cross-link.
+  The result is accurate, useful documentation instead of generic filler -- and
+  far less rework.
+depends_on: [BO-2200]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2200c-1
+  - BO-2200c-2
+  - BO-2200c-3
+  - BO-2200c-4
+  - BO-2200c-5
+  - BO-2200c-3-i
+  - BO-2200c-4-i
+  - BO-2200c-6
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: docs
+risk_surface: contract_boundary
