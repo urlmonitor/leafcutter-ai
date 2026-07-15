@@ -1,6 +1,6 @@
 id: BO-1700c-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "When a symlink cannot be created the hook copies the config and the probe passes"

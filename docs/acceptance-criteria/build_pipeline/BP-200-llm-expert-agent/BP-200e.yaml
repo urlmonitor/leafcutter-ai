@@ -2,7 +2,7 @@ id: BP-200e
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Prompt quality problems are caught at authoring time, not at runtime"
 component: build-pipeline
 level: L1

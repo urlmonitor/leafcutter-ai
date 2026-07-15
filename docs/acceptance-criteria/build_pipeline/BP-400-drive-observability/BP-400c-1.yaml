@@ -2,13 +2,13 @@ id: BP-400c-1
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Build system deploys all feedback analysis pipeline artifacts"
 component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
 criteria: |
   Given the build system has deployed the leafcutter package,
@@ -38,7 +38,8 @@ created: 2026-06-05
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/build/test_bp_stragglers_backfill.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

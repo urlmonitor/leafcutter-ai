@@ -2,7 +2,7 @@ id: BO-550-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket frontmatter supports a structured test_constraints field"
 component: build-orchestration
 level: L2

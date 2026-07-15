@@ -1,6 +1,6 @@
 id: BO-1600d-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Recovery is human-invoked and confirmation-gated — it never runs inside the automatic drive loop"

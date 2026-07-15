@@ -1,6 +1,6 @@
 id: BO-1500e-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: Authoring works when run from a deployed/installed copy, not just the dev layout

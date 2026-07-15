@@ -2,8 +2,8 @@
 title: "Check pre-commit availability and run install during onboard"
 status: done
 components:
-  - onboard
-  - build_system
+  - onboarding
+  - build_pipeline
 created: 2026-05-19
 depends_on: []
 priority: high

@@ -1,6 +1,6 @@
 id: KM-VIS-013
 components:
-  - knowledge-management
+  - knowledge_management
 title: "visualise_knowledge_graph.py produces a graph with nodes and edges against the real repository"
 component: knowledge-management
 level: L2

@@ -3,7 +3,7 @@ title: "EPIC: goal_to_epic.py bug fixes — single-location writes, correct back
 type: epic
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-22
 depends_on: []
 priority: high

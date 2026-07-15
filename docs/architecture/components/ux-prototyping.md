@@ -8,7 +8,7 @@ type: reference
 created: 2026-07-14
 last_updated: 2026-07-14
 components:
-  - ux-prototyping
+  - ux_prototyping
   - ac_store
   - build_pipeline
 ---

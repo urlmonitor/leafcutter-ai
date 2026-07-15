@@ -1,6 +1,6 @@
 id: GE-113c-1-iv
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "Every guard obtains the project root through one shared resolver so the wrong-root bug class cannot recur"
 component: guardrail-engine
 level: L3

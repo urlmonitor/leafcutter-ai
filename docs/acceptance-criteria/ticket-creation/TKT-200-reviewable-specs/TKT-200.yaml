@@ -1,6 +1,6 @@
 id: TKT-200
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: reviewed
 priority: medium
 title: "Every spec comes with the documentation that makes review possible"

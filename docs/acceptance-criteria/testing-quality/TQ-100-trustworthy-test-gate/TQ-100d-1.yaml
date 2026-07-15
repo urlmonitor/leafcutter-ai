@@ -1,6 +1,6 @@
 id: TQ-100d-1
 components:
-  - testing-quality
+  - testing_quality
 title: "A failing test on a valid, unexpired allowlist entry does not block the run"
 component: testing-quality
 level: L2

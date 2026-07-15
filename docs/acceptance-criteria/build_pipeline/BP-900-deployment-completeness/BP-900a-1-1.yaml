@@ -1,4 +1,6 @@
 id: BP-900a-1-1
+components:
+  - build_pipeline
 title: "Build fails if a source ac_store script is missing from the templates directory"
 component: build_pipeline
 level: L3

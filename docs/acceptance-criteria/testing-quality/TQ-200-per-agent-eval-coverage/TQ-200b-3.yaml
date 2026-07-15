@@ -1,0 +1,69 @@
+id: TQ-200b-3
+components:
+  - testing_quality
+title: "An eval runs whenever any file in its dependency closure changes"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given each agent declares the dependency closure of its eval — its prompt
+    template, the shared skills / instructions it loads, the schemas its output
+    must satisfy, the oracle artifacts its golden cases derive from, the eval set
+    itself, and the harness / scorer code — as a set of trigger globs,
+  When a change (a diff between two revisions) is evaluated for which evals to run,
+  Then an eval is STALE (must run) when ANY file in its dependency closure changed,
+  And the affected-eval set is computed by intersecting the change's file list
+    against each agent's declared trigger globs,
+  And only the affected evals run (so unaffected agents are not re-scored — cost),
+  And EVERY affected eval always runs (no affected agent is dropped — completeness),
+  And what ran versus what was skipped-as-unaffected is logged, so an eval is never
+    silently truncated out of the run.
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+  - path: scripts/evals/run_agent_eval.py
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The trigger closure is DATA, not code: each agent entry in
+  scripts/evals/agent_eval_config.json carries a `triggers` list of repo-relative
+  globs covering its template, the shared instructions/skills it loads, the
+  schema(s) it satisfies, the oracle artifacts its golden cases derive from, its
+  eval set, and the shared harness (run_agent_eval.py) + config. A selector (later
+  ticket) intersects a change/diff file list against each agent's globs to compute
+  the affected-eval set; only affected evals run but ALL affected ones do. The run
+  report enumerates ran vs skipped-as-unaffected so truncation is visible, never
+  silent. This AC delivers the trigger MANIFEST (the globs); the selector that
+  consumes it is out of scope here.
+delivers_to:
+  agent: eval-runner
+  contract: "Per-agent dependency-closure trigger globs the selector intersects against a change to compute the affected-eval set."
+expects_from: {}
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/evals/test_eval_selector.py::test_affected_agent_specific_template
+  - unit_tests/evals/test_eval_selector.py::test_affected_shared_harness_marks_all
+  - unit_tests/evals/test_eval_selector.py::test_affected_unrelated_marks_none
+  - unit_tests/evals/test_eval_selector.py::test_affected_recursive_glob_dir
+  - unit_tests/evals/test_eval_selector.py::test_diff_base_detects_changed_agent
+  - unit_tests/evals/test_eval_selector.py::test_diff_base_bad_ref_is_exit2
+implemented_by:
+  - scripts/evals/eval_selector.py
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

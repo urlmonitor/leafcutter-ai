@@ -62,6 +62,40 @@ jobs:
       - name: Ruff check
         run: ruff check scripts tests unit_tests
 
+  component-vocab:
+    name: Component vocab style (components.json)
+    runs-on: ubuntu-latest
+    # BLOCKING. Every `components` LIST value must be a canonical id in
+    # docs/components.json (underscore-case). Scope depends on the event:
+    #   - pull_request : only files CHANGED vs the base (diff-scoped), so a clean
+    #     PR is not failed for pre-existing drift in the base it didn't introduce;
+    #     a PR that *adds* drift still has that file in its diff and is caught.
+    #   - push (to main): the FULL tree, guaranteeing main never carries an
+    #     off-registry value (the merge-vector backstop that pre-commit can't cover).
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need history + base ref for the diff on pull_request events.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Check component vocabulary (PR — changed files only)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          python scripts/check_component_vocab.py --changed "origin/${{ github.base_ref }}"
+
+      - name: Check component vocabulary (push — full tree)
+        if: github.event_name != 'pull_request'
+        run: python scripts/check_component_vocab.py
+
   test:
     name: Test suite (pytest)
     runs-on: ubuntu-latest

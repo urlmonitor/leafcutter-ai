@@ -1,6 +1,6 @@
 id: TQ-100c
 components:
-  - testing-quality
+  - testing_quality
 title: "Shipped features are always protected, and protection can't be quietly removed"
 component: testing-quality
 level: L1

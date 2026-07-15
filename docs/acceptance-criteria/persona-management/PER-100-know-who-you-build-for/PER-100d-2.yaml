@@ -1,6 +1,6 @@
 id: PER-100d-2
 components:
-  - persona-management
+  - persona_management
 title: "Full persona detail is available on demand via a skill invocation"
 component: persona-management
 level: L2

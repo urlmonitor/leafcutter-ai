@@ -1,6 +1,6 @@
 id: ACS-900c
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "The block tells you exactly what to remove or reconcile"

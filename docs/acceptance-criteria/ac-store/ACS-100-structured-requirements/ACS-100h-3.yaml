@@ -2,7 +2,7 @@ id: ACS-100h-3
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Split requires user confirmation at each gate before modifying files"
 component: ac-store
 level: L2

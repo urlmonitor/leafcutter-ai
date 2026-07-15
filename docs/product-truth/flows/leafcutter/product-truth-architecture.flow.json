@@ -30,7 +30,7 @@
         "UXP-420a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     },
     {
       "id": "atlas",
@@ -42,7 +42,7 @@
         "UXP-421a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     },
     {
       "id": "agents",
@@ -54,7 +54,7 @@
         "UXP-422a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     }
   ],
   "branches": [],
@@ -63,7 +63,7 @@
     "in_progress": 0,
     "not_started": 1,
     "total": 3,
-    "asof": "2026-07-14"
+    "asof": "2026-07-15"
   },
   "acceptance_scenarios": [
     {

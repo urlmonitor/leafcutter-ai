@@ -2,7 +2,7 @@ id: KM-KQS-024
 readiness: reviewed
 priority: medium
 components:
-  - knowledge-management
+  - knowledge_management
 title: "Edges targeting phantom nodes are filtered from output"
 component: knowledge-management
 level: L2

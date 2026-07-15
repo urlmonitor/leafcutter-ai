@@ -1,6 +1,6 @@
 id: PER-100b-4
 components:
-  - persona-management
+  - persona_management
 title: "How-to guide for tagging ACs with persona references"
 component: persona-management
 level: L2

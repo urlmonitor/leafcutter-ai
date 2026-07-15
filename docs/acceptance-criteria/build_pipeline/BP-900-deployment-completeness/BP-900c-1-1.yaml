@@ -1,4 +1,6 @@
 id: BP-900c-1-1
+components:
+  - build_pipeline
 title: "Multiple templates referencing the same missing script produce a consolidated entry"
 component: build_pipeline
 level: L3
@@ -6,7 +8,7 @@ status: active
 req_status: approved
 readiness: approved
 priority: critical
-work_status: not_started
+work_status: done
 criteria: |
   Given "scripts/ac_store/generate_ticket_from_ac.py" is referenced in both
   "agents/build-ac.md" and "skills/ac-scanner/SKILL.md"
@@ -36,7 +38,8 @@ created: 2026-06-11
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/build/test_bp_stragglers_backfill.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900c-1-1.md
 change_target: pipeline

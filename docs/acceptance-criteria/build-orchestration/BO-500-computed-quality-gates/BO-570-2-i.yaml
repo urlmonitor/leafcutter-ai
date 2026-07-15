@@ -1,6 +1,6 @@
 id: BO-570-2-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "No frontend files changed -- dev-render smoke check is skipped, not failed"
 component: build-orchestration
 level: L3

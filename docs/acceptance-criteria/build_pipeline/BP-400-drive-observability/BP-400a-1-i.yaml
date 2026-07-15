@@ -2,7 +2,7 @@ id: BP-400a-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "emit_event.py write failure is non-fatal (exits 0 with stderr warning)"
 component: build-pipeline
 level: L3

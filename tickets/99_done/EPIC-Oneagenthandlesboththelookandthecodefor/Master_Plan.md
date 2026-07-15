@@ -3,7 +3,7 @@ epic_name: EPIC-OneAgentHandlesBothTheLookAndTheCodeFor
 created: 2026-06-08
 status: done
 components:
-  - build-pipeline
+  - build_pipeline
 source_ac: BP-700
 ---
 # EPIC-OneAgentHandlesBothTheLookAndTheCodeFor

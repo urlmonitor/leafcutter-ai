@@ -1,6 +1,8 @@
 id: BP-200d-3
 readiness: reviewed
 priority: medium
+components:
+  - build_pipeline
 title: "Prompt-audit skill returns a structured report with violations sorted by line number"
 component: build_pipeline
 level: L2
@@ -50,7 +52,8 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/agents/test_llm_expert_artifacts.py"
 implemented_by:
   - "templates/skills/prompt-audit/SKILL.md"
 change_target: prompt

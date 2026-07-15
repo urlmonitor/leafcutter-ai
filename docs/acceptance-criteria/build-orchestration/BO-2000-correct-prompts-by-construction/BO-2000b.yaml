@@ -1,6 +1,6 @@
 id: BO-2000b
 components:
-  - build-orchestration
+  - build_orchestration
 title: "python-coder carries its own implementation craft in its template"
 component: build-orchestration
 level: L1
@@ -52,7 +52,7 @@ product_truth:
       - Test
       - Ticket
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/python-coder-internal
     node: complexity
     node_kind: step
@@ -61,7 +61,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/python-coder-internal
     node: conventions
     node_kind: step
@@ -70,7 +70,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/python-coder-internal
     node: docenforce
     node_kind: step
@@ -79,4 +79,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

@@ -2,8 +2,8 @@
 title: "AC done-linker"
 status: done
 components:
-  - ac-store
-  - build-orchestration
+  - ac_store
+  - build_orchestration
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md

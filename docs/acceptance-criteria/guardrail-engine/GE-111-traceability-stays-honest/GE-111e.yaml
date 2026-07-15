@@ -1,6 +1,6 @@
 id: GE-111e
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Understand exactly which requirement broke and why, every time"

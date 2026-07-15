@@ -1,6 +1,6 @@
 id: BO-1500b-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: The fresh authoring worktree is bootstrapped so pre-commit hooks do not silently skip

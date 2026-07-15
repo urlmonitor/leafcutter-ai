@@ -1,6 +1,6 @@
 id: UXP-100c
 components:
-  - ux-prototyping
+  - ux_prototyping
 readiness: approved
 priority: medium
 title: "Decide on a prototype through a clear approval gate"

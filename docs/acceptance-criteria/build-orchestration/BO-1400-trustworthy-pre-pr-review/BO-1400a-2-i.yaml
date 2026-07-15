@@ -1,6 +1,6 @@
 id: BO-1400a-2-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "A build-output-only artifact that is not consumer-shipped by design is not falsely flagged"

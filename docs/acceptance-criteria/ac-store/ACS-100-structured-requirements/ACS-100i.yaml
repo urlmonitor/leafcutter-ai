@@ -2,7 +2,7 @@ id: ACS-100i
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Cross-field constraints and relational references are enforced together"
 component: ac-store
 level: L1

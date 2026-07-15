@@ -1,6 +1,6 @@
 id: PER-100d-2b
 components:
-  - persona-management
+  - persona_management
 title: "Persona-detail script reads and formats full persona YAML content"
 component: persona-management
 level: L2

@@ -1,6 +1,6 @@
 id: BO-1500d-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: The PR number and URL are reported back to the user the moment the PR is opened

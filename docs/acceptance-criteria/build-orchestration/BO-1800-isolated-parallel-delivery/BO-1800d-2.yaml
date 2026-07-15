@@ -1,6 +1,6 @@
 id: BO-1800d-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Garbage collection runs only single-writer, between drives"

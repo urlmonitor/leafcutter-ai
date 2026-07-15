@@ -1,0 +1,42 @@
+id: BO-2100d-4
+components:
+  - build_orchestration
+title: "How-to guide for diagnosing a live-app check that cannot run"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an operator whose live-app check reported a loud failure
+  When they consult the documentation to fix it
+  Then a how-to guide exists that maps each loud failure to its remedy:
+    a missing `requests` prerequisite, an empty or missing `startup_command`,
+    and a script-path resolution failure in a worktree,
+    And it tells the operator where to look (config block, environment, deployed dir)
+    for each case.
+depends_on: [BO-2100d, BO-2100d-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must map each of the three loud failures (missing `requests`, empty/missing `startup_command`, worktree script-path resolution failure) to a concrete remedy and where to look (environment, config block, deployed dir)."
+  - "The failure symptoms described must match the actual error messages emitted by BO-2100d-1, d-2, and d-3, so the guide stays actionable."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100d-4.md

@@ -1,6 +1,6 @@
 id: TKT-200e-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 title: "A claim paired with a command and an observed result passes the capture check"
 component: ticket-creation
 level: L2

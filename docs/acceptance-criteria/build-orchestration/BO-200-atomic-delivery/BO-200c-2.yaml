@@ -2,7 +2,7 @@ id: BO-200c-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Commit message body explains the intent, not just the file changes"
 component: build-orchestration
 level: L2

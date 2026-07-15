@@ -1,6 +1,6 @@
 id: ACS-300i
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Exposed interfaces field documents component boundaries"

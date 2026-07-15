@@ -1,6 +1,6 @@
 id: GE-113a
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "A misplaced test stops the commit with a fix-it message"
 component: guardrail-engine
 level: L1

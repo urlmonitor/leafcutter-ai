@@ -2,7 +2,7 @@ id: BP-300
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Workflow scripts orchestrate agents deterministically — no silent skips, no stale state"
 component: build-pipeline
 level: L0
@@ -38,4 +38,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

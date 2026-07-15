@@ -1,13 +1,13 @@
 id: BP-600e-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix workflow warns when red-phase test reveals a deeper root cause"
 component: build-pipeline
 level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the test-writer has produced a test based on the diagnosis,
   When the red-phase test fails but the failure message indicates a
@@ -43,7 +43,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600e-2.md
 change_target: pipeline

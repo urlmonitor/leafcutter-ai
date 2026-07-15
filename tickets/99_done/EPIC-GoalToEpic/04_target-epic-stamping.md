@@ -2,7 +2,7 @@
 title: "target_epic stamping — tag included ACs with the generated epic name"
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-GoalToEpic/01_tree-traversal-ticket-generation.md

@@ -1,6 +1,6 @@
 id: BO-1700h-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The probe honors a core.hooksPath override when locating the shared hook"

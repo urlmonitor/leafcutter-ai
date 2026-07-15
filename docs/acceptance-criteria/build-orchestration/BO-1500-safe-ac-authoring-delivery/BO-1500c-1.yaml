@@ -1,6 +1,6 @@
 id: BO-1500c-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: Final approval pushes the authoring branch and opens a PR to main automatically

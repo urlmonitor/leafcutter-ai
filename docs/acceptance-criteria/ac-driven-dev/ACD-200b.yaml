@@ -1,6 +1,6 @@
 id: ACD-200b
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "IT PO v3 validates documentation AC presence before promoting to reviewed"

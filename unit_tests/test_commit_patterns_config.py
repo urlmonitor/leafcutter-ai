@@ -5,6 +5,12 @@ Verifies that commit message patterns are defined in a single external
 configuration file (config/commit_message_patterns.json) that the classifier
 loads at runtime. Adding a new pattern should be a one-line config edit, not
 a code change.
+
+TestRoutingConfigIsArraySchema (added for the BO-1100 phantom-done remediation)
+asserts that the config is a TOP-LEVEL ARRAY of {group, path_pattern, template}
+entries per AC BO-1100c-1 and BO-1100c-2. The current config uses a 'patterns'
+dict (object) format — these tests are the RED baseline the python-coder must
+satisfy by converting the schema.
 """
 # @ac-tag: BO-1100c
 
@@ -38,41 +44,82 @@ class TestPatternsConfigFileExists(unittest.TestCase):
         )
 
     def test_config_file_is_valid_json(self):
-        """The config file must be parseable as JSON."""
+        """The config file must be parseable as JSON and be a top-level list (AC BO-1100c-1)."""
         with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
-        self.assertIsInstance(data, dict)
+        # (classification: test_drift) — old assertion expected a dict; AC BO-1100c-1
+        # specifies a top-level array of routing entries.
+        self.assertIsInstance(
+            data,
+            list,
+            msg=(
+                "config/commit_message_patterns.json must be a top-level JSON array "
+                "per AC BO-1100c-1. Got: %s. Old dict schema is stale." % type(data).__name__
+            ),
+        )
 
     def test_config_file_has_patterns_key(self):
-        """Top-level 'patterns' key must be a dict."""
+        """Config must be a top-level array with routing entries having required fields.
+
+        (classification: test_drift) — old assertion checked for a 'patterns' dict key;
+        AC BO-1100c-1 specifies a top-level array, so each entry is a routing object
+        with 'group', 'path_pattern', and 'template' fields.
+        """
         with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
-        self.assertIn("patterns", data)
-        self.assertIsInstance(data["patterns"], dict)
+        self.assertIsInstance(data, list, msg="Config must be a top-level JSON array.")
+        self.assertGreater(len(data), 0, msg="Config must have at least one routing entry.")
+        first = data[0]
+        self.assertIsInstance(first, dict, msg="Each routing entry must be a dict.")
+        self.assertIn("group", first, msg="Each routing entry must have a 'group' field.")
+        self.assertIn(
+            "path_pattern",
+            first,
+            msg="Each routing entry must have a 'path_pattern' field (AC BO-1100c-1).",
+        )
+        self.assertIn("template", first, msg="Each routing entry must have a 'template' field.")
 
     def test_config_patterns_cover_all_file_groups(self):
-        """Every FileGroup value must have a pattern entry in the config."""
+        """Every FileGroup value must have at least one routing entry in the config.
+
+        (classification: test_drift) — old assertion accessed data["patterns"] as a dict;
+        array-format config stores group values inside each entry's 'group' field.
+        """
         with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
-        config_keys = set(data["patterns"].keys())
+        self.assertIsInstance(data, list, msg="Config must be a top-level JSON array.")
+        config_groups = {
+            entry["group"]
+            for entry in data
+            if isinstance(entry, dict) and "group" in entry
+        }
         for group in FileGroup:
             with self.subTest(group=group):
                 self.assertIn(
                     group.value,
-                    config_keys,
-                    msg=f"FileGroup.{group.name} ({group.value!r}) missing from config",
+                    config_groups,
+                    msg=f"FileGroup.{group.name} ({group.value!r}) missing from config array",
                 )
 
     def test_all_patterns_contain_detail_placeholder(self):
-        """Every pattern string must contain the {detail} placeholder."""
+        """Every template string in the routing array must contain the {detail} placeholder.
+
+        (classification: test_drift) — old assertion iterated data["patterns"].items() as a
+        dict; array-format config stores templates inside each entry's 'template' field.
+        """
         with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
-        for key, template in data["patterns"].items():
-            with self.subTest(key=key):
+        self.assertIsInstance(data, list, msg="Config must be a top-level JSON array.")
+        for entry in data:
+            if not isinstance(entry, dict):
+                continue
+            template = entry.get("template", "")
+            group = entry.get("group", "<unknown>")
+            with self.subTest(group=group):
                 self.assertIn(
                     "{detail}",
                     template,
-                    msg=f"Pattern for {key!r} is missing {{detail}} placeholder",
+                    msg=f"Pattern for {group!r} is missing {{detail}} placeholder",
                 )
 
 
@@ -109,12 +156,19 @@ class TestLoadPatterns(unittest.TestCase):
         self.assertEqual(result, _FALLBACK_PATTERNS)
 
     def test_load_patterns_with_custom_path_overrides_a_pattern(self):
-        """A custom config file can override a single pattern entry."""
-        custom_data = {
-            "patterns": {
-                "tickets": "custom(tickets): {detail}",
+        """A custom array-format config file can override a single pattern entry.
+
+        (classification: test_drift) — old custom_data used the dict {'patterns': {...}}
+        schema; AC BO-1100c-1 requires a top-level array with routing-entry objects.
+        load_patterns() must read the array format and apply it on top of fallback defaults.
+        """
+        custom_data = [
+            {
+                "group": "tickets",
+                "path_pattern": "^tickets/",
+                "template": "custom(tickets): {detail}",
             }
-        }
+        ]
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False, encoding="utf-8"
         ) as tmp:
@@ -220,13 +274,23 @@ class TestConfigIsConsultedByClassifier(unittest.TestCase):
         )
 
     def test_one_line_config_edit_changes_a_pattern(self):
-        """AC BO-1100c: adding/changing a pattern is a one-line config edit.
+        """AC BO-1100c: adding/changing a pattern is a one-line array-entry edit.
 
-        This test simulates writing a modified config and verifies the classifier
-        picks up the new pattern when load_patterns() is pointed at that file.
+        This test simulates writing a modified array-format config and verifies
+        the classifier picks up the new pattern when load_patterns() is pointed
+        at that file.
+
+        (classification: test_drift) — old custom_data used {'patterns': {...}} dict
+        schema; AC BO-1100c-1/2 requires a top-level array of routing-entry objects.
         """
         custom_template = "CUSTOM(tickets): {detail}"
-        custom_data = {"patterns": {"tickets": custom_template}}
+        custom_data = [
+            {
+                "group": "tickets",
+                "path_pattern": "^tickets/",
+                "template": custom_template,
+            }
+        ]
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False, encoding="utf-8"
@@ -245,6 +309,140 @@ class TestConfigIsConsultedByClassifier(unittest.TestCase):
             self.assertTrue(
                 result.suggested_subject.startswith("CUSTOM(tickets):"),
                 msg=f"Expected custom prefix, got {result.suggested_subject!r}",
+            )
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+
+class TestRoutingConfigIsArraySchema(unittest.TestCase):
+    """AC BO-1100c-1/2 schema tests: config must be a top-level JSON array.
+
+    AC BO-1100c-1 specifies: "the file is valid JSON containing a top-level
+    array of routing entries" with each entry having at minimum 'group',
+    'path_pattern', and 'template' fields, evaluated in array order (first
+    match wins). At least 5 built-in entries must ship with the default config.
+
+    AC BO-1100c-2 specifies: appending a 6th entry activates it on next
+    invocation without modifying any code or agent prompt file.
+
+    CURRENT STATE (RED): config/commit_message_patterns.json uses a
+    'patterns' object (dict of group→template), not a top-level array. The
+    'path_pattern' field does not exist. These tests are the red baseline.
+    """
+
+    def test_routing_config_is_array_schema(self) -> None:
+        # covers: BO-1100c-1
+        """AC BO-1100c-1: commit_message_patterns.json must be a top-level JSON array.
+
+        The current config is a dict with a 'patterns' key (object schema).
+        After remediation it must be a list of routing-rule objects.
+        """
+        with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        self.assertIsInstance(
+            data,
+            list,
+            msg=(
+                "config/commit_message_patterns.json must be a top-level JSON array "
+                "of routing entries per AC BO-1100c-1. "
+                f"Got: {type(data).__name__!r}. "
+                "Current config uses a {{patterns: dict}} structure (phantom-done: "
+                "BO-1100c-1 array schema is not implemented)."
+            ),
+        )
+
+    def test_ac_bo1100c1_each_entry_has_path_pattern_field(self) -> None:
+        # covers: BO-1100c-1
+        """AC BO-1100c-1: each array entry must contain 'group', 'path_pattern', 'template'.
+
+        The 'path_pattern' field is new — the current config has no such field.
+        """
+        with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        self.assertIsInstance(data, list, msg="Top-level config must be a list.")
+        self.assertGreater(len(data), 0, msg="Config must have at least one routing entry.")
+        for i, entry in enumerate(data):
+            with self.subTest(entry_index=i):
+                self.assertIn(
+                    "group",
+                    entry,
+                    msg=f"Entry {i} is missing required field 'group'.",
+                )
+                self.assertIn(
+                    "path_pattern",
+                    entry,
+                    msg=(
+                        f"Entry {i} is missing required field 'path_pattern' "
+                        "(AC BO-1100c-1: each entry must specify a path glob/regex). "
+                        "The current config does not include path_pattern at all."
+                    ),
+                )
+                self.assertIn(
+                    "template",
+                    entry,
+                    msg=f"Entry {i} is missing required field 'template'.",
+                )
+
+    def test_ac_bo1100c1_at_least_five_default_entries(self) -> None:
+        # covers: BO-1100c-1
+        """AC BO-1100c-1: at least 5 built-in entries must ship (tickets, new ACs,
+        shipped ACs, implementation code, status-changes).
+        """
+        with _PATTERNS_CONFIG_PATH.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        self.assertIsInstance(data, list)
+        self.assertGreaterEqual(
+            len(data),
+            5,
+            msg=(
+                "Config must ship with at least 5 built-in routing entries per AC "
+                "BO-1100c-1 (tickets, new ACs, shipped ACs, implementation code, "
+                "status changes)."
+            ),
+        )
+
+    def test_ac_bo1100c2_new_rule_addable_via_config_path_param(self) -> None:
+        # covers: BO-1100c-2
+        """AC BO-1100c-2: appending a new rule to the array activates it without code changes.
+
+        classify_staged_files() must accept a patterns_config_path parameter
+        so it can load from a custom array-format config. This exercises the
+        'no code change required' guarantee: add a line to the JSON, done.
+        """
+        custom_rules = [
+            {
+                "group": "architecture-docs",
+                "path_pattern": "^docs/architecture/",
+                "template": "docs(arch): {detail}",
+            },
+        ]
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as tmp:
+            json.dump(custom_rules, tmp)
+            tmp_path = Path(tmp.name)
+
+        try:
+            # classify_staged_files must accept a patterns_config_path kwarg
+            # (new parameter) so the commit agent can point it at the live config.
+            result = classify_staged_files(
+                ["docs/architecture/components/new-component.md"],
+                patterns_config_path=tmp_path,
+            )
+            self.assertTrue(
+                result.specific_pattern_matched,
+                msg=(
+                    "classify_staged_files must route by path_pattern from the "
+                    "array config (BO-1100c-2). Currently path rules are hardcoded "
+                    "in _PATH_RULES and not read from config."
+                ),
+            )
+            self.assertTrue(
+                result.suggested_subject.startswith("docs(arch):"),
+                msg=(
+                    f"Expected 'docs(arch):' prefix from array config entry, "
+                    f"got: {result.suggested_subject!r}"
+                ),
             )
         finally:
             tmp_path.unlink(missing_ok=True)

@@ -2,7 +2,7 @@ id: BO-530-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "test-runner is injected after every coder-class agent in the computed chain"
 component: build-orchestration
 level: L2
@@ -71,7 +71,7 @@ product_truth:
       - Diff
       - Test
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/python-coder-internal
     node: tests
     node_kind: step
@@ -80,4 +80,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

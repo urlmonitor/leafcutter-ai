@@ -2,7 +2,7 @@ id: BO-400c-4
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "status-checker close-out calls set_ticket_status.py instead of git mv"
 component: build-orchestration
 level: L2

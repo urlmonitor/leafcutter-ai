@@ -1,4 +1,6 @@
 id: "GE-115"
+components:
+  - commit_guardian
 title: "check_doc_frontmatter resolves staged file paths against the git worktree top-level, not the .leafcutter-derived project root"
 component: guardrail-engine
 status: active

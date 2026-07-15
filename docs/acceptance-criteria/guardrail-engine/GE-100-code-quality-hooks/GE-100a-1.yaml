@@ -1,6 +1,6 @@
 id: GE-100a-1
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "jscpd hook rejects version 4.x with an actionable error and exits fail-open"

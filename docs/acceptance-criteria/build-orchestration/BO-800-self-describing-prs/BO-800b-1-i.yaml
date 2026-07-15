@@ -2,7 +2,7 @@ id: BO-800b-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Source AC chain with no L0 ancestor produces a summary from L1 criteria only"
 component: build-orchestration
 level: L3

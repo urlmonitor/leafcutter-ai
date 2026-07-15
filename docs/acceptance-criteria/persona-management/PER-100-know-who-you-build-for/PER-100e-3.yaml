@@ -1,6 +1,6 @@
 id: PER-100e-3
 components:
-  - persona-management
+  - persona_management
 title: "Persona expert derives insights from feature patterns in the AC store"
 component: persona-management
 level: L2

@@ -11,6 +11,7 @@
 # Runtime imports used by scripts/ and the test suites
 pyyaml>=6.0
 jsonschema>=4.0
+docstring_parser>=0.15
 
 # Test, lint, and type-check tooling (used by .github/workflows/ci.yml)
 pytest>=8.0

@@ -2,7 +2,7 @@ id: ACS-400c-2
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Criteria amendment appends the author to amended_by"
 component: ac-store
 level: L2

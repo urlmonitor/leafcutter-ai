@@ -3,7 +3,7 @@ epic_name: EPIC-DefineABehaviorOnce,ReuseTheSpec
 created: 2026-06-11
 status: done
 components:
-  - ac-store
+  - ac_store
 source_ac: ACS-500
 ---
 # EPIC-DefineABehaviorOnce,ReuseTheSpec

@@ -1,6 +1,6 @@
 id: BP-800c-3
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Package update with new best practices does not require user action"
 component: build-pipeline
 level: L2

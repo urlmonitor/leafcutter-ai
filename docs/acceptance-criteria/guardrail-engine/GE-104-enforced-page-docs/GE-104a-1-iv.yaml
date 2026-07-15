@@ -1,6 +1,6 @@
 id: GE-104a-1-iv
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Page-documentation hook is registered in commit_guardian.json with a hooks_manifest entry"

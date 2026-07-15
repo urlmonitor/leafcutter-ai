@@ -1,6 +1,6 @@
 id: UXP-542
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "A flow agent assembles the draft flow, wiring each step to its screen and entities"
 component: ux-prototyping
 level: L2
@@ -24,6 +24,9 @@ doc_links:
     status: exists
   - path: docs/product-truth/mock-data/pipeline-prompts/draft-flow.prompt.json
     relationship: specifies
+    status: exists
+  - path: docs/product-truth/evals/flow-author/eval.jsonl
+    relationship: verified-by
     status: exists
 assigned_agent: flow-author
 estimated_complexity: L
@@ -56,4 +59,4 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

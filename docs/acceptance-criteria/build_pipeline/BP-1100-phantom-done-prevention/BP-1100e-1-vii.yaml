@@ -1,6 +1,6 @@
 id: BP-1100e-1-vii
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: high
 title: "A done ticket is detected regardless of status-value quoting; a quoted status is never silently skipped"
@@ -42,7 +42,8 @@ origin_agent: BrainCandy
 created: 2026-07-07
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/01_TICKET-20260706-BP-1100e-1.md
 notes: |

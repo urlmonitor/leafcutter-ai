@@ -1,6 +1,6 @@
 id: KM-KGS-100c
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: approved
 priority: high
 title: "The map grows with you — add a new knowledge source without rewriting the rules"

@@ -1,6 +1,6 @@
 id: BO-1600d
 components:
-  - build-orchestration
+  - build_orchestration
 title: "If corruption is ever found, you get a safe, guided way back to a working repository"
 component: build-orchestration
 level: L1

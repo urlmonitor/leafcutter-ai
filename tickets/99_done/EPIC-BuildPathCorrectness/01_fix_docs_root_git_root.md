@@ -3,7 +3,7 @@ title: "Fix build phases to respect config paths (docs_root, git_root) instead o
 status: done
 components:
   - build_pipeline
-  - ac_traceability_store
+  - ac_store
 created: 2026-06-04
 depends_on: []
 priority: high

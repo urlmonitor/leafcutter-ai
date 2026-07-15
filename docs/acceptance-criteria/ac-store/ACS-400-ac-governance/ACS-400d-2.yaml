@@ -2,7 +2,7 @@ id: ACS-400d-2
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Governance rules are included by default with no opt-in required"
 component: ac-store
 level: L2

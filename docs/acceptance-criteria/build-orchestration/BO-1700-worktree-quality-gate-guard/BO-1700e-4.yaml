@@ -1,6 +1,6 @@
 id: BO-1700e-4
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "In a plain clone (not a worktree) the guard enforces without a false chain-broken verdict"

@@ -1,6 +1,6 @@
 id: BO-1600b-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "The next delivery commits cleanly into a worktree left by a failed one"

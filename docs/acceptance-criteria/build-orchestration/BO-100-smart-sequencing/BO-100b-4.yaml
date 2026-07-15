@@ -1,6 +1,6 @@
 id: BO-100b-4
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "NN execution-order prefix breaks ties deterministically within cap"

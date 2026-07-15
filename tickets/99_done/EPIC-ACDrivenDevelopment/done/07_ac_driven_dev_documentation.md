@@ -2,7 +2,7 @@
 title: "AC-driven development documentation — flow diagrams, state machine, and how-to"
 status: done
 components:
-  - ac-store
+  - ac_store
 created: 2026-06-05
 depends_on:
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/00_ac_readiness_gate_and_authoring_pipeline.md

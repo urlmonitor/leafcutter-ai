@@ -1,0 +1,34 @@
+id: BO-2100c
+components:
+  - build_orchestration
+title: "Every test server is shut down and its port freed"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  No orphaned processes or blocked ports left behind after a check.
+
+  Whenever the pipeline starts your app to test it, it reliably stops that app and
+  releases the port afterward — even when the feature wraps up or is finalized —
+  so repeated runs never accumulate zombie server processes or leave ports stuck.
+depends_on: [BO-2100]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2100c-1
+  - BO-2100c-2
+  - BO-2100c-3
+  - BO-2100c-4
+implemented_by: []
+documentation_triggers: [sequence-diagram]

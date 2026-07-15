@@ -6,7 +6,7 @@ status: accepted
 created: 2026-05-19
 last_updated: 2026-05-21
 components:
-  - docs
+  - documentation_system
 tags:
   - vision
   - roadmap

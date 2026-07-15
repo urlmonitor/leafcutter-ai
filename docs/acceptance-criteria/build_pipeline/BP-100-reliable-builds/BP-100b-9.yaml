@@ -1,6 +1,6 @@
 id: BP-100b-9
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Consolidated output root doc lists .claude/workflows/ as a shimmed output"
@@ -13,7 +13,7 @@ created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_te
 criteria: |
   Given docs/explanation/consolidated-output-root.md contains a shimmed outputs table,
   When the table is viewed,
-  Then a row exists with source "templates/scripts/workflows/",
+  Then a row exists with source "templates/workflows-js/",
     output ".claude/workflows/", and content description mentioning compiled workflow JS scripts
 depends_on:
   - BP-100l
@@ -29,8 +29,10 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+  - "corrected: criteria source path templates/scripts/workflows/ -> templates/workflows-js/, 2026-07-15"
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/build/test_bp100_drift_docs_compile.py"
 implemented_by:
   - docs/explanation/consolidated-output-root.md
 change_target: docs

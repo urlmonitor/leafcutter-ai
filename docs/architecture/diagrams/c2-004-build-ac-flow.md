@@ -7,8 +7,8 @@ last_updated: 2026-06-05
 flight_level: L2
 parent: agent_delivery_workflows.md
 components:
-  - ac-store
-  - build-orchestration
+  - ac_store
+  - build_orchestration
 related_docs:
   - docs/architecture/diagrams/ac-authoring-pipeline.md
   - docs/architecture/diagrams/ac-readiness-states.md

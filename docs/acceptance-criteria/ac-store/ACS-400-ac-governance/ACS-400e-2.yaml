@@ -2,7 +2,7 @@ id: ACS-400e-2
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Only staged AC YAML files are inspected — unmodified files are ignored"
 component: ac-store
 level: L2

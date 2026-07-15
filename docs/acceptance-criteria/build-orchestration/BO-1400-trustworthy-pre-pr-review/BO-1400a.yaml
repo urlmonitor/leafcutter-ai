@@ -1,6 +1,6 @@
 id: BO-1400a
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "The review checks bold claims against the real data and confirms the work will actually ship"
@@ -47,4 +47,4 @@ product_truth:
     entities:
       - Diff
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

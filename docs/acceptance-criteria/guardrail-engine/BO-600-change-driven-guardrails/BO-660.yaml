@@ -2,7 +2,7 @@ id: BO-660
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "New agent types and change targets inherit guardrails automatically"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: ACD-600b-1-ii
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: reviewed
 priority: medium
 title: "Post-merge hook ignores non-ticket files touched by the merge"

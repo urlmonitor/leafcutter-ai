@@ -38,7 +38,7 @@
         "UXP-210d-4"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     },
     {
       "id": "payDetails",
@@ -57,7 +57,7 @@
         "UXP-210d-5"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     },
     {
       "id": "authorize",
@@ -77,7 +77,7 @@
         "UXP-210d-6"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     },
     {
       "id": "confirmed",
@@ -92,7 +92,7 @@
         "UXP-210e"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     }
   ],
   "branches": [
@@ -114,7 +114,7 @@
         "UXP-210d-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     },
     {
       "id": "soldOutAtPay",
@@ -131,7 +131,7 @@
         "UXP-210d-3"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-14"
+      "impl_asof": "2026-07-15"
     }
   ],
   "impl_summary": {
@@ -139,7 +139,7 @@
     "in_progress": 0,
     "not_started": 6,
     "total": 6,
-    "asof": "2026-07-14"
+    "asof": "2026-07-15"
   },
   "acceptance_scenarios": [
     {

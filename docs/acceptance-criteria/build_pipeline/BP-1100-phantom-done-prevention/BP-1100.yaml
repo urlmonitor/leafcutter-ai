@@ -1,6 +1,6 @@
 id: BP-1100
 components:
-  - build-pipeline
+  - build_pipeline
 title: "A done ticket means the feature actually runs, not just that it looks done"
 component: build-pipeline
 level: L0
@@ -50,4 +50,4 @@ product_truth:
       - Diff
       - Test
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

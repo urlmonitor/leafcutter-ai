@@ -2,7 +2,7 @@
 title: "Prompt user to bootstrap glossary during onboard"
 status: done
 components:
-  - onboard
+  - onboarding
 created: 2026-05-19
 depends_on: []
 priority: low

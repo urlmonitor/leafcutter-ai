@@ -1,6 +1,6 @@
 id: TQ-100c-2
 components:
-  - testing-quality
+  - testing_quality
 title: "A done-AC test has no in-test path to downgrade itself to informational"
 component: testing-quality
 level: L2

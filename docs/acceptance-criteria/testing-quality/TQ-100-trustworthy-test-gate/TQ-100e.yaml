@@ -1,6 +1,6 @@
 id: TQ-100e
 components:
-  - testing-quality
+  - testing_quality
 title: "Roll enforcement out in safe stages"
 component: testing-quality
 level: L1

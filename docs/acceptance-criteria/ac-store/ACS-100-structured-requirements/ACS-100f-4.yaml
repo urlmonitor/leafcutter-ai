@@ -1,6 +1,6 @@
 id: ACS-100f-4
 components:
-  - ac-store
+  - ac_store
 readiness: reviewed
 priority: medium
 title: "Compound filter combines multiple criteria with AND semantics"

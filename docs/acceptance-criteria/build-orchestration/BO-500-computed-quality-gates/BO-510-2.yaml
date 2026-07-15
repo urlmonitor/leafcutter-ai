@@ -2,7 +2,7 @@ id: BO-510-2
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Agent template frontmatter carries the produces trait matching the registry"
 component: build-orchestration
 level: L2

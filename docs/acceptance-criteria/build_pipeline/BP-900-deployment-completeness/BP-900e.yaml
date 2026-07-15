@@ -1,6 +1,6 @@
 id: BP-900e
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Build catches package capabilities promised in the registry but never shipped to consumers"
 component: build-pipeline
 level: L1

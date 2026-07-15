@@ -1,6 +1,6 @@
 id: BO-201
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "ac-fulfillment-gate phase gate — ok/blocker verdict with per-AC details"
@@ -58,4 +58,4 @@ product_truth:
       - Ac
       - Diff
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

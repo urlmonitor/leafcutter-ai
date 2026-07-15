@@ -1,6 +1,6 @@
 id: BP-1000e-3
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: approved
 priority: medium
 title: "When every workflow mirror matches its source, the merge proceeds"

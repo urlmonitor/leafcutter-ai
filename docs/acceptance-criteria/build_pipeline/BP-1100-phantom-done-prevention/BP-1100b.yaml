@@ -1,6 +1,6 @@
 id: BP-1100b
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Workflow JavaScript is verified by behavioral-replay tests, not string scans"
 component: build-pipeline
 level: L1

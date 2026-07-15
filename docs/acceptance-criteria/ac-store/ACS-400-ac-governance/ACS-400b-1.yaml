@@ -2,7 +2,7 @@ id: ACS-400b-1
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Implementation agents can update work_status field"
 component: ac-store
 level: L2

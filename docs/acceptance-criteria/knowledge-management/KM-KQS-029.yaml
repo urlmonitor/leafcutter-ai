@@ -2,7 +2,7 @@ id: KM-KQS-029
 readiness: reviewed
 priority: medium
 components:
-  - knowledge-management
+  - knowledge_management
 title: "Node with empty components list produces no component_membership edges"
 component: knowledge-management
 level: L3

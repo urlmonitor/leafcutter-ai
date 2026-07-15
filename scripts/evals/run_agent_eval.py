@@ -121,6 +121,13 @@ try:
 except ImportError:
     jsonschema = None  # type: ignore[assignment]
 
+# Trigger-sha stamping (TQ-200b-4): reuse eval_selector's resolver as the single
+# source of truth so the SHAs stamped into each result and the SHAs the freshness
+# gate re-derives from the working tree are computed identically and compare
+# apples-to-apples. eval_selector lives beside this script.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from eval_selector import resolve_trigger_shas  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Typed exceptions (Error Handling Policy: wrap external I/O, log + raise typed)
@@ -1577,6 +1584,7 @@ def _run_label_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dict],
         "aggregate": aggregate,
         "rows": row_results,
     }
+    payload["trigger_shas"] = resolve_trigger_shas(repo_root, agent_cfg.get("triggers") or [])
     _emit_results(args, repo_root, payload, "-selftest" if args.self_test else "")
     return _gate(aggregate["accuracy"], threshold)
 
@@ -1627,6 +1635,7 @@ def _run_artifact_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dic
         "aggregate": aggregate,
         "rows": row_results,
     }
+    payload["trigger_shas"] = resolve_trigger_shas(repo_root, agent_cfg.get("triggers") or [])
     _emit_results(args, repo_root, payload, "-scoregold" if args.score_gold else "")
     return _gate(aggregate["accuracy"], threshold)
 

@@ -1,6 +1,6 @@
 id: ACD-1200f-2
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: high
 title: "Level-based leaf detection: _dfs_collect_leaves uses level field, not covered_by emptiness"

@@ -1,6 +1,6 @@
 id: ACD-1300e
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: draft
 priority: medium
 title: "Answer a question and the agent picks up where it left off"

@@ -1,6 +1,6 @@
 id: BP-900g-3-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Command-side reachability is coordinated with, and distinct from, the BP-811 workflow-.js shim reachability"
 component: build-pipeline
 level: L3

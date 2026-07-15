@@ -1,0 +1,62 @@
+id: BO-1000a-2
+components:
+  - build_orchestration
+title: "The step count N in the announcements is stable and correct across the run"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize-feature workflow announces "Step X of N" as each step
+    begins,
+  When the start-of-step progress lines from a single run are collected,
+  Then the value of N is identical in every start-of-step line within that run,
+  And N equals the number of steps in the finalize sequence that the workflow
+    declares it will run,
+  And the position X advances monotonically as the run progresses, with no
+    duplicated or skipped position number for the steps that actually execute.
+depends_on: [BO-1000a]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Policy constraints:
+    - N must be derived from a single source of truth for the step sequence
+      (one declared list/count), never hard-coded per line, so every
+      start-of-step line in a run reports an identical N and N cannot drift from
+      the number of steps the workflow actually declares.
+    - X must advance monotonically with no duplicate or skipped position for the
+      steps that execute (skips are still counted and reported — see BO-1000a-3);
+      derive X from the same ordered sequence, not an independent counter.
+    - Shares the narration helper introduced in BO-1000a-1.
+    - No new config key. ADR-001 build.py round-trip parity.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements + doc_links; criteria unchanged."
+superseded_by: null
+covered_by: [BO-1000a-2-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

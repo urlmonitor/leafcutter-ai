@@ -3,7 +3,7 @@ title: "Apostrophes and quote characters in the goal title are stripped before P
 status: done
 source_ac: ACD-1200a-3-ii
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-22
 depends_on: []
 priority: high

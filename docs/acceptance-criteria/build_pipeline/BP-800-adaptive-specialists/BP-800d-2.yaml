@@ -1,6 +1,6 @@
 id: BP-800d-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Legacy agent knowledge is migrated into the best-practice knowledge layer"
 component: build-pipeline
 level: L2

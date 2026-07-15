@@ -107,6 +107,28 @@ distinguishes memory (session-spanning working context) from the glossary
 explanations), and config values. It is also the required pre-flight gate before
 dispatching `documentation-expert`.
 
+## New Work Goes Through ACs — MANDATORY
+
+**Never hand-write a ticket as the primary artifact for new work.** Author
+**acceptance criteria first**, then generate the ticket from them. This is the
+canonical path per ADR-012 (`/create-ticket` is retired):
+
+1. `/plan-feature` — ac-triage → PO v3 → BA v3 → IT PO v3 author the ACs into the
+   store (`docs/acceptance-criteria/{component}/`), with user gates between stages.
+2. `/build-ac` — generates a fully-wired ticket **from** an approved AC.
+
+**Why:** ACs are the machine-readable, **test-coverable** unit of work. The AC YAML
+in the store is the source of truth that tests, `test-writer`, `ac-validator`, and CI
+tooling read; a ticket's body ACs are for human readability only (see
+`ticket-authoring` → "AC Referencing Convention"). Skipping straight to a ticket
+leaves nothing for tests to assert against, so the work cannot be verified as truly
+done — the exact phantom-done failure mode this repo exists to prevent.
+
+**The only** direct writes to `tickets/**/*.md` that bypass this are pure **lifecycle
+moves** — flipping `status:` and relocating a file between status folders
+(`00_inbox` → `01_todo` → `99_done`). Everything that defines new behavior starts
+with `/plan-feature`.
+
 <!-- roadmap-phase:start — AUTO-GENERATED from docs/roadmap.json; edits between these markers are overwritten on next render -->
 
 | Roadmap | [docs/roadmap.json](docs/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |

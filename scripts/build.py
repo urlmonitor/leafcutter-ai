@@ -410,6 +410,8 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
         "knowledge_query.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
+        "port_registry.py",
+        "live_surface_startup.py",
     ):
         if (scripts_src / fname).is_file():
             result.add(f"scripts/{fname}")
@@ -576,6 +578,8 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         "knowledge_query.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
+        "port_registry.py",
+        "live_surface_startup.py",
     ):
         if (scripts_src / fname).is_file():
             source_paths.add(f"scripts/{fname}")

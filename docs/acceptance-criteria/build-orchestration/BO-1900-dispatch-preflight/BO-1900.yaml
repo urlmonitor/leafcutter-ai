@@ -1,6 +1,6 @@
 id: BO-1900
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Every ticket is proven fit to dispatch before an agent is spawned"
 component: build-orchestration
 level: L0

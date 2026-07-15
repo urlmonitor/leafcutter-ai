@@ -1,6 +1,6 @@
 id: BP-100d-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Test verifies commit_guardian paths are excluded from production file classification"
@@ -40,7 +40,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py"
 implemented_by:
   - "unit_tests/commit_guardian/test_check_contract_shrinking.py"
 change_target: code

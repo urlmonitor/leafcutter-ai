@@ -3,8 +3,8 @@ title: "EPIC: AC Parent-Child Link Enforcement"
 type: epic
 status: todo
 components:
-  - ac-store
-  - ac-driven-dev
+  - ac_store
+  - ac_driven_dev
 created: 2026-06-07
 depends_on: []
 priority: medium

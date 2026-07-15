@@ -2,7 +2,7 @@ id: BP-400
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Understand how every drive performed — never fly blind"
 component: build-pipeline
 level: L0

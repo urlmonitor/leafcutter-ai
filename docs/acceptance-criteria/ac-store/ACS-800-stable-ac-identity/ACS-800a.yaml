@@ -1,6 +1,6 @@
 id: ACS-800a
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Every requirement gets a permanent name of its own"
@@ -56,4 +56,4 @@ product_truth:
     entities:
       - Ac
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

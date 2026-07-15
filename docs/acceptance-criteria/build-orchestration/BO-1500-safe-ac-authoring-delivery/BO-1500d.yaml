@@ -1,6 +1,6 @@
 id: BO-1500d
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "You see the pull request the moment it is ready"

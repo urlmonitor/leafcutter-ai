@@ -1,6 +1,6 @@
 id: BO-1100c-3-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Missing routing config file causes graceful fallback to current commit behavior"
 component: build-orchestration
 level: L3

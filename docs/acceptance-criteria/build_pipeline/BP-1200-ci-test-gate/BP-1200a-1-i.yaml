@@ -1,6 +1,6 @@
 id: BP-1200a-1-i
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Suite is green across repeated runs with both fixed and varied test-ordering seeds"
 component: build-pipeline
 level: L3

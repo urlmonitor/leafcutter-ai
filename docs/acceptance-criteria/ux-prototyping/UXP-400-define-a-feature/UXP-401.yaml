@@ -43,7 +43,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/define-a-feature
     node: flow
     node_kind: step
@@ -55,7 +55,7 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/define-a-feature
     node: mockData
     node_kind: step
@@ -65,7 +65,7 @@ product_truth:
     entities:
       - MockData
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: leafcutter/define-a-feature
     node: mockups
     node_kind: step
@@ -76,4 +76,4 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-14'
+    asof: '2026-07-15'

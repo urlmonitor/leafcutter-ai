@@ -1,6 +1,6 @@
 id: BO-1700a-10
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "How-to guide: proving pre-commit protection is live in a worktree"

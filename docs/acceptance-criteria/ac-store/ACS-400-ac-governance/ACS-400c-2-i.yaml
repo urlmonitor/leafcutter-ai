@@ -2,7 +2,7 @@ id: ACS-400c-2-i
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Criteria change with stale amended_by entry is rejected"
 component: ac-store
 level: L3

@@ -1,6 +1,6 @@
 id: BO-1800
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Build many features in parallel, safely, like a real team"
 component: build-orchestration
 level: L0

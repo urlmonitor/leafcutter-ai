@@ -2,8 +2,8 @@
 title: "Add TODO/placeholder marker detection to build pipeline"
 status: done
 components:
-  - build_system
-  - onboard
+  - build_pipeline
+  - onboarding
 created: 2026-05-19
 depends_on: []
 priority: high

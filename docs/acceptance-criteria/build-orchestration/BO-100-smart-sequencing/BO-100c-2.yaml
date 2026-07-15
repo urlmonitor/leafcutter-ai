@@ -1,6 +1,6 @@
 id: BO-100c-2
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: reviewed
 priority: medium
 title: "Overlapping files_touched removes conflicting ticket from batch"

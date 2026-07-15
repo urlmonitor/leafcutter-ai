@@ -1,6 +1,6 @@
 id: KM-VIS-010
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: reviewed
 priority: medium
 title: "Tests RED before python-coder, GREEN after"

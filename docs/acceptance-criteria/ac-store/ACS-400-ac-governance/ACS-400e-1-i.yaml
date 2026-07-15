@@ -2,7 +2,7 @@ id: ACS-400e-1-i
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Hook failure does not block legitimate commits (fail-open)"
 component: ac-store
 level: L3

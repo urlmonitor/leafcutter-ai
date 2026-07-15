@@ -1,6 +1,6 @@
 id: BO-1300c-1
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "Reviewers exercise the feature for uncovered gaps and never run the unit test suite"

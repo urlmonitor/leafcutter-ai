@@ -1,6 +1,6 @@
 id: KM-KQS-016
 components:
-  - knowledge-management
+  - knowledge_management
 title: "Each surface path in paths.json resolves to an existing directory or file"
 component: knowledge-management
 level: L2

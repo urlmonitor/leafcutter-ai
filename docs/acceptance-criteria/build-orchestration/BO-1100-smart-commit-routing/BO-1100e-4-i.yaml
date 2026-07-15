@@ -1,6 +1,6 @@
 id: BO-1100e-4-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Negative max_commits value is rejected before querying git history"
 component: build-orchestration
 level: L3
@@ -8,7 +8,7 @@ status: active
 readiness: reviewed
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the history filter is invoked with max_commits set to -1,
   When the filter validates its input parameters,
@@ -46,7 +46,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_defect_fixes.py
 implemented_by: []
 change_target: code
 risk_surface: cost

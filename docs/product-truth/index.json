@@ -49,7 +49,7 @@
         "in_progress": 1,
         "not_started": 7,
         "total": 10,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "checkout",
@@ -80,7 +80,7 @@
         "in_progress": 0,
         "not_started": 6,
         "total": 6,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "checkout",
@@ -111,7 +111,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 5,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "orders",
@@ -141,7 +141,7 @@
         "in_progress": 1,
         "not_started": 5,
         "total": 6,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "product-truth",
@@ -167,7 +167,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 3,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "product-truth",
@@ -194,7 +194,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "product-truth",
@@ -221,7 +221,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "product-truth",
@@ -248,7 +248,7 @@
         "in_progress": 0,
         "not_started": 1,
         "total": 3,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "product-truth",
@@ -280,7 +280,7 @@
         "in_progress": 3,
         "not_started": 4,
         "total": 10,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "ac-driven-dev",
@@ -310,11 +310,11 @@
         "PR"
       ],
       "impl_summary": {
-        "done": 1,
+        "done": 3,
         "in_progress": 1,
-        "not_started": 17,
+        "not_started": 15,
         "total": 19,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "build-pipeline",
@@ -348,7 +348,7 @@
         "in_progress": 0,
         "not_started": 10,
         "total": 10,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "product-truth",
@@ -376,7 +376,7 @@
         "in_progress": 3,
         "not_started": 0,
         "total": 3,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "build-pipeline",
@@ -403,7 +403,7 @@
         "in_progress": 1,
         "not_started": 6,
         "total": 7,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "build-pipeline",
@@ -430,7 +430,7 @@
         "in_progress": 0,
         "not_started": 6,
         "total": 6,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "tags": [
         "build-pipeline",
@@ -870,7 +870,7 @@
         "in_progress": 0,
         "not_started": 6,
         "total": 6,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": [
@@ -896,7 +896,7 @@
         "in_progress": 1,
         "not_started": 7,
         "total": 10,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [
         "fern-and-fig/checkout-and-pay"
@@ -918,7 +918,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 5,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -939,7 +939,7 @@
         "in_progress": 3,
         "not_started": 4,
         "total": 10,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -961,7 +961,7 @@
         "in_progress": 0,
         "not_started": 10,
         "total": 10,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -982,7 +982,7 @@
         "in_progress": 1,
         "not_started": 5,
         "total": 6,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": [
@@ -1003,7 +1003,7 @@
         "in_progress": 3,
         "not_started": 0,
         "total": 3,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [
         "leafcutter/define-a-feature",
@@ -1023,7 +1023,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -1039,7 +1039,7 @@
         "in_progress": 1,
         "not_started": 6,
         "total": 7,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": [
@@ -1060,7 +1060,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 3,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -1076,7 +1076,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -1095,11 +1095,11 @@
       "path": "flows/leafcutter/how-acs-are-built.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 1,
+        "done": 3,
         "in_progress": 1,
-        "not_started": 17,
+        "not_started": 15,
         "total": 19,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [
         "leafcutter/python-coder-internal"
@@ -1122,7 +1122,7 @@
         "in_progress": 0,
         "not_started": 1,
         "total": 3,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": []
@@ -1138,7 +1138,7 @@
         "in_progress": 0,
         "not_started": 6,
         "total": 6,
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       "expands": [],
       "parents": [
@@ -1160,7 +1160,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-300a": [
@@ -1176,7 +1176,7 @@
           "Request"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-300b": [
@@ -1192,7 +1192,7 @@
           "Request"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/how-acs-are-built",
@@ -1206,7 +1206,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-300c": [
@@ -1221,7 +1221,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-300d": [
@@ -1237,7 +1237,7 @@
           "Request"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-300g": [
@@ -1252,7 +1252,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-400a": [
@@ -1268,7 +1268,7 @@
           "AcStore"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-400b": [
@@ -1284,7 +1284,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-600a": [
@@ -1300,7 +1300,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/finalize-feature",
@@ -1311,7 +1311,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-600b": [
@@ -1327,7 +1327,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACD-800a": [
@@ -1342,7 +1342,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACS-400a": [
@@ -1357,7 +1357,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACS-400c": [
@@ -1372,7 +1372,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACS-800a": [
@@ -1387,7 +1387,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "ACS-900a": [
@@ -1402,7 +1402,7 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-1100a": [
@@ -1418,7 +1418,7 @@
           "Diff"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-1300c": [
@@ -1434,7 +1434,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-1400a": [
@@ -1449,7 +1449,7 @@
           "Diff"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-2000a": [
@@ -1462,7 +1462,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-2000b": [
@@ -1479,7 +1479,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/python-coder-internal",
@@ -1490,7 +1490,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/python-coder-internal",
@@ -1501,7 +1501,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/python-coder-internal",
@@ -1512,7 +1512,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-2000f": [
@@ -1528,7 +1528,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-2000f-5": [
@@ -1543,7 +1543,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-201": [
@@ -1559,7 +1559,7 @@
           "Diff"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-202": [
@@ -1575,7 +1575,7 @@
           "Diff"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-400b": [
@@ -1588,7 +1588,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-400c-2": [
@@ -1601,7 +1601,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-530-1": [
@@ -1618,7 +1618,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-530-2": [
@@ -1634,7 +1634,7 @@
           "Test"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/python-coder-internal",
@@ -1645,7 +1645,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-540": [
@@ -1660,7 +1660,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/how-acs-are-built",
@@ -1673,7 +1673,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-540-1": [
@@ -1688,7 +1688,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-540-2": [
@@ -1704,7 +1704,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-800": [
@@ -1717,7 +1717,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BO-800a": [
@@ -1733,7 +1733,7 @@
           "PR"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BP-014": [
@@ -1749,7 +1749,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BP-1100": [
@@ -1766,7 +1766,7 @@
           "Test"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BP-1100a": [
@@ -1782,7 +1782,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/python-coder-internal",
@@ -1793,7 +1793,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BP-300": [
@@ -1806,7 +1806,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "BP-300b": [
@@ -1821,7 +1821,7 @@
           "Ticket"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "FIN-100": [
@@ -1834,7 +1834,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "FIN-100a": [
@@ -1847,7 +1847,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "FIN-100b": [
@@ -1860,7 +1860,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "FIN-100c": [
@@ -1873,7 +1873,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "FIN-100d": [
@@ -1886,7 +1886,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "FIN-100f": [
@@ -1899,7 +1899,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210a": [
@@ -1914,7 +1914,7 @@
           "Plant"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210b": [
@@ -1929,7 +1929,7 @@
           "Plant"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210b-2": [
@@ -1945,7 +1945,7 @@
           "Plant"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210c": [
@@ -1961,7 +1961,7 @@
           "Plant"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210c-2": [
@@ -1976,7 +1976,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210d": [
@@ -1992,7 +1992,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210d-2": [
@@ -2008,7 +2008,7 @@
           "Payment"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "fern-and-fig/customer-buys-a-plant",
@@ -2022,7 +2022,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210d-3": [
@@ -2038,7 +2038,7 @@
           "Plant"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "fern-and-fig/customer-buys-a-plant",
@@ -2052,7 +2052,7 @@
           "Plant"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210d-4": [
@@ -2067,7 +2067,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210d-5": [
@@ -2084,7 +2084,7 @@
           "Payment"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210d-6": [
@@ -2100,7 +2100,7 @@
           "Payment"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210e": [
@@ -2115,7 +2115,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "fern-and-fig/customer-buys-a-plant",
@@ -2128,7 +2128,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-210f": [
@@ -2143,7 +2143,7 @@
           "Customer"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-220a": [
@@ -2159,7 +2159,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-220a-2": [
@@ -2175,7 +2175,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-220b": [
@@ -2190,7 +2190,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-220c": [
@@ -2205,7 +2205,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-220c-2": [
@@ -2220,7 +2220,7 @@
           "Order"
         ],
         "source": "mock",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-400": [
@@ -2233,7 +2233,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-400a": [
@@ -2246,7 +2246,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-401": [
@@ -2259,7 +2259,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2274,7 +2274,7 @@
           "Mockup"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2287,7 +2287,7 @@
           "MockData"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2301,7 +2301,7 @@
           "Mockup"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-401a": [
@@ -2314,7 +2314,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2329,7 +2329,7 @@
           "Mockup"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2342,7 +2342,7 @@
           "MockData"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2356,7 +2356,7 @@
           "Mockup"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-402": [
@@ -2372,7 +2372,7 @@
           "Flow"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/define-a-feature",
@@ -2386,7 +2386,7 @@
           "Flow"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-402a": [
@@ -2402,7 +2402,7 @@
           "Flow"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-410": [
@@ -2415,7 +2415,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-410a": [
@@ -2428,7 +2428,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-411": [
@@ -2441,7 +2441,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-411a": [
@@ -2454,7 +2454,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-412": [
@@ -2467,7 +2467,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-412a": [
@@ -2480,7 +2480,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-420": [
@@ -2493,7 +2493,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-420a": [
@@ -2506,7 +2506,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-421": [
@@ -2519,7 +2519,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-421a": [
@@ -2532,7 +2532,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-422": [
@@ -2545,7 +2545,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-422a": [
@@ -2558,7 +2558,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/product-truth-architecture",
@@ -2569,7 +2569,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-510": [
@@ -2582,7 +2582,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-511": [
@@ -2595,7 +2595,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-512": [
@@ -2608,7 +2608,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-513": [
@@ -2621,7 +2621,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-514": [
@@ -2634,7 +2634,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-520": [
@@ -2647,7 +2647,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-521": [
@@ -2660,7 +2660,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-522": [
@@ -2673,7 +2673,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-523": [
@@ -2686,7 +2686,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-524": [
@@ -2699,7 +2699,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-530": [
@@ -2714,7 +2714,7 @@
           "Request"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-540": [
@@ -2729,7 +2729,7 @@
           "MockData"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-541": [
@@ -2745,7 +2745,7 @@
           "Mockup"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-542": [
@@ -2762,7 +2762,7 @@
           "Mockup"
         ],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ],
     "UXP-543": [
@@ -2775,7 +2775,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/author-product-truth",
@@ -2786,7 +2786,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/author-product-truth",
@@ -2797,7 +2797,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       },
       {
         "flow": "leafcutter/author-product-truth",
@@ -2808,7 +2808,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-14"
+        "asof": "2026-07-15"
       }
     ]
   }

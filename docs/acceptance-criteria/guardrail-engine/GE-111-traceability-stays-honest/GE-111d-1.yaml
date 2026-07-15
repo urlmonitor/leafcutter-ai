@@ -1,6 +1,6 @@
 id: GE-111d-1
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Reconcile by updating implemented_by to the code's new location"

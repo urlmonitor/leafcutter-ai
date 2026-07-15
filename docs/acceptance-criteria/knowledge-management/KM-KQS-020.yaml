@@ -2,7 +2,7 @@ id: KM-KQS-020
 readiness: reviewed
 priority: medium
 components:
-  - knowledge-management
+  - knowledge_management
 title: "knowledge_query.py produces zero nodes gracefully for an empty surface directory"
 component: knowledge-management
 level: L3

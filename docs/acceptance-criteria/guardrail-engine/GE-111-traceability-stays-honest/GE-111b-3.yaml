@@ -1,6 +1,6 @@
 id: GE-111b-3
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Suggest the new location when a moved symbol can be located"

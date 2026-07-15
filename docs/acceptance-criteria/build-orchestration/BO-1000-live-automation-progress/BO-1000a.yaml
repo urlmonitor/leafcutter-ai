@@ -1,0 +1,31 @@
+id: BO-1000a
+components:
+  - build_orchestration
+title: "Long-running automation narrates its own progress as it runs"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Live step-by-step narration while automation runs — no more silence.
+
+  As each step begins, the automation announces which step it is, out of how many,
+  and what it's doing, so you can watch progress advance instead of staring at a
+  quiet screen and wondering whether anything is happening.
+depends_on: [BO-1000]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-1000a-1, BO-1000a-2, BO-1000a-3, BO-1000a-4]
+implemented_by: []
+documentation_triggers: [sequence-diagram]
+change_target: pipeline
+risk_surface: internal

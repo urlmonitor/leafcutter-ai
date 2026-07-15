@@ -1,6 +1,6 @@
 id: ACD-1500c-1-i
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Half-succeeded artifact creation must not mark the entry resolved (atomicity)"

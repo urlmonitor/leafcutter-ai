@@ -1,6 +1,6 @@
 id: GE-113b-1-i
 components:
-  - guardrail-engine
+  - commit_guardian
 title: "Bypass token present and the artifact correctly placed lets the commit proceed"
 component: guardrail-engine
 level: L3

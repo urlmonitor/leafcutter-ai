@@ -1,5 +1,19 @@
 {
   "components": {
+    "ac_driven_dev": {
+      "id": "ac_driven_dev",
+      "name": "AC-Driven Development",
+      "type": "orchestration",
+      "description": "AC-first development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the build loop that treats the AC store as the authoritative backlog.",
+      "detail_ref": "docs/architecture/components/ac-driven-dev.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/plan-feature.js",
+        "templates/skills/build-ac/SKILL.md"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "ac_store": {
       "id": "ac_store",
       "name": "AC Store",
@@ -47,6 +61,19 @@
         "scripts/bootstrap_install.py",
         "build-self.sh"
       ]
+    },
+    "build_orchestration": {
+      "id": "build_orchestration",
+      "name": "Build Orchestration",
+      "type": "orchestration",
+      "description": "Build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks.",
+      "detail_ref": "docs/architecture/components/build-orchestration.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/build-epic.js"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "build_pipeline": {
       "id": "build_pipeline",
@@ -131,6 +158,19 @@
         "scripts/feedback/"
       ]
     },
+    "finalize": {
+      "id": "finalize",
+      "name": "Finalize",
+      "type": "orchestration",
+      "description": "The finalize-feature workflow: pre-merge test baseline, push-before-merge sync, PR merge gating, main sync, and ticket/epic closure.",
+      "detail_ref": "docs/architecture/components/finalize.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/finalize-feature.js"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "frontend_coding": {
       "id": "frontend_coding",
       "name": "Frontend Coding",
@@ -178,8 +218,8 @@
         "scripts/injection_builders.py"
       ]
     },
-    "knowledge-management": {
-      "id": "knowledge-management",
+    "knowledge_management": {
+      "id": "knowledge_management",
       "name": "Knowledge Management",
       "type": "analysis",
       "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.",
@@ -225,6 +265,19 @@
         "build-self.sh",
         "docs/how-to/"
       ]
+    },
+    "persona_management": {
+      "id": "persona_management",
+      "name": "Persona Management",
+      "type": "analysis",
+      "description": "Persona definitions, AC targeting by persona, and persona knowledge-graph queries.",
+      "detail_ref": "docs/architecture/components/persona-management.md",
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/persona-management/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "precommit_hooks": {
       "id": "precommit_hooks",
@@ -346,6 +399,19 @@
         "templates/agents/sql-query.md"
       ]
     },
+    "stakeholder_delivery": {
+      "id": "stakeholder_delivery",
+      "name": "Stakeholder Delivery",
+      "type": "utility",
+      "description": "Stakeholder-facing delivery of product value: a presentation agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications.",
+      "detail_ref": "docs/architecture/components/stakeholder-delivery.md",
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/stakeholder-delivery/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "supervisor_system": {
       "id": "supervisor_system",
       "name": "Supervisor System",
@@ -381,19 +447,6 @@
       "primary_code": [
         "scripts/template_compiler.py",
         "scripts/build_phases.py"
-      ]
-    },
-    "ux-prototyping": {
-      "id": "ux-prototyping",
-      "name": "UX Prototyping",
-      "type": "analysis",
-      "description": "Product-truth store: the flow-first upstream authoring surface of Flows, Mockups, and Mock Data that captures product intent, generates acceptance criteria, and is rendered live by the Leafcutter Atlas.",
-      "detail_ref": "docs/architecture/components/ux-prototyping.md",
-      "status": "active",
-      "primary_code": [
-        "docs/product-truth/",
-        "docs/product-truth/scripts/validate_product_truth.py",
-        "leafcutter-web/lib/data/flows.ts"
       ]
     },
     "testing_quality": {
@@ -434,6 +487,22 @@
         "scripts/ticket_prioritizer.py"
       ]
     },
+    "ux_prototyping": {
+      "id": "ux_prototyping",
+      "name": "UX Prototyping",
+      "type": "utility",
+      "description": "Product-truth store: the flow-first upstream authoring surface of Flows, Mockups, and Mock Data that captures product intent, generates acceptance criteria, and is rendered live by the Leafcutter Atlas.",
+      "detail_ref": "docs/architecture/components/ux-prototyping.md",
+      "status": "active",
+      "primary_code": [
+        "docs/product-truth/",
+        "docs/product-truth/scripts/validate_product_truth.py",
+        "leafcutter-web/lib/data/flows.ts",
+        "docs/acceptance-criteria/ux-prototyping/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "worktree_manager": {
       "id": "worktree_manager",
       "name": "Worktree Manager",
@@ -444,6 +513,74 @@
       "primary_code": [
         "scripts/worktree/"
       ]
+    },
+    "finalize": {
+      "id": "finalize",
+      "name": "Finalize",
+      "type": "orchestration",
+      "description": "ACs for the finalize-feature workflow.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/finalize-feature.js"
+      ]
+    },
+    "build_orchestration": {
+      "id": "build_orchestration",
+      "name": "Build Orchestration",
+      "type": "orchestration",
+      "description": "ACs for build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/workflows/build-feature.md",
+        "templates/workflows-js/build-epic.js"
+      ]
+    },
+    "infrastructure": {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "type": "infrastructure",
+      "description": "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "ux_prototyping": {
+      "id": "ux_prototyping",
+      "name": "UX Prototyping",
+      "type": "utility",
+      "description": "ACs for the UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "persona_management": {
+      "id": "persona_management",
+      "name": "Persona Management",
+      "type": "analysis",
+      "description": "ACs for persona definitions, AC targeting by persona, and persona knowledge graph queries.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "stakeholder_delivery": {
+      "id": "stakeholder_delivery",
+      "name": "Stakeholder Delivery",
+      "type": "utility",
+      "description": "ACs for stakeholder-facing delivery of product value: the presentation-agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
+    },
+    "ac_driven_dev": {
+      "id": "ac_driven_dev",
+      "name": "AC-Driven Development",
+      "type": "orchestration",
+      "description": "ACs for the AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
     }
   }
 }

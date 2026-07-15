@@ -1,6 +1,6 @@
 id: ACD-300e-4
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "IT PO v3 queries the knowledge graph during S1 to discover agent capabilities and architecture relationships"

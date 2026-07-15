@@ -1,6 +1,6 @@
 id: BP-800e-1
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Build detects the legacy agent layout and triggers migration"
 component: build-pipeline
 level: L2

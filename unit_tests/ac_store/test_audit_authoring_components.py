@@ -213,7 +213,8 @@ class TestMainExitCodes(unittest.TestCase):
             root = Path(d)
             _write_yaml(
                 root, "ok.yaml",
-                _make_ac_yaml(components="components:\n  - knowledge-management\n"),
+                # Registry is docs/components.json (underscore ids).
+                _make_ac_yaml(components="components:\n  - knowledge_system\n"),
             )
             code = _mod.main(["--ac-root", str(root)])
             self.assertEqual(code, 0)
@@ -278,21 +279,31 @@ class TestRealFixtureBehavior(unittest.TestCase):
         self.assertGreater(total, 0, "Expected to scan at least one authoring-agent AC")
 
     def test_real_store_reports_expected_violation_count(self) -> None:
-        """Run against the full real store with the live registry; expect 51 violations."""
+        """Run against the full real store with the live registry.
+
+        The store was canonicalized onto docs/components.json (the components
+        vocabulary migration, 2026-07-10), so the real store is now expected to
+        be CLEAN: every authoring-agent AC carries only registry-valid component
+        ids. The prior 51-violation baseline (2026-07-08) predates that cleanup.
+        The scanner must still see authoring-agent ACs (total > 0); a total of 0
+        would indicate the scanner is silently skipping real files.
+        """
         if not self._AC_STORE.is_dir():
             self.skipTest("Real AC store not present in this environment")
         live_registry = load_registry_ids()
         total, violations = _mod.scan_store(self._AC_STORE, live_registry)
-        self.assertGreater(total, 0)
-        # The known baseline from 2026-07-08 is 51 violations; allow some drift
-        # as the store evolves, but a count of 0 with >0 authoring-agent ACs
-        # would indicate the scanner is silently skipping real files.
         self.assertGreater(
+            total,
+            0,
+            "Expected to scan >0 authoring-agent ACs; a total of 0 would mean the "
+            "scanner is silently skipping real files — check the real data format.",
+        )
+        self.assertEqual(
             len(violations),
             0,
-            f"Expected >0 violations in the real store (baseline: 51); "
-            f"got {len(violations)} from {total} authoring-agent ACs scanned. "
-            "The scanner may be silently skipping files — check the real data format.",
+            f"Expected a clean store (0 component violations) after the components "
+            f"canonicalization; got {len(violations)} from {total} authoring-agent "
+            f"ACs scanned: {violations[:10]}",
         )
 
     def test_real_ac_file_components_field_is_read_correctly(self) -> None:

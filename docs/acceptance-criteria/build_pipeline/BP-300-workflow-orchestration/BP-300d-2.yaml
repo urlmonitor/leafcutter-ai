@@ -1,6 +1,6 @@
 id: BP-300d-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "create-ticket and finalize-feature deployed commands also invoke their deterministic workflow on a supported runtime"
 component: build-pipeline
 level: L2

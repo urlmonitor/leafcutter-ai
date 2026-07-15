@@ -12,6 +12,15 @@
       "label_axes": ["needs_flow", "needs_mock_data", "needs_mockup"],
       "derive_outcome": true,
       "threshold": 0.70,
+      "triggers": [
+        "templates/agents/pt-classifier.md",
+        "docs/product-truth/README.md",
+        "docs/product-truth/schemas/classifier-eval.schema.json",
+        "docs/product-truth/index.json",
+        "docs/product-truth/classifier/eval.jsonl",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json"
+      ],
       "notes": "Booleans are the scored labels; outcome is derived from them via OUTCOME_BY_COMBO and reported as a secondary accuracy figure. Model pinned to haiku to match the pt-classifier template frontmatter. response_label_field names the sub-object of the model's returned JSON that holds the axes (pt-classifier's S4 contract nests them under 'expected'); omit or null it when an agent returns the axes at top level."
     },
     "mock-data-author": {
@@ -20,6 +29,18 @@
       "scoring_mode": "artifact",
       "artifact_type": "mock",
       "schema": "mock-data.schema.json",
+      "triggers": [
+        "templates/agents/mock-data-author.md",
+        "docs/product-truth/README.md",
+        "docs/product-truth/schemas/mock-data.schema.json",
+        "docs/product-truth/index.json",
+        "docs/product-truth/mock-data/**",
+        "docs/product-truth/evals/mock-data-author/eval.jsonl",
+        "docs/product-truth/scripts/generate_product_truth.py",
+        "docs/product-truth/scripts/validate_product_truth.py",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json"
+      ],
       "input_field": "input",
       "expected_field": "expected",
       "model": "opus",
@@ -35,6 +56,20 @@
       "scoring_mode": "artifact",
       "artifact_type": "flow",
       "schema": "flow.schema.json",
+      "triggers": [
+        "templates/agents/flow-author.md",
+        "docs/product-truth/README.md",
+        "docs/product-truth/schemas/flow.schema.json",
+        "docs/product-truth/index.json",
+        "docs/product-truth/flows/**",
+        "docs/product-truth/mockups/**",
+        "docs/product-truth/mock-data/**",
+        "docs/product-truth/evals/flow-author/eval.jsonl",
+        "docs/product-truth/scripts/generate_product_truth.py",
+        "docs/product-truth/scripts/validate_product_truth.py",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json"
+      ],
       "input_field": "input",
       "expected_field": "expected",
       "model": "opus",

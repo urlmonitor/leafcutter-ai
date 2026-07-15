@@ -1,6 +1,6 @@
 id: BP-800a-4
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Detection produces a stable technology manifest"
 component: build-pipeline
 level: L2

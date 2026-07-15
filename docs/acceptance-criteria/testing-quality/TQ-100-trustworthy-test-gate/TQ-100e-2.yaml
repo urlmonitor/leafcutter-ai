@@ -1,6 +1,6 @@
 id: TQ-100e-2
 components:
-  - testing-quality
+  - testing_quality
 title: "Reference doc for the enforcement rollout stages and their controlling configuration"
 component: testing-quality
 level: L2

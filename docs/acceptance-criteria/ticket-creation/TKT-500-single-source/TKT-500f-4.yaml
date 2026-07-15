@@ -1,6 +1,6 @@
 id: TKT-500f-4
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: draft
 priority: medium
 title: "Old ticket pipeline remains functional after ac-supervisor is deployed"

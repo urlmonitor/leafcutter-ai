@@ -1,6 +1,6 @@
 id: BO-1800c-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "Scheduling is host-resource-aware and sheds idle drives under memory pressure"

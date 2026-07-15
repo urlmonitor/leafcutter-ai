@@ -1,6 +1,6 @@
 id: UXP-100e-3
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Neither agent's completion gates the other from finishing"
 component: ux-prototyping
 level: L2

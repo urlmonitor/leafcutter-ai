@@ -1,6 +1,6 @@
 id: GE-100b-1
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "jscpd hook filters results to only report clones involving staged files"

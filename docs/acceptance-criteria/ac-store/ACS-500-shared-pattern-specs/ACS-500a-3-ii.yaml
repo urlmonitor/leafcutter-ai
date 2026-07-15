@@ -1,6 +1,6 @@
 id: ACS-500a-3-ii
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "implements_pattern referencing a deprecated pattern is rejected"

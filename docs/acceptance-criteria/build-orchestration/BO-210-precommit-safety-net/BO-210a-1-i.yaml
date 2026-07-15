@@ -1,6 +1,6 @@
 id: BO-210a-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: "The packaged template source of the routing config matches the deployed config byte-for-content"

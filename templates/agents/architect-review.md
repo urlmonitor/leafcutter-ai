@@ -228,6 +228,11 @@ Use the following heuristics to decide whether to suggest a diagram:
 Choose the `path` by running `python leafcutter/scripts/next_diagram_seq.py <level>`
 to get the next free sequence number, then construct `c{level}-{seq:03d}-{slug}.md`.
 
+When `suggested_diagrams` is non-empty, the **write-c4-diagram** skill must be invoked
+(or delegated to `architecture-diagram-author`) to produce or update the actual diagram
+files. Do not leave `suggested_diagrams` non-empty without arranging for the write-c4-diagram
+skill to run — the diagram suggestion is only complete when the file is created or updated.
+
 ## Sign-off Completion Manifest
 
 When signing off on a ticket, include a `completion_manifest:` block in your

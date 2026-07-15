@@ -2,7 +2,7 @@ id: BO-700d-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "An empty release (no tickets between tags) produces a No changes entry"
 component: build-orchestration
 level: L3

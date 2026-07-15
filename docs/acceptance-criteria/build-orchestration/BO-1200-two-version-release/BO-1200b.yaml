@@ -1,6 +1,6 @@
 id: BO-1200b
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: draft
 priority: medium
 title: "Dev is where agents deliver -- always moving forward"

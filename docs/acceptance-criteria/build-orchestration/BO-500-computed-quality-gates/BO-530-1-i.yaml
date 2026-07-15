@@ -2,7 +2,7 @@ id: BO-530-1-i
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Ticket with change_type doc_change skips TDD injection entirely"
 component: build-orchestration
 level: L3

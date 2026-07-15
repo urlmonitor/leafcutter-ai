@@ -1,6 +1,6 @@
 id: BO-570-4
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Python sign-off gate blocks on lint failure using the repo-ruff verdict"
 component: build-orchestration
 level: L2

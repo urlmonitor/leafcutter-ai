@@ -1,6 +1,6 @@
 id: BO-1100d-6
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Already-classified shapes are not recorded as unknown observations"
 component: build-orchestration
 level: L2
@@ -8,7 +8,7 @@ status: active
 readiness: reviewed
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the routing config contains an entry for "tickets" with path_pattern "tickets/**/*.md",
   And the staged files are:
@@ -54,7 +54,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_defect_fixes.py
 implemented_by: []
 change_target: code
 risk_surface: internal

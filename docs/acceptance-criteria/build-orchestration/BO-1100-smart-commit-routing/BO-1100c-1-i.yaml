@@ -1,6 +1,6 @@
 id: BO-1100c-1-i
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Malformed routing config is rejected with a specific parse error"
 component: build-orchestration
 level: L3

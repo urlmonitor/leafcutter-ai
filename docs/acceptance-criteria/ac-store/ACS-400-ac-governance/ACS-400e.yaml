@@ -2,7 +2,7 @@ id: ACS-400e
 readiness: reviewed
 priority: medium
 components:
-  - ac-store
+  - ac_store
 title: "Violations are caught before they reach the repository"
 component: ac-store
 level: L1

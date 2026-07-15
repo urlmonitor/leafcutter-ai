@@ -1,0 +1,65 @@
+id: BO-1000a-3
+components:
+  - build_orchestration
+title: "A step skipped because its state is already satisfied still reports the skip and why"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step's required outcome is already satisfied before it runs (for
+    example a pull request is already open, the branch is already up to date
+    with the mainline, the closure commit already exists, the pull request is
+    already merged, or the worktree is already absent),
+  When finalize reaches that step,
+  Then finalize still emits a start line for the step that reports the step is
+    being skipped and states the already-satisfied condition that caused the
+    skip,
+  And a skipped step is never silently omitted from the progress output.
+depends_on: [BO-1000a]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/finalize-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes: |
+    Policy constraints:
+    - Every already-satisfied short-circuit branch (PR already open, branch
+      already synced, closure commit exists, PR already merged, worktree absent)
+      must still emit a start line that (a) occupies its "Step X of N" position
+      and (b) names the concrete already-satisfied condition that caused the skip.
+    - A skip must never be a silent early-return: no step may vanish from the
+      progress output. This pairs with BO-1000b-1-i (the skip is also recorded as
+      a "skipped" outcome so the per-step record has no gap).
+    - Audit every existing short-circuit/idempotency guard in the workflow to
+      confirm each now narrates its skip; missing a branch is the primary defect
+      risk here.
+    - No new config key. ADR-001 build.py round-trip parity.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Assigned python-coder (workflow-body surface), added structured it_requirements + doc_links; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

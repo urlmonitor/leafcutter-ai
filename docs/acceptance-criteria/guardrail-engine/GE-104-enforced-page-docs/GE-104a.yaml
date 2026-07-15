@@ -1,6 +1,6 @@
 id: GE-104a
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "A new frontend page can never ship undocumented"

@@ -1,6 +1,6 @@
 id: BO-1800b-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: medium
 title: "No privileged bypass exists, and agents authenticate as a least-privilege identity with no direct-push right"

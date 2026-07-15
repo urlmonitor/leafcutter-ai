@@ -1,6 +1,6 @@
 id: PER-100c-2
 components:
-  - persona-management
+  - persona_management
 title: "Persona capability inventory groups results by component and level"
 component: persona-management
 level: L2

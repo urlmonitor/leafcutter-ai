@@ -8,8 +8,8 @@ last_updated: 2026-06-06
 flight_level: L2
 parent: agent_delivery_workflows.md
 components:
-  - ac-driven-dev
-  - build-orchestration
+  - ac_driven_dev
+  - build_orchestration
 related_docs:
   - docs/architecture/diagrams/c2-004-build-ac-flow.md
   - docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md

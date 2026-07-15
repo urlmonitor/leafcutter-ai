@@ -1,6 +1,6 @@
 id: BO-900
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: draft
 priority: medium
 title: "Long-running epics stay synchronized with main automatically"

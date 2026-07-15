@@ -1,6 +1,6 @@
 id: BP-800e-5
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Sequence diagram for the legacy-to-adaptive migration flow"
 component: build-pipeline
 level: L2

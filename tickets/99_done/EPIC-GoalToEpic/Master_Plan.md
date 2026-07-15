@@ -3,7 +3,7 @@ title: "EPIC: Goal to Epic — Turn any goal into a ready-to-build work package 
 type: epic
 status: done
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 created: 2026-06-05
 depends_on:
   - ACD-700

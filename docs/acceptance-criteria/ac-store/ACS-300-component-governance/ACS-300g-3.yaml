@@ -1,6 +1,6 @@
 id: ACS-300g-3
 components:
-  - ac-store
+  - ac_store
 title: "Every agent-backed subsystem has a corresponding component entry"
 component: ac-store
 level: L2

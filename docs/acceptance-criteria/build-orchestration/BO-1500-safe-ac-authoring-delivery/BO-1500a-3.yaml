@@ -1,6 +1,6 @@
 id: BO-1500a-3
 components:
-  - build-orchestration
+  - build_orchestration
 readiness: approved
 priority: high
 title: Sequence diagram of the isolated-authoring worktree lifecycle

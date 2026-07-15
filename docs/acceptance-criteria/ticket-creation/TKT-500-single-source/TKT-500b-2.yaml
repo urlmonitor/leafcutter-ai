@@ -1,6 +1,6 @@
 id: TKT-500b-2
 components:
-  - ticket-creation
+  - ticket_creation_pipeline
 readiness: approved
 priority: medium
 title: "Coder agent is blocked until test-writer signs off"

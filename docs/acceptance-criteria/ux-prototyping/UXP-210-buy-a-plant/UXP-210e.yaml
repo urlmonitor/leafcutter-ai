@@ -40,7 +40,7 @@ product_truth:
     entities:
       - Order
     source: mock
-    asof: '2026-07-14'
+    asof: '2026-07-15'
   - flow: fern-and-fig/customer-buys-a-plant
     node: confirmed
     node_kind: step
@@ -50,4 +50,4 @@ product_truth:
     entities:
       - Order
     source: mock
-    asof: '2026-07-14'
+    asof: '2026-07-15'

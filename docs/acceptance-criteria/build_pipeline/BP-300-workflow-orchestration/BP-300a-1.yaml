@@ -2,7 +2,7 @@ id: BP-300a-1
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 title: "debug.js dispatches three parallel Explore agents in Phase 1"
 component: build-pipeline
 level: L2

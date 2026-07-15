@@ -1,6 +1,6 @@
 id: GE-100
 components:
-  - guardrail-engine
+  - commit_guardian
 readiness: approved
 priority: high
 title: "Pre-commit hook detects duplicate code and blocks or warns on copy-paste clones in staged files"

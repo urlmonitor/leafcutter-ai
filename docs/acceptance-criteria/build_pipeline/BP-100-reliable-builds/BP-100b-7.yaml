@@ -1,6 +1,6 @@
 id: BP-100b-7
 components:
-  - build-pipeline
+  - build_pipeline
 readiness: reviewed
 priority: medium
 title: "Pre-commit drift hook triggers on compiled workflow files"
@@ -34,7 +34,7 @@ amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
-  - tests/test_build_artifact_parity.py::TestPreCommitFilesPatternCoversAllShimmedDirs
+  - "tests/test_build_artifact_parity.py"
 implemented_by:
   - templates/commit-guardian/commit_guardian.json
   - templates/scripts/commit_guardian/commit_guardian.json

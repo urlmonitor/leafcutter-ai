@@ -89,11 +89,12 @@ the worktree bootstrap and the drive start.
 python3 scripts/commit_guardian/verify_precommit_active.py --json 2>/tmp/probe_pre_drive.txt
 ```
 
-Parse the JSON stdout: `{"all_pass": bool, "failing_checks": [...], "results": {...}}`.
+Parse the JSON stdout: `{"binary": bool, "config": bool, "git_hook": bool, "canary": bool, "incomplete_build": bool, "failing_checks": [...]}`.
+(`incomplete_build` is present and `true` only when the guardian scripts are not fully deployed; `failing_checks` will include `"incomplete_build"` in that case.)
 
 **Failure behaviour (surface-and-offer, not hard-halt):**
 
-If `all_pass` is `false` OR the script exits non-zero:
+If `failing_checks` is non-empty OR the script exits non-zero:
 
 1. Emit the structured warning block to the user, listing each failing check:
    ```
@@ -109,7 +110,7 @@ If `all_pass` is `false` OR the script exits non-zero:
 3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
 4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
 
-Do NOT silently continue when `all_pass` is false — the warning must be surfaced.
+Do NOT silently continue when `failing_checks` is non-empty — the warning must be surfaced.
 
 If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
 ```
@@ -779,6 +780,7 @@ Every cap below is a hard ceiling enforced per-ticket. When exceeded, the superv
 |---|---|---|
 | **Coder respawn after own failure** (§3.1) | **1 per phase per ticket** | A second consecutive failure of the same coder agent on the same phase → fall through to §3.4. |
 | **Sibling respawn from review** (§3.2) | **1 per phase pair per ticket** | A "phase pair" is the (reviewer, coder) tuple, e.g. (pr-reviewer, python-coder). After one round-trip, a second blocker from the same reviewer against the same coder → fall through to §3.4. |
+| **test-failure rework** (BO-530-3-i) | **2 per ticket (configurable)** | When test-runner returns a blocker, the originating coder is re-dispatched for rework. After 2 rework attempts on the same ticket the loop is exhausted — fall through to §3.4. The default of 2 is configurable per-ticket via `test_failure_rework_cap:` in the ticket frontmatter; if absent, 2 applies. |
 | **brainstorm-lead invocations** (§3.3) | **1 per ticket** | A ticket gets at most one brainstorm. A second design-class blocker on the same ticket → fall through to §3.4 directly (do not spawn brainstorm-lead again). |
 | **Commit hook autofix loop** | inherited from `precommit-autofix` skill (1 retry) | Owned by the commit phase agent itself; supervisor does not retry commits. |
 | **Conflict-resolver chain** | inherited from existing chain | Owned by the pull-request phase agent itself; supervisor does not retry. |

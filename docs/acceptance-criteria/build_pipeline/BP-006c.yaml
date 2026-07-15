@@ -1,12 +1,14 @@
 id: BP-006c
 readiness: reviewed
 priority: medium
+components:
+  - build_pipeline
 title: "build_workflow_scripts() writes compiled workflows to .claude/workflows/, not workflows/"
 component: build_pipeline
 level: L1
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   Given build_phases.py build_workflow_scripts() is called with a target_root,
   When workflow scripts are compiled and written to disk,
@@ -26,7 +28,7 @@ created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []
 superseded_by: null
-covered_by: [BP-006c-1, BP-006c-2]
+covered_by: [BP-006c-1, BP-006c-2, BP-006c-3]
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

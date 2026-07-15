@@ -1,0 +1,51 @@
+id: UXP-551-1
+readiness: draft
+priority: medium
+title: "The JSON entity mock-data records are repurposed directly as test fixtures, no separate authoring"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the product-truth / entity mock-data records under leafcutter-web/fixtures/ (the
+  Plant/Customer/Order-style record data) are authored as plain JSON files shaped
+  identically to the real artifacts they stand in for,
+  When test-writer needs fixture data for a unit test that exercises the same shape,
+  Then test-writer loads those exact same JSON entity mock-data files directly, with no
+  separate fixture-authoring step,
+  And a test that reads one of these JSON files receives data of the same shape a loader
+  produces from the corresponding real artifact,
+  And no parallel or divergent copy of the entity mock-data is created for tests,
+  And this claim is scoped to the JSON entity mock-data records only, not to the YAML AC
+  store or markdown ticket parts of the canned repo.
+depends_on:
+  - UXP-551
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  The product-truth / entity mock-data RECORDS in leafcutter-web/fixtures/ (record data
+  such as Plant/Customer/Order) are plain JSON, shaped identically to the real artifacts,
+  so a single source of entity mock-data serves both the mock-mode Atlas (read through the
+  loaders per UXP-550/UXP-554) and the test suite (read directly by test-writer). No test
+  authors its own copy of this record data; tests reference the same JSON files. Scope is
+  the JSON entity mock-data only — the YAML AC store and markdown ticket inputs of the
+  canned repo mirror their native formats (UXP-551) and are not covered by this reuse
+  claim. This is the ADR-021 feed-forward principle applied to fixtures: the mock records
+  the reviewer sees are the same records the tests assert against.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

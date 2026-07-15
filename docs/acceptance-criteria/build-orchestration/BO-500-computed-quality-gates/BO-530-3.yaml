@@ -2,7 +2,7 @@ id: BO-530-3
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Test failure hands context back to the implementation agent for rework"
 component: build-orchestration
 level: L2

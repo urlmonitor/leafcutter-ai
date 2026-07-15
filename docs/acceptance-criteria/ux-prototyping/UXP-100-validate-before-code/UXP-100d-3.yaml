@@ -1,6 +1,6 @@
 id: UXP-100d-3
 components:
-  - ux-prototyping
+  - ux_prototyping
 title: "Handoff artifact includes component version references for drift detection"
 component: ux-prototyping
 level: L2

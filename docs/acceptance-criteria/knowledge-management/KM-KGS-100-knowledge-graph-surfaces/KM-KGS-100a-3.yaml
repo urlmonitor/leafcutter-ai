@@ -1,6 +1,6 @@
 id: KM-KGS-100a-3
 components:
-  - knowledge-management
+  - knowledge_management
 readiness: approved
 priority: high
 title: "An acceptance criterion's four relationship fields each become a distinct edge"

@@ -5,6 +5,8 @@ type: card
 status: active
 created: 2026-06-05
 card_version: "generated"
+components:
+  - supervisor_system
 ---
 # create-ticket
 

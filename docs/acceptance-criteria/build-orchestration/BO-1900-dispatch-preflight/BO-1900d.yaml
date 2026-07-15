@@ -1,6 +1,6 @@
 id: BO-1900d
 components:
-  - build-orchestration
+  - build_orchestration
 title: "A dispatch carries only a safe pointer, never a free-written prompt"
 component: build-orchestration
 level: L1

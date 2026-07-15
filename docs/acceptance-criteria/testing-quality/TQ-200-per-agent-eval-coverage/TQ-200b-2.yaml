@@ -1,6 +1,6 @@
 id: TQ-200b-2
 components:
-  - testing-quality
+  - testing_quality
 title: "The eval suite is wired into CI as a quality gate that blocks on regression"
 component: testing-quality
 level: L2

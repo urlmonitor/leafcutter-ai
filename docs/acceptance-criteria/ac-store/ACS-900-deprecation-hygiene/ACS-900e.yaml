@@ -1,6 +1,6 @@
 id: ACS-900e
 components:
-  - ac-store
+  - ac_store
 readiness: approved
 priority: high
 title: "Detection complements the existing audit tooling instead of duplicating it"

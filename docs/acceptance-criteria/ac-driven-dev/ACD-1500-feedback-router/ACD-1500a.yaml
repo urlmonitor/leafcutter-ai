@@ -1,6 +1,6 @@
 id: ACD-1500a
 components:
-  - ac-driven-dev
+  - ac_driven_dev
 readiness: approved
 priority: medium
 title: "Your agents' feedback gets sorted and sent to the right place automatically"

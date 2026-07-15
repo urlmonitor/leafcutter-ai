@@ -1,6 +1,6 @@
 id: BP-600b-2
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Quick-fix AC uses the correct component prefix and sequential ID"
 component: build-pipeline
 level: L2
@@ -47,6 +47,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BP-600b-2-i
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by:
   - "docs/reference/ac-schema.md#quick-fix-workflow-id-assignment"
   - "docs/acceptance-criteria/index.yaml"

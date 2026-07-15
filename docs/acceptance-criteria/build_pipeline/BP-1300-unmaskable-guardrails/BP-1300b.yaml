@@ -1,6 +1,6 @@
 id: BP-1300b
 components:
-  - build-pipeline
+  - build_pipeline
 title: "Checks judge the canonical source, not stale deployed copies"
 component: build-pipeline
 level: L1

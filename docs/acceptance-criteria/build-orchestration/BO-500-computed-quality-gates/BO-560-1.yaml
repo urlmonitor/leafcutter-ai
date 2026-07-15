@@ -2,13 +2,13 @@ id: BO-560-1
 readiness: reviewed
 priority: medium
 components:
-  - build-orchestration
+  - build_orchestration
 title: "Full agent chain is derived from change_type and the work agent's produces trait"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a ticket has:
     - change_type: flow_change
@@ -69,7 +69,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: [BO-560-1-i]
+covered_by:
+- BO-560-1-i
+- unit_tests/test_generate_ticket_from_ac.py
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary

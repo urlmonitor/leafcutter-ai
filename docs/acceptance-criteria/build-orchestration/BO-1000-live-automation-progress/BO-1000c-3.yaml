@@ -1,0 +1,52 @@
+id: BO-1000c-3
+components:
+  - build_orchestration
+title: "Sequence diagram of live progress delivery from background workflow to the conversation"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the live delivery of finalize progress into the main conversation
+    (BO-1000c-1 and BO-1000c-2) is implemented,
+  When the documentation required by the BO-1000c sequence-diagram trigger is
+    produced,
+  Then a sequence diagram is authored that shows progress travelling from the
+    background finalize workflow, through the mechanism that relays it, into the
+    main conversation, and on to the user,
+  And the diagram shows more than two participants and depicts the in-flight
+    ordering, so that updates are shown arriving during the run rather than only
+    at its end.
+depends_on: [BO-1000c, BO-1000c-1a, BO-1000c-1b]
+doc_links:
+  - path: docs/architecture/diagrams/finalize-progress-relay-sequence.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author the diagram as a Mermaid sequenceDiagram under docs/architecture/diagrams/, matching the existing *-sequence.md convention."
+  - "Participants must number more than two and cover the full relay path: the background finalize workflow, the run-progress journal (BO-1000c-1a), the /finalize-feature launcher/poller (BO-1000c-1b), the main conversation, and the user."
+  - "Depict in-flight ordering explicitly (e.g. a loop): lines are journaled and relayed into the conversation DURING the run, not batched only at the end — matching BO-1000c-2."
+  - "Include the halt case (BO-1000c-2-i) at least as a note: the halting step's line reaches the conversation via the relay before the terminal halt result."
+delivers_to: null
+expects_from:
+  ac_id: BO-1000c-1b
+  contract: "The implemented relay path (background workflow -> run-progress journal -> launcher poll/relay -> main conversation -> user) with in-flight ordering, which the diagram documents."
+origin_agent: business-analyst-v3
+created: 2026-07-10
+amended_by:
+  - reason: it-po-v3-technical-enrichment
+    note: "Added estimated_complexity, it_requirements, doc_links (planned relay sequence diagram), expects_from; repointed depends_on to split children BO-1000c-1a/1b; kept BA's architecture-diagram-author assignment; criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

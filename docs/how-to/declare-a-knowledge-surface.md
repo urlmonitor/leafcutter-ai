@@ -6,7 +6,7 @@ status: active
 created: 2026-06-22
 last_updated: 2026-06-22
 components:
-  - knowledge_system
+  - knowledge_management
 related_docs:
   - config/paths.json
   - templates/skills/knowledge-query/SKILL.md
