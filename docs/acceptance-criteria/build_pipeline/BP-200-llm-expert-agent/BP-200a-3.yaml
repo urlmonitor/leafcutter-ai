@@ -39,6 +39,8 @@ created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.m
 amended_by: []
 superseded_by: null
 covered_by: [BP-200a-3-i]
+  - "unit_tests/agents/test_llm_expert_artifacts.py"
+  - BP-200a-3-i
 implemented_by:
   - "templates/agents/llm-expert.md"
 change_target: prompt

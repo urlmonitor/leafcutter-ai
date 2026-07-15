@@ -7,7 +7,7 @@ level: L3
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the user invokes /quick-fix with a diagnosis specifying file
     "scripts/build_helpers.py" but no explicit component name,
@@ -40,7 +40,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

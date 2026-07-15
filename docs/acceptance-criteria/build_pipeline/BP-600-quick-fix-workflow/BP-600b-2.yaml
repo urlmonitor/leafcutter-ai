@@ -47,6 +47,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BP-600b-2-i
+  - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by:
   - "docs/reference/ac-schema.md#quick-fix-workflow-id-assignment"
   - "docs/acceptance-criteria/index.yaml"

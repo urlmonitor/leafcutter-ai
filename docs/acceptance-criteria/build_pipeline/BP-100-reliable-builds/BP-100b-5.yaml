@@ -37,6 +37,7 @@ superseded_by: null
 covered_by:
   - tests/test_build_artifact_parity.py::TestOutputDriftCoversAllShimmedDirs
   - BP-100b-5-i
+  - "unit_tests/build/test_bp100_drift_docs_compile.py"
 implemented_by:
   - templates/scripts/commit_guardian/check_output_drift.py
 change_target: code

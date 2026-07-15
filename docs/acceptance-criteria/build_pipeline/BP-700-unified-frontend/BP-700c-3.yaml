@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -46,7 +46,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/agents/test_frontend_coder_unified.py"
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-700c-3.md
 change_target: prompt
