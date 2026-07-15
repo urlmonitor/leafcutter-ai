@@ -1,0 +1,35 @@
+id: BO-2200b
+components:
+  - build_orchestration
+  - doc_compliance
+title: "'Done' is impossible until the documentation actually exists"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No phantom docs -- the build cannot be marked complete on a promise.
+
+  When a change requires documentation, the build cannot report the work as
+  complete unless the documentation was genuinely produced. A documentation step
+  can no longer "pass" having written nothing, so "done" reliably means the docs
+  are really there -- the same trust the build already earns for tests.
+depends_on: [BO-2200]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
