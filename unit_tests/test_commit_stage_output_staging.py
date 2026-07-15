@@ -1,6 +1,6 @@
 """
 Behavioral tests for the staging-discovery and AC-ID-match defects in
-commitStageOutput() in scripts/workflows/plan-feature.js.
+commitStageOutput() in templates/workflows-js/plan-feature.js (the E2 runtime file).
 
 AC reference: ACD-300g-2
 Ticket: 08_TICKET-20260622-Fix_Staging_Discovery_And_Match.md
