@@ -27,7 +27,7 @@ agents:
   documentation-expert: not_needed
   change-scope-reviewer: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -113,7 +113,7 @@ Related code / patterns to mirror (list duplicate-logic locations up front):
 - [x] test-runner — 2026-07-15 12:56
 - [x] change-scope-reviewer — 2026-07-15 13:05
 - [x] pr-reviewer — 2026-07-15 13:27
-- [ ] commit
+- [x] commit — 2026-07-15 11:45
 - [ ] pull-request
 
 ## Comments
@@ -312,3 +312,11 @@ completion_manifest:
   new_high_findings: false
   new_medium_findings: false
 Second-pass review: H-1 resolved — `_COMMIT_GUARDIAN_JSON` in the test file now points to `templates/scripts/commit_guardian/commit_guardian.json` (committed package source, not the untracked build shim). M-2 resolved — `_restage_index()` checks `result.returncode != 0` and prints a WARNING to stderr. All 9 unit tests pass (0.13s); ruff clean on both files. No new high or medium findings; suppressing 2 low nits (silent non-zero on `git diff --cached` in `_get_staged_docs_files` is intentional fail-open, and `scripts_dir` computing from `__file__` rather than `repo_root` is intentional for test isolation).
+
+### 2026-07-15 11:45 — commit (status: ok)
+feedback-id: fb_2026-07-15_a853e6b7
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Commit `08395364` landed on `feature/docindexautoregen` (6 files, 931 insertions). One precommit-autofix applied: `check-doc-frontmatter` blocked on `type: index` (invalid) and missing `components` field in `docs/INDEX.md` frontmatter — fixed `_HEADER_TEMPLATE` in `generate_doc_index.py` to use `type: reference` and `components: []`, regenerated `INDEX.md`, re-staged, and retried. All subsequent hooks passed.
