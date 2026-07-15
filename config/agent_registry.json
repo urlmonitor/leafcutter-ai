@@ -3246,7 +3246,10 @@
                     "source": "bash command output (reads of docs/product-truth/)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
         },
         {
             "id": "mock-data-author",
@@ -3281,7 +3284,10 @@
                     "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
         },
         {
             "id": "mockup-author",
@@ -3316,7 +3322,10 @@
                     "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
         },
         {
             "id": "flow-author",
@@ -3351,7 +3360,10 @@
                     "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
                 }
             ],
-            "produces": "analysis"
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
         }
     ]
 }

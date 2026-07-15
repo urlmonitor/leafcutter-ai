@@ -38,6 +38,7 @@ well under the 5 s max_test_duration_seconds budget.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,28 @@ import unittest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Truthy tokens for the AC_ENFORCE_STRICT opt-out switch. Mirrors
+# ``scripts.ac_store.pytest_ac_enforcement._STRICT_TRUTHY`` so these tests read
+# the flag exactly as the production plugin does.
+_STRICT_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _strict_mode_enabled() -> bool:
+    """Return True when AC masking is disabled via ``AC_ENFORCE_STRICT``.
+
+    Mirrors ``scripts.ac_store.pytest_ac_enforcement._strict_mode_enabled`` so
+    the mode-aware tests below branch on the same condition the plugin uses.
+    When strict is enabled, every AC-tagged failure surfaces as a real failure
+    — no outcome is ever downgraded to xfail, regardless of the covered AC's
+    work_status. The subprocess these tests spawn inherits ``AC_ENFORCE_STRICT``
+    via ``os.environ``, so the parent flag governs the child's behaviour too.
+
+    Returns:
+        True when ``AC_ENFORCE_STRICT`` holds a truthy token
+        (``1``/``true``/``yes``/``on``, case-insensitive); False otherwise.
+    """
+    return os.environ.get("AC_ENFORCE_STRICT", "").strip().lower() in _STRICT_TRUTHY
 
 
 class TestNotDoneAcTestIsInformational(unittest.TestCase):
@@ -143,20 +166,26 @@ class TestNotDoneAcTestIsInformational(unittest.TestCase):
     def test_not_done_ac_test_is_informational(self):
         # covers: TQ-100b-1
         """AC TQ-100b-1: A failing test tagged '# covers: <AC>' whose AC work_status
-        is not done is reported informationally and does NOT fail the run.
+        is not done is reported informationally and does NOT fail the run — UNLESS
+        masking is explicitly disabled via ``AC_ENFORCE_STRICT``.
 
-        What must be implemented to make this test green:
-          - conftest.py at the repo root must hook pytest_runtest_makereport (or
-            equivalent) and, for each failing test that declares '# covers: <AC-ID>'
-            where that AC's work_status is not 'done', convert the outcome to xfail
-            (or skip) so the run exit code stays 0.
-          - scripts/ac_store/test_enforcement.py must expose the classifier that the
-            conftest hook calls.
+        This test is mode-aware because the masking behaviour it validates is an
+        opt-out convenience, not an invariant. The enforcement plugin
+        (``scripts.ac_store.pytest_ac_enforcement``) downgrades a not-done AC's
+        failure to xfail ONLY when ``AC_ENFORCE_STRICT`` is unset/false; when it
+        is truthy the plugin surfaces every AC-tagged failure as a real failure.
+        The subprocess spawned here inherits ``AC_ENFORCE_STRICT`` from
+        ``os.environ``, so the parent flag governs the child run too.
 
-        This test is currently RED because:
-          - scripts/ac_store/test_enforcement.py does not exist (ImportError when
-            conftest tries to import it).
-          - Without the hook, a failing test causes pytest to exit non-zero.
+          - Masking mode (default, ``AC_ENFORCE_STRICT`` unset/false): the
+            failing test covering the not-done AC is downgraded to xfail, so the
+            subprocess exit code is 0 and the result is visible as xfail/skip.
+          - Strict mode (``AC_ENFORCE_STRICT`` truthy): the failure is NOT masked
+            — the subprocess exit code is non-zero and the failure surfaces as a
+            real FAILED result, never as xfail.
+
+        In BOTH modes the test still genuinely asserts the plugin's contract for
+        a not-done AC; it just asserts the correct half of the opt-out switch.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -171,8 +200,51 @@ class TestNotDoneAcTestIsInformational(unittest.TestCase):
             result = self._run_pytest_subprocess(test_dir, ac_store_dir)
             output = result.stdout + result.stderr
 
-            # The overall run must NOT fail (exit code 0) because the only
-            # failing test covers a not-done AC and is therefore informational.
+            if _strict_mode_enabled():
+                # Strict mode: masking is disabled, so the not-done AC's failure
+                # must surface as a REAL failure — non-zero exit, reported as
+                # FAILED, and never downgraded to xfail.
+                self.assertNotEqual(
+                    result.returncode,
+                    0,
+                    msg=(
+                        "Expected pytest exit code != 0 under AC_ENFORCE_STRICT — "
+                        "the failing test covers a not-done AC (work_status: todo) "
+                        "but strict mode disables masking, so it must surface as a "
+                        "real failure. "
+                        f"Exit code: {result.returncode}. Full output:\n{output}"
+                    ),
+                )
+
+                # The failure must appear as a genuine failure, not a masked xfail.
+                failure_markers = ("FAILED", "AssertionError", "assert False")
+                self.assertTrue(
+                    any(marker in output for marker in failure_markers),
+                    msg=(
+                        "Expected an explicit test failure to appear in the output "
+                        f"under strict mode (one of {failure_markers}), but none "
+                        f"were found. Full output:\n{output}"
+                    ),
+                )
+
+                # And it must NOT have been silenced to xfail.
+                silenced_markers = ("xfailed", "XFAIL")
+                for marker in silenced_markers:
+                    self.assertNotIn(
+                        marker,
+                        output,
+                        msg=(
+                            f"Found '{marker}' in output under AC_ENFORCE_STRICT — "
+                            "the not-done AC's failure was masked to xfail but strict "
+                            "mode must surface it as a real failure. "
+                            f"Full output:\n{output}"
+                        ),
+                    )
+                return
+
+            # Masking mode (default): the overall run must NOT fail (exit code 0)
+            # because the only failing test covers a not-done AC and is therefore
+            # downgraded to informational (xfail).
             self.assertEqual(
                 result.returncode,
                 0,
