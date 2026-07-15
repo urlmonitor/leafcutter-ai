@@ -3,23 +3,25 @@ Tests that plan-feature.js dispatches agents using canonical names only.
 
 AC reference: ACD-1400
 Root cause: create-ac-to-plan-feature rename updated the file/skill name but
-missed the agent dispatch references inside scripts/workflows/plan-feature.js.
-The pipeline arrays at lines 193-205 still reference product-owner-v3,
-business-analyst-v3, and it-po-v3 — none of which exist as real agents.
-These tests must FAIL (red) until the dispatch references are corrected to
-use the canonical names: product-owner, business-analyst, it-po.
+missed the agent dispatch references inside the workflow script. The pipeline
+arrays once referenced product-owner-v3, business-analyst-v3, and it-po-v3 —
+none of which exist as real agents. These tests guard against a regression to
+the obsolete *-v3 names.
+
+Retargeted to the E2 runtime file (templates/workflows-js/plan-feature.js) —
+the legacy scripts/workflows/plan-feature.js was retired during foundation
+cleanup and is no longer the consumer surface.
 """
 
 import os
 import unittest
 
-# Resolve the path relative to this file's location so the test works
-# regardless of which directory the test runner is invoked from.
+# The E2 runtime file is the sole plan-feature.js consumer surface.
 _REPO_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..")
 )
 _PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "scripts", "workflows", "plan-feature.js"
+    _REPO_ROOT, "templates", "workflows-js", "plan-feature.js"
 )
 
 

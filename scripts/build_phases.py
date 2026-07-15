@@ -2233,6 +2233,95 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_product_truth(target_root: Path, config: dict[str, Any],
+                        dry_run: bool, force: bool) -> int:
+    """Deploy product-truth tooling to ``<target_root>/docs/product-truth/``.
+
+    Copies the package-owned product-truth generator/validator scripts
+    (``docs/product-truth/scripts/*.py``) and their JSON schemas
+    (``docs/product-truth/schemas/*.json``) into the consumer project's
+    ``docs/product-truth/`` tree so they exist at runtime. The ``/plan-feature``
+    workflow's product-truth phase (see EPIC wiring) invokes these scripts via
+    ``python docs/product-truth/scripts/generate_product_truth.py`` relative to
+    the project root; without this phase they are absent in a consumer or fresh
+    worktree and the phase can only no-op.
+
+    Both subdirectories are copied with a shallow ``*.py`` / ``*.json`` glob so
+    that additional generator/validator scripts or schemas added later are
+    deployed automatically without editing this phase. Only the package-owned
+    ``scripts/`` and ``schemas/`` subdirectories are deployed — the
+    project-authored product-truth DATA (flows, mock-data, mockups,
+    ``index.json``) is never touched by this phase.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+    """
+    product_truth_src = PACKAGE_ROOT / "docs" / "product-truth"
+
+    # (source_subdir, glob, dest_subdir) triples. The glob is intentionally
+    # broad so new .py / .json files are picked up without editing this phase.
+    deploy_groups = [
+        (product_truth_src / "scripts", "*.py", "scripts"),
+        (product_truth_src / "schemas", "*.json", "schemas"),
+    ]
+
+    output_base = target_root / "docs" / "product-truth"
+    written = 0
+
+    for src_dir, pattern, dest_subdir in deploy_groups:
+        if not src_dir.is_dir():
+            _log.warning(
+                "build_product_truth: source directory not found, skipping: %s",
+                src_dir,
+            )
+            continue
+
+        output_dir = output_base / dest_subdir
+
+        for src_file in sorted(src_dir.glob(pattern)):
+            if not src_file.is_file():
+                continue
+
+            output_path = output_dir / src_file.name
+
+            if not _should_overwrite(output_path, force):
+                continue
+
+            if _files_content_identical(src_file, output_path):
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                continue
+
+            if dry_run:
+                print(f"  [DRY-RUN] would copy docs/product-truth/{dest_subdir}/{src_file.name}")
+                written += 1
+            else:
+                try:
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_file, output_path)
+                except OSError as exc:
+                    _log.warning(
+                        "build_product_truth: failed to copy %s → %s: %s",
+                        src_file,
+                        output_path,
+                        exc,
+                    )
+                    raise
+                print(f"  docs/product-truth/{dest_subdir}/{src_file.name}")
+                written += 1
+
+    return written
+
+
 # ---------------------------------------------------------------------------
 # Clean-mode: remove stale artifacts
 # ---------------------------------------------------------------------------

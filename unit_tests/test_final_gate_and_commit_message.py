@@ -1,6 +1,7 @@
 """
-Behavioral tests for the four bugs in run() / commitStageOutput() in
-scripts/workflows/plan-feature.js.
+Behavioral tests for the four bugs in the workflow body / commitStageOutput() in
+templates/workflows-js/plan-feature.js (the E2 runtime file), driven via the
+E2 harness.
 
 AC reference: ACD-300g-3, ACD-300g-4
 Ticket: 10_TICKET-20260622-Fix_Final_Gate_Edit_And_Commit_Message.md
@@ -64,80 +65,28 @@ Mock agent detection note:
 
 from __future__ import annotations
 
-import json
-import os
+import json  # noqa: F401 — used by mock-factory f-strings (json.dumps)
 import re
-import subprocess
+import subprocess  # noqa: F401 — TimeoutExpired referenced in a guard clause
 import textwrap
 import unittest
 
-_REPO_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..")
-)
-_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "scripts", "workflows", "plan-feature.js"
-)
-_TEMPLATE_PLAN_FEATURE_JS = os.path.join(
-    _REPO_ROOT, "templates", "workflows-js", "plan-feature.js"
+from _plan_feature_e2_runner import (
+    E2_PLAN_FEATURE_JS,
+    NodeScriptError,
+    run_plan_feature_e2,
 )
 
-
-# ---------------------------------------------------------------------------
-# Custom exception types (ruff TRY003 — no long inline messages)
-# ---------------------------------------------------------------------------
-
-
-class SourceParseError(Exception):
-    """Raised when the JS source cannot be parsed as expected by a test helper."""
-
-
-class NodeScriptError(Exception):
-    """Raised when an inline Node.js script exits non-zero unexpectedly."""
+# The E2 runtime file is the sole plan-feature.js consumer surface. The legacy
+# scripts/workflows/plan-feature.js was retired during foundation cleanup, so
+# these behavioral tests were retargeted to drive the E2 body via the
+# _plan_feature_e2_runner harness (the E2 analogue of the old run() call).
+_PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — drive the E2 runtime body and capture (run_result, side_channel).
 # ---------------------------------------------------------------------------
-
-
-def _read_source(path: str) -> str:
-    """Read and return the full text of a file."""
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    except OSError as exc:
-        msg = f"Cannot read source file {path}: {exc}"
-        raise OSError(msg) from exc
-
-
-def _run_node_script(script_text: str, timeout: int = 20) -> subprocess.CompletedProcess:
-    """Run an inline Node.js ESM script via stdin and return the CompletedProcess."""
-    return subprocess.run(
-        ["node", "--input-type=module"],
-        input=script_text,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-
-
-def _build_vm_preamble(plan_feature_path: str) -> str:
-    """
-    Return the ESM script fragment that loads plan-feature.js into a vm.Script
-    sandbox with ESM syntax stripped. Callers append their mock + invocation code.
-    """
-    return textwrap.dedent(f"""
-        import {{ readFileSync }} from 'fs';
-        import vm from 'vm';
-
-        const source = readFileSync({json.dumps(plan_feature_path)}, 'utf8');
-
-        // Strip ESM syntax so vm.Script can evaluate the source.
-        const patchedSource = source
-            .replace(/^export const meta[\\s\\S]*?^\\}};/m, 'const meta = {{}};')
-            .replace(/^export \\{{ run \\}};/m, '// export removed')
-            .replace(/^export function/gm, 'function')
-    """)
 
 
 def _run_plan_feature(
@@ -145,72 +94,25 @@ def _run_plan_feature(
     mock_agent_js: str,
     user_input: str = "test feature request",
     timeout: int = 25,
-) -> subprocess.CompletedProcess:
+) -> tuple[dict, dict]:
+    """Execute the E2 plan-feature body under a mock agent.
+
+    Returns (run_result, side_channel). ``run_result`` is the object the E2
+    top-level body returned (the E2 analogue of the legacy run() return value).
+    ``side_channel`` exposes ``commitCalls`` and ``allCalls`` populated by the
+    mock. ``plan_feature_path`` is accepted for signature parity with the
+    historical helper; the runner always targets the E2 runtime file.
+
+    The mock still receives the legacy ``call`` object
+    ({agentType, input:{instructions}}) — the runner shims the E2 positional
+    agent(prompt, opts) signature into it — so the per-test mocks port unchanged.
     """
-    Run plan-feature.js's run() function in a Node.js vm.Script sandbox.
-
-    Parameters
-    ----------
-    plan_feature_path:
-        Absolute path to the plan-feature.js file to test.
-    mock_agent_js:
-        JavaScript code that defines `mockAgent(call)` returning a Promise.
-        Must use the `isApprovalUpdate` sentinel phrase "update their YAML files"
-        (not "readiness: approved") to distinguish approval-update calls from
-        final-gate calls whose instructions also mention "readiness: approved".
-    user_input:
-        The $ARGUMENTS string passed as userInput to run().
-
-    Returns
-    -------
-    CompletedProcess. stdout encodes:
-        JSON(run_result) + NUL + JSON(side_channel)
-    where side_channel is { commitCalls: [...], allCalls: [...] }.
-    """
-    preamble = _build_vm_preamble(plan_feature_path)
-    script = preamble + textwrap.dedent(f"""
-        + `
-        // ---- mock agent ----
-        globalThis.__capturedCommitCalls = [];
-        globalThis.__capturedAllCalls = [];
-
-        {mock_agent_js}
-
-        // ---- invoke run() ----
-        run({{ userInput: {json.dumps(user_input)}, agent: mockAgent }})
-            .then(result => {{
-                const side = {{
-                    commitCalls: globalThis.__capturedCommitCalls,
-                    allCalls: globalThis.__capturedAllCalls,
-                }};
-                process.stdout.write(JSON.stringify(result) + '\\0' + JSON.stringify(side));
-            }})
-            .catch(err => {{
-                process.stderr.write('run() threw: ' + String(err));
-                process.exit(1);
-            }});
-        `;
-
-        const ctx = vm.createContext({{ ...globalThis, process, console, setTimeout, clearTimeout }});
-        const s = new vm.Script(patchedSource);
-        s.runInContext(ctx);
-    """)
-    return _run_node_script(script, timeout=timeout)
+    return run_plan_feature_e2(mock_agent_js, user_input=user_input, timeout=timeout)
 
 
-def _parse_run_output(proc: subprocess.CompletedProcess) -> tuple[dict, dict]:
-    """
-    Parse the stdout from _run_plan_feature() into (run_result, side_channel).
-
-    Raises NodeScriptError if the Node.js process exited non-zero.
-    """
-    if proc.returncode != 0:
-        msg = f"Node.js exited {proc.returncode}. stderr: {proc.stderr!r}"
-        raise NodeScriptError(msg)
-    parts = proc.stdout.split("\x00", 1)
-    run_result = json.loads(parts[0])
-    side = json.loads(parts[1]) if len(parts) > 1 else {}
-    return run_result, side
+def _parse_run_output(result_and_side: tuple[dict, dict]) -> tuple[dict, dict]:
+    """Pass-through: run_plan_feature_e2 already returns (run_result, side)."""
+    return result_and_side
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +161,12 @@ def _make_strategic_mock_with_final_action(final_action: str, priority: str = "h
                 return {{ status: 'ok', message: 'mock commit ok' }};
             }}
             if (agentType === 'status-checker') {{
+                // E2 commitStageOutput() runs a fail-closed no-main branch check
+                // before every commit; confirm a non-main authoring branch so the
+                // commit path proceeds.
+                if (instructions.includes('git branch --show-current')) {{
+                    return {{ output: 'ac-authoring/test', exit_code: 0 }};
+                }}
                 // Use specific phrases to distinguish gate types.
                 // IMPORTANT: final gate instruction contains "readiness: approved" in its
                 // UX text — do NOT use that as the isApprovalUpdate sentinel.
@@ -919,71 +827,17 @@ class TestFinalGateTerminalElse(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Template parity test
+# Template parity test — REMOVED.
+#
+# The former TestRunFunctionParityWithTemplate asserted byte-identity between
+# the run() body in scripts/workflows/plan-feature.js and
+# templates/workflows-js/plan-feature.js. After foundation cleanup there is
+# only ONE canonical plan-feature.js (the E2 runtime file); the legacy copy was
+# deleted. A single-file world has nothing to compare, and the two dialects had
+# already diverged (the legacy run()/E2 top-level-body split made byte-identity
+# impossible), so this parity test is meaningless and was removed rather than
+# left asserting against a deleted path.
 # ---------------------------------------------------------------------------
-
-
-class TestRunFunctionParityWithTemplate(unittest.TestCase):
-    """
-    Verify that the run() function in scripts/workflows/plan-feature.js and
-    templates/workflows-js/plan-feature.js are identical.
-
-    Both files must be fixed together — the template is the canonical source
-    deployed to consumer projects.
-
-    GREEN when both files are in-sync (currently byte-identical).
-    RED if a partial fix updates only one copy.
-
-    AC: ticket requirement — apply identical changes to templates/ file.
-    """
-
-    def _extract_run_function(self, source: str, path: str) -> str:
-        """Extract the full async function run() body from the source."""
-        start = source.find("async function run(")
-        if start == -1:
-            raise SourceParseError(f"async function run() not found in {path}")
-
-        depth = 0
-        i = start
-        found_first_brace = False
-        while i < len(source):
-            c = source[i]
-            if c == "{":
-                depth += 1
-                found_first_brace = True
-            elif c == "}" and found_first_brace:
-                depth -= 1
-                if depth == 0:
-                    return source[start: i + 1]
-            i += 1
-        raise SourceParseError(f"run() closing brace not found in {path}")
-
-    def test_scripts_and_templates_run_function_are_in_parity(self):
-        """
-        The run() function in scripts/ and templates/ must be identical after
-        the fix is applied to both files.
-
-        A partial fix (only one copy updated) means consumer projects deployed
-        from templates/ carry the defect.
-
-        GREEN when both files are byte-identical in their run() body.
-        RED when a partial fix drifts the two copies.
-        """
-        scripts_source = _read_source(_PLAN_FEATURE_JS)
-        template_source = _read_source(_TEMPLATE_PLAN_FEATURE_JS)
-
-        scripts_run = self._extract_run_function(scripts_source, _PLAN_FEATURE_JS)
-        template_run = self._extract_run_function(template_source, _TEMPLATE_PLAN_FEATURE_JS)
-
-        self.assertEqual(
-            scripts_run,
-            template_run,
-            msg=(
-                "scripts/workflows/plan-feature.js and "
-                "templates/workflows-js/plan-feature.js have DIFFERENT "
-                "run() function bodies. Apply the fix to BOTH files."
-            ),
-        )
 
 
 if __name__ == "__main__":

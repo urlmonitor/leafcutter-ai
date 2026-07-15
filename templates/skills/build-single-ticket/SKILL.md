@@ -483,7 +483,7 @@ Do not add any other preamble or summary text.
   main-branch invocation behaviour for the AC-authoring workflows.
 - **Does not push the AC-authoring branch or open the AC-authoring PR.** After
   the user gives final approval in `/plan-feature`, the `deliverAuthoringBranch()`
-  function in `scripts/workflows/plan-feature.js` automatically pushes the
+  function in `.claude/workflows/plan-feature.js` automatically pushes the
   authoring branch to origin and opens a PR whose base is `main` and head is
   the authoring branch (AC BO-1500c-1). This delivery step reuses the
   `pull-request` agent and runs without asking the user to intervene by hand.
@@ -507,7 +507,7 @@ Do not add any other preamble or summary text.
 - **Does not enforce the per-stage AC commit invariant.** The commit-before-next-stage
   invariant (AC BO-1500b-1) is specified in the `/plan-feature` skill
   (`templates/skills/plan-feature/SKILL.md §1–§3`) and enforced mechanically by the
-  `commitStageOutput()` call in `scripts/workflows/plan-feature.js`. That function
+  `commitStageOutput()` call in `.claude/workflows/plan-feature.js`. That function
   commits each stage's AC YAML files (product-owner-v3 → business-analyst-v3 →
   it-po-v3) to the authoring branch immediately after user approval, blocking the
   next stage from starting if the commit fails. This skill has no role in that
