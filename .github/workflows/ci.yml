@@ -122,6 +122,13 @@ jobs:
         run: python scripts/build.py --target-dir .
 
       - name: Run test suite
+        env:
+          # Disable AC-enforcement xfail-masking on the gate so genuinely-failing
+          # tests surface as real failures (not downgraded to xfail when their
+          # covering AC is not "done"). Keeps the CI signal trustworthy — a
+          # prerequisite for making this job blocking (BP-1200b).
+          # (EPIC-RedTestClusterRepair ticket 09.)
+          AC_ENFORCE_STRICT: "1"
         run: python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors
 
   typecheck:
