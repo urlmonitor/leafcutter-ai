@@ -1,6 +1,6 @@
 id: FIN-100c-8
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 components:
   - finalize
 title: "Only real regressions block finalization; pre_existing failures do not halt"
@@ -20,22 +20,57 @@ origin_agent: "business-analyst"
 created: 2026-07-15
 created_by_ticket: null
 assigned_agent: "test-failure-triage"
+estimated_complexity: S
+it_requirements: |
+  - REUSE EXISTING STEP 6 (instance-specific integration constraint):
+    blocks_finalization must be computed by the EXISTING triage Step 6 rule over the
+    recovered-baseline classifications (true iff any entry is category regression OR
+    stale_test; false when all are pre_existing/flaky). Do NOT introduce a separate
+    halt rule for the recovered-baseline case.
+  - HALT-GATE CONSUMPTION UNCHANGED: the workflow halt gate
+    (finalize-feature.js ~L802) consumes triageReport.blocks_finalization exactly as
+    today — the recovery path only changes the baseline supplied upstream, never the
+    halt-gate contract.
+  - NO FALSE HALT: in the 2026-07-15 case (all three deploy-dependent tests
+    pre_existing against the recovered baseline) blocks_finalization must be false so
+    finalize proceeds — this is the false test_regression this AC closes.
+  - GENUINE REGRESSION STILL HALTS: if any failure passes on main (regression),
+    blocks_finalization stays true and finalize HALTs — do not weaken this.
 delivers_to:
   - agent: "finalize-feature-workflow"
     contract: "provides blocks_finalization=false when all failures are pre_existing, and blocks_finalization=true only when a real regression exists"
 expects_from:
   - agent: "finalize-feature-workflow"
     contract: "provides the per-test triage classifications derived from the recovered baseline"
+test_spec:
+  - name: test_all_pre_existing_does_not_block_finalization
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When every post-merge failure is classified pre_existing against the recovered baseline, blocks_finalization is false and finalization proceeds."
+  - name: test_any_regression_blocks_finalization
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When at least one post-merge failure is classified regression, blocks_finalization is true (finalize HALTs)."
+  - name: test_2026_07_15_three_deploy_dependent_all_pre_existing_no_false_halt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The 2026-07-15 case (3 deploy-dependent tests, all pre-existing on main) yields blocks_finalization=false — no false test_regression halt."
 doc_links:
   - path: "templates/agents/test-failure-triage.md"
-    relevance: "Step 6 compute blocks_finalization (true iff any regression/stale_test)"
+    relevance: "Step 6 compute blocks_finalization (true iff any regression/stale_test) — reused unchanged over the recovered-baseline classifications"
   - path: "templates/workflows-js/finalize-feature.js"
-    relevance: "test_regression halt gate consumes blocks_finalization"
+    relevance: "test_regression halt gate (~L802) consumes blocks_finalization unchanged"
 depends_on:
   - FIN-100c
   - FIN-100c-7
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added estimated_complexity (S), it_requirements (instance-specific: reuse the existing Step 6 blocks_finalization rule and the ~L802 halt gate unchanged; no false halt in the 2026-07-15 all-pre_existing case; genuine regressions still HALT — the last two are the intent of this AC, not a restatement of FIN-100c-1/2's mechanics), and test_spec (3 descriptors incl. the concrete 2026-07-15 case). assigned_agent test-failure-triage kept per the classification boundary; contracts and criteria unchanged."
+    by: it-po
 covered_by: []
 implemented_by: []
 change_target: pipeline

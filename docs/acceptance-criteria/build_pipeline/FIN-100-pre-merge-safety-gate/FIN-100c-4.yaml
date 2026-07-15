@@ -1,6 +1,6 @@
 id: FIN-100c-4
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 components:
   - finalize
 title: "Null baseline triggers a targeted main-HEAD rerun instead of blanket regression"
@@ -26,6 +26,37 @@ origin_agent: "business-analyst"
 created: 2026-07-15
 created_by_ticket: null
 assigned_agent: "python-coder"
+estimated_complexity: M
+it_requirements: |
+  - SURFACE: this is finalize-feature.js workflow-body logic (python-coder), NOT
+    the triage agent — the triage agent (templates/agents/test-failure-triage.md)
+    is read-only and MUST NOT re-run tests. The rerun lives entirely in the
+    workflow; only classification stays in the triage agent (FIN-100c-7/8).
+  - TRIGGER: the recovery branch must fire ONLY when baselineFailures === null AND
+    post_merge_failures is non-empty. A null baseline with zero post-merge failures
+    still proceeds normally (no rerun, no halt) — do not regress the existing
+    zero-failure fast path (~L713).
+  - INSERTION POINT: place the branch between post-merge failure collection
+    (finalize-feature.js ~L713) and the triage dispatch (~L747), so the recovered
+    baseline is available before the triage set-difference runs.
+  - BUILD/DEPLOY PARITY: the main-HEAD checkout must run the SAME build/deploy step
+    used by Step 0 (~L440) and Step 3 (~L677) — `python3 scripts/build.py
+    --target-dir <checkout>` — BEFORE re-executing tests, so deploy-dependent tests
+    (e.g. scripts/commit_guardian/*) are judged under identical build/deploy state
+    (parity with FIN-100a-4). If Step 0/Step 3 downgrade self-description
+    enforcement, the rerun must use the same level.
+  - WORKTREE LIFECYCLE: reuse the existing temporary-worktree pattern — create via
+    `git worktree add --detach` against origin/main, and guarantee cleanup on every
+    exit path (success, halt, error) with no /tmp leak (mirror
+    cleanupBaselineWorktree).
+  - DETERMINISM (E2): no Date.now() (banned in E2); derive any temp path from
+    args.baseline_ts, exactly as the Step 0 baseline worktree path does (~L266).
+  - The null baseline alone MUST NOT halt finalization; the halt decision defers to
+    triage over the recovered baseline (FIN-100c-6/7/8). The conservative halt is
+    reserved for the rerun-unavailable fallback (FIN-100c-9).
+  - ERROR HANDLING: checkout/build/rerun I/O must be wrapped and logged at WARNING+
+    per the project error-handling policy; any failure routes to the FIN-100c-9
+    fallback, never crashes finalize.
 delivers_to:
   - agent: "test-failure-triage"
     contract: "provides a recovered baseline derived from a main-HEAD rerun in place of the null baseline, so triage can distinguish pre-existing from new failures"
@@ -34,11 +65,32 @@ expects_from:
     contract: "provides baseline_failures=null and a non-empty post_merge_failures list"
   - agent: "test-runner"
     contract: "returns the post-merge failure list with test IDs in file::test_name format"
+test_spec:
+  - name: test_null_baseline_with_failures_does_not_blanket_regress
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "With baseline_failures=null and a non-empty post-merge failure set, the workflow does NOT immediately mark every failure regression; it enters the recovery branch instead of the blanket-regression path."
+  - name: test_null_baseline_establishes_main_head_checkout
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The recovery branch establishes a detached checkout of origin/main HEAD before re-running the failing tests."
+  - name: test_null_baseline_runs_build_before_rerun
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The recovery branch runs `python3 scripts/build.py --target-dir <checkout>` against the main-HEAD checkout BEFORE executing the tests, matching the Step 0 / Step 3 build/deploy step (deploy parity with FIN-100a-4)."
+  - name: test_null_baseline_reexecutes_failing_tests_on_main
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The recovery branch re-executes the post-merge failing tests against main HEAD and records each test's pass/fail result on main."
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
-    relevance: "null-baseline handling (~L490-495) and triage forwarding (~L660-664) — the rerun branch replaces the blanket-regression path"
+    relevance: "null-baseline handling (~L478-500 keeps baselineFailures null) and triage forwarding (~L759-761); the recovery branch inserts between post-merge failure collection (~L713) and triage dispatch (~L747), replacing the blanket-regression path"
   - path: "templates/agents/test-failure-triage.md"
-    relevance: "Step 1 null-baseline conservative path that this behavior supersedes as the primary path"
+    relevance: "Step 1 null-baseline conservative path that this behavior supersedes as the primary path (triage stays read-only; the rerun is workflow-side)"
   - path: "docs/how-to/finalize-feature.md"
     relevance: "Step 0 baseline capture and its downstream consequence on triage"
 depends_on:
@@ -46,7 +98,10 @@ depends_on:
   - FIN-100a-2
   - FIN-100a-4
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added estimated_complexity (M), it_requirements (workflow-side surface; null+non-empty trigger; insertion point ~L713->L747; build.py parity with Step 0 ~L440 / Step 3 ~L677 and FIN-100a-4; temp-worktree lifecycle + guaranteed cleanup; E2 determinism no-Date.now; defer halt to triage; route errors to FIN-100c-9), and test_spec (4 descriptors, one per Then). Kept assigned_agent python-coder, delivers_to/expects_from, and criteria unchanged."
+    by: it-po
 covered_by: []
 implemented_by: []
 change_target: pipeline

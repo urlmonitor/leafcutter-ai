@@ -1,6 +1,6 @@
 id: FIN-100c-6
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 components:
   - finalize
 title: "A recovered baseline is built from the rerun and supplied to triage in place of the null baseline"
@@ -21,22 +21,66 @@ origin_agent: "business-analyst"
 created: 2026-07-15
 created_by_ticket: null
 assigned_agent: "python-coder"
+estimated_complexity: S
+it_requirements: |
+  - RECOVERED BASELINE = INTERSECTION: the recovered baseline must contain exactly
+    the post-merge failing test IDs that ALSO fail on the main-HEAD rerun
+    (post_merge_failures ∩ {ids that failed on main}), in the same file::test_name
+    ID format the triage set-difference consumes.
+  - EXCLUDE PASSERS: test IDs that PASS on main HEAD must be excluded from the
+    recovered baseline (they are genuine regressions and must remain in the
+    set-difference).
+  - FORWARD AS NON-NULL: the recovered baseline (a list) must be forwarded to the
+    triage dispatch as baseline_failures IN PLACE of null (the forwarding site
+    finalize-feature.js ~L759-761), so the EXISTING FIN-100c-1 / FIN-100c-2
+    set-difference classifies correctly with NO change to the triage agent.
+  - EMPTY-LIST vs NULL DISTINCTION (load-bearing edge): when NONE of the failing
+    tests fail on main, the recovered baseline is an empty list [] and MUST be
+    forwarded as [] (a clean baseline → all post-merge failures are genuine
+    regressions), NOT as null (which would re-trigger the conservative null path).
+    Preserve the [] / null distinction explicitly.
+  - No new triage-side classification code — the recovered baseline is consumed by
+    the same Step 2 partition as a normally-captured baseline (see FIN-100c-7).
 delivers_to:
   - agent: "test-failure-triage"
-    contract: "provides baseline_failures = the subset of post-merge failing test IDs that also fail on main HEAD, so the existing set-difference triage (FIN-100c-1/FIN-100c-2) classifies correctly"
+    contract: "provides baseline_failures = the subset of post-merge failing test IDs that also fail on main HEAD (empty list when none fail on main; never null on the recovery path), so the existing set-difference triage (FIN-100c-1/FIN-100c-2) classifies correctly"
 expects_from:
   - agent: "finalize-feature-workflow"
     contract: "provides the per-test pass/fail results of the main-HEAD rerun"
+test_spec:
+  - name: test_recovered_baseline_contains_only_ids_that_fail_on_main
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The recovered baseline equals the intersection of post_merge_failures and the set of tests that failed on the main-HEAD rerun."
+  - name: test_recovered_baseline_supplied_as_baseline_failures
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The triage dispatch receives the recovered baseline as baseline_failures in place of null."
+  - name: test_ids_passing_on_main_excluded_from_recovered_baseline
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Test IDs that pass on main HEAD are excluded from the recovered baseline so they remain in the regression set-difference."
+  - name: test_recovered_baseline_empty_list_when_none_fail_on_main
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When no failing test fails on main, baseline_failures is forwarded as [] (clean baseline → all regressions), never as null."
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
-    relevance: "triage forwarding (~L660-664) must pass the recovered baseline as baseline_failures instead of null"
+    relevance: "triage forwarding (~L759-761) must pass the recovered baseline as baseline_failures instead of null; preserve the [] vs null distinction"
   - path: "templates/agents/test-failure-triage.md"
-    relevance: "Input Contract baseline_failures field and Step 2 partition consume the recovered baseline"
+    relevance: "Input Contract baseline_failures field and Step 2 partition consume the recovered baseline (unchanged from a captured baseline)"
 depends_on:
   - FIN-100c
   - FIN-100c-4
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added estimated_complexity (S), it_requirements (recovered baseline = post_merge ∩ fails-on-main; exclude passers; forward as non-null at ~L759-761; the load-bearing []-vs-null edge so an all-regressions case is not re-conservatized; no new triage code), and test_spec (4 descriptors incl. the empty-list edge). Tightened delivers_to to state the empty-list/never-null recovery contract. assigned_agent python-coder and criteria unchanged."
+    by: it-po
 covered_by: []
 implemented_by: []
 change_target: pipeline
