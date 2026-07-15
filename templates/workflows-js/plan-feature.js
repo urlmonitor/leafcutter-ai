@@ -1917,9 +1917,16 @@ for (const step of pipeline) {
           "docs/product-truth/index.json — rely on that discovery, not a passed flow_ref. " +
           "ALSO return a flow_backlinks map in your JSON response: " +
           "{ \"<flow step id>\": [\"<AC id>\", ...] } linking each flow step to the AC ids you derived from it. " +
+          // FLOW-DERIVED-AC PARENTING RULE (orphan-prevention): every L2/L3 you derive
+          // from a flow step MUST have an L1 parent, or scan_ac_orphans.py /
+          // check_ac_parent_covered_by (pre-commit hooks) will flag it. Give an
+          // explicit anchor in BOTH branches — never leave a flow-derived AC parentless.
           (parent_l1_id
-            ? ""
-            : `Anchor the derived L2s under the L1 for component ${JSON.stringify(ptComponent)} so they are not orphaned. `) +
+            ? `Parent every flow-derived L2/L3 under the run's L1 ${JSON.stringify(parent_l1_id)} so none is orphaned. `
+            : `Anchor the derived L2s under the L1 for component ${JSON.stringify(ptComponent)} so they are not orphaned — ` +
+              `this run has no triage L1 (parent_l1_id is null), so on the strategic route use the L1 the ` +
+              `product-owner authored earlier in this run, otherwise use the flow's covering L1 (via index.json by_component). ` +
+              `Do NOT leave any flow-derived AC without an L1 parent; if no component L1 exists, report the missing L1 rather than orphaning the ACs. `) +
           "\n"
         : "") +
       `user_request: ${JSON.stringify(request)}\n` +

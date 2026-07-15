@@ -127,7 +127,18 @@ Seven rules realise this:
    self-discover the flow via `index.json` (the free-text derivation instruction
    carries the intent; `flow_ref` is inert). When the triage route is `technical`
    (which normally skips the BA) but a flow was produced, the BA stage is **forced
-   in** with an L1 anchor so the derived L2s are not orphaned. After the BA runs,
+   in** with an L1 anchor so the derived L2s are not orphaned. **Flow-derived-AC
+   parenting rule (orphan-prevention):** the flow→BA handoff instruction always parents
+   every flow-derived L2/L3 under the run's L1 — under the triage `parent_l1_id` when
+   present, otherwise under the component L1 (the product-owner-authored L1 on the
+   strategic route for a net-new capability, else the flow's covering L1 via
+   `index.json` `by_component`). In production the ordering `ac-triage → PT phase → AC
+   pipeline` guarantees an anchor: a net-new capability routes `strategic`, so the PO
+   authors an L1 before the BA derives from the flow (the E2E that surfaced the orphan
+   risk bypassed triage, so no PO L1 existed — an E2E-shortcut artifact, not a
+   production routing gap). The BA authors L2/L3 only and never invents an L1; if no
+   component L1 exists it reports the gap rather than emitting an orphaned AC that
+   `scan_ac_orphans.py` / `check_ac_parent_covered_by` would reject. After the BA runs,
    `docs/product-truth/scripts/apply_flow_backlinks.py` writes the BA's reported
    `flow_backlinks` into the flow's `step.implements[]` (union, order-preserving)
    and re-runs `generate_product_truth.py`. Because this re-mutates the
@@ -145,6 +156,23 @@ Seven rules realise this:
    silent no-op, because `log()` is inert under E2) and skips the PT phase; then
    `ac-triage` and the AC pipeline proceed normally. The phase can therefore never
    silently do nothing.
+
+8. **New-entity admission is owned by `mock-data-author`.** `index.json`
+   `entity_registry` is authoritative, hand-maintained vocabulary — *not* a
+   generator-derived field. `generate_product_truth.py` recomputes only the derived
+   indexes (`by_component` / `by_entity` / `by_flow` / `by_ac`) and
+   `impl_status` / `impl_summary`; it never touches `entity_registry`, and
+   `validate_product_truth.py` only *reads* it and hard-errors on any flow/mock/mockup
+   entity missing from it. When a mock-data dataset introduces a genuinely-new entity
+   (e.g. a net-new `Review`), the **`mock-data-author`** admits that name to
+   `entity_registry` in the same `index.json` edit that registers the artifact in
+   `artifacts[]`, then re-runs the generator/validator. The registry write lives in
+   exactly one agent: `pt-classifier` (which only names entities), `mockup-author`, and
+   `flow-author` consume the vocabulary and assume the introducer has admitted it. Prior
+   to this, no agent admitted new entities (the mock-data-author template even said "the
+   generator/validator own the registry", which they do not), so a genuinely-new entity
+   stalled the pipeline on a hard validator error — the gap the plant-reviews E2E
+   surfaced.
 
 Crash-resume recognises the `plan-feature(<STAGE>)` commit subjects on the branch,
 skips re-dispatching already-committed stages, and recovers the flow reference from

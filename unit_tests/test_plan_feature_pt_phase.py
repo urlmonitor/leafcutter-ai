@@ -20,8 +20,11 @@ Coverage (mirrors the plan's Test plan):
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from _plan_feature_e2_runner import run_plan_feature_e2
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 _PT_AUTHORS = ("mock-data-author", "mockup-author", "flow-author")
 
@@ -117,7 +120,7 @@ async function mockAgent(call) {
   if (agentType === 'product-owner') { return maybeStr({ status: 'ok', acs_written: ['ACD-PO'] }, 'acAuthorReturnsString'); }
   if (agentType === 'it-po') { return maybeStr({ status: 'ok', acs_written: ['ACD-ITPO'] }, 'acAuthorReturnsString'); }
   if (agentType === 'ac-triage') {
-    return { route: (CFG.triageRoute || 'technical'), existing_acs: [], parent_l1_id: null, rationale: 't' };
+    return { route: (CFG.triageRoute || 'technical'), existing_acs: [], parent_l1_id: (CFG.parentL1 || null), rationale: 't' };
   }
   if (agentType === 'commit') {
     globalThis.__capturedCommitCalls.push({ instructions });
@@ -317,6 +320,23 @@ class TestFlowToBaHandoff(unittest.TestCase):
         self.assertIn("flow was approved", ba["instr"])
         # No parent_l1_id on the technical route → anchor instruction present.
         self.assertIn("Anchor the derived L2s", ba["instr"])
+
+    def test_ba_prompt_parents_under_parent_l1_when_present(self) -> None:
+        # GAP 2 fix: when triage supplies a parent_l1_id (behavioral route on an
+        # existing L1) AND a flow was produced, the flow-derived-AC handoff must
+        # explicitly instruct the BA to parent the derived L2/L3 under that L1 so
+        # they are never orphaned — not rely on the generic parent_l1_id field alone.
+        cfg = {
+            "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
+            "triageRoute": "behavioral",
+            "parentL1": "UXP-491",
+        }
+        _res, side = _run(cfg)
+        ba = next(c for c in side["allCalls"] if c.get("label") == "stage-ba-author")
+        self.assertIn("flow was approved", ba["instr"])
+        # The explicit parenting instruction names the run's L1.
+        self.assertIn("Parent every flow-derived L2/L3 under the run's L1", ba["instr"])
+        self.assertIn("UXP-491", ba["instr"])
 
     def test_flow_committed_before_ba_author(self) -> None:
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}, "triageRoute": "technical"}
@@ -544,6 +564,44 @@ class TestResumeReconciliationSignal(unittest.TestCase):
         # …and it names the reconciliation-skipped event.
         telem = next(c for c in side["allCalls"] if c.get("label") == "pt-telemetry")
         self.assertIn("pt_reconciliation_skipped_on_resume", telem["instr"])
+
+
+# ---------------------------------------------------------------------------
+# GAP 1 — new-entity admission to entity_registry is owned by mock-data-author.
+#
+# The registry-admission behaviour is a PROMPT instruction (exercised for real by
+# the plant-reviews E2E, which introduced a net-new `Review` entity). A prompt
+# cannot be driven through the E2 harness, so we assert the template now carries an
+# explicit, unambiguous admission step and that pt-classifier no longer misattributes
+# registry ownership to the generator/validator.
+# ---------------------------------------------------------------------------
+class TestEntityRegistryAdmissionInstruction(unittest.TestCase):
+    def _read(self, rel: str) -> str:
+        return (_REPO_ROOT / rel).read_text(encoding="utf-8")
+
+    def test_mock_data_author_admits_new_entities_to_registry(self) -> None:
+        text = self._read("templates/agents/mock-data-author.md")
+        # The template must now tell the agent to ADD a genuinely-new entity name to
+        # the authoritative entity_registry array itself.
+        self.assertIn("entity_registry", text)
+        self.assertIn("Admit a genuinely-new entity yourself (MANDATORY)", text)
+        # It must state the registry is authoritative / hand-maintained, NOT generator-derived.
+        lowered = text.lower()
+        self.assertIn("authoritative", lowered)
+        self.assertTrue(
+            "not a generator-derived field" in lowered or "never touches `entity_registry`" in text,
+            msg="template must state entity_registry is not generator-derived",
+        )
+        # It must tie the admission to the same index.json edit as the artifacts[] registration.
+        self.assertIn("artifacts[]", text)
+        self.assertIn("SAME `index.json` edit", text)
+
+    def test_pt_classifier_points_registry_write_to_mock_data_author(self) -> None:
+        text = self._read("templates/agents/pt-classifier.md")
+        # The classifier still must not write the registry, but the rationale must no
+        # longer claim the generator/validator own it — it points at mock-data-author.
+        self.assertIn("mock-data-author", text)
+        self.assertNotIn("do not add to `entity_registry` (the generator/validator own it)", text)
 
 
 if __name__ == "__main__":

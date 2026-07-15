@@ -18,6 +18,10 @@ criteria: |
   And when the triage route is technical (which normally skips the BA) but a flow was
   produced, the BA stage is forced in with an L1 anchor so the derived L2s are not
   orphaned,
+  And the flow→BA handoff instruction explicitly parents every flow-derived L2/L3 under
+  the run's L1 — under the triage parent_l1_id when present, and otherwise under the
+  component L1 (the product-owner-authored L1 on the strategic route, else the flow's
+  covering L1) — so no flow-derived AC is left orphaned,
   And when no flow was produced the BA runs normally per the triage route.
 depends_on:
   - UXP-593
@@ -60,3 +64,8 @@ test_spec:
     framework: unittest
     type: behavioral
     description: "the flow is committed before the BA stage is dispatched."
+  - name: test_ba_prompt_parents_under_parent_l1_when_present
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "when triage supplies a parent_l1_id, the flow→BA handoff explicitly parents flow-derived L2/L3 under it (orphan-prevention)."
