@@ -62,6 +62,14 @@ _PROJECT_CONTEXT = _ROOT / "docs" / "agents" / "llm-expert" / "PROJECT_CONTEXT.m
 _REGISTRY = _ROOT / "config" / "agent_registry.json"
 _PROMPT_AUDIT_SKILL = _ROOT / "templates" / "skills" / "prompt-audit" / "SKILL.md"
 _AGENTS_README = _ROOT / "docs" / "agents" / "README.md"
+# TICKET-20260715-BuildPipelineAuditFindings accuracy-correction tests
+_BP_100B9_YAML = (
+    _ROOT / "docs" / "acceptance-criteria" / "build_pipeline"
+    / "BP-100-reliable-builds" / "BP-100b-9.yaml"
+)
+_FRONTEND_UPGRADE_HOWTO = (
+    _ROOT / "docs" / "how-to" / "upgrade-frontend-coder-unified-agent.md"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -545,3 +553,166 @@ def test_bp200e_3_check3_distinguishes_pipe_kinds_with_severities():
     # Every pattern row carries a severity, and a suggested_fix is documented.
     assert "error" in section and "warning" in section
     assert "suggested_fix" in section
+
+
+# ---------------------------------------------------------------------------
+# TICKET-20260715-BuildPipelineAuditFindings — accuracy corrections
+# AC-1: BP-100b-9 criteria path, AC-2: spawn_allowlist consistency, AC-3: how-to
+# ---------------------------------------------------------------------------
+
+
+def test_ac1_bp100b9_criteria_names_workflows_js():
+    # covers: BP-100b-9
+    """AC-1: BP-100b-9 criteria must use 'templates/workflows-js/' (the real build
+    source per build_phases.py:685) not 'templates/scripts/workflows/' (which does
+    not exist). The correction must also be recorded in amended_by.
+
+    Fails now because BP-100b-9.yaml still contains 'templates/scripts/workflows/'
+    in its criteria field and has no non-split amended_by entry.
+    Make green: update the criteria via the governance amendment path and add
+    an amended_by entry for the correction.
+    """
+    data = yaml.safe_load(_read(_BP_100B9_YAML))
+    criteria = data.get("criteria", "")
+
+    # The real build source must be named in the corrected criterion.
+    assert "templates/workflows-js/" in criteria, (
+        "BP-100b-9 criteria must name 'templates/workflows-js/' as the shimmed "
+        "workflow-scripts source directory (build_phases.py:685: "
+        "`workflows_js_src = TEMPLATES_DIR / 'workflows-js'`). "
+        "Currently the criteria still contains the non-existent path."
+    )
+
+    # The stale non-existent path must be removed from the criteria.
+    assert "templates/scripts/workflows/" not in criteria, (
+        "BP-100b-9 criteria still references 'templates/scripts/workflows/' "
+        "which does not exist in the repo. Replace it with 'templates/workflows-js/' "
+        "via the AC-amendment mechanism."
+    )
+
+    # The amendment must be recorded: at least one non-split amended_by entry.
+    amended_entries = data.get("amended_by") or []
+    non_split_amendments = [
+        e for e in amended_entries
+        if isinstance(e, str) and not e.strip().startswith("split:")
+    ]
+    assert non_split_amendments, (
+        "BP-100b-9.yaml must record the criteria path correction in its "
+        "'amended_by' field. Add an entry such as: "
+        "\"corrected: criteria source path templates/scripts/workflows/ -> "
+        "templates/workflows-js/, YYYY-MM-DD\""
+    )
+
+
+def test_ac2_llm_expert_spawn_allowlist_surfaces_agree():
+    # covers: TICKET-20260715-BuildPipelineAuditFindings AC-2
+    """AC-2: The spawn_allowlist value stated in PROJECT_CONTEXT.md §5 for llm-expert
+    must match the value in config/agent_registry.json.
+
+    Fails now because PROJECT_CONTEXT.md §5 states the allowlist is `[]` while
+    agent_registry.json lists `["research-agent"]`. Both surfaces must agree.
+    Make green: update whichever surface is wrong so both declare the same value.
+    """
+    # Registry is the canonical source.
+    registry_entry = _registry_agent("llm-expert")
+    registry_allowlist = sorted(registry_entry.get("spawn_allowlist", []))
+
+    # PROJECT_CONTEXT.md §5 must state the same value.
+    section = _md_section(
+        _read(_PROJECT_CONTEXT), "## Section 5: Nesting / Spawn-Allowlist Rules"
+    )
+    assert section, "Section 5 not found in PROJECT_CONTEXT.md"
+
+    # Find the sentence that states llm-expert's spawn_allowlist value.
+    # Expected format: "... is: `[...]` ..." on a single line.
+    match = re.search(
+        r"`llm-expert`[^\n]*?spawn_allowlist[^\n]*?is:\s*`(\[[^\]`]*\])`",
+        section,
+    )
+    assert match, (
+        "PROJECT_CONTEXT.md §5 must contain a sentence declaring llm-expert's "
+        "spawn_allowlist value in the format '... is: `[...]`' so the two "
+        "surfaces can be compared mechanically. "
+        "Currently the sentence states `[]` while the registry has `[\"research-agent\"]`."
+    )
+
+    doc_allowlist = sorted(json.loads(match.group(1)))
+    assert doc_allowlist == registry_allowlist, (
+        f"spawn_allowlist mismatch between surfaces: "
+        f"PROJECT_CONTEXT.md §5 says {json.loads(match.group(1))!r} "
+        f"but config/agent_registry.json says "
+        f"{registry_entry.get('spawn_allowlist', [])!r}. "
+        "Both surfaces must declare the same value."
+    )
+
+
+def test_ac3_frontend_coder_howto_no_false_clean_prune_claim():
+    # covers: TICKET-20260715-BuildPipelineAuditFindings AC-3
+    """AC-3: The how-to must NOT claim that 'build.py --clean' removes the
+    .claude/skills/frontend-design/ directory.
+
+    Fails now because the doc contains the phrase 'remove the stale
+    `frontend-design` skill directory' in a --clean context (lines ~48, ~150).
+    That claim is false: _build_source_manifests() treats deprecated templates
+    as still-managed so clean_stale_artifacts() never prunes them.
+    Make green: remove the false --clean prune claim from the how-to.
+    """
+    text = _read(_FRONTEND_UPGRADE_HOWTO)
+
+    # The specific false statement must be absent after correction.
+    assert "remove the stale `frontend-design` skill directory" not in text, (
+        "The how-to falsely claims 'build.py --clean' removes the "
+        ".claude/skills/frontend-design/ directory. That claim is incorrect — "
+        "clean_stale_artifacts() does not prune deprecated-but-still-managed "
+        "templates. Remove this false --clean prune sentence from the doc."
+    )
+
+    # Concept-level guard: no single line may pair `--clean` with a removal verb
+    # AND `frontend-design` UNLESS it is explicitly negated. This catches a
+    # reworded false claim (e.g. "`--clean` deletes the stale skill dir") that
+    # the verbatim check above would miss, while still allowing the doc's true
+    # statements that `--clean` does NOT remove the directory.
+    removal_verbs = ("remove", "prune", "delete")
+    negations = ("not", "never", "n't", "no ")
+    for line in text.splitlines():
+        low = line.lower()
+        if (
+            "--clean" in low
+            and "frontend-design" in low
+            and any(v in low for v in removal_verbs)
+        ):
+            assert any(n in low for n in negations), (
+                "The how-to appears to claim `build.py --clean` removes/prunes "
+                "the frontend-design directory. That is false — "
+                "clean_stale_artifacts() skips deprecated-but-still-managed "
+                f"templates. Offending line: {line.strip()!r}"
+            )
+
+
+def test_ac3_frontend_coder_howto_describes_real_removal_mechanism():
+    # covers: TICKET-20260715-BuildPipelineAuditFindings AC-3
+    """AC-3: The how-to must describe the REAL removal mechanism for frontend-design/:
+    deploy-time exclusion (deprecated: true causes _build_source_manifests() to skip
+    deployment) + skills_config.json migration + template overwrite — not --clean.
+
+    Fails now because the doc only describes the (false) --clean approach and
+    does not mention the actual deploy-time exclusion / deprecated-skip mechanism.
+    Make green: add a description of the real mechanism to the how-to.
+    """
+    text = _read(_FRONTEND_UPGRADE_HOWTO)
+
+    # At least one of these signals must appear to document the real mechanism.
+    real_mechanism_described = (
+        "deploy-time" in text
+        or "deprecated skip" in text
+        or "excluded at deploy" in text
+        or ("deprecated: true" in text)
+        or "_build_source_manifests" in text
+    )
+    assert real_mechanism_described, (
+        "The how-to must describe the real removal mechanism for frontend-design/: "
+        "deploy-time exclusion (frontend-design is retained in templates/skills/ "
+        "with 'deprecated: true', causing _build_source_manifests() to treat it as "
+        "still-managed and skip deployment) + skills_config migration + template "
+        "overwrite. Currently the doc only describes the false --clean approach."
+    )
