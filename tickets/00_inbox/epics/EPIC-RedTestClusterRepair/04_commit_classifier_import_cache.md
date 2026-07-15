@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: needed
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Fix commit_classifier stale import-time cache
@@ -121,6 +121,16 @@ completion_manifest:
 
 Auto-authorized commit gate: subject "fix(commit_classifier): support dict-format config schema (BO-1100c-4)"; staged files: requirements-dev.txt, scripts/commit_classifier.py, templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py, tests/test_sweep_processes.py, tickets/00_inbox/epics/EPIC-RedTestClusterRepair/01..09 ticket files. Note: probe check git_hook=false was a false positive (probe resolves hooks from workspace parent /home/henzeh/projects/leafcutter/.git/ which is not the repo root; actual hook exists at leafcutter-ai/.git/hooks/pre-commit). Combined commit includes approved changes from multiple tickets in this epic batch.
 
+### 2026-07-15 15:20 — pull-request (status: ok)
+
+feedback-id: fb_2026-07-15_f279fba1
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+
+PR #307 opened at https://github.com/urlmonitor/leafcutter-ai/pull/307 for branch chore/redtest-test-requirements targeting main. Four commits pushed successfully; PR body covers merge hook, classifier fix, and strict CI gate.
+
 ## Implementation Tasks
 
 - [ ] Locate the import-time cache in `commit_classifier.py` (module-level config load).
@@ -138,3 +148,5 @@ Auto-authorized commit gate: subject "fix(commit_classifier): support dict-forma
 - [x] python-coder — 2026-07-15 14:30
 - [x] test-runner — 2026-07-15 14:45
 - [x] commit — 2026-07-15 15:00
+- [ ] pr-reviewer
+- [x] pull-request — 2026-07-15 15:20

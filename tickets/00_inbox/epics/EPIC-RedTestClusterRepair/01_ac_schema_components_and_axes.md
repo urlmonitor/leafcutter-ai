@@ -1,6 +1,6 @@
 ---
 title: "Fix AC-schema drift: components required + axis fields accepted (check_ac_schema, readiness_gate)"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-07-15
@@ -25,7 +25,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Fix AC-schema drift (components required + axis fields)
@@ -140,7 +140,7 @@ Fixed 13 failing test YAML fixtures in `unit_tests/commit_guardian/test_check_ac
 - [x] test-runner — 2026-07-15 14:51
 - [x] pr-reviewer — 2026-07-15 15:30
 - [x] commit — 2026-07-15 15:09
-- [ ] pull-request
+- [x] pull-request — 2026-07-15 15:50
 
 ### 2026-07-15 14:51 — test-runner (status: ok)
 feedback-id: fb_2026-07-15_69a0f144
@@ -168,3 +168,11 @@ completion_manifest:
   negative_cases_preserved: true
   files_touched_discrepancy_noted: true
 Reviewed diff against ticket-01 scope. config/ac_store_schema.json already has components as required (line 11) and all axis fields present — no changes needed, consistent with python-coder's report. check_ac_schema.py already has the GE-112 fix (validate_manually() is a fallback only, gated by schema_validated flag). validate_ac_schema.py correctly delegates components validation to _ac_components.components_field_errors(). Both test-side fixes are correct: components: [finalize] added to 6 YAML fixtures in test_check_ac_schema.py (finalize is in schema enum); "components": ["ac_store"] added to _make_ac_yaml() in tests/ac_store/test_readiness_gate.py (ac_store is in schema enum). One medium finding: unit_tests/ac_store/test_readiness_gate.py is listed in files_touched but was not changed — it tests classify_readiness() from goal_to_epic.py, not validate_ac_schema.py, so its _write_ac() fixtures did not need the components field. The ticket's "dup" description was inaccurate; the implementation correctly omitted the change. No high-confidence findings. Status: ok.
+
+### 2026-07-15 15:50 — pull-request (status: ok)
+feedback-id: fb_2026-07-15_3af909dc
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #307 ("Repair red-test cluster: merge hook, classifier fix, strict CI") already open on branch chore/redtest-test-requirements → main (https://github.com/urlmonitor/leafcutter-ai/pull/307). All commits for ticket-01 (components field added to test fixtures in test_check_ac_schema.py and test_readiness_gate.py) are included in the branch and already pushed. No additional push required. Ticket status flipped to done (pull-request was the last needed agent).

@@ -1,6 +1,6 @@
 ---
 title: "Create the missing check_ac_done_on_merge hook (test_check_ac_done_on_merge)"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-07-15
@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: Create the missing check_ac_done_on_merge hook
@@ -90,7 +90,7 @@ tests:
 - [x] test-runner — 2026-07-15 14:49
 - [x] pr-reviewer — 2026-07-15 15:10
 - [x] commit — 2026-07-15 15:12
-- [ ] pull-request
+- [x] pull-request — 2026-07-15 15:45
 
 ## Comments
 
@@ -128,6 +128,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 [probe-override] Probe check `git_hook` failed with false positive: worktree `.git` is a file pointer, not a directory, so `resolve_hooks_path` cannot read `.git/config`. `canary: true` (primary safety signal) confirmed the hook IS active. Hook file verified at `leafcutter-ai/.git/hooks/pre-commit`. This bug is tracked in EPIC-RedTestClusterRepair ticket 05. Staged `templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py` (untracked new file) and committed alongside co-staged ticket 06/09 changes (also part of this epic drive). Test file `tests/commit_guardian/test_check_ac_done_on_merge.py` was already committed in a prior branch commit.
+
+### 2026-07-15 15:45 — pull-request (status: ok)
+feedback-id: fb_2026-07-15_8a317452
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #307 ("Repair red-test cluster: merge hook, classifier fix, strict CI") was already open for branch chore/redtest-test-requirements at https://github.com/urlmonitor/leafcutter-ai/pull/307. No new PR creation was needed. Sign-off committed and pushed to keep the PR HEAD current.
 
 ## Implementation Tasks
 
