@@ -1,6 +1,6 @@
 id: TQ-200a-3
 components:
-  - testing-quality
+  - testing_quality
 title: "Each eval set contains both golden and held-out cases"
 component: testing-quality
 level: L2

@@ -2,7 +2,7 @@ id: BP-014
 readiness: reviewed
 priority: medium
 components:
-  - build-pipeline
+  - build_pipeline
 status: active
 origin_agent: BrainCandy
 component: build-pipeline

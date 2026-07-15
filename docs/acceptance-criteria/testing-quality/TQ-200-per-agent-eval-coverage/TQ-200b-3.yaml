@@ -1,6 +1,6 @@
 id: TQ-200b-3
 components:
-  - testing-quality
+  - testing_quality
 title: "An eval runs whenever any file in its dependency closure changes"
 component: testing-quality
 level: L2

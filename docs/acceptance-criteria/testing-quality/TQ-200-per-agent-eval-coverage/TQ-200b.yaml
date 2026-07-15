@@ -1,6 +1,6 @@
 id: TQ-200b
 components:
-  - testing-quality
+  - testing_quality
 title: "A shared runner scores every agent's eval set and blocks merges on regression"
 component: testing-quality
 level: L1

@@ -1,6 +1,6 @@
 id: TQ-200a-2-i
 components:
-  - testing-quality
+  - testing_quality
 title: "LABEL output is scored by exact label match with precision/recall per routing axis"
 component: testing-quality
 level: L3

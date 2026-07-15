@@ -1,6 +1,6 @@
 id: TQ-200b-4
 components:
-  - testing-quality
+  - testing_quality
 title: "A triggering change with a missing or stale eval result is a hard failure, never a skip"
 component: testing-quality
 level: L2

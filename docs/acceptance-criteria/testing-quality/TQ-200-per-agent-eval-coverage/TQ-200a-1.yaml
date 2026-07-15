@@ -1,6 +1,6 @@
 id: TQ-200a-1
 components:
-  - testing-quality
+  - testing_quality
 title: "Every in-scope agent has an eval set of {id, input, expected} rows"
 component: testing-quality
 level: L2
