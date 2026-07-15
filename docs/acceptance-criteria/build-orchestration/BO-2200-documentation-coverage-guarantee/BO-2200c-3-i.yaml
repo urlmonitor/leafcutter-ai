@@ -1,0 +1,42 @@
+id: BO-2200c-3-i
+components:
+  - build_orchestration
+  - documentation_system
+readiness: draft
+priority: medium
+title: "An unresolved or absent parent L1 yields a genre-less contract line, not a crash"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given the generator is sourcing the Diataxis genre for a leaf AC's contract line,
+  When the leaf AC's parent L1 cannot be resolved -- the parent id derivation returns
+    nothing, the parent file is absent, or the parent carries no `documentation_triggers` --
+  Then the generator emits the contract line WITHOUT a genre (the path and content
+    constraint are still written), rather than raising an exception or aborting the ticket.
+  And the missing genre is represented explicitly (for example an "(unspecified genre)"
+    marker) so the omission is visible to the writer rather than silently blank.
+depends_on: [BO-2200c-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Parent resolution must fail soft: derive_parent_id returning None, a missing parent
+  file, or an absent documentation_triggers must produce a genre-less line, not a crash.
+  Log at WARNING per the error-handling policy; never swallow silently.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200c-3
+  contract: "The parent-genre resolution this edge case hardens against unresolved/absent parents."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

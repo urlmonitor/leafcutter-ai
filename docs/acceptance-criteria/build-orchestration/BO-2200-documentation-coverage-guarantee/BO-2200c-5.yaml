@@ -1,0 +1,49 @@
+id: BO-2200c-5
+components:
+  - build_orchestration
+  - documentation_system
+readiness: draft
+priority: medium
+title: "The Agent Contracts block is the single source both the writer reads and the verifier asserts"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given a generated ticket that requires documentation and carries the
+    `### documentation-expert` Agent Contracts block,
+  When `documentation-expert` runs, it reads that same block as its Contract-Aware brief;
+    and when `documentation-verifier` runs, it asserts against that same block's
+    checklist of required docs and content constraints,
+  Then both agents draw from one block -- there is no second, separately maintained list
+    of what documentation is required.
+  And a change to the Agent Contracts block changes both what the writer is told to
+    produce and what the verifier checks, keeping brief and enforcement in lockstep.
+depends_on: [BO-2200c, BO-2200c-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The Agent Contracts block is the ONE source of truth: documentation-expert's
+  Contract-Aware v2 spec and documentation-verifier's checklist both read it. Do not
+  introduce a parallel required-docs list that could drift from the block.
+delivers_to:
+  agent: documentation-verifier
+  contract: "The Agent Contracts block serves as the verifier's assertion checklist (consumed by BO-2200b-2/b-3) and as documentation-expert's Contract-Aware brief — one artifact, two readers."
+expects_from:
+  ac_id: BO-2200c-1
+  contract: "The Agent Contracts block whose single-source-of-truth role this behavior establishes."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

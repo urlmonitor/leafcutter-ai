@@ -1,0 +1,47 @@
+id: BO-2200a-4
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: draft
+priority: medium
+title: "A list-valued change target triggers documentation if any element triggers (union semantics)"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given the declarative `documentation_gates` policy and the ticket generator building
+    the agents map for a leaf AC whose `change_target` is a list,
+  When `change_target` is `[config, code]` (no element in the triggering set) and
+    `risk_surface` is `internal`,
+  Then the generated agents map does NOT include `documentation-expert`.
+  And when `change_target` is `[config, ui]` (at least one element, `ui`, is in the
+    triggering set), the generated agents map DOES include `documentation-expert`.
+  And the policy evaluates a list-valued `change_target` as the union of its elements:
+    the documentation demand is raised when ANY element is in the triggering set.
+depends_on: [BO-2200a, BO-2200a-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  `change_target` may be a scalar or a list (per the AC schema). The policy evaluation
+  must normalise a scalar to a single-element list and apply union semantics across the
+  elements so a multi-target AC is handled without crashing and triggers correctly.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200a-1
+  contract: "The declarative documentation_gates policy and generator read-path this behavior exercises with list-valued change_target."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

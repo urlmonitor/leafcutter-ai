@@ -1,0 +1,47 @@
+id: BO-2200a-3-i
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: draft
+priority: medium
+title: "A cost risk surface and an unclassified AC do not demand documentation"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given the declarative `documentation_gates` policy and the ticket generator building
+    the agents map for a leaf AC,
+  When the AC's `change_target` is `code` and its `risk_surface` is `cost`,
+  Then the generated agents map does NOT include `documentation-expert`
+    (the `cost` risk surface is explicitly excluded from the triggering set).
+  And when the AC carries neither a `change_target` nor a `risk_surface` field at all
+    (an AC that predates the computed-gates classification), the generator completes
+    without error and does NOT force `documentation-expert` from the documentation
+    policy on the basis of absent classification.
+depends_on: [BO-2200a-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Guard the two easy-to-miss negatives: `risk_surface: cost` must be excluded from the
+  triggering set, and a missing/None classification must not raise KeyError or default
+  to a documentation demand. Fail safe toward no-demand when there is nothing to classify.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200a-3
+  contract: "The non-triggering documentation-policy path this edge case hardens against cost and unclassified inputs."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

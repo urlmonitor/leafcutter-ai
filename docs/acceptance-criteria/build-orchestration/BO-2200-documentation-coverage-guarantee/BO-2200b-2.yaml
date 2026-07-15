@@ -1,0 +1,47 @@
+id: BO-2200b-2
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: draft
+priority: medium
+title: "The verifier fails the ticket when a required documentation file was not changed"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given a ticket that requires documentation and the documentation-verifier phase runs,
+  When the ticket's git diff contains NO change to any of the required documentation
+    files named in its documentation brief,
+  Then the verifier reports a failure with `status: blocker`.
+  And the blocker message names each required documentation file that is missing a
+    real change.
+  And the ticket cannot advance to commit or be reported as complete while the blocker
+    stands.
+depends_on: [BO-2200b, BO-2200b-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The verifier inspects the ticket's git diff and asserts a real doc-file change exists
+  for each required doc. A missing required doc yields status: blocker (not a warning).
+  The list of required docs comes from the Agent Contracts brief (BO-2200c), keeping a
+  single source of truth for what must exist.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-1
+  contract: "The documentation-verifier phase slot this behavior populates with the diff-presence assertion."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

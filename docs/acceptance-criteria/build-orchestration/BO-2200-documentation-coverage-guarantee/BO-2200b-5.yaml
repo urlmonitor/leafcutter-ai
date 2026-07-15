@@ -1,0 +1,45 @@
+id: BO-2200b-5
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: draft
+priority: medium
+title: "Once triggered, the writer and verifier cannot be suppressed by a not_needed override"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given a ticket whose classification triggered a documentation demand, so
+    `documentation-expert` and `documentation-verifier` were injected,
+  When an override attempts to set either agent's status to `not_needed`,
+  Then the override does not take effect and both agents remain `needed`.
+  And this non-suppressibility is enforced the same way the existing TDD-mandatory
+    protection keeps `test-writer` and `test-runner` from being stripped once required.
+depends_on: [BO-2200b, BO-2200b-4]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Make documentation-expert and documentation-verifier non-suppressible once the trigger
+  fires: a not_needed override must not strip them, mirroring the existing TDD-mandatory
+  protection for test-writer/test-runner. Locate the protection at the same layer that
+  already guards the TDD agents so the two behave identically.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-4
+  contract: "The injected documentation-expert + documentation-verifier this behavior protects from suppression."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

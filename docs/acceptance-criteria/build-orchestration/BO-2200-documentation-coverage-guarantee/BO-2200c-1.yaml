@@ -1,0 +1,47 @@
+id: BO-2200c-1
+components:
+  - build_orchestration
+  - documentation_system
+readiness: draft
+priority: medium
+title: "The generated ticket carries an Agent Contracts documentation-expert section in a fixed position"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given the ticket generator building a ticket that requires documentation,
+  When it writes the ticket body,
+  Then the body contains an `## Agent Contracts` section with a `### documentation-expert`
+    subsection.
+  And that section appears AFTER the `## Acceptance Criteria` section and BEFORE the
+    `## Sign-offs` section.
+  And the subsection lists one checklist item per documented AC using globally numbered
+    `- [ ] AC-N:` lines (numbered across the whole ticket, not restarting per subsection).
+depends_on: [BO-2200c]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/documentation_system.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The generator emits a `## Agent Contracts` -> `### documentation-expert` block, placed
+  after `## Acceptance Criteria` and before `## Sign-offs`, with globally numbered
+  `- [ ] AC-N:` lines. This block is the single source of truth for both the writer's
+  brief (BO-2200c) and the verifier's checklist (BO-2200b).
+delivers_to:
+  agent: python-coder
+  contract: "The `## Agent Contracts` -> `### documentation-expert` block (positioned after Acceptance Criteria, before Sign-offs, one globally-numbered AC-N line per documented AC). Consumed by BO-2200c-2/3/4 (line content) and BO-2200c-5 (shared source of truth)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -26,7 +26,11 @@ origin_agent: product-owner
 created: 2026-07-15
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2200d-1
+  - BO-2200d-2
+  - BO-2200d-1-i
+  - BO-2200d-2-i
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

@@ -1,0 +1,46 @@
+id: BO-2200d-2
+components:
+  - build_orchestration
+  - documentation_system
+readiness: draft
+priority: medium
+title: "On a doc-required ticket, the writer runs after code and tests and the verifier runs last before commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200d.yaml"
+criteria: |
+  Given a documentation-required ticket whose resolved phase order includes
+    `python-coder`, `test-runner`, `documentation-expert`, and `documentation-verifier`,
+  When the phase order is evaluated,
+  Then the index of `documentation-expert` is greater than the index of `python-coder`
+    and greater than the index of `test-runner` (docs are written after the code exists
+    and after tests run).
+  And `documentation-verifier` is the last phase before the commit phase.
+depends_on: [BO-2200d, BO-2200d-1, BO-2200b-1]
+doc_links:
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Assert the resolved relative order on a real doc-required ticket: index(documentation-expert)
+  > index(python-coder) and > index(test-runner); documentation-verifier immediately precedes
+  commit. This depends on both the post-coder placement (BO-2200d-1) and the verifier's
+  11.9 priority (BO-2200b-1).
+delivers_to: null
+expects_from:
+  ac_id: BO-2200d-1
+  contract: "The post-coder placement of documentation-expert whose resulting relative order this behavior asserts."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
