@@ -1,0 +1,90 @@
+id: ACD-1200b-5
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A supported approval mechanism promotes reviewed leaf ACs to approved without hand-editing YAML"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200b.yaml"
+criteria: |
+  Given a goal AC with two leaf children at readiness: reviewed
+    (for example ACD-050a-2-i and ACD-050b-1),
+  When a supported approval mechanism is invoked against that goal (a new
+    approval script under scripts/ac_store/, for example approve_acs.py, and/or
+    an --approve flag on the goal-to-epic command),
+  Then each of those reviewed leaf ACs has its readiness field promoted from
+    reviewed to approved in its stored YAML,
+  And the promotion is performed by the mechanism, not by any hand-edit of the
+    YAML files,
+  And the change is append-only with respect to history: an amended_by entry is
+    added recording the promotion, and no other field of the AC is altered.
+
+  Given the same two leaf ACs after a first successful promotion run,
+  When the approval mechanism is invoked a second time against the same goal,
+  Then the already-approved leaves remain approved and are not duplicated,
+    re-stamped, or otherwise modified (the operation is idempotent).
+depends_on: [ACD-1200b]
+doc_links:
+  - path: scripts/ac_store/approve_acs.py
+    relationship: modifies
+    status: planned
+  - path: scripts/goal_to_epic.py
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "Leaf ACs of the goal promoted to readiness: approved in the store (append-only, one amended_by entry each). These approved leaves are what goal_to_epic.py --approved-only (ACD-1200b-4) consumes."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1200b-5-i]
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/approve_acs.py"
+  n_location_rule: "1 new file (create target; follow the store-mutation convention of the sibling scripts/ac_store/mark_ac_done.py; optionally add an --approve flag on scripts/goal_to_epic.py that shells to it)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The approval mechanism (new script scripts/ac_store/approve_acs.py, plus optionally an --approve flag on goal_to_epic.py that shells to it) must promote each reviewed leaf AC of a goal from readiness: reviewed to approved in its stored YAML — never by hand-edit."
+    - "The mutation must be append-only with respect to history: add exactly one amended_by entry recording the promotion and alter no other field of the AC."
+    - "Must follow the store-mutation convention of the sibling scripts/ac_store/mark_ac_done.py: insert only the target field(s), never a whole-file rewrite."
+    - "The operation must be idempotent and byte-stable on re-run: a second run leaves already-approved leaves unchanged (verify via run-twice-and-diff), with no duplicate amended_by entry."
+test_spec:
+  - name: test_reviewed_leaves_promoted_to_approved
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Two reviewed leaf children under a goal; run the mechanism; assert both leaves now have readiness == approved."
+  - name: test_amended_by_appended_no_other_field_changed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After a promotion run, assert exactly one amended_by entry was appended and no other field of the AC was mutated."
+  - name: test_idempotent_second_run_noop
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Run the mechanism twice against the same goal; assert the second run is byte-stable (run-twice-and-diff empty) with no duplicate amended_by entry."
+change_target: pipeline
+risk_surface: internal

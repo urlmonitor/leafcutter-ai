@@ -1,0 +1,86 @@
+id: TKT-500f-9
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "Generated ticket frontmatter carries an ac_traceability entry (AC id + store path)"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC with id "BO-1000c-1b" stored at a known path in the AC store
+    (for example
+    "docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000c-1b.yaml"),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket frontmatter carries an ac_traceability entry that
+    names both the AC id "BO-1000c-1b" and the AC's store path,
+  And the ac_traceability entry is present in addition to (not merely) a bare
+    source_ac scalar,
+  And the ac_traceability entry is structured so ac-validator and
+    ac-fulfillment-gate can resolve the source AC from the ticket rather than
+    silently no-opping when only a bare source_ac is present.
+
+  Given a leaf AC for which a ticket is generated,
+  When ac-fulfillment-gate or ac-validator later reads that ticket,
+  Then it can locate the source AC file from the ac_traceability entry's store
+    path without scanning the whole store.
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Ticket frontmatter carrying an ac_traceability entry { id, path } resolvable to the source AC YAML file. Consumed by the agents-map wiring (TKT-500f-12) and by the ac-validator / ac-fulfillment-gate phases so they resolve the source AC instead of silently no-opping."
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1 (the _build_frontmatter emission point near line 833)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Generated frontmatter must carry an ac_traceability entry naming both the AC id and the AC's store path, in addition to (never replacing) the bare source_ac scalar."
+    - "The store path must be repo-root-relative and point to the actual source AC YAML, resolvable by ac-validator and ac-fulfillment-gate without scanning the whole store."
+    - "The entry shape must be the form the downstream gate consumers read; if any reference doc describes a different shape, flag it for reconciliation rather than emitting a divergent shape."
+test_spec:
+  - name: test_frontmatter_has_ac_traceability_id_and_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket from a fixture AC at a known store path; assert frontmatter ac_traceability contains both the AC id and the store path."
+  - name: test_source_ac_scalar_still_present
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the bare source_ac scalar is still emitted alongside the new ac_traceability entry (additive, not a replacement)."
+  - name: test_traceability_path_resolves_to_source_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the ac_traceability store path resolves to the actual source AC YAML file on disk."
+change_target: pipeline
+risk_surface: internal

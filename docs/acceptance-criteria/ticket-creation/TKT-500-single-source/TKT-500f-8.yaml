@@ -1,0 +1,91 @@
+id: TKT-500f-8
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "Generated ticket's files_touched includes the AC's real edit surface, unioned with doc_links"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose it_requirements is in structured form and names a source
+    file as its edit surface (for example reference_file_path:
+    "scripts/ac_store/generate_ticket_from_ac.py"),
+  And whose doc_links names a documentation path
+    (for example "docs/reference/ac-schema.md"),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's files_touched list contains
+    "scripts/ac_store/generate_ticket_from_ac.py" (the source edit surface named
+    by it_requirements),
+  And the generated ticket's files_touched list also contains
+    "docs/reference/ac-schema.md" (the doc_links path),
+  And files_touched is the de-duplicated union of the it_requirements edit
+    surface(s) and the doc_links paths: a path named in both it_requirements and
+    doc_links appears exactly once in files_touched.
+
+  Given a leaf AC whose it_requirements names a source file that is identical to
+    a path also listed in doc_links,
+  When a ticket is generated from that AC,
+  Then that path appears exactly once in files_touched (no duplicate entry).
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500f-8-i]
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "De-duplicated files_touched list: union of the it_requirements edit surface(s) and the doc_links edit-surface paths, each path appearing exactly once. Referenced by TKT-500f-10 and TKT-500f-12 as 'the union edit surface', and extended by TKT-500f-8-i (list-form extraction)."
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "all files_touched-assembly sites (currently the two doc_links-only sites near lines 1419 and 1453, fed by _extract_local_paths)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "files_touched must be the de-duplicated union of the it_requirements edit surface(s) and the doc_links paths; a path present in both must appear exactly once."
+    - "The edit surface must be drawn from it_requirements (the structured reference_file_path form), not only from doc_links."
+    - "Only edit-surface doc_links (relationship constrains/modifies/specifies) plus the it_requirements edit surface may enter files_touched; doc_links whose relationship is describes/related must NOT be added to files_touched."
+    - "No phantom paths may be invented: only paths actually named by the AC are emitted."
+    - "Ordering must be deterministic so regenerating the same AC yields byte-identical files_touched."
+test_spec:
+  - name: test_files_touched_unions_it_requirements_and_doc_links
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket from a fixture AC whose it_requirements.reference_file_path=X and doc_links names edit-surface Y; assert files_touched == sorted-unique {X, Y}."
+  - name: test_files_touched_dedups_shared_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC where reference_file_path equals a doc_links edit-surface path; assert that path appears exactly once in files_touched."
+  - name: test_describes_doc_links_excluded_from_files_touched
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "AC carrying a doc_links entry with relationship=describes; assert that path is NOT added to files_touched."
+change_target: pipeline
+risk_surface: internal
