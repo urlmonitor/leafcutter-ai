@@ -583,9 +583,14 @@ def run_checks() -> dict[str, Any]:
     Returns:
         Dict with keys: binary, config, git_hook, canary (each bool),
         incomplete_build (bool — present and True only when guardian scripts
-        are absent), and failing_checks (list[str] naming each failed key).
-        The string ``"hook_freshness"`` is appended to failing_checks when
-        ``check_hook_freshness`` returns False (hook is older than config).
+        are absent), hook_freshness (bool — advisory; True when hook mtime is
+        at least as recent as config mtime, False when hook is stale or absent),
+        and failing_checks (list[str] naming each failed check among A–D plus
+        ``"incomplete_build"``).  ``"hook_freshness"`` is NOT included in
+        failing_checks because a stale or absent hook is already surfaced by
+        check_c_git_hook (sentinel detection); adding it would cause false
+        positives in environments where pre-commit is not installed but the
+        four canonical checks all pass.
     """
     cwd = Path.cwd()
 
@@ -627,15 +632,22 @@ def run_checks() -> dict[str, Any]:
     validate_hook_name(hook_path)
 
     # BO-1700h-1: Check hook freshness (config-drift detection).
-    # Capture the return value: when False, report hook_freshness in failing_checks.
-    # The failure is only meaningful when both the hooks path and config were resolved
-    # successfully; a False result when either resolution used a fallback indicates
-    # "not installed" rather than "stale", and must not be surfaced as a violation.
+    # Reported as an advisory field (results["hook_freshness"]); NOT added to
+    # failing_checks.  A stale or absent hook is already detected by
+    # check_c_git_hook (sentinel check).  Adding it as a hard failure causes
+    # false positives when the four canonical checks all pass but pre-commit has
+    # not been installed (e.g. in CI worktrees that have not run pre-commit install).
     config_path_resolved = _resolve_config_path(cwd)
     config_path = config_path_resolved or (cwd / ".pre-commit-config.yaml")
     freshness_ok = check_hook_freshness(hook_path, config_path)
+    results["hook_freshness"] = freshness_ok
     if not freshness_ok and hooks_resolved and config_path_resolved is not None:
-        results["failing_checks"].append("hook_freshness")
+        _log.warning(
+            "run_checks: hook at %s may be stale (older than config at %s). "
+            "Advisory — run 'pre-commit install' to reinstall the hook if needed.",
+            hook_path,
+            config_path,
+        )
 
     checks = [
         ("binary", check_a_binary_on_path),
