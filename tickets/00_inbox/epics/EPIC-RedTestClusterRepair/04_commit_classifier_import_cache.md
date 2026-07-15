@@ -1,6 +1,6 @@
 ---
 title: "Fix commit_classifier stale import-time cache (test_defect_fixes, BO-1100c-4)"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-07-15
