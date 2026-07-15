@@ -831,6 +831,19 @@
                 "_comment": "EPIC-ProductTruthTrust: Single-writer generator in --check mode — exits non-zero if any derived field (flow impl_status/impl_summary, AC product_truth, index by_* maps) would change, making live-status drift a hard commit failure."
             },
             {
+                "id": "check-eval-staleness",
+                "tier": "judgment",
+                "name": "Check Agent-Eval Staleness (fast local freshness gate, no model)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_eval_staleness.py",
+                "language": "system",
+                "files": "(^scripts/evals/|^docs/product-truth/|^templates/agents/)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "TQ-200b-4: Fast local staleness guard. Delegates to scripts/evals/eval_selector.py --check --changed-files <staged> (SSOT selector + freshness gate) and BLOCKS when any affected agent's eval result is missing/stale, naming offenders + pointing at `python scripts/evals/run_agent_eval.py --agent <agent>`. No model call. Broad path filter = union of the three roots holding every trigger glob (scripts/evals/, docs/product-truth/, templates/agents/); over-firing is harmless (selector exits 0 when no agent's triggers match). Selector exit 2 / launch failure fails open; the REQUIRED CI eval check is the non-bypassable backstop (this block is bypassable with --no-verify)."
+            },
+            {
                 "id": "precommit-canary",
                 "name": "Pre-commit canary (PRECOMMIT_CANARY_OK probe)",
                 "entry": "python scripts/commit_guardian/precommit_canary.py",
