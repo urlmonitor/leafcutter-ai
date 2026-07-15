@@ -1,6 +1,6 @@
 ---
 title: "ADR-021: Always-On Product-Truth Authoring Phase in /plan-feature"
-description: "Records the decision to wire the product-truth authoring agents (pt-classifier, mock-data-author, mockup-author, flow-author) into the /plan-feature workflow as an always-on phase between ac-triage and the AC pipeline. The classifier runs on every invocation and its outcome derives the run-set; artifact agents run in a fixed order behind per-stage approve/edit/cancel gates with surgical, commit-before-next commits; the approved flow is handed to the business-analyst and its reported flow_backlinks are reconciled into step.implements by apply_flow_backlinks.py; and the phase self-skips non-silently when the product-truth store is absent. Realises the flow-first authoring surface of ADR-020."
+description: "Records the decision to wire the product-truth authoring agents (pt-classifier, mock-data-author, mockup-author, flow-author) into the /plan-feature workflow as an always-on phase between ac-triage and the AC pipeline. The classifier runs on every invocation and its outcome derives the run-set; artifact agents run in a fixed order behind per-stage approve/edit/cancel gates with surgical, commit-before-next commits; the approved flow is handed to the business-analyst and its reported flow_backlinks are reconciled into step.implements by apply_flow_backlinks.py; and the phase self-skips non-silently when the product-truth store is absent. Realises the flow-first authoring surface of ADR-023."
 type: "adr"
 status: "accepted"
 created: "2026-07-14"
@@ -12,7 +12,7 @@ components:
   - ac_store
   - build_pipeline
 related_docs:
-  - docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
   - docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
   - docs/product-truth/README.md
   - templates/skills/plan-feature/SKILL.md
@@ -34,11 +34,11 @@ related_code:
 | Deciders | BrainCandy |
 | Author | documentation-expert |
 | Supersedes | — |
-| Amends | — (realises ADR-020's flow-first authoring surface) |
+| Amends | — (realises ADR-023's flow-first authoring surface) |
 
 ## Context
 
-ADR-020 established the **product-truth store** as the flow-first upstream layer:
+ADR-023 established the **product-truth store** as the flow-first upstream layer:
 flows are the primary product-intent artifact and acceptance criteria are *derived
 from* flow steps. It named four authoring agents — `pt-classifier`,
 `mock-data-author`, `mockup-author`, `flow-author` — and a `business-analyst`
@@ -187,7 +187,7 @@ carry `spawned_by: ["user"]` and the workflow is not a registered caller (PO / B
 ### Positive
 
 - **The flow-first vision is actually executed.** `/plan-feature` now drafts a
-  reviewable flow (plus mock data and mockups) and derives ACs from it, so ADR-020's
+  reviewable flow (plus mock data and mockups) and derives ACs from it, so ADR-023's
   upstream layer is realised rather than only documented.
 - **Cannot silently no-op.** The store-absent path emits an observable signal and
   still runs AC authoring, so a missing store degrades loudly instead of quietly
@@ -221,7 +221,7 @@ carry `spawned_by: ["user"]` and the workflow is not a registered caller (PO / B
   journey to decompose.
 - Derived `impl_status` on the two meta-flows (`author-product-truth`,
   `define-a-feature`) is recomputed from AC `work_status` by the generator — never
-  hand-edited (ADR-020 rule 3).
+  hand-edited (ADR-023 rule 3).
 
 ## Alternatives
 
@@ -266,7 +266,7 @@ keeps each commit scoped and reviewable.
 
 ## References
 
-- [ADR-020 — Product-Truth Store as the Flow-First Upstream Layer](ADR-020-product-truth-flow-first-upstream-layer.md) — the store this phase authors into.
+- [ADR-023 — Product-Truth Store as the Flow-First Upstream Layer](ADR-023-product-truth-flow-first-upstream-layer.md) — the store this phase authors into.
 - [ADR-010 — AC Store as Authoritative Backlog](ADR-010-ac-store-as-authoritative-backlog.md) — the backlog the derived ACs populate.
 - `templates/workflows-js/plan-feature.js` — the E2 runtime workflow the PT phase is wired into.
 - `docs/product-truth/scripts/apply_flow_backlinks.py` — the reconciliation script that writes `step.implements` and re-runs the generator.

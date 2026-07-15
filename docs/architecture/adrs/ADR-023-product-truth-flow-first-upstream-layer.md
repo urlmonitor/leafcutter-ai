@@ -1,5 +1,5 @@
 ---
-title: "ADR-020: Product-Truth Store as the Flow-First Upstream Layer Beside the AC Store"
+title: "ADR-023: Product-Truth Store as the Flow-First Upstream Layer Beside the AC Store"
 description: "Records the decision to introduce a second structured store — the product-truth store (flows, mockups, mock data) — as the flow-first upstream authoring surface that GENERATES acceptance criteria, while the AC store remains the single authoritative backlog. Reconciles ADR-010 by scoping the AC store's authority to the backlog and positioning flows as the upstream product-intent surface. Covers flow-first authoring, ACs derived from flow steps, derived impl_status rolled up from work_status, and the Leafcutter Atlas as the read surface."
 type: "adr"
 status: "accepted"
@@ -27,7 +27,7 @@ related_code:
   - leafcutter-web/lib/data/flows.ts
 ---
 
-# ADR-020: Product-Truth Store as the Flow-First Upstream Layer Beside the AC Store
+# ADR-023: Product-Truth Store as the Flow-First Upstream Layer Beside the AC Store
 
 ## Status
 

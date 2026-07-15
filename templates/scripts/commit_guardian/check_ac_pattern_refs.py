@@ -32,7 +32,7 @@ Usage:
         scripts/commit_guardian/check_ac_pattern_refs.py
 
 DOC_LINKS:
-  - docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/
+  - docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/
 
 DECISION HISTORY:
   - 2026-06-17 [llm-expert/ACS-500f-2]: Created check_ac_pattern_refs.py.

@@ -28,7 +28,7 @@ artifact. The store is the surface on which product intent is authored and
 reviewed *before* acceptance criteria exist, and it is the source from which the
 `business-analyst` derives those criteria. Its authority and its relationship to
 the AC store are recorded in
-[ADR-020](../adrs/ADR-020-product-truth-flow-first-upstream-layer.md).
+[ADR-023](../adrs/ADR-023-product-truth-flow-first-upstream-layer.md).
 
 ## What it is (and is not)
 
@@ -172,7 +172,7 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 
 ## Cross-Links
 
-- [ADR-020 — Product-Truth Store as the Flow-First Upstream Layer](../adrs/ADR-020-product-truth-flow-first-upstream-layer.md) — the decision, and the reconciliation with ADR-010.
+- [ADR-023 — Product-Truth Store as the Flow-First Upstream Layer](../adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — the decision, and the reconciliation with ADR-010.
 - [ADR-010 — AC Store as Authoritative Backlog](../adrs/ADR-010-ac-store-as-authoritative-backlog.md) — the downstream backlog this store feeds.
 - [How to author product-truth artifacts by hand](../../how-to/authoring-product-truth-artifacts.md) — the search → add-vs-create protocol.
 - [Product-truth schema reference](../../how-to/product-truth-schema-reference.md) — field-by-field reference for the four schemas.
