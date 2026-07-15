@@ -1,0 +1,68 @@
+id: TQ-200b-4
+components:
+  - testing-quality
+title: "A triggering change with a missing or stale eval result is a hard failure, never a skip"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given each eval result records the git SHAs of its trigger inputs (the files in
+    its declared dependency closure),
+  When the freshness of an agent's eval is checked against the current revision,
+  Then a result whose recorded input SHAs no longer match the current inputs is
+    STALE,
+  And a triggering change (one that touched an agent's dependency closure) that has
+    a MISSING or STALE result for that agent is a HARD FAILURE — never a skip and
+    never an implicit pass,
+  And the check enumerates the affected agents deterministically and treats a
+    missing result as an error (mirroring TQ-200a-1's coverage-gap rule: in-scope
+    but unproven is a gap, not a silent pass),
+  And the guarantee is enforced as a REQUIRED gate — a required CI status check for
+    the live model run, plus a fast local pre-commit staleness guard that detects
+    and blocks a missing/stale result WITHOUT invoking the model,
+  And LLM-noise is absorbed by the agent's threshold: a small flake that still
+    scores at or above threshold is NOT a failure, so the gate is
+    regression-detecting rather than flaky.
+depends_on:
+  - TQ-200b
+doc_links:
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+  - path: scripts/evals/run_agent_eval.py
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Each eval result persists the git SHAs (or content hashes) of its trigger inputs;
+  a result is stale when any recorded input SHA differs from the current revision's.
+  A staleness check enumerates affected agents deterministically from the trigger
+  manifest (TQ-200b-3) and fails hard when a triggered agent has a missing OR stale
+  result — reusing the coverage-gap error semantics of TQ-200a-1, never a skip/pass.
+  Two enforcement surfaces: (1) a REQUIRED CI status check runs the live eval and
+  compares to threshold/baseline (builds on TQ-200b-2); (2) a fast local pre-commit
+  guard that compares recorded input SHAs to the working tree and BLOCKS on
+  missing/stale WITHOUT a model call (cheap, deterministic). Threshold comparison
+  (TQ-200b-1/-2) absorbs sub-threshold LLM noise so a passing-but-noisy run is not a
+  false failure; only a drop below threshold or a missing/stale result fails.
+delivers_to: null
+expects_from:
+  agent: eval-runner
+  contract: "The machine-readable eval report (TQ-200b-1) plus the per-result recorded trigger-input SHAs the freshness check compares against."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - config
+risk_surface: contract_boundary
