@@ -452,6 +452,20 @@
                 "_comment": "Component-taxonomy guard: pre-stage transformer that rewrites legacy/near-miss `components` LIST values (e.g. build-orchestration -> build_orchestration, guardrail-engine -> commit_guardian) to canonical docs/components.json ids in staged ACs/tickets/docs, so kebab reintroduced by a merge of a pre-migration branch is auto-healed before validators run. Scalar `component` and already-valid ids (e.g. knowledge_management) are untouched. Exits 0 always (fail-open)."
             },
             {
+                "id": "transform-doc-index",
+                "tier": "transform",
+                "name": "Transform doc index (regenerate docs/INDEX.md)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_doc_index.py",
+                "language": "system",
+                "files": "^docs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "always_run": false,
+                "_comment": "TICKET-20260715-DocIndexAutoRegen: Regenerates docs/INDEX.md and git-adds it whenever a docs/*.md file (other than INDEX.md itself) is staged. Exits 0 always (fail-open). Ordered before check-doc-frontmatter and check-description-field so generator-emitted frontmatter survives validation."
+            },
+            {
                 "id": "check-doc-frontmatter",
                 "tier": "judgment",
                 "name": "Check Doc Frontmatter (YAML frontmatter validation for docs/*.md and tickets/)",

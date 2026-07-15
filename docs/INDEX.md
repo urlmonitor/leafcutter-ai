@@ -1,16 +1,18 @@
 ---
-title: "Documentation Index"
-type: index
+title: Documentation Index
+type: reference
 status: active
-created: 2026-06-30
-description: "Master index of all documentation in the leafcutter-ai package, auto-generated."
+created: 2026-07-15
+components: []
+description: Auto-generated index of all documentation files in the docs/ directory.
+last_updated: '2026-07-15'
 ---
 # Documentation Index
 
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-14 17:23 UTC
+> Generated: 2026-07-15 11:32 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -155,6 +157,7 @@ task, then pull only those files.
 | EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](docs/retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](docs/retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering six knowledge items on worktree setup, deployment AC assertions, test coverage, and epic close protocols. |
+| EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](docs/retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](docs/retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](docs/retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
 | EPIC ComputedQualityGates | [docs/retrospectives/EPIC-ComputedQualityGates.md](docs/retrospectives/EPIC-ComputedQualityGates.md) | Post-merge retrospective for EPIC-ComputedQualityGates (PR #201), covering the phantom-done remediation, three-layer integration gap root cause analysis, backfill of 1,802 ACs, and five proposed knowledge items. |
