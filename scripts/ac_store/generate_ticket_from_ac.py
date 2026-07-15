@@ -55,7 +55,7 @@ _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 #: ``describes``, ``related``) are informational only and must NOT enter
 #: ``files_touched``.
 _EDIT_SURFACE_RELATIONSHIPS: frozenset[str] = frozenset(
-    {"constrains", "modifies", "specifies"}
+    {"constrains", "creates", "implements", "modifies", "specifies"}
 )
 
 #: Canonical support agents always added to every generated ticket.
@@ -255,7 +255,7 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     1. The ``reference_file_path`` named in ``it_requirements`` (structured form).
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
-       ``modifies``, ``specifies``).
+       ``creates``, ``implements``, ``modifies``, ``specifies``).
 
     Doc_links with ``relationship`` set to ``describes`` or ``related`` are
     informational only and are excluded from ``files_touched``.  Paths that
