@@ -5,7 +5,7 @@ type: epic
 created: 2026-07-15
 status: todo
 components:
-  - build-orchestration
+  - build_orchestration
 source_ac: BO-2200
 depends_on: []
 requires_diagram: false
