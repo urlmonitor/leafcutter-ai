@@ -71,7 +71,8 @@ created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260716-BP-300e-5.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: >-
