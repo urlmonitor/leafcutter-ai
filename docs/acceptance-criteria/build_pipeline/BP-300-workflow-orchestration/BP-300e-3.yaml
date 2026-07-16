@@ -1,0 +1,69 @@
+id: BP-300e-3
+components:
+  - build_pipeline
+title: "Valid JSON array surrounded by prose is still parsed and the run continues"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Given a workflow run dispatches a helper agent whose structured result is a JSON
+    array (for example a list of ticket objects),
+  And that agent returns the valid JSON array with explanatory prose before and/or
+    after it,
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the intended JSON array with every element intact,
+  And the run continues to its next stage rather than stopping on the extra wording.
+depends_on:
+  - BP-300e
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Edit only the canonical source templates/workflows-js/*.js; rebuild via build.py so the deployed .claude/workflows/*.js copy stays byte-identical (BP-100k drift guard) — never hand-edit the deployed copy."
+  - "The tolerant reader is a pure, synchronous, dependency-free function (no I/O); confine try/except to the JSON.parse boundary only, per the project error-handling policy."
+  - "The balanced scanner must handle a top-level '[' ... ']' array with the same depth logic used for objects, preserving element count and contents."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness, not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-1
+  contract: >-
+    Inline tolerant reader parseAgentJson(raw, {stage, agent}) whose balanced-scan
+    extraction covers both {...} objects and [...] arrays (string/escape-aware) and
+    returns the first balanced top-level value.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_parse_array_with_surrounding_prose_returns_array
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given '<prose>\\n[ {...}, {...} ]\\n<prose>' returns the array with the same element count and contents."
+  - name: test_run_continues_after_prose_wrapped_array
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Stubbed agent returns a prose-wrapped array; the run consumes every element and continues."
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with an
+  input string of the form '<prose>\n[ {...}, {...} ]\n<prose>' asserting the returned
+  value equals the intended array (same element count and contents). Also coverable by a
+  workflow-level integration test that dispatches a stubbed agent returning a
+  prose-wrapped array and asserts the run consumes every element and continues. This AC
+  isolates the array shape from the object shape (BP-300e-1 / BP-300e-2) because the
+  extractor must balance '[' ... ']' as well as '{' ... '}'.

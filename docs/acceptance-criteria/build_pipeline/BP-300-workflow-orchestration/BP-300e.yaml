@@ -1,0 +1,49 @@
+id: BP-300e
+readiness: approved
+req_status: draft
+priority: high
+components:
+  - build_pipeline
+title: "Delivery commands finish even when an agent adds extra wording to its reply"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Extra wording in an agent's reply never crashes your run.
+
+  Your /plan-feature, /build-feature, and /finalize-feature runs (and the epic
+  and ticket workflows behind them) complete and produce the output you asked
+  for — the requirements, tickets, and merges — even when a helper agent wraps
+  a perfectly good answer in an explanatory note or heading. A reply that is
+  genuinely unusable still stops the run with a clear message, so cosmetic
+  wording never costs you a lost run and real problems are never hidden.
+depends_on:
+  - BP-300
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+documentation_triggers: []
+documentation_rationale: >-
+  Reliability hardening of existing delivery commands — introduces no new
+  command, workflow, state machine, or component. The behavior is invisible
+  when working and surfaces only as clearer failures, so no user-facing doc
+  artifact is warranted.
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300e-1
+  - BP-300e-2
+  - BP-300e-3
+  - BP-300e-4
+  - BP-300e-5
+  - BP-300e-6
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
