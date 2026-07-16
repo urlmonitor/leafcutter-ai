@@ -880,6 +880,7 @@ def _build_frontmatter(
     ac_id: str,
     files_touched: list[str],
     agents: dict[str, str],
+    ac_store_path: "str | None" = None,
 ) -> str:
     """Build the YAML frontmatter block for the ticket.
 
@@ -888,6 +889,11 @@ def _build_frontmatter(
         ac_id: The AC id.
         files_touched: Local paths extracted from doc_links.
         agents: Agents map dict.
+        ac_store_path: Repo-root-relative path to the source AC YAML file.
+            When provided, an ``ac_traceability`` entry is added to the
+            frontmatter carrying both the AC id and the store path, enabling
+            ac-validator and ac-fulfillment-gate to locate the source AC
+            directly without scanning the whole store.
 
     Returns:
         Formatted frontmatter string (including opening and closing ``---``).
@@ -910,6 +916,8 @@ def _build_frontmatter(
         "agents": agents,
         "complexity": complexity,
     }
+    if ac_store_path is not None:
+        fm["ac_traceability"] = {"id": ac_id, "path": ac_store_path}
     test_constraints_raw = ac.get("test_constraints")
     test_constraints = _parse_test_constraints(test_constraints_raw)
     if test_constraints:
@@ -1477,6 +1485,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     ac_path, ac = result
 
+    # Compute repo-root-relative path to the AC file for ac_traceability.
+    # ac_path is guaranteed to be under ac_root (found by _find_ac_by_id),
+    # so relative_to(ac_root.parent.parent) always succeeds.
+    ac_store_path = str(ac_path.relative_to(ac_root.parent.parent))
+
     # Dry-run / verify: build the ticket in memory, print it, and (for --verify)
     # append a readiness report. Neither path writes a file.
     if args.dry_run or args.verify:
@@ -1489,7 +1502,7 @@ def main(argv: list[str] | None = None) -> int:
             change_targets=change_targets,
             risk_surface=risk_surface,
         )
-        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
+        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
         body = _build_ticket_body(ac, ac_id, agents_map=agents)
         print(frontmatter)
         print()
@@ -1523,7 +1536,7 @@ def main(argv: list[str] | None = None) -> int:
         change_targets=change_targets,
         risk_surface=risk_surface,
     )
-    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
+    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
     body = _build_ticket_body(ac, ac_id, agents_map=agents)
     ticket_content = frontmatter + "\n\n" + body
 
