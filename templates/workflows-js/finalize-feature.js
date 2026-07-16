@@ -767,6 +767,11 @@ if (testPassed) {
     );
 
     const recoveryWorktreePath = `${baselineTmpPath}-recovery`;
+    // Register with the workflow-level cleanup guard so cleanupBaselineWorktree()
+    // fires on any early exit (crash/non-compliant agent/malformed output) that
+    // occurs while the recovery worktree exists (mirrors the Step 0 pattern at
+    // line 413 where baselineWorktreePath = baselineTmpPath is set before dispatch).
+    baselineWorktreePath = recoveryWorktreePath;
 
     const recoveryResult = await agent(
       "Perform a targeted rerun of specific failing test IDs against a fresh origin/main checkout.\n" +
@@ -838,12 +843,19 @@ if (testPassed) {
         "All post-merge failures will be classified as regressions.\n" +
         "Failing tests with modified_by_branch status:\n" +
         postMergeFailures.map(id => {
-          const modifiedByBranch = changedFiles.some(f => id.startsWith(f) || id.includes(f));
+          const testFile = id.split("::")[0];
+          const modifiedByBranch = changedFiles.includes(testFile);
           return `  - ${id} [modified_by_branch: ${modifiedByBranch}]`;
         }).join("\n")
       );
       // baselineFailures remains null — triage Step 1 classifies all as regressions.
     }
+    // Workflow-level cleanup: remove the recovery worktree unconditionally
+    // (belt-and-suspenders; the agent prompt handles cleanup in steps B/D, but
+    // this ensures the path is removed even on malformed/crash/non-compliant exit).
+    // cleanupBaselineWorktree() also resets baselineWorktreePath = null so later
+    // halt paths do not double-target the recovery path.
+    await cleanupBaselineWorktree();
   }
 
   const triageRaw = await agent(

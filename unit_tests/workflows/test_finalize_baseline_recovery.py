@@ -1,17 +1,20 @@
 """
 MODULE: test_finalize_baseline_recovery
-GOAL: Verify that finalize-feature.js implements null-baseline targeted-rerun
-recovery logic (FIN-100c-4..9) instead of blanket-classification of all
-post-merge failures as regressions when the Step 0 baseline capture fails.
-
-Nature: TDD test stubs — MUST be RED until python-coder implements the recovery
-branch in templates/workflows-js/finalize-feature.js and updates
-templates/agents/test-failure-triage.md.
-
-All tests here read the source files as text and assert that specific
-implementation signals are present. The signals are absent until the recovery
-branch is coded, so every test below is expected to fail (ImportError or
-AssertionError). This is the correct red baseline for the TDD cycle.
+GOAL: Behavioral tests for the null-baseline targeted-rerun recovery path in
+      finalize-feature.js (FIN-100c-4 to FIN-100c-9), using the E2 workflow
+      harness to execute real JS code and assert on observed agent call behavior.
+BUSINESS CONTEXT: The 2026-07-15 incident: Step 0 baseline capture failed
+      (run_failed), so three deploy-dependent post-merge failures were all
+      misclassified as regressions, halting finalize incorrectly. The recovery
+      branch re-runs only the failing test IDs against origin/main HEAD to
+      recover a targeted baseline, enabling correct pre_existing vs. regression
+      classification and unblocking the finalize.
+ARCHITECTURE: Tests use run_workflow_under_e2() from _workflow_engine_harness.py
+      to run finalize-feature.js in a Node.js subprocess with mock agent() calls
+      controlled via label_responses. Behavioral assertions inspect the triage
+      agent call's prompt to verify the correct baseline_failures value is
+      forwarded. This catches implementation bugs that source-text grep tests
+      cannot catch (e.g. the logic is inverted, the wrong branch runs).
 
 ACs: FIN-100c-4, FIN-100c-5, FIN-100c-6, FIN-100c-7, FIN-100c-8, FIN-100c-9
 TICKET: TICKET-20260715-FinalizeBaselineFallbackTargetedRerun
@@ -19,402 +22,302 @@ TICKET: TICKET-20260715-FinalizeBaselineFallbackTargetedRerun
 
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
+
+# unit_tests/ must be on sys.path so _workflow_engine_harness is importable
+# from this sub-package (unit_tests/workflows/). E402 is suppressed in ruff.toml.
+_UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
+if str(_UNIT_TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_UNIT_TESTS_DIR))
+
+from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
-_TRIAGE_MD_PATH = _REPO_ROOT / "templates" / "agents" / "test-failure-triage.md"
 
-# The 3 deploy-dependent tests that produced the false test_regression halt on 2026-07-15
-_2026_07_15_TEST_IDS = [
-    "tests/commit_guardian/test_commit_guardian_imports.py::test_module_set_is_non_empty",
-    "tests/test_build_phases.py::test_includes_plan_feature",
-    "tests/test_build_phases.py::test_deployed_in_consumer_config",
+# Canonical post-merge failing test IDs used across behavioral tests.
+# These represent a realistic set of deploy-dependent or pre-existing failures.
+_POST_MERGE_FAILURES = [
+    "tests/foo.py::test_one",
+    "tests/bar.py::test_two",
+    "tests/baz.py::test_three",
 ]
 
-
-def _js() -> str:
-    """Return the full text of finalize-feature.js."""
-    return _JS_PATH.read_text(encoding="utf-8")
-
-
-def _triage_md() -> str:
-    """Return the full text of test-failure-triage.md."""
-    return _TRIAGE_MD_PATH.read_text(encoding="utf-8")
+_HARNESS_TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
 
 # ---------------------------------------------------------------------------
-# FIN-100c-4: Null baseline triggers a targeted main-HEAD rerun (with build.py parity)
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-def test_null_baseline_with_failures_does_not_blanket_regress():
-    # covers: FIN-100c-4
-    """FIN-100c-4: With baseline_failures=null and a non-empty post-merge failure
-    set, the workflow does NOT immediately mark every failure regression; it enters
-    the recovery branch instead of the blanket-regression path.
+def _base_label_responses(
+    post_merge_failing_tests: list | None = None,
+    targeted_rerun_response: dict | None = None,
+) -> dict:
+    """Build label_responses that drive finalize-feature.js to the recovery step.
 
-    To make this test green, implement the null-baseline recovery branch in
-    finalize-feature.js and include a 'targeted rerun' log or comment as the
-    canonical implementation signal.
+    Drives Step 0 to fail (baselineFailures=null), Step 1 to find an open PR,
+    Step 2 to merge cleanly, and Step 3 test run to fail with the given tests.
+    targeted_rerun_response controls what the recovery agent returns.
     """
-    js = _js()
-    assert "targeted rerun" in js, (
-        "finalize-feature.js must contain the phrase 'targeted rerun' (in a log or "
-        "comment) as the canonical signal that the null-baseline recovery branch is "
-        "implemented. Currently absent — recovery branch not yet coded."
-    )
+    if post_merge_failing_tests is None:
+        post_merge_failing_tests = list(_POST_MERGE_FAILURES)
+    responses: dict = {
+        "pre-flight": {
+            "found": True,
+            "branch": "feature/test-recovery",
+            "worktree_root": "/tmp/test-wt",
+        },
+        "gh-config": {"gh_target_account": None, "gh_repo": None},
+        # run_failed → baselineFailures stays null, recovery branch activates.
+        "step-0-baseline": {
+            "status": "run_failed",
+            "baseline_sha": None,
+            "baseline_failures": None,
+            "baseline_run_at": None,
+        },
+        # PR already open → skip pull-request agent dispatch.
+        "step-1-pr-probe": {
+            "found": True,
+            "number": 42,
+            "url": "https://github.com/test/pull/42",
+        },
+        # Clean merge → no conflict halt.
+        "step-2-merge-main": {"status": "merged", "merge_strategy": "merged_main"},
+        # Non-empty failing_tests → enters triage sub-step (and potentially recovery).
+        "step-3-test-run": {
+            "passed": False,
+            "output": "test output stub",
+            "failing_tests": post_merge_failing_tests,
+        },
+        "step-3-changed-files": {"changed_files": []},
+        # blocks_finalization=false → triage does not halt the workflow.
+        "step-3-triage": {"triage_report": [], "blocks_finalization": False},
+    }
+    if targeted_rerun_response is not None:
+        responses["step-3-targeted-rerun"] = targeted_rerun_response
+    return responses
 
 
-def test_null_baseline_establishes_main_head_checkout():
-    # covers: FIN-100c-4
-    """FIN-100c-4: The recovery branch establishes a detached checkout of
-    origin/main HEAD before re-running the failing tests.
+def _find_triage_call(result: HarnessResult):
+    """Return the step-3-triage AgentCall from the harness result, or None."""
+    for call in result.agent_calls:
+        if call.label == "step-3-triage":
+            return call
+    return None
 
-    Step 0 already uses one 'worktree add --detach' (baseline capture).
-    The recovery branch must add a second occurrence for the main-HEAD checkout.
+
+def _extract_baseline_failures(triage_call) -> tuple:
+    """Parse the baseline_failures value from the triage agent's prompt.
+
+    The prompt contains:
+      '...baseline_failures=<JSON value>, baseline_sha=...'
+
+    Returns (parsed_value, error_str).
+    parsed_value is the parsed Python value (list or None on success).
+    error_str is None on success, a description string on failure.
     """
-    js = _js()
-    count = js.count("worktree add --detach")
-    assert count >= 2, (
-        f"Expected at least 2 occurrences of 'worktree add --detach' in "
-        f"finalize-feature.js (step 0 baseline + null-baseline recovery checkout), "
-        f"but found {count}. Recovery branch checkout not yet implemented."
-    )
-
-
-def test_null_baseline_runs_build_before_rerun():
-    # covers: FIN-100c-4
-    """FIN-100c-4: The recovery branch runs python3 scripts/build.py against the
-    main-HEAD checkout BEFORE executing the tests, matching the Step 0 / Step 3
-    build/deploy step (deploy parity with FIN-100a-4).
-
-    Step 0 (~L440) and Step 3 (~L677) each call scripts/build.py once.
-    The recovery branch must add a third call.
-    """
-    js = _js()
-    count = js.count("scripts/build.py")
-    assert count >= 3, (
-        f"Expected at least 3 occurrences of 'scripts/build.py' in "
-        f"finalize-feature.js (step 0, step 3, and null-baseline recovery branch), "
-        f"but found {count}. Recovery branch build step not yet implemented."
-    )
-
-
-def test_null_baseline_reexecutes_failing_tests_on_main():
-    # covers: FIN-100c-4
-    """FIN-100c-4: The recovery branch re-executes the post-merge failing tests
-    against main HEAD and records each test's pass/fail result on main.
-
-    The 'recoveredBaselineFailures' (or 'recoveredBaseline') variable is the
-    canonical signal that the rerun results have been captured.
-    """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "finalize-feature.js must define a 'recoveredBaselineFailures' (or "
-        "'recoveredBaseline') variable to store the main-HEAD rerun results. "
-        "Not yet implemented — recovery branch absent."
-    )
+    prompt = triage_call.prompt
+    if not isinstance(prompt, str):
+        return None, f"triage prompt is not a string: {type(prompt)!r}"
+    marker = "baseline_failures="
+    idx = prompt.find(marker)
+    if idx == -1:
+        return None, "'baseline_failures=' not found in triage prompt"
+    after = prompt[idx + len(marker):]
+    end_marker = ", baseline_sha="
+    end_idx = after.find(end_marker)
+    if end_idx == -1:
+        return None, f"', baseline_sha=' not found after baseline_failures; got: {after[:120]!r}"
+    json_str = after[:end_idx]
+    try:
+        return json.loads(json_str), None
+    except json.JSONDecodeError as exc:
+        return None, f"JSON parse error on {json_str!r}: {exc}"
 
 
 # ---------------------------------------------------------------------------
-# FIN-100c-5: Rerun is scoped to only the failing test IDs (bounded runtime)
+# Smoke checks (thin, non-tautological — guard naming and label contracts)
+# These verify implementation artifacts that must stay stable; they are not
+# the primary evidence (behavioral tests below are).
 # ---------------------------------------------------------------------------
 
 
-def test_rerun_executes_only_failing_test_ids():
-    # covers: FIN-100c-5
-    """FIN-100c-5: The main-HEAD rerun is invoked with exactly the K post-merge
-    failing test node IDs and no other tests.
-
-    The scoped invocation is the canonical way the recovery path achieves bounded
-    runtime — it must not submit a blanket discover/full-suite call.
-    """
-    js = _js()
-    assert "targeted rerun" in js, (
-        "finalize-feature.js must contain 'targeted rerun' to signal the scoped "
-        "rerun of only the failing test IDs. Not yet implemented."
+def test_js_uses_recoveredbaselinefailures_variable():
+    """The recovery variable must be named 'recoveredBaselineFailures' in the JS."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    assert "recoveredBaselineFailures" in js, (
+        "finalize-feature.js must define the 'recoveredBaselineFailures' variable "
+        "to hold the targeted main-HEAD rerun results. Renaming it breaks the "
+        "implementation contract and the behavioral tests below."
     )
 
 
-def test_rerun_does_not_run_full_suite():
-    # covers: FIN-100c-5
-    """FIN-100c-5: The recovery path never invokes the full test suite (no bare
-    pytest / discover) — only the scoped node-ID invocation.
-
-    Asserting the recovery branch variable is present is a prerequisite for
-    verifying that full-suite discovery is not used in the recovery path.
-    """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — cannot verify that full-suite "
-        "discovery is avoided. Implement the scoped rerun first."
+def test_js_fallback_log_uses_rerun_unavailable_phrase():
+    """The conservative fallback path must log 'targeted rerun unavailable'."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    assert "targeted rerun unavailable" in js, (
+        "finalize-feature.js must log 'targeted rerun unavailable' in the fallback "
+        "path (FIN-100c-9) so operators can distinguish conservative fallback from a "
+        "genuine regression halt."
     )
 
 
-def test_rerun_completes_when_full_suite_baseline_timed_out():
-    # covers: FIN-100c-5
-    """FIN-100c-5: Given the Step 0 full-suite baseline timed out
-    (baseline_failures null), the scoped rerun of K IDs still completes and
-    yields a recovered baseline.
-
-    The recovered baseline variable is the canonical output of the scoped rerun.
-    """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "finalize-feature.js must build a 'recoveredBaselineFailures' variable "
-        "from the scoped main-HEAD rerun — even when the full-suite Step 0 baseline "
-        "timed out. Not yet implemented."
+def test_js_uses_step3_targeted_rerun_label():
+    """The recovery agent dispatch must use label='step-3-targeted-rerun'."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    assert "step-3-targeted-rerun" in js, (
+        "finalize-feature.js must dispatch the recovery agent with "
+        "label='step-3-targeted-rerun'. Absent — label was renamed or removed."
     )
 
 
 # ---------------------------------------------------------------------------
-# FIN-100c-6: Recovered baseline built from rerun, forwarded as non-null to triage
+# Behavioral tests
+#
+# Each test drives the full workflow body via run_workflow_under_e2(), then
+# locates the step-3-triage agent call and asserts on the baseline_failures
+# value embedded in its prompt. This is mutation-resistant: inverting the
+# recovery logic in JS causes baseline_failures to carry the wrong value,
+# which these tests detect directly.
+#
+# Mutation resistance verified (see task sign-off): temporarily setting
+# baselineFailures = null in the success arm caused tests 1-3 to fail;
+# reverting restored them to green.
 # ---------------------------------------------------------------------------
 
 
-def test_recovered_baseline_contains_only_ids_that_fail_on_main():
-    # covers: FIN-100c-6
-    """FIN-100c-6: The recovered baseline equals the intersection of
-    post_merge_failures and the set of tests that failed on the main-HEAD rerun.
+def test_behavioral_recovery_ok_subset_triage_gets_recovered_list():
+    """AC FIN-100c-6: recovery ok, subset → triage receives exactly the recovered subset.
 
-    Implementation must build recoveredBaselineFailures = post_merge_failures
-    intersected with main-HEAD rerun failures.
+    Post-merge failures: [T1, T2, T3]. Recovery reports [T2, T3] fail on main.
+    Expected: triage receives baseline_failures=[T2, T3] (T1 is a regression).
     """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "finalize-feature.js must build a 'recoveredBaselineFailures' variable "
-        "(intersection of post-merge failures and main-HEAD rerun failures). "
-        "Not yet implemented."
+    recovered = ["tests/bar.py::test_two", "tests/baz.py::test_three"]
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "ok", "recovered_failures": recovered},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        "step-3-triage agent was not dispatched. "
+        f"Dispatched labels: {[c.label for c in result.agent_calls]!r}. "
+        f"harness stderr: {result.stderr[:400]!r}"
+    )
+
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures from triage prompt: {err}"
+    assert baseline_failures == recovered, (
+        f"Expected triage baseline_failures={recovered!r} (recovered subset), "
+        f"but got {baseline_failures!r}. "
+        "The success arm must set baselineFailures = recoveredBaselineFailures "
+        "before the triage dispatch (FIN-100c-6)."
     )
 
 
-def test_recovered_baseline_supplied_as_baseline_failures():
-    # covers: FIN-100c-6
-    """FIN-100c-6: The triage dispatch receives the recovered baseline as
-    baseline_failures in place of null.
+def test_behavioral_recovery_ok_empty_triage_gets_empty_not_null():
+    """AC FIN-100c-6: recovery ok, empty → triage receives [], NOT null.
 
-    The JS must reassign baselineFailures to the recovered baseline (a list,
-    never null) before the triage agent dispatch at ~L747.
+    Post-merge failures: [T1, T2, T3]. Recovery reports [] (nothing fails on main).
+    Expected: triage receives baseline_failures=[] — the [] vs null distinction is
+    load-bearing: null would re-trigger the conservative all-regressions path.
     """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "finalize-feature.js must reassign baselineFailures to the recovered "
-        "baseline before the triage dispatch, so triage receives a non-null "
-        "list in place of null. Not yet implemented."
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "ok", "recovered_failures": []},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        "step-3-triage agent was not dispatched. "
+        f"Dispatched labels: {[c.label for c in result.agent_calls]!r}"
+    )
+
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures is not None, (
+        "triage received baseline_failures=null but expected [] (empty list). "
+        "An empty recovered baseline must be forwarded as [], never null — "
+        "null would re-trigger the conservative null-baseline path in triage."
+    )
+    assert baseline_failures == [], (
+        f"Expected triage baseline_failures=[] but got {baseline_failures!r}."
     )
 
 
-def test_ids_passing_on_main_excluded_from_recovered_baseline():
-    # covers: FIN-100c-6
-    """FIN-100c-6: Test IDs that pass on main HEAD are excluded from the recovered
-    baseline so they remain in the regression set-difference.
+def test_behavioral_recovery_ok_all_pre_existing_triage_gets_all():
+    """AC FIN-100c-6/8: all post-merge failures pre-exist on main → triage gets all.
 
-    Passers-on-main are NOT in the intersection and must be absent from
-    recoveredBaselineFailures; they will be classified as regression by triage.
+    Post-merge failures: [T1, T2, T3]. Recovery reports all three fail on main.
+    Expected: triage receives baseline_failures=[T1, T2, T3], so regressions=[] and
+    blocks_finalization=false (the 2026-07-15 deploy-dependent false-halt scenario).
     """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — cannot verify that passers-on-main "
-        "are excluded from the recovered baseline."
+    all_failures = list(_POST_MERGE_FAILURES)
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "ok", "recovered_failures": all_failures},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        "step-3-triage agent was not dispatched. "
+        f"Dispatched labels: {[c.label for c in result.agent_calls]!r}"
+    )
+
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures == all_failures, (
+        f"Expected triage baseline_failures={all_failures!r} (all pre-existing), "
+        f"but got {baseline_failures!r}."
     )
 
 
-def test_recovered_baseline_empty_list_when_none_fail_on_main():
-    # covers: FIN-100c-6
-    """FIN-100c-6: When no failing test fails on main, baseline_failures is
-    forwarded as [] (clean baseline → all regressions), never as null.
+def test_behavioral_recovery_checkout_failed_triage_gets_null():
+    """AC FIN-100c-9: checkout_failed → conservative fallback → triage gets null.
 
-    The [] vs null distinction is load-bearing: null would re-trigger the
-    conservative null-baseline path in triage (Step 1), which must not happen.
+    When the main-HEAD worktree checkout fails, the recovery branch must fall back
+    to the conservative null-baseline path: triage receives baseline_failures=null
+    and treats all post-merge failures as regressions.
     """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — cannot verify the [] vs null "
-        "distinction when no failing test fails on main HEAD."
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "checkout_failed", "recovered_failures": None},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        "step-3-triage agent was not dispatched. "
+        f"Dispatched labels: {[c.label for c in result.agent_calls]!r}"
+    )
+
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures is None, (
+        f"Expected triage to receive baseline_failures=null after checkout_failed "
+        f"(conservative fallback must preserve null), but got {baseline_failures!r}."
     )
 
 
-# ---------------------------------------------------------------------------
-# FIN-100c-7: pre_existing vs regression classification over recovered baseline
-# ---------------------------------------------------------------------------
+def test_behavioral_empty_post_merge_failures_skips_recovery():
+    """AC FIN-100c-5: postMergeFailures empty → recovery agent never dispatched.
 
-
-def test_recovered_baseline_failures_on_main_classified_pre_existing():
-    # covers: FIN-100c-7
-    """FIN-100c-7: Given a recovered baseline, every post-merge failure that also
-    fails on main HEAD is classified pre_existing (e.g. the 2026-07-15 case:
-    all 3 deploy-dependent tests).
-
-    The triage template must explicitly document the recovered-baseline scenario
-    so operators and reviewers understand that a non-null baseline may originate
-    from a targeted main-HEAD rerun.
+    The targeted-rerun condition is: baselineFailures === null AND
+    postMergeFailures.length > 0. When post-merge failures is empty the second
+    clause is false, so the step-3-targeted-rerun agent must not be called.
     """
-    triage_md = _triage_md()
-    assert "recovered" in triage_md.lower(), (
-        "templates/agents/test-failure-triage.md must document the 'recovered "
-        "baseline' scenario — a non-null baseline supplied from a targeted main-HEAD "
-        "rerun rather than a full Step 0 baseline capture. Not yet documented."
+    label_responses = _base_label_responses(
+        post_merge_failing_tests=[],  # empty — recovery condition is false
+        targeted_rerun_response=None,
     )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
 
-
-def test_recovered_baseline_pass_on_main_classified_regression():
-    # covers: FIN-100c-7
-    """FIN-100c-7: A post-merge failure whose test passes on main HEAD (absent from
-    the recovered baseline) is classified regression.
-
-    The triage dispatch in finalize-feature.js must forward the recovered baseline
-    as baseline_failures so the existing set-difference (Step 2 in triage template)
-    correctly classifies passers-on-main as regression.
-    """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — the JS must forward the recovered "
-        "baseline to triage so that tests passing on main HEAD are classified "
-        "regression by the set-difference. Not yet implemented."
-    )
-
-
-def test_triage_report_includes_category_per_test():
-    # covers: FIN-100c-7
-    """FIN-100c-7: Each post-merge failure appears in the triage_report with its
-    category field set, including when the baseline was recovered from a targeted
-    main-HEAD rerun.
-
-    The 'targeted rerun' signal in finalize-feature.js is the prerequisite:
-    without the recovery branch, per-test categories cannot be correctly assigned
-    in the recovered-baseline scenario (all would be regression via the null path).
-    """
-    js = _js()
-    assert "targeted rerun" in js, (
-        "finalize-feature.js must implement the targeted rerun path before "
-        "per-test categories can be correctly computed for the recovered-baseline "
-        "scenario. 'targeted rerun' not found in JS — not yet implemented."
-    )
-
-
-# ---------------------------------------------------------------------------
-# FIN-100c-8: Only real regressions set blocks_finalization=true
-# ---------------------------------------------------------------------------
-
-
-def test_all_pre_existing_does_not_block_finalization():
-    # covers: FIN-100c-8
-    """FIN-100c-8: When every post-merge failure is classified pre_existing against
-    the recovered baseline, blocks_finalization is false and finalization proceeds.
-    """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — the all-pre_existing scenario "
-        "(blocks_finalization=false) requires the recovered baseline to be forwarded "
-        "to triage. Not yet coded."
-    )
-
-
-def test_any_regression_blocks_finalization():
-    # covers: FIN-100c-8
-    """FIN-100c-8: When at least one post-merge failure is classified regression,
-    blocks_finalization is true (finalize HALTs).
-
-    The existing halt gate (~L802) already reads blocks_finalization from triage.
-    The recovery branch must forward the recovered baseline so that tests passing
-    on main remain in the regression set.
-    """
-    js = _js()
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — genuine regressions (tests passing "
-        "on main HEAD) still halt finalization, but only after the recovery branch "
-        "forwards the recovered baseline. Not yet coded."
-    )
-
-
-def test_2026_07_15_three_deploy_dependent_all_pre_existing_no_false_halt():
-    # covers: FIN-100c-8
-    """FIN-100c-8 (regression test): The 2026-07-15 case — 3 deploy-dependent tests,
-    all pre-existing on main — must yield blocks_finalization=false with the recovery
-    branch, preventing the false test_regression halt observed in workflow wf_23c45a0a-f4d.
-
-    This is the primary regression test for the false-positive pattern documented
-    in the ticket context.
-    """
-    js = _js()
-    # Gate: recovery branch must exist before the simulation is meaningful.
-    assert "recoveredBaselineFailures" in js or "recoveredBaseline" in js, (
-        "Recovery branch not yet implemented — the 2026-07-15 false-halt scenario "
-        "cannot be resolved without the null-baseline targeted rerun."
-    )
-    # Simulation: given recovered_baseline = all 3 tests (they all fail on main),
-    # the set-difference regressions = empty, and blocks_finalization must be False.
-    post_merge_failures = set(_2026_07_15_TEST_IDS)
-    recovered_baseline = set(_2026_07_15_TEST_IDS)  # all 3 also fail on origin/main
-    regressions = post_merge_failures - recovered_baseline
-    blocks_finalization = len(regressions) > 0
-    assert not blocks_finalization, (
-        "With all 3 deploy-dependent tests pre-existing on main HEAD, "
-        "the recovered-baseline set-difference must yield empty regressions and "
-        f"blocks_finalization=False. Got regressions={regressions}."
-    )
-
-
-# ---------------------------------------------------------------------------
-# FIN-100c-9: Rerun-unavailable → conservative fallback + modified_by_branch
-# ---------------------------------------------------------------------------
-
-
-def test_rerun_checkout_failure_falls_back_to_conservative_halt():
-    # covers: FIN-100c-9
-    """FIN-100c-9: When the main-HEAD checkout fails, the workflow falls back to the
-    conservative null-baseline path (all failures regression,
-    blocks_finalization=true).
-
-    The conservative fallback log line is the canonical implementation signal for
-    FIN-100c-9 (the narrowed successor to the former FIN-100c-3 blanket-halt).
-    """
-    js = _js()
-    assert "targeted rerun unavailable" in js or "rerun unavailable" in js, (
-        "finalize-feature.js must log 'targeted rerun unavailable' (or 'rerun "
-        "unavailable') when the main-HEAD checkout fails to distinguish this "
-        "conservative fallback from a genuine recovered-baseline regression halt. "
-        "Not yet implemented."
-    )
-
-
-def test_rerun_build_failure_falls_back_to_conservative_halt():
-    # covers: FIN-100c-9
-    """FIN-100c-9: When the build/deploy step against the main-HEAD checkout errors,
-    the workflow falls back to the conservative halt.
-    """
-    js = _js()
-    assert "targeted rerun unavailable" in js or "rerun unavailable" in js, (
-        "finalize-feature.js must log 'targeted rerun unavailable' (or 'rerun "
-        "unavailable') when the build/deploy step fails against the main-HEAD checkout. "
-        "Not yet implemented."
-    )
-
-
-def test_conservative_fallback_sets_blocks_finalization_true():
-    # covers: FIN-100c-9
-    """FIN-100c-9: The fallback halt sets blocks_finalization=true and treats every
-    post-merge failure as regression (reusing the existing triage Step 1 null path).
-    """
-    js = _js()
-    assert "targeted rerun unavailable" in js or "rerun unavailable" in js, (
-        "Conservative rerun-unavailable fallback not yet implemented in "
-        "finalize-feature.js."
-    )
-
-
-def test_halt_message_lists_modified_by_branch_per_test():
-    # covers: FIN-100c-9
-    """FIN-100c-9: The conservative halt message lists each failing test together
-    with its modified_by_branch flag so a human can adjudicate which failures
-    the branch actually touched.
-
-    The modified_by_branch flag is already emitted by triage Step 3 and forwarded
-    in the halt payload (~L808). The conservative fallback halt path must surface it.
-    """
-    js = _js()
-    assert "targeted rerun unavailable" in js or "rerun unavailable" in js, (
-        "Conservative rerun-unavailable fallback not yet implemented — cannot "
-        "verify that modified_by_branch is surfaced in the halt message."
+    dispatched_labels = [c.label for c in result.agent_calls]
+    assert "step-3-targeted-rerun" not in dispatched_labels, (
+        "step-3-targeted-rerun was dispatched but must NOT be when postMergeFailures "
+        "is empty (condition: baselineFailures===null AND postMergeFailures.length>0). "
+        f"All dispatched labels: {dispatched_labels!r}"
     )
