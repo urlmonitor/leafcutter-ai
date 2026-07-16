@@ -992,6 +992,44 @@ def _normalize_change_target(ac: AcRecord) -> list[str] | None:
     return [raw]
 
 
+def _criteria_checkboxes(criteria: str) -> list[str]:
+    """Derive machine-parseable ``- [ ] AC-N: <text>`` checkbox lines from criteria.
+
+    Extracts the text of each ``Then`` / ``And`` keyword clause in a Gherkin
+    criteria string (one checkbox per clause).  When no ``Then`` / ``And``
+    clauses are found, falls back to the first non-empty stripped line of the
+    criteria so that every non-empty criteria string produces at least one
+    checkbox.
+
+    The resulting lines match the ac-validator parser pattern
+    ``^- \\[ \\] AC-\\d+:\\s*\\S`` (with MULTILINE), satisfying TKT-500f-11.
+
+    Args:
+        criteria: The raw Gherkin criteria text from an AC record.
+
+    Returns:
+        A list of ``- [ ] AC-N: <text>`` strings — one per extracted clause.
+        Returns an empty list only when *criteria* is blank.
+    """
+    raw_lines = criteria.split("\n")
+    clauses: list[str] = []
+    for line in raw_lines:
+        stripped = line.strip()
+        m = re.match(r"^(Then|And)\s+(.*)", stripped, re.IGNORECASE)
+        if m:
+            text = m.group(2).rstrip(",").strip()
+            if text:
+                clauses.append(text)
+    if not clauses:
+        # Fallback: use the first non-empty line verbatim
+        for line in raw_lines:
+            stripped = line.strip()
+            if stripped:
+                clauses.append(stripped)
+                break
+    return [f"- [ ] AC-{i + 1}: {clause}" for i, clause in enumerate(clauses)]
+
+
 def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | None" = None) -> str:
     """Build the ticket body (everything after the frontmatter).
 
@@ -1040,6 +1078,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     # agent in the computed map produces production_code.
     has_code_producer = _computed_map_has_production_code_producer(agents)
 
+    checkbox_lines = _criteria_checkboxes(criteria)
     lines: list[str] = [
         f"# {title}",
         "",
@@ -1061,6 +1100,8 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         "```gherkin",
         criteria.rstrip(),
         "```",
+        "",
+        *checkbox_lines,
         "",
     ]
 
