@@ -58,6 +58,36 @@ _EDIT_SURFACE_RELATIONSHIPS: frozenset[str] = frozenset(
     {"constrains", "creates", "implements", "modifies", "specifies"}
 )
 
+#: Recognized file extensions for path detection in prose bullet strings.
+#: Only tokens whose final component carries one of these suffixes are treated
+#: as source file paths (TKT-500f-8-i path-detection rule).
+_PROSE_PATH_EXTENSIONS: frozenset[str] = frozenset({
+    ".py", ".md", ".yaml", ".yml", ".json", ".js", ".ts", ".sql",
+    ".txt", ".toml", ".cfg", ".ini", ".html", ".css", ".sh",
+})
+
+#: Path prefixes that identify extension-less tokens as source paths.
+#: A token that begins with one of these prefixes is included even when it
+#: carries no recognized file extension (TKT-500f-8-i path-detection rule).
+_KNOWN_PATH_PREFIXES: tuple[str, ...] = (
+    "scripts/",
+    "docs/",
+    "templates/",
+    "unit_tests/",
+    "tests/",
+    "leafcutter/",
+    "alembic/",
+)
+
+#: Matches candidate path tokens in prose text.
+#: Requires at least one ``/`` separator; admits the character set of typical
+#: POSIX file paths (alphanumeric, ``_``, ``.``, ``-``, ``/``).  The pattern
+#: is anchored so that each match begins and ends on a word character,
+#: preventing trailing punctuation from being captured as part of the path.
+_PROSE_PATH_TOKEN_RE: re.Pattern[str] = re.compile(
+    r"[A-Za-z0-9_][A-Za-z0-9_.\-]*/[A-Za-z0-9_./\-]*[A-Za-z0-9_]"
+)
+
 #: Canonical support agents always added to every generated ticket.
 _CANONICAL_SUPPORT_AGENTS: list[str] = [
     "test-writer",
@@ -251,12 +281,53 @@ def _extract_local_paths(
     return local
 
 
+def _extract_paths_from_prose(text: str) -> list[str]:
+    """Extract file path tokens from a prose bullet string.
+
+    A token is included only when it contains at least one ``/`` separator
+    AND satisfies one of two conditions:
+
+    * Its final path component ends in a recognized extension from
+      ``_PROSE_PATH_EXTENSIONS`` (e.g. ``scripts/foo.py``, ``docs/bar.md``).
+    * The token begins with a known path prefix from ``_KNOWN_PATH_PREFIXES``
+      (e.g. ``scripts/``, ``docs/``) even when it carries no extension.
+
+    Bare words such as ``"pipeline"`` or prose phrases such as
+    ``"system architecture"`` never satisfy either condition because they
+    contain no ``/`` character, so they are never extracted.
+
+    Args:
+        text: A prose bullet string (one item from a list-form it_requirements).
+
+    Returns:
+        List of file path strings found in *text* (may be empty).
+    """
+    found: list[str] = []
+    for match in _PROSE_PATH_TOKEN_RE.finditer(text):
+        token = match.group(0)
+        # Check for a recognized extension on the final path component.
+        dot_pos = token.rfind(".")
+        slash_pos = token.rfind("/")
+        if dot_pos > slash_pos:
+            # The dot is after the last slash — it belongs to the filename component.
+            ext = token[dot_pos:].lower()
+            if ext in _PROSE_PATH_EXTENSIONS:
+                found.append(token)
+                continue
+        # No recognized extension: fall back to known-prefix check.
+        if any(token.startswith(prefix) for prefix in _KNOWN_PATH_PREFIXES):
+            found.append(token)
+    return found
+
+
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
 
     The list is the union of:
 
-    1. The ``reference_file_path`` named in ``it_requirements`` (structured form).
+    1. The ``reference_file_path`` named in ``it_requirements`` (structured form),
+       or file path tokens extracted from prose bullets when ``it_requirements``
+       is a list of strings (list form — TKT-500f-8-i).
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
        ``creates``, ``implements``, ``modifies``, ``specifies``).
@@ -275,12 +346,20 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """
     paths: set[str] = set()
 
-    # Source 1 — it_requirements.reference_file_path (structured form)
+    # Source 1 — it_requirements edit surface.
+    # Structured form: a dict with an explicit reference_file_path key.
+    # List form (TKT-500f-8-i): a list of prose bullet strings; each bullet is
+    # scanned for file path tokens via _extract_paths_from_prose.
     it_req = ac.get("it_requirements")
     if isinstance(it_req, dict):
         ref_path = it_req.get("reference_file_path", "")
         if isinstance(ref_path, str) and ref_path:
             paths.add(ref_path)
+    elif isinstance(it_req, list):
+        for bullet in it_req:
+            if isinstance(bullet, str):
+                for path_token in _extract_paths_from_prose(bullet):
+                    paths.add(path_token)
 
     # Source 2 — doc_links edit-surface entries
     doc_links = ac.get("doc_links") or []
