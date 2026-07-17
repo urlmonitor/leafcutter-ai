@@ -56,19 +56,19 @@ behavioral_patterns:
   name: Stop-and-Ask
   related_agent: null
   trigger: condition requiring user decision or out-of-scope action
-- behavior: emit `(status: blocker)` naming each required doc absent from the git diff
+- behavior: 'emit `(status: blocker)` naming each required doc absent from the git diff'
   name: Fail on missing doc
   related_agent: null
   trigger: any required documentation file named in the Agent Contracts brief is absent from git diff HEAD
-- behavior: emit `(status: blocker)` — never status: ok on ambiguous or failed parse
+- behavior: 'emit `(status: blocker)` — never status: ok on ambiguous or failed parse'
   name: Fail-closed on parse error
   related_agent: null
   trigger: Agent Contracts block is absent on a v2 ticket, malformed, or raises an exception during parse
-- behavior: emit `(status: blocker)` naming each file and the placeholder marker found
+- behavior: 'emit `(status: blocker)` naming each file and the placeholder marker found'
   name: Fail on placeholder content
   related_agent: null
   trigger: a required doc is present in the diff but contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD markers, unfilled {token} patterns, or is an empty or heading-only stub
-- behavior: emit `(status: blocker)` — never status: ok when the helper script exits non-zero or raises an exception
+- behavior: 'emit `(status: blocker)` — never status: ok when the helper script exits non-zero or raises an exception'
   name: Fail-closed on script error
   related_agent: null
   trigger: python3 invocation of scripts/build_placeholder_detection.py exits non-zero or cannot be imported
