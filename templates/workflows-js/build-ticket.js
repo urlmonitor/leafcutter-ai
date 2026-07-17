@@ -125,6 +125,7 @@ const phaseOrder = [
   "sql-coder",                   // priority 7
   "sql-query",                   // priority 7
   "frontend-coder",              // priority 8
+  "llm-expert",                  // priority 8 — implements agent-template / skill / slash-command prompt work
   "test-runner",                 // priority 9
   "change-scope-reviewer",       // priority 10
   "documentation-expert",        // priority 10
