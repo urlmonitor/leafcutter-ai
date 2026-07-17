@@ -171,7 +171,7 @@ Load `.claude/commands/close-worktree.md` and execute it with the following conf
 
 1. Run Phases 1–3 of the close-worktree workflow (identify worktree, check uncommitted changes, check merge status).
 2. If Phase 2 finds uncommitted changes: stop immediately, show the dirty state, and refuse. Do not proceed to Phase 4.
-3. Run **Phase 3.5 (Sweep Residual Processes and Log Files)** of the close-worktree workflow. Include a pre-sweep summary in the safety-check report: "Sweep will kill N background worker(s) and remove M log file(s)" (use `--dry-run` to compute N and M without acting). If Phase 3.5 detects `conflict_pids`, surface them as anomalies with "action required" severity (see Anomalies below) and refuse to show the confirmation gate until all conflicts are resolved.
+3. Run **Phase 3.5 (Sweep Residual Processes and Log Files)** of the close-worktree workflow. Include a pre-sweep summary in the safety-check report: "Sweep will kill N background worker(s) and remove M log file(s)" (use `--dry-run` to compute N and M without acting). If Phase 3.5 detects `conflict_pids`, surface them as anomalies with "action required" severity — carry each in the `anomalies` array of your JSON response when dispatched for machine-parsed results, or flag them in your `## Anomalies` section on the interactive path — and refuse to show the confirmation gate until all conflicts are resolved.
 4. Otherwise, present the safety-check report to the user:
    - The worktree path and branch name.
    - Whether the branch has unmerged commits.
@@ -196,13 +196,14 @@ If Phase 3.5 reports orphan workers that cannot be killed (protected_paths confl
 
 ## Machine-Parsed Dispatch Output Contract
 
-When this agent is dispatched for a machine-parsed result — the calling workflow
-will `JSON.parse` your reply — your response MUST be exactly one JSON value and
-nothing else:
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
 
-- No `## Anomalies` section, no markdown headings of any kind before or after the payload.
+- No markdown headings of any kind before or after the payload.
 - No leading prose, no trailing prose.
-- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies` array:
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
 
   ```json
   {
@@ -210,7 +211,7 @@ nothing else:
     "worktree_path": "/path/to/worktree",
     "removed": true,
     "conflict_pids": [],
-    "anomalies": []
+    "anomalies": ["Unexpected value in X — may indicate Y"]
   }
   ```
 
@@ -227,7 +228,10 @@ than as a trailing prose section:
 ```
 
 The machine-parsed path is active when the task prompt specifies a JSON return shape
-(e.g. "Return JSON: { ... }") or you are dispatched with a workflow label.
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
 
 ## Sign-off (when ticket_path is provided)
 

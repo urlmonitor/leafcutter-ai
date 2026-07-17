@@ -171,10 +171,23 @@ Rules:
 ## Machine-Parsed Dispatch Output Contract
 
 This agent is always dispatched as a machine-parsed producer: the calling workflow
-will `JSON.parse` your reply. Your response MUST be exactly one JSON value and nothing
-else — no prose, no markdown headings before or after the JSON block. Any unexpected
-condition (e.g. missing index.json, unresolvable entity) must be reported in the
-`anomalies` array inside the JSON payload, not as trailing text.
+will `JSON.parse` your reply (or enforce it against a `schema:`). Your response MUST
+be exactly one JSON value and nothing else — no prose, no markdown headings before or
+after the JSON block.
+
+Carry any anomaly, warning, or unexpected condition INSIDE the JSON payload as an
+`anomalies` array field (e.g. missing index.json, unresolvable entity) — not as
+trailing text:
+
+```json
+{
+  "status": "ok",
+  "anomalies": ["Unexpected value in X — may indicate Y"]
+}
+```
+
+The human/interactive invocation path keeps its normal markdown output; this contract
+applies only to the machine-parsed dispatch path.
 
 ## Boundaries — What pt-classifier Does NOT Do
 

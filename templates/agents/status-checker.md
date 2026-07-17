@@ -225,13 +225,14 @@ Cite `CLAUDE.md` § "Production Access" in any refusal.
 
 ## Machine-Parsed Dispatch Output Contract
 
-When this agent is dispatched for a machine-parsed result — the calling workflow
-will `JSON.parse` your reply — your response MUST be exactly one JSON value and
-nothing else:
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
 
-- No `## Verdict` section, no `## Anomalies` section, no markdown headings of any kind.
+- No markdown headings of any kind before or after the payload.
 - No leading prose, no trailing prose.
-- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies` array:
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
 
   ```json
   {
@@ -242,9 +243,11 @@ nothing else:
   ```
 
 The machine-parsed path is active when the task prompt specifies a JSON return shape
-(e.g. "Return JSON: { ... }") or you are dispatched with a workflow label.
-The `## Verdict` markdown format and other prose sections are for the interactive
-(human-facing) path only.
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output (including the `## Verdict` section) — on the interactive
+path, flag unusual conditions in an `## Anomalies` section: unexpected values,
+unfamiliar patterns, results that contradict prior runs, or signals suggesting a
+different agent should handle it.
 
 ## Completion Manifest (sign-off §2b)
 
