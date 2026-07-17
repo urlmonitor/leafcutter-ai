@@ -2626,6 +2626,80 @@
             ]
         },
         {
+            "id": "documentation-verifier",
+            "name": "Documentation Verifier",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket introduces or modifies documentation surfaces, agent templates, skill bodies, or any content requiring documentation coverage verification. Conditional: only emitted in the agents: map when requires_documentation_verification is non-null in the ticket frontmatter. This is the documentation analogue of the BP-1100 phantom-done enforcement family — do NOT fold into it.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter requires_documentation_verification != null"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies agent templates, skills, or documentation that requires coverage verification"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket changes a public interface or workflow that requires documentation to be accurate and complete before commit"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/documentation-verifier.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.9,
+            "priority_rationale": "Documentation coverage gate; runs after coder (6/7/8), test-runner (9), documentation-expert (10), pr-reviewer (11), user-surface-smoker (11.5), and live-surface-tester (11.8), and BEFORE commit (12). Verifies that documentation produced by coders and documentation-expert is complete and accurate. See BO-2200b-1.",
+            "conditional": true,
+            "conditional_field": "requires_documentation_verification",
+            "requires_ticket_section": false,
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
             "id": "onboard",
             "name": "Onboard Install Wizard",
             "tier": "utility",
