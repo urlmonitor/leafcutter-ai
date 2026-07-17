@@ -10,15 +10,13 @@ Tests drive the real JS source via Node.js (no Claude binary required).
 
 Function-behaviour tests (TestParseAgentJsonBehavior) extract parseAgentJson
 from plan-feature.js via brace-matching and run it in isolation under Node.js.
-Since parseAgentJson has not yet been implemented in plan-feature.js, all
-tests in this class will fail with:
-  AssertionError: parseAgentJson not found in plan-feature.js
 
 Structural tests (TestParseAgentJsonStructuralAudit) audit the template source
 files to assert that:
   (a) no brittle ternary/bare JSON.parse patterns remain on agent-reply variables
-  (b) every workflow script that has parse sites contains a byte-identical
-      parseAgentJson body
+  (b) every script in _SCRIPTS_REQUIRING_TOLERANT_READER carries a byte-identical
+      parseAgentJson body (structural uniformity per BP-300e-5 — includes
+      build-epic.js and build-ticket.js even though they have 0 live parse call sites)
 
 Integration tests (TestParseAgentJsonIntegration) run the workflow scripts
 under the _workflow_engine_harness E2 stub and verify the run continues when
@@ -60,9 +58,19 @@ _ALL_SCRIPTS: dict[str, Path] = {
     "build-ticket.js": _BUILD_TICKET_JS,
 }
 
-# Scripts that are known to have (or have had) agent-reply parse sites.
-# build-feature.js is excluded: 0 parse sites per implementation notes.
-_SCRIPTS_WITH_PARSE_SITES: dict[str, Path] = {
+# Scripts that must carry a byte-identical parseAgentJson helper (BP-300e-5,
+# "uniformly across every delivery workflow script").
+#
+# plan-feature.js and finalize-feature.js: have LIVE parse call sites that
+#   call parseAgentJson() directly on agent-reply variables.
+# build-epic.js and build-ticket.js: schema-only (0 live parse call sites —
+#   every agent() call passes a schema: so the engine auto-parses). They carry
+#   the helper for structural uniformity and forward-compatibility, NOT because
+#   they currently have parse sites.
+# build-feature.js: EXCLUDED — schema-only and no uniformity carve-in was
+#   made for it (the ticket's files_touched lists it but implementation notes
+#   mark it 0-parse-site and unchanged).
+_SCRIPTS_REQUIRING_TOLERANT_READER: dict[str, Path] = {
     "plan-feature.js": _PLAN_FEATURE_JS,
     "finalize-feature.js": _FINALIZE_FEATURE_JS,
     "build-epic.js": _BUILD_EPIC_JS,
@@ -172,8 +180,6 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
     """Behavioural tests for parseAgentJson extracted from plan-feature.js.
 
     Each test extracts the function and runs it in isolation via Node.js.
-    Before implementation, all tests fail at setUpClass with:
-      AssertionError: parseAgentJson function not found in plan-feature.js
     """
 
     fn_body: str = ""
@@ -182,7 +188,6 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Extract parseAgentJson from plan-feature.js once for all tests in this class."""
         source = _read_source(_PLAN_FEATURE_JS)
-        # Will raise AssertionError if parseAgentJson is absent (expected red state).
         cls.fn_body = _extract_fn(source, "parseAgentJson", "plan-feature.js")
 
     def _call(
@@ -408,6 +413,156 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
             f"Error must name the agent; got: {error_msg!r}"
         )
 
+    def test_top_level_scalar_reply_raises_typed_error(self) -> None:
+        # covers: BP-300e-4
+        """AC: A reply that is a bare JSON scalar string (no braces or brackets, e.g.
+        "42" or "true") raises the typed error naming stage and agent.
+
+        Documents the M-1 contract change: the old greedy helper tolerated bare
+        scalars; the new brace-matching helper requires an object or array.
+        """
+        driver = """
+(async () => {
+  const raw = "42";
+  try {
+    const result = parseAgentJson(raw, { stage: "build-stage", agent: "build-agent" });
+    process.stdout.write(JSON.stringify({ ok: false, threw: false, value: result }));
+  } catch (err) {
+    process.stdout.write(JSON.stringify({ ok: true, threw: true, error: String(err) }));
+  }
+})();
+"""
+        result = _invoke_node(self.fn_body, driver)
+        self.assertTrue(
+            result.get("threw"),
+            f"Expected function to throw on bare scalar input but got: {result}",
+        )
+        error_msg = result.get("error", "")
+        self.assertIn(
+            "build-stage", error_msg,
+            f"Error must name the stage 'build-stage'; got: {error_msg!r}",
+        )
+        self.assertIn(
+            "build-agent", error_msg,
+            f"Error must name the agent 'build-agent'; got: {error_msg!r}",
+        )
+
+    def test_escaped_backslash_before_closing_quote_parsed(self) -> None:
+        # covers: BP-300e-1-ii
+        """AC: A JSON string value ending with an escaped backslash is recovered intact;
+        the trailing escape does not swallow the real closing quote.
+
+        Covers the F2/L-1 escape edge: the brace-matching scanner must treat the
+        two-byte sequence \\\\ in the JSON stream as a complete backslash escape so
+        that the following '"' correctly closes the string, rather than being misread
+        as part of an escaped-quote sequence (which would extend the string past its
+        true end and corrupt the extraction).
+
+        Driver input: JS single-quoted string whose JSON path value is C:\\ (encoding
+        C + colon + backslash = 3 chars). After brace-extraction and JSON.parse the
+        recovered path must equal "C:\\" — confirming the escape was handled correctly.
+        """
+        driver = r"""
+(async () => {
+  const raw = '{"path":"C:\\\\"}';
+  try {
+    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
+    process.stdout.write(JSON.stringify({ ok: true, value: result }));
+  } catch (err) {
+    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
+  }
+})();
+"""
+        result = _invoke_node(self.fn_body, driver)
+        self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
+        path_value = result["value"].get("path", "")
+        # The JS driver uses a single-quoted string literal whose bytes on disk are:
+        #   C, colon, 4 backslash bytes, closing-quote  →  {"path":"C:\\"}  at JS runtime.
+        # JSON.parse decodes C + : + \\ (two backslashes) → C + : + \ (3-char value: C:\).
+        # The key escape-edge assertion: the trailing \\ in the JSON stream is consumed
+        # as a complete backslash escape, so the following " correctly closes the string
+        # rather than being misread as an escaped-quote (\\\" extends-string bug).
+        self.assertTrue(
+            path_value.endswith("\\"),
+            f"Expected path value ending with a backslash but got: {path_value!r}",
+        )
+        self.assertEqual(
+            path_value, "C:\\",
+            f"Expected 'C:\\\\' (C-colon-backslash, 3 chars) but got: {path_value!r}",
+        )
+
+    def test_null_passthrough_returned_unchanged(self) -> None:
+        # covers: BP-300e-1-iii
+        """AC: A non-string null input is returned as null unchanged with no throw and
+        no re-parse attempt."""
+        driver = """
+(async () => {
+  const raw = null;
+  try {
+    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
+    process.stdout.write(JSON.stringify({ ok: true, value: result }));
+  } catch (err) {
+    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
+  }
+})();
+"""
+        result = _invoke_node(self.fn_body, driver)
+        self.assertTrue(result.get("ok"), f"Expected ok=True for null input but got: {result}")
+        self.assertIn("value", result, "Output must contain 'value' key")
+        self.assertIsNone(result["value"], "null input must be returned as null (Python None)")
+
+    def test_numeric_passthrough_returned_unchanged(self) -> None:
+        # covers: BP-300e-1-iii
+        """AC: A non-string numeric input (e.g. 42) is returned unchanged with no throw
+        and no re-parse attempt."""
+        driver = """
+(async () => {
+  const raw = 42;
+  try {
+    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
+    process.stdout.write(JSON.stringify({ ok: true, value: result }));
+  } catch (err) {
+    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
+  }
+})();
+"""
+        result = _invoke_node(self.fn_body, driver)
+        self.assertTrue(result.get("ok"), f"Expected ok=True for numeric input but got: {result}")
+        self.assertEqual(result.get("value"), 42, "Numeric input 42 must be returned unchanged")
+
+    def test_incidental_json_before_real_payload_first_taken(self) -> None:
+        # covers: BP-300e-2-i
+        """AC: When leading prose contains an incidental balanced JSON object before the
+        intended payload, the first balanced value is returned (M-2 first-match contract).
+
+        This test pins the risk explicitly: if any earlier balanced JSON block appears in
+        the reply prose, parseAgentJson returns it — not the intended later payload.
+        The variant uses leading prose + an incidental {step:1} + real {status:'done'}
+        to document that first-match is deterministic, even when the earlier block is small.
+        """
+        driver = r"""
+(async () => {
+  const raw = "Step completed {\"step\": 1} and full result: {\"status\": \"done\", \"count\": 5}";
+  try {
+    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
+    process.stdout.write(JSON.stringify({ ok: true, value: result }));
+  } catch (err) {
+    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
+  }
+})();
+"""
+        result = _invoke_node(self.fn_body, driver)
+        self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
+        value = result["value"]
+        self.assertEqual(
+            value.get("step"), 1,
+            "The incidental first block {step: 1} must be returned (first-match wins)",
+        )
+        self.assertNotIn(
+            "status", value,
+            "The later block {status: 'done'} must NOT be included — first-match wins",
+        )
+
 
 # ---------------------------------------------------------------------------
 # Structural audit tests (BP-300e-5)
@@ -461,14 +616,17 @@ class TestParseAgentJsonStructuralAudit(unittest.TestCase):
     def test_tolerant_reader_body_identical_across_workflow_scripts(self) -> None:
         # covers: BP-300e-5
         """AC: The inlined parseAgentJson body is byte-identical across every workflow
-        script that contains it (guards inline placement against drift).
+        script in _SCRIPTS_REQUIRING_TOLERANT_READER (guards inline placement against drift).
 
-        build-feature.js is excluded: 0 parse sites, trivially compliant per spec.
+        build-feature.js is excluded: schema-only with no uniformity carve-in per BP-300e-5.
+        build-epic.js and build-ticket.js are schema-only (0 live parse call sites) but
+        included for structural uniformity — the helper is present for forward-compatibility,
+        not because they currently call parseAgentJson directly.
         """
         fn_bodies: dict[str, str] = {}
         missing: list[str] = []
 
-        for script_name, script_path in _SCRIPTS_WITH_PARSE_SITES.items():
+        for script_name, script_path in _SCRIPTS_REQUIRING_TOLERANT_READER.items():
             source = _read_source(script_path)
             try:
                 body = _extract_fn(source, "parseAgentJson", script_name)
