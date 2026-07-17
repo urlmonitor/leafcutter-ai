@@ -163,6 +163,62 @@ function sortByCanonicalPriority(phases) {
 }
 
 // ---------------------------------------------------------------------------
+// Prose-tolerant reply reader (BP-300e)
+// ---------------------------------------------------------------------------
+
+function parseAgentJson(raw, ctx) {
+  const stage = ctx.stage;
+  const agent = ctx.agent;
+  if (typeof raw !== "string") {
+    return raw;
+  }
+  if (!raw.trim()) {
+    throw new Error(
+      "[" + stage + "] " + agent +
+      " returned an empty or whitespace-only reply — no parseable JSON found"
+    );
+  }
+  const closeFor = { 123: 125, 91: 93 };
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i);
+    if (code !== 123 && code !== 91) { continue; }
+    const closeCode = closeFor[code];
+    let depth = 0;
+    let inString = false;
+    let j = i;
+    while (j < raw.length) {
+      const ch = raw.charCodeAt(j);
+      if (inString) {
+        if (ch === 92 && j + 1 < raw.length) {
+          j += 2;
+          continue;
+        }
+        if (ch === 34) { inString = false; }
+      } else {
+        if (ch === 34) { inString = true; }
+        else if (ch === code) { depth++; }
+        else if (ch === closeCode) {
+          depth--;
+          if (depth === 0) {
+            try {
+              return JSON.parse(raw.slice(i, j + 1));
+            } catch (_) {
+              break;
+            }
+          }
+        }
+      }
+      j++;
+    }
+  }
+  throw new Error(
+    "[" + stage + "] " + agent +
+    " returned a reply with no parseable JSON — " +
+    "all reply-reading sites must route through parseAgentJson"
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
 // Read the worktree path from args if provided. If args.worktree_path is set,
