@@ -1,0 +1,57 @@
+id: UXP-545
+components:
+  - ux_prototyping
+title: "Each product-truth stage is gated (approve/edit/cancel) and committed under a plan-feature(<STAGE>) subject"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given the product-truth phase is running an artifact stage,
+  When the stage agent produces its draft,
+  Then the workflow presents it at a review gate offering approve, edit, or cancel,
+  And edit re-dispatches the same stage agent with the user's feedback (bounded retry)
+  before re-gating,
+  And approve commits that stage's output under a commit subject of the form
+  plan-feature(MOCK-DATA|MOCKUP|FLOW): <component> before the next stage begins.
+depends_on:
+  - UXP-595
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  The PT authoring loop in templates/workflows-js/plan-feature.js gates each stage via
+  a status-checker dispatch (label pt-gate-<stage>) with approve/edit/cancel handling
+  and MAX_EDIT_RETRIES, then commits via commitStageOutputProductTruth using
+  stageDisplayName to build the plan-feature(<STAGE>): <component> subject.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+  - unit_tests/test_commit_stage_output_product_truth.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js#commitStageOutputProductTruth
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_edit_then_approve_redispatches_stage
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "edit at a PT gate re-dispatches the same stage agent before re-gating."
+  - name: test_subject_uses_pt_display_name
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "each stage commit subject is plan-feature(<STAGE>): <component>."

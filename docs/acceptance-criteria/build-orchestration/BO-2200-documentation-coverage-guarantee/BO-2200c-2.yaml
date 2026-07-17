@@ -1,0 +1,71 @@
+id: BO-2200c-2
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "Each contract line names a genre, a target doc path, and a content constraint"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given the `### documentation-expert` subsection is being generated for a documented AC,
+  When the generator writes that AC's `- [ ] AC-N:` line,
+  Then the line names the Diataxis genre required -- one of `how-to`, `reference-doc`,
+    `sequence-diagram`, `state-diagram`, `component-diagram`, or `explanation`.
+  And the line names the target documentation path where the doc belongs.
+  And the line names a content constraint derived from that leaf AC's `criteria`, so the
+    writer knows specifically what the doc must cover rather than receiving a generic nudge.
+depends_on: [BO-2200c, BO-2200c-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    contract_line:
+      type: object
+      properties:
+        genre:
+          type: string
+          enum: [how-to, reference-doc, sequence-diagram, state-diagram, component-diagram, explanation]
+        target_path: {type: string}
+        content_constraint: {type: string}
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Each AC-N line carries three parts: Diataxis genre, target doc path, and a content constraint derived from the leaf AC criteria."
+    - "The genre vocabulary matches the documentation_triggers enum plus `explanation`."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200c-1
+  contract: "The Agent Contracts block structure whose per-AC lines this behavior fills with genre + path + content constraint."
+test_spec:
+  - name: test_contract_line_names_genre_path_and_constraint
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A generated AC-N line contains a Diataxis genre, a target documentation path, and a content constraint derived from the leaf AC criteria."
+  - name: test_genre_vocabulary_matches_enum_plus_explanation
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The genre named on a contract line is one of the documentation_triggers enum values or `explanation`."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/18_TICKET-20260715-BO-2200c-2.md

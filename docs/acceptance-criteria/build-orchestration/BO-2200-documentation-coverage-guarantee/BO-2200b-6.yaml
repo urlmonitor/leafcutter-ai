@@ -1,0 +1,66 @@
+id: BO-2200b-6
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "The verifier is registered in every canonical phase-order source so it never sorts to the end"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given the project has more than one canonical source that defines phase ordering --
+    the single-ticket build phase-order list, the feature/epic build phase-order list,
+    and the building-epics ordering table,
+  When each source is inspected,
+  Then every one of them lists `documentation-verifier` in the same relative slot:
+    after the coder / test-runner / documentation-expert and before commit.
+  And no canonical phase-order source omits `documentation-verifier`, so it can never
+    fall through to a default that sorts it to the end of the run.
+depends_on: [BO-2200b, BO-2200b-1]
+doc_links:
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements: |
+  Add documentation-verifier to ALL canonical phase-order sources consistently, in the
+  same relative slot (after coder / test-runner / documentation-expert, before commit):
+    - templates/workflows-js/build-ticket.js phaseOrder (~lines 118-138)
+    - templates/workflows-js/build-feature.js phaseOrder (~line 201)
+    - templates/skills/building-epics/SKILL.md section 2.1.1 ordering table (~lines 610-634)
+    - templates/skills/ticket-authoring/SKILL.md ordering note
+  A phase agent missing from one source sorts to the end there; parity across all sources
+  is the property under test. This AC spans workflow .js dispatcher files and skill markdown
+  ordering tables — it is assigned to llm-expert (the workflow / skill / registry ordering
+  specialist) as a single unit so the cross-source relative slot stays consistent. Keep the
+  slot identical to the priority 11.9 registry entry (BO-2200b-1).
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-1
+  contract: "The documentation-verifier phase agent (priority 11.9) whose registration this behavior propagates across all phase-order sources."
+test_spec:
+  - name: test_documentation_verifier_present_in_all_phase_order_sources
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-verifier appears in build-ticket.js phaseOrder, build-feature.js phaseOrder, and the building-epics SKILL.md ordering table — no source omits it."
+  - name: test_documentation_verifier_same_relative_slot_across_sources
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "In each source, documentation-verifier is ordered after coder/test-runner/documentation-expert and before commit (identical relative slot)."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/16_TICKET-20260715-BO-2200b-6.md

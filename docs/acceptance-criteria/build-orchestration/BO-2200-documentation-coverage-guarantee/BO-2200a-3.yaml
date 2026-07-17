@@ -1,0 +1,67 @@
+id: BO-2200a-3
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "A purely internal refactor does not demand documentation"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given the declarative `documentation_gates` policy and the ticket generator building
+    the agents map for a leaf AC,
+  When the AC's `change_target` is `code` and its `risk_surface` is `internal`,
+  Then the generated agents map does NOT include `documentation-expert`.
+  And the same negative result holds for `change_target` values `config`, `prompt`, and
+    `infrastructure` when paired with `risk_surface` `internal`.
+  And no documentation demand is raised for these purely internal refactors, so the
+    build imposes no documentation busywork on changes with nothing observable to document.
+depends_on: [BO-2200a, BO-2200a-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    non_triggering_classification:
+      type: object
+      description: "change_target in {code, config, prompt, infrastructure} with risk_surface=internal must not require documentation-expert."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The negative case must be an explicit, tested behavior — not merely the absence of a positive rule — so a regression that over-triggers documentation-expert is caught."
+    - "The generator must produce an agents map WITHOUT documentation-expert for internal-refactor classifications."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200a-1
+  contract: "The declarative documentation_gates policy whose non-triggering classifications this behavior pins down."
+test_spec:
+  - name: test_code_internal_does_not_trigger_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target=code, risk_surface=internal yields an agents map WITHOUT documentation-expert."
+  - name: test_config_prompt_infrastructure_internal_do_not_trigger
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target in {config, prompt, infrastructure} with risk_surface=internal each yields no documentation-expert."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/03_TICKET-20260715-BO-2200a-3.md

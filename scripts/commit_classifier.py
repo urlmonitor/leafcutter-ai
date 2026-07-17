@@ -17,12 +17,15 @@ BUSINESS CONTEXT: AC BO-1100a — the right message style is chosen automaticall
       AC BO-1100c — message patterns are defined in one place you can read and
       edit: config/commit_message_patterns.json. Adding a new pattern is a
       one-line edit to that file; no code change is required.
-ARCHITECTURE: Patterns are loaded at module-import time from
-      config/commit_message_patterns.json (resolved relative to this file's
-      location). If the config file is absent or malformed, the module falls
-      back to compiled-in defaults so callers are never broken by a missing
-      config. The classification logic itself remains pure (no filesystem
-      writes, no network I/O).
+ARCHITECTURE: The module-level DEFAULT_PATTERNS constant is populated once at
+      import time from config/commit_message_patterns.json (resolved relative
+      to this file's location). classify_staged_files() re-reads the on-disk
+      config on every invocation via _get_current_patterns() so that edits to
+      commit_message_patterns.json are picked up without a process restart
+      (AC BO-1100c-4). If the config file is absent or malformed, the module
+      falls back to compiled-in defaults so callers are never broken by a
+      missing config. The classification logic itself remains pure (no network
+      I/O, no filesystem writes).
 
 Used by:
   - templates/agents/commit.md (Step 2 message-drafting branch)
@@ -97,8 +100,56 @@ _FALLBACK_PATTERNS: dict[FileGroup, str] = {
 
 
 # ---------------------------------------------------------------------------
-# Config-file loader (AC BO-1100c)
+# Config-file loader helpers (AC BO-1100c)
 # ---------------------------------------------------------------------------
+
+
+def _load_patterns_from_dict(raw: dict, path: Path) -> dict[FileGroup, str]:
+    """Extract commit-message patterns from the flat-object config schema.
+
+    Handles the ``{"patterns": {"tickets": "...", ...}}`` dict format.  Each
+    key in the nested ``"patterns"`` object must be a valid ``FileGroup`` value
+    string; unrecognised keys are skipped with a WARNING so an unknown group
+    never silently corrupts the result.
+
+    Args:
+        raw: The already-parsed top-level JSON object (must be a ``dict``).
+        path: The filesystem path the object was loaded from, used only for
+            log messages.
+
+    Returns:
+        Dict mapping each FileGroup to its template string, starting from
+        compiled-in ``_FALLBACK_PATTERNS`` with overrides applied from ``raw``.
+        Falls back to plain ``_FALLBACK_PATTERNS`` when the nested
+        ``"patterns"`` key is absent or is not itself a ``dict``.
+    """
+    patterns_data = raw.get("patterns")
+    if not isinstance(patterns_data, dict):
+        logger.warning(
+            "commit_message_patterns.json at %s has no usable 'patterns' key "
+            "— using compiled-in defaults",
+            path,
+        )
+        return dict(_FALLBACK_PATTERNS)
+
+    result: dict[FileGroup, str] = dict(_FALLBACK_PATTERNS)
+    for key, template in patterns_data.items():
+        if not isinstance(template, str):
+            logger.warning(
+                "Pattern for %r is not a string in commit_message_patterns.json — skipped",
+                key,
+            )
+            continue
+        try:
+            group = FileGroup(key)
+        except ValueError:
+            logger.warning(
+                "Unknown FileGroup key %r in commit_message_patterns.json — skipped",
+                key,
+            )
+            continue
+        result[group] = template
+    return result
 
 
 def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
@@ -114,9 +165,15 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
     Callers that want to add or modify a pattern should edit the JSON file;
     this function picks up the change on the next invocation.
 
-    The legacy flat-object schema (``{"patterns": {...}}``) is no longer
-    supported.  When the loaded JSON is not a list, the function falls back to
-    compiled-in defaults and logs a warning so the misconfiguration is visible.
+    Two JSON schemas are supported:
+
+    * **Array schema** (preferred, per AC BO-1100c-1): a top-level JSON array
+      of routing-entry objects, each with ``group`` and ``template`` keys.
+    * **Flat-object schema** (legacy): ``{"patterns": {"tickets": "...", ...}}``.
+      The nested dict maps FileGroup value strings to template strings.
+
+    When the loaded JSON does not match either schema, the function falls back
+    to compiled-in defaults and logs a warning so the misconfiguration is visible.
 
     Args:
         config_path: Optional explicit path to the patterns JSON file.
@@ -146,10 +203,16 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
         )
         return dict(_FALLBACK_PATTERNS)
 
+    # Flat-object schema: {"patterns": {"tickets": "...", ...}}
+    if isinstance(raw, dict):
+        return _load_patterns_from_dict(raw, path)
+
     if not isinstance(raw, list):
         logger.warning(
-            "commit_message_patterns.json is not a top-level array "
-            "(legacy dict format is stale per AC BO-1100c-1) — using compiled-in defaults"
+            "commit_message_patterns.json at %s has unexpected structure "
+            "(expected a top-level array or a dict with 'patterns' key) "
+            "— using compiled-in defaults",
+            path,
         )
         return dict(_FALLBACK_PATTERNS)
 

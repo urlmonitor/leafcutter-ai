@@ -8,7 +8,7 @@ last_updated: 2026-07-14
 components:
   - ux_prototyping
 related_docs:
-  - docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
   - docs/architecture/components/ux-prototyping.md
   - docs/how-to/product-truth-schema-reference.md
   - docs/product-truth/README.md
@@ -29,7 +29,7 @@ duplication the store exists to prevent.
 For the field-by-field shape of each artifact, see the companion
 [product-truth schema reference](product-truth-schema-reference.md). For the
 decision and how this store relates to the AC store, see
-[ADR-020](../architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md).
+[ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md).
 
 ---
 
@@ -196,5 +196,5 @@ the `.md`.**
 
 - [Product-truth schema reference](product-truth-schema-reference.md) — the four schemas, field by field.
 - [UX Prototyping component](../architecture/components/ux-prototyping.md) — the store's architecture.
-- [ADR-020](../architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md) — why the store exists and how it relates to the AC store.
+- [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — why the store exists and how it relates to the AC store.
 - [docs/product-truth/README.md](../product-truth/README.md) — the store's operational README and seed status.

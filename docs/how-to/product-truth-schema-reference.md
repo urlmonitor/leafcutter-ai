@@ -10,7 +10,7 @@ components:
 related_docs:
   - docs/how-to/authoring-product-truth-artifacts.md
   - docs/architecture/components/ux-prototyping.md
-  - docs/architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
   - docs/product-truth/README.md
 ---
 
@@ -192,5 +192,5 @@ The `outcome` must be consistent with `expected{}` — the validator
 
 - [How to author a Flow, Mockup, or Mock Data artifact by hand](authoring-product-truth-artifacts.md)
 - [UX Prototyping component](../architecture/components/ux-prototyping.md)
-- [ADR-020](../architecture/adrs/ADR-020-product-truth-flow-first-upstream-layer.md)
+- [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md)
 - `docs/product-truth/schemas/` — the authoritative schema files.

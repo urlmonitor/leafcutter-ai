@@ -1,0 +1,60 @@
+id: BP-300e-1-i
+components:
+  - build_pipeline
+title: "Nested braces inside the JSON object do not truncate extraction"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Given a helper agent returns a valid JSON object that itself contains nested objects
+    (braces within braces — for example a "contract" field whose value is another
+    object), followed by trailing explanatory prose,
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the complete top-level object including every nested
+    level, stopping extraction only at the matching top-level closing brace and not
+    at the first nested closing brace,
+  And the run continues with the fully intact nested result.
+depends_on:
+  - BP-300e-1
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Extraction must count nesting depth and stop only at the matching top-level closing brace, never at the first nested close."
+  - "The tolerant reader stays a pure, synchronous, dependency-free function; confine try/except to the JSON.parse boundary only."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness with a deeply nested object plus trailing prose, not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-1
+  contract: >-
+    Inline tolerant reader parseAgentJson whose balanced-scan extraction is
+    depth-counting (matches the top-level close), not first-close.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_nested_object_not_truncated_at_first_close
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given a deeply nested object plus trailing prose returns the full top-level object with all nested levels intact (depth preserved)."
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with an
+  input containing a deeply nested object plus trailing prose, asserting the returned
+  value is the full top-level object (depth preserved) — proving the balanced-brace
+  scanner counts nesting depth rather than stopping at the first '}'.

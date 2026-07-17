@@ -1,0 +1,57 @@
+id: UXP-549
+components:
+  - ux_prototyping
+title: "Crash-resume recognizes committed product-truth stages, skips them, and recovers the flow reference"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given a prior /plan-feature session committed one or more product-truth stages before
+  crashing,
+  When the workflow is resumed,
+  Then it recognizes the plan-feature(MOCK-DATA|MOCKUP|FLOW) commit subjects on the
+  branch,
+  And it skips re-dispatching the already-committed stage agents,
+  And when the flow stage was already committed it recovers the flow reference from that
+  commit so the reference flows into the (possibly forced) business-analyst prompt.
+depends_on:
+  - UXP-595
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements: |
+  templates/workflows-js/plan-feature.js extends stageDisplayName/displayToKey for the
+  MOCK-DATA/MOCKUP/FLOW subjects (keyed on the lowercased display name, e.g.
+  "mock-data"->"mockdata") so committed stages are detected on resume and skipped;
+  recoverFlowRefFromCommit reads the committed FLOW commit to restore the flow reference.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_plan_feature_pt_phase.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js#recoverFlowRefFromCommit
+change_target: code
+risk_surface: internal
+test_required: true
+test_spec:
+  - name: test_committed_pt_stages_are_skipped
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "committed MOCK-DATA and MOCKUP stages are not re-dispatched on resume."
+  - name: test_flow_ref_recovered_from_committed_flow_commit
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "the flow reference is recovered from the committed FLOW commit and reaches the BA prompt."

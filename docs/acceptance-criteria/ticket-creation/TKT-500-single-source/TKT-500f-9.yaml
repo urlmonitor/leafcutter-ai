@@ -47,7 +47,8 @@ created: 2026-07-15
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/TICKET-20260715-TKT-500f-9.md
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to:

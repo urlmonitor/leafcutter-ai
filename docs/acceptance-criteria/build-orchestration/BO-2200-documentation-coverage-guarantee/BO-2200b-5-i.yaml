@@ -1,0 +1,63 @@
+id: BO-2200b-5-i
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "A hand-edited not_needed on the verifier is restored to needed at generation time"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given a doc-triggering ticket whose agents map was generated with `documentation-expert`
+    and `documentation-verifier` both `needed`,
+  When someone hand-edits the ticket to set `documentation-verifier` (or
+    `documentation-expert`) to `not_needed` and the ticket is re-generated or re-validated,
+  Then the status is restored to `needed` for both agents.
+  And the restore is silent-proof: the change is either overwritten or surfaced as a
+    validation error, never silently accepted.
+depends_on: [BO-2200b-5]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    restore_on_regenerate:
+      type: object
+      description: "Re-generation/re-validation must re-assert documentation-expert and documentation-verifier to needed rather than trust an on-disk not_needed."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The non-suppressibility guard must survive a manual downgrade in the ticket file, exactly as the TDD-mandatory guard restores test-writer/test-runner."
+    - "Re-generation or re-validation must re-assert needed; a hand-edited not_needed must be overwritten or surfaced as a validation error, never silently accepted."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-5
+  contract: "The non-suppressibility protection this edge case exercises against a hand-edited not_needed."
+test_spec:
+  - name: test_hand_edited_not_needed_restored_on_regeneration
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A ticket hand-edited to documentation-verifier: not_needed is restored to needed when re-generated/re-validated."
+  - name: test_downgrade_not_silently_accepted
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The manual downgrade is either overwritten or surfaced as a validation error — never silently accepted."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/15_TICKET-20260715-BO-2200b-5-i.md

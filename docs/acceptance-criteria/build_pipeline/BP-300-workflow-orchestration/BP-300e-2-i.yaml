@@ -1,0 +1,60 @@
+id: BP-300e-2-i
+components:
+  - build_pipeline
+title: "When a reply contains several JSON blocks, the first balanced top-level value is taken"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Given a helper agent's reply contains more than one top-level JSON block — for
+    example a valid JSON object, then later in the same reply a second JSON object or
+    array embedded in prose,
+  When the workflow reads the agent's reply,
+  Then the workflow takes the FIRST complete, balanced top-level value it finds and
+    parses that one,
+  And later blocks are ignored, so the intended primary result is the one used and the
+    run continues.
+depends_on:
+  - BP-300e-2
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When several top-level balanced values are present, the reader must deterministically return the FIRST; later blocks are ignored (no last-wins, no ambiguity)."
+  - "The tolerant reader stays a pure, synchronous, dependency-free function; confine try/except to the JSON.parse boundary only."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness with two distinct top-level blocks separated by prose, not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-2
+  contract: >-
+    Inline tolerant reader parseAgentJson whose balanced scan returns the first complete
+    top-level value encountered.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_first_top_level_block_taken_when_multiple_present
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given two distinct top-level JSON blocks separated by prose returns the FIRST block; the later block is ignored."
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with an
+  input holding two distinct top-level JSON blocks separated by prose, asserting the
+  returned value equals the FIRST block. Documents the deterministic tie-break rule so a
+  reply that mentions an illustrative second payload never silently swaps the result.

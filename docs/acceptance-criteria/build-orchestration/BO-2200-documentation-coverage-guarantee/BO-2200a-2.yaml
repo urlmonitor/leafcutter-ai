@@ -1,0 +1,75 @@
+id: BO-2200a-2
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "A boundary, safety, auth, or privacy risk surface also demands documentation"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given the declarative `documentation_gates` policy and the ticket generator building
+    the agents map for a leaf AC whose `change_target` is `code`,
+  When the AC's `risk_surface` is `contract_boundary`,
+  Then the generated agents map includes `documentation-expert`.
+  And the same result holds when `risk_surface` is `safety`, `auth`, or `privacy`
+    (each of these values, on its own, causes `documentation-expert` to be required
+    even when the `change_target` alone would not have triggered it).
+  And the risk-surface trigger is evaluated independently of the change-target trigger,
+    so a documentation demand is raised if EITHER dimension matches its triggering set.
+depends_on: [BO-2200a, BO-2200a-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    risk_surface_triggers:
+      type: array
+      items:
+        type: string
+        enum: [contract_boundary, safety, auth, privacy]
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Extend the documentation_gates policy evaluation in _build_agents_map so the triggering risk_surface set {contract_boundary, safety, auth, privacy} raises the documentation demand independently of change_target."
+    - "OR semantics between the two dimensions: documentation-expert is required if EITHER change_target OR risk_surface matches its triggering set."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200a-1
+  contract: "The declarative documentation_gates policy and generator read-path this behavior extends with the risk_surface trigger dimension."
+test_spec:
+  - name: test_risk_surface_contract_boundary_triggers_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "change_target=code, risk_surface=contract_boundary yields documentation-expert in the generated agents map."
+  - name: test_each_triggering_risk_surface_requires_doc_expert
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "risk_surface in {safety, auth, privacy} each independently triggers documentation-expert even when change_target=code would not."
+  - name: test_change_target_and_risk_surface_are_ORed
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "A non-triggering change_target combined with a triggering risk_surface still yields documentation-expert (independent OR evaluation)."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/02_TICKET-20260715-BO-2200a-2.md

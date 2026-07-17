@@ -4,11 +4,16 @@ description: |
   Triage, orchestrate, and gate AC authoring for a user's feature request.
   Invokes the /plan-feature workflow (.claude/workflows/plan-feature.js): dispatches
   ac-triage to classify the request as strategic / behavioral / technical /
-  covered, then routes through the correct authoring agents (PO v3, BA v3,
-  IT PO v3) with user confirmation gates between stages. All output goes
-  exclusively to the AC store (docs/acceptance-criteria/) — no ticket files
-  are produced. The user sets priority at the final gate; the workflow writes
-  readiness: approved on approval.
+  covered. It then runs an always-on product-truth (PT) phase — classify the
+  request (pt-classifier), draft only the artifacts it needs (mock-data-author,
+  mockup-author, flow-author, in that fixed order, each behind an approve/edit/cancel
+  gate and a surgical commit), then derive ACs from the approved flow — before
+  routing through the correct authoring agents (PO v3, BA v3, IT PO v3) with user
+  confirmation gates between stages. When the product-truth store is absent the PT
+  phase self-skips non-silently and AC authoring still proceeds. All output goes
+  exclusively to the AC store (docs/acceptance-criteria/) and the product-truth
+  store (docs/product-truth/) — no ticket files are produced. The user sets priority
+  at the final gate; the workflow writes readiness: approved on approval.
   Trigger phrases: "plan feature", "new AC", "author ACs",
   "write requirements", "/plan-feature".
 allowed-tools: Bash, Read, Agent
@@ -24,11 +29,15 @@ wraps the `plan-feature.js` workflow script, which:
 
 1. **Pre-triages** the user's request via the `ac-triage` agent (Haiku-tier)
    to check for duplicates and classify the routing path.
-2. **Dispatches** the correct authoring agents in sequence based on the triage
+2. **Runs the always-on product-truth (PT) phase** (see §PT) — classifies the
+   request, drafts only the artifacts it needs, and derives ACs from the approved
+   flow — between triage and the AC pipeline.
+3. **Dispatches** the correct authoring agents in sequence based on the triage
    result, skipping upstream agents when the request only needs downstream work.
-3. **Gates** each stage transition with user confirmation — the user sees the
+4. **Gates** each stage transition with user confirmation — the user sees the
    ACs produced at each stage and can approve, request edits, or cancel.
-4. **Writes exclusively to the AC store** — no ticket files are produced.
+5. **Writes exclusively to the AC store and the product-truth store** — no ticket
+   files are produced.
 
 ## Invocation
 
@@ -337,6 +346,57 @@ route: strategic | behavioral | technical | covered
 | `behavioral` | Matching L1 AC found. Adding scenarios. | BA v3 → gate → IT PO v3 → final gate |
 | `technical` | Only adding technical constraints. | IT PO v3 → final gate |
 | `covered` | Request fully covered by existing ACs. | Show existing ACs → user: cancel / amend / force |
+
+---
+
+## §PT — Product-Truth Authoring Phase (always-on)
+
+**This phase runs after §0 Triage and before the §1–§3 AC pipeline, on every
+invocation.** It authors the product-truth artifacts a request needs so the AC
+pipeline decomposes a reviewed flow rather than starting from prose. See ADR-021
+and ADR-020. Behaviour (implemented in `templates/workflows-js/plan-feature.js`):
+
+1. **Classify (always-on).** Dispatch `pt-classifier` exactly once. Derive the
+   run-set from `classifier.outcome`
+   (`full-set | mockup+data | mockup-only | mock-data-only | none`) via the
+   canonical `OUTCOME_TO_STAGES` mapping — never the advisory `dispatch` array
+   (validate `dispatch` against `outcome`; the outcome wins on disagreement). An
+   unparseable/inconsistent classifier or `outcome = none` skips the PT phase and
+   proceeds straight to the AC pipeline. (AC UXP-544 / UXP-544a)
+
+2. **Store-absent self-skip (non-silent).** When the outcome is not `none`, probe
+   for `docs/product-truth/` + its scripts via a `status-checker` dispatch. If
+   absent, emit an **observable** telemetry/warning dispatch (never a silent
+   no-op — `log()` is inert under E2) and skip the PT phase; the AC pipeline still
+   runs. (AC UXP-595a)
+
+3. **Draft the artifacts (fixed order, gated, surgical commits).** Run the run-set
+   in the fixed `PT_ORDER` `mock-data-author → mockup-author → flow-author`. Each
+   stage is presented at an approve/edit/cancel gate; `edit` re-dispatches the
+   stage agent with feedback (bounded retries); `approve` commits that stage's
+   output **before** the next agent runs. Each commit is **surgical** — only the
+   reported artifact paths + their derived files + `docs/product-truth/index.json`
+   (never a blanket `git add docs/product-truth`; never `docs/acceptance-criteria/`)
+   — under subject `plan-feature(MOCK-DATA|MOCKUP|FLOW): <component>`. A failed
+   commit aborts before the next agent; `cancel` opens no PR and preserves prior
+   committed stages; a commit to `main` is refused fail-closed.
+   (ACs UXP-544b / UXP-545 / UXP-545a / UXP-545b / UXP-545c / UXP-546)
+
+4. **Flow → business-analyst.** Commit the flow + regenerated `index.json` before
+   the BA stage so the BA self-discovers it via `index.json`; supply a flow
+   derivation instruction. When the triage route is `technical` (no BA) but a flow
+   was produced, force the BA stage in with an L1 anchor so derived L2s are not
+   orphaned. (AC UXP-547)
+
+5. **Reconcile back-links.** After the BA runs, `docs/product-truth/scripts/apply_flow_backlinks.py`
+   writes the BA's reported `flow_backlinks` into the flow's `step.implements[]`
+   (union, order-preserving) and re-runs `generate_product_truth.py`, on its own
+   reconciliation commit. Idempotent; an unknown step id is a non-fatal warning.
+   (AC UXP-548)
+
+**Crash-resume:** committed `plan-feature(<STAGE>)` commits are recognised on
+resume; already-committed stages are skipped and the flow reference is recovered
+from a committed `FLOW` commit. (AC UXP-549)
 
 ---
 

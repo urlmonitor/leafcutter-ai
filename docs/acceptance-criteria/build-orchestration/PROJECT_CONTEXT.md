@@ -1,7 +1,12 @@
 ---
-description: Accumulated conventions for the build-orchestration AC namespace — L0 numbering, scope boundaries vs. neighbouring components, and concurrency/parity/registry distinctions for BO-series authoring agents.
+description: Accumulated conventions for the build-orchestration AC namespace — L0
+  numbering, scope boundaries vs. neighbouring components, and concurrency/parity/registry
+  distinctions for BO-series authoring agents.
+created: '2026-07-17'
+last_updated: '2026-07-17'
+type: tutorial
+status: active
 ---
-
 # build-orchestration — Project Context for Authoring Agents
 
 Accumulated conventions for the `build-orchestration` AC namespace (prefix `BO`).
@@ -10,11 +15,47 @@ Read this before authoring or decomposing ACs in this component.
 ## ID numbering
 
 - L0s occupy hundreds: 100, 200, 201, 202, 300, 400, 500, 700, 800, 900, 1100,
-  1200, 1300, 1400, 1500, 1600, 1700, 1800.
-- Next free L0 hundred after BO-1800 is **BO-1900**. Pick the next free hundred
+  1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200.
+- Next free L0 hundred after BO-2200 is **BO-2300**. Pick the next free hundred
   for any new L0. (BO-1700 = worktree-quality-gate-guard, added 2026-07-01;
-  BO-1800 = isolated-parallel-delivery, added 2026-07-06 from ADR-018.)
+  BO-1800 = isolated-parallel-delivery, added 2026-07-06 from ADR-018;
+  BO-1900 = dispatch-preflight; BO-2000 = correct-prompts-by-construction;
+  BO-2100 = live-app-proof; BO-2200 = documentation-coverage-guarantee, added
+  2026-07-15.)
+- The earlier "next free is BO-1900" note was stale — always confirm the highest
+  existing L0 folder on disk before assigning, not just this file.
 - Deprecated/superseded IDs are reserved permanently — never reuse a numeric slot.
+
+## Documentation-coverage guarantee — BO-2200 family (placement rationale + boundary)
+
+BO-2200 ("Documentation stays correct and complete, automatically", added
+2026-07-15) is the documentation-specific hardening of the computed quality
+gates. It lives in build-orchestration — NOT build-pipeline (build.py/parity)
+and NOT guardrail-engine — because it is a drive-time gate concern, per the
+component-choice rule in the BO-1700 section below ("does the gate FIRE during a
+drive" belongs here). Four L1s, each a distinct benefit; keep them distinct when
+decomposing at L2:
+
+- **BO-2200a** — broadened, accurate REQUIREMENT: docs are demanded for
+  user-facing / flow / data / security / auth / privacy changes, and NOT for
+  purely internal refactors. This is the change-classification → required-doc
+  mapping. Cite BO-500/BO-610 (computed gates derive WHICH gates apply); BO-2200a
+  hardens the documentation trigger specifically — do NOT re-derive BO-500's
+  general gate-selection engine here.
+- **BO-2200b** — ENFORCEMENT: a change that requires docs cannot reach `done`
+  unless docs were genuinely produced (no phantom docs; a doc step can't "pass"
+  writing nothing). This is the doc analogue of BP-1100 phantom-done, applied to
+  documentation — cite the parallel but do not fold into BP-1100.
+- **BO-2200c** — precise BRIEF to the writer: kind (how-to/reference/diagram/
+  explanation), location, required contents, and which existing docs to
+  update/cross-link. This is the documentation-expert dispatch contract.
+- **BO-2200d** — TIMING: docs are authored AFTER the change is built so they
+  match reality (drive phase ordering).
+
+Boundary vs BO-500: BO-500 = "the right gates happen automatically from the kind
+of change" (general engine); BO-2200 = "the documentation gate is broad enough,
+enforced, and precise enough to be trusted" (one gate, hardened). They are
+complementary, not duplicative.
 
 ## Concurrency / atomicity scope boundaries (avoid duplication)
 
@@ -78,7 +119,9 @@ actually FIRE during a drive" concern belongs in build-orchestration (drive /
 worktree / pre-drive-gate territory), NOT build-pipeline (build.py / parity) or
 infrastructure (hook content / conventions). By the same rationale the ADR-018
 isolation-topology capability landed in build-orchestration (drive isolation +
-main-branch gating during drives), not build-pipeline or infrastructure.
+main-branch gating during drives), not build-pipeline or infrastructure. The
+BO-2200 documentation-coverage guarantee (2026-07-15) followed the same rule: a
+drive-time documentation GATE belongs here, alongside BO-500 computed gates.
 
 ## Cross-component placement notes (parity & registry — NOT build-orchestration)
 

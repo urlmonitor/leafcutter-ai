@@ -1,0 +1,63 @@
+id: BO-2200d-1-i
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "Removing documentation-expert from the flow-change gates leaves the other pre-coder gates intact"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200d.yaml"
+criteria: |
+  Given the four flow-change-gate mandatory-agents lists after `documentation-expert` has
+    been removed from them,
+  When a flow-change ticket is generated,
+  Then `architect-review` (and any other pre-coder mandatory agent that was in those lists)
+    is still injected and still ordered before the coder.
+  And `documentation-expert` no longer appears in any flow-change-gate list, so it is never
+    injected twice (once pre-coder and once post-coder) for the same ticket.
+depends_on: [BO-2200d-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    surgical_removal_guard:
+      type: object
+      description: "Flow-change lists retain architect-review (and other pre-coder gates) and contain no documentation-expert; documentation-expert appears exactly once (no double-injection)."
+  reference_file_path: "config/guardrail_gates.yaml"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Guard against two regressions from the surgical removal: (1) accidentally dropping architect-review or another pre-coder gate, and (2) leaving documentation-expert in a flow-change list so it is injected twice."
+    - "Assert the flow-change lists retain architect-review and contain no documentation-expert."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200d-1
+  contract: "The surgical flow_change_gates edit this edge case verifies for collateral-damage safety."
+test_spec:
+  - name: test_architect_review_still_injected_pre_coder
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "On a flow-change ticket, architect-review is still injected and ordered before the coder after the documentation-expert removal."
+  - name: test_documentation_expert_never_double_injected
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-expert appears in no flow-change-gate list and exactly once in the resolved agents map (no pre-coder + post-coder duplication)."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/26_TICKET-20260715-BO-2200d-1-i.md

@@ -164,11 +164,21 @@ class TestAllChecksPass(unittest.TestCase):
                     f"Implement this check function or adjust the test to match the "
                     f"actual internal function names."
                 )
+        # Neutralise the environment-dependent collaborators this test does not
+        # intend to exercise. run_checks() also invokes is_guardian_complete() and
+        # check_hook_freshness() live against Path.cwd(); on a CI runner that ran
+        # build.py but NOT `pre-commit install`, the git hook file is absent so
+        # check_hook_freshness() returns False and 'hook_freshness' leaks into
+        # failing_checks — failing this four-check-aggregation contract. Mock them
+        # so the test is hermetic (matches how TestRunChecksInvokesHookIdValidation
+        # and the freshness/guardian tests already isolate these helpers).
         with (
             patch.object(_vpa, "check_a_binary_on_path", return_value=True),
             patch.object(_vpa, "check_b_config", return_value=True),
             patch.object(_vpa, "check_c_git_hook", return_value=True),
             patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
         ):
             result = _vpa.run_checks()
         for key in ("binary", "config", "git_hook", "canary"):
@@ -479,11 +489,18 @@ class TestExitCodeAllPass(unittest.TestCase):
         from unittest.mock import patch as mock_patch
 
         captured_stdout = io.StringIO()
+        # Neutralise the environment-dependent collaborators (see TestAllChecksPass):
+        # main() -> run_checks() also runs is_guardian_complete()/check_hook_freshness()
+        # live against Path.cwd(); on a CI runner without `pre-commit install` the
+        # absent hook makes freshness False and main() would exit 1. Mock them so the
+        # all-pass exit-code path is tested in isolation.
         with (
             patch.object(_vpa, "check_a_binary_on_path", return_value=True),
             patch.object(_vpa, "check_b_config", return_value=True),
             patch.object(_vpa, "check_c_git_hook", return_value=True),
             patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
             mock_patch("sys.stdout", captured_stdout),
         ):
             try:
@@ -2259,11 +2276,17 @@ class TestPreDriveGateBlocksOnProbeFail(unittest.TestCase):
                 "AttributeError: verify_precommit_active does not expose run_checks(). "
                 "Implement run_checks() returning the five-key dict."
             )
+        # Neutralise the environment-dependent collaborators (see TestAllChecksPass):
+        # is_guardian_complete()/check_hook_freshness() run live against Path.cwd()
+        # and, on a CI runner without `pre-commit install`, leak 'hook_freshness'
+        # into failing_checks. Mock them so the all-pass gate contract is hermetic.
         with (
             patch.object(_vpa, "check_a_binary_on_path", return_value=True),
             patch.object(_vpa, "check_b_config", return_value=True),
             patch.object(_vpa, "check_c_git_hook", return_value=True),
             patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
         ):
             result = _vpa.run_checks()
         self.assertEqual(
@@ -2351,11 +2374,17 @@ class TestCommitPhaseGateRefusesOnProbeFail(unittest.TestCase):
             self.fail(
                 "AttributeError: verify_precommit_active does not expose run_checks()."
             )
+        # Neutralise the environment-dependent collaborators (see TestAllChecksPass):
+        # is_guardian_complete()/check_hook_freshness() run live against Path.cwd()
+        # and, on a CI runner without `pre-commit install`, leak 'hook_freshness'
+        # into failing_checks. Mock them so the all-pass commit-gate contract is hermetic.
         with (
             patch.object(_vpa, "check_a_binary_on_path", return_value=True),
             patch.object(_vpa, "check_b_config", return_value=True),
             patch.object(_vpa, "check_c_git_hook", return_value=True),
             patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
         ):
             result = _vpa.run_checks()
         self.assertEqual(
@@ -2401,12 +2430,18 @@ class TestCommitPhaseGateReRunsProbeNoCaching(unittest.TestCase):
             self.fail(
                 "AttributeError: verify_precommit_active does not expose run_checks()."
             )
+        # Neutralise the environment-dependent collaborators (see TestAllChecksPass):
+        # is_guardian_complete()/check_hook_freshness() run live against Path.cwd()
+        # and, on a CI runner without `pre-commit install`, leak 'hook_freshness'
+        # into failing_checks. Mock them so the stateless re-run contract is hermetic.
         # First invocation — pre-drive gate: all checks pass
         with (
             patch.object(_vpa, "check_a_binary_on_path", return_value=True),
             patch.object(_vpa, "check_b_config", return_value=True),
             patch.object(_vpa, "check_c_git_hook", return_value=True),
             patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
         ):
             first_result = _vpa.run_checks()
         self.assertEqual(
@@ -2424,6 +2459,8 @@ class TestCommitPhaseGateReRunsProbeNoCaching(unittest.TestCase):
             patch.object(_vpa, "check_b_config", return_value=True),
             patch.object(_vpa, "check_c_git_hook", return_value=False),
             patch.object(_vpa, "check_d_canary", return_value=True),
+            patch.object(_vpa, "is_guardian_complete", return_value=True),
+            patch.object(_vpa, "check_hook_freshness", return_value=True),
         ):
             second_result = _vpa.run_checks()
         self.assertFalse(

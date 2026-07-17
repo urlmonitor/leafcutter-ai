@@ -99,10 +99,12 @@ jobs:
   test:
     name: Test suite (pytest)
     runs-on: ubuntu-latest
-    # INFORMATIONAL ONLY until the suite is green on a fresh checkout — see the
-    # header note. Drop continue-on-error to make this a blocking gate (BP-1200b)
-    # once the pre-existing collection errors and failures are resolved.
-    continue-on-error: true
+    # BLOCKING gate (BP-1200b): the suite is green on a fresh checkout under
+    # AC_ENFORCE_STRICT=1 (build step + install_shims, then strict pytest), so a
+    # PR carrying a failing test now fails this check and cannot merge. There is
+    # NO continue-on-error — dropping it is the whole point of this job.
+    # The job name "Test suite (pytest)" is the stable contract referenced by the
+    # branch-protection required-status-checks list (BP-1200c) — do NOT rename it.
     steps:
       - uses: actions/checkout@v4
 
@@ -122,6 +124,13 @@ jobs:
         run: python scripts/build.py --target-dir .
 
       - name: Run test suite
+        env:
+          # Disable AC-enforcement xfail-masking on the gate so genuinely-failing
+          # tests surface as real failures (not downgraded to xfail when their
+          # covering AC is not "done"). Keeps the CI signal trustworthy — a
+          # prerequisite for making this job blocking (BP-1200b).
+          # (EPIC-RedTestClusterRepair ticket 09.)
+          AC_ENFORCE_STRICT: "1"
         run: python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors
 
   typecheck:

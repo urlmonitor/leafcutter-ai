@@ -15,7 +15,7 @@ ARCHITECTURE: Pure-function helpers with no external I/O and no subprocess calls
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
-  - docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/
+  - docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/
 
 DECISION HISTORY:
   - 2026-06-17 [python-coder/ACS-500f-1]: Created by extracting validators from

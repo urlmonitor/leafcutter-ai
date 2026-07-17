@@ -1,0 +1,73 @@
+id: BO-2200c-4
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "doc_links richness is surfaced as existing docs to update or cross-link"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
+criteria: |
+  Given a documented AC whose `doc_links` entries carry `relationship`, `status`, and
+    `relevance` fields,
+  When the generator writes the `### documentation-expert` section,
+  Then those entries are surfaced in the Agent Contracts block as 'existing docs to
+    update / cross-link', preserving each entry's `relationship`, `status`, and
+    `relevance` alongside its path.
+  And the entries are NOT reduced to bare `files_touched` paths that discard the
+    relationship / status / relevance metadata.
+depends_on: [BO-2200c, BO-2200c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    existing_docs_cross_link:
+      type: array
+      items:
+        type: object
+        properties:
+          path: {type: string}
+          relationship: {type: string}
+          status: {type: string}
+          relevance: {type: string}
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Current behavior (_extract_local_paths) strips doc_links to bare paths, discarding relationship/status/relevance."
+    - "Preserve the structured fields (relationship / status / relevance) and render them as 'existing docs to update / cross-link' in the Agent Contracts block so the writer knows how each linked doc relates."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200c-1
+  contract: "The Agent Contracts block into which this behavior injects the enriched existing-docs cross-link list."
+test_spec:
+  - name: test_doc_links_relationship_status_relevance_preserved
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "doc_links entries with relationship/status/relevance are surfaced with those fields intact in the Agent Contracts block."
+  - name: test_doc_links_not_reduced_to_bare_paths
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The rendered existing-docs list preserves structured metadata rather than collapsing to bare files_touched paths."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/21_TICKET-20260715-BO-2200c-4.md

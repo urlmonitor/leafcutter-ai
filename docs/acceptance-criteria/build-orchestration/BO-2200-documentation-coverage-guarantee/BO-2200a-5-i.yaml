@@ -1,0 +1,66 @@
+id: BO-2200a-5-i
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "A valid documentation_triggers enum value on a non-L1 AC is still rejected for being off-level"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200a.yaml"
+criteria: |
+  Given the agent-side AC schema validator with both the enum-value check and the new
+    L1-only check active,
+  When it validates an L2 AC whose `documentation_triggers` contains only values that
+    are themselves valid enum members (for example `reference-doc`),
+  Then validation still fails, because the field is present on a non-L1 AC — a valid
+    enum value does not exempt an off-level AC from the L1-only rule.
+  And when it validates an L1 AC whose `documentation_triggers` contains an invalid
+    value (for example `tutorial`), validation fails on the enum check even though the
+    level is permitted.
+  And the two rules are independent, so neither masks the other.
+depends_on: [BO-2200a-5]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    independence_rule:
+      type: object
+      description: "The level check and the enum check for documentation_triggers must both run and report independently."
+  reference_file_path: "scripts/ac_store/validate_ac_schema.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The level check and the enum check must both run and report independently — an AC can fail one, the other, or both."
+    - "Do not short-circuit the enum check when the level check passes, and do not let a valid enum value suppress the level check."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200a-5
+  contract: "The combined level+enum documentation_triggers validation this edge case pins to independent evaluation."
+test_spec:
+  - name: test_valid_enum_on_l2_still_fails_off_level
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An L2 AC whose documentation_triggers is a valid enum value (reference-doc) still fails on the L1-only rule."
+  - name: test_invalid_enum_on_l1_fails_enum_check
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An L1 AC whose documentation_triggers contains an invalid value (tutorial) fails on the enum check even though the level is permitted."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/07_TICKET-20260715-BO-2200a-5-i.md

@@ -49,6 +49,15 @@ logger = logging.getLogger(__name__)
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
 _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 
+#: doc_links relationships that represent a real edit surface (i.e. the linked
+#: file is a file the implementing agent must modify or create). Paths with these
+#: relationships enter ``files_touched``. Relationships not in this set (e.g.
+#: ``describes``, ``related``) are informational only and must NOT enter
+#: ``files_touched``.
+_EDIT_SURFACE_RELATIONSHIPS: frozenset[str] = frozenset(
+    {"constrains", "creates", "implements", "modifies", "specifies"}
+)
+
 #: Canonical support agents always added to every generated ticket.
 _CANONICAL_SUPPORT_AGENTS: list[str] = [
     "test-writer",
@@ -200,14 +209,24 @@ def _find_existing_ticket(tickets_root: Path, ac_id: str) -> Path | None:
 # ---------------------------------------------------------------------------
 
 
-def _extract_local_paths(doc_links: list[Any]) -> list[str]:
+def _extract_local_paths(
+    doc_links: list[Any],
+    *,
+    relationships: frozenset[str] | None = None,
+) -> list[str]:
     """Extract local file paths from a doc_links list.
 
-    Filters out entries whose path starts with 'http' (URLs).
+    Filters out entries whose path starts with 'http' (URLs).  When
+    *relationships* is provided, only entries whose ``relationship`` field is
+    a member of that set are included; entries with an absent or non-matching
+    relationship are skipped.
 
     Args:
         doc_links: List of doc_link dicts (each has at least a 'path' key)
                    or None/empty.
+        relationships: Optional frozenset of relationship strings to include.
+                       When ``None`` (default) no relationship filtering is
+                       applied.
 
     Returns:
         List of local path strings (may be empty).
@@ -218,10 +237,55 @@ def _extract_local_paths(doc_links: list[Any]) -> list[str]:
     for link in doc_links:
         if not isinstance(link, dict):
             continue
+        if relationships is not None:
+            rel = link.get("relationship", "")
+            if rel not in relationships:
+                continue
         path_val = link.get("path", "")
         if isinstance(path_val, str) and path_val and not path_val.startswith("http"):
             local.append(path_val)
     return local
+
+
+def _build_files_touched(ac: dict[str, Any]) -> list[str]:
+    """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
+
+    The list is the union of:
+
+    1. The ``reference_file_path`` named in ``it_requirements`` (structured form).
+    2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
+       relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
+       ``creates``, ``implements``, ``modifies``, ``specifies``).
+
+    Doc_links with ``relationship`` set to ``describes`` or ``related`` are
+    informational only and are excluded from ``files_touched``.  Paths that
+    appear in both sources are deduplicated so each path is listed exactly once.
+    The returned list is sorted deterministically so that regenerating the same
+    AC always yields byte-identical output.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        Sorted list of unique local path strings (may be empty).
+    """
+    paths: set[str] = set()
+
+    # Source 1 — it_requirements.reference_file_path (structured form)
+    it_req = ac.get("it_requirements")
+    if isinstance(it_req, dict):
+        ref_path = it_req.get("reference_file_path", "")
+        if isinstance(ref_path, str) and ref_path:
+            paths.add(ref_path)
+
+    # Source 2 — doc_links edit-surface entries
+    doc_links = ac.get("doc_links") or []
+    for path_val in _extract_local_paths(
+        doc_links, relationships=_EDIT_SURFACE_RELATIONSHIPS
+    ):
+        paths.add(path_val)
+
+    return sorted(paths)
 
 
 def _resolve_reference_patterns(it_req: dict, ac_id: str) -> dict:
@@ -816,6 +880,7 @@ def _build_frontmatter(
     ac_id: str,
     files_touched: list[str],
     agents: dict[str, str],
+    ac_store_path: "str | None" = None,
 ) -> str:
     """Build the YAML frontmatter block for the ticket.
 
@@ -824,6 +889,11 @@ def _build_frontmatter(
         ac_id: The AC id.
         files_touched: Local paths extracted from doc_links.
         agents: Agents map dict.
+        ac_store_path: Repo-root-relative path to the source AC YAML file.
+            When provided, an ``ac_traceability`` entry is added to the
+            frontmatter carrying both the AC id and the store path, enabling
+            ac-validator and ac-fulfillment-gate to locate the source AC
+            directly without scanning the whole store.
 
     Returns:
         Formatted frontmatter string (including opening and closing ``---``).
@@ -846,6 +916,8 @@ def _build_frontmatter(
         "agents": agents,
         "complexity": complexity,
     }
+    if ac_store_path is not None:
+        fm["ac_traceability"] = {"id": ac_id, "path": ac_store_path}
     test_constraints_raw = ac.get("test_constraints")
     test_constraints = _parse_test_constraints(test_constraints_raw)
     if test_constraints:
@@ -920,6 +992,44 @@ def _normalize_change_target(ac: AcRecord) -> list[str] | None:
     return [raw]
 
 
+def _criteria_checkboxes(criteria: str) -> list[str]:
+    """Derive machine-parseable ``- [ ] AC-N: <text>`` checkbox lines from criteria.
+
+    Extracts the text of each ``Then`` / ``And`` keyword clause in a Gherkin
+    criteria string (one checkbox per clause).  When no ``Then`` / ``And``
+    clauses are found, falls back to the first non-empty stripped line of the
+    criteria so that every non-empty criteria string produces at least one
+    checkbox.
+
+    The resulting lines match the ac-validator parser pattern
+    ``^- \\[ \\] AC-\\d+:\\s*\\S`` (with MULTILINE), satisfying TKT-500f-11.
+
+    Args:
+        criteria: The raw Gherkin criteria text from an AC record.
+
+    Returns:
+        A list of ``- [ ] AC-N: <text>`` strings — one per extracted clause.
+        Returns an empty list only when *criteria* is blank.
+    """
+    raw_lines = criteria.split("\n")
+    clauses: list[str] = []
+    for line in raw_lines:
+        stripped = line.strip()
+        m = re.match(r"^(Then|And)\s+(.*)", stripped, re.IGNORECASE)
+        if m:
+            text = m.group(2).rstrip(",").strip()
+            if text:
+                clauses.append(text)
+    if not clauses:
+        # Fallback: use the first non-empty line verbatim
+        for line in raw_lines:
+            stripped = line.strip()
+            if stripped:
+                clauses.append(stripped)
+                break
+    return [f"- [ ] AC-{i + 1}: {clause}" for i, clause in enumerate(clauses)]
+
+
 def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | None" = None) -> str:
     """Build the ticket body (everything after the frontmatter).
 
@@ -968,6 +1078,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     # agent in the computed map produces production_code.
     has_code_producer = _computed_map_has_production_code_producer(agents)
 
+    checkbox_lines = _criteria_checkboxes(criteria)
     lines: list[str] = [
         f"# {title}",
         "",
@@ -989,6 +1100,8 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         "```gherkin",
         criteria.rstrip(),
         "```",
+        "",
+        *checkbox_lines,
         "",
     ]
 
@@ -1413,10 +1526,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     ac_path, ac = result
 
+    # Compute repo-root-relative path to the AC file for ac_traceability.
+    # ac_path is guaranteed to be under ac_root (found by _find_ac_by_id),
+    # so relative_to(ac_root.parent.parent) always succeeds.
+    ac_store_path = str(ac_path.relative_to(ac_root.parent.parent))
+
     # Dry-run / verify: build the ticket in memory, print it, and (for --verify)
     # append a readiness report. Neither path writes a file.
     if args.dry_run or args.verify:
-        files_touched = _extract_local_paths(ac.get("doc_links") or [])
+        files_touched = _build_files_touched(ac)
         assigned_agent = ac.get("assigned_agent", "python-coder")
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
@@ -1425,7 +1543,7 @@ def main(argv: list[str] | None = None) -> int:
             change_targets=change_targets,
             risk_surface=risk_surface,
         )
-        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
+        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
         body = _build_ticket_body(ac, ac_id, agents_map=agents)
         print(frontmatter)
         print()
@@ -1450,7 +1568,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # Build ticket content
-    files_touched = _extract_local_paths(ac.get("doc_links") or [])
+    files_touched = _build_files_touched(ac)
     assigned_agent = ac.get("assigned_agent", "python-coder")
     change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
@@ -1459,7 +1577,7 @@ def main(argv: list[str] | None = None) -> int:
         change_targets=change_targets,
         risk_surface=risk_surface,
     )
-    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
+    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
     body = _build_ticket_body(ac, ac_id, agents_map=agents)
     ticket_content = frontmatter + "\n\n" + body
 

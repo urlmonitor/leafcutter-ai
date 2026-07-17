@@ -1,0 +1,58 @@
+id: BO-2200b-3
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "The verifier fails placeholder documentation and passes real content"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given a ticket that requires documentation and the documentation-verifier phase runs,
+  When a required documentation file was changed in the diff but its content matches a
+    placeholder signature -- for example it contains only `TODO` or `TBD` markers, is an
+    empty stub, or is an unfilled copy of a template --
+  Then the verifier reports a failure with `status: blocker` identifying the placeholder file.
+  And when every required documentation file was changed AND its content does not match a
+    placeholder signature, the verifier returns `status: ok`.
+depends_on: [BO-2200b, BO-2200b-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements: |
+  Author the documentation-verifier template's placeholder-detection instructions so the
+  agent recognises TODO/TBD markers, empty or heading-only stubs, and unfilled template
+  signatures (e.g. residual `{placeholder}` tokens). Real, non-placeholder content is the
+  ONLY passing outcome (fail-closed): an exception or an ambiguous parse must not emit
+  status: ok. Mirror the BP-1100 phantom-done posture. Reuse the existing deterministic
+  helper scripts/build_placeholder_detection.py (scan_for_placeholders / TODO-TBD regexes)
+  via Bash rather than re-implementing placeholder scanning in the prompt, so detection is
+  consistent and testable at the helper level.
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-1
+  contract: "The documentation-verifier phase slot this behavior populates with placeholder-signature detection in the agent template."
+test_required: false
+test_rationale: |
+  documentation-verifier is a prompt-driven signoff LLM agent; its pass/fail judgment is
+  exercised behaviorally at drive time (like user-surface-smoker), not by a pytest unit.
+  The deterministic placeholder helper it reuses
+  (scripts/build_placeholder_detection.py) is already covered by its own tests, so the
+  signature-matching logic is unit-tested at that layer.
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/11_TICKET-20260715-BO-2200b-3.md

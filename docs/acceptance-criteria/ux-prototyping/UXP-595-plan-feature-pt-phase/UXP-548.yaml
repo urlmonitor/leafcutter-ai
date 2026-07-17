@@ -1,0 +1,64 @@
+id: UXP-548
+components:
+  - ux_prototyping
+title: "The business-analyst's reported flow_backlinks are reconciled into step.implements and derived data is regenerated"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: approved
+work_status: done
+criteria: |
+  Given the business-analyst has derived ACs from a flow and reported a flow_backlinks
+  map (step id -> AC ids),
+  When the reconciliation step runs,
+  Then each reported AC id is unioned (order-preserving) into that step's
+  implements[] in the flow JSON,
+  And the product-truth generator is re-run so index.json by_ac, the flow impl_summary,
+  and each AC's product_truth back-reference are regenerated,
+  And applying the same flow_backlinks a second time is a byte-for-byte no-op
+  (idempotent),
+  And a backlink for an unknown step id is a non-fatal warning, not a crash.
+depends_on:
+  - UXP-595
+doc_links:
+  - path: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/scripts/apply_flow_backlinks.py
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  docs/product-truth/scripts/apply_flow_backlinks.py writes the BA-reported flow_backlinks
+  into the flow's step.implements[] (union, order-preserving) and re-runs
+  generate_product_truth.py; it is idempotent, treats an unknown step id as a logged
+  non-fatal warning, and exposes a --skip-generate flag. It is invoked by /plan-feature
+  after the BA stage as its own reconciliation commit (it re-mutates already-committed
+  flow + index + AC files). Typed try/except per the repo error-handling policy.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_apply_flow_backlinks.py
+implemented_by:
+  - docs/product-truth/scripts/apply_flow_backlinks.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_writes_step_implements
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "a reported backlink unions the AC id into the step's implements[]."
+  - name: test_idempotent
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "a second identical reconciliation leaves every file byte-for-byte unchanged."

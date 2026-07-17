@@ -1,0 +1,76 @@
+id: BO-2200d-1
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "documentation-expert is added via the post-coder surface path, not the pre-coder flow-change slot"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200d.yaml"
+criteria: |
+  Given the ticket generator injects `documentation-expert` for a doc-triggering ticket,
+  When it decides through which path to add the agent,
+  Then `documentation-expert` is added via the per-surface (canonical-order) path, which
+    orders it after the coder -- not via the pre-coder flow-change gate slot.
+  And `documentation-expert` is absent from all four flow-change-gate mandatory-agents
+    lists.
+  And `architect-review` remains present in the pre-coder flow-change-gate lists (the
+    removal of documentation-expert is surgical and does not remove other pre-coder gates).
+depends_on: [BO-2200d, BO-2200a-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    flow_change_gates:
+      type: object
+      description: "documentation-expert removed from all four code|schema x contract_boundary|safety flow_change_gates mandatory_agents entries; architect-review retained; documentation-expert added via the per-surface canonical-order (post-coder) path instead."
+  reference_file_path: "config/guardrail_gates.yaml"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Remove documentation-expert from the pre-coder flow_change_gates mandatory_agents lists (all four: code|schema x contract_boundary|safety, ~lines 266-327) and add it via the per-surface canonical-order path (_CANONICAL_PHASE_ORDER) so it is ordered after the coder."
+    - "architect-review must stay in the flow_change_gates lists (pre-coder)."
+    - "Audit for double-injection: documentation-expert must appear exactly once in the resolved agents map."
+    - "The existing tests TestFlowChangeSequencing / TestBO540FlowChangeOrdering assert doc-expert BEFORE the coder — they must be updated to reflect the post-coder placement."
+delivers_to:
+  agent: python-coder
+  contract: "documentation-expert injected via the post-coder per-surface path and removed from the four flow_change_gates mandatory_agents lists (architect-review retained pre-coder). Consumed by BO-2200d-2 (relative-order assertion)."
+expects_from:
+  ac_id: BO-2200a-1
+  contract: "The documentation-trigger decision that gates when documentation-expert is injected at all."
+test_spec:
+  - name: test_documentation_expert_added_via_post_coder_path
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "For a doc-triggering flow-change ticket, documentation-expert is injected via the per-surface canonical-order path (ordered after the coder), not the pre-coder flow-change slot."
+  - name: test_documentation_expert_absent_from_flow_change_gates
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-expert is absent from all four flow_change_gates mandatory_agents lists."
+  - name: test_architect_review_retained_in_flow_change_gates
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "architect-review remains in the pre-coder flow_change_gates lists after the surgical removal."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/25_TICKET-20260715-BO-2200d-1.md

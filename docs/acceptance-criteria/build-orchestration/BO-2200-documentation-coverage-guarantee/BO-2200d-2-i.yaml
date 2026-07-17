@@ -1,0 +1,62 @@
+id: BO-2200d-2-i
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "With multiple coders, documentation-expert is ordered after the last coder"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200d.yaml"
+criteria: |
+  Given a documentation-required ticket whose phase order includes more than one coder --
+    for example both `python-coder` and `frontend-coder` -- alongside `documentation-expert`,
+  When the phase order is evaluated,
+  Then the index of `documentation-expert` is greater than the index of EVERY coder in the
+    ticket (it is ordered after the last coder, not merely after the first).
+  And `documentation-verifier` still runs after `documentation-expert` and last before commit.
+depends_on: [BO-2200d-2]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    multi_coder_ordering:
+      type: object
+      description: "index(documentation-expert) > max(index of every coder present: python-coder, sql-coder, frontend-coder); documentation-verifier after documentation-expert and last before commit."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The post-coder placement must hold against the LAST coder when several coders are present (python-coder, sql-coder, frontend-coder)."
+    - "A placement that only clears the first coder would let docs be written before another coder finishes — assert against the maximum coder index."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200d-2
+  contract: "The relative-order assertion this edge case extends to the multiple-coders case."
+test_spec:
+  - name: test_doc_expert_ordered_after_last_coder
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "With python-coder and frontend-coder both present, index(documentation-expert) is greater than the index of every coder (after the last coder)."
+  - name: test_verifier_after_doc_expert_and_last_before_commit_multi_coder
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "documentation-verifier still runs after documentation-expert and immediately before commit in the multi-coder case."
+origin_agent: business-analyst
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/28_TICKET-20260715-BO-2200d-2-i.md

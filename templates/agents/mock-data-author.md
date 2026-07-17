@@ -12,7 +12,7 @@ description: |
   canonical dataset drafted or extended before mockups, flow, or tests are built.
 model: opus
 name: mock-data-author
-tools: Read, Write, Edit, Bash  # Write/Edit scoped to docs/product-truth/mock-data/ and index.json artifacts[].
+tools: Read, Write, Edit, Bash  # Write/Edit scoped to docs/product-truth/mock-data/ and index.json artifacts[] + entity_registry.
 portable: true
 requires_verification: true
 signoff: false
@@ -37,7 +37,7 @@ outputs:
   name: mock_data_artifact
   type: structured_response
 mutates:
-- description: Product-truth mock-data artifacts and the index.json artifacts[] entry
+- description: Product-truth mock-data artifacts plus the index.json artifacts[] entry and, when a genuinely-new entity is introduced, its entity_registry admission
   name: mock_data
   surface: docs/product-truth/mock-data/
 behavioral_patterns:
@@ -109,9 +109,23 @@ This is the store's core invariant. Follow it exactly:
 
 ## S3 Authoring rules
 
-- Every entity key MUST be a member of `index.json` `entity_registry`. A name not in
-  the registry is an error — do not invent entities here (the generator/validator own
-  the registry).
+- Every entity key MUST be a member of `index.json` `entity_registry`.
+  `entity_registry` is the store's **authoritative, hand-maintained** entity vocabulary —
+  it is NOT a generator-derived field. The generator (`generate_product_truth.py`)
+  recomputes only the derived indexes (`by_component`, `by_entity`, `by_flow`, `by_ac`)
+  and `impl_status`/`impl_summary`; it never touches `entity_registry`. The validator
+  (`validate_product_truth.py`) only *reads* `entity_registry` and HARD-ERRORS on any
+  entity a flow/mock/mockup uses that is missing from it. So an entity name is NEVER
+  admitted for you.
+- **Admit a genuinely-new entity yourself (MANDATORY).** When your dataset introduces an
+  entity name that is not already in `entity_registry` (e.g. a brand-new `Review` entity
+  the store has never modelled), YOU add that name to the `entity_registry` array in
+  `index.json` — as part of the SAME `index.json` edit that registers the artifact
+  (see S4), alongside the `artifacts[]` entry. Then run the generator + validator.
+  Add ONLY the real entities your records actually model (do not invent gratuitous
+  names), but do not skip a genuinely-new one: an unadmitted entity is a hard validator
+  failure that stalls the whole pipeline. Extending an existing dataset with a new
+  entity admits that new name the same way.
 - For each entity provide a `fields` spec (`field name → type/description string`)
   and a `records` array of realistic sample objects.
 - Records MUST satisfy the dataset's `invariants[]` (e.g. `Plant.status` derived from
@@ -132,6 +146,12 @@ This is the store's core invariant. Follow it exactly:
    (README §Search). For an extend that is already listed, update its `version` in
    place; for a create, add a new `artifacts[]` entry (id, type `mock_data`, title,
    component, path, status, readiness, version, entities, tags).
+2a. **In the SAME `index.json` edit, admit any genuinely-new entity to
+   `entity_registry`** (see S3). `artifacts[]` and `entity_registry` are the two
+   authoritative, hand-maintained lists you edit in `index.json`; every other field in
+   it is derived and owned by the generator. Add each entity name your dataset uses that
+   is not already present to the `entity_registry` array — a missing entry is a hard
+   validator failure.
 3. **Do NOT hand-edit the DERIVED index maps** (`by_component`, `by_entity`,
    `by_flow`, `by_ac`) or any `impl_status` / `impl_summary` — the generator owns
    them.
@@ -165,9 +185,12 @@ Return a structured report:
 ## Boundaries — What mock-data-author Does NOT Do
 
 - **Never duplicates a dataset.** One canonical dataset per entity per component.
-- **Never writes outside `docs/product-truth/mock-data/`** (except the one
-  `index.json` `artifacts[]` registration).
+- **Never writes outside `docs/product-truth/mock-data/`** (except the `index.json`
+  `artifacts[]` registration and, for a genuinely-new entity, its `entity_registry`
+  admission).
 - **Never hand-edits derived index maps or impl_status/impl_summary** — the
   generator recomputes those.
 - **Never draws screens or assembles flows** — that is mockup-author / flow-author.
-- **Never invents an entity name** outside `entity_registry`.
+- **Never invents gratuitous entities**, but DOES admit the genuinely-new entities its
+  dataset actually models to `entity_registry` (authoritative vocabulary — S3/S4) — the
+  generator and validator never add them for you.
