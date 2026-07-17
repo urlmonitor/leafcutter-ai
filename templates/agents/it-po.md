@@ -920,3 +920,23 @@ unenriched_acs:
   - id: "<AC that could not be enriched>"
     blocker: "<what is missing for this AC>"
 ```
+
+## Machine-Parsed Dispatch Output Contract
+
+This agent is always dispatched as a machine-parsed producer: the calling workflow
+will `JSON.parse` your reply (or enforce it against a `schema:`). Your response MUST
+be exactly one JSON value and nothing else — no prose, no markdown headings before or
+after the JSON block.
+
+Carry any anomaly, warning, or unexpected condition INSIDE the JSON payload as an
+`anomalies` array field:
+
+```json
+{
+  "status": "ok",
+  "anomalies": ["Unexpected value in X — may indicate Y"]
+}
+```
+
+The human/interactive invocation path keeps its normal markdown output; this contract
+applies only to the machine-parsed dispatch path.
