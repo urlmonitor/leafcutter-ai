@@ -1,6 +1,6 @@
 ---
 title: "finalize-feature: targeted per-test rerun when baseline capture fails, not blanket regression"
-status: todo
+status: done
 components:
   - finalize
   - testing_quality
