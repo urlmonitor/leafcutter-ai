@@ -857,6 +857,51 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     ])
 
 
+def _build_agent_contracts_section(
+    ac: AcRecord,
+    ac_id: str,
+    agents_map: dict[str, str],
+) -> str:
+    """Build the ## Agent Contracts section when documentation-expert is needed.
+
+    Emits the section only when 'documentation-expert' appears in *agents_map*
+    with status 'needed'.  The ``### documentation-expert`` subsection lists one
+    globally-numbered ``- [ ] AC-N:`` checklist item per documented AC (one item
+    for the source AC: the title of *ac*).
+
+    Global numbering means the counter does not restart per subsection; it
+    continues from any prior AC-N items in the ticket body.  Currently only the
+    ``### documentation-expert`` subsection is emitted and no prior items exist,
+    so the counter always starts at AC-1 for tickets generated today.
+
+    The section is placed after ``## Acceptance Criteria`` (and any Test
+    Requirements / Implementation Notes blocks) and before ``## Sign-offs``, as
+    required by BO-2200c-1 n_location_rule='1'.
+
+    Args:
+        ac: Parsed AC record.
+        ac_id: The AC id.
+        agents_map: The computed agents map (agent name → status).
+
+    Returns:
+        Formatted ``## Agent Contracts`` markdown block, or ``""`` when
+        documentation-expert is not in the agents map as 'needed'.
+    """
+    if agents_map.get("documentation-expert") != "needed":
+        return ""
+
+    title = ac.get("title", f"Implement {ac_id}")
+    section_lines = [
+        "## Agent Contracts",
+        "",
+        "### documentation-expert",
+        "",
+        f"- [ ] AC-1: {title}",
+        "",
+    ]
+    return "\n".join(section_lines)
+
+
 def _build_signoffs_section(agents: dict[str, str]) -> str:
     """Build the ## Sign-offs section from the agents map.
 
@@ -1067,6 +1112,13 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     impl_notes = _build_implementation_notes_section(ac, ac_id)
     if impl_notes:
         lines.append(impl_notes)
+
+    # Emit ## Agent Contracts section (BO-2200c-1): placed after ## Acceptance
+    # Criteria (and any Test Requirements / Implementation Notes blocks) and
+    # before ## Sign-offs.  Only emitted when documentation-expert is 'needed'.
+    agent_contracts = _build_agent_contracts_section(ac, ac_id, agents)
+    if agent_contracts:
+        lines.append(agent_contracts)
 
     lines.extend([
         signoffs,
@@ -1584,5 +1636,13 @@ DECISION HISTORY
   _build_verification_report() that prints the would-be ticket plus a PASS/WARN/
   FAIL readiness report (exits non-zero on FAIL) so an author can confirm the AC
   gives a coder enough to build and test-writer enough to test. (AC BO-2000e)
+- 2026-07-16 [TICKET-20260715-BO-2200c-1]: Emit ## Agent Contracts section.
+  Added _build_agent_contracts_section() that emits an '## Agent Contracts'
+  heading with a '### documentation-expert' subsection when documentation-expert
+  is in the agents map as 'needed'. The subsection carries one globally-numbered
+  '- [ ] AC-1: <title>' checklist item for the source AC. Section is positioned
+  after ## Acceptance Criteria (and Test Requirements / Implementation Notes)
+  and before ## Sign-offs. Tickets without documentation-expert:needed are
+  unaffected. (AC BO-2200c-1)
 ====================================================================
 """

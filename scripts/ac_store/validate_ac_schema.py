@@ -139,6 +139,15 @@ def _validate_file(path: Path, registry_ids: set[str] | None = None) -> list[str
                     f"{path}: Field 'documentation_triggers' contains invalid values: "
                     f"{invalid}. Valid values: {sorted(_DOC_TRIGGER_VALUES)}."
                 )
+            # L1-only constraint: documentation_triggers is permitted only on L1 ACs.
+            # BO-2200a-5: reject the field on L0, L2, L3 with a message that names
+            # the offending AC id and its level.
+            ac_level = data.get("level")
+            if ac_level != "L1":
+                errors.append(
+                    f"{path}: Field 'documentation_triggers' is permitted only on L1 "
+                    f"ACs. AC {data['id']} has level {ac_level!r}."
+                )
 
     return errors
 
