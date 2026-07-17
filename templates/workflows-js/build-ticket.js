@@ -133,6 +133,7 @@ const phaseOrder = [
   "reference-author",            // priority 10
   "pr-reviewer",                 // priority 11
   "user-surface-smoker",         // priority 11.5
+  "documentation-verifier",      // priority 11.9
   "commit",                      // priority 12
   "pull-request",                // priority 13
 ];

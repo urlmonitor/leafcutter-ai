@@ -630,6 +630,7 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 11.5 | `ac-validator` | AC coverage gate; runs after pr-reviewer (11) and before commit (12) |
 | 11.5 | `user-surface-smoker` | Surface end-to-end smoker; concurrent with ac-validator |
 | 11.7 | `ac-fulfillment-gate` | AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) |
+| 11.9 | `documentation-verifier` | Documentation coverage gate; runs after documentation-expert (10) and before commit (12) |
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |
 
