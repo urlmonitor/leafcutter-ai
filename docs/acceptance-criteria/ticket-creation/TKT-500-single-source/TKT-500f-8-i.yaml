@@ -8,7 +8,7 @@ component: ticket-creation
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-8.yaml"
 criteria: |
@@ -47,8 +47,11 @@ origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/ac_store/test_tkt_500f_8_i.py
+implemented_by:
+- tickets/TICKET-20260717-TKT-500f-8-i.md
+- scripts/ac_store/generate_ticket_from_ac.py
 assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
