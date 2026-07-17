@@ -79,6 +79,13 @@ You receive a JSON payload with the following fields:
 `baseline_failures` may be `null` (baseline run failed or unavailable).
 When null, treat all failures as `regression` (conservative fallback).
 
+`baseline_failures` may also be a **recovered baseline** — a non-null list built
+by a targeted main-HEAD rerun of only the post-merge failing test IDs (FIN-100c-4/6).
+A recovered baseline is supplied in place of `null` when the Step 0 full-suite
+baseline timed out but the targeted rerun succeeded. Treat a recovered baseline
+exactly like a full baseline: tests present in it are `pre_existing`; tests absent
+from it are `regression` candidates processed by Steps 2–4.
+
 ## Classification Categories
 
 | Category | Condition | Action |
