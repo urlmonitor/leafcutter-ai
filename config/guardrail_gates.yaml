@@ -268,53 +268,55 @@ flow_change_gates:
     risk_surface: contract_boundary
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - python-coder
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before python-coder (priority 6) and
-      sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before python-coder
+      (priority 6) and sql-coder (priority 7).
+      documentation-expert is added via the per-surface documentation_gates
+      canonical-order path (post-coder) when triggered — not via this gate.
 
   - change_target: code
     risk_surface: safety
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - python-coder
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before python-coder (priority 6) and
-      sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before python-coder
+      (priority 6) and sql-coder (priority 7).
+      documentation-expert is added via the per-surface documentation_gates
+      canonical-order path (post-coder) when triggered — not via this gate.
 
   - change_target: schema
     risk_surface: contract_boundary
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before sql-coder
+      (priority 7).
+      documentation-expert is added via documentation_gates (schema triggers
+      it) via the canonical-order path — after the coder, not via this gate.
 
   - change_target: schema
     risk_surface: safety
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before sql-coder
+      (priority 7).
+      documentation-expert is added via documentation_gates (schema triggers
+      it) via the canonical-order path — after the coder, not via this gate.
 
   - change_target: config
     risk_surface: contract_boundary

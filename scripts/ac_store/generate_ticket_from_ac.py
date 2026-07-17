@@ -475,11 +475,9 @@ def _build_agents_map(
                 )
 
         # Consume flow_change_gates: for each (change_target, risk_surface) pair
-        # that is listed as a flow-change pair, union mandatory_agents into guardrail_set
-        # and switch to the flow-change phase order so documentation-expert is placed
-        # BEFORE any coder (as required by the phase_constraint in each entry).
+        # that is listed as a flow-change pair, union mandatory_agents into guardrail_set.
+        # Phase ordering is handled by _CANONICAL_PHASE_ORDER for all pairs (BO-2200d-1).
         flow_change_entries = gates.get("flow_change_gates", []) or []
-        is_flow_change_pair = False
         for entry in flow_change_entries:
             if not isinstance(entry, dict):
                 continue
@@ -489,14 +487,19 @@ def _build_agents_map(
             ):
                 mandatory = entry.get("mandatory_agents") or []
                 guardrail_set.update(mandatory)
-                is_flow_change_pair = True
 
-        # Apply documentation_gates policy (BO-2200a-1): data-driven
-        # documentation-expert requirement.  When any change_target intersects
-        # change_target_triggers from the gates config, documentation-expert is
-        # added to guardrail_set as 'needed'.  The trigger list is read from
-        # config at call-time — no hard-coded set exists in the generator — so
-        # adding or removing a triggering value is a configuration edit only.
+        # Apply documentation_gates policy — two independent trigger dimensions:
+        #
+        # Dimension 1 (BO-2200a-1): change_target_triggers — documentation-expert
+        # is required when any change_target intersects the trigger list.
+        #
+        # Dimension 2 (BO-2200a-2): risk_surface_triggers — documentation-expert
+        # is required when risk_surface matches any entry in the trigger list,
+        # independently of the change_target dimension (OR semantics).
+        #
+        # Both trigger lists are read from config at call-time — no hard-coded
+        # set exists in the generator — so adding or removing a triggering value
+        # is a configuration edit only.
         doc_gates_policy = gates.get("documentation_gates") or {}
         doc_change_triggers: set[str] = set(
             doc_gates_policy.get("change_target_triggers") or []
@@ -504,10 +507,22 @@ def _build_agents_map(
         if doc_change_triggers and set(change_targets) & doc_change_triggers:
             guardrail_set.add("documentation-expert")
 
-        # For flow-change pairs, documentation-expert must appear before any coder.
-        # _FLOW_CHANGE_PHASE_ORDER encodes this constraint; all other pairs use the
-        # standard _CANONICAL_PHASE_ORDER.
-        phase_order = _FLOW_CHANGE_PHASE_ORDER if is_flow_change_pair else _CANONICAL_PHASE_ORDER
+        # Dimension 2 — risk_surface_triggers (BO-2200a-2): adds
+        # documentation-expert when risk_surface is in the trigger set,
+        # independently of the change_target trigger above.
+        doc_risk_triggers: set[str] = set(
+            doc_gates_policy.get("risk_surface_triggers") or []
+        )
+        if doc_risk_triggers and risk_surface and risk_surface in doc_risk_triggers:
+            guardrail_set.add("documentation-expert")
+
+        # documentation-expert is ordered via _CANONICAL_PHASE_ORDER (post-coder
+        # position) for all pairs, including flow-change pairs.  architect-review
+        # (position 0 in _CANONICAL_PHASE_ORDER) still correctly precedes any coder
+        # for flow-change pairs.  BO-2200d-1: documentation-expert is injected via
+        # documentation_gates (post-coder canonical order), not via the pre-coder
+        # flow-change gate slot.
+        phase_order = _CANONICAL_PHASE_ORDER
 
         # Collect all agent names that should appear in the map
         # Start with guardrails + assigned agent + standard tail agents
@@ -1390,6 +1405,12 @@ def _build_verification_report(
     has_fail = False
 
     def record(status: str, message: str) -> None:
+        """Append a status-tagged line to *lines* and set has_fail on FAIL.
+
+        Args:
+            status: One of ``"PASS"``, ``"WARN"``, or ``"FAIL"``.
+            message: Human-readable description of the check result.
+        """
         nonlocal has_fail
         if status == "FAIL":
             has_fail = True
@@ -1667,5 +1688,13 @@ DECISION HISTORY
   documentation_gates section to config/guardrail_gates.yaml with
   change_target_triggers: [ui, schema, pipeline, docs] and risk_surface_triggers
   for future use.
+- 2026-07-17 [TICKET-20260715-BO-2200a-2]: Add risk_surface_triggers dimension to
+  documentation_gates policy in _build_agents_map.  Extended the documentation_gates
+  evaluation to read risk_surface_triggers from the gates config.  When risk_surface
+  matches any entry in risk_surface_triggers, documentation-expert is added to
+  guardrail_set as 'needed' independently of the change_target_triggers check (OR
+  semantics: documentation-expert is required if EITHER dimension matches its
+  triggering set).  The trigger set {contract_boundary, safety, auth, privacy} is
+  already present in config/guardrail_gates.yaml — no config change required (BO-2200a-2).
 ====================================================================
 """
