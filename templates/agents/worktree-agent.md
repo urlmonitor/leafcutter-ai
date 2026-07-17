@@ -171,7 +171,7 @@ Load `.claude/commands/close-worktree.md` and execute it with the following conf
 
 1. Run Phases 1–3 of the close-worktree workflow (identify worktree, check uncommitted changes, check merge status).
 2. If Phase 2 finds uncommitted changes: stop immediately, show the dirty state, and refuse. Do not proceed to Phase 4.
-3. Run **Phase 3.5 (Sweep Residual Processes and Log Files)** of the close-worktree workflow. Include a pre-sweep summary in the safety-check report: "Sweep will kill N background worker(s) and remove M log file(s)" (use `--dry-run` to compute N and M without acting). If Phase 3.5 detects `conflict_pids`, surface them as anomalies with "action required" severity (see Anomalies below) and refuse to show the confirmation gate until all conflicts are resolved.
+3. Run **Phase 3.5 (Sweep Residual Processes and Log Files)** of the close-worktree workflow. Include a pre-sweep summary in the safety-check report: "Sweep will kill N background worker(s) and remove M log file(s)" (use `--dry-run` to compute N and M without acting). If Phase 3.5 detects `conflict_pids`, surface them as anomalies with "action required" severity — carry each in the `anomalies` array of your JSON response when dispatched for machine-parsed results, or flag them in your `## Anomalies` section on the interactive path — and refuse to show the confirmation gate until all conflicts are resolved.
 4. Otherwise, present the safety-check report to the user:
    - The worktree path and branch name.
    - Whether the branch has unmerged commits.
@@ -194,13 +194,45 @@ Phase 3.5 of the close-worktree workflow handles this sweep automatically. The s
 
 If Phase 3.5 reports orphan workers that cannot be killed (protected_paths conflict), surface them as an `[action required]` anomaly and refuse to proceed until the user resolves them manually. Migrated from user-memory feedback_async_sql_test_orphan_workers.md by EPIC-AgentKnowledgeSystem ticket 04.
 
-## Anomalies
+## Machine-Parsed Dispatch Output Contract
 
-After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies.
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
 
-**Protected-path conflicts (action required severity):** If `SweepResult.conflict_pids` contains entries with `matched_protected_path`, surface each as an anomaly with severity "action required":
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
 
-> ANOMALY [action required]: Process PID `<pid>` (`<cmdline>`) matches protected_paths entry `<matched_protected_path>`. Cleanup was aborted. Kill the process manually or remove the protected_paths entry, then retry the worktree remove operation.
+  ```json
+  {
+    "status": "ok",
+    "worktree_path": "/path/to/worktree",
+    "removed": true,
+    "conflict_pids": [],
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+**Protected-path conflict anomalies:** If `SweepResult.conflict_pids` contains entries
+with `matched_protected_path`, include each as an entry in the `anomalies` array rather
+than as a trailing prose section:
+
+```json
+{
+  "anomalies": [
+    "ANOMALY [action required]: Process PID <pid> (<cmdline>) matches protected_paths entry <matched_protected_path>. Cleanup aborted. Kill the process manually or remove the protected_paths entry, then retry the worktree remove operation."
+  ]
+}
+```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

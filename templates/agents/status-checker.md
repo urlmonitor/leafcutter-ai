@@ -223,9 +223,31 @@ Cite `CLAUDE.md` § "Production Access" in any refusal.
 - Closing requires explicit user authorisation in the same turn.
 - Move files via `git mv` (preserves history); never copy + delete.
 
-## Anomalies
+## Machine-Parsed Dispatch Output Contract
 
-After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies.
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
+
+  ```json
+  {
+    "status": "ok",
+    "result": "...",
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output (including the `## Verdict` section) — on the interactive
+path, flag unusual conditions in an `## Anomalies` section: unexpected values,
+unfamiliar patterns, results that contradict prior runs, or signals suggesting a
+different agent should handle it.
 
 ## Completion Manifest (sign-off §2b)
 
