@@ -120,7 +120,8 @@ or explanation before or after the JSON block:
   "route": "strategic|behavioral|technical|covered",
   "existing_acs": ["ACD-100a", "ACD-100a-1"],
   "parent_l1_id": "ACD-100a",
-  "rationale": "One sentence explaining the classification decision."
+  "rationale": "One sentence explaining the classification decision.",
+  "anomalies": []
 }
 ```
 
@@ -129,6 +130,15 @@ Field rules:
 - `existing_acs`: array of AC IDs that are relevant (empty array `[]` for `strategic`).
 - `parent_l1_id`: the matched L1 AC ID string for `behavioral` route; `null` for all others.
 - `rationale`: one sentence (≤ 80 chars) explaining why this route was chosen.
+- `anomalies`: array of strings for unexpected conditions encountered during triage (empty `[]` if none).
+
+## Machine-Parsed Dispatch Output Contract
+
+This agent is always dispatched as a machine-parsed producer: the calling workflow
+will `JSON.parse` your reply. Your response MUST be exactly one JSON value and nothing
+else — no prose, no markdown headings before or after the JSON block. Any unexpected
+condition (e.g. store read error, ambiguous match) must be reported in the `anomalies`
+array inside the JSON, not as trailing text.
 
 ## Performance Contract
 

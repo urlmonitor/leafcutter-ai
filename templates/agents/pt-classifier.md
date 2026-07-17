@@ -153,7 +153,8 @@ Return a single JSON object and nothing else. It conforms to
   "entities": ["Plant"],
   "decision": "create",
   "extends": null,
-  "dispatch": ["mock-data-author", "mockup-author"]
+  "dispatch": ["mock-data-author", "mockup-author"],
+  "anomalies": []
 }
 ```
 
@@ -161,10 +162,19 @@ Rules:
 - `outcome` MUST be consistent with `expected` per the S2 table.
 - Omit `extends` (or set it `null`) unless `decision` is `extend`.
 - Every entity MUST be in `entity_registry`; `component` MUST be a real component id.
+- `anomalies`: array of strings for unexpected conditions (e.g. missing index.json, unknown entity). Empty `[]` if none.
 - A gold reference of this I/O lives at
   `docs/product-truth/mock-data/pipeline-prompts/classify-request.prompt.json`.
 
 ---
+
+## Machine-Parsed Dispatch Output Contract
+
+This agent is always dispatched as a machine-parsed producer: the calling workflow
+will `JSON.parse` your reply. Your response MUST be exactly one JSON value and nothing
+else — no prose, no markdown headings before or after the JSON block. Any unexpected
+condition (e.g. missing index.json, unresolvable entity) must be reported in the
+`anomalies` array inside the JSON payload, not as trailing text.
 
 ## Boundaries — What pt-classifier Does NOT Do
 

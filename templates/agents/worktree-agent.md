@@ -194,13 +194,41 @@ Phase 3.5 of the close-worktree workflow handles this sweep automatically. The s
 
 If Phase 3.5 reports orphan workers that cannot be killed (protected_paths conflict), surface them as an `[action required]` anomaly and refuse to proceed until the user resolves them manually. Migrated from user-memory feedback_async_sql_test_orphan_workers.md by EPIC-AgentKnowledgeSystem ticket 04.
 
-## Anomalies
+## Machine-Parsed Dispatch Output Contract
 
-After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies.
+When this agent is dispatched for a machine-parsed result — the calling workflow
+will `JSON.parse` your reply — your response MUST be exactly one JSON value and
+nothing else:
 
-**Protected-path conflicts (action required severity):** If `SweepResult.conflict_pids` contains entries with `matched_protected_path`, surface each as an anomaly with severity "action required":
+- No `## Anomalies` section, no markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies` array:
 
-> ANOMALY [action required]: Process PID `<pid>` (`<cmdline>`) matches protected_paths entry `<matched_protected_path>`. Cleanup was aborted. Kill the process manually or remove the protected_paths entry, then retry the worktree remove operation.
+  ```json
+  {
+    "status": "ok",
+    "worktree_path": "/path/to/worktree",
+    "removed": true,
+    "conflict_pids": [],
+    "anomalies": []
+  }
+  ```
+
+**Protected-path conflict anomalies:** If `SweepResult.conflict_pids` contains entries
+with `matched_protected_path`, include each as an entry in the `anomalies` array rather
+than as a trailing prose section:
+
+```json
+{
+  "anomalies": [
+    "ANOMALY [action required]: Process PID <pid> (<cmdline>) matches protected_paths entry <matched_protected_path>. Cleanup aborted. Kill the process manually or remove the protected_paths entry, then retry the worktree remove operation."
+  ]
+}
+```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+(e.g. "Return JSON: { ... }") or you are dispatched with a workflow label.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

@@ -377,6 +377,26 @@ If any item is `false`, append a one-sentence explanation in the comment body
 so that the ticket-supervisor can route appropriately. See signoff §2b for the
 full `completion_manifest:` schema and placement rules.
 
+## Machine-Parsed Dispatch Output Contract
+
+When this agent is dispatched for a machine-parsed result — the calling workflow
+will `JSON.parse` your reply — your response MUST be exactly one JSON value and
+nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies` array:
+
+  ```json
+  {
+    "status": "ok",
+    "pr_url": "https://github.com/...",
+    "anomalies": []
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

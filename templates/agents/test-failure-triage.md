@@ -275,3 +275,25 @@ is strictly additive — the heuristic classification is always available as a f
   {"error": "<reason>", "blocks_finalization": true}
   ```
   Default to `blocks_finalization: true` on error (conservative).
+
+## Machine-Parsed Dispatch Output Contract
+
+When this agent is dispatched for a machine-parsed result — the calling workflow
+will `JSON.parse` or `safeParseJSON` your reply — your response MUST be exactly
+one JSON value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies` array:
+
+  ```json
+  {
+    "regressions": [],
+    "pre_existing": [],
+    "blocks_finalization": false,
+    "summary": "...",
+    "anomalies": []
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape.
