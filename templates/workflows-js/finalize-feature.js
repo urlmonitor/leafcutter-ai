@@ -744,6 +744,120 @@ if (testPassed) {
     }
   }
 
+  // -----------------------------------------------------------------------
+  // Step 3 (null-baseline targeted-rerun recovery — FIN-100c-4/5/6/9)
+  //
+  // When baselineFailures is null (Step 0 baseline unavailable) and there
+  // are post-merge failures, attempt a targeted rerun of ONLY the failing
+  // test IDs against a fresh origin/main checkout. This recovers a baseline
+  // without running the full suite (bounded runtime, FIN-100c-5).
+  //
+  // Success path: builds recoveredBaselineFailures, sets baselineFailures to
+  //   the recovered list so triage receives a non-null baseline (FIN-100c-6).
+  //   Tests in the recovered baseline → pre_existing; absent → regression.
+  // Failure path: logs "targeted rerun unavailable" and falls back to the
+  //   conservative null-baseline path (all failures = regressions, FIN-100c-9).
+  // -----------------------------------------------------------------------
+  let recoveredBaselineFailures = null;
+
+  if (baselineFailures === null && postMergeFailures.length > 0) {
+    log(
+      `[finalize-feature] step 3: baseline unavailable — attempting targeted rerun of ` +
+      `${postMergeFailures.length} failing test ID(s) against origin/main HEAD (FIN-100c-4).`
+    );
+
+    const recoveryWorktreePath = `${baselineTmpPath}-recovery`;
+    // Register with the workflow-level cleanup guard so cleanupBaselineWorktree()
+    // fires on any early exit (crash/non-compliant agent/malformed output) that
+    // occurs while the recovery worktree exists (mirrors the Step 0 pattern at
+    // line 413 where baselineWorktreePath = baselineTmpPath is set before dispatch).
+    baselineWorktreePath = recoveryWorktreePath;
+
+    const recoveryResult = await agent(
+      "Perform a targeted rerun of specific failing test IDs against a fresh origin/main checkout.\n" +
+      "Rerun ONLY the specified failing test IDs — NOT the full suite (bounded runtime, FIN-100c-5).\n" +
+      "\n" +
+      "Step A — Create a temporary detached worktree at origin/main HEAD:\n" +
+      `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${recoveryWorktreePath}" origin/main\n` +
+      "  Capture exit code.\n" +
+      "  If non-zero:\n" +
+      "    Log: 'targeted rerun unavailable — worktree checkout failed.'\n" +
+      "    Return: { \"status\": \"checkout_failed\", \"recovered_failures\": null }\n" +
+      "\n" +
+      "Step B — Deploy shims before rerun (build parity with Step 0 and Step 3, FIN-100c-4):\n" +
+      `  Run: python3 "${recoveryWorktreePath}/scripts/build.py" --target-dir "${recoveryWorktreePath}"\n` +
+      "  Capture exit code.\n" +
+      "  If non-zero:\n" +
+      "    Log: 'targeted rerun unavailable — build/deploy step failed.'\n" +
+      `    Run: git -C "${WORKTREE_ROOT}" worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true\n` +
+      `    Run: rm -rf "${recoveryWorktreePath}" 2>/dev/null || true\n` +
+      "    Return: { \"status\": \"build_failed\", \"recovered_failures\": null }\n" +
+      "\n" +
+      "Step C — Targeted rerun of ONLY the failing test IDs (not full suite):\n" +
+      `  Run in "${recoveryWorktreePath}": pytest --tb=no -q <each_failing_test_id_as_separate_arg>\n` +
+      "  Where the failing test IDs are listed in Context below.\n" +
+      "  Collect each output line matching '<file>::<test_name> FAILED'.\n" +
+      "  Build recovered_failures = list of test IDs that ALSO fail on origin/main HEAD.\n" +
+      "\n" +
+      "Step D — Remove the temp recovery worktree:\n" +
+      `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true\n` +
+      `  Run: rm -rf "${recoveryWorktreePath}" 2>/dev/null || true\n` +
+      "\n" +
+      "Step E — Return result:\n" +
+      "  Return: { \"status\": \"ok\", \"recovered_failures\": [<list of test IDs that failed on origin/main>] }\n" +
+      "  An empty list means no post-merge failure also fails on main (all are regressions).\n" +
+      `Context: failing_test_ids=${JSON.stringify(postMergeFailures)}`,
+      { agentType: "status-checker", label: "step-3-targeted-rerun", phase: "Step 3" }
+    )
+
+    let recoveryInfo;
+    {
+      const { value, malformed } = safeParseJSON(recoveryResult);
+      if (malformed) {
+        log("[finalize-feature] step 3 targeted-rerun parse malformed — targeted rerun unavailable, using conservative fallback.");
+        recoveryInfo = { status: "parse_failed", recovered_failures: null };
+      } else {
+        recoveryInfo = value || { status: "parse_failed", recovered_failures: null };
+      }
+    }
+
+    const recoveryStatus = (recoveryInfo.status || "").toLowerCase();
+    if (recoveryStatus === "ok" && Array.isArray(recoveryInfo.recovered_failures)) {
+      // Success: forward recovered baseline to triage (FIN-100c-6).
+      // recoveredBaselineFailures = intersection of post-merge failures and those
+      // that ALSO fail on origin/main HEAD. Tests absent from it → regression.
+      recoveredBaselineFailures = recoveryInfo.recovered_failures;
+      baselineFailures = recoveredBaselineFailures; // [] means clean baseline, never null
+      log(
+        `[finalize-feature] step 3 targeted rerun complete: ` +
+        `${recoveredBaselineFailures.length} pre-existing failure(s) recovered ` +
+        `from ${postMergeFailures.length} post-merge failure(s). ` +
+        "Forwarding recovered baseline to triage in place of null (FIN-100c-6)."
+      );
+    } else {
+      // Checkout failed, build failed, or parse error — targeted rerun unavailable (FIN-100c-9).
+      // Fall back to conservative null-baseline path: all failures = regressions.
+      log(
+        `[finalize-feature] step 3 targeted rerun unavailable (${recoveryStatus}) — ` +
+        "falling back to conservative null-baseline path. " +
+        "All post-merge failures will be classified as regressions.\n" +
+        "Failing tests with modified_by_branch status:\n" +
+        postMergeFailures.map(id => {
+          const testFile = id.split("::")[0];
+          const modifiedByBranch = changedFiles.includes(testFile);
+          return `  - ${id} [modified_by_branch: ${modifiedByBranch}]`;
+        }).join("\n")
+      );
+      // baselineFailures remains null — triage Step 1 classifies all as regressions.
+    }
+    // Workflow-level cleanup: remove the recovery worktree unconditionally
+    // (belt-and-suspenders; the agent prompt handles cleanup in steps B/D, but
+    // this ensures the path is removed even on malformed/crash/non-compliant exit).
+    // cleanupBaselineWorktree() also resets baselineWorktreePath = null so later
+    // halt paths do not double-target the recovery path.
+    await cleanupBaselineWorktree();
+  }
+
   const triageRaw = await agent(
     "Classify each failing test into one of four categories: " +
     "'regression' (caused by this branch), 'stale_test' (covers a deprecated/superseded AC), " +

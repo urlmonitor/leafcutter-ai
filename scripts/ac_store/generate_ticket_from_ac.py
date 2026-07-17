@@ -84,6 +84,8 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "test-runner",
     "documentation-expert",
     "pr-reviewer",
+    "ac-validator",
+    "ac-fulfillment-gate",
     "commit",
     "pull-request",
 ]
@@ -98,6 +100,8 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "sql-coder",
     "test-runner",
     "pr-reviewer",
+    "ac-validator",
+    "ac-fulfillment-gate",
     "commit",
     "pull-request",
 ]
@@ -398,6 +402,7 @@ def _build_agents_map(
     not_needed_overrides: dict[str, str] | None = None,
     guardrail_config_path: Path | str | None = None,
     agent_registry_path: Path | str | None = None,
+    files_touched: list[str] | None = None,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -414,6 +419,11 @@ def _build_agents_map(
     cannot be excluded via not_needed_overrides when the computed chain requires
     them — the computed chain wins (BO-550-1-i).
 
+    When files_touched contains at least one implementation .py file, ac-validator
+    and ac-fulfillment-gate are wired as needed phases (TKT-500f-12).  This check
+    applies only in the computed path (when change_targets and risk_surface are
+    provided) and keys off the actual edit surface, not the change_target label.
+
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
         change_targets: List of change target categories (e.g. ['python_code', 'config']).
@@ -421,6 +431,9 @@ def _build_agents_map(
         not_needed_overrides: Map of agent → 'not_needed' that must be preserved.
         guardrail_config_path: Path to config/guardrail_gates.yaml.
         agent_registry_path: Path to config/agent_registry.json.
+        files_touched: List of file paths the ticket will touch.  Used to detect
+            implementation .py files so that ac-validator and ac-fulfillment-gate
+            are wired when needed.
 
     Returns:
         Ordered dict suitable for YAML frontmatter serialisation.
@@ -510,6 +523,17 @@ def _build_agents_map(
                 all_needed.add("test-writer")
                 all_needed.add("test-runner")
                 break
+
+        # Wire ac-validator and ac-fulfillment-gate for code-AC tickets (TKT-500f-12).
+        # When files_touched contains at least one implementation .py file, these two
+        # store-fidelity gates must run against the ticket so AC traceability is verified
+        # before any commit is made.  Docs/config-only tickets (no .py in files_touched)
+        # are not affected — the check keys off the actual edit surface, not the
+        # change_target label, so a stale or doc_links-only files_touched would not
+        # mis-classify a code AC as docs-only.
+        if files_touched and any(p.endswith(".py") for p in files_touched):
+            all_needed.add("ac-validator")
+            all_needed.add("ac-fulfillment-gate")
 
         # Determine TDD-mandated agents that cannot be overridden (BO-550-1-i).
         # When the computed chain requires test-writer or test-runner (via guardrail
@@ -857,6 +881,50 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     ])
 
 
+def _build_agent_contracts_section(ac: AcRecord) -> str:
+    """Build the ## Agent Contracts section from delivers_to and expects_from.
+
+    When both fields are None, returns an empty string so no section is emitted.
+    The section is only rendered when at least one contract field is non-null,
+    ensuring the null-contract path produces no contract heading or content.
+
+    Args:
+        ac: Parsed AC record.
+
+    Returns:
+        Formatted ## Agent Contracts markdown block, or empty string when both
+        delivers_to and expects_from are None.
+    """
+    delivers_to = ac.get("delivers_to") or None
+    expects_from = ac.get("expects_from") or None
+
+    if delivers_to is None and expects_from is None:
+        return ""
+
+    lines: list[str] = ["## Agent Contracts", ""]
+    if delivers_to is not None:
+        lines.append("### Delivers To")
+        lines.append("")
+        agent_name = delivers_to.get("agent", "")
+        contract_text = delivers_to.get("contract", "")
+        if agent_name:
+            lines.append(f"- **Agent:** {agent_name}")
+        if contract_text:
+            lines.append(f"- **Contract:** {contract_text}")
+        lines.append("")
+    if expects_from is not None:
+        lines.append("### Expects From")
+        lines.append("")
+        upstream_ac_id = expects_from.get("ac_id", "")
+        contract_text = expects_from.get("contract", "")
+        if upstream_ac_id:
+            lines.append(f"- **AC:** {upstream_ac_id}")
+        if contract_text:
+            lines.append(f"- **Contract:** {contract_text}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _build_signoffs_section(agents: dict[str, str]) -> str:
     """Build the ## Sign-offs section from the agents map.
 
@@ -1065,11 +1133,13 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         # _build_agents_map falls back to legacy behaviour when absent.
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
+        files_touched_for_map = _build_files_touched(ac)
 
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
+            files_touched=files_touched_for_map,
         )
     signoffs = _build_signoffs_section(agents)
     complexity = _infer_complexity(ac)
@@ -1116,6 +1186,10 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     impl_notes = _build_implementation_notes_section(ac, ac_id)
     if impl_notes:
         lines.append(impl_notes)
+
+    agent_contracts = _build_agent_contracts_section(ac)
+    if agent_contracts:
+        lines.append(agent_contracts)
 
     lines.extend([
         signoffs,
@@ -1542,6 +1616,7 @@ def main(argv: list[str] | None = None) -> int:
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
+            files_touched=files_touched,
         )
         frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
         body = _build_ticket_body(ac, ac_id, agents_map=agents)
@@ -1576,6 +1651,7 @@ def main(argv: list[str] | None = None) -> int:
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
+        files_touched=files_touched,
     )
     frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
     body = _build_ticket_body(ac, ac_id, agents_map=agents)
