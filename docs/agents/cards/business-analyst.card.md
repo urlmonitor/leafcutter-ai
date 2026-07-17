@@ -1,13 +1,17 @@
 ---
 agent_id: business-analyst
-title: "Agent Card: business-analyst"
-description: "Business Analyst — L2/L3 behavioral decomposition agent. Receives L1 feature ACs from the Product Owner and decomposes them into testable Gherkin behaviors (L2) and edge-case specifications (L3). Produces individual AC YAML files as its primary output.  Use when: the PO has produced L0/L1 ACs and the pipeline needs behavioral specifications before implementation agents can begin work.  This agent operates exclusively at L2/L3 and produces AC YAML files."
+title: 'Agent Card: business-analyst'
+description: 'Business Analyst — L2/L3 behavioral decomposition agent. Receives L1
+  feature ACs from the Product Owner and decomposes them into testable Gherkin behaviors
+  (L2) and edge-case specifications (L3). Produces individual AC YAML files as its
+  primary output.  Use when: the PO has produced L0/L1 ACs and the pipeline needs
+  behavioral specifications before implementation agents can begin work.  This agent
+  operates exclusively at L2/L3 and produces AC YAML files.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - ticket_creation_pipeline
+created: 2026-07-15
+card_version: generated
+last_updated: '2026-07-17'
 ---
 # business-analyst
 
@@ -106,3 +110,11 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | a file is absent | unreadable, binary, or exceeds 50 KB | `None` |
 | Conditional Behavior | it exists and is ≤ 50 KB of readable text | absorb its contents into your | `None` |
+---
+
+## AC Assignments
+
+### business-analyst
+
+- UXP-402: On approval, acceptance criteria are generated from the flow's steps
+- UXP-402a: If the person rejects the drafted flow at review, no acceptance criteria are generated

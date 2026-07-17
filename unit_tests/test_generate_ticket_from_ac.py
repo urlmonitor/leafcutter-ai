@@ -869,22 +869,15 @@ class TestFlowChangeSequencing:
             f"documentation-expert must be 'needed'; got {result.get('documentation-expert')!r}"
         )
 
-    def test_ac4_documentation_expert_before_coder_for_flow_change_pair(self) -> None:
-        # covers: AC-4
-        """AC-4: documentation-expert must appear BEFORE python-coder in the computed
-        map key order for the code/production flow-change pair.
+    def test_ac4_documentation_expert_after_coder_for_flow_change_pair(self) -> None:
+        # covers: BO-2200d-2
+        """BO-2200d supersedes the original AC-4 pre-coder contract.
 
-        This verifies that the canonical ordering (architect-review priority 4,
-        documentation-expert priority 10 per SKILL.md) places both agents before
-        any coder (python-coder priority 6, sql-coder priority 7).
-
-        Note: The _CANONICAL_PHASE_ORDER list places documentation-expert AFTER
-        python-coder, so the fix must either use a modified ordering or ensure
-        that for flow-change pairs, documentation-expert is treated as a pre-coder
-        agent. The test specifically requires documentation-expert before python-coder.
-
-        This test is RED before the fix because documentation-expert is absent
-        from the computed map entirely (flow_change_gates not consumed).
+        documentation-expert now runs AFTER the coder for a code/contract_boundary
+        pair: BO-2200d-1 removed documentation-expert from flow_change_gates and it
+        is re-added via the per-surface documentation_gates path (BO-2200a) in the
+        canonical order, which places it after python-coder/test-runner so it
+        documents real code. (Was: doc-expert BEFORE the coder under BO-540-2.)
         """
         result = _build_agents_map(
             "python-coder",
@@ -896,7 +889,7 @@ class TestFlowChangeSequencing:
         keys = list(result.keys())
         assert "documentation-expert" in keys, (
             "documentation-expert must be present in the computed map for code/contract_boundary "
-            "(flow-change pair). It is currently absent because flow_change_gates is not consumed."
+            "(it is required via the documentation_gates per-surface path)."
         )
         assert "python-coder" in keys, (
             "python-coder must be present in the computed map."
@@ -905,12 +898,10 @@ class TestFlowChangeSequencing:
         de_idx = keys.index("documentation-expert")
         pc_idx = keys.index("python-coder")
 
-        assert de_idx < pc_idx, (
-            f"documentation-expert (index {de_idx}) must appear BEFORE python-coder "
-            f"(index {pc_idx}) in the computed map for a flow-change pair.\n"
-            f"Full map keys: {keys}\n\n"
-            f"The fix must ensure flow-change pairs place documentation-expert before "
-            f"any coder in the agent ordering."
+        assert de_idx > pc_idx, (
+            f"BO-2200d: documentation-expert (index {de_idx}) must appear AFTER python-coder "
+            f"(index {pc_idx}) so it documents real code.\n"
+            f"Full map keys: {keys}"
         )
 
 
@@ -2343,13 +2334,13 @@ class TestBO540FlowChangeOrdering:
             f"Full map keys: {keys}"
         )
 
-    def test_bo540_2_documentation_expert_before_coder_for_flow_change(self) -> None:
-        # covers: BO-540-2
-        """BO-540-2: For a flow_change pair (code/contract_boundary), documentation-expert
-        must appear in the computed agents map BEFORE python-coder.
+    def test_bo540_2_documentation_expert_after_coder_for_flow_change(self) -> None:
+        # covers: BO-2200d-2
+        """BO-2200d supersedes BO-540-2's doc-expert pre-coder ordering.
 
-        The AC criteria: 'documentation-expert has a lower sequence number than python-coder
-        AND documentation-expert has a lower sequence number than test-writer'.
+        For a code/contract_boundary pair, documentation-expert now appears AFTER
+        python-coder (added via the documentation_gates per-surface path in canonical
+        order, not the flow_change_gates pre-coder slot) so it documents real code.
         """
         result = _build_agents_map(
             "python-coder",
@@ -2361,25 +2352,25 @@ class TestBO540FlowChangeOrdering:
         keys = list(result.keys())
 
         assert "documentation-expert" in keys, (
-            "BO-540-2: documentation-expert must be in the agents map for code/contract_boundary "
-            "(a flow_change pair). The flow_change_gates mandatory_agents for this pair includes "
-            f"documentation-expert. Full map: {result}"
+            "documentation-expert must be in the agents map for code/contract_boundary "
+            f"(required via the documentation_gates per-surface path). Full map: {result}"
         )
 
         de_idx = keys.index("documentation-expert")
         pc_idx = keys.index("python-coder")
 
-        assert de_idx < pc_idx, (
-            f"BO-540-2: documentation-expert (index {de_idx}) must appear BEFORE "
-            f"python-coder (index {pc_idx}) for the code/contract_boundary flow_change pair.\n"
+        assert de_idx > pc_idx, (
+            f"BO-2200d: documentation-expert (index {de_idx}) must appear AFTER "
+            f"python-coder (index {pc_idx}) for the code/contract_boundary pair.\n"
             f"Full map keys: {keys}"
         )
 
-    def test_bo540_2_documentation_expert_before_test_writer_in_flow_change(self) -> None:
-        # covers: BO-540-2
-        """BO-540-2: For a flow_change pair, documentation-expert must also appear BEFORE
-        test-writer. The AC states: 'documentation-expert has a lower sequence number than
-        test-writer' (documentation planning must happen before TDD authoring).
+    def test_bo540_2_documentation_expert_after_test_writer_in_flow_change(self) -> None:
+        # covers: BO-2200d-2
+        """BO-2200d supersedes BO-540-2's doc-expert-before-test-writer ordering.
+
+        For a code/contract_boundary pair, documentation-expert now appears AFTER
+        test-writer (docs are authored after the code and its tests exist, not before).
         """
         result = _build_agents_map(
             "python-coder",
@@ -2391,19 +2382,19 @@ class TestBO540FlowChangeOrdering:
         keys = list(result.keys())
 
         assert "documentation-expert" in keys, (
-            "BO-540-2: documentation-expert must be present for code/contract_boundary."
+            "documentation-expert must be present for code/contract_boundary."
         )
         assert "test-writer" in keys, (
-            "BO-540-2: test-writer must be present for code/contract_boundary."
+            "test-writer must be present for code/contract_boundary."
         )
 
         de_idx = keys.index("documentation-expert")
         tw_idx = keys.index("test-writer")
 
-        assert de_idx < tw_idx, (
-            f"BO-540-2: documentation-expert (index {de_idx}) must appear BEFORE "
-            f"test-writer (index {tw_idx}) for the code/contract_boundary flow_change pair.\n"
-            "documentation-expert plans the spec before test-writer authors tests.\n"
+        assert de_idx > tw_idx, (
+            f"BO-2200d: documentation-expert (index {de_idx}) must appear AFTER "
+            f"test-writer (index {tw_idx}) for the code/contract_boundary pair.\n"
+            "documentation-expert authors docs after the code and tests exist.\n"
             f"Full map keys: {keys}"
         )
 

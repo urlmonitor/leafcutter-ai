@@ -1,13 +1,19 @@
 ---
 agent_id: brainstorm-worker
-title: "Agent Card: brainstorm-worker"
-description: "Internal-only single-perspective analyst. Spawned exclusively by `brainstorm-lead` (never by the user, never by a supervisor, never by any other agent) as part of the design-escalation tier from `building-epics` §3.3. Receives a design question plus a single perspective parameter (e.g. `simplicity`, `robustness`, `reversibility`, `performance`, `usability`, `maintainability`) and reasons about the question through that lens only. Returns a strictly structured `{perspective, recommendation, rationale, risks}` block — the parent lead parses on these keys. Does NOT spawn sub-agents; this is a single-shot read-only analyst."
+title: 'Agent Card: brainstorm-worker'
+description: Internal-only single-perspective analyst. Spawned exclusively by `brainstorm-lead`
+  (never by the user, never by a supervisor, never by any other agent) as part of
+  the design-escalation tier from `building-epics` §3.3. Receives a design question
+  plus a single perspective parameter (e.g. `simplicity`, `robustness`, `reversibility`,
+  `performance`, `usability`, `maintainability`) and reasons about the question through
+  that lens only. Returns a strictly structured `{perspective, recommendation, rationale,
+  risks}` block — the parent lead parses on these keys. Does NOT spawn sub-agents;
+  this is a single-shot read-only analyst.
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - supervisor_system
+created: 2026-07-15
+card_version: generated
+last_updated: '2026-07-17'
 ---
 # brainstorm-worker
 
