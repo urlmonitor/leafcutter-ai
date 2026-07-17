@@ -491,6 +491,19 @@ def _build_agents_map(
                 guardrail_set.update(mandatory)
                 is_flow_change_pair = True
 
+        # Apply documentation_gates policy (BO-2200a-1): data-driven
+        # documentation-expert requirement.  When any change_target intersects
+        # change_target_triggers from the gates config, documentation-expert is
+        # added to guardrail_set as 'needed'.  The trigger list is read from
+        # config at call-time — no hard-coded set exists in the generator — so
+        # adding or removing a triggering value is a configuration edit only.
+        doc_gates_policy = gates.get("documentation_gates") or {}
+        doc_change_triggers: set[str] = set(
+            doc_gates_policy.get("change_target_triggers") or []
+        )
+        if doc_change_triggers and set(change_targets) & doc_change_triggers:
+            guardrail_set.add("documentation-expert")
+
         # For flow-change pairs, documentation-expert must appear before any coder.
         # _FLOW_CHANGE_PHASE_ORDER encodes this constraint; all other pairs use the
         # standard _CANONICAL_PHASE_ORDER.
@@ -1644,5 +1657,15 @@ DECISION HISTORY
   after ## Acceptance Criteria (and Test Requirements / Implementation Notes)
   and before ## Sign-offs. Tickets without documentation-expert:needed are
   unaffected. (AC BO-2200c-1)
+- 2026-07-17 [TICKET-20260715-BO-2200a-1]: Add documentation_gates data-driven trigger.
+  Added a documentation_gates read-path in _build_agents_map: after the
+  flow_change_gates processing, the gates config is checked for a
+  documentation_gates.change_target_triggers list.  When any change_target in
+  the call intersects that list, documentation-expert is added to guardrail_set
+  as 'needed'.  The trigger set is read from config at call-time so that
+  adding/removing a value is purely a config edit (BO-2200a-1).  Also added the
+  documentation_gates section to config/guardrail_gates.yaml with
+  change_target_triggers: [ui, schema, pipeline, docs] and risk_surface_triggers
+  for future use.
 ====================================================================
 """

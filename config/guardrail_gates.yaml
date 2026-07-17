@@ -324,3 +324,36 @@ flow_change_gates:
     phase_constraint: >
       status-checker must verify boundary impact before
       config changes are merged; pr-reviewer gates the merge.
+
+# ---------------------------------------------------------------------------
+# documentation_gates
+#
+# Declarative policy that controls when documentation-expert is required based
+# on the AC's change_target(s).  Consumed by
+# generate_ticket_from_ac.py::_build_agents_map — the generator reads
+# change_target_triggers at call-time and adds documentation-expert to the
+# agents map as 'needed' when any change_target intersects the trigger list.
+#
+# Adding or removing a value here is a configuration edit only — no generator
+# code change is required (BO-2200a-1).
+#
+# change_target_triggers: ADR-017 change_target values that mandate
+#   documentation-expert regardless of risk_surface.  Each value in this list
+#   independently triggers the requirement.
+#
+# risk_surface_triggers: ADR-017 risk_surface values reserved for future use
+#   (a risk-surface–driven documentation gate layered on top of the
+#   change-target gate; not yet read by the generator).
+# ---------------------------------------------------------------------------
+
+documentation_gates:
+  change_target_triggers:
+    - ui
+    - schema
+    - pipeline
+    - docs
+  risk_surface_triggers:
+    - contract_boundary
+    - safety
+    - auth
+    - privacy
