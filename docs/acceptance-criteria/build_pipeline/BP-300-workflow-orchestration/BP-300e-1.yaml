@@ -1,0 +1,78 @@
+id: BP-300e-1
+components:
+  - build_pipeline
+title: "Valid JSON object followed by trailing prose is still parsed and the run continues"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Given a /plan-feature run dispatches a helper agent to return a structured result,
+  And that agent replies with a complete, valid JSON object immediately followed by
+    a trailing explanatory markdown section (for example a "## Anomalies" heading and
+    a paragraph of prose after the closing brace),
+  When the workflow reads the agent's reply,
+  Then the workflow recovers the intended JSON object with all of its fields intact
+    and ignores the trailing prose,
+  And the run continues to its next stage and produces the requirements it was asked
+    for rather than stopping on the extra wording.
+depends_on:
+  - BP-300e
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Edit only the canonical source templates/workflows-js/*.js; rebuild via build.py so the deployed .claude/workflows/*.js copy stays byte-identical (BP-100k compiled-output drift guard) — never hand-edit the deployed copy."
+  - "The tolerant reader is a pure, synchronous, dependency-free function (no I/O); confine try/except to the JSON.parse boundary only, per the project error-handling policy."
+  - "Recover the intended object by extracting the FIRST balanced top-level value via depth counting, not a greedy regex."
+  - "Supersede the existing greedy safeParseJSON in finalize-feature.js (its /\\{[\\s\\S]*\\}/ regex matches to the LAST brace and is neither nesting- nor string-aware) — do not leave two divergent agent-reply readers in the workflow scripts."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness (unit_tests/_plan_feature_e2_runner.py pattern), not a source string-scan."
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Inline tolerant reader parseAgentJson(raw, {stage, agent}): a non-string raw is
+    returned unchanged; a string is JSON.parse'd, else the FIRST balanced top-level
+    {...} or [...] is extracted by depth counting that ignores braces/brackets inside
+    JSON string literals and respects backslash escapes, then parsed; if nothing parses
+    it throws a typed error whose message names the stage and agent. Present
+    byte-identically in every delivery workflow script.
+expects_from: null
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_parse_object_with_trailing_prose_returns_object
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given '{\"a\":\"b\"}\\n\\n## Anomalies\\n<prose>' returns exactly {a: b}, trailing prose ignored."
+  - name: test_run_continues_after_object_with_trailing_prose
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Stubbed agent returns object-plus-trailing-prose; the run reaches its next stage instead of stopping."
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300e-1-i
+  - BP-300e-1-ii
+  - BP-300e-1-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with
+  an input string of the form '{"...": "..."}\n\n## Anomalies\n<prose>' asserting the
+  returned value equals the intended object. Also coverable by a workflow-level
+  integration test that dispatches a stubbed agent returning object-plus-trailing-prose
+  and asserts the run reaches its next stage. Belt-and-suspenders: the dispatched
+  agents' "return ONLY structured JSON, no surrounding prose" contract is a separate
+  reinforcement, not the guarantee this AC tests.

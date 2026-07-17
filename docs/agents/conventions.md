@@ -1,9 +1,10 @@
 ---
 title: "Agent Authoring Conventions"
+description: "Operational how-to for authoring agents: frontmatter schema, file layout, visibility classes (including the confirmation-gate rules), tool allowlists, patterns, and sign-off lifecycle."
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-10
+last_updated: 2026-06-17
 components:
   - "infrastructure"
 related_docs:
@@ -169,6 +170,16 @@ description: |
 ```
 
 The confirmation gate applies *once*, at the boundary where the destructive action commits. Sub-agents below the gate (e.g. a `commit-runner` spawning `precommit-fixer`) do not re-prompt; the gate covers the entire spawn tree below it. See [ADR-006 §2.8](../architecture/ADR-006-agent-model-tiers.md#28-clarifications-on-edge-cases).
+
+#### 3.2.1 A confirmation-gated agent must never be *spawned* to serve an interactive action
+
+The confirmation gate requires the **human user's own** same-turn reply. A relayed "yes" — one passed in by a coordinator, supervisor, or any parent agent — does not satisfy the gate and the agent will (correctly) refuse it. A spawned sub-agent has **no direct human channel**: the user only ever replies to the top-level session, never to a sub-agent. Therefore:
+
+- **Do NOT** dispatch `commit`, `pull-request`, or any confirmation-gated agent via the `Agent` tool to perform an interactive (non-supervised) commit/push/PR. The sub-agent waits for a confirmation it can never receive, and the action deadlocks.
+- When the human authorizes the action **directly in the conversation**, the top-level session performs it directly — `COMMIT_AGENT_MODE=1 git commit …` for commits (the env flag satisfies the `enforce_commit_delegation` hook), `git push` + `gh pr create` for PRs.
+- Gated agents are spawned **only** in the supervised pipeline path, where they auto-authorize on the `ticket_path` branch (see [the `commit` template Step 3](git/commit.md) and [building-epics §5.0](../../templates/skills/building-epics/SKILL.md)). That is the *inverse* of the [§3.2 downstream rule](#32-confirmation-gated): the gate is satisfied upstream by the `/build-feature` dispatch and the pre-commit gates, not by a per-commit prompt.
+
+This is the same deadlock class as the supervised-commit `question`-status hang fixed on 2026-06-17: a gate whose answer cannot reach the agent is unsatisfiable, not merely slow.
 
 ### 3.3 Internal
 

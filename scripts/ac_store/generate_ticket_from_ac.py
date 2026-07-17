@@ -55,7 +55,7 @@ _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 #: ``describes``, ``related``) are informational only and must NOT enter
 #: ``files_touched``.
 _EDIT_SURFACE_RELATIONSHIPS: frozenset[str] = frozenset(
-    {"constrains", "modifies", "specifies"}
+    {"constrains", "creates", "implements", "modifies", "specifies"}
 )
 
 #: Canonical support agents always added to every generated ticket.
@@ -84,6 +84,8 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "test-runner",
     "documentation-expert",
     "pr-reviewer",
+    "ac-validator",
+    "ac-fulfillment-gate",
     "commit",
     "pull-request",
 ]
@@ -98,6 +100,8 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "sql-coder",
     "test-runner",
     "pr-reviewer",
+    "ac-validator",
+    "ac-fulfillment-gate",
     "commit",
     "pull-request",
 ]
@@ -255,7 +259,7 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     1. The ``reference_file_path`` named in ``it_requirements`` (structured form).
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
-       ``modifies``, ``specifies``).
+       ``creates``, ``implements``, ``modifies``, ``specifies``).
 
     Doc_links with ``relationship`` set to ``describes`` or ``related`` are
     informational only and are excluded from ``files_touched``.  Paths that
@@ -398,6 +402,7 @@ def _build_agents_map(
     not_needed_overrides: dict[str, str] | None = None,
     guardrail_config_path: Path | str | None = None,
     agent_registry_path: Path | str | None = None,
+    files_touched: list[str] | None = None,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -414,6 +419,11 @@ def _build_agents_map(
     cannot be excluded via not_needed_overrides when the computed chain requires
     them — the computed chain wins (BO-550-1-i).
 
+    When files_touched contains at least one implementation .py file, ac-validator
+    and ac-fulfillment-gate are wired as needed phases (TKT-500f-12).  This check
+    applies only in the computed path (when change_targets and risk_surface are
+    provided) and keys off the actual edit surface, not the change_target label.
+
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
         change_targets: List of change target categories (e.g. ['python_code', 'config']).
@@ -421,6 +431,9 @@ def _build_agents_map(
         not_needed_overrides: Map of agent → 'not_needed' that must be preserved.
         guardrail_config_path: Path to config/guardrail_gates.yaml.
         agent_registry_path: Path to config/agent_registry.json.
+        files_touched: List of file paths the ticket will touch.  Used to detect
+            implementation .py files so that ac-validator and ac-fulfillment-gate
+            are wired when needed.
 
     Returns:
         Ordered dict suitable for YAML frontmatter serialisation.
@@ -538,6 +551,17 @@ def _build_agents_map(
                 all_needed.add("test-writer")
                 all_needed.add("test-runner")
                 break
+
+        # Wire ac-validator and ac-fulfillment-gate for code-AC tickets (TKT-500f-12).
+        # When files_touched contains at least one implementation .py file, these two
+        # store-fidelity gates must run against the ticket so AC traceability is verified
+        # before any commit is made.  Docs/config-only tickets (no .py in files_touched)
+        # are not affected — the check keys off the actual edit surface, not the
+        # change_target label, so a stale or doc_links-only files_touched would not
+        # mis-classify a code AC as docs-only.
+        if files_touched and any(p.endswith(".py") for p in files_touched):
+            all_needed.add("ac-validator")
+            all_needed.add("ac-fulfillment-gate")
 
         # Determine TDD-mandated agents that cannot be overridden (BO-550-1-i).
         # When the computed chain requires test-writer or test-runner (via guardrail
@@ -953,6 +977,7 @@ def _build_frontmatter(
     ac_id: str,
     files_touched: list[str],
     agents: dict[str, str],
+    ac_store_path: "str | None" = None,
 ) -> str:
     """Build the YAML frontmatter block for the ticket.
 
@@ -961,6 +986,11 @@ def _build_frontmatter(
         ac_id: The AC id.
         files_touched: Local paths extracted from doc_links.
         agents: Agents map dict.
+        ac_store_path: Repo-root-relative path to the source AC YAML file.
+            When provided, an ``ac_traceability`` entry is added to the
+            frontmatter carrying both the AC id and the store path, enabling
+            ac-validator and ac-fulfillment-gate to locate the source AC
+            directly without scanning the whole store.
 
     Returns:
         Formatted frontmatter string (including opening and closing ``---``).
@@ -983,6 +1013,8 @@ def _build_frontmatter(
         "agents": agents,
         "complexity": complexity,
     }
+    if ac_store_path is not None:
+        fm["ac_traceability"] = {"id": ac_id, "path": ac_store_path}
     test_constraints_raw = ac.get("test_constraints")
     test_constraints = _parse_test_constraints(test_constraints_raw)
     if test_constraints:
@@ -1057,6 +1089,44 @@ def _normalize_change_target(ac: AcRecord) -> list[str] | None:
     return [raw]
 
 
+def _criteria_checkboxes(criteria: str) -> list[str]:
+    """Derive machine-parseable ``- [ ] AC-N: <text>`` checkbox lines from criteria.
+
+    Extracts the text of each ``Then`` / ``And`` keyword clause in a Gherkin
+    criteria string (one checkbox per clause).  When no ``Then`` / ``And``
+    clauses are found, falls back to the first non-empty stripped line of the
+    criteria so that every non-empty criteria string produces at least one
+    checkbox.
+
+    The resulting lines match the ac-validator parser pattern
+    ``^- \\[ \\] AC-\\d+:\\s*\\S`` (with MULTILINE), satisfying TKT-500f-11.
+
+    Args:
+        criteria: The raw Gherkin criteria text from an AC record.
+
+    Returns:
+        A list of ``- [ ] AC-N: <text>`` strings — one per extracted clause.
+        Returns an empty list only when *criteria* is blank.
+    """
+    raw_lines = criteria.split("\n")
+    clauses: list[str] = []
+    for line in raw_lines:
+        stripped = line.strip()
+        m = re.match(r"^(Then|And)\s+(.*)", stripped, re.IGNORECASE)
+        if m:
+            text = m.group(2).rstrip(",").strip()
+            if text:
+                clauses.append(text)
+    if not clauses:
+        # Fallback: use the first non-empty line verbatim
+        for line in raw_lines:
+            stripped = line.strip()
+            if stripped:
+                clauses.append(stripped)
+                break
+    return [f"- [ ] AC-{i + 1}: {clause}" for i, clause in enumerate(clauses)]
+
+
 def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | None" = None) -> str:
     """Build the ticket body (everything after the frontmatter).
 
@@ -1092,11 +1162,13 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         # _build_agents_map falls back to legacy behaviour when absent.
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
+        files_touched_for_map = _build_files_touched(ac)
 
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
+            files_touched=files_touched_for_map,
         )
     signoffs = _build_signoffs_section(agents)
     complexity = _infer_complexity(ac)
@@ -1105,6 +1177,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     # agent in the computed map produces production_code.
     has_code_producer = _computed_map_has_production_code_producer(agents)
 
+    checkbox_lines = _criteria_checkboxes(criteria)
     lines: list[str] = [
         f"# {title}",
         "",
@@ -1126,6 +1199,8 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         "```gherkin",
         criteria.rstrip(),
         "```",
+        "",
+        *checkbox_lines,
         "",
     ]
 
@@ -1563,6 +1638,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     ac_path, ac = result
 
+    # Compute repo-root-relative path to the AC file for ac_traceability.
+    # ac_path is guaranteed to be under ac_root (found by _find_ac_by_id),
+    # so relative_to(ac_root.parent.parent) always succeeds.
+    ac_store_path = str(ac_path.relative_to(ac_root.parent.parent))
+
     # Dry-run / verify: build the ticket in memory, print it, and (for --verify)
     # append a readiness report. Neither path writes a file.
     if args.dry_run or args.verify:
@@ -1574,8 +1654,9 @@ def main(argv: list[str] | None = None) -> int:
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
+            files_touched=files_touched,
         )
-        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
+        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
         body = _build_ticket_body(ac, ac_id, agents_map=agents)
         print(frontmatter)
         print()
@@ -1608,8 +1689,9 @@ def main(argv: list[str] | None = None) -> int:
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
+        files_touched=files_touched,
     )
-    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents)
+    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
     body = _build_ticket_body(ac, ac_id, agents_map=agents)
     ticket_content = frontmatter + "\n\n" + body
 

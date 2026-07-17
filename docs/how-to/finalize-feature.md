@@ -1,10 +1,15 @@
 ---
-title: "How to use /finalize-feature"
-description: "Step-by-step guide for running /finalize-feature to merge a feature branch, run post-merge tests, and close tracking tickets."
-last_updated: 2026-06-24
+title: How to use /finalize-feature
+description: Step-by-step guide for running /finalize-feature to merge a feature branch,
+  run post-merge tests, and close tracking tickets.
+last_updated: 2026-07-15
 audience: developers
+created: '2026-07-15'
+type: tutorial
+status: active
+components:
+  - finalize
 ---
-
 # How to use /finalize-feature
 
 `/finalize-feature` finalizes a feature branch end-to-end: it captures a
@@ -29,7 +34,7 @@ incomplete step.
 
 | Step | Name | What happens |
 |------|------|--------------|
-| 0 | Capture baseline | A temporary detached worktree is created at `origin/main`. The test suite runs there. The list of failing test IDs is stored as the **pre-merge baseline**. The temp worktree is then removed. If baseline capture fails for any reason, the workflow continues (graceful degradation) — triage will classify all post-merge failures conservatively as regressions. |
+| 0 | Capture baseline | A temporary detached worktree is created at `origin/main`. The test suite runs there. The list of failing test IDs is stored as the **pre-merge baseline**. The temp worktree is then removed. If baseline capture fails for any reason, the workflow continues (graceful degradation) — a **targeted rerun** of only the post-merge failing test IDs is then attempted against `origin/main` HEAD to build a **recovered baseline** for triage. Only if that targeted rerun is also unavailable does triage fall back to conservative classification. |
 | 1 | Open PR | If no open PR exists for the branch, the `pull-request` agent opens one. |
 | 2 | Merge main into worktree | `origin/main` is merged into the feature worktree with `--no-commit --no-ff`. This gives step 3 a realistic view of the post-merge state. On conflict the merge is aborted and the workflow halts. |
 | 3 | Post-merge tests + triage | The full test suite runs against the post-merge worktree. If all tests pass, the triage sub-steps are skipped and the workflow proceeds to step 4. When failures exist, the `test-failure-triage` agent classifies each failing test as `regression` (caused by this branch), `pre_existing` (already failing on main), or `flaky`. If `blocks_finalization == true` (regressions found), finalization halts here — **the PR is not merged**. If `false` (all failures are pre-existing), the workflow continues to step 4. |
@@ -72,6 +77,16 @@ as **regressions** — tests that pass on `main` but fail on the post-merge
 worktree, meaning this branch introduced a breakage. **The PR has not been
 merged to main.**
 
+**Null-baseline recovery (targeted rerun):** When the Step 0 full-suite baseline
+timed out, the workflow performs a **targeted rerun** of only the post-merge
+failing test IDs against a fresh `origin/main` checkout (after the same
+`build.py` deploy step). This builds a **recovered baseline** and supplies it to
+triage in place of `null`. Tests that also fail on `origin/main` are classified
+`pre_existing` and do not block finalization. Only if this targeted rerun is also
+unavailable (checkout or build fails) does triage fall back to the conservative
+path — the halt message lists each failing test's `modified_by_branch` flag so
+you can adjudicate which tests this branch actually touched.
+
 The `triage_report` in the halted result shows:
 
 - `regressions` — test IDs that are newly failing (must be fixed).
@@ -80,6 +95,10 @@ The `triage_report` in the halted result shows:
   but tracking tickets will be created).
 - `summary` — one-sentence triage summary.
 
+Each triage entry also includes `modified_by_branch` — whether the test file was
+modified by this branch — to help distinguish genuine regressions from pre-existing
+failures the branch did not touch.
+
 **What to do:**
 
 1. Read the `triage_report.regressions` list.
@@ -87,16 +106,6 @@ The `triage_report` in the halted result shows:
 3. Push the fix commits.
 4. Re-run `/finalize-feature`. The workflow resumes from step 0 (captures a
    fresh baseline) and retests.
-
-If the triage report misclassified a test (e.g. it calls a pre-existing failure
-a regression), you can:
-- Check the baseline: did that test fail on `origin/main` before your branch?
-  ```bash
-  git stash && pytest <test_id> && git stash pop
-  ```
-- If it was already failing before your branch, the triage baseline capture
-  may have had a transient failure. Re-run `/finalize-feature` to get a fresh
-  baseline.
 
 ---
 

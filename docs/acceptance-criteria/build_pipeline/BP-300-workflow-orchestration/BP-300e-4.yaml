@@ -1,0 +1,72 @@
+id: BP-300e-4
+components:
+  - build_pipeline
+title: "A reply with no recoverable structured result stops the run with a clear error naming the stage and agent"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Given a workflow run dispatches a helper agent to return a structured result,
+  And that agent's reply contains no recoverable structured result at all
+    (prose only, with no valid JSON object or array anywhere in it),
+  When the workflow reads the agent's reply,
+  Then the run stops with a clear, typed error that names the stage and the agent
+    whose reply could not be understood,
+  And the failure is neither silently skipped nor swallowed — the user is told a real
+    problem occurred rather than the run appearing to succeed with missing output.
+depends_on:
+  - BP-300e
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Edit only the canonical source templates/workflows-js/*.js; rebuild via build.py so the deployed .claude/workflows/*.js copy stays byte-identical (BP-100k drift guard) — never hand-edit the deployed copy."
+  - "On no recoverable value, throw a typed error carrying the stage and agent identity supplied by the caller; never return null/undefined and never let the reply be silently skipped or swallowed."
+  - "Every call site must thread its stage/agent label into the reader so the error can name them — the current bare `typeof x === 'string' ? JSON.parse(x) : x` sites pass no such context, so the coder must add it at each site."
+  - "The typed error must supersede finalize-feature.js's current {value:null, malformed:true} return convention so the halt is a raised typed error, not a soft sentinel a caller could ignore."
+  - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness (assert a typed error is raised, not a generic crash or a silent None/skip), not a source string-scan."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-1
+  contract: >-
+    Inline tolerant reader parseAgentJson(raw, {stage, agent}) whose failure path throws
+    a typed error naming the stage and agent when no balanced top-level value parses.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+test_spec:
+  - name: test_prose_only_reply_raises_typed_error_naming_stage_and_agent
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Reader given a prose-only string raises a typed error whose message carries the caller-supplied stage/agent identity (not a generic crash, not None)."
+  - name: test_run_halts_on_unparseable_reply
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Stubbed agent returns prose-only output; the run halts with the named error rather than proceeding with missing output."
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-300e-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  Test contract intent: unit-testable against the tolerant agent-reply reader with a
+  prose-only input string, asserting it raises a typed error (not a generic crash and
+  not a silent None/skip) whose message carries the failing stage/agent identity passed
+  in by the caller. Also coverable by a workflow-level integration test that dispatches a
+  stubbed agent returning prose-only output and asserts the run halts with the named
+  error rather than proceeding. This AC is the "never blind" guarantee — the deliberate
+  boundary between tolerated cosmetic wording (BP-300e-1..3) and a genuinely unusable
+  reply.

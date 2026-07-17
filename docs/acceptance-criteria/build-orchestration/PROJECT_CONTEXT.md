@@ -1,7 +1,12 @@
 ---
-description: Accumulated conventions for the build-orchestration AC namespace — L0 numbering, scope boundaries vs. neighbouring components, and concurrency/parity/registry distinctions for BO-series authoring agents.
+description: Accumulated conventions for the build-orchestration AC namespace — L0
+  numbering, scope boundaries vs. neighbouring components, and concurrency/parity/registry
+  distinctions for BO-series authoring agents.
+created: '2026-07-17'
+last_updated: '2026-07-17'
+type: tutorial
+status: active
 ---
-
 # build-orchestration — Project Context for Authoring Agents
 
 Accumulated conventions for the `build-orchestration` AC namespace (prefix `BO`).
