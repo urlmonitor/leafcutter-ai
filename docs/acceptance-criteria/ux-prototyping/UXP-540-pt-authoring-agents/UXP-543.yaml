@@ -55,7 +55,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/author-product-truth
     node: mockupOnly
     node_kind: branch
@@ -64,7 +64,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/author-product-truth
     node: noFlow
     node_kind: branch
@@ -73,7 +73,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/author-product-truth
     node: none
     node_kind: branch
@@ -82,4 +82,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

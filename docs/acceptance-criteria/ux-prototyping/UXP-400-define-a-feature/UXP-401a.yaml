@@ -1,4 +1,6 @@
 id: UXP-401a
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "When the person requests changes to the draft, the system revises the flow before ACs are generated"
@@ -44,7 +46,7 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/define-a-feature
     node: flow
     node_kind: step
@@ -56,7 +58,7 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/define-a-feature
     node: mockData
     node_kind: step
@@ -66,7 +68,7 @@ product_truth:
     entities:
       - MockData
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/define-a-feature
     node: mockups
     node_kind: step
@@ -77,4 +79,4 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

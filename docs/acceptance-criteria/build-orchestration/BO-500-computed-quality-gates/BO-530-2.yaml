@@ -71,7 +71,7 @@ product_truth:
       - Diff
       - Test
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/python-coder-internal
     node: tests
     node_kind: step
@@ -80,4 +80,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

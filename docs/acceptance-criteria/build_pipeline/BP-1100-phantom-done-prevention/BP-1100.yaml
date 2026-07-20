@@ -50,4 +50,4 @@ product_truth:
       - Diff
       - Test
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

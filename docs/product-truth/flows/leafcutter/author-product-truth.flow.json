@@ -51,7 +51,7 @@
         "UXP-530"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "search",
@@ -70,7 +70,7 @@
         "UXP-422a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mockData",
@@ -92,7 +92,7 @@
         "UXP-540"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mockups",
@@ -117,7 +117,7 @@
         "UXP-541"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "flow",
@@ -145,7 +145,7 @@
         "UXP-542"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "deriveAcs",
@@ -171,7 +171,7 @@
         "UXP-402"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [
@@ -192,7 +192,7 @@
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "dataOnly",
@@ -211,7 +211,7 @@
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mockupOnly",
@@ -230,7 +230,7 @@
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "none",
@@ -249,7 +249,7 @@
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "impl_summary": {
@@ -257,7 +257,7 @@
     "in_progress": 2,
     "not_started": 4,
     "total": 10,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

@@ -34,7 +34,7 @@
         "UXP-400a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "classify",
@@ -46,7 +46,7 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mockData",
@@ -61,7 +61,7 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mockups",
@@ -79,7 +79,7 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "flow",
@@ -98,7 +98,7 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "approve",
@@ -116,7 +116,7 @@
         "UXP-402a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -125,7 +125,7 @@
     "in_progress": 6,
     "not_started": 0,
     "total": 6,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

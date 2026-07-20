@@ -59,4 +59,4 @@ product_truth:
       - MockData
       - Mockup
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

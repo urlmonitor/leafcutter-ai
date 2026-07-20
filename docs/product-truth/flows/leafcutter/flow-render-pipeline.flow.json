@@ -30,7 +30,7 @@
         "UXP-410a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "resolve",
@@ -42,7 +42,7 @@
         "UXP-411a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "render",
@@ -54,7 +54,7 @@
         "UXP-412a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -63,7 +63,7 @@
     "in_progress": 0,
     "not_started": 0,
     "total": 3,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

@@ -1,4 +1,6 @@
 id: UXP-210d-5
+components:
+  - ux_prototyping
 readiness: approved
 priority: medium
 title: "Entering payment details creates a Payment record"
@@ -25,9 +27,28 @@ it_requirements: |
   order. Payment.amount must equal Order.total per the catalog dataset invariants.
 delivers_to: null
 expects_from: {}
+test_required: true
+test_spec:
+  - name: test_valid_card_creates_payment_in_authorized_state
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "Entering valid card details creates a Payment record for the order in the 'authorized' state."
+  - name: test_payment_tied_to_signed_in_customers_order
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "The created Payment is linked to the signed-in customer's order (not any other customer or order)."
+  - name: test_order_not_marked_paid_before_capture
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "After authorization, no Order is marked 'paid' — capture has not yet happened."
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: it-po-test-contract
+    note: "Added test_spec (3 behavioral tests derived from the Gherkin Then-clauses) and test_required: true; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -45,4 +66,4 @@ product_truth:
       - Order
       - Payment
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

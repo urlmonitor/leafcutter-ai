@@ -42,7 +42,7 @@
         "BO-2000f"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "status",
@@ -57,7 +57,7 @@
         "BP-300b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "adr",
@@ -72,7 +72,7 @@
         "BO-540"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "diagram",
@@ -87,7 +87,7 @@
         "BO-540"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "itpo",
@@ -106,7 +106,7 @@
         "ACD-300b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "architect",
@@ -121,7 +121,7 @@
         "BO-540-1"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "test",
@@ -140,7 +140,7 @@
         "BO-530-1"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "code",
@@ -160,7 +160,7 @@
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "testrun",
@@ -176,7 +176,7 @@
         "BO-530-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "docs",
@@ -192,7 +192,7 @@
         "BO-540-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "scope",
@@ -208,7 +208,7 @@
         "BP-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "review",
@@ -223,7 +223,7 @@
         "BO-1400a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "acval",
@@ -240,7 +240,7 @@
         "BP-1100"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "smoke",
@@ -256,7 +256,7 @@
         "BO-1300c"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "acfulfill",
@@ -276,7 +276,7 @@
         "BO-202"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "livetest",
@@ -292,7 +292,7 @@
         "BP-014"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "commit",
@@ -310,7 +310,7 @@
         "BO-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "pr",
@@ -328,7 +328,7 @@
         "BO-800a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [
@@ -346,7 +346,7 @@
         "BO-2000f-5"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "acceptance_scenarios": [
@@ -418,6 +418,6 @@
     "in_progress": 1,
     "not_started": 15,
     "total": 19,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   }
 }

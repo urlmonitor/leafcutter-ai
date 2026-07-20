@@ -1,4 +1,6 @@
 id: UXP-210e
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Customer sees an order confirmation"
@@ -40,7 +42,7 @@ product_truth:
     entities:
       - Order
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: fern-and-fig/customer-buys-a-plant
     node: confirmed
     node_kind: step
@@ -50,4 +52,4 @@ product_truth:
     entities:
       - Order
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

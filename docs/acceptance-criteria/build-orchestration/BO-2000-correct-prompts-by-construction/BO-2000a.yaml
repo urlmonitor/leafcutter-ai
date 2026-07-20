@@ -49,4 +49,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
