@@ -1,0 +1,47 @@
+id: ACD-1200a-11-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Regeneration preserves an AC's unrelated implemented_by entries and only collapses the same-ticket duplicate"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-11.yaml"
+criteria: |
+  This edge case complements ACD-1200a-11 (same-ticket dedup) by requiring that
+  legitimately distinct implementation references are never lost during dedup.
+
+  Given an AC whose implemented_by list legitimately contains an entry for a
+    different, unrelated implementation path (one that is not the ticket being
+    regenerated),
+  When a ticket is regenerated from that AC and the back-reference for the
+    regenerated ticket is written,
+  Then the unrelated entry is preserved unchanged in the AC's implemented_by list,
+  And only the stale or duplicate entry that points at the same regenerated ticket
+    is collapsed to a single entry,
+  And the dedup never removes, rewrites, or reorders the unrelated entry.
+depends_on: [ACD-1200a-11]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

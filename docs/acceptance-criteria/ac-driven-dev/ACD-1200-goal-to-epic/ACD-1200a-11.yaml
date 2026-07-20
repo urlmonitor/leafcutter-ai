@@ -1,0 +1,50 @@
+id: ACD-1200a-11
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Regenerating a ticket dedupes the AC's implemented_by back-reference to a single entry"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a.yaml"
+criteria: |
+  Given an AC whose implemented_by list already contains an entry pointing at the
+    ticket produced by a prior generation of that same AC,
+  When a ticket is generated again from that AC by the generator's back-reference
+    writer (regeneration of the same AC's ticket),
+  Then after the back-reference is written the AC's implemented_by list contains
+    exactly one entry for that ticket (the prior same-ticket entry is replaced or
+    deduplicated, not appended a second time),
+  And repeated regenerations of the same AC do not grow the implemented_by list
+    (the back-reference write is idempotent for the same ticket).
+depends_on: [ACD-1200a]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1200a-11-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

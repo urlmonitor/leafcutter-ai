@@ -1,0 +1,49 @@
+id: TKT-500f-14
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "AC-gate wiring covers code tickets with non-.py source or a coder agent, not only .py tickets"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose generated ticket is a code/implementation ticket by virtue
+    of either a files_touched entry that is a non-.py source file (for example a
+    .js workflow body) or an assigned coder agent (python-coder, frontend-coder,
+    or sql-coder),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's agents map wires both the ac-validator phase and the
+    ac-fulfillment-gate phase as needed phases,
+  And those two gates are wired for such code tickets even when files_touched
+    contains no .py file (the gate wiring keys off the code-ticket signal — a
+    non-.py source file and/or a coder assignment — and is not limited to .py
+    source).
+depends_on: [TKT-500f, TKT-500f-12]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500f-14-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
