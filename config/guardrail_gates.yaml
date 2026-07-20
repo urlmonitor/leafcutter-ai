@@ -365,6 +365,7 @@ documentation_gates:
   # pair whose documentation burden is explicitly zero.
   non_triggering_classifications:
     - {change_target: code, risk_surface: internal}
+    - {change_target: code, risk_surface: cost}
     - {change_target: config, risk_surface: internal}
     - {change_target: prompt, risk_surface: internal}
     - {change_target: infrastructure, risk_surface: internal}
