@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -60,11 +60,36 @@ delivers_to:
 expects_from:
   ac_id: BO-1000b-1
   contract: "The start-of-step (BO-1000a-1) and per-step-outcome (BO-1000b-1) lines as they are emitted, which this AC also appends to the journal."
+test_required: true
+test_spec:
+  - name: test_progress_line_appended_to_journal_at_moment_it_is_emitted
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "When the workflow emits a start-of-step or per-step-outcome line, that same line is appended to the durable run-progress journal at the moment it is emitted."
+  - name: test_journal_readable_by_external_caller_while_run_in_flight
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A caller outside the background run can read the run-progress journal entries while the run is still in flight, before it completes."
+  - name: test_journal_preserves_emission_order
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The journal preserves the emission order of the progress lines."
+  - name: test_journal_written_incrementally_not_only_at_end
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The journal is written incrementally over the course of the run (append-as-you-go), not flushed only once at the end."
 origin_agent: it-po-v3
 created: 2026-07-10
-amended_by: []
+amended_by:
+  - reason: it-po-test-contract
+    note: "Added test_spec (4 behavioral tests derived from the Gherkin Then-clauses) and test_required: true so the approved code AC declares its test contract; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-InFlightVisibility/12_TICKET-20260715-BO-1000c-1a.md
 change_target: pipeline
 risk_surface: internal

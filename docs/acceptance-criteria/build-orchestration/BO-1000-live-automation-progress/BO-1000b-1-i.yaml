@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -49,13 +49,28 @@ delivers_to: null
 expects_from:
   ac_id: BO-1000b-1
   contract: "The in-order per-step outcome record from BO-1000b-1, into which the skipped entry (with reason) is written so no step position is left without an outcome."
+test_required: true
+test_spec:
+  - name: test_skipped_step_records_skipped_outcome_with_reason
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "When a step is skipped because its outcome was already satisfied, its recorded outcome is 'skipped' together with the already-satisfied reason."
+  - name: test_per_step_record_has_no_gaps
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "After a run, every step in the declared sequence has exactly one recorded outcome (executed or skipped) — the collected per-step record has no missing positions and no duplicates."
 origin_agent: business-analyst-v3
 created: 2026-07-10
 amended_by:
   - reason: it-po-v3-technical-enrichment
     note: "Assigned python-coder (workflow-body surface), added structured it_requirements, expects_from (per-step record), doc_links; criteria unchanged."
+  - reason: it-po-test-contract
+    note: "Added test_spec (2 behavioral tests derived from the Gherkin Then-clauses) and test_required: true; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-InFlightVisibility/08_TICKET-20260715-BO-1000b-1-i.md
 change_target: pipeline
 risk_surface: internal

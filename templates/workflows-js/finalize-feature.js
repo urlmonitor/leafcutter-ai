@@ -128,6 +128,62 @@ function safeParseJSON(raw) {
   }
 }
 
+/**
+ * Prose-tolerant agent reply parser (BP-300e).
+ *
+ * Returns non-string values as-is (already-parsed pass-through). For strings,
+ * tries direct JSON.parse; on failure uses brace/bracket matching to extract
+ * the first complete balanced JSON block from freeform prose. Throws a typed
+ * Error naming the stage and agent when no JSON can be found.
+ *
+ * @param {*}      raw - Value from agent() — string, object, or null.
+ * @param {{ stage: string, agent: string }} ctx - Call-site context for errors.
+ * @returns {*} Parsed value.
+ * @throws {Error} When no JSON is found, message names stage and agent.
+ */
+function parseAgentJson(raw, ctx) {
+  var stage = (ctx && ctx.stage) ? String(ctx.stage) : 'unknown';
+  var agent = (ctx && ctx.agent) ? String(ctx.agent) : 'unknown';
+  if (typeof raw !== 'string') {
+    return raw;
+  }
+  var trimmed = raw.trim();
+  if (trimmed === '') {
+    throw new Error('[parseAgentJson] stage=' + stage + ' agent=' + agent + ': empty or whitespace reply — no JSON found');
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {}
+  var OBJ = 1; var ARR = 2;
+  for (var pass = OBJ; pass <= ARR; pass++) {
+    var openCode = pass === OBJ ? 0x7B : 0x5B;
+    var closeCode = pass === OBJ ? 0x7D : 0x5D;
+    var start = -1;
+    for (var s = 0; s < raw.length; s++) {
+      if (raw.charCodeAt(s) === openCode) { start = s; break; }
+    }
+    if (start === -1) { continue; }
+    var depth = 0;
+    var inStr = false;
+    var esc = false;
+    for (var i = start; i < raw.length; i++) {
+      var cc = raw.charCodeAt(i);
+      if (esc) { esc = false; continue; }
+      if (cc === 0x5C && inStr) { esc = true; continue; }
+      if (cc === 0x22) { inStr = !inStr; continue; }
+      if (inStr) { continue; }
+      if (cc === openCode) { depth++; }
+      else if (cc === closeCode) {
+        depth--;
+        if (depth === 0) {
+          try { return JSON.parse(raw.slice(start, i + 1)); } catch (_) { break; }
+        }
+      }
+    }
+  }
+  throw new Error('[parseAgentJson] stage=' + stage + ' agent=' + agent + ': unusable reply — no JSON object or array found');
+}
+
 // -------------------------------------------------------------------------
 // Pre-flight worktree resolution
 //
@@ -196,15 +252,13 @@ const preflightResult = await agent(
 )
 
 let preflightInfo;
-{
-  const { value, malformed } = safeParseJSON(preflightResult);
-  if (malformed) {
-    log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
-    preflightInfo = { found: true, branch: "unknown", worktree_root: "unknown" };
-  } else {
-    preflightInfo = value || { found: true, branch: "unknown", worktree_root: "unknown" };
-  }
+try {
+  preflightInfo = parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" });
+} catch (_parseErr) {
+  log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
+  preflightInfo = null;
 }
+preflightInfo = preflightInfo || { found: true, branch: "unknown", worktree_root: "unknown" };
 
 // When the worktree resolution step found no matching worktree, fail with a
 // clear, actionable message rather than a silent misdetection.

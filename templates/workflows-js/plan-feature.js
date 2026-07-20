@@ -141,6 +141,62 @@ function stageDisplayName(stageKey) {
 }
 
 /**
+ * Prose-tolerant agent reply parser (BP-300e).
+ *
+ * Returns non-string values as-is (already-parsed pass-through). For strings,
+ * tries direct JSON.parse; on failure uses brace/bracket matching to extract
+ * the first complete balanced JSON block from freeform prose. Throws a typed
+ * Error naming the stage and agent when no JSON can be found.
+ *
+ * @param {*}      raw - Value from agent() — string, object, or null.
+ * @param {{ stage: string, agent: string }} ctx - Call-site context for errors.
+ * @returns {*} Parsed value.
+ * @throws {Error} When no JSON is found, message names stage and agent.
+ */
+function parseAgentJson(raw, ctx) {
+  var stage = (ctx && ctx.stage) ? String(ctx.stage) : 'unknown';
+  var agent = (ctx && ctx.agent) ? String(ctx.agent) : 'unknown';
+  if (typeof raw !== 'string') {
+    return raw;
+  }
+  var trimmed = raw.trim();
+  if (trimmed === '') {
+    throw new Error('[parseAgentJson] stage=' + stage + ' agent=' + agent + ': empty or whitespace reply — no JSON found');
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {}
+  var OBJ = 1; var ARR = 2;
+  for (var pass = OBJ; pass <= ARR; pass++) {
+    var openCode = pass === OBJ ? 0x7B : 0x5B;
+    var closeCode = pass === OBJ ? 0x7D : 0x5D;
+    var start = -1;
+    for (var s = 0; s < raw.length; s++) {
+      if (raw.charCodeAt(s) === openCode) { start = s; break; }
+    }
+    if (start === -1) { continue; }
+    var depth = 0;
+    var inStr = false;
+    var esc = false;
+    for (var i = start; i < raw.length; i++) {
+      var cc = raw.charCodeAt(i);
+      if (esc) { esc = false; continue; }
+      if (cc === 0x5C && inStr) { esc = true; continue; }
+      if (cc === 0x22) { inStr = !inStr; continue; }
+      if (inStr) { continue; }
+      if (cc === openCode) { depth++; }
+      else if (cc === closeCode) {
+        depth--;
+        if (depth === 0) {
+          try { return JSON.parse(raw.slice(start, i + 1)); } catch (_) { break; }
+        }
+      }
+    }
+  }
+  throw new Error('[parseAgentJson] stage=' + stage + ' agent=' + agent + ': unusable reply — no JSON object or array found');
+}
+
+/**
  * Commit AC YAML files produced by a completed pipeline stage.
  *
  * Stages ONLY the files that correspond to AC IDs in the `written` array,
@@ -195,9 +251,7 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       let branchParsed;
       try {
         branchParsed =
-          typeof branchCheckResult === "string"
-            ? JSON.parse(branchCheckResult)
-            : branchCheckResult;
+          parseAgentJson(branchCheckResult, { stage: "branch-check", agent: "status-checker" });
       } catch (_parseErr) {
         branchCheckError = "branch check response was not valid JSON";
         branchParsed = null;
@@ -368,7 +422,7 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
   let result;
   try {
     result =
-      typeof commitResult === "string" ? JSON.parse(commitResult) : commitResult;
+      parseAgentJson(commitResult, { stage: "commit-output", agent: "commit" });
   } catch (_parseErr) {
     // If the agent returned non-JSON, treat as failure — an unparseable result
     // means we cannot confirm the commit succeeded (fail-closed per ACD-300g-1-i).
@@ -494,7 +548,7 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
       `Return a JSON object: { "output": "<raw stdout>", "exit_code": <number> }`,
       { agentType: "status-checker", label: "scan-orphans-git-status" }
     );
-    const parsed = typeof statusResult === "string" ? JSON.parse(statusResult) : statusResult;
+    const parsed = parseAgentJson(statusResult, { stage: "orphan-status", agent: "status-checker" });
     if (!parsed || parsed.exit_code !== 0) {
       // git status failed — warn and proceed without blocking.
       return [];
@@ -540,7 +594,7 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
         `If the file cannot be read, return: { "content": null }`,
         { agentType: "status-checker", label: "scan-orphans-read-file" }
       );
-      const readParsed = typeof readResult === "string" ? JSON.parse(readResult) : readResult;
+      const readParsed = parseAgentJson(readResult, { stage: "orphan-read", agent: "status-checker" });
       fileContent = readParsed ? readParsed.content : null;
     } catch (_readErr) {
       // Cannot read file — skip it.
@@ -667,7 +721,7 @@ async function deliverAuthoringBranch(authoringBranch, authoringWorktreePath, al
 
   let result;
   try {
-    result = typeof pushResult === "string" ? JSON.parse(pushResult) : pushResult;
+    result = parseAgentJson(pushResult, { stage: "deliver-branch", agent: "pull-request" });
   } catch (_parseErr) {
     // Non-JSON response — treat as best-effort success if we cannot tell otherwise.
     return {
@@ -699,7 +753,7 @@ async function scanCommittedStages(authoringWorktreePath) {
       `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
       { agentType: "status-checker", label: "scan-committed-stages" }
     );
-    const parsed = typeof logResult === "string" ? JSON.parse(logResult) : logResult;
+    const parsed = parseAgentJson(logResult, { stage: "log-scan", agent: "status-checker" });
     if (!parsed || parsed.exit_code !== 0) {
       // git log failed (e.g. no origin/main yet) — treat as no committed stages.
       return new Set();
@@ -773,7 +827,7 @@ async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktr
       `Return ONLY a JSON object: { "choice": "yes" | "no" | "discard" }`,
       { agentType: "status-checker", label: "resolve-orphans-choice" }
     );
-    const parsed = typeof choiceResult === "string" ? JSON.parse(choiceResult) : choiceResult;
+    const parsed = parseAgentJson(choiceResult, { stage: "orphan-choice", agent: "status-checker" });
     userChoice = (parsed && parsed.choice) ? parsed.choice.toLowerCase().trim() : "no";
   } catch (_choiceErr) {
     // Cannot parse choice — default to "no" (safe-abort).
@@ -829,9 +883,7 @@ async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktr
         continue;
       }
 
-      const statusParsed = typeof fileStatusResult === "string"
-        ? JSON.parse(fileStatusResult)
-        : fileStatusResult;
+      const statusParsed = parseAgentJson(fileStatusResult, { stage: "discard-status", agent: "status-checker" });
       const fileStatusLine = (statusParsed && statusParsed.output) ? statusParsed.output.trim() : "";
       const isUntracked = fileStatusLine.startsWith("??");
 
@@ -1011,7 +1063,7 @@ async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath)
       `Return JSON: { "output": "<raw stdout line>", "exit_code": <number> }`,
       { agentType: "status-checker", label: "pt-store-check" }
     );
-    const parsed = typeof result === "string" ? JSON.parse(result) : result;
+    const parsed = parseAgentJson(result, { stage: "store-check", agent: "status-checker" });
     if (!parsed || typeof parsed.output !== "string") {
       return false;
     }
@@ -1105,7 +1157,7 @@ async function commitStageOutputProductTruth(reportedPaths, stageName, component
       let branchParsed;
       try {
         branchParsed =
-          typeof branchCheckResult === "string" ? JSON.parse(branchCheckResult) : branchCheckResult;
+          parseAgentJson(branchCheckResult, { stage: "branch-check", agent: "status-checker" });
       } catch (_parseErr) {
         branchCheckError = "branch check response was not valid JSON";
         branchParsed = null;
@@ -1214,7 +1266,7 @@ async function commitStageOutputProductTruth(reportedPaths, stageName, component
 
   let result;
   try {
-    result = typeof commitResult === "string" ? JSON.parse(commitResult) : commitResult;
+    result = parseAgentJson(commitResult, { stage: "commit-output", agent: "commit" });
   } catch (_parseErr) {
     result = { status: "error", message: "product-truth commit result unparseable — cannot confirm success", hook_name: null, failing_files: [], is_conflict: false };
   }
@@ -1243,7 +1295,7 @@ async function recoverFlowRefFromCommit(authoringWorktreePath) {
       `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
       { agentType: "status-checker", label: "resume-flow-ref" }
     );
-    const parsed = typeof logResult === "string" ? JSON.parse(logResult) : logResult;
+    const parsed = parseAgentJson(logResult, { stage: "log-scan", agent: "status-checker" });
     if (!parsed || parsed.exit_code !== 0) {
       return null;
     }
@@ -1324,7 +1376,7 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   // is intentionally non-fatal — the caller only logs on status:error.
   let runParsed;
   try {
-    runParsed = typeof runResult === "string" ? JSON.parse(runResult) : runResult;
+    runParsed = parseAgentJson(runResult, { stage: "pt-reconcile", agent: "status-checker" });
   } catch (_runParseErr) {
     return { status: "error", message: "reconcile result unparseable" };
   }
@@ -1363,7 +1415,7 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
       `  If non-zero: Return { "status": "error", "message": "<summary>" }`,
       { agentType: "commit", label: "commit-flow-reconciliation" }
     );
-    const commitParsed = typeof commitOut === "string" ? JSON.parse(commitOut) : commitOut;
+    const commitParsed = parseAgentJson(commitOut, { stage: "reconcile-commit", agent: "commit" });
     return commitParsed || { status: "error", message: "no result from reconciliation commit agent" };
   } catch (err) {
     return { status: "error", message: "reconciliation commit dispatch failed: " + err.message };
@@ -1406,9 +1458,7 @@ try {
     { agentType: "status-checker", label: "detect-current-branch" }
   );
   const cbParsed =
-    typeof currentBranchResult === "string"
-      ? JSON.parse(currentBranchResult)
-      : currentBranchResult;
+    parseAgentJson(currentBranchResult, { stage: "detect-branch", agent: "status-checker" });
   if (cbParsed && cbParsed.exit_code === 0) {
     const currentBranch = (cbParsed.output || "").trim();
     if (currentBranch.toLowerCase() === "main") {
@@ -1452,9 +1502,7 @@ try {
 }
 
 const wtParsed =
-  typeof worktreeSetupResult === "string"
-    ? JSON.parse(worktreeSetupResult)
-    : worktreeSetupResult;
+  parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: "status-checker" });
 
 // Only fail-hard when exit_code is explicitly non-zero.
 if (wtParsed && wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
@@ -1521,7 +1569,7 @@ const triageResult = await agent(
 
 let triage;
 try {
-  triage = typeof triageResult === "string" ? JSON.parse(triageResult) : triageResult;
+  triage = parseAgentJson(triageResult, { stage: "ac-triage", agent: "ac-triage" });
 } catch (err) {
   return {
     status: "error",
@@ -1548,7 +1596,7 @@ if (route === "covered" && !force) {
 
   let userChoice;
   try {
-    userChoice = typeof coverageResult === "string" ? JSON.parse(coverageResult) : coverageResult;
+    userChoice = parseAgentJson(coverageResult, { stage: "covered-gate", agent: "status-checker" });
   } catch (_) {
     userChoice = { choice: "cancel" };
   }
@@ -1602,7 +1650,7 @@ const classifierResult = await agent(
 
 let classifier;
 try {
-  classifier = typeof classifierResult === "string" ? JSON.parse(classifierResult) : classifierResult;
+  classifier = parseAgentJson(classifierResult, { stage: "pt-classify", agent: "pt-classifier" });
 } catch (_ptParseErr) {
   classifier = null;
 }
@@ -1670,7 +1718,7 @@ if (ptRunSet.skip) {
         // the parsed object so artifact_paths/flow_ref aren't silently dropped.
         let ptResultObj;
         try {
-          ptResultObj = typeof ptResult === "string" ? JSON.parse(ptResult) : ptResult;
+          ptResultObj = parseAgentJson(ptResult, { stage: "pt-author", agent: "pt-author" });
         } catch (_ptResultParseErr) {
           ptResultObj = {};
         }
@@ -1689,7 +1737,7 @@ if (ptRunSet.skip) {
 
         let ptGate;
         try {
-          ptGate = typeof ptGateResult === "string" ? JSON.parse(ptGateResult) : ptGateResult;
+          ptGate = parseAgentJson(ptGateResult, { stage: "pt-gate", agent: "status-checker" });
         } catch (_ptGateErr) {
           ptGate = { action: "cancel" };
         }
@@ -1818,9 +1866,7 @@ for (const step of pipeline) {
         { agentType: "status-checker", label: "resume-log" }
       );
       const resumeLogParsed =
-        typeof resumeLogResult === "string"
-          ? JSON.parse(resumeLogResult)
-          : resumeLogResult;
+        parseAgentJson(resumeLogResult, { stage: "resume-log", agent: "status-checker" });
       if (resumeLogParsed && resumeLogParsed.exit_code === 0) {
         const logBody = resumeLogParsed.output || "";
         // Scan line-by-line. Real `git log --format=%B` concatenates commit
@@ -1941,7 +1987,7 @@ for (const step of pipeline) {
     // off the parsed object so acs_written/flow_backlinks aren't silently dropped.
     let stepResultObj;
     try {
-      stepResultObj = typeof stepResult === "string" ? JSON.parse(stepResult) : stepResult;
+      stepResultObj = parseAgentJson(stepResult, { stage: "stage-author", agent: "stage-agent" });
     } catch (_stepResultParseErr) {
       stepResultObj = {};
     }
@@ -1967,7 +2013,7 @@ for (const step of pipeline) {
 
       let gateDecision;
       try {
-        gateDecision = typeof gateResult === "string" ? JSON.parse(gateResult) : gateResult;
+        gateDecision = parseAgentJson(gateResult, { stage: "stage-gate", agent: "status-checker" });
       } catch (_) {
         gateDecision = { action: "cancel" };
       }
@@ -2049,7 +2095,7 @@ for (const step of pipeline) {
 
       let finalDecision;
       try {
-        finalDecision = typeof finalGateResult === "string" ? JSON.parse(finalGateResult) : finalGateResult;
+        finalDecision = parseAgentJson(finalGateResult, { stage: "final-gate", agent: "status-checker" });
       } catch (_) {
         finalDecision = { action: "defer" };
       }

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -55,13 +55,28 @@ delivers_to: null
 expects_from:
   ac_id: BO-1000b-1
   contract: "The per-step outcome record from BO-1000b-1; each entry's outcome text must be populated with the concrete result data this AC requires."
+test_required: true
+test_spec:
+  - name: test_outcome_text_states_concrete_result_data
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "For a step that produced measurable results (counts, identifiers, or decisions such as tickets/ACs closed, pre-existing failure count, PR number, merge result), the outcome line and final recap state that concrete result data rather than a content-free acknowledgement."
+  - name: test_worked_step_never_reports_bare_ok_or_done
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A step that did real work never reports its outcome as only 'ok' or 'done' without the accompanying result data."
 origin_agent: business-analyst-v3
 created: 2026-07-10
 amended_by:
   - reason: it-po-v3-technical-enrichment
     note: "Assigned python-coder (workflow-body surface), added structured it_requirements, expects_from, doc_links; criteria unchanged."
+  - reason: it-po-test-contract
+    note: "Added test_spec (2 behavioral tests derived from the Gherkin Then-clauses) and test_required: true; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-InFlightVisibility/11_TICKET-20260715-BO-1000b-3.md
 change_target: pipeline
 risk_surface: internal
