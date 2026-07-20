@@ -48,6 +48,6 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-InFlightVisibility/16_TICKET-20260715-BO-1000c-3.md
+- tickets/00_inbox/epics/EPIC-InFlightVisibility/16_TICKET-20260720-BO-1000c-3.md
 change_target: pipeline
 risk_surface: internal
