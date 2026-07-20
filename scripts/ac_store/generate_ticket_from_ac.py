@@ -1401,27 +1401,54 @@ def _normalise_repo_relative(path: str) -> str:
     return normalised
 
 
-def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
+def _write_implemented_by(
+    ac_path: Path,
+    ticket_path: str,
+    ac_id: str,
+    worktree: Path | None = None,
+) -> None:
     """Append *ticket_path* to the implemented_by list in the source AC YAML.
 
     Uses a targeted field update (not a full yaml.dump round-trip) to minimise
     diff noise in the AC store, per the risk mitigation note in the ticket.
 
     The update strategy:
-    1. Read the full file content.
-    2. Parse implemented_by from the YAML.
-    3. If ticket_path is already present, skip (idempotent).
-    4. Rewrite only the implemented_by lines using a targeted string replacement.
+    1. Normalise ticket_path to a repo-relative form (strip worktree prefix or
+       leading ``/``/``./`` characters).
+    2. Read the full file content.
+    3. Parse implemented_by from the YAML.
+    4. If ticket_path is already present, skip (idempotent).
+    5. Rewrite only the implemented_by lines using a targeted string replacement.
 
     Args:
         ac_path: Absolute path to the source AC YAML file.
-        ticket_path: Relative path of the generated ticket to record.
+        ticket_path: Path of the generated ticket to record.  May be absolute
+                     or relative; will be normalised to repo-relative form
+                     before writing.
         ac_id: The AC id (for diagnostic messages).
+        worktree: Optional worktree root.  When provided and *ticket_path* is
+                  absolute, the worktree prefix is stripped via
+                  ``Path.relative_to`` to produce a clean repo-relative path.
+                  When absent (or when ``relative_to`` raises ``ValueError``),
+                  ``_normalise_repo_relative`` is used as a fallback.
 
     Raises:
         OSError: When the file cannot be read or written.
         yaml.YAMLError: When the YAML cannot be parsed.
     """
+    # Normalise ticket_path to a repo-relative form before any read/write.
+    # When worktree is provided and the path is absolute, relativise against
+    # the worktree root.  Otherwise fall back to _normalise_repo_relative which
+    # strips any leading './' or '/' prefixes.
+    _p = Path(ticket_path)
+    if _p.is_absolute() and worktree is not None:
+        try:
+            ticket_path = str(_p.relative_to(worktree))
+        except ValueError:
+            ticket_path = _normalise_repo_relative(ticket_path)
+    else:
+        ticket_path = _normalise_repo_relative(ticket_path)
+
     content = ac_path.read_text(encoding="utf-8")
     data = yaml.safe_load(content)
     implemented_by: list[str] = data.get("implemented_by") or []
@@ -1868,7 +1895,7 @@ def main(argv: list[str] | None = None) -> int:
     # Write implemented_by back-reference into source AC
     relative_ticket_path = str(ticket_path.relative_to(worktree)) if ticket_path.is_relative_to(worktree) else str(ticket_path)
     try:
-        _write_implemented_by(ac_path, relative_ticket_path, ac_id)
+        _write_implemented_by(ac_path, relative_ticket_path, ac_id, worktree=worktree)
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"WARNING: ticket written but could not update implemented_by in {ac_path}: {exc}",
