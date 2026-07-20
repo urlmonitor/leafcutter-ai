@@ -1,0 +1,60 @@
+id: GE-116a-1-iii
+components:
+  - commit_guardian
+title: "Unparseable agent definition fails open and does not block the commit"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given a staged agent definition whose settings block cannot be read (the
+    frontmatter is malformed or absent, so the guard cannot determine either
+    the verification setting or the declared abilities),
+  When the commit is attempted,
+  Then the consistency guard fails open and does not block the commit,
+  And it surfaces a non-blocking warning that the agent definition could not be
+    inspected,
+  And a parse error in one definition never hard-blocks an otherwise valid
+    commit.
+depends_on:
+  - GE-116a-1
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The verification-consistency guard's error path, which this edge constrains to fail-open (exit 0 + warning) on unreadable frontmatter."
+it_requirements:
+  - "Fail OPEN on unreadable/malformed/absent frontmatter (matching the repo's check_ac_schema / check_ac_circular_deps fail-open convention): exit 0 and surface a non-blocking warning to stderr that the definition could not be inspected. Fail CLOSED only on a clearly-detected contradiction."
+  - "A parse error in one staged definition must never hard-block an otherwise valid commit; follow the error-handling policy (typed except, log at WARNING) and do not let the parse exception propagate out of the hook."
+test_spec:
+  - name: test_fails_open_on_malformed_frontmatter
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Staged agent definition with malformed/absent frontmatter → hook exits 0 and emits a non-blocking warning; the commit is not blocked."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Decision: fail-OPEN on parse error, matching the repo's fail-open hook
+  convention (see check_ac_schema / check_ac_circular_deps "Fail-open
+  behaviour" in docs/reference/ac-schema.md). The guard only ever fail-CLOSES
+  on a clearly-detected contradiction; when it cannot read the definition it
+  must not block, so a malformed unrelated file never stops a commit. Warning
+  to stderr, exit 0.

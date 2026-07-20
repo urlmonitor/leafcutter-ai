@@ -1,0 +1,37 @@
+id: GE-116b
+components:
+  - commit_guardian
+title: "The block names the offending agent and the exact fix"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  The block names the offending agent and the exact fix.
+
+  When a commit is stopped, the message identifies which agent definition is
+  inconsistent and states the single change that resolves it, so the person
+  committing can fix it in seconds without hunting.
+depends_on:
+  - GE-116
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-116b-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Message content of the same guard introduced by GE-116a; covered by that guard's reference-doc update, no separate documentation needed."
+notes: "User-authored intent: BrainCandy. Framed by product-owner. Remediation message must name the offending template and the fix (e.g. set requires_verification: false for a read-only agent, or add Edit/Write to tools)."
+change_target: code
+risk_surface: internal

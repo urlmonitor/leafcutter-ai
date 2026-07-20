@@ -1,0 +1,52 @@
+id: GE-116c-1
+components:
+  - commit_guardian
+title: "A commit staging no agent definitions passes untouched"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given a commit that stages no agent definitions at all,
+  When the commit is attempted,
+  Then the consistency guard performs no inspection and raises no objection,
+  And the commit is never slowed down or blocked by this guard,
+  And this holds regardless of what other kinds of files the commit stages.
+depends_on:
+  - GE-116c
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The verification-consistency guard whose staged-file filter this AC exercises (no-op path when no agent definition is staged)."
+it_requirements:
+  - "When the staged set contains no templates/agents/*.md file, the hook must exit 0 immediately without inspecting anything, regardless of the other staged file types."
+test_spec:
+  - name: test_noop_when_no_agent_definitions_staged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Commit staging only non-agent files → hook exits 0 without performing any inspection."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  No-op / fail-open on non-target commits: when the staged set contains no
+  templates/agents/*.md file, the hook exits 0 immediately without reading
+  anything. Prevents false alarms on unrelated work.

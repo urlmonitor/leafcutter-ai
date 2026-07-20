@@ -1,0 +1,55 @@
+id: GE-116c-2
+components:
+  - commit_guardian
+title: "Non-agent files are not inspected by the consistency guard"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given a commit that stages files which are not agent definitions (for example
+    a source-code file or a documentation page) alongside no agent definitions,
+  And one of those staged files happens to contain the words that name the
+    verification setting or the edit abilities,
+  When the commit is attempted,
+  Then the consistency guard does not inspect those non-agent files,
+  And it raises no objection based on their contents,
+  And the commit proceeds as far as this guard is concerned.
+depends_on:
+  - GE-116c
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The verification-consistency guard whose file-identity trigger this AC exercises (non-agent files with matching keywords must be ignored)."
+it_requirements:
+  - "Trigger scope is by file identity (staged templates/agents/*.md) only, never by content grep; a .py or .md file that merely mentions requires_verification / Edit / Write must not be inspected or block the commit."
+test_spec:
+  - name: test_ignores_non_agent_files_with_matching_keywords
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Staged non-agent file containing the words requires_verification / Edit / Write, with no agent definitions staged → hook exits 0 (not inspected)."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Scope is by file identity (templates/agents/*.md), not by content grep. A .py
+  or .md doc that merely mentions requires_verification / Edit / Write must not
+  be inspected. The staged-file filter is the guard's only trigger surface.

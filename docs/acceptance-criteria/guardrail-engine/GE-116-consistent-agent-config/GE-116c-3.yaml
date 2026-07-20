@@ -1,0 +1,56 @@
+id: GE-116c-3
+components:
+  - commit_guardian
+title: "Only staged agent definitions are checked, not the whole tree"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given the project already contains an agent definition on disk that requires
+    verification while granting no ability to edit or create files,
+  And that pre-existing contradictory definition is not part of the current
+    commit (it is not staged),
+  And the current commit stages only unrelated, consistent changes,
+  When the commit is attempted,
+  Then the consistency guard inspects only the staged agent definitions,
+  And it does not block the commit for the pre-existing unstaged contradiction,
+  And the commit proceeds as far as this guard is concerned.
+depends_on:
+  - GE-116c
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The verification-consistency guard whose staged-only scope (git diff --cached) this AC exercises (unstaged pre-existing contradictions must not block)."
+it_requirements:
+  - "Inspect only the staged set (git diff --cached name filter), never a full-tree scan; a pre-existing on-disk contradictory agent definition that is not staged must not block the commit."
+test_spec:
+  - name: test_ignores_unstaged_preexisting_contradiction
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A contradictory agent definition exists on disk but is unstaged; the commit stages only consistent unrelated changes → hook exits 0 (only staged definitions inspected)."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The guard operates on the staged set only (git diff --cached name filter),
+  never a full-tree scan. A contributor is never blocked by a contradiction
+  they did not touch; pre-existing offenders are remediated when next edited.
