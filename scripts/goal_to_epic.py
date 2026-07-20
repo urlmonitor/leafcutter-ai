@@ -251,18 +251,27 @@ def _to_pascal_case(title: str) -> str:
 
     Pre-processing pipeline (applied in this order):
     1. Strip leading/trailing whitespace.
-    2. Normalise non-ASCII punctuation (em-dash, en-dash, smart quotes, etc.)
-       to spaces via :func:`_normalize_non_ascii_punct` so that they act as
-       word boundaries and do not appear literally in the output.
-    3. Strip apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
+    2. Strip apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
        in-place via :func:`_strip_quote_chars` so that a quote embedded
-       mid-word (e.g. ``user's``) joins its adjacent letters into a single
-       PascalCase word (e.g. ``Users``) rather than creating a word boundary.
-    4. Split on whitespace, hyphens, underscores, **and** PascalCase upper-case
-       letter boundaries (``(?=[A-Z])``).  The PascalCase split makes the
-       function idempotent: passing an already-PascalCase string returns the
-       same string unchanged.
-    5. Capitalise the first character of each non-empty token and join without
+       mid-word (e.g. ``user's`` / ``customer’s``) joins its adjacent letters
+       into a single PascalCase word (e.g. ``Users``/``Customers``) rather than
+       creating a word boundary. This runs BEFORE non-ASCII normalisation so the
+       curly apostrophe U+2019 is removed in-place instead of being turned into
+       a space.
+    3. Normalise remaining non-ASCII punctuation (em-dash, en-dash, ellipsis,
+       etc.) to spaces via :func:`_normalize_non_ascii_punct` so that they act
+       as word boundaries and do not appear literally in the output.
+    4. Idempotence guard (acronym-safe): if the pre-processed string is a
+       single token with a leading uppercase letter and no word separators
+       (i.e. it is already PascalCase, such as a name previously produced by
+       this function or by :func:`_derive_epic_name`), it is returned
+       unchanged. This keeps re-application safe — e.g. a derived epic name
+       passed back through :func:`assemble_epic_folder` — without corrupting
+       casing, while a raw title containing an acronym (``validate API inputs``)
+       still lower-cases the acronym tail (``ValidateApiInputs``) because it
+       contains word separators and so skips the guard.
+    5. Split on whitespace, hyphens, and underscores.
+    6. Capitalise the first character of each non-empty token and join without
        separators.
 
     Args:
@@ -273,9 +282,21 @@ def _to_pascal_case(title: str) -> str:
         only the characters that survive pre-processing; non-ASCII punctuation
         is absent from the output.
     """
-    normalized = _normalize_non_ascii_punct(title.strip())
-    stripped = _strip_quote_chars(normalized)
-    words = re.split(r"(?=[A-Z])|[\s\-_]+", stripped)
+    # Strip apostrophe/quote characters (incl. non-ASCII U+2019) FIRST, in-place,
+    # so a quote embedded mid-word (e.g. "user's" / "customer’s") joins its
+    # adjacent letters ("Users"/"Customers") rather than becoming a word boundary.
+    # This must precede non-ASCII normalisation, which would otherwise turn the
+    # curly apostrophe U+2019 into a space and split the word.
+    dequoted = _strip_quote_chars(title.strip())
+    normalized = _normalize_non_ascii_punct(dequoted)
+    # Idempotence guard (acronym-safe): an already-PascalCase single token
+    # (leading uppercase, no word separators) is returned unchanged so that
+    # re-applying the conversion does not corrupt casing (dry-run/real-run
+    # parity, ACD-1200a-3-iii), while raw titles with separators still flow
+    # through the split+capitalise path below.
+    if normalized and normalized[0].isupper() and not re.search(r"[\s\-_]", normalized):
+        return normalized
+    words = re.split(r"[\s\-_]+", normalized)
     return "".join(word.capitalize() for word in words if word)
 
 
