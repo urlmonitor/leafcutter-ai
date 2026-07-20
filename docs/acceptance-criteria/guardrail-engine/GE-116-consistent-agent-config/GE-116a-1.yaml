@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 assigned_agent: python-coder
@@ -61,6 +61,9 @@ covered_by:
   - GE-116a-1-iii
 implemented_by:
 - tickets/00_inbox/TICKET-20260720-GE-116a-1.md
+- templates/scripts/commit_guardian/hooks/check_agent_verification_consistency.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- unit_tests/commit_guardian/test_agent_verification_consistency.py
 change_target: code
 risk_surface: internal
 notes: |
