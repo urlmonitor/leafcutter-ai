@@ -1,0 +1,82 @@
+id: BO-2300e-1-i
+components:
+  - build_orchestration
+title: "Applying the same answer twice is idempotent and never double-applies"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that was paused on a pending question and has already received and
+    applied a valid answer,
+  When the same answer is submitted again for that already-answered question
+    (for example a duplicate submission, or a second resume of the same run),
+  Then the answer is not applied a second time,
+  And the run's later stages are not re-executed as a result,
+  And the run's state matches the state produced by applying the answer exactly
+    once.
+depends_on: [BO-2300e-1]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Idempotency guard for re-submitting an already-applied answer."
+    properties:
+      applied_count: {type: integer, description: "must remain 1 after a duplicate submission"}
+      later_stages_reexecuted: {type: boolean, description: "must be false"}
+    required: [applied_count, later_stages_reexecuted]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Applying the same answer twice (duplicate submission or a second resume of the same run) must be idempotent: the answer is not applied a second time, later stages are not re-executed, and the resulting state matches applying the answer exactly once."
+    - "Idempotency must cover both 'an answer arrives for an already-answered question' and 'resuming twice' — the same guarantee."
+  delivers_shape:
+    description: "Idempotency assertion surface; no downstream producer."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300d-1
+  contract: "The apply-by-type + resume path whose re-invocation this edge makes idempotent (no double-apply, no re-execution of later stages)."
+test_spec:
+  - name: test_duplicate_answer_not_double_applied
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Submitting the same answer again for an already-answered question does not apply it a second time."
+  - name: test_second_resume_does_not_rerun_stages
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "A second resume of the same run does not re-execute the run's later stages."
+  - name: test_state_matches_single_application
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The run's state after a duplicate answer matches the state produced by applying the answer exactly once."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Covers both "an answer arrives for a question already answered" and "resuming
+  twice" — the same idempotency guarantee. Prevents double-apply of the answer or
+  re-running downstream stages.

@@ -1,0 +1,82 @@
+id: BO-2300e-1-iii
+components:
+  - build_orchestration
+title: "A stale or expired pause is handled gracefully"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that paused with a pending question and whose pause has since
+    become stale or expired (its resumable state can no longer be restored),
+  When an answer is submitted for it,
+  Then the run does not silently resume into a corrupt or partial state,
+  And the answerer is told the pause can no longer be resumed and why,
+  And the run's earlier committed stages remain present and unchanged.
+depends_on: [BO-2300e-1]
+assigned_agent: python-coder
+estimated_complexity: M
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Stale/expired-pause handling result."
+    properties:
+      resumed: {type: boolean, description: "must be false"}
+      unresumable_reason: {type: string, description: "explicit reason surfaced to the answerer"}
+      committed_stages_unchanged: {type: boolean}
+    required: [resumed, unresumable_reason, committed_stages_unchanged]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "When a pause's resumable state can no longer be restored (resumeFromRunId cache entry gone or unusable), the run must not silently resume into a corrupt or partial state; the answerer is told the pause can no longer be resumed and why; earlier committed stages remain present and unchanged."
+    - "Stale detection failure must be explicit (a typed error surfaced to the answerer), never a silent corrupt resume; follow the project error-handling policy (typed except, WARNING+ log)."
+    - "Stale/expired = the resumeFromRunId cache entry is gone or unusable; the failure must not destroy already-committed prior work."
+  delivers_shape:
+    description: "Stale-pause assertion surface; no downstream producer."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300e-1
+  contract: "The durable resume path and its pause_point/resumeFromRunId marker; this edge asserts that when the resumable state is stale/unrestorable, resume fails explicitly (reason surfaced) without corrupting or destroying committed stages."
+test_spec:
+  - name: test_stale_pause_does_not_corrupt_resume
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "A stale/expired pause does not silently resume into a corrupt or partial state."
+  - name: test_stale_pause_reports_unresumable_reason
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The answerer is told the pause can no longer be resumed and why."
+  - name: test_stale_pause_keeps_committed_stages
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The run's earlier committed stages remain present and unchanged."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Stale/expired = the resumeFromRunId cache entry is gone or unusable. The
+  failure must be explicit (not a silent corrupt resume) and must not destroy
+  already-committed prior work.

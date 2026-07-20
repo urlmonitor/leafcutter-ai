@@ -1,0 +1,31 @@
+id: BO-2300c
+components:
+  - build_orchestration
+title: "You see the context you need before you answer"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every question comes with the information behind it.
+
+  When a run pauses to ask, it surfaces the relevant context — what it has done,
+  what it proposes, and why it's asking — so you can make an informed decision
+  instead of answering blind.
+depends_on: [BO-2300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-2300c-1]
+implemented_by: []
+documentation_triggers: [sequence-diagram]
+change_target: pipeline
+risk_surface: internal
