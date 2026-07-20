@@ -1,0 +1,56 @@
+id: GE-117e-4
+readiness: draft
+priority: medium
+title: "Sequence diagram: the fix-or-opt-out route out of a declaration block"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+criteria: |
+  Given a reader wants to understand how a developer recovers from a declaration
+    block
+  When the reader opens the sequence diagram for the escape-hatch flow
+  Then the diagram shows the guardrail returning a block with the offending items
+  And the diagram shows the autofix path: the developer invoking the autofix, the
+    autofix resolving a component from the component registry or an AC from commit
+    context, inserting the declaration, and the guardrail re-checking to a pass
+  And the diagram shows the autofix prompting the developer when inference is
+    ambiguous
+  And the diagram shows the deliberate opt-out path: the developer adding a
+    reason-bearing per-item marker and the guardrail proceeding for that item
+depends_on:
+  - GE-117e
+  - GE-117e-1
+  - GE-117e-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author the diagram as a Mermaid sequenceDiagram with check_doc_frontmatter-compliant architecture frontmatter (title, type, status, created, last_updated, components, flight_level; diagram_type: sequence)."
+  - "Depict both recovery paths: the autofix path (invoke -> resolve component from components.json OR AC from commit context via the AC store -> insert -> guardrail re-checks to pass) INCLUDING the prompt-on-ambiguity branch (GE-117e-1-i), and the deliberate `AC-EXEMPT: <reason>` per-item opt-out path (GE-117e-2)."
+  - "Keep the flow consistent with GE-117e-1 (autofix + the component-inference prerequisite that makes the module-component branch prompt today), GE-117e-1-i, and GE-117e-2."
+delivers_to: null
+expects_from:
+  ac_id: GE-117e-1
+  contract: "The autofix and opt-out recovery flow the diagram depicts"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117e documentation_triggers [sequence-diagram]. The
+  multi-step developer<->hook<->store interaction for recovery the PO flagged. Keep
+  consistent with GE-117e-1 (autofix), GE-117e-1-i (prompt on ambiguity), and
+  GE-117e-2 (deliberate opt-out).

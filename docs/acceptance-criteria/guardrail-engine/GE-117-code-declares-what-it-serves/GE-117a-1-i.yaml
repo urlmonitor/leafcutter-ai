@@ -1,0 +1,53 @@
+id: GE-117a-1-i
+readiness: draft
+priority: medium
+title: "A module docstring naming an unregistered component fails as an invalid declaration"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a.yaml"
+criteria: |
+  Given a source file is new or changed in the staged commit
+  And its module-level docstring names a component that does not resolve to any
+    registered component id in the component registry
+  When the declaration check evaluates the module docstring
+  Then the check produces an invalid-declaration verdict for that file
+  And the verdict records the unresolved component name that was declared
+  And the verdict is distinct from the missing-declaration verdict (a wrong name
+    is not treated the same as no name)
+depends_on:
+  - GE-117a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/components.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Return verdict: 'invalid' (distinct from 'missing') when the declared component name does not resolve to a registered id in docs/components.json; set declared_value to the unresolved name and resolved: false so GE-117e can suggest the closest registered id on invalid."
+  - "Validity check reuses the same components.json loader as GE-117a-1 / check_components_integrity.py; no separate resolution path."
+  - "Same in-process ast parse over the staged blob as GE-117a-1; no MCP."
+  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117a-1
+  contract: "The per-file module-component verdict object whose invalid branch this edge case exercises"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the VALIDITY dimension the PO called out on GE-117a: a garbage or unknown
+  component name does not satisfy the requirement. Keeping invalid distinct from
+  missing matters for the actionable message (GE-117e can suggest the closest
+  registered id on invalid, whereas missing prompts for any component) and for the
+  autofix path (invalid = correct the name; missing = infer/prompt).

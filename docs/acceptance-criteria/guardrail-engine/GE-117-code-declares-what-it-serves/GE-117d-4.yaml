@@ -1,0 +1,53 @@
+id: GE-117d-4
+readiness: draft
+priority: medium
+title: "How-to guide: understanding and clearing a declaration-guardrail block"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+criteria: |
+  Given a developer's commit has been blocked by the declaration guardrail
+  When the developer opens the how-to guide for this guardrail
+  Then the guide explains that the block means in-scope code is missing or has an
+    invalid requirement or component declaration
+  And the guide shows how to read the block report to identify each offending file,
+    its surface, and whether the declaration was missing or invalid
+  And the guide states that blocking is the default behavior and how to opt into the
+    warn-only tier
+  And the guide points to the fix and opt-out routes for clearing the block
+depends_on:
+  - GE-117d
+  - GE-117d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
+  - "State the block DEFAULT and the deliberate warn opt-in exactly as GE-117d-3 implements (unconfigured = block); show how to read the block report fields (file, surface, missing|invalid, declared value)."
+  - "Point to the GE-117e-3 how-to for the fix/opt-out routes rather than re-documenting the mechanics here."
+delivers_to: null
+expects_from:
+  ac_id: GE-117d-1
+  contract: "The blocking behavior and block report the how-to documents"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117d documentation_triggers [how-to]. Documents the
+  block experience and points to GE-117e's routes for clearing it (do not re-document
+  the fix/opt-out mechanics here — link to GE-117e-3). Must state the block default
+  and warn opt-in exactly as GE-117d-3 implements.

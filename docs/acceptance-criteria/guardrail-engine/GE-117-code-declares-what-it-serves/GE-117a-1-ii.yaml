@@ -1,0 +1,59 @@
+id: GE-117a-1-ii
+readiness: draft
+priority: medium
+title: "A changed file with no module docstring is not double-reported by the component-declaration check"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a.yaml"
+criteria: |
+  Given a source file is new or changed in the staged commit
+  And the file has no module-level docstring at all
+  When the declaration check evaluates the module-component surface
+  Then the component-declaration check does not itself raise a second
+    missing-docstring finding for that file
+  And the absence of the docstring is left to the docstring-presence guardrail to
+    report
+
+  Given a source file is new or changed in the staged commit
+  And the file has no module-level docstring
+  And the docstring-presence guardrail has already been satisfied by a later fix
+    that adds a docstring naming a registered component
+  When the declaration check evaluates the module-component surface
+  Then the check produces a satisfied verdict for that file
+depends_on:
+  - GE-117a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When ast.get_docstring returns None for the module (no docstring at all), the declaration check must NOT emit its own missing-docstring finding — docstring PRESENCE is GE-100's floor; this check only asserts that an existing docstring names a resolvable component. Layer on top; do not double-report the same defect."
+  - "Once a docstring exists and names a registered component, apply the normal satisfied path (second scenario) — the no-docstring branch is a suppression of THIS check's finding, not a permanent exemption for the file."
+  - "Same in-process ast parse over the staged blob; no MCP. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117a-1
+  contract: "The per-file module-component verdict whose no-docstring boundary vs GE-100 this edge case defines"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Defines the boundary with GE-100 (docstring PRESENCE/quality) without duplicating
+  it. GE-117 layers ON TOP: presence is GE-100's job, so when there is no docstring
+  at all the component-declaration check must not emit a redundant second
+  missing-docstring complaint — that would double-report the same defect. The second
+  scenario confirms the layering direction: once a docstring exists, this check's
+  own concern (does it name a resolvable component) applies.

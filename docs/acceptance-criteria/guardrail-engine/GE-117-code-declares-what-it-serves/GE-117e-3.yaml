@@ -1,0 +1,55 @@
+id: GE-117e-3
+readiness: draft
+priority: medium
+title: "How-to guide: fixing a missing declaration or deliberately opting out"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+criteria: |
+  Given a developer's commit was blocked for a missing or invalid declaration
+  When the developer opens the how-to guide for clearing the block
+  Then the guide describes the guided autofix route and how to invoke it to add the
+    correct component or AC declaration
+  And the guide explains that the autofix prompts rather than guessing when the
+    component or AC cannot be inferred unambiguously
+  And the guide describes the deliberate per-item opt-out route, showing that it
+    requires a stated reason and stays visible in the diff
+  And the guide states that a reason-less opt-out and a global silent disable are
+    not accepted
+depends_on:
+  - GE-117e
+  - GE-117e-1
+  - GE-117e-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
+  - "Document the exact opt-out wire-format `AC-EXEMPT: <reason>` (inline, in the item's own docstring/entry, non-empty reason, visible in diff) as implemented in GE-117e-2, and that a reason-less marker or a global disable is rejected (GE-117e-2-i)."
+  - "Document that the autofix PROMPTS rather than guessing when inference is ambiguous (GE-117e-1-i), and — reflecting the GE-117e-1 prerequisite — that component auto-inference is currently prompt-based until a components.json pattern-inference lands; keep the guide consistent with the implemented autofix behavior."
+delivers_to: null
+expects_from:
+  ac_id: GE-117e-1
+  contract: "The autofix and opt-out routes the how-to documents"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117e documentation_triggers [how-to]. Teaches BOTH
+  routes out of a block (autofix + deliberate opt-out) consistent with GE-117e-1,
+  GE-117e-1-i, GE-117e-2, GE-117e-2-i. Must make the opt-out's reason requirement and
+  in-diff visibility explicit so the escape hatch stays auditable.

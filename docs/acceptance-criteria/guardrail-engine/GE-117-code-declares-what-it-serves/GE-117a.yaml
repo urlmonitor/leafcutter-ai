@@ -1,0 +1,46 @@
+id: GE-117a
+readiness: draft
+priority: medium
+title: "Each file states which part of the system it belongs to"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Every file's top-level description names the component it is part of.
+
+  When you open a new or changed file, its module-level description tells you
+  which registered component it belongs to — so its place in the system is
+  clear from the file itself, without cross-referencing a separate map.
+depends_on: [GE-117]
+doc_links:
+  - path: "docs/components.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117a-1
+  - GE-117a-2
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  PO authoring note (for the BA). This L1 owns the MODULE-level declaration:
+  the file's top-level docstring must name the component it belongs to, and that
+  name must be one of the registered components in docs/components.json. Scope is
+  diff-only — only new or changed files are checked; legacy modules are not
+  retrofitted (mirrors the existing tail-tag convention). The VALIDITY of the
+  named component (must resolve to a real component id) is part of "declares its
+  component" — a garbage or unknown component name does not satisfy this.
+  Enforcement action (block vs warn) belongs to GE-117d, not here. This L1 is the
+  requirement that the declaration exist and be valid.
+  documentation_triggers [how-to] — authors need a task guide for what to write
+  in a module docstring; no new multi-actor flow beyond the shared commit-time
+  guardrail interaction that GE-117d documents.

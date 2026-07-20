@@ -1,0 +1,53 @@
+id: GE-117d-2
+readiness: draft
+priority: medium
+title: "A commit whose in-scope declarations are all satisfied proceeds"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+criteria: |
+  Given every in-scope module component, public symbol, and new decision-history
+    entry in the staged commit has a satisfied declaration verdict
+  When the commit-time guardrail runs on the staged commit
+  Then the commit is allowed to proceed
+  And the guardrail reports no declaration violation
+
+  Given the staged commit touches only files and symbols that are out of scope
+    (unchanged code, private symbols, pre-existing decision-history entries)
+  When the commit-time guardrail runs
+  Then the commit is allowed to proceed
+  And the guardrail reports no declaration violation
+depends_on:
+  - GE-117d
+  - GE-117d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Proceed (exit 0, no violation reported) when every in-scope verdict is 'satisfied' AND when the diff contains nothing in scope at all (out-of-scope-only diff: unchanged files, private symbols, pre-existing entries) — an empty in-scope set must never produce a false-positive block."
+  - "An out-of-scope-only diff produces zero verdicts, not satisfied verdicts; ensure the aggregator treats an empty verdict set as proceed."
+  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117d-1
+  contract: "The block/proceed decision whose proceed branch this AC specifies"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The clean-pass counterpart to GE-117d-1's block. Two proceed cases: all in-scope
+  declarations satisfied, and nothing in scope at all (out-of-scope-only diff). The
+  second scenario guards against a false-positive block on a commit that only edits
+  unchanged/private/legacy surfaces — the diff-only + public-only scope must let it
+  through cleanly.

@@ -1,0 +1,56 @@
+id: GE-117d-3
+readiness: draft
+priority: medium
+title: "A deliberately configured warn tier reports violations without blocking, and block is the default"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+criteria: |
+  Given no enforcement mode has been configured for the declaration guardrail
+  And an in-scope declaration is missing
+  When the commit-time guardrail runs
+  Then the commit is rejected, because block is the default behavior
+
+  Given the enforcement mode has been deliberately configured to warn
+  And an in-scope declaration is missing
+  When the commit-time guardrail runs
+  Then the commit is allowed to proceed
+  And the guardrail reports the same missing-declaration detail it would have used
+    to block, as a warning
+depends_on:
+  - GE-117d
+  - GE-117d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+    relationship: parent
+    status: exists
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The enforcement mode is read from this hook's config section in commit_guardian.json; the UNCONFIGURED default is block (first scenario) — a missing/empty mode key must resolve to block, never warn. Mirror the GE-100 warn-vs-block config precedent for the key shape."
+  - "In warn mode the guardrail exits 0 (commit proceeds) but emits the SAME per-item detail it would have blocked on, labeled as a warning; do not degrade the detail in warn mode."
+  - "Warn mode is the only non-block behavior permitted and is reachable only by deliberate configuration; do not add any other bypass. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117d-1
+  contract: "The block/proceed decision and the violation report whose warn-tier variant this AC specifies"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the warn tier as a DELIBERATE OPT-IN only, never the default — mirrors GE-100's
+  warn-vs-block config precedent. First scenario locks the default (unconfigured =
+  block) so a coder cannot quietly ship warn-as-default; second scenario proves the
+  opt-in path still surfaces the same detail. This is the ONLY non-block behavior the
+  PO permitted and it is explicitly gated behind deliberate configuration.
