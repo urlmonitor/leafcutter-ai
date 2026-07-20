@@ -1,4 +1,6 @@
 id: UXP-523
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Opening a step shows its ACs' live status, the mock records it uses, and its mockup"
@@ -45,4 +47,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

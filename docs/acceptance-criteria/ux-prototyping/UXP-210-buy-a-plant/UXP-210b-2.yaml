@@ -1,4 +1,6 @@
 id: UXP-210b-2
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Out-of-stock plant offers a notify-me action instead of add-to-cart"
@@ -41,4 +43,4 @@ product_truth:
       - Customer
       - Plant
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

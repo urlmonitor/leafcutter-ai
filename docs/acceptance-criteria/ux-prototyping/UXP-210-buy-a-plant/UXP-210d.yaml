@@ -1,4 +1,6 @@
 id: UXP-210d
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Customer can check out and pay"
@@ -26,7 +28,7 @@ origin_agent: BrainCandy
 created: 2026-07-10
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [UXP-210d-2, UXP-210d-3, UXP-210d-4, UXP-210d-5, UXP-210d-6]
 implemented_by: []
 change_target: code
 risk_surface: internal
@@ -41,4 +43,4 @@ product_truth:
       - Customer
       - Order
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

@@ -1,4 +1,6 @@
 id: UXP-210d-6
+components:
+  - ux_prototyping
 readiness: approved
 priority: medium
 title: "Successful authorization captures the Payment and marks the Order paid"
@@ -26,9 +28,28 @@ it_requirements: |
   exactly one captured Payment. Renders the order-confirmation screen.
 delivers_to: null
 expects_from: {}
+test_required: true
+test_spec:
+  - name: test_capture_sets_payment_status_to_captured
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "When the processor captures an 'authorized' Payment for an in-stock item, the Payment status becomes 'captured'."
+  - name: test_capture_sets_order_status_to_paid
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "On successful capture, the associated Order status becomes 'paid'."
+  - name: test_confirmation_screen_shows_order_number_and_captured_amount
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    description: "After capture, the confirmation screen is shown with the order number and the captured amount."
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: it-po-test-contract
+    note: "Added test_spec (3 behavioral tests derived from the Gherkin Then-clauses) and test_required: true; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -45,4 +66,4 @@ product_truth:
       - Order
       - Payment
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

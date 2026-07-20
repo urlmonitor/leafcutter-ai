@@ -30,7 +30,7 @@
         "FIN-100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "openpr",
@@ -42,7 +42,7 @@
         "BO-800"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mergemain",
@@ -54,7 +54,7 @@
         "FIN-100b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "postmerge",
@@ -67,7 +67,7 @@
         "FIN-100d"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "closeacs",
@@ -80,7 +80,7 @@
         "BO-400b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "mergepr",
@@ -92,7 +92,7 @@
         "FIN-100f"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "archive",
@@ -104,7 +104,7 @@
         "BO-400c-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -141,6 +141,6 @@
     "in_progress": 1,
     "not_started": 6,
     "total": 7,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   }
 }

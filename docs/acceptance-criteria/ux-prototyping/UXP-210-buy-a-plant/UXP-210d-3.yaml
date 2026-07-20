@@ -1,4 +1,6 @@
 id: UXP-210d-3
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Plant that sold out after being carted blocks checkout"
@@ -43,7 +45,7 @@ product_truth:
       - Order
       - Plant
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: fern-and-fig/customer-buys-a-plant
     node: outOfStockAtCheckout
     node_kind: branch
@@ -54,4 +56,4 @@ product_truth:
       - Order
       - Plant
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

@@ -1,4 +1,6 @@
 id: UXP-524
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "An AC node links to the flows it appears in"
@@ -43,4 +45,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

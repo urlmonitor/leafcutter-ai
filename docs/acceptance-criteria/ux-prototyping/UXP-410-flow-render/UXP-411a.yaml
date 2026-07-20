@@ -1,4 +1,6 @@
 id: UXP-411a
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "A step whose acceptance-criteria id does not resolve renders as an unknown/fallback status"
@@ -44,4 +46,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

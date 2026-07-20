@@ -1,4 +1,6 @@
 id: UXP-210d-2
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: high
 title: "Declined payment is handled without creating an order"
@@ -43,7 +45,7 @@ product_truth:
       - Order
       - Payment
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: fern-and-fig/customer-buys-a-plant
     node: paymentFailed
     node_kind: branch
@@ -54,4 +56,4 @@ product_truth:
       - Customer
       - Order
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

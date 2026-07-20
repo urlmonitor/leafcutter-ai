@@ -46,7 +46,7 @@
         "ACD-300a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "author",
@@ -75,7 +75,7 @@
         "ACD-300d"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "approve",
@@ -101,7 +101,7 @@
         "ACD-300g"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "scan",
@@ -125,7 +125,7 @@
         "ACD-400a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "generate",
@@ -151,7 +151,7 @@
         "ACD-400b"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "complete",
@@ -178,7 +178,7 @@
         "ACD-600b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [
@@ -208,7 +208,7 @@
         "ACS-400c"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "backfill",
@@ -235,7 +235,7 @@
         "ACD-800a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "rehome",
@@ -260,7 +260,7 @@
         "ACS-800a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "retire",
@@ -286,7 +286,7 @@
         "ACS-900a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "impl_summary": {
@@ -294,7 +294,7 @@
     "in_progress": 3,
     "not_started": 4,
     "total": 10,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

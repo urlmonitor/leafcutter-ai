@@ -30,7 +30,7 @@
         "ACD-300"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "build",
@@ -42,7 +42,7 @@
         "BP-300"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "finalize",
@@ -54,7 +54,7 @@
         "FIN-100"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -91,6 +91,6 @@
     "in_progress": 3,
     "not_started": 0,
     "total": 3,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   }
 }

@@ -1,4 +1,6 @@
 id: UXP-210c
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Customer can review the cart before paying"
@@ -26,7 +28,7 @@ origin_agent: BrainCandy
 created: 2026-07-10
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [UXP-210c-2]
 implemented_by: []
 change_target: code
 risk_surface: internal
@@ -41,4 +43,4 @@ product_truth:
       - Order
       - Plant
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'
