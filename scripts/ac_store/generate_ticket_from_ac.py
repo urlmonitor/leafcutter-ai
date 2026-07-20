@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import glob as _glob
+import importlib.util
 import json
 import logging
 import re
@@ -147,6 +148,40 @@ _DEFAULT_GUARDRAIL_GATES = "config/guardrail_gates.yaml"
 # ---------------------------------------------------------------------------
 
 AcRecord = dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Component vocabulary: kebab → underscore normalisation
+# ---------------------------------------------------------------------------
+
+
+def _load_migration_map() -> dict[str, str]:
+    """Load the canonical kebab-to-underscore MIGRATION_MAP from migrate_component_vocab.py.
+
+    MODULE: generate_ticket_from_ac
+    GOAL: Resolve the sibling module at ``scripts/migrate_component_vocab.py``
+          relative to this file's location and import its ``MIGRATION_MAP`` dict
+          at runtime so the generated ticket's ``components`` LIST carries the
+          underscore graph id rather than the kebab namespace scalar.
+
+    Returns:
+        Mapping from kebab component namespace key to underscore graph id.
+        Falls back to an empty dict on any I/O or import error (the caller uses
+        ``dict.get(key, key)`` so the raw kebab value is preserved as a
+        last-resort fallback).
+    """
+    sibling = Path(__file__).resolve().parent.parent / "migrate_component_vocab.py"
+    try:
+        spec = importlib.util.spec_from_file_location("migrate_component_vocab", sibling)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        return dict(mod.MIGRATION_MAP)
+    except (OSError, AttributeError, ImportError) as exc:
+        logger.warning("Cannot load MIGRATION_MAP from %s: %s", sibling, exc)
+        return {}
+
+
+_COMPONENT_MIGRATION_MAP: dict[str, str] = _load_migration_map()
 
 
 # ---------------------------------------------------------------------------
@@ -1022,6 +1057,31 @@ def _build_signoffs_section(agents: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def _build_components_list(ac: AcRecord) -> list[str]:
+    """Build the ``components`` LIST for a generated ticket frontmatter.
+
+    Prefers the AC's own ``components`` LIST when non-empty (already holds
+    underscore graph ids per the two-axis taxonomy).  Otherwise normalises the
+    scalar ``component`` key to its underscore graph id via
+    ``_COMPONENT_MIGRATION_MAP`` (kebab → underscore), falling back to the raw
+    value when the key is absent from the map.
+
+    The scalar ``component`` field in the ticket frontmatter is left unchanged
+    — only the LIST is normalised to the components.json graph vocabulary.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        List of underscore graph ids for the generated ticket ``components`` LIST.
+    """
+    existing = ac.get("components")
+    if existing:
+        return list(existing)
+    kebab = ac.get("component", "unknown")
+    return [_COMPONENT_MIGRATION_MAP.get(kebab, kebab)]
+
+
 def _build_frontmatter(
     ac: AcRecord,
     ac_id: str,
@@ -1051,7 +1111,7 @@ def _build_frontmatter(
         "title": ac.get("title", f"Implement {ac_id}"),
         "status": "todo",
         "source_ac": ac_id,
-        "components": [ac.get("component", "unknown")],
+        "components": _build_components_list(ac),
         "created": today,
         "depends_on": ac.get("depends_on") or [],
         "priority": _map_priority(ac),
