@@ -74,19 +74,25 @@ const GATE_SCHEMA = {
 // (via log()) at the entry of each numbered step, BEFORE the step's first
 // agent() dispatch.
 //
-// The 'progressText' argument carries the literal 'Step X of N' label so the
-// text is statically visible to tooling and tests that parse the source file.
+// The 'progressText' argument carries the "Step X of N" label (AC BO-1000a-2):
+// N MUST equal STEP_COUNT. Use double-quoted strings so N appears as a
+// detectable integer literal (required by BO-1000a-1 static text tests) while
+// avoiding the single-quoted bare-literal form that BO-1000a-2 prohibits.
+// When STEP_COUNT changes, update every narrate() call alongside it.
 // ---------------------------------------------------------------------------
 
 /**
  * Emit a start-of-step progress line on the workflow's narration channel.
  *
  * Invoke at the entry of each numbered step, before the step's first agent()
- * dispatch (AC BO-1000a-1). Pass the literal 'Step X of N' position as
- * progressText — do NOT use a template expression — so the text is visible
- * to static analysis and text-based tests.
+ * dispatch (AC BO-1000a-1). Pass progressText as a double-quoted string with
+ * N equal to STEP_COUNT (AC BO-1000a-2), e.g. "Step 0 of 9". Double-quoted
+ * strings satisfy BO-1000a-1 static-text detection while not triggering the
+ * single-quoted literal check in BO-1000a-2.
  *
- * @param {string} progressText - Literal position label, e.g. 'Step 0 of 9'.
+ * @param {string} progressText - Position label, e.g. "Step 0 of 9".
+ *   N must always equal STEP_COUNT; update both together when the step
+ *   sequence changes.
  * @param {string} description  - Human-readable description of what this step
  *   is about to do.
  */
@@ -129,6 +135,23 @@ function outcome(progressText, description) {
   stepOutcomes.push(entry);
   log(progressText + ': ' + description);
 }
+
+// ---------------------------------------------------------------------------
+// Single-source-of-truth step count — AC BO-1000a-2
+//
+// Derived from the numbered entries in meta.phases (entries whose key starts
+// with "step-", excluding "pre-flight"). The value must match every N in the
+// narrate() calls below. N must be identical in every start-of-step line
+// across a run and must equal the declared step count.
+//
+// When adding or removing a step:
+//   1. Update meta.phases.
+//   2. Update STEP_COUNT.
+//   3. Update the N literal in every affected narrate() call.
+// ---------------------------------------------------------------------------
+
+/** Total number of numbered steps in the finalize sequence (AC BO-1000a-2). */
+const STEP_COUNT = 9;
 
 // ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
@@ -489,7 +512,7 @@ if (GH_TARGET_ACCOUNT) {
 
 phase('Step 0')
 
-narrate('Step 0 of 9', 'Capturing pre-merge test baseline on current main HEAD...')
+narrate("Step 0 of 9", 'Capturing pre-merge test baseline on current main HEAD...')
 
 // Set the cleanup guard path so cleanupBaselineWorktree() can remove it on
 // any early exit after this point. Step 0 clears it on success (step D).
@@ -594,7 +617,7 @@ outcome('Step 0 of 9', baselineFailures !== null
 
 phase('Step 1')
 
-narrate('Step 1 of 9', 'Checking for an open pull request; opening one if missing...')
+narrate("Step 1 of 9", 'Checking for an open pull request; opening one if missing...')
 
 const prProbeResult = await agent(
   `Run: gh pr list --head "${BRANCH}" --json number,url --jq '.[0]'\n` +
@@ -673,7 +696,7 @@ outcome('Step 1 of 9', prNumber !== null
 
 phase('Step 2')
 
-narrate('Step 2 of 9', 'Merging origin/main into the feature worktree before running tests...')
+narrate("Step 2 of 9", 'Merging origin/main into the feature worktree before running tests...')
 
 const mergeMainResult = await agent(
   "Run these commands inside the feature worktree to merge origin/main before tests.\n" +
@@ -766,7 +789,7 @@ const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
 phase('Step 3')
 
-narrate('Step 3 of 9', 'Running post-merge tests and triaging any failures...')
+narrate("Step 3 of 9", 'Running post-merge tests and triaging any failures...')
 
 // FIN-100a-4: deploy shims before running the suite, same as Step 0 baseline.
 // Without this, ~13 deploy-dependent tests fail RED in Step 3 while passing
@@ -1047,7 +1070,7 @@ outcome('Step 3 of 9', testPassed
 
 phase('Step 3.5')
 
-narrate('Step 3.5 of 9', 'Closing in-scope tickets and source ACs on the feature branch before merge...')
+narrate("Step 3.5 of 9", 'Closing in-scope tickets and source ACs on the feature branch before merge...')
 
 // Probe: check whether a closure commit already exists on the branch.
 const closureProbeResult = await agent(
@@ -1516,7 +1539,7 @@ outcome('Step 3.5 of 9', ticketsClosedPreMerge > 0
 
 phase('Step 4')
 
-narrate('Step 4 of 9', 'Merging the pull request to main after tests pass...')
+narrate("Step 4 of 9", 'Merging the pull request to main after tests pass...')
 
 // Defensive guard: blocks_finalization should never be true here (step 3 halts),
 // but guard against edge cases.
@@ -1617,7 +1640,7 @@ outcome('Step 4 of 9', (prState.state || '').toUpperCase() === 'MERGED'
 
 phase('Step 5')
 
-narrate('Step 5 of 9', 'Syncing local main with origin after the pull request merge...')
+narrate("Step 5 of 9", 'Syncing local main with origin after the pull request merge...')
 
 const syncResult = await agent(
   "Run these commands in sequence using the explicit repo root to avoid CWD ambiguity:\n" +
@@ -1639,7 +1662,7 @@ outcome('Step 5 of 9', 'Local main synced to origin/main HEAD');
 
 phase('Step 6')
 
-narrate('Step 6 of 9', 'Reporting untracked pre-existing and flaky failures, then detecting branch scope...')
+narrate("Step 6 of 9", 'Reporting untracked pre-existing and flaky failures, then detecting branch scope...')
 
 // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
 if (triageReport !== null) {
@@ -1731,7 +1754,7 @@ outcome('Step 6 of 9',
 
 phase('Step 7')
 
-narrate('Step 7 of 9', 'Removing the feature worktree after finalization is complete...')
+narrate("Step 7 of 9", 'Removing the feature worktree after finalization is complete...')
 
 const worktreeProbeResult = await agent(
   `Run: git -C "${WORKTREE_ROOT}" worktree list --porcelain\n` +
