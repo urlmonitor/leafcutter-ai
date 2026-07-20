@@ -24,7 +24,6 @@ import importlib
 import importlib.util
 import io
 import json
-import sys
 import types
 import unittest
 from pathlib import Path
@@ -759,6 +758,163 @@ class TestVerificationConsistencyModuleStructure(unittest.TestCase):
             "DECISION HISTORY",
             source_code,
             "Hook script must contain a '# DECISION HISTORY' block at the bottom.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Real on-disk format (scalar tools) + requires_verification parsing.
+# Every real templates/agents/*.md uses a scalar comma-separated `tools:` string
+# with an optional trailing `# comment`, NOT a YAML list. The list-format
+# fixtures above never drive the hook's scalar branch — the branch every real
+# commit actually hits. These tests close that gap
+# (feedback_spotcheck_real_data_format) and guard the requires_verification
+# truthiness fix (a quoted "false" must NOT false-block).
+# ---------------------------------------------------------------------------
+
+
+def _make_agent_md_scalar(
+    name: str = "test-agent",
+    requires_verification: str | None = None,
+    tools_scalar: str | None = None,
+) -> str:
+    """Build an agent template using the REAL scalar frontmatter format.
+
+    Args:
+        name: The agent name.
+        requires_verification: Raw scalar emitted verbatim after the field name
+            (e.g. ``true`` or ``"false"``); omitted when None.
+        tools_scalar: Raw scalar emitted verbatim after ``tools:`` (e.g.
+            ``Read, Bash  # Read-only.``); the field is omitted when None.
+
+    Returns:
+        A markdown string in the real scalar frontmatter format.
+    """
+    lines = ["---", f"name: {name}"]
+    if requires_verification is not None:
+        lines.append(f"requires_verification: {requires_verification}")
+    if tools_scalar is not None:
+        lines.append(f"tools: {tools_scalar}")
+    lines += ["---", "", f"# {name}", "", "This is a test agent template."]
+    return "\n".join(lines)
+
+
+class TestVerificationConsistencyRealFormat(unittest.TestCase):
+    """Tests driving the scalar `tools:` branch and requires_verification parsing.
+
+    Red-baseline: all tests raise ImportError until the hook is implemented.
+    """
+
+    def setUp(self) -> None:
+        """Load the hook module; raises ImportError if not yet implemented."""
+        self.module = _load_hook_module()
+
+    def _run(self, path: str, content: str) -> int:
+        with patch.object(self.module, "_get_staged_files", return_value=[path]):
+            with patch.object(self.module, "_read_staged_file", return_value=content):
+                return self.module.main()
+
+    def test_scalar_tools_lacking_edit_write_blocks(self) -> None:
+        # covers: GE-116a-1
+        """Real scalar format `tools: Read, Bash  # comment` + rv true -> BLOCK.
+
+        Drives the isinstance(tools, str) branch — the format 100% of real
+        agent templates use — including a trailing inline `#` comment.
+        """
+        content = _make_agent_md_scalar(
+            name="read-only-agent",
+            requires_verification="true",
+            tools_scalar="Read, Bash  # Read-only. No Write/Edit.",
+        )
+        result = self._run("templates/agents/read-only-agent.md", content)
+        self.assertNotEqual(
+            result, 0, "Scalar tools with only Read/Bash + rv true must block."
+        )
+
+    def test_scalar_tools_with_write_allows(self) -> None:
+        # covers: GE-116a-2-i
+        """Scalar `tools: Read, Write, Bash  # comment` + rv true -> ALLOW (Write satisfies)."""
+        content = _make_agent_md_scalar(
+            name="writer-agent",
+            requires_verification="true",
+            tools_scalar="Read, Write, Bash  # can create files",
+        )
+        result = self._run("templates/agents/writer-agent.md", content)
+        self.assertEqual(
+            result, 0, "Scalar tools containing Write must be allowed (Edit OR Write)."
+        )
+
+    def test_scalar_tools_with_edit_allows(self) -> None:
+        # covers: GE-116a-2
+        """Scalar `tools: Read, Edit, Bash` + rv true -> ALLOW (Edit satisfies)."""
+        content = _make_agent_md_scalar(
+            name="editor-agent",
+            requires_verification="true",
+            tools_scalar="Read, Edit, Bash",
+        )
+        result = self._run("templates/agents/editor-agent.md", content)
+        self.assertEqual(result, 0, "Scalar tools containing Edit must be allowed.")
+
+    def test_absent_tools_field_blocks(self) -> None:
+        # covers: GE-116a-1-i
+        """rv true with NO tools field at all -> BLOCK (empty tool set)."""
+        content = _make_agent_md_scalar(
+            name="no-tools-agent",
+            requires_verification="true",
+            tools_scalar=None,
+        )
+        result = self._run("templates/agents/no-tools-agent.md", content)
+        self.assertNotEqual(
+            result, 0, "An absent tools field with rv true must block (no edit capability)."
+        )
+
+    def test_quoted_requires_verification_false_allows(self) -> None:
+        # covers: GE-116a-3
+        # covers: GE-116a-4
+        """Quoted `requires_verification: "false"` + read-only tools -> ALLOW.
+
+        Regression guard: a quoted scalar parses to the string "false", which is
+        truthy by non-emptiness. The hook must interpret it as falsy, not block a
+        valid read-only agent. This test FAILS against the naive truthiness check.
+        """
+        content = _make_agent_md_scalar(
+            name="quoted-false-agent",
+            requires_verification='"false"',
+            tools_scalar="Read, Bash  # Read-only",
+        )
+        result = self._run("templates/agents/quoted-false-agent.md", content)
+        self.assertEqual(
+            result,
+            0,
+            'A quoted requires_verification: "false" must be treated as not-required '
+            "(read-only agent allowed), not truthy-by-non-emptiness.",
+        )
+
+    def test_quoted_requires_verification_true_blocks(self) -> None:
+        # covers: GE-116a-1
+        """Quoted `requires_verification: "true"` + read-only tools -> BLOCK."""
+        content = _make_agent_md_scalar(
+            name="quoted-true-agent",
+            requires_verification='"true"',
+            tools_scalar="Read, Bash",
+        )
+        result = self._run("templates/agents/quoted-true-agent.md", content)
+        self.assertNotEqual(
+            result, 0, 'A quoted requires_verification: "true" read-only agent must block.'
+        )
+
+    def test_absent_frontmatter_fails_open(self) -> None:
+        # covers: GE-116a-1-iii
+        """A staged agent template with NO YAML frontmatter -> FAIL OPEN (exit 0)."""
+        content = "# just-a-heading\n\nNo frontmatter here at all.\n"
+        err_buf = io.StringIO()
+        with patch.object(
+            self.module, "_get_staged_files", return_value=["templates/agents/no-fm.md"]
+        ):
+            with patch.object(self.module, "_read_staged_file", return_value=content):
+                with patch("sys.stderr", err_buf):
+                    result = self.module.main()
+        self.assertEqual(
+            result, 0, "Absent frontmatter must fail open (exit 0), never hard-block."
         )
 
 

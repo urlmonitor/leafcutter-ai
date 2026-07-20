@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from pathlib import Path
 
 import yaml
 
@@ -50,8 +49,10 @@ def _get_staged_files() -> list[str]:
             text=True,
             check=False,
         )
-    except subprocess.SubprocessError as exc:
-        print(f"{_HOOK_TAG} ERROR: git diff failed: {exc}", file=sys.stderr)
+    except (subprocess.SubprocessError, OSError) as exc:
+        # OSError covers a missing/unexecutable git binary (FileNotFoundError,
+        # PermissionError). Fail open: an unreadable index must never hard-block.
+        print(f"{_HOOK_TAG} WARNING: git diff failed: {exc}", file=sys.stderr)
         return []
     return result.stdout.strip().splitlines()
 
@@ -60,15 +61,18 @@ def _read_staged_file(path: str) -> str:
     """Read the staged content of a file from the git index.
 
     Reads via ``git show :0:<path>`` (the staged blob) so that partial-staging
-    scenarios (``git add -p``) return the staged version, not the working-tree
-    version.  Falls back to a direct disk read when git show fails (e.g. new
-    file not yet known to the index in some edge cases).
+    scenarios (``git add -p``) inspect the staged version, never the working-tree
+    version — this is what makes the staged-only guarantee (GE-116c-3) hold.
+    Deliberately does NOT fall back to a working-tree disk read: doing so would
+    let a contradiction that was fixed only in the working tree (not re-staged)
+    slip the committed blob past the guard. On any failure the file is treated as
+    uninspectable and skipped fail-open (empty string), never hard-blocked.
 
     Args:
         path: Repo-root-relative path to the staged file.
 
     Returns:
-        File content as a UTF-8 string, or an empty string on error
+        The staged blob content as a UTF-8 string, or an empty string on error
         (caller skips empty content as fail-open).
     """
     try:
@@ -78,26 +82,23 @@ def _read_staged_file(path: str) -> str:
             text=True,
             check=False,
         )
-    except subprocess.SubprocessError as exc:
+    except (subprocess.SubprocessError, OSError) as exc:
+        # OSError covers a missing/unexecutable git binary. Fail open.
         print(
             f"{_HOOK_TAG} WARNING: git show :0:{path} failed: {exc}; "
-            "falling back to disk read.",
-            file=sys.stderr,
-        )
-        result = None
-
-    if result is not None and result.returncode == 0:
-        return result.stdout
-
-    # Fallback: read from disk (handles newly created files in some setups).
-    try:
-        return Path(path).read_text(encoding="utf-8")
-    except OSError as exc:
-        print(
-            f"{_HOOK_TAG} WARNING: Cannot read {path}: {exc}",
+            "skipping (fail-open).",
             file=sys.stderr,
         )
         return ""
+
+    if result.returncode != 0:
+        print(
+            f"{_HOOK_TAG} WARNING: {path} not readable from the index "
+            f"(git show exit {result.returncode}); skipping (fail-open).",
+            file=sys.stderr,
+        )
+        return ""
+    return result.stdout
 
 
 def _parse_frontmatter(content: str) -> dict | None:
@@ -138,6 +139,24 @@ def _parse_frontmatter(content: str) -> dict | None:
     return parsed
 
 
+def _is_verification_required(value: object) -> bool:
+    """Interpret a frontmatter ``requires_verification`` value as a boolean.
+
+    Handles bare YAML booleans (``true``/``false`` parse to ``bool``), quoted
+    scalars that parse to strings (``"false"`` must be falsy, not truthy by
+    non-emptiness), numeric values, and absent/``None`` values (not-required).
+
+    Args:
+        value: The raw ``requires_verification`` value from parsed frontmatter.
+
+    Returns:
+        ``True`` when the value denotes verification-required; ``False`` otherwise.
+    """
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "1", "on"}
+    return bool(value)
+
+
 def _is_offender(frontmatter: dict) -> bool:
     """Return True when the agent template violates the verification-consistency rule.
 
@@ -150,7 +169,10 @@ def _is_offender(frontmatter: dict) -> bool:
     are handled.  An absent ``tools`` field is treated as an empty tool set (offender
     when requires_verification is true), consistent with GE-116a-1-i.
     A missing or falsy ``requires_verification`` field is treated as not-required
-    (allowed).
+    (allowed). A quoted YAML scalar (e.g. ``requires_verification: "false"``)
+    parses to a string; such strings are interpreted case-insensitively so that
+    ``"false"``/``"no"``/``"0"``/``"off"``/``""`` are correctly falsy rather than
+    truthy-by-non-emptiness.
 
     Args:
         frontmatter: Parsed YAML frontmatter dict from the agent template.
@@ -159,7 +181,7 @@ def _is_offender(frontmatter: dict) -> bool:
         ``True`` when the template violates the rule; ``False`` when consistent
         or requires_verification is not declared.
     """
-    if not frontmatter.get("requires_verification", False):
+    if not _is_verification_required(frontmatter.get("requires_verification", False)):
         return False
     tools = frontmatter.get("tools")
     if tools is None:
@@ -206,6 +228,14 @@ def main() -> int:
     for path in agent_templates:
         content = _read_staged_file(path)
         if not content:
+            # Empty or uninspectable staged blob — cannot evaluate the rule.
+            # Fail open with a warning per GE-116a-1-iii (never hard-block).
+            # (A git-read failure already warned inside _read_staged_file.)
+            print(
+                f"{_HOOK_TAG} WARNING: {path} is empty or uninspectable; "
+                "skipping (fail-open per GE-116a-1-iii).",
+                file=sys.stderr,
+            )
             continue
 
         frontmatter = _parse_frontmatter(content)
@@ -270,5 +300,17 @@ if __name__ == "__main__":
 #   or set requires_verification: false (GE-116b-1/GE-116b-1-i). Registered
 #   in templates/scripts/commit_guardian/commit_guardian.json with files
 #   pattern ^templates/agents/.*[.]md$ and pass_filenames: false.
+#   (#GE-116a-1)
+# - 2026-07-20 [BrainCandy/GE-116a-1]: Post-review remediation (code-review +
+#   adversarial logic-check). (1) requires_verification truthiness now routed
+#   through _is_verification_required so a quoted "false" is falsy instead of
+#   truthy-by-non-emptiness (was false-blocking a valid read-only agent).
+#   (2) _read_staged_file no longer falls back to a working-tree disk read on
+#   git-show failure — that fallback could commit a staged contradiction fixed
+#   only in the working tree, violating the staged-only contract (GE-116c-3);
+#   it now fails open (empty string). (3) git helpers catch OSError as well as
+#   SubprocessError so a missing git binary fails open inside main(), not only
+#   at the __main__ wrapper. (4) empty/uninspectable staged blob now emits the
+#   GE-116a-1-iii warning instead of skipping silently.
 #   (#GE-116a-1)
 # ====================================================================
