@@ -1,7 +1,7 @@
 id: ACD-1200a-12
 components:
   - ac_driven_dev
-readiness: draft
+readiness: approved
 priority: medium
 title: "implemented_by back-reference records a repo-relative ticket path, never absolute or worktree-specific"
 component: ac-driven-dev
@@ -40,9 +40,37 @@ doc_links:
     status: exists
 delivers_to: null
 expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The value recorded into implemented_by must be a repo-relative path (e.g. tickets/00_inbox/epics/EPIC-.../NN_TICKET-....md): no leading '/', never an absolute filesystem path."
+    - "The recorded value must contain no worktree-specific or per-checkout directory prefix, so the same AC generated from any worktree records the identical repo-relative path."
+    - "Derive the repo root from the repository (e.g. git top-level or the existing repo-root helper), not from the current working directory or a hard-coded absolute base."
+test_spec:
+  - name: test_implemented_by_path_is_repo_relative
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After generation, assert the implemented_by entry does not start with '/' and is not an absolute filesystem path (repo-relative form)."
+  - name: test_implemented_by_path_has_no_worktree_prefix
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the recorded implemented_by path contains no worktree/per-checkout directory segment; generating from a different worktree root yields the identical repo-relative path."
 origin_agent: business-analyst-v3
 created: 2026-07-20
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-07-20'
 superseded_by: null
 covered_by: []
 implemented_by: []

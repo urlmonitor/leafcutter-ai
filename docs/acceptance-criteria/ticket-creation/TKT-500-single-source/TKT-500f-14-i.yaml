@@ -1,7 +1,7 @@
 id: TKT-500f-14-i
 components:
   - ticket_creation_pipeline
-readiness: draft
+readiness: approved
 priority: medium
 title: "Docs/config/diagram-only tickets are not over-gated, and the .py-triggered gate wiring still holds"
 component: ticket-creation
@@ -43,10 +43,40 @@ doc_links:
     relationship: specifies
     status: exists
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: TKT-500f-14
+  contract: "The broadened code-ticket gate signal in _build_agents_map (generate_ticket_from_ac.py); this edge case bounds it so docs/config/diagram-only tickets are exempt and the existing .py-triggered wiring does not regress."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Broadening the gate signal must not force-add ac-validator/ac-fulfillment-gate to docs/config/diagram-only tickets (no recognised source file in files_touched AND a non-coder agent such as documentation-expert or architecture-diagram-author)."
+    - "The existing .py-triggered wiring from TKT-500f-12 must still hold unchanged (no regression)."
+    - "The exemption must be data-driven (absence of any recognised source extension AND no coder assignment), never keyed off a hard-coded agent or component name list."
+test_spec:
+  - name: test_docs_only_ticket_not_over_gated
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket for a docs-only fixture AC (files_touched=[a .md], assigned_agent=documentation-expert); assert ac-validator and ac-fulfillment-gate are NOT in the agents map."
+  - name: test_py_ticket_still_gated_no_regression
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket for a fixture AC with a .py file in files_touched; assert ac-validator and ac-fulfillment-gate are still wired (TKT-500f-12 behaviour unchanged)."
 origin_agent: business-analyst-v3
 created: 2026-07-20
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-07-20'
 superseded_by: null
 covered_by: []
 implemented_by: []

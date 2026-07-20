@@ -1,7 +1,7 @@
 id: TKT-500f-14
 components:
   - ticket_creation_pipeline
-readiness: draft
+readiness: approved
 priority: medium
 title: "AC-gate wiring covers code tickets with non-.py source or a coder agent, not only .py tickets"
 component: ticket-creation
@@ -37,11 +37,41 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
-delivers_to: null
+delivers_to:
+  agent: python-coder
+  contract: "The broadened code-ticket gate signal in _build_agents_map (generate_ticket_from_ac.py): any recognised source-code extension in files_touched OR a coder assignment (python-coder/frontend-coder/sql-coder) force-adds ac-validator + ac-fulfillment-gate. Edge case TKT-500f-14-i bounds this against over-gating docs/config/diagram-only tickets and against .py regression."
 expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Broaden the code-ticket gate signal in _build_agents_map so ac-validator and ac-fulfillment-gate are force-added when files_touched contains ANY recognised source-code extension (not only .py — e.g. .js/.ts/.tsx/.jsx/.sql/.vue/.svelte) OR the assigned agent is a coder (python-coder/frontend-coder/sql-coder)."
+    - "Prefer deriving the recognised-source-extension set from the existing extension allowlist already used to build files_touched (avoid a second hard-coded list that can drift)."
+    - "Must NOT gate docs/config/diagram-only tickets (no source file in files_touched and a non-coder agent) and must not regress the existing .py-triggered wiring (TKT-500f-12)."
+test_spec:
+  - name: test_non_py_source_ticket_gets_ac_gates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket for a fixture AC whose files_touched contains only a .js file; assert the agents map wires ac-validator and ac-fulfillment-gate as needed."
+  - name: test_coder_assignment_gets_ac_gates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket for a fixture AC assigned python-coder (or frontend-coder/sql-coder) with no .py in files_touched; assert ac-validator and ac-fulfillment-gate are wired as needed."
 origin_agent: business-analyst-v3
 created: 2026-07-20
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-07-20'
 superseded_by: null
 covered_by: [TKT-500f-14-i]
 implemented_by: []
