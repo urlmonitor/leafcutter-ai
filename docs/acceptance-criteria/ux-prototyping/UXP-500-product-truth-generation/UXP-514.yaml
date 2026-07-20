@@ -1,4 +1,6 @@
 id: UXP-514
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "Validator errors on derived-vs-source drift (impl_status, product_truth, indexes, screen->mockup)"
@@ -50,4 +52,4 @@ product_truth:
     mock_data: null
     entities: []
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

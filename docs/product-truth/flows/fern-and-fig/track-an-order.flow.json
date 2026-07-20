@@ -36,7 +36,7 @@
         "UXP-220a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "orderDetail",
@@ -51,7 +51,7 @@
         "UXP-220b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "track",
@@ -66,7 +66,7 @@
         "UXP-220c"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [
@@ -85,7 +85,7 @@
         "UXP-220a-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "trackingUnavailable",
@@ -101,7 +101,7 @@
         "UXP-220c-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "impl_summary": {
@@ -109,7 +109,7 @@
     "in_progress": 1,
     "not_started": 3,
     "total": 5,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

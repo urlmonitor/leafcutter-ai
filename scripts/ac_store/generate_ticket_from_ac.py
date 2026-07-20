@@ -58,6 +58,36 @@ _EDIT_SURFACE_RELATIONSHIPS: frozenset[str] = frozenset(
     {"constrains", "creates", "implements", "modifies", "specifies"}
 )
 
+#: Recognized file extensions for path detection in prose bullet strings.
+#: Only tokens whose final component carries one of these suffixes are treated
+#: as source file paths (TKT-500f-8-i path-detection rule).
+_PROSE_PATH_EXTENSIONS: frozenset[str] = frozenset({
+    ".py", ".md", ".yaml", ".yml", ".json", ".js", ".ts", ".sql",
+    ".txt", ".toml", ".cfg", ".ini", ".html", ".css", ".sh",
+})
+
+#: Path prefixes that identify extension-less tokens as source paths.
+#: A token that begins with one of these prefixes is included even when it
+#: carries no recognized file extension (TKT-500f-8-i path-detection rule).
+_KNOWN_PATH_PREFIXES: tuple[str, ...] = (
+    "scripts/",
+    "docs/",
+    "templates/",
+    "unit_tests/",
+    "tests/",
+    "leafcutter/",
+    "alembic/",
+)
+
+#: Matches candidate path tokens in prose text.
+#: Requires at least one ``/`` separator; admits the character set of typical
+#: POSIX file paths (alphanumeric, ``_``, ``.``, ``-``, ``/``).  The pattern
+#: is anchored so that each match begins and ends on a word character,
+#: preventing trailing punctuation from being captured as part of the path.
+_PROSE_PATH_TOKEN_RE: re.Pattern[str] = re.compile(
+    r"[A-Za-z0-9_][A-Za-z0-9_.\-]*/[A-Za-z0-9_./\-]*[A-Za-z0-9_]"
+)
+
 #: Canonical support agents always added to every generated ticket.
 _CANONICAL_SUPPORT_AGENTS: list[str] = [
     "test-writer",
@@ -251,12 +281,53 @@ def _extract_local_paths(
     return local
 
 
+def _extract_paths_from_prose(text: str) -> list[str]:
+    """Extract file path tokens from a prose bullet string.
+
+    A token is included only when it contains at least one ``/`` separator
+    AND satisfies one of two conditions:
+
+    * Its final path component ends in a recognized extension from
+      ``_PROSE_PATH_EXTENSIONS`` (e.g. ``scripts/foo.py``, ``docs/bar.md``).
+    * The token begins with a known path prefix from ``_KNOWN_PATH_PREFIXES``
+      (e.g. ``scripts/``, ``docs/``) even when it carries no extension.
+
+    Bare words such as ``"pipeline"`` or prose phrases such as
+    ``"system architecture"`` never satisfy either condition because they
+    contain no ``/`` character, so they are never extracted.
+
+    Args:
+        text: A prose bullet string (one item from a list-form it_requirements).
+
+    Returns:
+        List of file path strings found in *text* (may be empty).
+    """
+    found: list[str] = []
+    for match in _PROSE_PATH_TOKEN_RE.finditer(text):
+        token = match.group(0)
+        # Check for a recognized extension on the final path component.
+        dot_pos = token.rfind(".")
+        slash_pos = token.rfind("/")
+        if dot_pos > slash_pos:
+            # The dot is after the last slash — it belongs to the filename component.
+            ext = token[dot_pos:].lower()
+            if ext in _PROSE_PATH_EXTENSIONS:
+                found.append(token)
+                continue
+        # No recognized extension: fall back to known-prefix check.
+        if any(token.startswith(prefix) for prefix in _KNOWN_PATH_PREFIXES):
+            found.append(token)
+    return found
+
+
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
 
     The list is the union of:
 
-    1. The ``reference_file_path`` named in ``it_requirements`` (structured form).
+    1. The ``reference_file_path`` named in ``it_requirements`` (structured form),
+       or file path tokens extracted from prose bullets when ``it_requirements``
+       is a list of strings (list form — TKT-500f-8-i).
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
        ``creates``, ``implements``, ``modifies``, ``specifies``).
@@ -275,12 +346,20 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """
     paths: set[str] = set()
 
-    # Source 1 — it_requirements.reference_file_path (structured form)
+    # Source 1 — it_requirements edit surface.
+    # Structured form: a dict with an explicit reference_file_path key.
+    # List form (TKT-500f-8-i): a list of prose bullet strings; each bullet is
+    # scanned for file path tokens via _extract_paths_from_prose.
     it_req = ac.get("it_requirements")
     if isinstance(it_req, dict):
         ref_path = it_req.get("reference_file_path", "")
         if isinstance(ref_path, str) and ref_path:
             paths.add(ref_path)
+    elif isinstance(it_req, list):
+        for bullet in it_req:
+            if isinstance(bullet, str):
+                for path_token in _extract_paths_from_prose(bullet):
+                    paths.add(path_token)
 
     # Source 2 — doc_links edit-surface entries
     doc_links = ac.get("doc_links") or []
@@ -911,20 +990,22 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
 
 def _build_agent_contracts_section(
     ac: AcRecord,
-    ac_id: str,
-    agents_map: dict[str, str],
+    ac_id: str = "",
+    agents_map: dict[str, str] | None = None,
 ) -> str:
-    """Build the ## Agent Contracts section when documentation-expert is needed.
+    """Build the ## Agent Contracts section.
 
-    Emits the section only when 'documentation-expert' appears in *agents_map*
-    with status 'needed'.  The ``### documentation-expert`` subsection lists one
-    globally-numbered ``- [ ] AC-N:`` checklist item per documented AC (one item
-    for the source AC: the title of *ac*).
+    Emits the section when either of the following conditions is met:
 
-    Global numbering means the counter does not restart per subsection; it
-    continues from any prior AC-N items in the ticket body.  Currently only the
-    ``### documentation-expert`` subsection is emitted and no prior items exist,
-    so the counter always starts at AC-1 for tickets generated today.
+    * ``documentation-expert`` appears in *agents_map* with status ``'needed'``
+      (BO-2200c-1): a ``### documentation-expert`` subsection is appended listing
+      one globally-numbered ``- [ ] AC-1: <title>`` checklist item.
+    * The AC record has a non-null ``delivers_to`` or ``expects_from`` field
+      (TKT-500f-10): the contract details are rendered under ``### Delivers To``
+      or ``### Expects From`` subsections.
+
+    Both conditions may fire simultaneously; each contributes its own subsection.
+    Returns ``""`` when neither condition is met.
 
     The section is placed after ``## Acceptance Criteria`` (and any Test
     Requirements / Implementation Notes blocks) and before ``## Sign-offs``, as
@@ -932,26 +1013,58 @@ def _build_agent_contracts_section(
 
     Args:
         ac: Parsed AC record.
-        ac_id: The AC id.
-        agents_map: The computed agents map (agent name → status).
+        ac_id: The AC id (used to build the fallback title for the BO-2200c-1
+            subsection).
+        agents_map: The computed agents map (agent name → status). When ``None``
+            or when ``documentation-expert`` is absent or not ``'needed'``, the
+            BO-2200c-1 subsection is suppressed.
 
     Returns:
-        Formatted ``## Agent Contracts`` markdown block, or ``""`` when
-        documentation-expert is not in the agents map as 'needed'.
+        Formatted ``## Agent Contracts`` markdown block, or ``""`` when neither
+        condition fires.
     """
-    if agents_map.get("documentation-expert") != "needed":
+    delivers_to = ac.get("delivers_to") or None
+    expects_from = ac.get("expects_from") or None
+    doc_expert_needed = (agents_map or {}).get("documentation-expert") == "needed"
+
+    if not doc_expert_needed and delivers_to is None and expects_from is None:
         return ""
 
-    title = ac.get("title", f"Implement {ac_id}")
-    section_lines = [
-        "## Agent Contracts",
-        "",
-        "### documentation-expert",
-        "",
-        f"- [ ] AC-1: {title}",
-        "",
-    ]
-    return "\n".join(section_lines)
+    lines: list[str] = ["## Agent Contracts", ""]
+
+    # BO-2200c-1: emit documentation-expert subsection when the agent is needed.
+    if doc_expert_needed:
+        title = ac.get("title", f"Implement {ac_id}")
+        lines.extend([
+            "### documentation-expert",
+            "",
+            f"- [ ] AC-1: {title}",
+            "",
+        ])
+
+    # TKT-500f-10: emit delivers_to / expects_from contract fields when present.
+    if delivers_to is not None:
+        lines.append("### Delivers To")
+        lines.append("")
+        agent_name = delivers_to.get("agent", "")
+        contract_text = delivers_to.get("contract", "")
+        if agent_name:
+            lines.append(f"- **Agent:** {agent_name}")
+        if contract_text:
+            lines.append(f"- **Contract:** {contract_text}")
+        lines.append("")
+    if expects_from is not None:
+        lines.append("### Expects From")
+        lines.append("")
+        upstream_ac_id = expects_from.get("ac_id", "")
+        contract_text = expects_from.get("contract", "")
+        if upstream_ac_id:
+            lines.append(f"- **AC:** {upstream_ac_id}")
+        if contract_text:
+            lines.append(f"- **Contract:** {contract_text}")
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def _build_signoffs_section(agents: dict[str, str]) -> str:
@@ -1216,9 +1329,10 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     if impl_notes:
         lines.append(impl_notes)
 
-    # Emit ## Agent Contracts section (BO-2200c-1): placed after ## Acceptance
-    # Criteria (and any Test Requirements / Implementation Notes blocks) and
-    # before ## Sign-offs.  Only emitted when documentation-expert is 'needed'.
+    # Emit ## Agent Contracts section: placed after ## Acceptance Criteria (and
+    # Test Requirements / Implementation Notes) and before ## Sign-offs.
+    # Emits when documentation-expert is 'needed' (BO-2200c-1) or when the AC
+    # has delivers_to / expects_from fields (TKT-500f-10).
     agent_contracts = _build_agent_contracts_section(ac, ac_id, agents)
     if agent_contracts:
         lines.append(agent_contracts)

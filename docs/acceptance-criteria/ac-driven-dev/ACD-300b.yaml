@@ -45,7 +45,7 @@ product_truth:
       - Ac
       - Request
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'
   - flow: leafcutter/how-acs-are-built
     node: itpo
     node_kind: step
@@ -56,4 +56,4 @@ product_truth:
       - Ac
       - Ticket
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

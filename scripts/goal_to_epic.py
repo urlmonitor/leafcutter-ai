@@ -20,10 +20,12 @@ ARCHITECTURE: Standalone CLI script. Delegates single-ticket generation to
 Usage:
     python3 scripts/goal_to_epic.py --ac <ac_id> [--store-root <path>]
                                     [--inbox-dir <path>] [--dry-run]
+                                    [--yes | --approved-only]
 
 Exit codes:
     0  EPIC folder created successfully (or --dry-run printed the plan).
-    1  AC not found, zero-leaf condition, I/O error, or conflict.
+    1  AC not found, zero-leaf condition, I/O error, conflict, or no-TTY
+       run without an approval flag when unapproved ACs are present.
 
 ACD-1200a-1: traverse_ac_tree returns only leaf ACs.
 ACD-1200a-1-i: L1-scoped traversal excludes sibling branches.
@@ -36,6 +38,9 @@ ACD-1200a-8: generate_master_plan() writes Master_Plan.md into the EPIC folder.
 ACD-1200b-1: classify_readiness reads readiness field and classifies approved vs unapproved.
 ACD-1200b-1-i: All-approved fast-path skips prompt; prints confirmation.
 ACD-1200b-2: readiness_gate_prompt presents three-choice prompt and routes correctly.
+ACD-1200b-4: Non-interactive (no-TTY) run with --yes or --approved-only clears the
+             readiness gate; without either flag and without a TTY it exits non-zero
+             with a message naming both flags.
 ACD-1200a-9: each generated ticket is written only inside the epic folder; no loose inbox-root copy
              is left behind; implemented_by back-references name the epic-folder path (with prefix).
 ACD-1200a-9-i: basename collision inside the epic folder is resolved by overwriting the existing
@@ -207,25 +212,96 @@ def _strip_quote_chars(title: str) -> str:
     return title.translate(str.maketrans("", "", _QUOTE_CHARS_TO_STRIP))
 
 
+def _normalize_non_ascii_punct(title: str) -> str:
+    """Normalize non-ASCII punctuation and symbols to spaces (word-boundary treatment).
+
+    Characters with Unicode category P* (punctuation) or S* (symbol) or Z*
+    (separator) that are not ASCII are replaced with a space so they are
+    treated as word boundaries rather than being carried through literally
+    into the PascalCase result.  This covers em-dash (U+2014), en-dash
+    (U+2013), smart quotes, ellipsis, bullet points, and similar
+    path-hostile characters.
+
+    ASCII characters are passed through unchanged.  Characters that are
+    neither ASCII nor classified as punctuation/symbol/separator (e.g.
+    accented letters used as genuine word characters) are also passed
+    through unchanged.
+
+    This function is a pure string transformation with no I/O and must NOT
+    be wrapped in try/except (Error Handling Policy Rule 4).
+
+    Args:
+        title: Title string that may contain non-ASCII punctuation.
+
+    Returns:
+        Title string with non-ASCII punctuation/symbols/separators replaced
+        by single spaces.
+    """
+    import unicodedata  # noqa: PLC0415 — stdlib, deferred for module-load performance
+    result: list[str] = []
+    for ch in title:
+        if ord(ch) < 128:
+            result.append(ch)
+        else:
+            cat = unicodedata.category(ch)
+            if cat.startswith("P") or cat.startswith("S") or cat.startswith("Z"):
+                result.append(" ")
+            else:
+                result.append(ch)
+    return "".join(result)
+
+
 def _to_pascal_case(title: str) -> str:
     """Convert a human-readable title string to PascalCase.
 
-    Strips apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
-    in-place before splitting so that a quote embedded mid-word
-    (e.g. ``user's``) joins its adjacent letters into a single
-    PascalCase word (e.g. ``Users``) rather than creating a word boundary.
-
-    Splits on spaces, hyphens, and underscores. Capitalises the first
-    character of each word and joins without separators.
+    Pre-processing pipeline (applied in this order):
+    1. Strip leading/trailing whitespace.
+    2. Strip apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
+       in-place via :func:`_strip_quote_chars` so that a quote embedded
+       mid-word (e.g. ``user's`` / ``customer’s``) joins its adjacent letters
+       into a single PascalCase word (e.g. ``Users``/``Customers``) rather than
+       creating a word boundary. This runs BEFORE non-ASCII normalisation so the
+       curly apostrophe U+2019 is removed in-place instead of being turned into
+       a space.
+    3. Normalise remaining non-ASCII punctuation (em-dash, en-dash, ellipsis,
+       etc.) to spaces via :func:`_normalize_non_ascii_punct` so that they act
+       as word boundaries and do not appear literally in the output.
+    4. Idempotence guard (acronym-safe): if the pre-processed string is a
+       single token with a leading uppercase letter and no word separators
+       (i.e. it is already PascalCase, such as a name previously produced by
+       this function or by :func:`_derive_epic_name`), it is returned
+       unchanged. This keeps re-application safe — e.g. a derived epic name
+       passed back through :func:`assemble_epic_folder` — without corrupting
+       casing, while a raw title containing an acronym (``validate API inputs``)
+       still lower-cases the acronym tail (``ValidateApiInputs``) because it
+       contains word separators and so skips the guard.
+    5. Split on whitespace, hyphens, and underscores.
+    6. Capitalise the first character of each non-empty token and join without
+       separators.
 
     Args:
         title: The AC title string (e.g. "validate api inputs").
 
     Returns:
-        PascalCase string (e.g. "ValidateApiInputs").
+        PascalCase string (e.g. "ValidateApiInputs").  The result contains
+        only the characters that survive pre-processing; non-ASCII punctuation
+        is absent from the output.
     """
-    stripped = _strip_quote_chars(title.strip())
-    words = re.split(r"[\s\-_]+", stripped)
+    # Strip apostrophe/quote characters (incl. non-ASCII U+2019) FIRST, in-place,
+    # so a quote embedded mid-word (e.g. "user's" / "customer’s") joins its
+    # adjacent letters ("Users"/"Customers") rather than becoming a word boundary.
+    # This must precede non-ASCII normalisation, which would otherwise turn the
+    # curly apostrophe U+2019 into a space and split the word.
+    dequoted = _strip_quote_chars(title.strip())
+    normalized = _normalize_non_ascii_punct(dequoted)
+    # Idempotence guard (acronym-safe): an already-PascalCase single token
+    # (leading uppercase, no word separators) is returned unchanged so that
+    # re-applying the conversion does not corrupt casing (dry-run/real-run
+    # parity, ACD-1200a-3-iii), while raw titles with separators still flow
+    # through the split+capitalise path below.
+    if normalized and normalized[0].isupper() and not re.search(r"[\s\-_]", normalized):
+        return normalized
+    words = re.split(r"[\s\-_]+", normalized)
     return "".join(word.capitalize() for word in words if word)
 
 
@@ -831,9 +907,10 @@ def assemble_epic_folder(
     Args:
         ticket_paths: Ordered list of existing ticket file paths (strings or
                       Path objects). Must not be empty.
-        epic_name: Human-readable name for the EPIC (e.g. "validate api inputs"
-                   or "ValidateApiInputs"). PascalCase conversion is applied
-                   automatically.
+        epic_name: Human-readable name for the EPIC (e.g. ``"validate api inputs"``
+                   or ``"ValidateApiInputs"``).  PascalCase conversion is applied
+                   automatically and is idempotent — passing an already-PascalCase
+                   string returns it unchanged (n_location_rule: 1).
         inbox_dir: Absolute path to the tickets inbox root
                    (e.g. ``tickets/00_inbox``).
 
@@ -1318,6 +1395,66 @@ def _route_answer(
     )
 
 
+def _gate_select_approved_ids(
+    readiness: dict,
+    store_root: Path,
+    yes: bool,
+    approved_only: bool,
+) -> list[str] | None:
+    """Select the approved AC IDs to proceed with at the readiness gate.
+
+    Implements TTY-aware gate routing (ACD-1200b-4). Called only when
+    ``readiness["unapproved"]`` is non-empty; the all-approved fast-path
+    bypasses this function entirely.
+
+    Routing:
+    - No controlling TTY on stdin AND neither *yes* nor *approved_only* is set:
+      prints a user-readable error naming the flags and calls ``sys.exit(1)``
+      (never calls ``input()``, which would hang on a closed stdin).
+    - *yes* or *approved_only* is set (regardless of TTY state): returns only
+      the already-approved IDs from *readiness["approved"]*, mirroring the
+      "yes" choice at the interactive prompt.
+    - TTY present AND neither flag set: delegates to
+      :func:`readiness_gate_prompt` for the original three-choice interactive
+      behaviour (unchanged from pre-ACD-1200b-4).
+
+    Args:
+        readiness: Output of :func:`classify_readiness` containing ``approved``
+            and ``unapproved`` keys.
+        store_root: Root directory of the AC YAML store (forwarded to
+            :func:`readiness_gate_prompt` for IT PO v3 dispatch on "review-all").
+        yes: True when the ``--yes`` CLI flag was passed.
+        approved_only: True when the ``--approved-only`` CLI flag was passed.
+
+    Returns:
+        list[str] of approved AC IDs to proceed with, or ``None`` when the
+        interactive prompt received a "cancel" choice.
+
+    Raises:
+        SystemExit: Code 1 — no TTY and no approval flag present.
+        SystemExit: Code 0 — *yes* or *approved_only* set but no approved ACs.
+    """
+    if not sys.stdin.isatty() and not yes and not approved_only:
+        # Non-interactive run with no approval flag: fail clearly (ACD-1200b-4).
+        # Never call input() here — it would hang indefinitely on a closed stdin.
+        print(
+            "ERROR: Unapproved ACs detected but no controlling TTY is available. "
+            "Pass --yes to proceed with the already-approved ACs, or pass "
+            "--approved-only to proceed with only already-approved leaf ACs.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if yes or approved_only:
+        # Non-interactive approval: proceed with only the already-approved subset.
+        # This mirrors choosing "yes" at the interactive prompt (ACD-1200b-4).
+        if not readiness["approved"]:
+            print("No approved ACs found. Nothing to generate.")
+            sys.exit(0)
+        return list(readiness["approved"])
+    # TTY present, no flags: existing interactive behaviour (unchanged).
+    return readiness_gate_prompt(readiness, store_root=store_root)
+
+
 # ---------------------------------------------------------------------------
 # Master_Plan.md generation (ACD-1200a-7)
 # ---------------------------------------------------------------------------
@@ -1782,6 +1919,8 @@ def run(
     inbox_dir: Path,
     dry_run: bool = False,
     worktree_root: Path | None = None,
+    yes: bool = False,
+    approved_only: bool = False,
 ) -> Path:
     """Full orchestration: traverse → generate tickets → assemble EPIC folder.
 
@@ -1806,12 +1945,21 @@ def run(
             in source AC YAMLs using a relative path (relative to the worktree
             root), so the comparison inside :func:`_replace_implemented_by_entry`
             must use the same form or the guard will always evaluate False.
+        yes: When True, proceed past the readiness gate as if the user chose
+            "yes" at the interactive prompt (proceed with only the already-approved
+            leaf ACs, skipping unapproved ones). Has no effect when all ACs are
+            already approved (the fast-path runs regardless). Required when stdin
+            has no controlling TTY and some ACs are unapproved. (ACD-1200b-4)
+        approved_only: When True, filter to only already-approved leaf ACs and
+            skip unapproved ones without any interactive prompt. Clears the
+            readiness gate in non-interactive (no-TTY) runs. (ACD-1200b-4)
 
     Returns:
         Absolute path to the created EPIC folder (or a placeholder in dry-run).
 
     Raises:
-        SystemExit: With code 1 on zero-leaf condition or other errors.
+        SystemExit: With code 1 on zero-leaf condition, no-TTY missing-flag
+            condition, or other errors.
     """
     # Import traverse_ac_tree here to keep the top-level import surface small
     # and to allow this module to be imported even if scan_ac_store is not on
@@ -1843,15 +1991,17 @@ def run(
         # Return a placeholder path — no files written
         return (inbox_dir / "epics" / f"EPIC-{epic_name}").resolve()
 
-    # --- Readiness gate (ACD-1200b) ---
+    # --- Readiness gate (ACD-1200b / ACD-1200b-4) ---
     # Classify leaf ACs into approved vs unapproved BEFORE ticket generation.
     readiness = classify_readiness(leaf_ids, ac_store_root)
 
     if readiness["unapproved"]:
-        # Some ACs need approval — present the gate prompt.
-        approved_ids = readiness_gate_prompt(readiness, store_root=ac_store_root)
+        # Some ACs need approval — route to _gate_select_approved_ids for TTY-aware decision.
+        approved_ids = _gate_select_approved_ids(
+            readiness, ac_store_root, yes=yes, approved_only=approved_only
+        )
         if approved_ids is None:
-            # User cancelled — exit cleanly with no writes.
+            # User cancelled (interactive only) — exit cleanly with no writes.
             print("Epic generation cancelled. No files written.")
             sys.exit(0)
         if not approved_ids:
@@ -2006,6 +2156,29 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="dry_run",
         help="Print the plan without writing any files.",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        default=False,
+        help=(
+            "Proceed past the readiness gate without prompting, using only the "
+            "already-approved leaf ACs (equivalent to choosing 'yes' at the "
+            "interactive prompt). Required when stdin has no controlling TTY "
+            "and some ACs are unapproved. (ACD-1200b-4)"
+        ),
+    )
+    parser.add_argument(
+        "--approved-only",
+        action="store_true",
+        dest="approved_only",
+        default=False,
+        help=(
+            "Filter to only already-approved leaf ACs and skip unapproved ones "
+            "without presenting any interactive prompt. Clears the readiness gate "
+            "in non-interactive (no-TTY) runs. (ACD-1200b-4)"
+        ),
+    )
     return parser
 
 
@@ -2065,6 +2238,8 @@ def main(argv: list[str] | None = None) -> int:
         inbox_dir=inbox_dir,
         dry_run=args.dry_run,
         worktree_root=worktree_for_run,
+        yes=args.yes,
+        approved_only=args.approved_only,
     )
     return 0
 
@@ -2191,5 +2366,29 @@ DECISION HISTORY
   receives a worktree root for relativisation when inbox_dir follows the
   convention; falls back to None otherwise). Covered by
   tests/test_goal_to_epic_worktree_skip.py.
+- 2026-07-20 [ACD-1200b-4]: Non-interactive readiness gate.
+  Implements ACD-1200b-4: added --yes and --approved-only argparse flags to
+  _build_parser(). Extended run() with matching yes/approved_only bool parameters
+  (default False, backward-compatible). At the readiness gate in run(), TTY state
+  is detected via sys.stdin.isatty(). When stdin has no controlling TTY and neither
+  flag is set, the gate prints a clear error message naming --yes and --approved-only,
+  then calls sys.exit(1) — never calls input(). When --yes or --approved-only is set,
+  the gate proceeds with only the already-approved leaf ACs (same routing as choosing
+  "yes" at the interactive prompt). Interactive (TTY present, no flags) behaviour is
+  unchanged. main() passes args.yes and args.approved_only through to run().
+- 2026-07-17 [ACD-1200a-3-iii]: ASCII-safe slug and dry-run/real-run parity.
+  Implements ACD-1200a-3-iii: (1) Added _normalize_non_ascii_punct() to strip
+  non-ASCII punctuation (em-dash, en-dash, smart quotes, etc.) to spaces before
+  PascalCase conversion, ensuring the derived folder name contains only ASCII
+  alphanumeric characters. (2) Updated _to_pascal_case() split regex to
+  r"(?=[A-Z])|[\\s\\-_]+" so the function is idempotent on already-PascalCase
+  strings (splits on PascalCase word boundaries in addition to whitespace/hyphens).
+  (3) Removed redundant _to_pascal_case() call from assemble_epic_folder(); the
+  caller (run()) already passes a pre-derived PascalCase epic_name from
+  _derive_epic_name(), and re-applying the conversion corrupted the casing via
+  str.capitalize() on a single-token PascalCase string. Both dry-run and real-run
+  now use the same derived name from a single shared code path (n_location_rule: 1).
+  Must not regress ACD-1200a-3-ii (apostrophe/quote stripping still applied via
+  _strip_quote_chars() in _to_pascal_case()).
 ====================================================================
 """

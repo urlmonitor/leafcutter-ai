@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200b.yaml"
 criteria: |
@@ -53,8 +53,10 @@ origin_agent: business-analyst-v3
 created: 2026-07-15
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/ac_driven_dev/test_acd_1200b_4.py
+implemented_by:
+- tickets/TICKET-20260720-ACD-1200b-4.md
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

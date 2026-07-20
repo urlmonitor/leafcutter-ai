@@ -74,4 +74,4 @@ product_truth:
       - Test
       - Ticket
     source: real
-    asof: '2026-07-15'
+    asof: '2026-07-20'

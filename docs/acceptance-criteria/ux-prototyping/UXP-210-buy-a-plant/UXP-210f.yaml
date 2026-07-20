@@ -1,4 +1,6 @@
 id: UXP-210f
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: high
 title: "Customer signs in before checkout and keeps their cart"
@@ -41,4 +43,4 @@ product_truth:
     entities:
       - Customer
     source: mock
-    asof: '2026-07-15'
+    asof: '2026-07-20'

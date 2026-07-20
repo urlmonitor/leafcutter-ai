@@ -280,10 +280,6 @@ Return a structured manifest:
 - Never call back into another orchestrator (no recursion). Specialists return
   to you; you return to the user.
 
-## Anomalies
-
-After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies.
-
 ## Completion Manifest (sign-off §2b)
 
 When signing off on a ticket (`ticket_path` provided), populate the `completion_manifest:` block
@@ -350,6 +346,30 @@ exceed **2000 characters**. If the content would exceed 2000 characters:
 
 The truncated capsule MUST still be valid YAML and must still parse as a valid
 sign-off entry (all five field keys present, even if values are shortened).
+
+## Machine-Parsed Dispatch Output Contract
+
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
+
+  ```json
+  {
+    "status": "ok",
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
 
 ---
 

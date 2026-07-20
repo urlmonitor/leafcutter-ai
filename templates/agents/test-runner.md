@@ -263,6 +263,32 @@ A `false` item MUST expand to a nested object with `result`, `reason`, and `reme
 sub-keys (bare `false` values are rejected by the supervisor). See `signoff` §2b for the
 full format and examples.
 
+## Machine-Parsed Dispatch Output Contract
+
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
+
+  ```json
+  {
+    "passed": true,
+    "output": "...",
+    "failing_tests": [],
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

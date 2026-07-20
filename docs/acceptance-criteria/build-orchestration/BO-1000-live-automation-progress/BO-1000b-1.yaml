@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -58,13 +58,38 @@ delivers_to:
   agent: python-coder
   contract: "An in-order per-step outcome record — one entry per step with {position, step name, outcome text carrying concrete result data, executed|skipped} — consumed by BO-1000b-2 (end-of-run summary) and BO-1000c-1a (live journal relay)."
 expects_from: null
+test_required: true
+test_spec:
+  - name: test_outcome_line_emitted_after_each_step_completes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "When a step finishes its work on the success path, a one-line outcome result is emitted for that step after its work completes."
+  - name: test_outcome_line_distinct_from_and_additional_to_start_line
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The per-step outcome line is a separate line from, and additional to, the same step's start-of-step announcement (two distinct lines per step)."
+  - name: test_outcome_line_produced_for_every_nonerror_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "An outcome line is produced for every non-error step (count equals executed steps), not only for steps that hit an error branch."
+  - name: test_outcome_line_describes_what_the_step_actually_did
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Each outcome line describes what the step actually did (e.g. baseline captured with failure count, PR opened with its number, tests passed with counts) rather than a generic completion notice."
 origin_agent: business-analyst-v3
 created: 2026-07-10
 amended_by:
   - reason: it-po-v3-technical-enrichment
     note: "Assigned python-coder (workflow-body surface), added structured it_requirements, delivers_to (per-step outcome record), doc_links; criteria unchanged."
+  - reason: it-po-test-contract
+    note: "Added test_spec (4 behavioral tests derived from the Gherkin Then-clauses) and test_required: true; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: [BO-1000b-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-InFlightVisibility/07_TICKET-20260720-BO-1000b-1.md
 change_target: pipeline
 risk_surface: internal

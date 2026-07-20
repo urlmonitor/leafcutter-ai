@@ -29,7 +29,7 @@
         "UXP-520"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "filter",
@@ -40,7 +40,7 @@
         "UXP-521"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "select",
@@ -51,7 +51,7 @@
         "UXP-522"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "inspect",
@@ -62,7 +62,7 @@
         "UXP-523"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "cross",
@@ -73,7 +73,7 @@
         "UXP-524"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -82,7 +82,7 @@
     "in_progress": 0,
     "not_started": 0,
     "total": 5,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

@@ -29,7 +29,7 @@
         "UXP-510"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "derive",
@@ -40,7 +40,7 @@
         "UXP-511"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "invert",
@@ -51,7 +51,7 @@
         "UXP-512"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "backref",
@@ -62,7 +62,7 @@
         "UXP-513"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "validate",
@@ -73,7 +73,7 @@
         "UXP-514"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -82,7 +82,7 @@
     "in_progress": 0,
     "not_started": 0,
     "total": 5,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   },
   "acceptance_scenarios": [
     {

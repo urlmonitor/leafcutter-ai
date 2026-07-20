@@ -30,7 +30,7 @@
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "implement",
@@ -42,7 +42,7 @@
         "BP-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "docenforce",
@@ -54,7 +54,7 @@
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "complexity",
@@ -66,7 +66,7 @@
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "tests",
@@ -78,7 +78,7 @@
         "BO-530-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     },
     {
       "id": "signoff",
@@ -90,7 +90,7 @@
         "BO-2000a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-15"
+      "impl_asof": "2026-07-20"
     }
   ],
   "branches": [],
@@ -121,6 +121,6 @@
     "in_progress": 0,
     "not_started": 6,
     "total": 6,
-    "asof": "2026-07-15"
+    "asof": "2026-07-20"
   }
 }

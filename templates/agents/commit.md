@@ -440,9 +440,30 @@ COMMIT_AGENT_MODE=1 git commit -m "..." 2>/tmp/commit_err.txt
 
 This was confirmed during EPIC-PortableWorkflowHardening and codified in commit 34ffd468. Migrated from user-memory feedback_background_commit_silent_kill.md by EPIC-AgentKnowledgeSystem ticket 04.
 
-## Anomalies
+## Machine-Parsed Dispatch Output Contract
 
-After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies.
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
+
+  ```json
+  {
+    "status": "ok",
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
+
 ## Commit-Agent Sign-off Step (when ticket_path is provided)
 
 After writing the sign-off (via the Sign-off section below), immediately stage
