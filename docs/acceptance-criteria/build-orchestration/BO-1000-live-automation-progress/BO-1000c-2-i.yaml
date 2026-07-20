@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -43,6 +43,7 @@ amended_by:
     note: "Re-assigned to llm-expert (relay/launch-contract surface). Added it_requirements, doc_links, expects_from (journal + BO-1000a-1-i dependency). Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-InFlightVisibility/15_TICKET-20260715-BO-1000c-2-i.md
 change_target: pipeline
 risk_surface: internal
