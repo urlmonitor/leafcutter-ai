@@ -608,6 +608,25 @@ def _build_agents_map(
         if doc_risk_triggers and risk_surface and risk_surface in doc_risk_triggers:
             guardrail_set.add("documentation-expert")
 
+        # Dimension 3 — non_triggering_classifications (BO-2200a-3): explicit
+        # negative guard that removes documentation-expert when the call's
+        # (change_target, risk_surface) pair matches any entry in the exclusion
+        # list, even if the trigger dimensions above would otherwise add it.
+        # This ensures purely internal refactors never impose a documentation
+        # burden regardless of any future expansion of the trigger lists.
+        non_triggering: list = list(
+            doc_gates_policy.get("non_triggering_classifications") or []
+        )
+        if non_triggering and "documentation-expert" in guardrail_set:
+            for entry in non_triggering:
+                if not isinstance(entry, dict):
+                    continue
+                entry_ct = entry.get("change_target")
+                entry_rs = entry.get("risk_surface")
+                if entry_ct in change_targets and entry_rs == risk_surface:
+                    guardrail_set.discard("documentation-expert")
+                    break
+
         # documentation-expert is ordered via _CANONICAL_PHASE_ORDER (post-coder
         # position) for all pairs, including flow-change pairs.  architect-review
         # (position 0 in _CANONICAL_PHASE_ORDER) still correctly precedes any coder
@@ -1892,5 +1911,15 @@ DECISION HISTORY
   semantics: documentation-expert is required if EITHER dimension matches its
   triggering set).  The trigger set {contract_boundary, safety, auth, privacy} is
   already present in config/guardrail_gates.yaml — no config change required (BO-2200a-2).
+- 2026-07-20 [TICKET-20260715-BO-2200a-3]: Add non_triggering_classifications guard to
+  documentation_gates policy in _build_agents_map.  After both trigger dimensions have
+  had a chance to add documentation-expert, a third read-path checks
+  documentation_gates.non_triggering_classifications from the gates config.  If any
+  entry's (change_target, risk_surface) pair matches the call's arguments,
+  documentation-expert is discarded from the guardrail set — even if the general trigger
+  lists would otherwise require it (explicit negative rule overrides positive triggers).
+  Added non_triggering_classifications list to config/guardrail_gates.yaml covering the
+  four internal-refactor pairs: code/internal, config/internal, prompt/internal,
+  infrastructure/internal (BO-2200a-3).
 ====================================================================
 """

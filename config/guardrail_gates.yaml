@@ -359,6 +359,15 @@ documentation_gates:
     - safety
     - auth
     - privacy
+  # BO-2200a-3: explicit negative guard — purely internal refactors must never
+  # require documentation-expert regardless of change_target or risk_surface
+  # trigger list expansions.  Each entry names a (change_target, risk_surface)
+  # pair whose documentation burden is explicitly zero.
+  non_triggering_classifications:
+    - {change_target: code, risk_surface: internal}
+    - {change_target: config, risk_surface: internal}
+    - {change_target: prompt, risk_surface: internal}
+    - {change_target: infrastructure, risk_surface: internal}
 
 # ---------------------------------------------------------------------------
 # surgical_removal_guard
