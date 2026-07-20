@@ -1,0 +1,81 @@
+id: ACD-1200a-11
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "Regenerating a ticket dedupes the AC's implemented_by back-reference to a single entry"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a.yaml"
+criteria: |
+  Given an AC whose implemented_by list already contains an entry pointing at the
+    ticket produced by a prior generation of that same AC,
+  When a ticket is generated again from that AC by the generator's back-reference
+    writer (regeneration of the same AC's ticket),
+  Then after the back-reference is written the AC's implemented_by list contains
+    exactly one entry for that ticket (the prior same-ticket entry is replaced or
+    deduplicated, not appended a second time),
+  And repeated regenerations of the same AC do not grow the implemented_by list
+    (the back-reference write is idempotent for the same ticket).
+depends_on: [ACD-1200a]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "The same-ticket dedup semantics of _write_implemented_by in scripts/ac_store/generate_ticket_from_ac.py — implemented_by entries compared as repo-relative ticket paths and the prior same-ticket entry collapsed to a single entry rather than appended — which edge case ACD-1200a-11-i extends to preserve unrelated entries."
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Dedup the back-reference by comparing entries as repo-relative ticket paths so regenerating the same AC's ticket collapses the prior same-ticket entry to exactly one entry, never appending a second (the current dedup only skips on an exact string match)."
+    - "The back-reference write must be idempotent: running the generator twice against the same AC leaves the implemented_by list unchanged in length and content (run-twice byte-stable)."
+    - "Preserve the existing minimal-diff targeted rewrite of only the implemented_by block; do not full-dump the AC YAML."
+    - "Must not regress the current exact-string idempotency skip."
+test_spec:
+  - name: test_regenerate_dedupes_same_ticket_implemented_by
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Regenerate a ticket for a fixture AC whose implemented_by already contains that same ticket path; assert implemented_by has exactly one entry afterward (no duplicate)."
+  - name: test_repeated_regeneration_does_not_grow_implemented_by
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Regenerate the same AC's ticket multiple times; assert implemented_by length stays constant (idempotent back-reference write)."
+origin_agent: business-analyst-v3
+created: 2026-07-20
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-07-20'
+superseded_by: null
+covered_by: [ACD-1200a-11-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

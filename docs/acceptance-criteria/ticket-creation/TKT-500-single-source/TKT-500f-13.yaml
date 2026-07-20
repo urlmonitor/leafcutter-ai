@@ -1,0 +1,82 @@
+id: TKT-500f-13
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: medium
+title: "Generated ticket's components LIST uses the components.json graph id, not the index.yaml kebab namespace"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose component belongs to a namespace where the components.json
+    graph id differs from the index.yaml kebab namespace key (for example graph id
+    build_orchestration versus namespace build-orchestration),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the generated ticket's components LIST contains the underscore
+    components.json graph id (build_orchestration) so the ticket passes the
+    Component-vocab CI check,
+  And when the generated ticket also emits a scalar component field, that scalar
+    still carries the index.yaml kebab namespace key (build-orchestration)
+    unchanged,
+  And only the components LIST is normalized to the graph vocabulary — the
+    two-axis taxonomy (kebab namespace scalar, underscore graph-id list) is
+    preserved rather than the kebab value being copied into the LIST.
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The generated ticket's components LIST must carry the docs/components.json underscore graph id (e.g. build_orchestration) so the ticket passes the Component-vocab CI check (check_component_vocab.py); the current code copies the scalar kebab `component` verbatim into the LIST."
+    - "Apply the existing canonical kebab->underscore normalisation (scripts/migrate_component_vocab.py MIGRATION_MAP resolved against docs/components.json) at generation time — or prefer the AC's own `components` LIST, which already holds underscore graph ids — rather than re-deriving a new mapping."
+    - "The scalar `component` axis (index.yaml kebab namespace key) must stay unchanged; only the components LIST is normalised (two-axis taxonomy preserved, kebab value never copied into the LIST)."
+test_spec:
+  - name: test_generated_components_list_uses_underscore_graph_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Generate a ticket for a fixture AC whose graph id is build_orchestration (kebab namespace build-orchestration); assert the generated ticket's components LIST == ['build_orchestration']."
+  - name: test_two_axis_taxonomy_preserved
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the generated components LIST is the underscore graph id while the source AC's scalar `component` remains the kebab namespace key (kebab value not copied into the LIST)."
+origin_agent: business-analyst-v3
+created: 2026-07-20
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-07-20'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

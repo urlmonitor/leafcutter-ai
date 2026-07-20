@@ -1,0 +1,77 @@
+id: ACD-1200a-11-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "Regeneration preserves an AC's unrelated implemented_by entries and only collapses the same-ticket duplicate"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-11.yaml"
+criteria: |
+  This edge case complements ACD-1200a-11 (same-ticket dedup) by requiring that
+  legitimately distinct implementation references are never lost during dedup.
+
+  Given an AC whose implemented_by list legitimately contains an entry for a
+    different, unrelated implementation path (one that is not the ticket being
+    regenerated),
+  When a ticket is regenerated from that AC and the back-reference for the
+    regenerated ticket is written,
+  Then the unrelated entry is preserved unchanged in the AC's implemented_by list,
+  And only the stale or duplicate entry that points at the same regenerated ticket
+    is collapsed to a single entry,
+  And the dedup never removes, rewrites, or reorders the unrelated entry.
+depends_on: [ACD-1200a-11]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-11
+  contract: "The repo-relative same-ticket dedup collapse in _write_implemented_by (generate_ticket_from_ac.py); this edge case constrains that same dedup code path to leave unrelated implemented_by entries untouched."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The dedup must preserve any implemented_by entry that points at a different, unrelated implementation path; only the entry equal (compared as a repo-relative path) to the regenerated ticket is collapsed."
+    - "The dedup must never remove, rewrite, or reorder the surviving unrelated entry."
+    - "Implement via the same single dedup code path introduced for ACD-1200a-11 — do not add a second divergent dedup implementation."
+test_spec:
+  - name: test_regeneration_preserves_unrelated_implemented_by_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Fixture AC with two implemented_by entries (one for THIS ticket, one unrelated); regenerate; assert the unrelated entry survives and only the same-ticket duplicate is collapsed to a single entry."
+  - name: test_dedup_does_not_reorder_unrelated_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After dedup the surviving unrelated entry keeps its original value and position (not removed, rewritten, or reordered)."
+origin_agent: business-analyst-v3
+created: 2026-07-20
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-07-20'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
