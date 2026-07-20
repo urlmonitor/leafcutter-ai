@@ -154,7 +154,7 @@ def _derive_all_machine_parsed_producers() -> set:
     # 4. Literal schema dispatches (catches brainstorm-lead as classifier, etc.)
     producers.update(_extract_literal_schema_dispatches())
 
-    # 5. Window scan for JSON.parse / safeParseJSON near any literal agentType
+    # 5. Window scan for JSON.parse / safeParseJSON / parseAgentJson near any literal agentType
     for js_file in glob.glob(os.path.join(WORKFLOWS_JS_DIR, "*.js")):
         with open(js_file, encoding="utf-8") as fh:
             lines = fh.readlines()
@@ -174,7 +174,11 @@ def _derive_all_machine_parsed_producers() -> set:
             window_start = max(0, i - 5)
             window_end = min(len(lines), i + 20)
             window = "".join(lines[window_start:window_end])
-            if "JSON.parse(" in window or "safeParseJSON(" in window:
+            if (
+                "JSON.parse(" in window
+                or "safeParseJSON(" in window
+                or "parseAgentJson(" in window
+            ):
                 producers.add(agent_name)
 
     return producers

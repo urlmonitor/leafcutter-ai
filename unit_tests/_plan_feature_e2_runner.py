@@ -274,7 +274,15 @@ def run_isolated_e2(
         SourceParseError: If a named function cannot be extracted.
     """
     source = read_e2_source()
-    snippets = [extract_js_function(source, name) for name in func_names]
+    # BP-300e-5: extracted functions now call the module-level parseAgentJson
+    # tolerant reply reader. Include it in every isolated bundle (deduped, first)
+    # so an extracted function's isolated runtime matches the loaded-module
+    # runtime — otherwise a call to parseAgentJson throws ReferenceError and is
+    # swallowed by the function's own try/catch, masking real behavior.
+    names = list(func_names)
+    if "parseAgentJson" not in names:
+        names = ["parseAgentJson", *names]
+    snippets = [extract_js_function(source, name) for name in names]
     script = "'use strict';\n" + "\n".join(snippets) + "\n" + driver_js
     proc = _run_node(script, timeout=timeout)
     if proc.returncode != 0:

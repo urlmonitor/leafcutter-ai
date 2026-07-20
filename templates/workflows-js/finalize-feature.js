@@ -82,50 +82,73 @@ const GATE_SCHEMA = {
 phase('Pre-flight')
 
 /**
- * AC-4: Tolerant JSON parse helper.
+ * Tolerant agent-reply reader (BP-300e). Extracts the first balanced JSON
+ * object or array from a raw agent reply string, tolerating surrounding prose.
  *
- * Distinguishes between two failure modes:
- *   1. Agent returned a value that is already an object/array (pass-through).
- *   2. Agent returned a string — try JSON.parse; on failure, scan for a JSON
- *      object or array embedded inside freeform prose.
+ * Passthrough: when raw is already an object or array (not a string), it is
+ * returned unchanged — no re-parse is attempted.
  *
- * Returns { value: <parsed>, malformed: false } on success.
- * Returns { value: null, malformed: true } when no parseable JSON is found.
+ * Brace-matching: scan character-by-character, tracking depth and skipping
+ * characters inside JSON string literals (including escaped quotes), and
+ * return the first complete balanced JSON value.
  *
- * @param {*} raw  - Value returned by agent() — may be string, object, or null.
- * @returns {{ value: *, malformed: boolean }}
+ * Error: when no parseable JSON value is found (including empty or
+ * whitespace-only replies), throws a typed Error naming both stage and agent.
+ *
+ * @param {*} raw - Value returned by agent() — may be string, object, or null.
+ * @param {{ stage: string, agent: string }} ctx - Context for error messages.
+ * @returns {*} Parsed JSON value (object, array, etc.).
  */
-function safeParseJSON(raw) {
-  if (raw === null || raw === undefined) {
-    return { value: null, malformed: true };
-  }
-  // Already a non-string (object, array, boolean, number) — use directly.
+function parseAgentJson(raw, ctx) {
+  const stage = ctx.stage;
+  const agent = ctx.agent;
   if (typeof raw !== "string") {
-    return { value: raw, malformed: false };
+    return raw;
   }
-  // Try direct parse first.
-  try {
-    return { value: JSON.parse(raw), malformed: false };
-  } catch (_) {
-    // Try to extract a JSON object or array from inside prose.
-    const objMatch = raw.match(/\{[\s\S]*\}/);
-    if (objMatch) {
-      try {
-        return { value: JSON.parse(objMatch[0]), malformed: false };
-      } catch (_) {
-        // fall through
-      }
-    }
-    const arrMatch = raw.match(/\[[\s\S]*\]/);
-    if (arrMatch) {
-      try {
-        return { value: JSON.parse(arrMatch[0]), malformed: false };
-      } catch (_) {
-        // fall through
-      }
-    }
-    return { value: null, malformed: true };
+  if (!raw.trim()) {
+    throw new Error(
+      "[" + stage + "] " + agent +
+      " returned an empty or whitespace-only reply — no parseable JSON found"
+    );
   }
+  const closeFor = { 123: 125, 91: 93 };
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i);
+    if (code !== 123 && code !== 91) { continue; }
+    const closeCode = closeFor[code];
+    let depth = 0;
+    let inString = false;
+    let j = i;
+    while (j < raw.length) {
+      const ch = raw.charCodeAt(j);
+      if (inString) {
+        if (ch === 92 && j + 1 < raw.length) {
+          j += 2;
+          continue;
+        }
+        if (ch === 34) { inString = false; }
+      } else {
+        if (ch === 34) { inString = true; }
+        else if (ch === code) { depth++; }
+        else if (ch === closeCode) {
+          depth--;
+          if (depth === 0) {
+            try {
+              return JSON.parse(raw.slice(i, j + 1));
+            } catch (_) {
+              break;
+            }
+          }
+        }
+      }
+      j++;
+    }
+  }
+  throw new Error(
+    "[" + stage + "] " + agent +
+    " returned a reply with no parseable JSON — " +
+    "all reply-reading sites must route through parseAgentJson"
+  );
 }
 
 // -------------------------------------------------------------------------
@@ -197,12 +220,11 @@ const preflightResult = await agent(
 
 let preflightInfo;
 {
-  const { value, malformed } = safeParseJSON(preflightResult);
-  if (malformed) {
+  try {
+    preflightInfo = parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" }) || { found: true, branch: "unknown", worktree_root: "unknown" };
+  } catch (_parseErr) {
     log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
     preflightInfo = { found: true, branch: "unknown", worktree_root: "unknown" };
-  } else {
-    preflightInfo = value || { found: true, branch: "unknown", worktree_root: "unknown" };
   }
 }
 
@@ -313,12 +335,11 @@ const ghConfigResult = await agent(
 
 let ghConfig;
 {
-  const { value, malformed } = safeParseJSON(ghConfigResult);
-  if (malformed) {
+  try {
+    ghConfig = parseAgentJson(ghConfigResult, { stage: "gh-config", agent: "status-checker" }) || { gh_target_account: null, gh_repo: null };
+  } catch (_parseErr) {
     log("[finalize-feature] gh config parse malformed — proceeding with no account constraint");
     ghConfig = { gh_target_account: null, gh_repo: null };
-  } else {
-    ghConfig = value || { gh_target_account: null, gh_repo: null };
   }
 }
 
@@ -338,12 +359,11 @@ if (GH_TARGET_ACCOUNT) {
 
   let ghStatus;
   {
-    const { value, malformed } = safeParseJSON(ghStatusResult);
-    if (malformed) {
+    try {
+      ghStatus = parseAgentJson(ghStatusResult, { stage: "gh-auth-status", agent: "status-checker" }) || { active_account: null };
+    } catch (_parseErr) {
       log("[finalize-feature] gh auth status parse malformed — assuming active_account is null");
       ghStatus = { active_account: null };
-    } else {
-      ghStatus = value || { active_account: null };
     }
   }
 
@@ -361,12 +381,11 @@ if (GH_TARGET_ACCOUNT) {
 
     let ghSwitch;
     {
-      const { value, malformed } = safeParseJSON(ghSwitchResult);
-      if (malformed) {
+      try {
+        ghSwitch = parseAgentJson(ghSwitchResult, { stage: "gh-auth-switch", agent: "status-checker" }) || { switch_exit_code: 1, verified_account: null };
+      } catch (_parseErr) {
         log("[finalize-feature] gh switch parse malformed — assuming switch failed");
         ghSwitch = { switch_exit_code: 1, verified_account: null };
-      } else {
-        ghSwitch = value || { switch_exit_code: 1, verified_account: null };
       }
     }
 
@@ -464,14 +483,13 @@ const baselineResult = await agent(
 
 let baselineInfo;
 {
-  const { value, malformed } = safeParseJSON(baselineResult);
-  if (malformed) {
+  try {
+    baselineInfo = parseAgentJson(baselineResult, { stage: "step-0-baseline", agent: "status-checker" }) || { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+  } catch (_parseErr) {
     // AC-4: Malformed reply is not the same as "baseline failed" —
     // degrade gracefully (same as run_failed path) without spuriously halting.
     log("[finalize-feature] step 0 baseline parse malformed — treating as run_failed (triage will use conservative classification)");
     baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
-  } else {
-    baselineInfo = value || { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
   }
 }
 
@@ -517,14 +535,13 @@ const prProbeResult = await agent(
 
 let prProbe;
 {
-  const { value, malformed } = safeParseJSON(prProbeResult);
-  if (malformed) {
+  try {
+    prProbe = parseAgentJson(prProbeResult, { stage: "step-1-pr-probe", agent: "status-checker" }) || { found: false };
+  } catch (_parseErr) {
     // AC-4: Malformed PR probe defaults to "not found" — safer to open a duplicate
     // PR (which will be rejected by GH) than to silently skip creating one.
     log("[finalize-feature] step 1 PR probe parse malformed — assuming no PR exists");
     prProbe = { found: false };
-  } else {
-    prProbe = value || { found: false };
   }
 }
 
@@ -552,12 +569,11 @@ if (prProbe.found) {
 
   let openPr;
   {
-    const { value, malformed } = safeParseJSON(openPrResult);
-    if (malformed) {
+    try {
+      openPr = parseAgentJson(openPrResult, { stage: "step-1-open-pr", agent: "pull-request" }) || {};
+    } catch (_parseErr) {
       log("[finalize-feature] step 1 PR open parse malformed — pr_number and url will be null");
       openPr = {};
-    } else {
-      openPr = value || {};
     }
   }
 
@@ -611,16 +627,15 @@ const mergeMainResult = await agent(
 
 let mergeMainInfo;
 {
-  const { value, malformed } = safeParseJSON(mergeMainResult);
-  if (malformed) {
+  try {
+    mergeMainInfo = parseAgentJson(mergeMainResult, { stage: "step-2-merge-main", agent: "status-checker" }) || { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
+  } catch (_parseErr) {
     // AC-4: A malformed reply is not the same as "conflict detected".
     // Default to "already_up_to_date" (non-halting, safe) and log a warning.
     // If the merge actually had a problem, it will become apparent at the
     // test-runner phase (step 3) rather than spuriously halting here.
     log("[finalize-feature] step 2 merge-main parse malformed — treating as already_up_to_date (non-halting safe default)");
     mergeMainInfo = { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
-  } else {
-    mergeMainInfo = value || { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
   }
 }
 
@@ -690,8 +705,12 @@ testResult = await agent(
 let testPassed;
 let postMergeFailures;
 {
-  const { value, malformed } = safeParseJSON(testResult);
-  if (malformed) {
+  try {
+    const parsed = parseAgentJson(testResult, { stage: "step-3-test-run", agent: "test-runner" }) || {};
+    testPassed = parsed.passed === true;
+    testResult = parsed;
+    postMergeFailures = Array.isArray(parsed.failing_tests) ? parsed.failing_tests : [];
+  } catch (_parseErr) {
     // AC-4: A malformed test reply is ambiguous — we cannot determine pass/fail.
     // Default to testPassed=false (conservative) but log clearly that this is a
     // parse failure, not an agent-reported failure. The triage step will then
@@ -701,11 +720,6 @@ let postMergeFailures;
     testPassed = false;
     postMergeFailures = [];
     testResult = { passed: false, output: "(parse malformed)", failing_tests: [] };
-  } else {
-    const parsed = value || {};
-    testPassed = parsed.passed === true;
-    testResult = parsed;
-    postMergeFailures = Array.isArray(parsed.failing_tests) ? parsed.failing_tests : [];
   }
 }
 
@@ -734,13 +748,12 @@ if (testPassed) {
 
   let changedFiles = [];
   {
-    const { value, malformed } = safeParseJSON(changedFilesResult);
-    if (malformed) {
+    try {
+      const parsedCf = parseAgentJson(changedFilesResult, { stage: "step-3-changed-files", agent: "status-checker" }) || {};
+      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
+    } catch (_parseErr) {
       log("[finalize-feature] step 3 changed_files parse malformed — triage will use empty changed_files list");
       changedFiles = [];
-    } else {
-      const parsedCf = value || {};
-      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
     }
   }
 
@@ -812,12 +825,11 @@ if (testPassed) {
 
     let recoveryInfo;
     {
-      const { value, malformed } = safeParseJSON(recoveryResult);
-      if (malformed) {
+      try {
+        recoveryInfo = parseAgentJson(recoveryResult, { stage: "step-3-targeted-rerun", agent: "status-checker" }) || { status: "parse_failed", recovered_failures: null };
+      } catch (_parseErr) {
         log("[finalize-feature] step 3 targeted-rerun parse malformed — targeted rerun unavailable, using conservative fallback.");
         recoveryInfo = { status: "parse_failed", recovered_failures: null };
-      } else {
-        recoveryInfo = value || { status: "parse_failed", recovered_failures: null };
       }
     }
 
@@ -879,8 +891,14 @@ if (testPassed) {
   )
 
   {
-    const { value, malformed } = safeParseJSON(triageRaw);
-    if (malformed) {
+    try {
+      triageReport = parseAgentJson(triageRaw, { stage: "step-3-triage", agent: "test-failure-triage" }) || {
+        blocks_finalization: true,
+        regressions: postMergeFailures,
+        pre_existing: [],
+        summary: "Triage report empty — treating all failures as regressions.",
+      };
+    } catch (_parseErr) {
       // AC-4: A malformed triage reply is genuinely ambiguous — we cannot determine
       // whether failures are regressions or pre-existing. Use conservative
       // blocks_finalization=true, but log clearly that this is a parse failure
@@ -892,13 +910,6 @@ if (testPassed) {
         regressions: postMergeFailures,
         pre_existing: [],
         summary: "Triage reply was malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
-      };
-    } else {
-      triageReport = value || {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage report empty — treating all failures as regressions.",
       };
     }
   }
@@ -961,12 +972,11 @@ const closureProbeResult = await agent(
 
 let closureAlreadyCommitted = false;
 {
-  const { value, malformed } = safeParseJSON(closureProbeResult);
-  if (malformed) {
+  try {
+    closureAlreadyCommitted = (parseAgentJson(closureProbeResult, { stage: "step-3.5-closure-probe", agent: "status-checker" }) || {}).already_committed === true;
+  } catch (_parseErr) {
     log("[finalize-feature] step 3.5 closure probe parse malformed — assuming not already committed (will re-attempt closure)");
     closureAlreadyCommitted = false;
-  } else {
-    closureAlreadyCommitted = (value || {}).already_committed === true;
   }
 }
 
@@ -985,12 +995,11 @@ if (closureAlreadyCommitted) {
       { agentType: "status-checker", label: "step-3.5-pr-state", phase: "Step 3.5" }
     )
     {
-      const { value, malformed } = safeParseJSON(prClosureStateResult);
-      if (malformed) {
+      try {
+        prAlreadyMergedAtClosure = ((parseAgentJson(prClosureStateResult, { stage: "step-3.5-pr-state", agent: "status-checker" }) || {}).state || "").toUpperCase() === "MERGED";
+      } catch (_parseErr) {
         log("[finalize-feature] step 3.5 PR state parse malformed — assuming PR is OPEN");
         prAlreadyMergedAtClosure = false;
-      } else {
-        prAlreadyMergedAtClosure = ((value || {}).state || "").toUpperCase() === "MERGED";
       }
     }
   }
@@ -1125,12 +1134,11 @@ if (closureAlreadyCommitted) {
 
     let closureInfo;
     {
-      const { value, malformed } = safeParseJSON(closureResult);
-      if (malformed) {
+      try {
+        closureInfo = parseAgentJson(closureResult, { stage: "step-3.5-closure", agent: "status-checker" }) || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
+      } catch (_parseErr) {
         log("[finalize-feature] step 3.5 closure parse malformed — assuming zero tickets/ACs closed");
         closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
-      } else {
-        closureInfo = value || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
       }
     }
 
@@ -1233,10 +1241,15 @@ const syncCheckResult = await agent(
 
 let syncCheckInfo;
 {
-  const { value, malformed } = safeParseJSON(syncCheckResult);
+  let syncCheckValue;
+  try {
+    syncCheckValue = parseAgentJson(syncCheckResult, { stage: "pre-step-4-sync-check", agent: "status-checker" });
+  } catch (_parseErr) {
+    syncCheckValue = null;
+  }
   // H-1: Fail closed — malformed parse or null/missing value cannot be trusted.
   // Refusing to merge an unverified head is safer than proceeding on unknown state.
-  if (malformed || value === null || value === undefined) {
+  if (syncCheckValue === null || syncCheckValue === undefined) {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
@@ -1254,7 +1267,7 @@ let syncCheckInfo;
       action_required: "verify_and_push",
     };
   }
-  syncCheckInfo = value;
+  syncCheckInfo = syncCheckValue;
 }
 
 // H-1: Explicit known-status gate — any status outside this set is indeterminate → HALT.
@@ -1439,12 +1452,11 @@ const prStateResult = await agent(
 
 let prState;
 {
-  const { value, malformed } = safeParseJSON(prStateResult);
-  if (malformed) {
+  try {
+    prState = parseAgentJson(prStateResult, { stage: "step-4-pr-state", agent: "status-checker" }) || { state: "OPEN" };
+  } catch (_parseErr) {
     log("[finalize-feature] step 4 PR state parse malformed — assuming PR is OPEN");
     prState = { state: "OPEN" };
-  } else {
-    prState = value || { state: "OPEN" };
   }
 }
 
@@ -1585,12 +1597,11 @@ const closeResult = await agent(
 
 let closeInfo;
 {
-  const { value, malformed } = safeParseJSON(closeResult);
-  if (malformed) {
+  try {
+    closeInfo = parseAgentJson(closeResult, { stage: "step-6-scope-detect", agent: "status-checker" }) || { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
+  } catch (_parseErr) {
     log("[finalize-feature] step 6 scope-detect parse malformed — no tickets reported in summary");
     closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
-  } else {
-    closeInfo = value || { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
   }
 }
 
@@ -1620,14 +1631,13 @@ const worktreeProbeResult = await agent(
 
 let worktreeProbe;
 {
-  const { value, malformed } = safeParseJSON(worktreeProbeResult);
-  if (malformed) {
+  try {
+    worktreeProbe = parseAgentJson(worktreeProbeResult, { stage: "step-7-worktree-probe", agent: "status-checker" }) || { exists: true };
+  } catch (_parseErr) {
     // AC-4: Malformed probe — conservative default is exists=true (safer to
     // attempt removal than to skip and leave the worktree dangling).
     log("[finalize-feature] step 7 worktree probe parse malformed — assuming exists=true (conservative)");
     worktreeProbe = { exists: true };
-  } else {
-    worktreeProbe = value || { exists: true };
   }
 }
 
@@ -1645,12 +1655,11 @@ if (!worktreeProbe.exists) {
 
   let wResult;
   {
-    const { value, malformed } = safeParseJSON(worktreeResult);
-    if (malformed) {
+    try {
+      wResult = parseAgentJson(worktreeResult, { stage: "step-7-remove-worktree", agent: "worktree-agent" }) || { removed: false, conflict_pids: [] };
+    } catch (_parseErr) {
       log("[finalize-feature] step 7 worktree-agent parse malformed — assuming removed=false, conflict_pids=[]");
       wResult = { removed: false, conflict_pids: [] };
-    } else {
-      wResult = value || { removed: false, conflict_pids: [] };
     }
   }
 
