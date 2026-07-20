@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -50,6 +50,7 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260720-BO-2300a-3.md
+- docs/architecture/diagrams/c3-001-interactive-pause-resume-run-lifecycle.md
 change_target: docs
 risk_surface: internal
 notes: |

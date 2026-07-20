@@ -12,7 +12,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-20 22:24 UTC
+> Generated: 2026-07-20 22:46 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -36,6 +36,7 @@ task, then pull only those files.
 | finalize | [docs/architecture/components/finalize.md](docs/architecture/components/finalize.md) | The finalize-feature workflow: pre-merge test baseline capture, PR merge gating, push-before-merge sync, main sync, and ticket/epic closure. |
 | glossary | [docs/architecture/components/glossary.md](docs/architecture/components/glossary.md) | Project terminology registry with automated coverage checks that ensure novel jargon is triaged and documented consistently across all project artifacts. |
 | injection builder | [docs/architecture/components/injection-builder.md](docs/architecture/components/injection-builder.md) | Context injection payload assembler that delivers structured knowledge to agents at invocation time via the 11-channel agent knowledge plane. |
+| interactive pause resume substrate | [docs/architecture/components/interactive-pause-resume-substrate.md](docs/architecture/components/interactive-pause-resume-substrate.md) | Container-level overview of the ADR-024 interactive pause/resume substrate inside the build orchestration workflow engine: the inline resolveGate()/pauseAtGate() helpers, the agent-mediated durable pending-question store under .leafcutter/paused_runs/, and the run lifecycle and pause->ask->answer->resume interaction documented by its two L3 child diagrams. |
 | knowledge management | [docs/architecture/components/knowledge-management.md](docs/architecture/components/knowledge-management.md) | The cross-surface knowledge graph: surface ingestion from config/paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation. |
 | knowledge system | [docs/architecture/components/knowledge-system.md](docs/architecture/components/knowledge-system.md) | Knowledge harvesting and context file maintenance system that persists learnings across agent sessions for improved future-invocation quality. |
 | persona management | [docs/architecture/components/persona-management.md](docs/architecture/components/persona-management.md) | Persona definitions, AC targeting by persona, and persona knowledge-graph queries. |
