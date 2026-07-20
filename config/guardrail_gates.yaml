@@ -359,3 +359,56 @@ documentation_gates:
     - safety
     - auth
     - privacy
+
+# ---------------------------------------------------------------------------
+# surgical_removal_guard
+#
+# Formally encodes the invariants established by the BO-2200d-1 surgical
+# removal of documentation-expert from the four flow-change-gate
+# mandatory_agents lists (code/contract_boundary, code/safety,
+# schema/contract_boundary, schema/safety).
+#
+# This section is the machine-readable declaration consumed by
+# unit_tests/test_bo_2200d_1_i.py to assert the following invariants hold
+# after the removal:
+#
+#   1. architect-review is RETAINED in all four flow_change_gates
+#      mandatory_agents lists (no accidental collateral removal).
+#   2. documentation-expert is ABSENT from all four flow_change_gates
+#      mandatory_agents lists (no double-injection: it is injected once,
+#      post-coder, via documentation_gates — never pre-coder via this gate).
+#   3. documentation-expert appears exactly once in the computed agents map
+#      for any doc-triggering flow-change pair (e.g. schema/contract_boundary).
+#
+# n_location_rule: all — this section must be present in all deployments of
+# guardrail_gates.yaml.
+# ---------------------------------------------------------------------------
+
+surgical_removal_guard:
+  description: >
+    Flow-change lists retain architect-review (and other pre-coder gates)
+    and contain no documentation-expert; documentation-expert appears exactly
+    once in the computed agents map (no double-injection via both
+    flow_change_gates pre-coder and documentation_gates post-coder).
+  n_location_rule: all
+  invariants:
+    - id: ARCHITECT_REVIEW_RETAINED
+      description: >
+        architect-review must be present in all four flow_change_gates
+        mandatory_agents lists (code/contract_boundary, code/safety,
+        schema/contract_boundary, schema/safety) after the surgical removal
+        of documentation-expert.
+      enforced_by: unit_tests/test_bo_2200d_1_i.py::test_architect_review_still_injected_pre_coder
+    - id: DOC_EXPERT_ABSENT_FROM_FLOW_CHANGE_GATES
+      description: >
+        documentation-expert must be absent from all four flow_change_gates
+        mandatory_agents lists so it is never injected twice (once pre-coder
+        and once post-coder) for the same ticket.
+      enforced_by: unit_tests/test_bo_2200d_1_i.py::test_documentation_expert_never_double_injected
+    - id: DOC_EXPERT_SINGLE_INJECTION
+      description: >
+        documentation-expert appears exactly once in the computed agents map
+        for any doc-triggering flow-change pair (schema/contract_boundary is
+        the canonical test pair). It is injected via documentation_gates
+        (post-coder canonical order), never via flow_change_gates.
+      enforced_by: unit_tests/test_bo_2200d_1_i.py::test_documentation_expert_never_double_injected
