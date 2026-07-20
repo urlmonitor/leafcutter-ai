@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A module docstring naming an unregistered component fails as an invalid declaration"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L3
 status: active
 req_status: draft

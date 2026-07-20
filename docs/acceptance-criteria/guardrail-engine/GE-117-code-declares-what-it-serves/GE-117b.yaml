@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Each public function and class states the requirement it satisfies"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L1
 status: active
 req_status: draft

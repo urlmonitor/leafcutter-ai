@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A changed module docstring naming a registered component satisfies the module-component declaration"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

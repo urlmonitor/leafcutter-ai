@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Get stopped before committing code that hides why it exists or where it belongs"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L1
 status: active
 req_status: draft

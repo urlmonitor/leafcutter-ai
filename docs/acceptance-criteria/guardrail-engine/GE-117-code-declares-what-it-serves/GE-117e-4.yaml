@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Sequence diagram: the fix-or-opt-out route out of a declaration block"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

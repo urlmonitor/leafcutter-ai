@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A commit is blocked by default when any in-scope declaration is missing or invalid"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

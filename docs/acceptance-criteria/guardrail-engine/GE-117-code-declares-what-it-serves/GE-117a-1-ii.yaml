@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A changed file with no module docstring is not double-reported by the component-declaration check"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L3
 status: active
 req_status: draft

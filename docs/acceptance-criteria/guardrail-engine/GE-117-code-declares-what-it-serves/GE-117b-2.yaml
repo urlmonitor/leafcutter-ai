@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A well-formatted AC reference that points to no existing AC fails as invalid"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

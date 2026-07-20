@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Guided autofix inserts the correct declaration so the corrected commit proceeds"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

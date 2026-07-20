@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "How-to guide: the extended decision-history tail-tag with ticket and AC references"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

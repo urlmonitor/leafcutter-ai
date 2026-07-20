@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A private symbol is never required to declare an AC, and __all__ overrides the underscore rule"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L3
 status: active
 req_status: draft

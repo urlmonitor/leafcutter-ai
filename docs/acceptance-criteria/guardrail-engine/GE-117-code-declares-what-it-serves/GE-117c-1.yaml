@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A new decision-history entry carrying a resolvable AC reference satisfies the entry-AC declaration"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

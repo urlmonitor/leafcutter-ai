@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "When the component or AC cannot be inferred unambiguously, autofix prompts instead of guessing"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L3
 status: active
 req_status: draft

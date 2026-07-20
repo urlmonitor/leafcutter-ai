@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A new decision-history entry may inherit its enclosing symbol's AC unless it serves a different one"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L3
 status: active
 req_status: draft

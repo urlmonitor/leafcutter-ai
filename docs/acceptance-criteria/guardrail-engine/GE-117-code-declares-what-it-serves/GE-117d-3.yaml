@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "A deliberately configured warn tier reports violations without blocking, and block is the default"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L2
 status: active
 req_status: draft

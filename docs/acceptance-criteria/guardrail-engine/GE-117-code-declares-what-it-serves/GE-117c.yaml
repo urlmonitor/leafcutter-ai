@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Each new decision-history note records the requirement behind the change"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L1
 status: active
 req_status: draft

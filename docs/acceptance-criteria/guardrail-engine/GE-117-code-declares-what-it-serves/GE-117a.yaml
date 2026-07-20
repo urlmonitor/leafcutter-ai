@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Each file states which part of the system it belongs to"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L1
 status: active
 req_status: draft

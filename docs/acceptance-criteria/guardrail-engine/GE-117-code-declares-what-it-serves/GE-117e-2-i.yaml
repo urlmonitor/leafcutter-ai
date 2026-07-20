@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "An opt-out with no reason, or a global silent disable, does not clear the block"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L3
 status: active
 req_status: draft

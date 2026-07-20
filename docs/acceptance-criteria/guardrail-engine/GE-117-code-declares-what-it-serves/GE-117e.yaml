@@ -3,6 +3,8 @@ readiness: draft
 priority: medium
 title: "Fix a missing declaration quickly, or deliberately opt out when it truly does not apply"
 component: guardrail-engine
+components:
+  - commit_guardian
 level: L1
 status: active
 req_status: draft
