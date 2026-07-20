@@ -207,25 +207,96 @@ def _strip_quote_chars(title: str) -> str:
     return title.translate(str.maketrans("", "", _QUOTE_CHARS_TO_STRIP))
 
 
+def _normalize_non_ascii_punct(title: str) -> str:
+    """Normalize non-ASCII punctuation and symbols to spaces (word-boundary treatment).
+
+    Characters with Unicode category P* (punctuation) or S* (symbol) or Z*
+    (separator) that are not ASCII are replaced with a space so they are
+    treated as word boundaries rather than being carried through literally
+    into the PascalCase result.  This covers em-dash (U+2014), en-dash
+    (U+2013), smart quotes, ellipsis, bullet points, and similar
+    path-hostile characters.
+
+    ASCII characters are passed through unchanged.  Characters that are
+    neither ASCII nor classified as punctuation/symbol/separator (e.g.
+    accented letters used as genuine word characters) are also passed
+    through unchanged.
+
+    This function is a pure string transformation with no I/O and must NOT
+    be wrapped in try/except (Error Handling Policy Rule 4).
+
+    Args:
+        title: Title string that may contain non-ASCII punctuation.
+
+    Returns:
+        Title string with non-ASCII punctuation/symbols/separators replaced
+        by single spaces.
+    """
+    import unicodedata  # noqa: PLC0415 — stdlib, deferred for module-load performance
+    result: list[str] = []
+    for ch in title:
+        if ord(ch) < 128:
+            result.append(ch)
+        else:
+            cat = unicodedata.category(ch)
+            if cat.startswith("P") or cat.startswith("S") or cat.startswith("Z"):
+                result.append(" ")
+            else:
+                result.append(ch)
+    return "".join(result)
+
+
 def _to_pascal_case(title: str) -> str:
     """Convert a human-readable title string to PascalCase.
 
-    Strips apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
-    in-place before splitting so that a quote embedded mid-word
-    (e.g. ``user's``) joins its adjacent letters into a single
-    PascalCase word (e.g. ``Users``) rather than creating a word boundary.
-
-    Splits on spaces, hyphens, and underscores. Capitalises the first
-    character of each word and joins without separators.
+    Pre-processing pipeline (applied in this order):
+    1. Strip leading/trailing whitespace.
+    2. Strip apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
+       in-place via :func:`_strip_quote_chars` so that a quote embedded
+       mid-word (e.g. ``user's`` / ``customer’s``) joins its adjacent letters
+       into a single PascalCase word (e.g. ``Users``/``Customers``) rather than
+       creating a word boundary. This runs BEFORE non-ASCII normalisation so the
+       curly apostrophe U+2019 is removed in-place instead of being turned into
+       a space.
+    3. Normalise remaining non-ASCII punctuation (em-dash, en-dash, ellipsis,
+       etc.) to spaces via :func:`_normalize_non_ascii_punct` so that they act
+       as word boundaries and do not appear literally in the output.
+    4. Idempotence guard (acronym-safe): if the pre-processed string is a
+       single token with a leading uppercase letter and no word separators
+       (i.e. it is already PascalCase, such as a name previously produced by
+       this function or by :func:`_derive_epic_name`), it is returned
+       unchanged. This keeps re-application safe — e.g. a derived epic name
+       passed back through :func:`assemble_epic_folder` — without corrupting
+       casing, while a raw title containing an acronym (``validate API inputs``)
+       still lower-cases the acronym tail (``ValidateApiInputs``) because it
+       contains word separators and so skips the guard.
+    5. Split on whitespace, hyphens, and underscores.
+    6. Capitalise the first character of each non-empty token and join without
+       separators.
 
     Args:
         title: The AC title string (e.g. "validate api inputs").
 
     Returns:
-        PascalCase string (e.g. "ValidateApiInputs").
+        PascalCase string (e.g. "ValidateApiInputs").  The result contains
+        only the characters that survive pre-processing; non-ASCII punctuation
+        is absent from the output.
     """
-    stripped = _strip_quote_chars(title.strip())
-    words = re.split(r"[\s\-_]+", stripped)
+    # Strip apostrophe/quote characters (incl. non-ASCII U+2019) FIRST, in-place,
+    # so a quote embedded mid-word (e.g. "user's" / "customer’s") joins its
+    # adjacent letters ("Users"/"Customers") rather than becoming a word boundary.
+    # This must precede non-ASCII normalisation, which would otherwise turn the
+    # curly apostrophe U+2019 into a space and split the word.
+    dequoted = _strip_quote_chars(title.strip())
+    normalized = _normalize_non_ascii_punct(dequoted)
+    # Idempotence guard (acronym-safe): an already-PascalCase single token
+    # (leading uppercase, no word separators) is returned unchanged so that
+    # re-applying the conversion does not corrupt casing (dry-run/real-run
+    # parity, ACD-1200a-3-iii), while raw titles with separators still flow
+    # through the split+capitalise path below.
+    if normalized and normalized[0].isupper() and not re.search(r"[\s\-_]", normalized):
+        return normalized
+    words = re.split(r"[\s\-_]+", normalized)
     return "".join(word.capitalize() for word in words if word)
 
 
@@ -831,9 +902,10 @@ def assemble_epic_folder(
     Args:
         ticket_paths: Ordered list of existing ticket file paths (strings or
                       Path objects). Must not be empty.
-        epic_name: Human-readable name for the EPIC (e.g. "validate api inputs"
-                   or "ValidateApiInputs"). PascalCase conversion is applied
-                   automatically.
+        epic_name: Human-readable name for the EPIC (e.g. ``"validate api inputs"``
+                   or ``"ValidateApiInputs"``).  PascalCase conversion is applied
+                   automatically and is idempotent — passing an already-PascalCase
+                   string returns it unchanged (n_location_rule: 1).
         inbox_dir: Absolute path to the tickets inbox root
                    (e.g. ``tickets/00_inbox``).
 
@@ -2191,5 +2263,19 @@ DECISION HISTORY
   receives a worktree root for relativisation when inbox_dir follows the
   convention; falls back to None otherwise). Covered by
   tests/test_goal_to_epic_worktree_skip.py.
+- 2026-07-17 [ACD-1200a-3-iii]: ASCII-safe slug and dry-run/real-run parity.
+  Implements ACD-1200a-3-iii: (1) Added _normalize_non_ascii_punct() to strip
+  non-ASCII punctuation (em-dash, en-dash, smart quotes, etc.) to spaces before
+  PascalCase conversion, ensuring the derived folder name contains only ASCII
+  alphanumeric characters. (2) Updated _to_pascal_case() split regex to
+  r"(?=[A-Z])|[\\s\\-_]+" so the function is idempotent on already-PascalCase
+  strings (splits on PascalCase word boundaries in addition to whitespace/hyphens).
+  (3) Removed redundant _to_pascal_case() call from assemble_epic_folder(); the
+  caller (run()) already passes a pre-derived PascalCase epic_name from
+  _derive_epic_name(), and re-applying the conversion corrupted the casing via
+  str.capitalize() on a single-token PascalCase string. Both dry-run and real-run
+  now use the same derived name from a single shared code path (n_location_rule: 1).
+  Must not regress ACD-1200a-3-ii (apostrophe/quote stripping still applied via
+  _strip_quote_chars() in _to_pascal_case()).
 ====================================================================
 """
