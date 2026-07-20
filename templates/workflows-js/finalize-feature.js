@@ -1864,6 +1864,11 @@ return {
   // In-order per-step outcome record (AC BO-1000b-1).
   // Consumed by BO-1000b-2 (end-of-run summary) and BO-1000c-1a (live relay).
   step_outcomes: stepOutcomes,
+  // End-of-run summary composed from the recorded per-step outcomes (AC BO-1000b-2).
+  // Each step is listed alongside the specific outcome text it recorded — not a bare
+  // overall status. Sourced directly from stepOutcomes[] so the summary cannot
+  // diverge from what was narrated live.
+  step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   message:
     `Feature "${BRANCH}" finalized. ` +
     `Steps completed: [${completedSteps.join(", ")}]. ` +
