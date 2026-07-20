@@ -68,6 +68,33 @@ const GATE_SCHEMA = {
 }
 
 // ---------------------------------------------------------------------------
+// Narration helper — AC BO-1000a-1
+//
+// Emits a start-of-step progress line on the workflow's narration channel
+// (via log()) at the entry of each numbered step, BEFORE the step's first
+// agent() dispatch.
+//
+// The 'progressText' argument carries the literal 'Step X of N' label so the
+// text is statically visible to tooling and tests that parse the source file.
+// ---------------------------------------------------------------------------
+
+/**
+ * Emit a start-of-step progress line on the workflow's narration channel.
+ *
+ * Invoke at the entry of each numbered step, before the step's first agent()
+ * dispatch (AC BO-1000a-1). Pass the literal 'Step X of N' position as
+ * progressText — do NOT use a template expression — so the text is visible
+ * to static analysis and text-based tests.
+ *
+ * @param {string} progressText - Literal position label, e.g. 'Step 0 of 9'.
+ * @param {string} description  - Human-readable description of what this step
+ *   is about to do.
+ */
+function narrate(progressText, description) {
+  log(progressText + ': ' + description);
+}
+
+// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 //
 // NOTE on leaf invariant: workflow() is NOT called anywhere in this script.
@@ -426,6 +453,8 @@ if (GH_TARGET_ACCOUNT) {
 
 phase('Step 0')
 
+narrate('Step 0 of 9', 'Capturing pre-merge test baseline on current main HEAD...')
+
 // Set the cleanup guard path so cleanupBaselineWorktree() can remove it on
 // any early exit after this point. Step 0 clears it on success (step D).
 // baselineTmpPath uses args.baseline_ts (replaces Date.now(), banned in E2).
@@ -525,6 +554,8 @@ if (baselineStatus === "ok") {
 
 phase('Step 1')
 
+narrate('Step 1 of 9', 'Checking for an open pull request; opening one if missing...')
+
 const prProbeResult = await agent(
   `Run: gh pr list --head "${BRANCH}" --json number,url --jq '.[0]'\n` +
   "Return ONLY a JSON object:\n" +
@@ -597,6 +628,8 @@ if (prProbe.found) {
 // -------------------------------------------------------------------------
 
 phase('Step 2')
+
+narrate('Step 2 of 9', 'Merging origin/main into the feature worktree before running tests...')
 
 const mergeMainResult = await agent(
   "Run these commands inside the feature worktree to merge origin/main before tests.\n" +
@@ -684,6 +717,8 @@ const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 // -------------------------------------------------------------------------
 
 phase('Step 3')
+
+narrate('Step 3 of 9', 'Running post-merge tests and triaging any failures...')
 
 // FIN-100a-4: deploy shims before running the suite, same as Step 0 baseline.
 // Without this, ~13 deploy-dependent tests fail RED in Step 3 while passing
@@ -959,6 +994,8 @@ if (testPassed) {
 // -------------------------------------------------------------------------
 
 phase('Step 3.5')
+
+narrate('Step 3.5 of 9', 'Closing in-scope tickets and source ACs on the feature branch before merge...')
 
 // Probe: check whether a closure commit already exists on the branch.
 const closureProbeResult = await agent(
@@ -1423,6 +1460,8 @@ if (syncStatus === "pushed") {
 
 phase('Step 4')
 
+narrate('Step 4 of 9', 'Merging the pull request to main after tests pass...')
+
 // Defensive guard: blocks_finalization should never be true here (step 3 halts),
 // but guard against edge cases.
 if (triageReport !== null && triageReport.blocks_finalization) {
@@ -1518,6 +1557,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
 
 phase('Step 5')
 
+narrate('Step 5 of 9', 'Syncing local main with origin after the pull request merge...')
+
 const syncResult = await agent(
   "Run these commands in sequence using the explicit repo root to avoid CWD ambiguity:\n" +
   `1. git -C "${WORKTREE_ROOT}" checkout main\n` +
@@ -1535,6 +1576,8 @@ completedSteps.push(5);
 // -------------------------------------------------------------------------
 
 phase('Step 6')
+
+narrate('Step 6 of 9', 'Reporting untracked pre-existing and flaky failures, then detecting branch scope...')
 
 // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
 if (triageReport !== null) {
@@ -1621,6 +1664,8 @@ if (closeInfo.skipped) {
 // -------------------------------------------------------------------------
 
 phase('Step 7')
+
+narrate('Step 7 of 9', 'Removing the feature worktree after finalization is complete...')
 
 const worktreeProbeResult = await agent(
   `Run: git -C "${WORKTREE_ROOT}" worktree list --porcelain\n` +
