@@ -3,6 +3,7 @@ title: "Documentation Index"
 type: reference
 status: active
 created: 2026-06-30
+last_updated: '2026-07-20'
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -12,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-17 09:05 UTC
+> Generated: 2026-07-20 22:26 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -132,6 +133,7 @@ task, then pull only those files.
 | agent teams constraints | [docs/reference/agent-teams-constraints.md](docs/reference/agent-teams-constraints.md) | Reference: Claude Code Agent Teams Constraints |
 | agent template frontmatter | [docs/reference/agent-template-frontmatter.md](docs/reference/agent-template-frontmatter.md) | Reference: Agent Template Frontmatter Fields |
 | claude code hooks | [docs/reference/claude-code-hooks.md](docs/reference/claude-code-hooks.md) | Reference guide for Claude Code PreToolUse and PostToolUse hooks — hook types, registration format, exit-code contract, and the fail-open convention. |
+| documentation coverage guarantee | [docs/reference/documentation-coverage-guarantee.md](docs/reference/documentation-coverage-guarantee.md) | Lookup reference for the documentation-coverage guarantee: the declarative documentation_gates trigger policy, the documentation-verifier enforcement phase, and the Agent Contracts brief that is the single source of truth for what documentation is demanded and verified. |
 | feedback concurrency | [docs/reference/feedback-concurrency.md](docs/reference/feedback-concurrency.md) | Reference: Feedback Client Concurrency Limitation |
 | frontend coder capabilities | [docs/reference/frontend-coder-capabilities.md](docs/reference/frontend-coder-capabilities.md) | frontend-coder Unified Agent — Preserved Capabilities Reference |
 | skill frontmatter | [docs/reference/skill-frontmatter.md](docs/reference/skill-frontmatter.md) | Reference: SKILL.md Frontmatter Fields |

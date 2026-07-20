@@ -712,10 +712,22 @@ def _build_agents_map(
         _TDD_MANDATORY: frozenset[str] = frozenset({"test-writer", "test-runner"})
         tdd_protected: set[str] = all_needed & _TDD_MANDATORY
 
+        # Determine documentation-mandatory agents that cannot be overridden (BO-2200b-5).
+        # When the documentation trigger fires and injects documentation-expert and
+        # documentation-verifier, those agents cannot be excluded by not_needed_overrides —
+        # the computed documentation chain wins, identical to the TDD-mandatory protection
+        # above.  A not_needed override attempt is silently ignored for either agent when
+        # the trigger fired (computed chain wins).
+        _DOC_MANDATORY: frozenset[str] = frozenset(
+            {"documentation-expert", "documentation-verifier"}
+        )
+        doc_protected: set[str] = all_needed & _DOC_MANDATORY
+
         # Remove any agent that has an explicit not_needed override,
-        # but protect TDD-mandated agents (BO-550-1-i: computed chain wins).
+        # but protect TDD-mandated agents (BO-550-1-i: computed chain wins)
+        # and doc-mandatory agents (BO-2200b-5: computed doc chain wins).
         for agent in overrides:
-            if agent not in tdd_protected:
+            if agent not in tdd_protected and agent not in doc_protected:
                 all_needed.discard(agent)
 
         # Build ordered result according to the chosen phase order.
@@ -744,6 +756,9 @@ def _build_agents_map(
                     agents[nc_agent] = "not_needed"
             if phase_agent in tdd_protected:
                 # TDD-mandated agents are never overridable (BO-550-1-i).
+                agents[phase_agent] = "needed"
+            elif phase_agent in doc_protected:
+                # Doc-mandatory agents are never overridable (BO-2200b-5).
                 agents[phase_agent] = "needed"
             elif phase_agent in overrides:
                 agents[phase_agent] = "not_needed"

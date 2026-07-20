@@ -38,6 +38,7 @@ title: "Documentation Index"
 type: reference
 status: active
 created: {created}
+last_updated: '{last_updated}'
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -303,7 +304,11 @@ def generate_index(repo_root: Path) -> str:
     existing_index = repo_root / "docs" / "INDEX.md"
     created = _extract_created_date(existing_index) or today_date
 
-    sections: list[str] = [_HEADER_TEMPLATE.format(timestamp=timestamp, created=created)]
+    sections: list[str] = [
+        _HEADER_TEMPLATE.format(
+            timestamp=timestamp, created=created, last_updated=today_date
+        )
+    ]
 
     for heading, rel_path, recursive in _CATEGORIES:
         abs_path = repo_root / rel_path
