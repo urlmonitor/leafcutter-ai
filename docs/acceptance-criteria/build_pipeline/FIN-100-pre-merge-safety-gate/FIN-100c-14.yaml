@@ -1,6 +1,6 @@
 id: FIN-100c-14
-readiness: draft
-priority: medium
+readiness: approved
+priority: low
 components:
   - finalize
 title: "Recovery tests assert observable behavior, not brittle source-substring counts"

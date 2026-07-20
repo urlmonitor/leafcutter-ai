@@ -1,6 +1,6 @@
 id: FIN-100c-15
-readiness: draft
-priority: medium
+readiness: approved
+priority: low
 components:
   - finalize
 title: "The recovered-baseline accumulator is scoped to the recovery block, not to wider function scope"

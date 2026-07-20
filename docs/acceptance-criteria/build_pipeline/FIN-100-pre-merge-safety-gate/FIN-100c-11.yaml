@@ -1,6 +1,6 @@
 id: FIN-100c-11
-readiness: draft
-priority: medium
+readiness: approved
+priority: low
 components:
   - finalize
 title: "Null-baseline recovery attempt is an extracted, independently testable named unit"

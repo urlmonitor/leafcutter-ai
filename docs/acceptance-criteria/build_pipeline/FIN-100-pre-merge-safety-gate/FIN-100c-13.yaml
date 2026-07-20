@@ -1,6 +1,6 @@
 id: FIN-100c-13
-readiness: draft
-priority: medium
+readiness: approved
+priority: low
 components:
   - finalize
 title: "Stale recovery worktree is reclaimed by the recovery path before it creates its own worktree"

@@ -1,6 +1,6 @@
 id: FIN-100c-12
-readiness: draft
-priority: medium
+readiness: approved
+priority: low
 components:
   - finalize
 title: "A recovered baseline is forwarded to triage with its own consistent, non-null baseline SHA"
