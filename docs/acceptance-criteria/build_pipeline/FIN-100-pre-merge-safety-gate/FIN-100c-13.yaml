@@ -1,0 +1,49 @@
+id: FIN-100c-13
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "Stale recovery worktree is reclaimed by the recovery path before it creates its own worktree"
+level: L3
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given a prior interrupted finalize run left a recovery worktree at the
+    deterministic recovery path (the Step-0 baseline path suffixed with
+    "-recovery")
+  And a new finalize run reaches the null-baseline recovery attempt, which reuses
+    that same deterministic recovery path
+  When the recovery attempt prepares to create its temporary main-HEAD worktree
+  Then it first reclaims any pre-existing worktree registered at that recovery
+    path and deletes the leftover directory, before creating the new worktree
+  And the reclaim is performed by the recovery path itself, not left to rely on
+    the Step-0 stale-baseline glob incidentally matching the recovery path
+  And the subsequent worktree creation therefore succeeds, rather than failing
+    with a path-already-exists error that would be misreported as a checkout
+    failure and trigger a false conservative halt (FIN-100c-9)
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "the recovery worktree path is deterministic (`${baselineTmpPath}-recovery`, ~L782) and reused on resume; unlike Step 0's Step-A0 stale-worktree reclaim (~L438-444), the recovery agent's Step A (~L793-798) does no self-reclaim and relies on the incidental Step-0 glob overlap — it must reclaim/remove any pre-existing -recovery worktree before `git worktree add`"
+origin_agent: business-analyst
+created: 2026-07-20
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+req_status: active
+work_status: todo
+notes: |
+  Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
+  Addresses code-review finding L-2: on resume, a leftover -recovery worktree
+  makes `git worktree add` fail, which is misreported as checkout_failed and
+  causes a false conservative halt. Edge-case/robustness on the resume path, so
+  authored as L3. Technical fields left for it-po enrichment.

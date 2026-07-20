@@ -1,0 +1,43 @@
+id: FIN-100c-15
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "The recovered-baseline accumulator is scoped to the recovery block, not to wider function scope"
+level: L3
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given the recovered-baseline accumulator variable used by the null-baseline
+    recovery attempt (its only reader and writer being the recovery block)
+  When the finalize workflow source is inspected
+  Then that variable is declared within the recovery block that reads and writes it
+  And it is not declared at a wider function scope than the recovery block
+  And no code outside the recovery block reads or writes it, and no vestigial
+    wider-scope declaration of it remains
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "`recoveredBaselineFailures` is declared at ~L774 (function/outer scope) but is only read and written inside the recovery block (~L776-870); the declaration should move inside the recovery block so no wider-scope declaration remains"
+origin_agent: business-analyst
+created: 2026-07-20
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+req_status: active
+work_status: todo
+notes: |
+  Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
+  Addresses code-review finding L-4: recoveredBaselineFailures should be declared
+  within the recovery block (its only use site) rather than at wider function
+  scope. Code-hygiene robustness, authored as L3. Technical fields left for it-po
+  enrichment.

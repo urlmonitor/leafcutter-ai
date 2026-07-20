@@ -1,0 +1,53 @@
+id: FIN-100c-11
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "Null-baseline recovery attempt is an extracted, independently testable named unit"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given the null-baseline recovery attempt currently inlined in the finalize
+    workflow's Step 3 (the block guarded by the baseline being null and a
+    non-empty post-merge failure set)
+  When the recovery logic is invoked
+  Then the recovery attempt is expressed as a single named unit (a function or
+    helper) that accepts the post-merge failing test IDs and the recovery result
+    as inputs and returns either the recovered baseline list or null
+  And that named unit is exercised by at least one unit test in isolation —
+    without running the full finalize workflow — that asserts: given a recovery
+    result reporting that a subset of the post-merge failures also fail on main
+    HEAD, the unit returns exactly that subset as the recovered baseline
+  And a second isolated test asserts that a rerun-unavailable recovery result
+    (checkout failed, build/deploy failed, or unparseable output) makes the unit
+    return null
+  And the main Step-3 flow delegates to this named unit rather than restating the
+    recovery logic inline, mirroring the existing Step 0 / cleanupBaselineWorktree
+    extraction pattern
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "the ~85-line inlined recovery block (guarded by baselineFailures === null && postMergeFailures.length > 0, ~L774-871) that must be extracted into a named unit returning the recovered baseline list or null, mirroring the Step 0 baseline helper and cleanupBaselineWorktree extraction"
+origin_agent: business-analyst
+created: 2026-07-20
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+req_status: active
+work_status: todo
+notes: |
+  Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
+  Addresses code-review finding M-3: the recovery attempt should be a single
+  named, isolatedly-testable unit rather than ~85 lines inlined in the Step-3
+  flow. Technical fields (assigned_agent, it_requirements, test_spec) left for
+  it-po enrichment.

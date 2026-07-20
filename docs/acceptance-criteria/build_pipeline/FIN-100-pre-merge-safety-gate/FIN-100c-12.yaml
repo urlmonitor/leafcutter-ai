@@ -1,0 +1,51 @@
+id: FIN-100c-12
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "A recovered baseline is forwarded to triage with its own consistent, non-null baseline SHA"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given the Step-0 baseline was unavailable (the forwarded baseline SHA is null)
+    and the post-merge run reported failing tests
+  When the targeted main-HEAD rerun completes successfully and a recovered
+    baseline is forwarded to triage
+  Then the recovery reports the origin/main HEAD commit SHA of the checkout the
+    rerun was performed against
+  And the workflow sets the baseline SHA forwarded to triage to that recovered
+    SHA (a non-null value) rather than leaving it null
+  And the pair forwarded to triage is consistent: whenever the recovered baseline
+    list is non-null, the accompanying baseline SHA is also non-null and equals
+    the SHA of the checkout the rerun ran against
+  And when the targeted rerun is unavailable and no recovered baseline is produced,
+    the baseline SHA forwarded to triage remains null
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+  - FIN-100c-6
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "recovery success path (~L837-848) sets baselineFailures to the recovered list but leaves baselineSha null; the triage dispatch (~L885-889) forwards baseline_sha=baselineSha — the recovery agent must return the checked-out origin/main HEAD SHA and the workflow must set the forwarded baseline SHA to it so a recovered baseline is never paired with a null SHA"
+origin_agent: business-analyst
+created: 2026-07-20
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+req_status: active
+work_status: todo
+notes: |
+  Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
+  Addresses code-review finding L-1: a non-null recovered baseline is currently
+  forwarded to triage while baseline_sha stays null (an inconsistent pair). The
+  recovery agent should return the origin/main HEAD SHA it checked out and the
+  workflow should forward it. Technical fields (assigned_agent, it_requirements,
+  test_spec) left for it-po enrichment.

@@ -1,0 +1,50 @@
+id: FIN-100c-14
+readiness: draft
+priority: medium
+components:
+  - finalize
+title: "Recovery tests assert observable behavior, not brittle source-substring counts"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given the test file covering the null-baseline targeted-rerun recovery
+  When its test functions verify the recovery behavior
+  Then no test gates on a count of source substrings in the workflow file text
+    (for example the number of occurrences of a worktree-add command string or of
+    a build-script path string)
+  And coverage of the recovery behavior is obtained by executing the recovery path
+    under the workflow test harness and asserting observable outcomes — the
+    recovered baseline forwarded to triage, the conservative fallback on a
+    rerun-unavailable result, and the worktree cleanup
+  And a benign refactor that preserves recovery behavior but changes source
+    wording or command spelling does not fail these tests
+  And an inverted recovery decision (for example forwarding a non-null recovered
+    baseline when the rerun was unavailable, or leaving the baseline null when a
+    recovered baseline was produced) is caught by at least one behavioral test
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "the recovery branch (~L774-871) whose behavior the tests must exercise via the run_workflow_under_e2 harness rather than counting occurrences of source substrings such as `worktree add --detach` or `scripts/build.py`"
+origin_agent: business-analyst
+created: 2026-07-20
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+req_status: active
+work_status: todo
+notes: |
+  Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
+  Addresses code-review finding L-3: the recovery tests must not gate on brittle
+  source-substring count thresholds; coverage must come from behavioral execution
+  (via the run_workflow_under_e2 harness) so benign refactors don't break tests
+  and inverted logic is caught. Technical fields left for it-po enrichment.
