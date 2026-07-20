@@ -1,0 +1,46 @@
+id: GE-117b
+readiness: draft
+priority: medium
+title: "Each public function and class states the requirement it satisfies"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Every public function or class points to the requirement it fulfils.
+
+  When you read a new or changed public function or class, its description
+  references the acceptance criterion it satisfies — so you can trace any piece
+  of behaviour straight back to the requirement that asked for it.
+depends_on: [GE-117]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117b-1
+  - GE-117b-2
+  - GE-117b-3
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  PO authoring note (for the BA). This L1 owns the PUBLIC FUNCTION/CLASS docstring
+  declaration: the docstring must reference the AC the symbol satisfies, and that
+  reference must resolve to a real AC id in the store (a valid, existing AC —
+  not merely well-formatted text). Scope is diff-only and PUBLIC symbols only:
+  new or changed public functions/classes; private/internal helpers and legacy
+  symbols are out of scope (mirrors the tail-tag convention). This LAYERS ON TOP
+  of GE-100's docstring-presence requirement — do not re-specify that a docstring
+  must exist; specify that, given one exists on a public symbol in the diff, it
+  must carry a valid AC reference. Enforcement action lives in GE-117d.
+  Open question for BA/IT-PO: exact definition of "public" (naming convention vs
+  __all__ vs export surface) — do not assume; decide at L2.
+  documentation_triggers [how-to] — authors need guidance on where/how to cite
+  the AC in a function/class docstring.

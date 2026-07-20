@@ -1,0 +1,53 @@
+id: GE-117c-2
+readiness: draft
+priority: medium
+title: "How-to guide: the extended decision-history tail-tag with ticket and AC references"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117c.yaml"
+criteria: |
+  Given a developer is adding a new decision-history entry that must record the AC
+    behind the change
+  When the developer opens the how-to guide for the decision-history declaration
+  Then the guide shows the updated tail-tag form carrying both the existing ticket
+    reference and the new AC reference on a new entry
+  And the guide states that only newly added entries must carry the AC reference and
+    that pre-existing entries are never retrofitted
+  And the guide explains when an entry may inherit the enclosing symbol's AC and
+    when it must carry its own reference
+  And the guide states that the referenced AC must resolve to a real AC in the store
+    or the commit is blocked
+depends_on:
+  - GE-117c
+  - GE-117c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
+  - "Document the EXTENDED tail-tag (existing ticket ref + new AC ref); do NOT re-document the existing ticket-tag mechanics — layer the AC dimension on top, consistent with the GE-117c-1 implementation."
+  - "Reflect the inheritance rule from GE-117c-1-i and the diff-only legacy guarantee from GE-117c-1; link (not duplicate) the GE-117d-4 block-flow how-to."
+delivers_to: null
+expects_from:
+  ac_id: GE-117c-1
+  contract: "The extended tail-tag behavior (ticket + AC, diff-only, inheritance) the how-to documents"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117c documentation_triggers [how-to]. Teaches the
+  UPDATED tail-tag format (ticket + AC) — does not re-document the existing ticket
+  tag mechanics, layers the AC dimension on top. Must reflect the inheritance rule
+  from GE-117c-1-i and the diff-only legacy guarantee from GE-117c-1.

@@ -1,0 +1,57 @@
+id: GE-117d
+readiness: draft
+priority: medium
+title: "Get stopped before committing code that hides why it exists or where it belongs"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A commit is blocked when in-scope code fails to declare its requirement and its component.
+
+  When new or changed code lacks a valid requirement reference or a valid
+  component reference where one is required, the commit is stopped with a clear,
+  actionable message naming the file and what is missing — so undeclared code can
+  never silently reach the repository.
+depends_on: [GE-117]
+doc_links:
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117d-1
+  - GE-117d-2
+  - GE-117d-3
+  - GE-117d-4
+  - GE-117d-5
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+notes: |
+  PO authoring note (for the BA). This L1 owns the ENFORCEMENT ACTION for the
+  three declaration requirements (GE-117a module→component, GE-117b public
+  symbol→AC, GE-117c new decision-history entry→AC). User-confirmed decision:
+  FAIL-CLOSED / BLOCKING by default — the commit is REJECTED when an in-scope
+  declaration is missing or invalid. This is the headline guarantee; do NOT
+  decompose warn-only as the default behaviour at L2. A configurable warn tier
+  may exist as a deliberately-opted-into behaviour (mirroring GE-100's
+  warn-vs-block config), but the default and headline behaviour is BLOCK.
+  Scope of what triggers the block is diff-only (new/changed code), inherited
+  from GE-117a/b/c — this L1 does not redefine scope, only the action taken when
+  those requirements are violated. The error message must name the file and the
+  specific missing/invalid reference so it is actionable. The escape hatch that
+  keeps this block from being a dead end is GE-117e — keep the two separate:
+  GE-117d = the block; GE-117e = the opt-out/autofix route out.
+  documentation_triggers [how-to, sequence-diagram] — a new commit-time guardrail
+  behaviour authors must understand (how-to) plus a multi-actor commit-time
+  interaction (developer -> hook -> AC store / component registry -> commit
+  decision) that warrants a sequence diagram.

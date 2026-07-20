@@ -1,0 +1,57 @@
+id: GE-117e
+readiness: draft
+priority: medium
+title: "Fix a missing declaration quickly, or deliberately opt out when it truly does not apply"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A guided way to add the missing declaration, or a deliberate opt-out, so the block is never a dead end.
+
+  When your commit is stopped for a missing requirement or component reference,
+  you get a fast path to add the correct declaration — and, for the rare case
+  where it genuinely does not apply, a deliberate, visible opt-out — so the
+  guardrail protects you without ever trapping you.
+depends_on: [GE-117]
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117e-1
+  - GE-117e-2
+  - GE-117e-3
+  - GE-117e-4
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+notes: |
+  PO authoring note (for the BA). This L1 is the ESCAPE HATCH that keeps GE-117d's
+  block from being a dead end — consistent with GE-111d's reconciliation escape
+  routes and GE-100's warn-vs-block config precedent. Two intended routes (keep
+  both distinct, do not collapse to one):
+    1. FIX / AUTOFIX — a guided or automated way to insert the correct
+       declaration (component reference on a module docstring; AC reference on a
+       public symbol or new decision-history entry) so the same commit proceeds
+       once corrected.
+    2. DELIBERATE OPT-OUT — a visible, intentional way to mark an in-scope item
+       as genuinely not requiring a declaration, so the guardrail does not trap
+       legitimate edge cases. The opt-out must be deliberate and auditable, NOT
+       a silent global disable that would defeat GE-117d's fail-closed default.
+  OPEN QUESTIONS for BA/IT-PO (do not assume): the exact opt-out mechanism and
+  its durability (inline marker vs config allowlist vs per-file annotation);
+  whether the autofix can safely infer the component (from directory_patterns in
+  components.json) or the AC (from ticket/AC context) or must prompt; and how the
+  opt-out is surfaced so it stays visible in review rather than hidden. Tie the
+  autofix's component inference to the components.json directory_patterns field
+  precedent used by /quick-fix.
+  documentation_triggers [how-to, sequence-diagram] — the fix/opt-out is a guided
+  user action (how-to) and a multi-step developer<->hook<->store interaction
+  (sequence-diagram).

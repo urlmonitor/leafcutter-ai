@@ -1,0 +1,71 @@
+id: GE-117d-1
+readiness: draft
+priority: medium
+title: "A commit is blocked by default when any in-scope declaration is missing or invalid"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+criteria: |
+  Given the declaration checks have produced at least one missing-declaration or
+    invalid-declaration verdict for in-scope staged code
+  And no enforcement mode has been deliberately configured
+  When the commit-time guardrail runs on the staged commit
+  Then the commit is rejected
+  And the guardrail reports each offending item naming the file, the surface
+    (module component, public symbol, or new decision-history entry), and whether
+    the declaration was missing or invalid
+  And for an invalid declaration the report names the unresolved value that was
+    declared
+
+  Given the declaration checks have produced verdicts for module-component,
+    symbol-AC, and decision-history-AC surfaces in the same commit, with at least
+    one violation on more than one surface
+  When the commit-time guardrail runs
+  Then the commit is rejected
+  And the report enumerates every offending item across all three surfaces rather
+    than stopping at the first
+depends_on:
+  - GE-117d
+  - GE-117a-1
+  - GE-117b-1
+  - GE-117c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+    relationship: parent
+    status: exists
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Aggregate the verdicts from ALL THREE surface producers — module-component (GE-117a-1), symbol-ac (GE-117b-1), and decision-history-ac (GE-117c-1) — into one block/proceed decision. expects_from names GE-117a-1 as the primary upstream (single-valued field); GE-117b-1 and GE-117c-1 are equally-required secondary upstreams, carried here via depends_on and this requirement. The aggregator must consume all three verdict shapes uniformly."
+  - "DEFAULT action on any missing/invalid in-scope verdict is BLOCK (fail-closed) — this is user-confirmed and must NOT be relaxed to a warn/advisory default; a warn tier exists only as the deliberate opt-in in GE-117d-3."
+  - "Enumerate ALL offending items across all three surfaces (never stop at the first); the block report lists per item {file, surface, missing|invalid, declared_value-when-invalid}."
+  - "The block report is the single actionable payload consumed by the developer and by GE-117e-1 (autofix) / GE-117e-2 (opt-out); keep its item shape stable so those consumers can act on file+surface+missing/invalid+declared-value."
+  - "Scope of what triggers the block is diff-only, inherited from GE-117a/b/c — do not redefine scope here."
+  - "Register/aggregate within the same commit_guardian.json hook wiring (config section + hooks_manifest entry, tier: judgment); fail-open on INTERNAL error (exit 0, stderr advisory, clean stdout) so an internal fault never masquerades as a violation. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "The block/proceed decision plus the aggregated actionable report (file + surface + missing|invalid + declared value per item) consumed by the developer and by GE-117e's message/route rendering"
+expects_from:
+  ac_id: GE-117a-1
+  contract: "The per-file/per-symbol/per-entry declaration verdicts (satisfied|missing|invalid) that the enforcement action consumes"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Owns the FAIL-CLOSED headline guarantee (user-confirmed, do NOT re-litigate): the
+  DEFAULT action on any missing/invalid in-scope declaration is BLOCK. Aggregates
+  verdicts from all three surfaces (GE-117a-1 / GE-117b-1 / GE-117c-1) and enumerates
+  ALL offenders (never first-only), mirroring the enumerate-all-drifted-pairs
+  precedent. The actionable message content (naming file + what's missing) lives
+  here as the block report; GE-117e renders the routes OUT of the block. Scope of
+  what triggers the block is diff-only, inherited from a/b/c — not redefined here.
+  Warn tier is a deliberate opt-in only (GE-117d-3), never the default.

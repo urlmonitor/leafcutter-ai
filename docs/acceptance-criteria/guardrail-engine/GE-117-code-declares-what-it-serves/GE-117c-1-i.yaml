@@ -1,0 +1,64 @@
+id: GE-117c-1-i
+readiness: draft
+priority: medium
+title: "A new decision-history entry may inherit its enclosing symbol's AC unless it serves a different one"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117c.yaml"
+criteria: |
+  Given the staged commit adds a new decision-history entry inside a public symbol
+  And that symbol already declares an acceptance-criterion reference that resolves
+    to a real AC id
+  And the new entry carries no acceptance-criterion reference of its own
+  When the declaration check evaluates the newly added decision-history entry
+  Then the check produces a satisfied verdict for the entry by inheriting the
+    enclosing symbol's resolved AC reference
+
+  Given the staged commit adds a new decision-history entry inside a public symbol
+    that declares AC "AC-A"
+  And the new entry carries its own acceptance-criterion reference "AC-B" that
+    resolves to a real AC id different from the enclosing symbol's
+  When the declaration check evaluates the newly added decision-history entry
+  Then the check produces a satisfied verdict using the entry's own reference "AC-B"
+
+  Given the staged commit adds a new decision-history entry at module level with no
+    enclosing symbol
+  And the new entry carries no acceptance-criterion reference of its own
+  When the declaration check evaluates the newly added decision-history entry
+  Then the check produces a missing-declaration verdict, because there is no
+    enclosing symbol reference to inherit
+depends_on:
+  - GE-117c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117c-1.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Determine the enclosing symbol of a new decision-history entry from the same ast parse used for GE-117b (map the entry's source line into the enclosing FunctionDef/ClassDef span); inheritance applies only when that enclosing symbol has a RESOLVED AC reference."
+  - "Precedence: an entry's OWN resolvable AC reference always wins over the enclosing symbol's (scenario 2); inheritance is a fallback only when the entry carries no own reference."
+  - "A module-level entry (no enclosing symbol) with no own reference has nothing to inherit and yields a missing verdict (scenario 3); do not silently pass it."
+  - "Reuse the shared _load_ac_by_id resolver for both the entry's own ref and the inherited ref; no separate resolution path. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117c-1
+  contract: "The per-entry decision-history verdict whose inheritance branch this edge case defines"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ENCODES the deferred inheritance decision (resolution #2). An entry inside a public
+  symbol that already declares a resolvable AC may inherit it (avoids forcing a
+  redundant duplicate tag on every entry, keeping the tail-tag ergonomics the PO
+  wanted). It MUST carry its own explicit reference when it records a change serving
+  a DIFFERENT AC (scenario 2 shows its own ref wins) or when it is a module-level
+  entry with no enclosing declared symbol to inherit from (scenario 3 -> missing).
+  Net guarantee: every new entry resolves to SOME valid AC, without redundant tags
+  in the common case.

@@ -1,0 +1,79 @@
+id: GE-117b-1
+readiness: draft
+priority: medium
+title: "A changed public symbol docstring referencing a real AC satisfies the symbol-AC declaration"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+criteria: |
+  Given a public function or class is new or changed in the staged commit
+  And a symbol is public when its name does not start with an underscore, except
+    that when the module defines __all__ the __all__ membership is authoritative
+    (a name listed in __all__ is public; a name absent from __all__ is not)
+  And the symbol's docstring references an acceptance criterion that resolves to a
+    real AC id in the store
+  When the declaration check evaluates the symbol
+  Then the check produces a satisfied verdict for that symbol's AC declaration
+
+  Given a public function or class is new or changed in the staged commit
+  And its docstring exists but references no acceptance criterion
+  When the declaration check evaluates the symbol
+  Then the check produces a missing-declaration verdict naming the symbol and the
+    symbol-AC declaration as the missing requirement
+
+  Given a public function or class is unchanged in the staged commit
+  And its docstring references no acceptance criterion
+  When the declaration check evaluates the staged diff
+  Then the check produces no verdict for that unchanged symbol
+depends_on:
+  - GE-117b
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement the symbol-AC surface in the same NEW hook check_declaration_traceability.py (module and symbol surfaces share the hook); the decision-history surface (GE-117c) EXTENDS the existing check_documentation.py tail-tag validator — do not duplicate AC-resolution logic across the two, share it (see next requirement)."
+  - "Discover top-level public symbols by parsing the STAGED blob in-process with the Python stdlib ast module: walk module-body FunctionDef/AsyncFunctionDef/ClassDef nodes. A symbol is public when its name does not start with '_', EXCEPT that when the module defines __all__ the __all__ membership is authoritative. No MCP/jcodemunch — a commit hook has no MCP channel."
+  - "Resolve each declared AC reference against the AC store by EXTRACTING scan_ac_store.py's _load_ac_by_id into an importable shared module that both this hook and scan_ac_store.py depend on (extract-don't-copy; guarantee no regression to scan_ac_store.py's existing behavior). A reference is VALID iff _load_ac_by_id returns a record; None means the id does not exist."
+  - "Emit the per-symbol verdict {file, symbol, surface: 'symbol-ac', verdict: 'satisfied'|'missing'|'invalid', declared_refs: [str], resolved: bool}; declared_refs is always a list; keep the shape structurally aligned with the module-component and decision-history verdicts for GE-117d-1 aggregation."
+  - "Scope is diff-only AND public-only: only new/changed public symbols are evaluated; unchanged symbols and private symbols produce no verdict."
+  - "Docstring PRESENCE is GE-100's floor and is NOT re-specified here; this surface asserts only that an existing public-symbol docstring carries a resolvable AC reference."
+  - "Fail-open on INTERNAL hook error only (exit 0, stderr advisory, clean stdout); real missing/invalid declarations fail-closed via GE-117d-1."
+  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify parity via the build.py round-trip (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "Per-symbol AC-declaration verdict {file, symbol, surface: 'symbol-ac', verdict: 'satisfied'|'missing'|'invalid', declared_refs: [str], resolved: bool} consumed by GE-117d (block) and GE-117e (message/autofix)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117b-1-i
+  - GE-117b-1-ii
+implemented_by: []
+notes: |
+  Owns the HAPPY-PATH and MISSING-PATH for the public-symbol->AC surface (GE-117b),
+  and ENCODES THE DEFERRED "public" DEFINITION (resolution #1 for the BA): a symbol
+  is public when its name does not start with '_', with __all__ authoritative when
+  present. Rationale: matches Python's own convention and is determinable in-process
+  by ast over the staged blob (no MCP/jcodemunch dependency — see the IT-PO note
+  that hooks have no MCP channel). Scope is diff-only and PUBLIC-only: unchanged
+  symbols and private symbols are out of scope (third scenario + GE-117b-1-i).
+  Presence of the docstring is GE-100's concern, not re-specified. Invalid/multi-ref
+  is GE-117b-1-ii; well-formatted-but-nonexistent id is GE-117b-2. Verdict shape is
+  the shared spine consumed by GE-117d/e.

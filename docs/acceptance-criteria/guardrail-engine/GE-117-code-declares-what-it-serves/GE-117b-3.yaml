@@ -1,0 +1,52 @@
+id: GE-117b-3
+readiness: draft
+priority: medium
+title: "How-to guide: citing the AC a public function or class satisfies"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+criteria: |
+  Given a developer is adding or changing a public function or class that must
+    declare the AC it satisfies
+  When the developer opens the how-to guide for the symbol-AC declaration
+  Then the guide states which symbols count as public (name not starting with an
+    underscore, with __all__ authoritative when the module defines it)
+  And the guide shows where in a function or class docstring to cite the AC and the
+    expected form of the reference
+  And the guide explains that the cited AC id must resolve to a real AC in the store
+    or the commit is blocked
+  And the guide shows how to cite more than one AC when a symbol satisfies several
+depends_on:
+  - GE-117b
+  - GE-117b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
+  - "Teach the SAME 'public' definition GE-117b-1 implements (underscore rule, __all__ authoritative) and the multi-AC citation form from GE-117b-1-ii; keep the cited-reference format consistent with what the coder implements."
+  - "Do NOT re-document the commit block flow — link to the GE-117d-4 how-to for that."
+delivers_to: null
+expects_from:
+  ac_id: GE-117b-1
+  contract: "The symbol-AC declaration behavior and the public-symbol definition the how-to documents"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117b documentation_triggers [how-to]. Must teach the
+  same "public" definition encoded in GE-117b-1 and the multi-AC form from
+  GE-117b-1-ii — keep the doc consistent with the implemented behavior. Link the
+  block flow to GE-117d's how-to rather than re-documenting it.

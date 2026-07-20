@@ -1,0 +1,56 @@
+id: GE-117b-1-ii
+readiness: draft
+priority: medium
+title: "A symbol may declare multiple ACs, and every declared reference must resolve"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+criteria: |
+  Given a public function is new or changed in the staged commit
+  And its docstring references two acceptance criteria that both resolve to real
+    AC ids in the store
+  When the declaration check evaluates the symbol
+  Then the check produces a satisfied verdict recording both referenced AC ids
+
+  Given a public function is new or changed in the staged commit
+  And its docstring references two acceptance criteria, one of which resolves to a
+    real AC id and one of which does not resolve to any AC id
+  When the declaration check evaluates the symbol
+  Then the check produces an invalid-declaration verdict for that symbol
+  And the verdict records which referenced id failed to resolve
+  And the presence of the one valid reference does not make the symbol satisfied
+depends_on:
+  - GE-117b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "declared_refs collects ALL AC references parsed from the symbol docstring (a list, possibly length > 1); the verdict is 'satisfied' iff EVERY declared ref resolves via the shared _load_ac_by_id; a single unresolvable ref among otherwise-valid ones yields 'invalid' (partial validity never passes)."
+  - "On the invalid branch, record which specific ref(s) failed to resolve in the verdict so GE-117e can act on the exact dangling id; do not collapse to a boolean."
+  - "Reuse the SAME extracted _load_ac_by_id resolver as GE-117b-1 / GE-117c-1 (one shared module); no per-leaf reimplementation. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117b-1
+  contract: "The per-symbol verdict object whose declared_refs list and invalid branch this edge case exercises"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Covers the multiple-ACs-per-symbol case the brief called out: one symbol may
+  legitimately satisfy several criteria, so declared_refs is a list, and a satisfied
+  verdict requires ALL declared refs to resolve. A single unresolvable ref among
+  otherwise-valid ones is invalid — partial validity does not pass, otherwise a typo
+  in one ref would slip through. The well-formatted-but-nonexistent single-ref case
+  is GE-117b-2.

@@ -1,0 +1,76 @@
+id: GE-117e-1
+readiness: draft
+priority: medium
+title: "Guided autofix inserts the correct declaration so the corrected commit proceeds"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+criteria: |
+  Given a commit was blocked because a new file's module docstring does not name a
+    component
+  And the file's location matches exactly one registered component's directory
+    pattern
+  When the developer invokes the guided autofix for that file
+  Then the autofix inserts the matched component name into the module docstring
+  And re-running the guardrail on the corrected staged commit produces a satisfied
+    verdict for that module-component declaration
+
+  Given a commit was blocked because a new public symbol or a new decision-history
+    entry does not reference an AC
+  And the surrounding commit context supplies a single AC the change is being made
+    for
+  When the developer invokes the guided autofix for that item
+  Then the autofix inserts that AC reference into the docstring or entry
+  And re-running the guardrail on the corrected staged commit produces a satisfied
+    verdict for that declaration
+depends_on:
+  - GE-117e
+  - GE-117d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/components.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "PREREQUISITE (component-inference gap — user-confirmed): module-component VALIDITY resolves against docs/components.json (code-component ids, e.g. 'commit_guardian'), but components.json has NO directory/path-pattern field. The directory_patterns field lives only in docs/acceptance-criteria/index.yaml, whose ids are a DIFFERENT namespace (e.g. 'guardrail-engine'), so index.yaml patterns cannot be used to infer a components.json id. Therefore component auto-inference is NOT implementable until one of these lands: (a) a directory/primary_code-pattern-based inference is added to docs/components.json, or (b) a components.json<->index.yaml id bridge is added. UNTIL a prerequisite lands, the module-component autofix MUST PROMPT for the component (the GE-117e-1-i prompt behavior) rather than infer it. Do not silently insert a components.json id from an index.yaml directory_patterns match."
+  - "AC-reference auto-inference (public symbol / decision-history entry) is UNAFFECTED by the above: when the surrounding commit context supplies a single AC, resolve it against the AC store via the shared _load_ac_by_id and insert it; on re-check the same commit produces a satisfied verdict."
+  - "The autofix EDIT is applied to the staged working tree (module docstring gets the component name; symbol docstring or new decision-history entry gets the AC ref) and the observable success criterion is behavioral: re-running the guardrail on the corrected staged commit yields a satisfied verdict for that item."
+  - "Ambiguous / no-confident-inference paths (multi-match, no-match, no single contextual AC) PROMPT and never fabricate — specified in GE-117e-1-i."
+  - "Fail-open on INTERNAL error; edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together and verify via build.py round-trip (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "The applied-declaration edit (component name into module docstring; AC ref into symbol docstring or new entry) that turns a blocking verdict into a satisfied one on re-check"
+expects_from:
+  ac_id: GE-117d-1
+  contract: "The block report identifying each offending file/surface/missing value that the autofix acts on"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117e-1-i
+implemented_by: []
+notes: |
+  Owns the FIX/AUTOFIX route (route 1 of GE-117e). Component inference reuses the
+  components.json directory_patterns precedent the PO tied it to (same field
+  /quick-fix uses) — unambiguous single-match auto-inserts. The AC inference draws
+  on the surrounding commit/ticket context when it supplies a single AC. The
+  ambiguous / no-confident-inference case is GE-117e-1-i (prompt, do not guess). The
+  observable outcome is behavioral: after autofix, the same commit's re-check passes.
+
+  IT-PO ENRICHMENT NOTE (2026-07-02, user-confirmed): the PO/BA note above conflated
+  two registries. directory_patterns lives in docs/acceptance-criteria/index.yaml
+  (ids like 'guardrail-engine'), NOT in docs/components.json (ids like
+  'commit_guardian') which is the VALIDITY target for module-component declarations.
+  The two id namespaces do not map 1:1, so index.yaml directory_patterns cannot infer
+  a valid components.json id. Component auto-inference is therefore a PREREQUISITE
+  (add a pattern-based inference to components.json, or a components.json<->index.yaml
+  bridge); until then the module-component autofix PROMPTS (GE-117e-1-i). AC-ref
+  inference via _load_ac_by_id is unaffected. Captured in it_requirements above.

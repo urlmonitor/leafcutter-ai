@@ -1,0 +1,69 @@
+id: GE-117e-2
+readiness: draft
+priority: medium
+title: "A deliberate per-item opt-out with a reason clears the block and stays visible in the diff"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+criteria: |
+  Given a commit was blocked because an in-scope item genuinely does not need a
+    declaration
+  And the developer marks that specific item with a per-item opt-out that carries a
+    stated reason, placed in the item's own docstring or entry so it appears in the
+    staged diff
+  When the guardrail runs on the corrected staged commit
+  Then the guardrail treats that specific item as opted out and does not block on it
+  And the opt-out and its reason remain present in the committed code where a
+    reviewer reading the diff can see them
+
+  Given one in-scope item carries a deliberate per-item opt-out with a reason
+  And a different in-scope item in the same commit still lacks its required
+    declaration
+  When the guardrail runs
+  Then the commit is still rejected for the un-opted-out item
+  And the opt-out on the first item does not suppress the block on the second
+depends_on:
+  - GE-117e
+  - GE-117d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Opt-out WIRE-FORMAT (user-confirmed): an inline sentinel `AC-EXEMPT: <reason>` placed in the item's OWN docstring (module or symbol) or in the decision-history entry itself, so the marker and its reason land in the staged diff and are visible to a reviewer. The reason is the text after the colon and must be non-empty."
+  - "The marker is PER-ITEM and scoped to the item whose docstring/entry carries it: recognizing it removes ONLY that item from the block set; every other in-scope item is still evaluated and can still block (second criteria scenario)."
+  - "It is NEVER global: there is no file-level, config-level, or repo-level form of this marker; a global disable is not an accepted substitute (that boundary is GE-117e-2-i)."
+  - "Detect the marker from the same ast/staged-blob parse of the item's docstring/entry used by the declaration surfaces (no MCP); recognizing an AC-EXEMPT marker converts that item's verdict from missing/invalid to opted-out (not blocking) while leaving the marker text in the committed source."
+  - "Fail-open on INTERNAL error; edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "The per-item opt-out recognition (a reason-bearing inline `AC-EXEMPT: <reason>` marker on the specific item) that removes only that item from the block set"
+expects_from:
+  ac_id: GE-117d-1
+  contract: "The block decision and per-item verdicts the opt-out selectively clears"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117e-2-i
+implemented_by: []
+notes: |
+  ENCODES the deferred opt-out mechanism decision (resolution #3): an INLINE,
+  PER-ITEM, REASON-BEARING marker placed in the item's own docstring/entry so it
+  lands in the diff and is visible in review — NOT a config allowlist and NOT a
+  silent global disable. Rationale: stays in the diff (auditable + reviewable),
+  scoped to one item (never global), requires a reason (can't be a rubber stamp).
+  Second scenario proves scoping: opting out one item never suppresses another's
+  block. Exact wire-format of the marker is left to the IT-PO; the BEHAVIOR (inline,
+  per-item, reason-required, visible-in-diff, non-global) is pinned and testable. The
+  abuse/missing-reason rejection is GE-117e-2-i.
+
+  IT-PO ENRICHMENT NOTE (2026-07-02, user-confirmed): the concrete wire-format is the
+  inline sentinel `AC-EXEMPT: <reason>` in the item's own docstring/entry. Pinned in
+  it_requirements; the behavioral guarantees from the criteria text are unchanged.

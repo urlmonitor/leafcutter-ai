@@ -1,0 +1,53 @@
+id: GE-117e-2-i
+readiness: draft
+priority: medium
+title: "An opt-out with no reason, or a global silent disable, does not clear the block"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+criteria: |
+  Given a commit was blocked for a missing declaration
+  And the developer marks the item with an opt-out that carries no reason
+  When the guardrail runs on the staged commit
+  Then the commit is still rejected
+  And the guardrail reports that the opt-out is not honored because it lacks a
+    required reason
+
+  Given a commit was blocked for a missing declaration
+  And the developer attempts to suppress it by disabling the declaration guardrail
+    globally rather than marking the specific item
+  When the guardrail runs on the staged commit
+  Then the specific in-scope item is still treated as missing its declaration
+  And a global disable is not accepted as a substitute for a deliberate per-item
+    opt-out
+depends_on:
+  - GE-117e-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e-2.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An `AC-EXEMPT:` marker with an empty/whitespace-only reason is NOT honored: the item still blocks and the guardrail reports that the opt-out was rejected for lacking a required reason. The reason must be non-empty text."
+  - "A global disable (e.g. attempting to turn the declaration guardrail off wholesale, or a repo/file-level suppression) is NOT accepted as a substitute for the per-item AC-EXEMPT marker; the specific in-scope item is still evaluated and still blocks. Do not add a global bypass path."
+  - "These two abuse modes must be fail-closed so the escape hatch cannot become an escape from GE-117d's guarantee. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117e-2
+  contract: "The per-item reason-bearing opt-out whose abuse boundaries this edge case defines"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Guards the opt-out against the two abuse modes the PO warned about: a reason-less
+  marker (rubber-stamp) and a silent global disable that would defeat GE-117d's
+  fail-closed default. The opt-out must be deliberate (reason required) and auditable
+  (per-item, in-diff) — this L3 makes both anti-patterns fail-closed. Keeps the
+  escape hatch from becoming an escape from the guarantee.

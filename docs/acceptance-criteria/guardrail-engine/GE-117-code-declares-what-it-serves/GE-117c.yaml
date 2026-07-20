@@ -1,0 +1,45 @@
+id: GE-117c
+readiness: draft
+priority: medium
+title: "Each new decision-history note records the requirement behind the change"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Every new decision-history entry carries the requirement that motivated it.
+
+  When a change adds a note to a file's decision history, that note also names
+  the acceptance criterion behind the change — so the running record of "why we
+  changed this" links each decision to the requirement that drove it.
+depends_on: [GE-117]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117c-1
+  - GE-117c-2
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  PO authoring note (for the BA). This L1 EXTENDS the existing DECISION HISTORY
+  tail-tag mechanism (which already carries a ticket reference) to ALSO carry an
+  AC reference on every NEW entry. Scope is diff-only and NEW entries only:
+  pre-existing decision-history entries are never retrofitted (this is the core
+  of the tail-tag convention — only entries added in the diff are checked). The
+  AC reference must resolve to a real AC id. Do NOT respecify the existing
+  ticket-tag format or ticket traceability — that already exists; this adds the
+  AC dimension on top. Enforcement action lives in GE-117d.
+  Open question for BA/IT-PO: whether a new entry may satisfy this via the same
+  AC named on the enclosing function/class, or must carry its own explicit
+  reference — do not assume; decide at L2.
+  documentation_triggers [how-to] — authors need the updated tail-tag format
+  guidance (ticket + AC).

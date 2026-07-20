@@ -1,0 +1,65 @@
+id: GE-117e-1-i
+readiness: draft
+priority: medium
+title: "When the component or AC cannot be inferred unambiguously, autofix prompts instead of guessing"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
+criteria: |
+  Given a commit was blocked because a new file's module docstring does not name a
+    component
+  And the file's location matches more than one registered component's directory
+    pattern
+  When the developer invokes the guided autofix for that file
+  Then the autofix does not silently pick one component
+  And it presents the matching candidate components for the developer to choose
+  And it inserts a component only after the developer selects one
+
+  Given a commit was blocked because a new file's module docstring does not name a
+    component
+  And the file's location matches no registered component's directory pattern
+  When the developer invokes the guided autofix for that file
+  Then the autofix does not insert a fabricated component name
+  And it reports that it could not infer the component and asks the developer to
+    supply one
+
+  Given a commit was blocked because a new public symbol does not reference an AC
+  And the surrounding commit context does not supply a single unambiguous AC
+  When the developer invokes the guided autofix for that symbol
+  Then the autofix does not insert a guessed AC reference
+  And it asks the developer to supply the AC the symbol satisfies
+depends_on:
+  - GE-117e-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/components.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "PROMPT-never-fabricate is the safety floor for autofix: multi-candidate match => present candidates and insert only after selection; no match => report inability and ask the developer to supply the value; no single confident contextual AC => ask the developer for the AC. Never invent a component name or AC id."
+  - "Given the GE-117e-1 component-inference PREREQUISITE (components.json has no directory_patterns; index.yaml patterns are a different id namespace), the module-component autofix's DEFAULT path today is the no-confident-inference PROMPT specified here — i.e. until a components.json pattern-inference lands, the module-component branch always reaches this prompt behavior rather than the GE-117e-1 auto-insert branch."
+  - "AC-ref prompt-on-ambiguity is independent of that prerequisite and applies whenever commit context does not yield a single resolvable AC."
+  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117e-1
+  contract: "The autofix apply behavior whose ambiguous / no-confident-inference branch this edge case defines"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the "infer vs prompt" boundary the PO flagged: the autofix may auto-insert
+  only on a CONFIDENT single match (directory_patterns single-match for component; a
+  single contextual AC). Ambiguous match, no match, or no confident AC context =>
+  PROMPT, never guess and never fabricate. This keeps the autofix from silently
+  inserting a wrong declaration (which would defeat the whole point of the guardrail).

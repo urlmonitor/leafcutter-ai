@@ -1,0 +1,62 @@
+id: GE-117
+readiness: draft
+priority: medium
+title: "Every piece of code declares which requirement and which component it serves"
+component: guardrail-engine
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Open any file and its own words tell you why it exists and where it belongs.
+
+  Today a reader has to guess which requirement a function fulfils and which part
+  of the system a file belongs to. This goal makes that self-evident: the code
+  itself states, in plain sight, the requirement it satisfies and the component
+  it is part of. New code cannot land without making that declaration, so the
+  connection between what was asked for and what was built is never left to
+  memory or archaeology. The result is a codebase that explains itself — anyone
+  can answer "why is this here?" and "what does this belong to?" from the file
+  alone, and that answer is guaranteed to be present rather than hoped for.
+depends_on: []
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "docs/components.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117a
+  - GE-117b
+  - GE-117c
+  - GE-117d
+  - GE-117e
+implemented_by: []
+notes: |
+  PO placement rationale (2026-07-02). GE-117 is a NEW SIBLING L0, deliberately
+  distinct from GE-111. GE-111 governs KEEPING an already-declared AC-to-code
+  link honest as code is refactored over time (drift prevention on the AC
+  store's implemented_by graph). GE-117 governs ESTABLISHING the declaration in
+  the first place — code→AC and code→component links stated in the code's own
+  docstrings, checked for PRESENCE at authoring/commit time. Different lifecycle
+  stage (author-time vs refactor-time), different surface (docstrings vs the AC
+  store graph). They are complementary and MUST NOT be conflated.
+
+  GE-117 also extends, but does not duplicate, GE-100's docstring PRESENCE/quality
+  enforcement: GE-100 requires a docstring to exist; GE-117 requires an existing
+  in-scope docstring to additionally carry a valid AC reference and/or component
+  reference. Do not re-specify presence checks — layer on top of them.
+
+  Scope confirmed with user (BrainCandy) — broadest interpretation, three
+  docstring surfaces (module → component; public function/class → AC; new
+  DECISION HISTORY entry → AC), diff-only (new/changed code; legacy not
+  retrofitted, mirroring the existing tail-tag convention), fail-closed default
+  with a deliberate escape hatch (consistent with GE-111d's reconciliation
+  escape routes).
