@@ -1,0 +1,82 @@
+id: BO-2300e-1-ii
+components:
+  - build_orchestration
+title: "Resuming a run with no pending pause is a no-op"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that has no pending question (it is running, already completed, or
+    was cancelled),
+  When an answer or a resume is submitted for that run,
+  Then no paused step is resumed and no answer is applied,
+  And the run's existing state is left unchanged,
+  And the submission is reported as having nothing to resume rather than causing
+    an error.
+depends_on: [BO-2300e-1]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "No-op resume result when no pending pause exists."
+    properties:
+      resumed: {type: boolean, description: "must be false"}
+      answer_applied: {type: boolean, description: "must be false"}
+      state_unchanged: {type: boolean}
+      report: {type: string, description: "e.g. 'nothing to resume' — not an error"}
+    required: [resumed, answer_applied, report]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Submitting an answer/resume for a run with no pending question (running, completed, or cancelled) must be a safe no-op: no step resumed, no answer applied, existing state unchanged, and the submission reported as 'nothing to resume' rather than erroring."
+    - "Guards the resume side against being invoked when nothing is waiting — must be a safe no-op, not a crash or a spurious re-run."
+  delivers_shape:
+    description: "No-op assertion surface; no downstream producer."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300e-1
+  contract: "The durable resume path; this edge asserts it is a safe no-op (report 'nothing to resume', state unchanged) when the run has no pending pause."
+test_spec:
+  - name: test_resume_no_pending_is_noop
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Submitting an answer/resume for a run with no pending question resumes no step and applies no answer."
+  - name: test_resume_no_pending_leaves_state_unchanged
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The run's existing state is left unchanged by a no-op resume."
+  - name: test_resume_no_pending_reports_nothing_to_resume
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The submission is reported as having nothing to resume rather than causing an error."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Guards the resume side against being invoked when nothing is waiting — must be
+  a safe no-op, not a crash or a spurious re-run.

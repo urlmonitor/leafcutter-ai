@@ -1,0 +1,79 @@
+id: BO-2300d-1-i
+components:
+  - build_orchestration
+title: "Pausing mid multi-stage run preserves the earlier committed stages"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a multi-stage run that has completed and committed stages one and two,
+  And the run pauses for a question during stage three,
+  When a valid "approve" answer is submitted and the run resumes,
+  Then stages one and two are not re-run,
+  And their committed results are still present and unchanged,
+  And the run continues from stage three onward.
+depends_on: [BO-2300d-1]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Resume-preservation assertion for a multi-stage run resumed via approve."
+    properties:
+      stages_rerun: {type: array, description: "must be empty for already-committed stages"}
+      committed_stage_results_unchanged: {type: boolean}
+      resumed_from_stage: {type: integer}
+    required: [committed_stage_results_unchanged]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "On approve+resume of a multi-stage run, previously committed stages must not be re-run and their committed results must remain present and unchanged; the run continues from the paused stage onward."
+    - "Motivating case: /plan-feature committed the PO stage before hitting the PO gate; resuming must not discard or redo that committed PO stage."
+    - "Reuse the resumeFromRunId replay path from BO-2300d-1 (committed stages replayed as done, not re-executed)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300d-1
+  contract: "The apply-by-type + resume-from-pause-point path; this edge asserts that on an approve resume the already-committed prior stages are preserved (not re-run)."
+test_spec:
+  - name: test_committed_stages_not_rerun_on_resume
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "On approve+resume, stages committed before the pause are not re-run."
+  - name: test_committed_results_unchanged_after_resume
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The committed results of earlier stages remain present and unchanged after resume."
+  - name: test_run_continues_from_paused_stage
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The run continues from the paused stage (stage three) onward."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Motivating case: /plan-feature authored PO ACs (an early stage) then hit the PO
+  gate; resuming must not discard or redo the already-committed PO stage.

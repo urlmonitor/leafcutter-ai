@@ -1,0 +1,87 @@
+id: BO-2300b-2-i
+components:
+  - build_orchestration
+title: "An unparseable answer re-prompts and never crashes the run"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run is paused on a pending question,
+  When an answer that cannot be interpreted at all is submitted (for example an
+    empty answer, or malformed content that does not correspond to any allowed
+    value),
+  Then the run does not crash or terminate,
+  And the answer is not applied,
+  And the run stays paused on the same pending question,
+  And the same question is presented again with its valid answer shape.
+depends_on: [BO-2300b-2]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Validation result for an unparseable/empty answer submission."
+    properties:
+      accepted: {type: boolean, description: "always false for an unparseable answer"}
+      run_survived: {type: boolean, description: "always true; the run never crashes"}
+      represented_question: {type: object}
+    required: [accepted, run_survived]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "An unparseable or empty answer must not crash or terminate the run; it is not applied, the run stays paused, and the same question is re-presented with its valid answer shape."
+    - "Answer parsing is at an input boundary and must follow the project error-handling policy (typed except, WARNING log, no bare except, no silent swallow)."
+    - "Distinct from BO-2300b-2 (a well-formed answer of the wrong type): here the answer is unparseable/empty; this edge additionally asserts run survival."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300b-2
+  contract: "The reject-and-re-prompt path for a non-satisfying answer; this edge extends it to unparseable/empty input and adds the never-crash guarantee."
+test_spec:
+  - name: test_empty_answer_does_not_crash
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "An empty answer does not crash or terminate the run."
+  - name: test_malformed_answer_not_applied
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Malformed content that matches no allowed value is not applied."
+  - name: test_run_stays_paused_after_unparseable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "After an unparseable answer the run stays paused on the same pending question."
+  - name: test_same_question_reasked_after_unparseable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The same question is presented again with its valid answer shape."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Distinct from BO-2300b-2 (a well-formed answer of the wrong type): here the
+  answer is unparseable/empty. Both paths must re-prompt; this one additionally
+  asserts the run survives (never crashes).

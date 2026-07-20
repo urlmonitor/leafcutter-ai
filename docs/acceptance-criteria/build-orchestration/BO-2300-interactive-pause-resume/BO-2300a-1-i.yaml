@@ -1,0 +1,74 @@
+id: BO-2300a-1-i
+components:
+  - build_orchestration
+title: "A run that hits no decision point completes normally without pausing"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a background run that reaches no interactive decision point during its
+    execution,
+  When it runs to completion,
+  Then it finishes normally and never enters the paused state,
+  And no pending question is recorded for it,
+  And its behavior is unchanged from a run made before the pause mechanism
+    existed.
+depends_on: [BO-2300a-1]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Assertion surface: a gateless run's terminal result carries no paused state and no pending-question record."
+    properties:
+      status: {type: string, enum: [completed]}
+      pending_question: {type: "null"}
+    required: [status]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "A run that reaches no interactive gate must complete with behavior equivalent to a pre-pause-mechanism run: no paused state is entered and no pending-question record is written."
+    - "Regression guard: the pause machinery must be inert on runs that never pause (do not perturb the non-interactive path)."
+    - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300a-1
+  contract: "The pause/persist mechanism whose inertness this edge asserts: on a run with no interactive gate, that mechanism must not enter the paused state nor write a pending-question record."
+test_spec:
+  - name: test_run_without_gate_completes_normally
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "A run that reaches no interactive gate finishes normally and never enters the paused state."
+  - name: test_no_pending_question_recorded_for_gateless_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "No pending-question record is written for a run that hits no decision point."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Guards against a regression where the pause machinery accidentally affects
+  runs that never needed input.

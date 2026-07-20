@@ -1,0 +1,65 @@
+id: BO-2300d-2
+components:
+  - build_orchestration
+title: "Sequence diagram: pause -> ask -> answer -> resume interaction"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A sequence diagram documents the pause -> ask -> answer -> resume interaction
+  across the workflow engine, the durable pending-question store, and the
+  answerer, showing:
+    - the run reaching an interactive gate and pausing instead of cancelling;
+    - the structured question (declared type + valid answer shape) plus the
+      context snapshot captured at pause time being emitted and persisted to the
+      durable store;
+    - the answerer being shown the context and supplying an answer;
+    - the answer being validated against the declared type (wrong-shape or
+      unparseable answers re-prompting) and, when valid, applied by type;
+    - the run resuming from the pause point with earlier committed stages
+      preserved.
+  A reader can follow one full round-trip from pause to resume, including the
+  cross-process durable-wait case.
+depends_on: [BO-2300a-1, BO-2300b-1, BO-2300c-1, BO-2300d-1, BO-2300e-1]
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/bo-2300-pause-resume-sequence.md
+    relationship: describes
+    status: planned
+it_requirements:
+  - "The diagram must use the project's Mermaid sequenceDiagram convention and be stored under docs/architecture/diagrams/, cross-linked from docs/architecture/components/build-orchestration.md."
+  - "Participant and message names must match the mechanism: the workflow engine, the durable pending-question store, and the answerer; the question object and context snapshot shapes must align with BO-2300b-1 and BO-2300c-1."
+  - "The diagram must include the re-prompt loop for a wrong-shape/unparseable answer (BO-2300b-2 / BO-2300b-2-i) and the cross-process resume path (BO-2300e-1), not only the happy path."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Authored by the IT PO to satisfy the sequence-diagram documentation_triggers on
+  the L1 parents BO-2300a, BO-2300b, BO-2300c, and BO-2300d. A single sequence
+  diagram of the full pause -> ask -> answer -> resume interaction covers all four
+  triggers, so it is linked under the most relevant parent (BO-2300d, which owns
+  the answer-apply-and-resume step) and covers BO-2300a/b/c by reference rather
+  than authoring a redundant per-parent diagram AC.

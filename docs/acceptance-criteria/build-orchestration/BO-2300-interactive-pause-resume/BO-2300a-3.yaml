@@ -1,0 +1,60 @@
+id: BO-2300a-3
+components:
+  - build_orchestration
+title: "State diagram: run pause/resume lifecycle (running / paused-awaiting-input / resumed / cancelled)"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A state diagram documents the run lifecycle for the interactive pause/resume
+  mechanism, showing the states running, paused-awaiting-input, resumed, and
+  cancelled, and the transitions between them:
+    - running -> paused-awaiting-input when an interactive gate is reached with
+      no reachable answerer;
+    - paused-awaiting-input -> resumed when a valid answer is applied by type;
+    - paused-awaiting-input -> cancelled when a "cancel" answer is applied, and
+      running -> cancelled for a genuine cancellation;
+    - paused-awaiting-input -> unresumable when the pause becomes stale/expired.
+  The diagram makes clear that paused-awaiting-input and cancelled are distinct
+  states and that only paused-awaiting-input is eligible for resume, so a reader
+  can see how a run moves from running into a durable pause and back.
+depends_on: [BO-2300a-1, BO-2300a-2, BO-2300d-1, BO-2300e-1]
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/bo-2300-pause-resume-state.md
+    relationship: describes
+    status: planned
+it_requirements:
+  - "The diagram must use the project's Mermaid stateDiagram convention and be stored under docs/architecture/diagrams/, cross-linked from docs/architecture/components/build-orchestration.md."
+  - "State and status names must match the values used by the implemented mechanism: paused_awaiting_input, cancelled, running, completed/resumed (per BO-2300a-1 / BO-2300a-2)."
+  - "The diagram must show the stale/expired-pause transition (BO-2300e-1-iii) as an explicit unresumable outcome, not a silent path."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Authored by the IT PO to satisfy the state-diagram documentation_triggers on
+  the L1 parents BO-2300a, BO-2300d, and BO-2300e. A single state diagram for the
+  pause/resume lifecycle covers all three triggers, so it is linked under the most
+  relevant parent (BO-2300a, which introduces the paused-vs-cancelled distinction)
+  and covers BO-2300d (resumed) and BO-2300e (durable/stale) by reference rather
+  than authoring a redundant per-parent diagram AC.

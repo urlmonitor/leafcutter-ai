@@ -1,0 +1,80 @@
+id: BO-2300d-1-ii
+components:
+  - build_orchestration
+title: "A cancel answer stops gracefully, keeps committed stages, opens no PR"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a multi-stage run that has completed and committed earlier stages,
+  And the run is paused on a pending question,
+  When a valid "cancel" answer is submitted,
+  Then the run stops gracefully rather than erroring,
+  And the earlier committed stages remain present and unchanged,
+  And no pull request is opened as a result of the cancellation.
+depends_on: [BO-2300d-1]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Graceful-cancel outcome for a paused multi-stage run."
+    properties:
+      stopped_gracefully: {type: boolean, description: "true; must not error"}
+      committed_stages_unchanged: {type: boolean}
+      pr_opened: {type: boolean, description: "must be false"}
+    required: [stopped_gracefully, pr_opened]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "A valid 'cancel' answer must stop the run gracefully (not error); earlier committed stages remain present and unchanged; no pull request is opened as a result of the cancellation."
+    - "Cancel is a graceful stop, not a rollback: prior committed work is retained, but the run does not proceed to open a PR for the incomplete work."
+  delivers_shape:
+    description: "Terminal cancel state consumed only as an assertion surface; no downstream producer."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300d-1
+  contract: "The cancel branch of apply-by-type; this edge asserts a graceful stop that retains committed stages and opens no PR."
+test_spec:
+  - name: test_cancel_stops_without_error
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "A valid 'cancel' answer stops the run gracefully rather than erroring."
+  - name: test_cancel_keeps_committed_stages
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Earlier committed stages remain present and unchanged after cancel."
+  - name: test_cancel_opens_no_pr
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "No pull request is opened as a result of the cancellation."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Cancel is a graceful stop, not a rollback: prior committed work is retained,
+  but the run does not proceed to open a PR for the incomplete work.
