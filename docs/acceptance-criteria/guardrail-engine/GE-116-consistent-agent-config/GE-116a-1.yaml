@@ -59,7 +59,8 @@ covered_by:
   - GE-116a-1-i
   - GE-116a-1-ii
   - GE-116a-1-iii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-GE-116a-1.md
 change_target: code
 risk_surface: internal
 notes: |
