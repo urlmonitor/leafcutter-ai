@@ -20,10 +20,13 @@ criteria: |
   And the run stays paused on the same pending question,
   And the same question is presented again with its valid answer shape.
 depends_on: [BO-2300b-2]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md
@@ -41,41 +44,44 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
-    - "An unparseable or empty answer must not crash or terminate the run; it is not applied, the run stays paused, and the same question is re-presented with its valid answer shape."
-    - "Answer parsing is at an input boundary and must follow the project error-handling policy (typed except, WARNING log, no bare except, no silent swallow)."
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript). The unparseable/empty answer path is handled inside resolveGate() in the shared JS helper: the resume answer (supplied via args / read by the resume agent) that cannot be interpreted must not throw out of the workflow body; the run stays paused and re-presents the question. This is JS in the workflow files, not a standalone Python module."
+    - "An unparseable or empty answer must not crash or terminate the run; it is not applied, the run stays paused_awaiting_input, and the same question is re-presented with its valid answer shape."
+    - "Answer parsing is at an input boundary; any Python helper the resume agent invokes to read/parse the answer must follow the project error-handling policy (typed except, WARNING log, no bare except, no silent swallow), and the JS gate must convert a parse failure into a stay-paused re-prompt rather than an unhandled throw."
     - "Distinct from BO-2300b-2 (a well-formed answer of the wrong type): here the answer is unparseable/empty; this edge additionally asserts run survival."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) resuming with an empty/malformed answer in args; assert the harness run does not error, status stays paused_awaiting_input, and the question is re-emitted. Do NOT test a standalone Python module."
 delivers_to: null
 expects_from:
   ac_id: BO-2300b-2
-  contract: "The reject-and-re-prompt path for a non-satisfying answer; this edge extends it to unparseable/empty input and adds the never-crash guarantee."
+  contract: "The reject-and-re-prompt path for a non-satisfying answer in the shared JS validator; this edge extends it to unparseable/empty input and adds the never-crash guarantee."
 test_spec:
   - name: test_empty_answer_does_not_crash
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "An empty answer does not crash or terminate the run."
+    description: "Via run_workflow_under_e2, resuming with an empty answer in args does not crash or terminate the run (the harness executes the JS to completion without an unhandled throw)."
   - name: test_malformed_answer_not_applied
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Malformed content that matches no allowed value is not applied."
+    description: "Via the harness, malformed content that matches no allowed value is not applied."
   - name: test_run_stays_paused_after_unparseable
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "After an unparseable answer the run stays paused on the same pending question."
+    description: "Via the harness, after an unparseable answer the run stays paused_awaiting_input on the same pending question."
   - name: test_same_question_reasked_after_unparseable
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The same question is presented again with its valid answer shape."
+    description: "Via the harness, the same question is presented again with its valid answer shape."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; unparseable-answer handling lives in resolveGate() in the shared JS helper (converts parse failure to stay-paused re-prompt); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

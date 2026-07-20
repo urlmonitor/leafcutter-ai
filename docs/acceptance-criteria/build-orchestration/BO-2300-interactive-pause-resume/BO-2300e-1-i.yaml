@@ -20,10 +20,13 @@ criteria: |
   And the run's state matches the state produced by applying the answer exactly
     once.
 depends_on: [BO-2300e-1]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-constraints.md
@@ -40,37 +43,41 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: asserted against the E2 workflow ENGINE (JavaScript). Idempotency is enforced in resolveGate() in the shared JS helper: consulting the record's already-applied answer BEFORE the gate's agent() call (ADR-024 rule 4) is what makes a second resume a no-op rather than a re-apply. Not a standalone Python module."
+    - "CORRECTNESS INVARIANT (ADR-024 rule 4): because resolveGate() consults the record's answer field before the gate's live agent() call, a duplicate submission / second resume finds the answer already applied and does not re-apply it; the record's applied state is the idempotency key."
     - "Applying the same answer twice (duplicate submission or a second resume of the same run) must be idempotent: the answer is not applied a second time, later stages are not re-executed, and the resulting state matches applying the answer exactly once."
     - "Idempotency must cover both 'an answer arrives for an already-answered question' and 'resuming twice' — the same guarantee."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js): resume once with an answer, then resume a SECOND time with the same answer, and assert (from captured agent_calls) that later stages are not re-dispatched and the state matches a single application. Do NOT test a standalone Python module."
   delivers_shape:
     description: "Idempotency assertion surface; no downstream producer."
 delivers_to: null
 expects_from:
   ac_id: BO-2300d-1
-  contract: "The apply-by-type + resume path whose re-invocation this edge makes idempotent (no double-apply, no re-execution of later stages)."
+  contract: "The apply-by-type + resume path in the shared JS resolveGate() (which consults the record's answer before the gate agent() call); this edge makes its re-invocation idempotent (no double-apply, no re-execution of later stages)."
 test_spec:
   - name: test_duplicate_answer_not_double_applied
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Submitting the same answer again for an already-answered question does not apply it a second time."
+    description: "Via run_workflow_under_e2, submitting the same answer again for an already-answered question does not apply it a second time (resolveGate finds it already applied)."
   - name: test_second_resume_does_not_rerun_stages
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A second resume of the same run does not re-execute the run's later stages."
+    description: "Via a second harness resume of the same run, the run's later stages are not re-dispatched (absent from captured agent_calls)."
   - name: test_state_matches_single_application
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The run's state after a duplicate answer matches the state produced by applying the answer exactly once."
+    description: "Via the harness, the run's state after a duplicate answer matches the state produced by applying the answer exactly once."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; tied idempotency to the ADR-024 rule-4 invariant (resolveGate consults the record's already-applied answer before the gate agent() call); test_spec now drives the real JS via a two-resume _workflow_engine_harness.run_workflow_under_e2 sequence. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -78,5 +85,6 @@ change_target: pipeline
 risk_surface: internal
 notes: |
   Covers both "an answer arrives for a question already answered" and "resuming
-  twice" — the same idempotency guarantee. Prevents double-apply of the answer or
-  re-running downstream stages.
+  twice" — the same idempotency guarantee. The record's applied-answer state is
+  the idempotency key: resolveGate() consulting it before the gate agent() call
+  (ADR-024 rule 4) prevents double-apply or re-running downstream stages.

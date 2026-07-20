@@ -1460,6 +1460,143 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
 }
 
 // ---------------------------------------------------------------------------
+// §R — Inline pause-resume helpers (ADR-024 BO-2300 RESUME half).
+// E2 workflow bodies are self-contained and cannot import local modules
+// (ES-module import is a SyntaxError inside the test-harness IIFE, and the
+// runtime has no module access), so the pause-resume helper is defined inline
+// here. The same helper is inlined in finalize-feature.js — keep them in sync.
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a resume_answer's shape against its declared question type.
+ * @param {object} answer       - args.resume_answer object.
+ * @param {string} expectedType - "single_choice" | "priority_choice" | "free_text"
+ * @returns {{ valid: boolean }}
+ */
+function validateAnswerShape(answer, expectedType) {
+  if (!answer || typeof answer !== "object") { return { valid: false }; }
+  if (expectedType === "single_choice") {
+    return (typeof answer.action === "string" || typeof answer.choice === "string")
+      ? { valid: true } : { valid: false };
+  }
+  if (expectedType === "priority_choice") {
+    return (answer.priority != null) ? { valid: true } : { valid: false };
+  }
+  if (expectedType === "free_text") {
+    return (typeof answer.text === "string") ? { valid: true } : { valid: false };
+  }
+  return { valid: false };
+}
+
+/**
+ * Apply a validated resume answer by its type and return the effective gate decision.
+ * @param {object} answer - Validated answer from args.resume_answer.
+ * @param {string} type   - "single_choice" | "priority_choice" | "free_text"
+ * @returns {object} Gate decision e.g. { action: "approve" }.
+ */
+function applyAnswerByType(answer, type) {
+  if (type === "priority_choice") { return { action: "approve", priority: answer.priority }; }
+  if (type === "free_text") { return { action: "approve", text: answer.text }; }
+  return { action: answer.action || answer.choice };
+}
+
+/**
+ * Resume-aware interactive gate resolver (ADR-024).
+ *
+ * CORRECTNESS INVARIANT (ADR-024 Rule 4):
+ *   Checks args.resume_answer BEFORE calling liveGateFn so that on resume the
+ *   harness-replayed cached headless answer is never applied.
+ *
+ * Return value:
+ *   { action: "..." }                   — valid gate decision; caller proceeds.
+ *   { status: "paused_awaiting_input" } — headless or invalid answer; caller MUST return.
+ *   { status: "nothing_to_resume" }     — record absent (exists:false); caller MUST return.
+ *   { status: "unresumable_stale" }     — record stale; caller MUST return.
+ *
+ * @param {string}   gateId     - Gate label (e.g. "final-gate").
+ * @param {Function} liveGateFn - Zero-arg async fn; returns parsed gate decision or null (headless).
+ * @param {object}   args       - Workflow args (may include resume_answer, run_id).
+ * @param {object}   context    - Context snapshot for the pause record.
+ * @returns {Promise<object>}
+ */
+async function resolveGate(gateId, liveGateFn, args, context) {
+  const runId = (args && args.run_id) || "default-run";
+
+  // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
+  if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
+    const answerType = args.resume_answer.type || "single_choice";
+    const validation = validateAnswerShape(args.resume_answer, answerType);
+    if (!validation.valid) {
+      // Wrong/malformed shape: return paused immediately — no liveGateFn, no read-pause-record, no pause-persist.
+      return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+    }
+    // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
+    const rec = await agent(
+      { run_id: runId, gate_id: gateId },
+      { agentType: "status-checker", label: "read-pause-record" }
+    );
+    if (rec && rec.exists === false) {
+      return { status: "nothing_to_resume", run_id: runId, gate_id: gateId };
+    }
+    if (rec && rec.stale === true) {
+      return { status: "unresumable_stale", run_id: runId, gate_id: gateId, reason: rec.stale_reason };
+    }
+    // Record present and not stale: apply the answer.
+    return applyAnswerByType(args.resume_answer, answerType);
+  }
+
+  // No matching resume_answer: call the live gate.
+  let gateAnswer = null;
+  if (typeof liveGateFn === "function") {
+    try { gateAnswer = await liveGateFn(); } catch (_err) { gateAnswer = null; }
+  }
+  // Valid explicit decision.
+  if (gateAnswer !== null && gateAnswer !== undefined && typeof gateAnswer === "object" &&
+      (typeof gateAnswer.action === "string" || typeof gateAnswer.choice === "string")) {
+    return gateAnswer;
+  }
+  // Headless or unparseable: pause and persist.
+  return pauseAtGate(gateId, runId, context);
+}
+
+/**
+ * Pause the workflow at an interactive gate and persist the pending-question
+ * record (ADR-024 pause-resume mechanism).
+ *
+ * Dispatches a "pause-persist" agent call carrying the question shape and
+ * context snapshot, then returns { status: "paused_awaiting_input" } so the
+ * caller can `return` it immediately, exiting the workflow without losing
+ * committed stages.
+ *
+ * Called by resolveGate() on the headless path. Direct callers should use
+ * resolveGate() instead, which checks args.resume_answer first (ADR-024 Rule 4).
+ *
+ * @param {string} gateId      - Gate label (e.g. "final-gate", "covered-route-gate").
+ * @param {string} runId       - Current run identifier.
+ * @param {object} ctxSnapshot - Workflow context snapshot at pause time.
+ * @returns {Promise<{status: "paused_awaiting_input", run_id: string, gate_id: string}>}
+ */
+async function pauseAtGate(gateId, runId, ctxSnapshot) {
+  const question = {
+    type: "single_choice",
+    gate_id: gateId,
+    options: ["approve", "edit", "cancel", "defer"],
+    prompt:
+      `Interactive gate '${gateId}' requires a human decision. ` +
+      "Options: approve (proceed), edit (re-draft with feedback), " +
+      "cancel (abort; keep prior committed stages), defer (leave as reviewed; resume later).",
+  };
+  const context = ctxSnapshot || { gate_id: gateId };
+  // Dispatch the pause-persist agent call. The agent writes the durable
+  // pending-question record to .leafcutter/paused_runs/<runId>.json.
+  await agent(
+    { question, context, run_id: runId, gate_id: gateId, status: "paused_awaiting_input" },
+    { agentType: "status-checker", label: "pause-persist" }
+  );
+  return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+}
+
+// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 // ---------------------------------------------------------------------------
 
@@ -1628,25 +1765,37 @@ const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage
 // Handle "covered" route: show existing ACs + prompt user
 // -------------------------------------------------------------------------
 if (route === "covered" && !force) {
-  const coverageResult = await agent(
-    "Present the following to the user and ask them to choose one option:\n\n" +
-    `The request appears to already be covered by these existing ACs:\n${existing_acs.join(", ")}\n\n` +
-    "Options:\n" +
-    "  1. cancel  — the existing ACs are sufficient; exit without creating new ACs.\n" +
-    "  2. amend   — add constraints/details to the existing ACs (routes as 'technical').\n" +
-    "  3. force   — create new ACs anyway (routes as 'strategic').\n\n" +
-    "Return ONLY a JSON object: { \"choice\": \"cancel\" | \"amend\" | \"force\", \"rationale\": \"...\" }",
-    { agentType: "status-checker", label: "covered-route-gate" }
+  // ADR-024: resolveGate checks args.resume_answer before the live agent call.
+  const _covGateResult = await resolveGate(
+    "covered-route-gate",
+    async () => {
+      const raw = await agent(
+        "Present the following to the user and ask them to choose one option:\n\n" +
+        `The request appears to already be covered by these existing ACs:\n${existing_acs.join(", ")}\n\n` +
+        "Options:\n" +
+        "  1. cancel  — the existing ACs are sufficient; exit without creating new ACs.\n" +
+        "  2. amend   — add constraints/details to the existing ACs (routes as 'technical').\n" +
+        "  3. force   — create new ACs anyway (routes as 'strategic').\n\n" +
+        "Return ONLY a JSON object: { \"choice\": \"cancel\" | \"amend\" | \"force\", \"rationale\": \"...\" }",
+        { agentType: "status-checker", label: "covered-route-gate" }
+      );
+      let parsed;
+      try {
+        parsed = parseAgentJson(raw, { stage: "covered-route-gate", agent: "status-checker" });
+      } catch (_) {
+        parsed = null;
+      }
+      return (parsed && typeof parsed.choice === "string") ? parsed : null;
+    },
+    args,
+    { route: "covered", existing_acs }
   );
-
-  let userChoice;
-  try {
-    userChoice = parseAgentJson(coverageResult, { stage: "covered-route-gate", agent: "status-checker" });
-  } catch (_) {
-    userChoice = { choice: "cancel" };
+  if (_covGateResult && _covGateResult.status &&
+      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_covGateResult.status)) {
+    return _covGateResult;
   }
-
-  const choice = (userChoice.choice || "cancel").toLowerCase();
+  const userChoice = _covGateResult || { choice: "cancel" };
+  const choice = (userChoice.choice || userChoice.action || "cancel").toLowerCase();
 
   if (choice === "cancel") {
     return {
@@ -1769,24 +1918,36 @@ if (ptRunSet.skip) {
         }
         const reportedPaths = (ptResultObj && Array.isArray(ptResultObj.artifact_paths)) ? ptResultObj.artifact_paths : [];
 
-        // Gate: approve / edit / cancel.
-        const ptGateResult = await agent(
-          `${ptStep.agent} drafted the following product-truth artifact(s): ${reportedPaths.join(", ") || "(none)"}.\n` +
-          "Present these to the user and ask them to choose:\n" +
-          "  1. approve — commit this stage and proceed.\n" +
-          "  2. edit    — re-invoke this agent with feedback.\n" +
-          "  3. cancel  — abort the pipeline (no PR; prior committed stages preserved; this draft left uncommitted).\n" +
-          "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"cancel\", \"feedback\": \"...\" }",
-          { agentType: "status-checker", label: `pt-gate-${ptStep.stage}` }
+        // Gate: approve / edit / cancel. ADR-024: resolveGate checks args.resume_answer first.
+        const _ptGateResult = await resolveGate(
+          `pt-gate-${ptStep.stage}`,
+          async () => {
+            const raw = await agent(
+              `${ptStep.agent} drafted the following product-truth artifact(s): ${reportedPaths.join(", ") || "(none)"}.\n` +
+              "Present these to the user and ask them to choose:\n" +
+              "  1. approve — commit this stage and proceed.\n" +
+              "  2. edit    — re-invoke this agent with feedback.\n" +
+              "  3. cancel  — abort the pipeline (no PR; prior committed stages preserved; this draft left uncommitted).\n" +
+              "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"cancel\", \"feedback\": \"...\" }",
+              { agentType: "status-checker", label: `pt-gate-${ptStep.stage}` }
+            );
+            let parsed;
+            try {
+              parsed = parseAgentJson(raw, { stage: `pt-gate-${ptStep.stage}`, agent: "status-checker" });
+            } catch (_ptGateErr) {
+              parsed = null;
+            }
+            return (parsed && typeof parsed.action === "string") ? parsed : null;
+          },
+          args,
+          { stage: ptStep.stage }
         );
-
-        let ptGate;
-        try {
-          ptGate = parseAgentJson(ptGateResult, { stage: `pt-gate-${ptStep.stage}`, agent: "status-checker" });
-        } catch (_ptGateErr) {
-          ptGate = { action: "cancel" };
+        if (_ptGateResult && _ptGateResult.status &&
+            ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_ptGateResult.status)) {
+          return _ptGateResult;
         }
-        const ptAction = (ptGate.action || "cancel").toLowerCase();
+        const ptGate = _ptGateResult || { action: "cancel" };
+        const ptAction = ptGate.action.toLowerCase();
 
         if (ptAction === "cancel") {
           // NO-PR GUARANTEE (PT cancel): prior committed PT stages preserved, current draft uncommitted.
@@ -2048,26 +2209,38 @@ for (const step of pipeline) {
       baFlowBacklinks = stepResultObj.flow_backlinks;
     }
 
-    // Present gate to the user.
+    // Present gate to the user. ADR-024: resolveGate checks args.resume_answer first.
     if (step.gate !== "final") {
-      const gateResult = await agent(
-        `${step.agent} has written the following ACs: ${written.join(", ") || "(none)"}.\n` +
-        "Present these to the user and ask them to choose:\n" +
-        "  1. approve — proceed to the next stage.\n" +
-        "  2. edit    — re-invoke this agent with feedback.\n" +
-        "  3. cancel  — abort the pipeline (ACs remain as drafts).\n" +
-        "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"cancel\", \"feedback\": \"...\" }",
-        { agentType: "status-checker", label: `gate-${step.stage}` }
+      const _midGateResult = await resolveGate(
+        `gate-${step.stage}`,
+        async () => {
+          const raw = await agent(
+            `${step.agent} has written the following ACs: ${written.join(", ") || "(none)"}.\n` +
+            "Present these to the user and ask them to choose:\n" +
+            "  1. approve — proceed to the next stage.\n" +
+            "  2. edit    — re-invoke this agent with feedback.\n" +
+            "  3. cancel  — abort the pipeline (ACs remain as drafts).\n" +
+            "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"cancel\", \"feedback\": \"...\" }",
+            { agentType: "status-checker", label: `gate-${step.stage}` }
+          );
+          let parsed;
+          try {
+            parsed = parseAgentJson(raw, { stage: `gate-${step.stage}`, agent: "status-checker" });
+          } catch (_) {
+            parsed = null;
+          }
+          return (parsed && typeof parsed.action === "string") ? parsed : null;
+        },
+        args,
+        { stage: step.stage, acs: written }
       );
-
-      let gateDecision;
-      try {
-        gateDecision = parseAgentJson(gateResult, { stage: `gate-${step.stage}`, agent: "status-checker" });
-      } catch (_) {
-        gateDecision = { action: "cancel" };
+      if (_midGateResult && _midGateResult.status &&
+          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_midGateResult.status)) {
+        return _midGateResult;
       }
+      const gateDecision = _midGateResult || { action: "cancel" };
 
-      const action = (gateDecision.action || "cancel").toLowerCase();
+      const action = gateDecision.action.toLowerCase();
 
       if (action === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel).
@@ -2132,24 +2305,38 @@ for (const step of pipeline) {
       }
     } else {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
-      const finalGateResult = await agent(
-        `IT PO v3 has enriched the following ACs: ${written.join(", ") || allAcsWritten.join(", ")}.\n` +
-        "Present these to the user with their enriched fields (assigned_agent, complexity, contracts).\n" +
-        "Ask the user to:\n" +
-        "  1. Set a priority: critical / high / medium / low\n" +
-        "  2. Choose an action: approve (set readiness: approved + priority) | edit | defer (leave as reviewed) | cancel (abort; leave this stage's ACs as uncommitted drafts)\n" +
-        "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"defer\" | \"cancel\", \"priority\": \"high\" | \"medium\" | \"low\" | \"critical\" }",
-        { agentType: "status-checker", label: "final-gate" }
+      // ADR-024: resolveGate checks args.resume_answer before the live agent call.
+      const _finalGateResult = await resolveGate(
+        "final-gate",
+        async () => {
+          const raw = await agent(
+            `IT PO v3 has enriched the following ACs: ${written.join(", ") || allAcsWritten.join(", ")}.\n` +
+            "Present these to the user with their enriched fields (assigned_agent, complexity, contracts).\n" +
+            "Ask the user to:\n" +
+            "  1. Set a priority: critical / high / medium / low\n" +
+            "  2. Choose an action: approve (set readiness: approved + priority) | edit | defer (leave as reviewed) | cancel (abort; leave this stage's ACs as uncommitted drafts)\n" +
+            "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"defer\" | \"cancel\", \"priority\": \"high\" | \"medium\" | \"low\" | \"critical\" }",
+            { agentType: "status-checker", label: "final-gate" }
+          );
+          let parsed;
+          try {
+            parsed = parseAgentJson(raw, { stage: "final-gate", agent: "status-checker" });
+          } catch (_) {
+            parsed = null;
+          }
+          return (parsed && typeof parsed.action === "string") ? parsed : null;
+        },
+        args,
+        { stage: "final", acs: written, all_acs: allAcsWritten }
       );
-
-      let finalDecision;
-      try {
-        finalDecision = parseAgentJson(finalGateResult, { stage: "final-gate", agent: "status-checker" });
-      } catch (_) {
-        finalDecision = { action: "defer" };
+      // Non-proceed outcomes: exit immediately.
+      if (_finalGateResult && _finalGateResult.status &&
+          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_finalGateResult.status)) {
+        return _finalGateResult;
       }
+      const finalDecision = _finalGateResult || { action: "defer" };
 
-      const finalAction = (finalDecision.action || "defer").toLowerCase();
+      const finalAction = finalDecision.action.toLowerCase();
       const priority = VALID_PRIORITIES.includes(finalDecision.priority)
         ? finalDecision.priority
         : "medium";

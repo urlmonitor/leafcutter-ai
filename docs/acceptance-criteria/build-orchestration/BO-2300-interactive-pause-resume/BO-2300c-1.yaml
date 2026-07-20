@@ -21,10 +21,13 @@ criteria: |
   And the context payload is presented to the answerer alongside the question so
     the answer can be made from the shown information.
 depends_on: [BO-2300c]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: M
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md
@@ -42,44 +45,51 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "all"
   required_skills:
+    - llm-expert
     - python-coder
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript). The context snapshot is assembled in the JS gate at pause time from values already in the workflow body's scope and handed to the persist agent() dispatch, which writes it into the record's context field. This is JS in the workflow files plus the agent-mediated write, not a standalone Python module."
+    - "FEASIBILITY (E2 body has no filesystem access): the context snapshot is captured in-body at pause and persisted via the persist agent() dispatch to .leafcutter/paused_runs/<run_id>.json (the dispatched agent may use a small Python helper for the JSON write); the workflow body performs no direct fs write."
     - "The context payload must be captured as a snapshot at the moment of pause (not re-derived at answer time), so it remains correct when the answerer returns much later (see durability BO-2300e-1)."
     - "The context must include what the run has done, what it proposes, and the decision being asked, and must be persisted with the pending-question record."
     - "Context capture must not include secrets/credentials; snapshot only the decision-relevant artifacts."
     - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js); assert the persist agent() call args carry a context payload { work_done_so_far, proposal, decision_summary } captured at pause time. Do NOT test a standalone Python module."
+  delivers_shape:
+    description: "The context snapshot this AC establishes populates the record's context field from BO-2300a-1."
 delivers_to:
-  agent: python-coder
-  contract: "Context snapshot object { work_done_so_far, proposal, decision_summary } captured at pause time and stored in the pending-question record's context field; presented to the answerer alongside the question. Consumed by apply/resume (BO-2300d-1) and durability (BO-2300e-1)."
+  agent: llm-expert
+  contract: "Context snapshot object { work_done_so_far, proposal, decision_summary } captured in-body at pause time and written via the persist agent() dispatch into the pending-question record's context field (.leafcutter/paused_runs/<run_id>.json); presented to the answerer alongside the question. Consumed by apply/resume (BO-2300d-1) and durability (BO-2300e-1)."
 expects_from:
   ac_id: BO-2300a-1
-  contract: "The pending-question record into whose context field this pause-time snapshot is written."
+  contract: "The pending-question record into whose context field this pause-time snapshot is written (via the persist agent() dispatch)."
 test_spec:
   - name: test_context_captured_at_pause_time
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The context is a snapshot taken at pause time, not re-derived when the answer is submitted."
+    description: "Via run_workflow_under_e2, the context in the persist agent() call args is a snapshot taken at pause time, not re-derived when the answer is submitted."
   - name: test_context_includes_work_proposal_decision
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The context payload includes what the run has done, what it proposes, and the decision being asked."
+    description: "Via the harness, the context payload includes what the run has done, what it proposes, and the decision being asked."
   - name: test_context_persisted_with_question
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The context snapshot is persisted alongside the pending-question record."
+    description: "Via the harness, the context snapshot is persisted alongside the pending-question record (present in the persist agent() dispatch payload)."
   - name: test_context_presented_to_answerer
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The context payload is presented to the answerer alongside the question."
+    description: "Via the harness, the context payload is presented to the answerer alongside the question."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; context snapshot is assembled in the JS gate at pause and persisted via the agent() dispatch (no fs in body); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
