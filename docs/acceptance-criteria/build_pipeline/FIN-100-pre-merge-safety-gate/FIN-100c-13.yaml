@@ -25,15 +25,60 @@ criteria: |
 depends_on:
   - FIN-100c
   - FIN-100c-4
+assigned_agent: "python-coder"
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js — the recovery agent's
+    Step A (~L793-798), immediately BEFORE `git -C "${WORKTREE_ROOT}" worktree
+    add --detach "${recoveryWorktreePath}" origin/main`. The recovery path is
+    deterministic (`${baselineTmpPath}-recovery`, ~L782) and is reused on resume.
+  - SELF-RECLAIM BEFORE ADD: the recovery path must, as its own explicit step,
+    reclaim any pre-existing worktree registered at recoveryWorktreePath and
+    delete the leftover directory before the `git worktree add` — mirror Step 0's
+    Step-A0 stale-worktree reclaim (~L438-444), e.g. `git -C "${WORKTREE_ROOT}"
+    worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true` then
+    `rm -rf "${recoveryWorktreePath}" 2>/dev/null || true`.
+  - NO RELIANCE ON INCIDENTAL OVERLAP: the reclaim MUST be performed by the
+    recovery path itself and must not depend on the Step-0 stale-baseline glob
+    incidentally matching the -recovery path (that overlap is not guaranteed and
+    is not a self-contained safeguard).
+  - OUTCOME: after the self-reclaim, the subsequent `worktree add` succeeds on
+    resume rather than failing with a path-already-exists error that Step A would
+    return as {status: "checkout_failed"} and thereby trigger the FIN-100c-9
+    conservative halt falsely.
+  - ERROR HANDLING: the reclaim commands are best-effort (|| true) and must not
+    themselves abort the recovery; any genuine add failure after a clean reclaim
+    still routes to the existing checkout_failed fallback per the error-handling
+    policy.
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_recovery_reclaims_stale_recovery_worktree_before_add
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral (run_workflow_under_e2): the step-3-targeted-rerun agent prompt instructs a worktree remove/rm of ${recoveryWorktreePath} that precedes the `git worktree add` for that same path, so a pre-existing recovery worktree is reclaimed before creation."
+  - name: test_recovery_reclaim_is_self_contained_not_step0_glob
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral/structural: the reclaim of the -recovery path is issued within the recovery path's own Step A and does not depend on the Step-0 stale-baseline glob matching the recovery path."
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
     relationship: describes
     status: exists
     relevance: "the recovery worktree path is deterministic (`${baselineTmpPath}-recovery`, ~L782) and reused on resume; unlike Step 0's Step-A0 stale-worktree reclaim (~L438-444), the recovery agent's Step A (~L793-798) does no self-reclaim and relies on the incidental Step-0 glob overlap — it must reclaim/remove any pre-existing -recovery worktree before `git worktree add`"
+  - path: "docs/how-to/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "documents the finalize baseline/recovery worktree lifecycle and resume behavior"
 origin_agent: business-analyst
 created: 2026-07-20
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added assigned_agent (python-coder — finalize-feature.js workflow body / recovery agent prompt), estimated_complexity (S — a self-reclaim step added to Step A before worktree add), it_requirements (self-reclaim of the deterministic ${baselineTmpPath}-recovery path in the recovery agent's own Step A before `git worktree add`, mirroring Step 0's Step-A0 reclaim ~L438-444; must not rely on the incidental Step-0 glob overlap; prevents the path-already-exists error being misreported as checkout_failed and falsely triggering the FIN-100c-9 halt; best-effort reclaim per error-handling policy), and test_spec (2 behavioral/structural descriptors). Criteria unchanged; readiness left draft per approval gate."
+    by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

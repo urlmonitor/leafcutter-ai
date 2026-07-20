@@ -26,15 +26,71 @@ criteria: |
 depends_on:
   - FIN-100c
   - FIN-100c-4
+assigned_agent: "python-coder"
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: unit_tests/workflows/test_finalize_baseline_recovery.py. Coverage of
+    the recovery behavior must come from executing the recovery path via
+    run_workflow_under_e2() (from _workflow_engine_harness) and asserting on
+    observable outcomes — the baseline_failures/baseline_sha forwarded in the
+    step-3-triage dispatch prompt, the conservative fallback on a
+    rerun-unavailable result, and the recovery worktree cleanup — not from source
+    text inspection.
+  - NO SUBSTRING-COUNT GATES: no test may assert on a COUNT of source substrings
+    in the workflow file text (e.g. `js.count("worktree add --detach")`,
+    `js.count("scripts/build.py")` compared to a threshold). The existing thin
+    presence smoke checks (`"recoveredBaselineFailures" in js`, `"targeted rerun
+    unavailable" in js`, `"step-3-targeted-rerun" in js`, ~L149-175) are boolean
+    presence guards, not count gates, and are acceptable — but any occurrence-count
+    threshold assertion must be removed/absent.
+  - REFACTOR-STABLE: the behavioral tests must remain green under a benign refactor
+    that preserves recovery behavior but changes source wording or command
+    spelling (this is also what enables the FIN-100c-11 extraction to land without
+    breaking these tests).
+  - INVERSION-DETECTING: at least one behavioral test must fail if the recovery
+    decision is inverted (forwarding a non-null recovered baseline when the rerun
+    was unavailable, or leaving baseline_failures null when a recovered baseline
+    was produced) — assert on the baseline_failures value carried into the triage
+    dispatch, per the mutation-resistance note already in the test module.
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_recovery_tests_have_no_source_substring_count_gate
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Meta-test: the recovery test module contains no assertion gating on a count of source substrings in the workflow file text (e.g. no `.count(` on the read JS source compared to a numeric threshold)."
+  - name: test_recovery_behavior_covered_via_harness_execution
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The recovery behavior (recovered baseline forwarded to triage, conservative fallback, worktree cleanup) is covered by run_workflow_under_e2 harness execution asserting observable outcomes, not source-text inspection."
+  - name: test_benign_source_reword_does_not_fail_behavioral_tests
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "A behavior-preserving refactor that changes source wording/command spelling (e.g. the FIN-100c-11 extraction) keeps the behavioral recovery tests green."
+  - name: test_inverted_recovery_decision_is_caught
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "An inverted recovery decision (non-null baseline forwarded on rerun-unavailable, or null forwarded when a recovered baseline was produced) fails at least one behavioral test that asserts on the triage baseline_failures value."
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
     relationship: describes
     status: exists
     relevance: "the recovery branch (~L774-871) whose behavior the tests must exercise via the run_workflow_under_e2 harness rather than counting occurrences of source substrings such as `worktree add --detach` or `scripts/build.py`"
+  - path: "unit_tests/workflows/test_finalize_baseline_recovery.py"
+    relationship: describes
+    status: exists
+    relevance: "the recovery test module this AC constrains: coverage via run_workflow_under_e2 behavioral assertions; boolean presence smoke checks (~L149-175) are acceptable but no source-substring-count threshold gate may exist"
 origin_agent: business-analyst
 created: 2026-07-20
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added assigned_agent (python-coder — owns the workflow test file), estimated_complexity (S — test-file hygiene: remove any count gate, keep behavioral coverage), it_requirements (coverage via run_workflow_under_e2 observable-outcome assertions; NO source-substring-count threshold gates, while the existing boolean presence smoke checks ~L149-175 remain acceptable; refactor-stable so the FIN-100c-11 extraction lands cleanly; at least one inversion-detecting behavioral assertion on the triage baseline_failures value), and test_spec (meta-test asserting no count gate + behavioral coverage + refactor-stability + inversion detection). Criteria unchanged; readiness left draft per approval gate."
+    by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

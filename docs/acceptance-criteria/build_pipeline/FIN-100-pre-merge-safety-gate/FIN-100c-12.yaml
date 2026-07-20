@@ -26,15 +26,71 @@ depends_on:
   - FIN-100c
   - FIN-100c-4
   - FIN-100c-6
+assigned_agent: "python-coder"
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js — the recovery success
+    arm (~L837-848) and the triage dispatch that forwards
+    baseline_sha=${JSON.stringify(baselineSha)} (~L887, dispatch block ~L873-891).
+  - RECOVERY AGENT RETURN: the step-3-targeted-rerun agent's Step E return
+    (~L819-820) must additionally report the origin/main HEAD commit SHA of the
+    checkout the rerun ran against (resolve via `git -C "${recoveryWorktreePath}"
+    rev-parse HEAD` after the successful `git worktree add ... origin/main`), e.g.
+    add a "checked_out_sha" field to the ok result.
+  - SUCCESS-ARM ASSIGNMENT: on the ok arm (recoveryStatus === "ok", where the
+    workflow already sets baselineFailures = recoveredBaselineFailures ~L841-842),
+    the workflow must ALSO set baselineSha to that reported recovered SHA, exactly
+    as Step 0 assigns baselineSha from its baseline agent result (~L502/L510), so
+    the non-null recovered baseline is never forwarded paired with a null SHA.
+  - CONSISTENCY INVARIANT (load-bearing): set baselineFailures and baselineSha in
+    the same arm so they cannot diverge — whenever the recovered baseline list is
+    non-null, baselineSha forwarded at ~L887 must be non-null and equal to the
+    checked-out SHA.
+  - FALLBACK UNCHANGED: on the rerun-unavailable arm (checkout/build/parse
+    failure, ~L849-864) no recovered baseline is produced and baselineSha remains
+    null — preserving the existing conservative null/null pairing.
+  - ERROR HANDLING: the rev-parse I/O must be wrapped and logged at WARNING+ per
+    the project error-handling policy; a rev-parse failure degrades to the
+    rerun-unavailable fallback (does not crash finalize and does not forward a
+    non-null baseline with a null SHA).
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "forwards baseline_sha = the origin/main HEAD SHA of the recovery checkout (non-null) whenever a non-null recovered baseline is forwarded; baseline_sha is null only when no recovered baseline is produced (rerun-unavailable fallback)"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides the non-null recovered baseline list built by FIN-100c-6 on the success arm, and the successful recovery-worktree checkout at origin/main HEAD whose SHA is resolved and forwarded"
+test_spec:
+  - name: test_recovery_ok_forwards_nonnull_baseline_sha
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral (run_workflow_under_e2): on a successful targeted rerun that yields a non-null recovered baseline, the triage dispatch prompt carries a non-null baseline_sha equal to the recovery checkout's reported origin/main HEAD SHA."
+  - name: test_recovered_baseline_and_sha_pair_consistent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral: whenever the triage prompt's baseline_failures is non-null, its baseline_sha is also non-null (the recovered baseline and its SHA are never a non-null/null mismatched pair)."
+  - name: test_rerun_unavailable_keeps_baseline_sha_null
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral: when the targeted rerun is unavailable (checkout_failed/build_failed/parse_failed), the triage dispatch prompt forwards baseline_sha=null (no recovered baseline produced)."
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
     relationship: describes
     status: exists
-    relevance: "recovery success path (~L837-848) sets baselineFailures to the recovered list but leaves baselineSha null; the triage dispatch (~L885-889) forwards baseline_sha=baselineSha — the recovery agent must return the checked-out origin/main HEAD SHA and the workflow must set the forwarded baseline SHA to it so a recovered baseline is never paired with a null SHA"
+    relevance: "recovery success path (~L837-848) sets baselineFailures to the recovered list but leaves baselineSha null; the triage dispatch (~L887) forwards baseline_sha=baselineSha — the recovery agent must return the checked-out origin/main HEAD SHA and the workflow must set baselineSha to it so a recovered baseline is never paired with a null SHA (Step 0 sets baselineSha similarly at ~L502/L510)"
+  - path: "templates/agents/test-failure-triage.md"
+    relationship: describes
+    status: exists
+    relevance: "Input Contract baseline_sha field consumed alongside baseline_failures; a non-null recovered baseline must arrive with a non-null SHA"
 origin_agent: business-analyst
 created: 2026-07-20
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added assigned_agent (python-coder — finalize-feature.js workflow body), estimated_complexity (S — one rev-parse in the recovery agent return plus one success-arm assignment), it_requirements (recovery Step E return must add the origin/main HEAD checked_out_sha via git rev-parse; success arm sets baselineSha alongside baselineFailures mirroring Step 0 ~L502/L510; consistency invariant so a non-null baseline never pairs with a null SHA; fallback keeps null/null; rev-parse failure degrades to the FIN-100c-9 fallback per error-handling policy), test_spec (3 behavioral descriptors, one per Then, driven through the triage dispatch prompt), delivers_to (non-null SHA paired with recovered baseline), and expects_from FIN-100c-6. Criteria unchanged; readiness left draft per approval gate."
+    by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

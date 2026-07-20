@@ -29,15 +29,81 @@ criteria: |
 depends_on:
   - FIN-100c
   - FIN-100c-4
+assigned_agent: "python-coder"
+estimated_complexity: M
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js. Extract the ~85-line
+    inlined recovery block (guarded by baselineFailures === null &&
+    postMergeFailures.length > 0, ~L774-871) into a named unit defined at module
+    scope, mirroring the existing cleanupBaselineWorktree helper (~L295) and the
+    Step 0 baseline extraction shape.
+  - SEPARATE THE PURE DECISION: the decision that maps the recovery agent's
+    result (recoveryInfo.status + recovered_failures, ~L836-848) to either the
+    recovered baseline list or null MUST be a pure, side-effect-free function
+    (no worktree I/O, no agent() dispatch, no cleanup). This pure unit is the
+    thing exercised by the isolated unit tests the criteria require — it accepts
+    the post-merge failing IDs and the recovery result and returns the recovered
+    baseline list or null. Keep the async orchestration (agent dispatch +
+    `${baselineTmpPath}-recovery` worktree lifecycle + cleanupBaselineWorktree
+    call) in a separate wrapper.
+  - E2 CONSTRAINT: the module intentionally has no `export async function run()`
+    — E2 executes the top-level body directly (see ~L28). The extraction must not
+    add any top-level side effect that runs on import, and the pure decision unit
+    must be reachable for isolated invocation without executing the workflow body
+    (so a unit test can call it directly, not via run_workflow_under_e2).
+  - BEHAVIOR-PRESERVING REFACTOR ONLY: the success arm must still set
+    baselineFailures to the recovered list with the empty-list-not-null semantics
+    preserved (FIN-100c-6), the rerun-unavailable arm must still leave
+    baselineFailures null (FIN-100c-9), and cleanupBaselineWorktree() must still
+    fire unconditionally after the block (~L870). No observable behavior change
+    beyond the extraction and delegation.
+  - DELEGATION: the Step-3 flow must call the extracted named unit instead of
+    restating the recovery logic inline.
+  - ERROR HANDLING: I/O in the async wrapper stays wrapped and logged at WARNING+
+    per the project error-handling policy; the pure decision function is a pure
+    internal function and MUST NOT be wrapped in try/except (error-handling
+    policy Rule 4).
+delivers_to: null
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides the step-3-targeted-rerun recovery result ({status, recovered_failures}) and the post-merge failing test IDs that the extracted unit maps to a recovered baseline list or null (same inputs the inlined block consumes today, FIN-100c-4/6)"
+test_spec:
+  - name: test_recovery_decision_returns_subset_that_fails_on_main
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Isolated unit test (no full workflow): given a recovery result with status ok and recovered_failures = a subset of the post-merge failing IDs, the extracted unit returns exactly that subset as the recovered baseline."
+  - name: test_recovery_decision_returns_null_when_rerun_unavailable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Isolated unit test: a rerun-unavailable recovery result (status checkout_failed / build_failed / parse_failed, or recovered_failures not an array) makes the extracted unit return null."
+  - name: test_recovery_decision_returns_empty_list_not_null_when_none_fail_on_main
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Isolated unit test: status ok with recovered_failures = [] makes the unit return [] (a clean recovered baseline), never null — preserving the load-bearing [] vs null distinction (FIN-100c-6)."
+  - name: test_step3_delegates_to_named_recovery_unit
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral test via run_workflow_under_e2: after extraction, the Step-3 flow still forwards the correct baseline_failures to the triage dispatch (recovered subset on ok, null on rerun-unavailable), proving delegation preserves behavior."
 doc_links:
   - path: "templates/workflows-js/finalize-feature.js"
     relationship: describes
     status: exists
     relevance: "the ~85-line inlined recovery block (guarded by baselineFailures === null && postMergeFailures.length > 0, ~L774-871) that must be extracted into a named unit returning the recovered baseline list or null, mirroring the Step 0 baseline helper and cleanupBaselineWorktree extraction"
+  - path: "docs/how-to/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "documents the finalize Step 0 baseline capture and Step 3 recovery flow whose recovery logic is being extracted"
 origin_agent: business-analyst
 created: 2026-07-20
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added assigned_agent (python-coder — finalize-feature.js workflow body, same surface as FIN-100c-4/5/6/9), estimated_complexity (M — ~85-line extraction plus a new pure decision unit and its isolated tests), it_requirements (extract to a module-scope named unit mirroring cleanupBaselineWorktree; separate the pure status→baseline decision from the async worktree/agent orchestration so it is callable in isolation given the no-run() E2 top-level-body execution model; behavior-preserving incl. []-not-null and unconditional cleanup; pure function must not be try/except-wrapped per policy Rule 4), test_spec (2 isolated unit tests required by the criteria + the []-vs-null edge + a delegation behavioral test), and expects_from. Kept criteria, implements_pattern/pattern_bindings (none) unchanged; readiness left draft per approval gate."
+    by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []
