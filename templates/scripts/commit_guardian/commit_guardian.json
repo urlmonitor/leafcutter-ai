@@ -574,6 +574,19 @@
                 "pass_filenames": false
             },
             {
+                "id": "check-agent-verification-consistency",
+                "tier": "judgment",
+                "name": "Check Agent Verification Consistency",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/hooks/check_agent_verification_consistency.py",
+                "language": "system",
+                "files": "^templates/agents/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "GE-116a-1: Blocks commits staging a templates/agents/*.md whose frontmatter declares requires_verification: true but lists no edit-capable tool (Edit or Write). Fail-closed on detection; fail-open on YAML parse errors. Scoped to staged templates/agents/*.md by file identity only (git diff --cached). Block message names every offending path and states both fixes."
+            },
+            {
                 "id": "check-predone-scope",
                 "tier": "judgment",
                 "name": "Check Pre-Done Scope Reconciliation (files_touched vs actual diff)",
