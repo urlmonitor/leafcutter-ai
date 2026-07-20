@@ -1,0 +1,58 @@
+id: GE-116a-5
+components:
+  - commit_guardian
+title: "Consistency guard is registered so it runs on every commit"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given the agent-definition consistency guard is declared in the project's
+    commit-guardian hook manifest,
+  When the project build assembles the pre-commit hook configuration,
+  Then the consistency guard appears in the generated pre-commit configuration,
+  And it is therefore invoked automatically on every commit that stages an
+    agent definition, without any manual per-repository setup.
+depends_on:
+  - GE-116a
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The hook script templates/scripts/commit_guardian/hooks/check_agent_verification_consistency.py exists and is runnable via run_hook.py (the script this AC registers in the manifest)."
+it_requirements:
+  - "Register the guard in the SOURCE manifest templates/scripts/commit_guardian/commit_guardian.json (hooks_manifest.hooks[]), NOT the deployed scripts/commit_guardian/commit_guardian.json; then rebuild via scripts/build.py so it is emitted into the generated .pre-commit-config.yaml. Mirror the existing check-agent-spawn-consistency entry shape (id, tier, name, entry via run_hook.py, files regex, stages, pass_filenames)."
+  - "Scope the manifest entry's files regex to agent definitions (e.g. ^templates/agents/.*\\.md$) so the hook only fires when an agent definition is staged."
+  - "Parity trap (BP-300e): a new commit_guardian hook script must be reachable by build.py's commit_guardian deploy and by any deployable-set / build-drift guard. After registering, rebuild and confirm the new script deploys to scripts/commit_guardian/hooks/ and that check_build_drift / check_hook_parity pass."
+test_spec:
+  - name: test_hook_registered_in_generated_precommit_config
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "After build.py runs, the generated .pre-commit-config.yaml contains the agent-verification consistency hook entry, so it runs on every commit that stages an agent definition without manual setup."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal
+notes: |
+  Wiring requirement: the hook must be an entry in commit_guardian.json's
+  hooks_manifest so build.py emits it into the generated .pre-commit-config.yaml
+  (same mechanism as the existing check_ac_schema / check_ac_circular_deps
+  hooks). Without this the guard function exists but never runs at commit time.
+  change_target is config because this AC is about the manifest registration,
+  not the check logic.

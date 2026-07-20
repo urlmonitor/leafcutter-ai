@@ -1,0 +1,38 @@
+id: GE-116c
+components:
+  - commit_guardian
+title: "Only agent definitions are checked; unrelated commits pass untouched"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Only agent definitions are checked; unrelated commits pass untouched.
+
+  The check looks only at staged agent definitions, so commits that touch
+  anything else are never slowed down or blocked by a false alarm.
+depends_on:
+  - GE-116
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-116c-1
+  - GE-116c-2
+  - GE-116c-3
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Scope behavior of the same guard introduced by GE-116a; covered by that guard's reference-doc update, no separate documentation needed."
+notes: "User-authored intent: BrainCandy. Framed by product-owner. Scope: staged templates/agents/*.md only."
+change_target: code
+risk_surface: internal

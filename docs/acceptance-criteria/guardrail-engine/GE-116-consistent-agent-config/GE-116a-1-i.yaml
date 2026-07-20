@@ -1,0 +1,54 @@
+id: GE-116a-1-i
+components:
+  - commit_guardian
+title: "Verification-required agent with an empty abilities list is blocked"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given a staged agent definition whose settings declare that it must verify
+    the changes it makes (requires_verification is true),
+  And that agent declares an abilities list that is present but empty (no tools
+    at all, so neither the ability to edit nor to create files is granted),
+  When the commit is attempted,
+  Then the commit is blocked fail-closed,
+  And the block is reported as a failure of the consistency guard.
+depends_on:
+  - GE-116a-1
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The fail-closed block decision of the verification-consistency guard, which this edge refines for an empty tools list."
+it_requirements:
+  - "An empty tools list (tools: []) grants no edit/create ability and must be treated identically to a Read/Bash-only list: with requires_verification: true it is a contradiction and the hook exits non-zero (blocked)."
+test_spec:
+  - name: test_blocks_when_tools_list_empty
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Staged agent template with requires_verification: true and tools: [] (present but empty) → hook exits non-zero (blocked fail-closed)."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Edge: tools: [] (empty list) must be treated the same as a Read/Bash-only
+  list for the block decision — an empty abilities set also grants no
+  edit/create ability, so requires_verification: true is still contradictory.
