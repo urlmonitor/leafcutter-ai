@@ -67,6 +67,27 @@ _PROSE_PATH_EXTENSIONS: frozenset[str] = frozenset({
     ".txt", ".toml", ".cfg", ".ini", ".html", ".css", ".sh",
 })
 
+#: Documentation and configuration file extensions excluded from source-code
+#: detection.  Used to derive _SOURCE_CODE_EXTENSIONS from _PROSE_PATH_EXTENSIONS.
+_DOC_CONFIG_EXTENSIONS: frozenset[str] = frozenset({
+    ".md", ".yaml", ".yml", ".json", ".txt", ".toml", ".cfg", ".ini",
+})
+
+#: Recognised source-code file extensions that signal a code-ticket for AC-gate
+#: wiring.  Derived from _PROSE_PATH_EXTENSIONS (the prose-path-detection allowlist)
+#: by removing documentation and configuration suffixes, then extended with common
+#: frontend framework extensions not present in the prose-detection set.  A single
+#: derivation (rather than a second independent hard-coded list) ensures both sets
+#: stay in sync when _PROSE_PATH_EXTENSIONS is updated (TKT-500f-14).
+_SOURCE_CODE_EXTENSIONS: frozenset[str] = (
+    (_PROSE_PATH_EXTENSIONS - _DOC_CONFIG_EXTENSIONS)
+    | frozenset({".tsx", ".jsx", ".vue", ".svelte"})
+)
+
+#: Known coder agents — any of these as the AC's assigned_agent signals a code
+#: ticket regardless of files_touched content (TKT-500f-14).
+_KNOWN_CODERS: frozenset[str] = frozenset({"python-coder", "frontend-coder", "sql-coder"})
+
 #: Path prefixes that identify extension-less tokens as source paths.
 #: A token that begins with one of these prefixes is included even when it
 #: carries no recognized file extension (TKT-500f-8-i path-detection rule).
@@ -533,10 +554,14 @@ def _build_agents_map(
     cannot be excluded via not_needed_overrides when the computed chain requires
     them — the computed chain wins (BO-550-1-i).
 
-    When files_touched contains at least one implementation .py file, ac-validator
-    and ac-fulfillment-gate are wired as needed phases (TKT-500f-12).  This check
-    applies only in the computed path (when change_targets and risk_surface are
-    provided) and keys off the actual edit surface, not the change_target label.
+    When files_touched contains at least one recognised source-code file (not
+    limited to .py — any extension in _SOURCE_CODE_EXTENSIONS qualifies) OR
+    the assigned_agent is a known coder (python-coder/frontend-coder/sql-coder),
+    ac-validator and ac-fulfillment-gate are wired as needed phases
+    (TKT-500f-12, broadened by TKT-500f-14).  This check applies only in the
+    computed path (when change_targets and risk_surface are provided) and keys
+    off the actual edit surface and/or the assigned agent, not the change_target
+    label.
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
@@ -638,14 +663,23 @@ def _build_agents_map(
                 all_needed.add("test-runner")
                 break
 
-        # Wire ac-validator and ac-fulfillment-gate for code-AC tickets (TKT-500f-12).
-        # When files_touched contains at least one implementation .py file, these two
-        # store-fidelity gates must run against the ticket so AC traceability is verified
-        # before any commit is made.  Docs/config-only tickets (no .py in files_touched)
-        # are not affected — the check keys off the actual edit surface, not the
-        # change_target label, so a stale or doc_links-only files_touched would not
-        # mis-classify a code AC as docs-only.
-        if files_touched and any(p.endswith(".py") for p in files_touched):
+        # Wire ac-validator and ac-fulfillment-gate for code tickets
+        # (TKT-500f-12, broadened by TKT-500f-14). A ticket is classified as a
+        # code ticket when EITHER of the following is true:
+        #   (a) files_touched contains at least one recognised source-code file
+        #       extension (not limited to .py — covers .js, .ts, .tsx, .jsx,
+        #       .sql, .vue, .svelte, .html, .css, .sh, etc. as defined by
+        #       _SOURCE_CODE_EXTENSIONS, derived from _PROSE_PATH_EXTENSIONS);
+        #   (b) the assigned agent is a known coder (python-coder,
+        #       frontend-coder, or sql-coder) — coder assignment alone is
+        #       sufficient regardless of files_touched content.
+        # Docs/config/diagram-only tickets (no source file in files_touched AND
+        # a non-coder assigned agent) satisfy neither condition and are not gated.
+        _has_source_file = bool(files_touched) and any(
+            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS for p in files_touched
+        )
+        _is_coder_assigned = assigned_agent in _KNOWN_CODERS
+        if _has_source_file or _is_coder_assigned:
             all_needed.add("ac-validator")
             all_needed.add("ac-fulfillment-gate")
 
