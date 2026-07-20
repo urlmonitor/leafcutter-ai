@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
-generate_ticket_from_ac.py — Generate a ticket file from an AC YAML record.
+MODULE: generate_ticket_from_ac
+GOAL: Generate a ticket file from an AC YAML record in the acceptance-criteria store.
+BUSINESS CONTEXT: Ticket generation is the bridge between authored ACs and actionable
+    work items — it converts machine-readable AC YAML into the frontmatter, agent map,
+    test requirements, and sign-off sections that phase agents need.
+ARCHITECTURE: CLI script in scripts/ac_store/; called by the /build-ac workflow and
+    by ticket-supervisors; reads config/guardrail_gates.yaml + config/agent_registry.json
+    to compute the agents map, and writes tickets to tickets/00_inbox/.
 
 Usage:
     python3 scripts/ac_store/generate_ticket_from_ac.py --ac <ac_id> [options]
@@ -614,18 +621,44 @@ def _build_agents_map(
         # list, even if the trigger dimensions above would otherwise add it.
         # This ensures purely internal refactors never impose a documentation
         # burden regardless of any future expansion of the trigger lists.
+        #
+        # Union semantics (BO-2200a-4): for list-valued change_targets, a
+        # non_triggering entry for one element must NOT cancel the trigger raised
+        # by a DIFFERENT element.  When Dimension 1 (change_target_triggers) is
+        # the source of the documentation demand, suppression only applies when
+        # EVERY triggering element is covered by a non_triggering entry for the
+        # current risk_surface.
         non_triggering: list = list(
             doc_gates_policy.get("non_triggering_classifications") or []
         )
         if non_triggering and "documentation-expert" in guardrail_set:
-            for entry in non_triggering:
-                if not isinstance(entry, dict):
-                    continue
-                entry_ct = entry.get("change_target")
-                entry_rs = entry.get("risk_surface")
-                if entry_ct in change_targets and entry_rs == risk_surface:
+            # Collect the set of change_target values covered by a non_triggering
+            # entry for the current risk_surface.
+            suppressed_targets: set[str] = {
+                entry.get("change_target")
+                for entry in non_triggering
+                if isinstance(entry, dict)
+                and entry.get("change_target")
+                and entry.get("risk_surface") == risk_surface
+            }
+            triggering_via_change_target: set[str] = (
+                set(change_targets) & doc_change_triggers
+            )
+            if triggering_via_change_target:
+                # documentation-expert was triggered by at least one change_target
+                # element via Dimension 1.  Union semantics (BO-2200a-4): suppress
+                # only when EVERY triggering change_target element is covered by a
+                # non_triggering entry for this risk_surface.  A match on one list
+                # element must NOT cancel the trigger raised by a different element.
+                if not (triggering_via_change_target - suppressed_targets):
                     guardrail_set.discard("documentation-expert")
-                    break
+            else:
+                # documentation-expert was triggered by risk_surface_triggers only
+                # (Dimension 2).  Apply the original scalar suppression: if any
+                # change_target for this call has a non_triggering entry for the
+                # current risk_surface, suppress.
+                if any(ct in suppressed_targets for ct in change_targets):
+                    guardrail_set.discard("documentation-expert")
 
         # documentation-expert is ordered via _CANONICAL_PHASE_ORDER (post-coder
         # position) for all pairs, including flow-change pairs.  architect-review
@@ -1921,5 +1954,16 @@ DECISION HISTORY
   Added non_triggering_classifications list to config/guardrail_gates.yaml covering the
   four internal-refactor pairs: code/internal, config/internal, prompt/internal,
   infrastructure/internal (BO-2200a-3).
+- 2026-07-20 [TICKET-20260715-BO-2200a-4]: Apply union semantics to list-valued
+  change_targets in non_triggering_classifications check (Dimension 3).  Fixed a bug
+  where a non_triggering entry for one element (e.g. config/internal) could suppress
+  documentation-expert even when a different element in the list (e.g. ui) independently
+  triggered it via change_target_triggers.  The fix: instead of discarding
+  documentation-expert whenever any non_triggering entry's change_target is found in the
+  list, collect all triggering elements (change_targets ∩ doc_change_triggers) and only
+  discard when EVERY triggering element is covered by a non_triggering entry for the
+  current risk_surface.  For the Dimension-2-only path (risk_surface_triggers trigger),
+  the original scalar suppression is preserved unchanged.  (AC BO-2200a-4)
+  (#EPIC-DocumentationCoverageGuarantee/05)
 ====================================================================
 """
