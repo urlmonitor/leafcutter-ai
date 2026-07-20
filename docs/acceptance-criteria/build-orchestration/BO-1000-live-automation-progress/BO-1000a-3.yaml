@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -53,13 +53,28 @@ it_requirements:
     - No new config key. ADR-001 build.py round-trip parity.
 delivers_to: null
 expects_from: null
+test_required: true
+test_spec:
+  - name: test_skipped_step_emits_start_line_stating_already_satisfied_condition
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "When a step's required outcome is already satisfied (e.g. PR already open, branch synced, closure commit exists, PR already merged, worktree absent), finalize still emits a start line reporting the step is skipped and naming the concrete already-satisfied condition."
+  - name: test_skipped_step_not_silently_omitted_from_progress_output
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A skipped step still appears in the progress output — it is never a silent early-return that removes the step from the narration."
 origin_agent: business-analyst-v3
 created: 2026-07-10
 amended_by:
   - reason: it-po-v3-technical-enrichment
     note: "Assigned python-coder (workflow-body surface), added structured it_requirements + doc_links; criteria unchanged."
+  - reason: it-po-test-contract
+    note: "Added test_spec (2 behavioral tests derived from the Gherkin Then-clauses) and test_required: true; criteria and all prior fields unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-InFlightVisibility/05_TICKET-20260715-BO-1000a-3.md
 change_target: pipeline
 risk_surface: internal
