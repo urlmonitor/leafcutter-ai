@@ -22,10 +22,10 @@ from pathlib import Path
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_SCRIPTS_DIR = _REPO_ROOT / "scripts"
+_SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from ac_store.generate_ticket_from_ac import _write_implemented_by  # noqa: E402
+from generate_ticket_from_ac import _write_implemented_by  # noqa: E402
 
 
 class TestACD1200a11ImplementedByDedup(unittest.TestCase):
