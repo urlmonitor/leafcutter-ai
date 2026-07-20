@@ -120,6 +120,7 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "sql-coder",
     "test-runner",
     "documentation-expert",
+    "documentation-verifier",
     "pr-reviewer",
     "ac-validator",
     "ac-fulfillment-gate",
@@ -132,6 +133,7 @@ _CANONICAL_PHASE_ORDER: list[str] = [
 _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "architect-review",
     "documentation-expert",
+    "documentation-verifier",
     "test-writer",
     "python-coder",
     "sql-coder",
@@ -659,6 +661,15 @@ def _build_agents_map(
                 # current risk_surface, suppress.
                 if any(ct in suppressed_targets for ct in change_targets):
                     guardrail_set.discard("documentation-expert")
+
+        # BO-2200b-4: when documentation-expert survives all discard passes, also
+        # inject documentation-verifier as its companion verification phase.
+        # Both agents are gated on the same trigger decision — removing
+        # documentation-expert (via non_triggering_classifications) also removes
+        # documentation-verifier because the inject block is only reached when
+        # documentation-expert remains in guardrail_set.
+        if "documentation-expert" in guardrail_set:
+            guardrail_set.add("documentation-verifier")
 
         # documentation-expert is ordered via _CANONICAL_PHASE_ORDER (post-coder
         # position) for all pairs, including flow-change pairs.  architect-review
@@ -1191,6 +1202,11 @@ def _build_frontmatter(
     risk_surface = ac.get("risk_surface")
     if risk_surface is not None:
         fm["risk_surface"] = risk_surface
+    # BO-2200b-4: set documentation_required: true when the documentation-verifier
+    # phase is wired as needed — signals to downstream agents that a documentation
+    # review cycle is in flight for this ticket.
+    if agents.get("documentation-verifier") == "needed":
+        fm["documentation_required"] = True
     return "---\n" + yaml.dump(fm, default_flow_style=False, allow_unicode=True) + "---"
 
 
@@ -1965,5 +1981,18 @@ DECISION HISTORY
   current risk_surface.  For the Dimension-2-only path (risk_surface_triggers trigger),
   the original scalar suppression is preserved unchanged.  (AC BO-2200a-4)
   (#EPIC-DocumentationCoverageGuarantee/05)
+- 2026-07-20 [TICKET-20260715-BO-2200b-4]: Inject documentation-verifier alongside
+  documentation-expert; set documentation_required: true in frontmatter.
+  _build_agents_map: after all non_triggering_classifications discard passes, when
+  documentation-expert remains in guardrail_set, documentation-verifier is also added to
+  guardrail_set.  Both agents are gated on the same trigger decision so removing
+  documentation-expert via the non-triggering guard also removes documentation-verifier.
+  _build_frontmatter: when documentation-verifier appears in the agents map as 'needed',
+  sets documentation_required: True in the frontmatter, signalling to downstream agents
+  that a documentation review cycle is in flight.  When the AC does not trigger a
+  documentation demand, neither documentation-verifier nor documentation_required: true
+  appears.  Added documentation-verifier to _CANONICAL_PHASE_ORDER (after
+  documentation-expert) and _FLOW_CHANGE_PHASE_ORDER (after documentation-expert).
+  (AC BO-2200b-4) (#EPIC-DocumentationCoverageGuarantee/13)
 ====================================================================
 """
