@@ -40,7 +40,11 @@ import subprocess
 import textwrap
 import unittest
 
-from _plan_feature_e2_runner import E2_PLAN_FEATURE_JS, run_plan_feature_e2
+from _plan_feature_e2_runner import (
+    E2_PLAN_FEATURE_JS,
+    extract_js_function,
+    run_plan_feature_e2,
+)
 
 # The E2 runtime file is the sole plan-feature.js consumer surface after
 # foundation cleanup deleted the legacy scripts/workflows/plan-feature.js.
@@ -158,7 +162,12 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
             "  return result ||", "  const __finalResult = result ||", 1
         )
 
-        script = textwrap.dedent(f"""
+        # BP-300e-5: the coercion block now calls the module-level parseAgentJson
+        # tolerant reader. Inject its definition so the isolated replay matches
+        # the loaded-module runtime (otherwise the call ReferenceErrors and the
+        # coercion's own catch masks it as a fail-closed "error").
+        parse_agent_json_fn = extract_js_function(self.source, "parseAgentJson")
+        script = parse_agent_json_fn + "\n" + textwrap.dedent(f"""
             // Behavioral replay: inject the exact coercion block from plan-feature.js.
             // Wrapped in an async IIFE to allow `const` declarations and async syntax.
             (async () => {{
