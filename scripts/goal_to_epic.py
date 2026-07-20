@@ -20,10 +20,12 @@ ARCHITECTURE: Standalone CLI script. Delegates single-ticket generation to
 Usage:
     python3 scripts/goal_to_epic.py --ac <ac_id> [--store-root <path>]
                                     [--inbox-dir <path>] [--dry-run]
+                                    [--yes | --approved-only]
 
 Exit codes:
     0  EPIC folder created successfully (or --dry-run printed the plan).
-    1  AC not found, zero-leaf condition, I/O error, or conflict.
+    1  AC not found, zero-leaf condition, I/O error, conflict, or no-TTY
+       run without an approval flag when unapproved ACs are present.
 
 ACD-1200a-1: traverse_ac_tree returns only leaf ACs.
 ACD-1200a-1-i: L1-scoped traversal excludes sibling branches.
@@ -36,6 +38,9 @@ ACD-1200a-8: generate_master_plan() writes Master_Plan.md into the EPIC folder.
 ACD-1200b-1: classify_readiness reads readiness field and classifies approved vs unapproved.
 ACD-1200b-1-i: All-approved fast-path skips prompt; prints confirmation.
 ACD-1200b-2: readiness_gate_prompt presents three-choice prompt and routes correctly.
+ACD-1200b-4: Non-interactive (no-TTY) run with --yes or --approved-only clears the
+             readiness gate; without either flag and without a TTY it exits non-zero
+             with a message naming both flags.
 ACD-1200a-9: each generated ticket is written only inside the epic folder; no loose inbox-root copy
              is left behind; implemented_by back-references name the epic-folder path (with prefix).
 ACD-1200a-9-i: basename collision inside the epic folder is resolved by overwriting the existing
@@ -1390,6 +1395,66 @@ def _route_answer(
     )
 
 
+def _gate_select_approved_ids(
+    readiness: dict,
+    store_root: Path,
+    yes: bool,
+    approved_only: bool,
+) -> list[str] | None:
+    """Select the approved AC IDs to proceed with at the readiness gate.
+
+    Implements TTY-aware gate routing (ACD-1200b-4). Called only when
+    ``readiness["unapproved"]`` is non-empty; the all-approved fast-path
+    bypasses this function entirely.
+
+    Routing:
+    - No controlling TTY on stdin AND neither *yes* nor *approved_only* is set:
+      prints a user-readable error naming the flags and calls ``sys.exit(1)``
+      (never calls ``input()``, which would hang on a closed stdin).
+    - *yes* or *approved_only* is set (regardless of TTY state): returns only
+      the already-approved IDs from *readiness["approved"]*, mirroring the
+      "yes" choice at the interactive prompt.
+    - TTY present AND neither flag set: delegates to
+      :func:`readiness_gate_prompt` for the original three-choice interactive
+      behaviour (unchanged from pre-ACD-1200b-4).
+
+    Args:
+        readiness: Output of :func:`classify_readiness` containing ``approved``
+            and ``unapproved`` keys.
+        store_root: Root directory of the AC YAML store (forwarded to
+            :func:`readiness_gate_prompt` for IT PO v3 dispatch on "review-all").
+        yes: True when the ``--yes`` CLI flag was passed.
+        approved_only: True when the ``--approved-only`` CLI flag was passed.
+
+    Returns:
+        list[str] of approved AC IDs to proceed with, or ``None`` when the
+        interactive prompt received a "cancel" choice.
+
+    Raises:
+        SystemExit: Code 1 — no TTY and no approval flag present.
+        SystemExit: Code 0 — *yes* or *approved_only* set but no approved ACs.
+    """
+    if not sys.stdin.isatty() and not yes and not approved_only:
+        # Non-interactive run with no approval flag: fail clearly (ACD-1200b-4).
+        # Never call input() here — it would hang indefinitely on a closed stdin.
+        print(
+            "ERROR: Unapproved ACs detected but no controlling TTY is available. "
+            "Pass --yes to proceed with the already-approved ACs, or pass "
+            "--approved-only to proceed with only already-approved leaf ACs.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if yes or approved_only:
+        # Non-interactive approval: proceed with only the already-approved subset.
+        # This mirrors choosing "yes" at the interactive prompt (ACD-1200b-4).
+        if not readiness["approved"]:
+            print("No approved ACs found. Nothing to generate.")
+            sys.exit(0)
+        return list(readiness["approved"])
+    # TTY present, no flags: existing interactive behaviour (unchanged).
+    return readiness_gate_prompt(readiness, store_root=store_root)
+
+
 # ---------------------------------------------------------------------------
 # Master_Plan.md generation (ACD-1200a-7)
 # ---------------------------------------------------------------------------
@@ -1854,6 +1919,8 @@ def run(
     inbox_dir: Path,
     dry_run: bool = False,
     worktree_root: Path | None = None,
+    yes: bool = False,
+    approved_only: bool = False,
 ) -> Path:
     """Full orchestration: traverse → generate tickets → assemble EPIC folder.
 
@@ -1878,12 +1945,21 @@ def run(
             in source AC YAMLs using a relative path (relative to the worktree
             root), so the comparison inside :func:`_replace_implemented_by_entry`
             must use the same form or the guard will always evaluate False.
+        yes: When True, proceed past the readiness gate as if the user chose
+            "yes" at the interactive prompt (proceed with only the already-approved
+            leaf ACs, skipping unapproved ones). Has no effect when all ACs are
+            already approved (the fast-path runs regardless). Required when stdin
+            has no controlling TTY and some ACs are unapproved. (ACD-1200b-4)
+        approved_only: When True, filter to only already-approved leaf ACs and
+            skip unapproved ones without any interactive prompt. Clears the
+            readiness gate in non-interactive (no-TTY) runs. (ACD-1200b-4)
 
     Returns:
         Absolute path to the created EPIC folder (or a placeholder in dry-run).
 
     Raises:
-        SystemExit: With code 1 on zero-leaf condition or other errors.
+        SystemExit: With code 1 on zero-leaf condition, no-TTY missing-flag
+            condition, or other errors.
     """
     # Import traverse_ac_tree here to keep the top-level import surface small
     # and to allow this module to be imported even if scan_ac_store is not on
@@ -1915,15 +1991,17 @@ def run(
         # Return a placeholder path — no files written
         return (inbox_dir / "epics" / f"EPIC-{epic_name}").resolve()
 
-    # --- Readiness gate (ACD-1200b) ---
+    # --- Readiness gate (ACD-1200b / ACD-1200b-4) ---
     # Classify leaf ACs into approved vs unapproved BEFORE ticket generation.
     readiness = classify_readiness(leaf_ids, ac_store_root)
 
     if readiness["unapproved"]:
-        # Some ACs need approval — present the gate prompt.
-        approved_ids = readiness_gate_prompt(readiness, store_root=ac_store_root)
+        # Some ACs need approval — route to _gate_select_approved_ids for TTY-aware decision.
+        approved_ids = _gate_select_approved_ids(
+            readiness, ac_store_root, yes=yes, approved_only=approved_only
+        )
         if approved_ids is None:
-            # User cancelled — exit cleanly with no writes.
+            # User cancelled (interactive only) — exit cleanly with no writes.
             print("Epic generation cancelled. No files written.")
             sys.exit(0)
         if not approved_ids:
@@ -2078,6 +2156,29 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="dry_run",
         help="Print the plan without writing any files.",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        default=False,
+        help=(
+            "Proceed past the readiness gate without prompting, using only the "
+            "already-approved leaf ACs (equivalent to choosing 'yes' at the "
+            "interactive prompt). Required when stdin has no controlling TTY "
+            "and some ACs are unapproved. (ACD-1200b-4)"
+        ),
+    )
+    parser.add_argument(
+        "--approved-only",
+        action="store_true",
+        dest="approved_only",
+        default=False,
+        help=(
+            "Filter to only already-approved leaf ACs and skip unapproved ones "
+            "without presenting any interactive prompt. Clears the readiness gate "
+            "in non-interactive (no-TTY) runs. (ACD-1200b-4)"
+        ),
+    )
     return parser
 
 
@@ -2137,6 +2238,8 @@ def main(argv: list[str] | None = None) -> int:
         inbox_dir=inbox_dir,
         dry_run=args.dry_run,
         worktree_root=worktree_for_run,
+        yes=args.yes,
+        approved_only=args.approved_only,
     )
     return 0
 
@@ -2263,6 +2366,16 @@ DECISION HISTORY
   receives a worktree root for relativisation when inbox_dir follows the
   convention; falls back to None otherwise). Covered by
   tests/test_goal_to_epic_worktree_skip.py.
+- 2026-07-20 [ACD-1200b-4]: Non-interactive readiness gate.
+  Implements ACD-1200b-4: added --yes and --approved-only argparse flags to
+  _build_parser(). Extended run() with matching yes/approved_only bool parameters
+  (default False, backward-compatible). At the readiness gate in run(), TTY state
+  is detected via sys.stdin.isatty(). When stdin has no controlling TTY and neither
+  flag is set, the gate prints a clear error message naming --yes and --approved-only,
+  then calls sys.exit(1) — never calls input(). When --yes or --approved-only is set,
+  the gate proceeds with only the already-approved leaf ACs (same routing as choosing
+  "yes" at the interactive prompt). Interactive (TTY present, no flags) behaviour is
+  unchanged. main() passes args.yes and args.approved_only through to run().
 - 2026-07-17 [ACD-1200a-3-iii]: ASCII-safe slug and dry-run/real-run parity.
   Implements ACD-1200a-3-iii: (1) Added _normalize_non_ascii_punct() to strip
   non-ASCII punctuation (em-dash, en-dash, smart quotes, etc.) to spaces before
