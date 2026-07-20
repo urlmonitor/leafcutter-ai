@@ -1,0 +1,84 @@
+id: FIN-100c-15
+readiness: approved
+priority: low
+components:
+  - finalize
+title: "The recovered-baseline accumulator is scoped to the recovery block, not to wider function scope"
+level: L3
+component: finalize
+status: active
+parent: FIN-100c-4
+criteria: |
+  Given the recovered-baseline accumulator variable used by the null-baseline
+    recovery attempt (its only reader and writer being the recovery block)
+  When the finalize workflow source is inspected
+  Then that variable is declared within the recovery block that reads and writes it
+  And it is not declared at a wider function scope than the recovery block
+  And no code outside the recovery block reads or writes it, and no vestigial
+    wider-scope declaration of it remains
+depends_on:
+  - FIN-100c
+  - FIN-100c-4
+assigned_agent: "python-coder"
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js. `recoveredBaselineFailures`
+    is currently declared at outer/function scope (`let recoveredBaselineFailures
+    = null;`, ~L774) but is only read and written inside the recovery block
+    (~L776-870, i.e. inside `if (baselineFailures === null &&
+    postMergeFailures.length > 0)`).
+  - MOVE DECLARATION INSIDE THE BLOCK: declare the accumulator within the recovery
+    block that reads and writes it; remove the wider-scope declaration so no
+    vestigial outer declaration remains.
+  - NO OUTSIDE ACCESS: confirm no code outside the recovery block reads or writes
+    `recoveredBaselineFailures` (the value forwarded to triage is carried via
+    baselineFailures, not the accumulator).
+  - BEHAVIOR-PRESERVING: this is a scope-narrowing hygiene change only; the
+    success-arm assignment to baselineFailures (empty-list-not-null preserved) and
+    the unconditional cleanupBaselineWorktree() after the block must be unchanged.
+  - COORDINATION: if delivered together with the FIN-100c-11 extraction, the
+    accumulator should live inside the extracted named unit's block scope rather
+    than at module/function scope.
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_recoveredbaselinefailures_declared_inside_recovery_block
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Source-structure assertion: the sole `let/const recoveredBaselineFailures` declaration in finalize-feature.js occurs inside the recovery block (after the `if (baselineFailures === null && postMergeFailures.length > 0)` opener), with no declaration at wider function scope."
+  - name: test_no_vestigial_wider_scope_declaration_remains
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Source-structure assertion: exactly one declaration of recoveredBaselineFailures exists and it is not at the outer/function scope preceding the recovery block (no vestigial wider-scope declaration)."
+  - name: test_recovery_behavior_unchanged_after_scope_narrowing
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Behavioral regression (run_workflow_under_e2): after moving the declaration into the block, the recovery still forwards the recovered subset on ok and null on rerun-unavailable — behavior is preserved."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "`recoveredBaselineFailures` is declared at ~L774 (function/outer scope) but is only read and written inside the recovery block (~L776-870); the declaration should move inside the recovery block so no wider-scope declaration remains"
+origin_agent: business-analyst
+created: 2026-07-20
+created_by_ticket: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added assigned_agent (python-coder — finalize-feature.js workflow body), estimated_complexity (S — move one `let` declaration inside the recovery block), it_requirements (move recoveredBaselineFailures declaration from outer scope ~L774 into the recovery block ~L776-870, remove the vestigial wider-scope declaration, confirm no outside access, behavior-preserving, and coordinate with the FIN-100c-11 extraction so it lives in the extracted unit's scope), and test_spec (2 source-structure assertions per the task's acceptance of a structural check for a pure-refactor scope AC + 1 behavioral regression). Criteria unchanged; readiness left draft per approval gate."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+req_status: active
+work_status: todo
+notes: |
+  Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
+  Addresses code-review finding L-4: recoveredBaselineFailures should be declared
+  within the recovery block (its only use site) rather than at wider function
+  scope. Code-hygiene robustness, authored as L3. Technical fields left for it-po
+  enrichment.
