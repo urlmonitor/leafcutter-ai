@@ -206,10 +206,24 @@ For each path in `required_docs`:
 1. Normalise the path (strip leading `./` if present).
 2. Check whether the normalised path appears in `changed_files` (exact string match).
 3. If it does NOT appear → add to `missing_docs`.
+4. If it DOES appear → it is **satisfied**. Do NOT add it to `missing_docs`.
+
+**Independent evaluation guarantee (AC BO-2200b-2-i).** Iterate the FULL `required_docs`
+list without early exit. Do NOT break or emit a blocker when the first missing doc is
+encountered — every required doc must be checked before the verdict is produced.
+
+- A doc present in `changed_files` is **satisfied** regardless of whether any sibling
+  doc is missing.
+- The `missing_docs` list MUST contain ONLY paths absent from `changed_files`.
+- Satisfied docs MUST NOT appear in the blocker message. One satisfied doc must not
+  mask an unsatisfied sibling, and one unsatisfied sibling must not retroactively
+  un-satisfy a doc that is present in the diff.
 
 After checking all required docs:
 
-If `missing_docs` is non-empty → emit `(status: blocker)`:
+If `missing_docs` is non-empty → emit `(status: blocker)`.
+List ONLY the paths in `missing_docs` — do NOT list paths that are present in
+`changed_files` (those are satisfied and must not appear in the blocker):
 ```
 Documentation coverage failure. The following required documentation files have
 no real change in the git diff (git diff HEAD --name-only):
@@ -218,6 +232,7 @@ no real change in the git diff (git diff HEAD --name-only):
   - <missing_file_2>
 
 Each listed file must contain a real change before this ticket can advance to commit.
+(Documentation files already present in the diff are not listed here — they are satisfied.)
 Responsible agent: documentation-expert (respawn to write the missing docs).
 ```
 Follow the failed-path recipe (signoff §4). Do not proceed to Step 6.
@@ -229,6 +244,13 @@ four sub-checks below. A finding from ANY sub-check is a placeholder finding for
 that file. Real, non-placeholder content is the ONLY passing outcome: an exception
 or an ambiguous result in any sub-check MUST produce `(status: blocker)`, never
 `(status: ok)`.
+
+**Brevity is not a placeholder signal.** A short but genuine doc — real prose or
+a real diagram body with no placeholder markers — passes all four sub-checks. Do
+NOT reject a file for being brief; placeholder detection keys on placeholder
+SIGNATURES (heading-only stubs, residual template tokens such as `{summary}` or
+`<placeholder>`, TODO/TBD/FIXME markers), not on length. A concise real doc MUST
+pass.
 
 #### 6a — Helper Script Scan (TODO/PLACEHOLDER/FIXME/Replace-with/QUESTION)
 
@@ -269,8 +291,11 @@ Run a single Bash command per file:
 grep -on "{[^}]*}" <absolute_file_path>
 ```
 
-Any output means the file contains residual `{placeholder}` tokens from an unfilled
-template copy. Record each match as a placeholder finding.
+Any output means the file contains residual `{token}` patterns from an unfilled
+template copy. Canonical examples of residual tokens: `{summary}`, `{title}`,
+`{description}`. Angle-bracket patterns such as `<placeholder>` are also placeholder
+signatures; they are caught by sub-check 6a's PLACEHOLDER marker scan. Record each
+curly-brace match as a placeholder finding.
 
 #### 6d — Empty or Heading-Only Stub Check
 
@@ -283,6 +308,9 @@ Use the `Read` tool to read the file's full content. Examine each line:
   items — record as a placeholder finding.
 
 A file passes 6d if it has at least one non-blank, non-heading line of real content.
+**Brevity is not a stub.** A short but genuine doc containing at least one real
+sentence, list item, or code block passes 6d regardless of length. Only a completely
+empty file or a file composed solely of headings and blank lines is a stub.
 
 #### 6e — Verdict per File
 
@@ -359,7 +387,7 @@ completion_manifest:
   required_docs_list_parsed: true
   all_required_docs_present_in_diff:
     result: false
-    reason: "<list of missing doc paths>"
+    reason: "<list of MISSING doc paths only — do not include paths present in diff>"
     remediation: "Respawn documentation-expert to write the missing documentation files."
   no_placeholder_content_in_changed_docs: true
 Missing required documentation: <file list>. Responsible agent: documentation-expert.
@@ -467,5 +495,21 @@ DECISION HISTORY
   Read. Script-error finding on any non-zero Bash exit: status: blocker, never status: ok.
   Added Edit to tools: list (required for signoff §2 atomic recipe). Updated behavioral_patterns,
   TOOL NOTE, Signoff Comment Schema, and Completion Manifest description to reflect new checks.
+- 2026-07-20 [llm-expert]: Hardened partial-coverage handling per AC BO-2200b-2-i. (#EPIC-DocumentationCoverageGuarantee/10_TICKET-20260715-BO-2200b-2-i.md)
+  Added explicit independent evaluation guarantee to Step 5: the full required_docs list
+  is always iterated without early exit; satisfied docs (present in changed_files) are
+  never added to missing_docs and must not appear in the blocker message; one satisfied
+  doc must not mask an unsatisfied sibling. Updated the Step 5 blocker message template
+  and Signoff Comment Schema failure path reason field to make the "missing paths only"
+  contract explicit.
+- 2026-07-20 [llm-expert]: Refined placeholder detection to key on signatures not length, per AC BO-2200b-3-i. (#EPIC-DocumentationCoverageGuarantee/12_TICKET-20260715-BO-2200b-3-i.md)
+  Added "Brevity is not a placeholder signal" note to Step 6 intro: explicit statement
+  that a short but genuine doc passes all four sub-checks; placeholder detection keys
+  on SIGNATURES (heading-only stubs, residual template tokens such as {summary} or
+  <placeholder>, TODO/TBD/FIXME markers), not on length. Updated 6c prose to cite
+  {summary} as a canonical residual token example and note that angle-bracket patterns
+  such as <placeholder> are also placeholder signatures caught by 6a. Added "Brevity
+  is not a stub" note to 6d: short genuine docs pass 6d; only empty files and
+  heading-only files are stubs.
 ====================================================================
 """
