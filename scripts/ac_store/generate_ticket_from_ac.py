@@ -1378,6 +1378,29 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
 # ---------------------------------------------------------------------------
 
 
+def _normalise_repo_relative(path: str) -> str:
+    """Strip leading ``./`` or ``/`` and normalise separators for dedup comparison.
+
+    Produces a canonical repo-relative form used only inside
+    :func:`_write_implemented_by` to compare a candidate path against existing
+    ``implemented_by`` entries.  The stored AC YAML value is never modified —
+    only the comparison is normalised so that ``./tickets/foo.md`` and
+    ``tickets/foo.md`` are treated as the same entry.
+
+    Args:
+        path: A raw path string, potentially prefixed with ``./`` or ``/``.
+
+    Returns:
+        The normalised repo-relative path with any leading ``./`` or ``/``
+        stripped and path separators unified to ``/``.
+    """
+    normalised = path.replace("\\", "/")
+    normalised = normalised.lstrip("/")
+    while normalised.startswith("./"):
+        normalised = normalised[2:]
+    return normalised
+
+
 def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
     """Append *ticket_path* to the implemented_by list in the source AC YAML.
 
@@ -1403,8 +1426,9 @@ def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
     data = yaml.safe_load(content)
     implemented_by: list[str] = data.get("implemented_by") or []
 
-    if ticket_path in implemented_by:
-        # Already recorded — idempotent, no write needed
+    normalised_incoming = _normalise_repo_relative(ticket_path)
+    if any(_normalise_repo_relative(entry) == normalised_incoming for entry in implemented_by):
+        # Already recorded (normalised repo-relative match) — idempotent, no write needed
         return
 
     implemented_by.append(ticket_path)
