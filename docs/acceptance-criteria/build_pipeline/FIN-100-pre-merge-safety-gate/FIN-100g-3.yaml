@@ -1,0 +1,92 @@
+id: FIN-100g-3
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "Unresolvable target produces an actionable error naming the expected argument forms and listing candidate worktrees/branches"
+level: L2
+component: finalize
+status: active
+parent: FIN-100g
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the finalize workflow is invoked with a target "ge-116a-1" (supplied as a
+  bare string or as an object) that resolves to no registered worktree — no
+  worktree currently has that branch checked out
+  When the pre-flight fails to resolve the supplied target to a worktree
+  Then it exits with a single actionable error that:
+    - identifies the unresolved target "ge-116a-1" by name
+    - names the expected argument forms (a bare branch-name string, OR an object
+      with a target/target_branch key)
+    - lists the candidate worktrees and their checked-out branches that ARE
+      currently registered (for example the entries from `git worktree list`)
+  And this error is emitted whenever a target was supplied but is unresolvable —
+  it is distinct from, and more specific than, the generic "clear error naming
+  the branch" of FIN-100g-1
+depends_on:
+  - FIN-100g
+  - FIN-100g-1
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js target-resolution failure
+    path — where a supplied target matches no registered worktree.
+  - When a target WAS supplied (bare string or object) but resolves to no
+    registered worktree, emit a SINGLE actionable error whose message contains all
+    three of: (a) the unresolved target name, (b) the expected argument forms (a
+    bare branch-name string OR an object with a `target`/`target_branch` key), and
+    (c) the list of currently-registered candidate worktrees with their
+    checked-out branches (sourced from `git worktree list --porcelain`).
+  - This error MUST be distinct from, and more specific than, the generic
+    branch-named error of FIN-100g-1 (which covers the target-supplied-but-branch-
+    not-checked-out case at the FIN-100g-1 boundary); the FIN-100g-3 message adds
+    the expected-forms guidance and the candidate list.
+  - The `git worktree list` I/O MUST be wrapped and logged at WARNING+ per the
+    project error-handling policy; a failure to enumerate worktrees must not crash
+    the pre-flight.
+  - E2 determinism: the error content is derived from the args and the current git
+    worktree state only (no Date.now, no nondeterministic ordering that would make
+    the message untestable — sort the candidate list deterministically).
+delivers_to: []
+expects_from:
+  - agent: python-coder
+    contract: "the set of registered worktrees and their branches (for example from `git worktree list --porcelain`) used to build the candidate list in the error message"
+test_spec:
+  - name: test_unresolvable_target_error_names_target
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When the supplied target resolves to no worktree, the emitted error names the unresolved target \"ge-116a-1\"."
+  - name: test_unresolvable_target_error_lists_expected_forms
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The unresolved-target error names the expected argument forms: a bare branch-name string OR an object with a target/target_branch key."
+  - name: test_unresolvable_target_error_lists_candidate_worktrees
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The unresolved-target error lists the currently-registered candidate worktrees and their checked-out branches (from `git worktree list`)."
+  - name: test_unresolvable_target_error_distinct_from_generic
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The unresolved-target error is emitted whenever a target was supplied but is unresolvable, and is distinct from / more specific than the generic FIN-100g-1 branch-named error."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Pre-flight target-resolution failure path — the error message content when a supplied target matches no worktree"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map pre-flight row — unresolved-target error contract"
+  - path: "unit_tests/workflows/test_finalize_feature_preflight.py"
+    relevance: "Regression tests asserting the unresolved-target error names the target, the expected argument forms, and the candidate worktree list"
+origin_agent: business-analyst
+created: 2026-07-21
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (target-resolution failure surface in finalize-feature.js; single actionable error carrying target name + expected argument forms + candidate worktree/branch list from `git worktree list --porcelain`; distinct from and more specific than the generic FIN-100g-1 error; wrap+log the git worktree I/O per error-handling policy; deterministic, sorted candidate list for testability per E2) and test_spec (4 descriptors, one per required message element plus the distinct-from-generic Then). Added the test-file doc_link. Kept assigned_agent python-coder, estimated_complexity S, expects_from, and criteria unchanged."
+    by: it-po
+covered_by:
+  - FIN-100g-3-i
+implemented_by: []
