@@ -6,7 +6,7 @@ component: build-pipeline
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 # 6 L2 children = 5 behavioral guards + 1 mandatory sequence-diagram doc AC

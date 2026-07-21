@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -61,7 +61,8 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
+- tickets/99_done/TICKET-20260721-BP-1100f-6.md
+- docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
 notes: |
   Documentation AC produced because the parent L1 BP-1100f declares
   documentation_triggers: [sequence-diagram] (BA §7b — a doc AC is mandatory per

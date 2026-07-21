@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -62,7 +62,8 @@ superseded_by: null
 covered_by:
   - BP-1100f-1-i
 implemented_by:
-- tickets/00_inbox/TICKET-20260721-BP-1100f-1.md
+- tickets/99_done/TICKET-20260721-BP-1100f-1.md
+- templates/agents/pr-reviewer.md
 notes: |
   Guard #2 of BP-1100f. Surface for IT-PO to pin: the pr-reviewer agent's
   dispatch-review lens — it should flag an agent()-style dispatch whose first
