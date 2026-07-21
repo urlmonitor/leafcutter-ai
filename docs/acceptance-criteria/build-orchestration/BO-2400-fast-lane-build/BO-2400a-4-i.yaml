@@ -1,0 +1,29 @@
+id: BO-2400a-4-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Green gate refuses commit staging when the coder cannot make all tests pass"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the coder agent has run and the green-verification script finds one or more
+    batch tests still failing,
+  When the green check completes,
+  Then commit staging is NOT performed
+  And the loop reports the AC ids whose covering tests are still failing.
+depends_on: [BO-2400a-4]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

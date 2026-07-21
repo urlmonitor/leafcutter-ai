@@ -1,0 +1,30 @@
+id: BO-2500b-1-i
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Work whose local pre-commit check was skipped is still caught by the CI gate"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the proof-of-done pre-commit check was skipped locally (via a skip flag, or
+    because a worktree lacked the hook configuration),
+  When the resulting commit is pushed and CI runs on the fresh checkout,
+  Then the required CI proof-of-done check still detects the missing or failing proof
+  And blocks the merge, so the local skip cannot let unproven work reach the
+    protected branch.
+depends_on: [BO-2500b-1]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

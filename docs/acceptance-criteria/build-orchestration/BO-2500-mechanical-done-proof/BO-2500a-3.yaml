@@ -1,0 +1,28 @@
+id: BO-2500a-3
+components:
+  - build_orchestration
+  - testing_quality
+title: "An AC with a present, passing linked test is eligible to be marked done"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC that has at least one test tagged "# covers:<id>" and every such
+    test passes in the current test run,
+  When the done-status of that AC is evaluated,
+  Then the AC is eligible to be marked done.
+depends_on: [BO-2500a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

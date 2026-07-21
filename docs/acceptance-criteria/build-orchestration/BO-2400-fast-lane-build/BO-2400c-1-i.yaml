@@ -1,0 +1,29 @@
+id: BO-2400c-1-i
+components:
+  - build_orchestration
+  - injection_builder
+title: "Stable-prefix churn that would bust the cache is detected"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two agent invocations within one drive that are intended to share the cached
+    stable prefix,
+  When the stable-prefix content differs between the two assembled prompts,
+  Then a checksum comparison of the stable prefix across the drive flags the mismatch
+  And the churn is surfaced (so unintended cache-busting cannot pass silently).
+depends_on: [BO-2400c-1]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

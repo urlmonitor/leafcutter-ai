@@ -1,0 +1,29 @@
+id: BO-2400d-2
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "Each telemetry record is tagged with its lane and agent identity"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent invocation records a telemetry entry,
+  When the entry is written,
+  Then it carries the lane it ran under (fast lane or heavy pipeline)
+  And it carries the identity of the agent that produced it, so records can be grouped
+    by lane and by agent.
+depends_on: [BO-2400d]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

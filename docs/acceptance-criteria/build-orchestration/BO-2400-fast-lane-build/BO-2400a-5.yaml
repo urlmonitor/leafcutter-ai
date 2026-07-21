@@ -1,0 +1,30 @@
+id: BO-2400a-5
+components:
+  - build_orchestration
+  - testing_quality
+title: "No heavy-path coordination constructs are used in the fast lane"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a batch is built through the fast lane,
+  When the loop executes from selection to commit staging,
+  Then no per-ticket supervisor agent is dispatched
+  And no planner-as-agent invocation is made to sequence the phases
+  And the batch is built within a single worktree under a single command invocation
+    (not the heavy path's split of three commands across three worktrees).
+depends_on: [BO-2400a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

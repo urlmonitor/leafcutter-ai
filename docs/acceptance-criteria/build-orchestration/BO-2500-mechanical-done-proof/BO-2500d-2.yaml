@@ -1,0 +1,28 @@
+id: BO-2500d-2
+components:
+  - build_orchestration
+  - review_system
+title: "The opinion-only gate agents remain present in the heavy pipeline"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the heavy-pipeline phase order,
+  When its phases are enumerated,
+  Then the LLM review, validator, and fulfillment gate agents are still present,
+  So removing them from the fast lane does not remove them from the thorough path.
+depends_on: [BO-2500d]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

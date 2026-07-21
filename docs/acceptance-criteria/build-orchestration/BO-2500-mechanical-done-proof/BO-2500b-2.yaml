@@ -1,0 +1,29 @@
+id: BO-2500b-2
+components:
+  - build_orchestration
+  - commit_guardian
+title: "The final proof-of-done check runs on a fresh clean checkout in CI"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request is opened or updated,
+  When the final proof-of-done check runs in CI,
+  Then it executes against a fresh clean checkout of the branch (not the author's
+    local working tree)
+  And its verdict is derived only from what is committed to the branch.
+depends_on: [BO-2500b]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

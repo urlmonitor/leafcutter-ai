@@ -1,0 +1,30 @@
+id: BO-2400d-1
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "Each agent invocation records duration and token counts to the telemetry sink"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent invocation completes during a build,
+  When its telemetry is recorded,
+  Then exactly one telemetry record is appended to the sink for that invocation
+  And the record contains its duration, input token count, output token count, and
+    cache-read token count.
+depends_on: [BO-2400d]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400d-1-i
+implemented_by: []

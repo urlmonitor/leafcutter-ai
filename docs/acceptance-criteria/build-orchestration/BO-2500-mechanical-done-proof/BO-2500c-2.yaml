@@ -1,0 +1,30 @@
+id: BO-2500c-2
+components:
+  - build_orchestration
+  - testing_quality
+title: "Parser and validator tests round-trip through the real on-disk artifact"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a parser or validator is under test,
+  When it is exercised,
+  Then its input is written to and read back from a real on-disk artifact using the
+    same producer the system uses in production
+  And the assertion is made against the value obtained from that round-trip, so the
+    on-disk format under test matches the format that actually occurs.
+depends_on: [BO-2500c]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

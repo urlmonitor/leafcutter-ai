@@ -26,7 +26,10 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2500c-1
+  - BO-2500c-2
+  - BO-2500c-3
 implemented_by: []
 documentation_triggers: [how-to, reference-doc]
 change_target: code

@@ -1,0 +1,28 @@
+id: BO-2400b-3-ii
+components:
+  - build_orchestration
+title: "An explicit lane override wins over the decision rule"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an explicit lane override is supplied with the build request,
+  When the path router decides,
+  Then the selected lane equals the override regardless of what the decision rule
+    would have chosen from the inputs
+  And the override (and that it superseded the rule) is recorded.
+depends_on: [BO-2400b-3]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

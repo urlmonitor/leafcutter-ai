@@ -1,0 +1,29 @@
+id: BO-2400a-3-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Red-baseline gate halts when a batch test will not go red"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the red-baseline script runs the batch's tests before any implementation and
+    finds at least one batch test that already passes,
+  When the red-baseline check completes,
+  Then the loop halts before the coder agent is dispatched
+  And the halt report names the offending test and its associated AC id.
+depends_on: [BO-2400a-3]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

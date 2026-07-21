@@ -1,0 +1,29 @@
+id: BO-2500a-1-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "A covers tag pointing at a non-active AC id does not satisfy any AC's done proof"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test tagged "# covers:<id>" where <id> is not the id of an active AC
+    (deprecated, superseded, or nonexistent),
+  When linked-test coverage is evaluated,
+  Then that tag does not count toward the done proof of any active AC
+  And the dangling tag is flagged.
+depends_on: [BO-2500a-1]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

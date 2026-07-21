@@ -1,0 +1,29 @@
+id: BO-2500a-2-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "An xfailed or skipped linked test does not count as passing"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the only test tagged "# covers:<id>" for an active AC is marked xfail or is
+    skipped in the current run,
+  When the done-status of that AC is evaluated,
+  Then that test does not count as a passing linked test
+  And the AC cannot be marked done on the basis of it.
+depends_on: [BO-2500a-2]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

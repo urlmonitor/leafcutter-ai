@@ -1,0 +1,29 @@
+id: BO-2500b-3
+components:
+  - build_orchestration
+  - commit_guardian
+title: "The CI proof-of-done check is required and blocks merge"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the CI proof-of-done check reports failure on a pull request,
+  When a merge to the protected branch is attempted,
+  Then the merge is blocked because the check is a required status check
+  And the author cannot bypass it (it is not skippable the way the local pre-commit
+    check is).
+depends_on: [BO-2500b]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

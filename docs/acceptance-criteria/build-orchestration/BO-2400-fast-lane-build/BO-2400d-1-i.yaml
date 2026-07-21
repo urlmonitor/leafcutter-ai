@@ -1,0 +1,30 @@
+id: BO-2400d-1-i
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "An unreachable telemetry sink is surfaced loudly, never silently"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the telemetry sink is unreachable or unwritable,
+  When an agent invocation attempts to record its telemetry,
+  Then the failure emits a WARNING (it is not swallowed silently)
+  And a count of failed telemetry writes is surfaced to the operator,
+    so a run cannot complete with undetected dropped events
+    (as in the prior incident where 23 submit-failed events went unnoticed).
+depends_on: [BO-2400d-1]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,30 @@
+id: BO-2400a-2-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Selection truncates a batch that exceeds the cohesion cap"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the number of ready cohesive ACs available exceeds the configured cohesion
+    cap M,
+  When the fast-lane selection script builds the batch,
+  Then the selected batch contains at most M ACs
+  And the ACs left over are not included in this batch (they remain ready for a
+    subsequent loop).
+depends_on: [BO-2400a-2]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

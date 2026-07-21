@@ -1,0 +1,29 @@
+id: BO-2400c-2-i
+components:
+  - build_orchestration
+  - injection_builder
+title: "Cache TTL expiry mid-drive re-primes the prefix instead of dropping it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the cache TTL elapses between two invocations during a drive,
+  When the next invocation runs,
+  Then the stable prefix is re-sent to re-prime the cache (a cache-write occurs)
+    rather than being omitted
+  And the resulting cache miss is observable in the recorded telemetry.
+depends_on: [BO-2400c-2]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

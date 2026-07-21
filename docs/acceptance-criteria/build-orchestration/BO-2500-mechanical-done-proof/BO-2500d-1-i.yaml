@@ -1,0 +1,31 @@
+id: BO-2500d-1-i
+components:
+  - build_orchestration
+  - review_system
+title: "Removing a gate before its mechanical replacement exists is rejected"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a change proposes removing an opinion-only gate agent from the fast-lane phase
+    order while its mechanical proof-of-done replacement is not yet present in that
+    phase order,
+  When the phase-order change is validated,
+  Then the removal is rejected
+  And the rejection states that the mechanical replacement gate must exist in the fast
+    lane before the opinion-only gate can be removed.
+depends_on: [BO-2500d-1]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

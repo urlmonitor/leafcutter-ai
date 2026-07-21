@@ -1,0 +1,30 @@
+id: BO-2500d-3
+components:
+  - build_orchestration
+  - review_system
+title: "The mechanical proof-of-done gates stand in for the removed review agents in the fast lane"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane phase order after the opinion-only agents are removed,
+  When its phases are enumerated,
+  Then the deterministic proof-of-done gates (red-baseline verification, green plus
+    coverage verification, and the covers-tag linkage check) are present as the
+    completion arbiters
+  So the fast lane still has an enforced proof-of-done in place of the removed review.
+depends_on: [BO-2500d]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -24,7 +24,10 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2400b-1
+  - BO-2400b-2
+  - BO-2400b-3
 implemented_by: []
 documentation_triggers: [how-to]
 change_target: pipeline

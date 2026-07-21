@@ -1,0 +1,30 @@
+id: BO-2400a-1
+components:
+  - build_orchestration
+  - testing_quality
+title: "Exactly one test-writer and one coder agent per batch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a cohesive batch of N ready leaf ACs selected for the fast lane (N >= 2),
+  When the fast-lane build loop runs the batch to completion,
+  Then exactly one test-writer agent invocation is dispatched for the whole batch
+  And exactly one coder agent invocation is dispatched for the whole batch
+  And the total count of test-writer plus coder agent invocations equals 2,
+    independent of N (it does not grow per-AC or per-ticket).
+depends_on: [BO-2400a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

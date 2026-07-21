@@ -1,0 +1,33 @@
+id: BO-2400a-4
+components:
+  - build_orchestration
+  - testing_quality
+title: "Green verification and coverage check are deterministic script gates before commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the coder agent has finished making changes for the batch,
+  When the fast-lane loop verifies completion,
+  Then a deterministic script runs the batch's tests and confirms all of them pass
+    (the batch test run exits zero)
+  And the same script confirms every AC id in the batch has at least one test tagged
+    "# covers:<id>"
+  And commit staging is performed only after both the green check and the coverage
+    check pass.
+depends_on: [BO-2400a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400a-4-i
+implemented_by: []

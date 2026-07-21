@@ -1,0 +1,28 @@
+id: BO-2400b-3-i
+components:
+  - build_orchestration
+title: "Ambiguous scope defaults to the heavy pipeline"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given routing inputs that do not clearly classify as scoped/interactive (ambiguous
+    scope),
+  When the path router applies the decision rule,
+  Then it selects the heavy pipeline as the safe default
+  And it records the reason the request was treated as ambiguous.
+depends_on: [BO-2400b-3]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

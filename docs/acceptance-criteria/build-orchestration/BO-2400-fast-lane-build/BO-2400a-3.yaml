@@ -1,0 +1,31 @@
+id: BO-2400a-3
+components:
+  - build_orchestration
+  - testing_quality
+title: "Red-baseline verification is a deterministic script gate before the coder runs"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer has written the batch's tests and no implementation change
+    has been made yet,
+  When the fast-lane loop verifies the red baseline,
+  Then a deterministic script runs the batch's tests and confirms every newly added
+    test for the batch fails (the batch test run exits non-zero)
+  And the coder agent is dispatched only after this red-baseline check passes.
+depends_on: [BO-2400a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400a-3-i
+implemented_by: []

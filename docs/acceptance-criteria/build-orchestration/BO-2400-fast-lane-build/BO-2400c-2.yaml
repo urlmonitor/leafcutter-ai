@@ -1,0 +1,29 @@
+id: BO-2400c-2
+components:
+  - build_orchestration
+  - injection_builder
+title: "Extended one-hour cache TTL is configured for drives"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane drive is invoked,
+  When the prompt cache is configured for its agent invocations,
+  Then the cache TTL is set to the extended one-hour value
+  And it is not left at the default (short) TTL.
+depends_on: [BO-2400c]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400c-2-i
+implemented_by: []
