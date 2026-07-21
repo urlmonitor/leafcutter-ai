@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -48,7 +48,10 @@ amended_by:
     note: "L3 edge for BP-1100f-2; same llm-expert prose surface. test_required:false (review-lens prose)."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-2.md
+- templates/agents/pr-reviewer.md
+- templates/agents/test-writer.md
 notes: |
   L3 edge for BP-1100f-2: closes the near-miss where a test looks effect-oriented
   (it names the artifact path) but only inspects the arguments handed to a mock —

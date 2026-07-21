@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -57,7 +57,9 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100f-3-i
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-3.md
+- templates/agents/it-po.md
 notes: |
   Guard #5 of BP-1100f. Surface for IT-PO to pin: the pre-dispatch refinement /
   consistency lens (before the first coder dispatch). This is DISTINCT from its BP-1100

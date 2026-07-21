@@ -44,3 +44,15 @@ is the L2 container for this mechanism, and the two diagrams below document it:
 - [Interactive Pause/Resume — Run Lifecycle State Diagram](../diagrams/c3-001-interactive-pause-resume-run-lifecycle.md) — the run lifecycle states (`running`, `paused_awaiting_input`, `resumed`, `cancelled`, `completed`) and the `resolveGate` resume outcomes (`nothing_to_resume`, `unresumable_stale`), showing that `paused_awaiting_input` and `cancelled` are distinct and only `paused_awaiting_input` is resume-eligible.
 - [Interactive Pause/Resume — Pause, Ask, Answer, Resume Sequence](../diagrams/c3-002-interactive-pause-resume-sequence.md) — the message-level interaction between the workflow engine, the agent-mediated persist/read agent, the durable store, and the answerer, including the wrong-shape re-prompt loop and cross-process resume via `resumeFromRunId`.
 - [ADR-024 — Interactive Gates Pause and Persist Instead of Cancelling When Headless](../adrs/ADR-024-interactive-pause-resume.md) — the design of record.
+
+## Phantom-Done Prevention — Real-Effect / Real-Intent Verification
+
+The drive and verification-phase routing this component owns is where the BP-1100f
+phantom-done-prevention gates plug in. Those gates prove that a durable change actually
+happened by its **real effect** and **stated intent**, rather than by **dispatch
+topology** (the presence, labels, or counts of dispatched helpers a test mock controls) —
+the BO-2300 failure mode in which a feature was signed off twice while its real behaviour
+was absent. The sequence diagram below places each of the five gates on the timeline
+relative to dispatch and to the done state:
+
+- [Phantom-Done Prevention — Proving a Durable Change by Real Effect and Intent](../diagrams/c3-003-phantom-done-real-effect-intent-verification.md) — the end-to-end BP-1100f verification flow: pre-dispatch intent-vs-surface consistency (BP-1100f-3), instruction-carrying dispatch review (BP-1100f-1), the harness-level instruction-less-dispatch contract violation (BP-1100f-4), the real-artifact test-evidence requirement (BP-1100f-2), and the automatic observable-side-effect smoke check that gates the done state (BP-1100f-5).

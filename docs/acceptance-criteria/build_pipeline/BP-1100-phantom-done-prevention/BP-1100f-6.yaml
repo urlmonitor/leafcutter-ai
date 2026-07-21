@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -60,7 +60,9 @@ amended_by:
     note: "Docs AC already correctly assigned architecture-diagram-author (documentation_triggers: [sequence-diagram]). Light enrichment only: added estimated_complexity, it_requirements (target doc + Mermaid sequenceDiagram + gate placement), a build-orchestration.md doc_link, and test_required:false (docs, not a code AC). S7b documentation gate satisfied by this AC. readiness left draft."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-6.md
+- docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
 notes: |
   Documentation AC produced because the parent L1 BP-1100f declares
   documentation_triggers: [sequence-diagram] (BA §7b — a doc AC is mandatory per

@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -91,7 +91,10 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100f-4-i
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-4.md
+- unit_tests/_workflow_engine_harness.py
+- unit_tests/test_bp_1100f_4.py
 notes: |
   Guard #4 of BP-1100f. Surface for IT-PO to pin: the workflow-js test harness /
   dispatch interceptor (the agent() test double used by workflow unit tests). This is
