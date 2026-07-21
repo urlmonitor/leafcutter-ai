@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a.yaml"
 criteria: |
@@ -80,6 +80,7 @@ created: 2026-07-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-ACD-1200a-13.md
 change_target: pipeline
 risk_surface: internal
