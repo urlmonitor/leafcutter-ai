@@ -906,6 +906,74 @@ let postMergeFailures;
   }
 }
 
+// -------------------------------------------------------------------------
+// Step 3 (deploy-parity self-check — FIN-100g-4 / FIN-100g-4-i)
+//
+// Before triaging any failures, verify the post-merge worktree's DEPLOYED
+// layer is consistent: every runtime artifact the tests import must be present
+// at its expected deployed location under WORKTREE_ROOT, INCLUDING gitignored,
+// non-git-tracked deployed copies (e.g. scripts/commit_guardian/*.py deployed
+// by install_shims). A missing deployed artifact is an environment/build-state
+// condition, NEVER a test regression. On a miss, re-run the deterministic
+// deploy against the worktree root (build parity with FIN-100a-4 / FIN-100c-4)
+// and re-verify + re-run the previously-failing tests, so build-state failures
+// clear before triage. Triage (FIN-100c) runs ONLY once the deployed layer is
+// verified consistent. The exclusion is data-driven (tests that pass after a
+// verified re-deploy), never keyed on a hard-coded test/helper name — a genuine
+// failure that persists after a verified-consistent deploy still reaches triage
+// and can HALT.
+// -------------------------------------------------------------------------
+if (!testPassed) {
+  const deployParityResult = await agent(
+    `Verify the deployed layer of the post-merge worktree "${WORKTREE_ROOT}" is consistent BEFORE triage (FIN-100g-4).\n` +
+    "1. For every runtime artifact the failing tests import, check it is present at its\n" +
+    "   expected DEPLOYED location under the worktree root — INCLUDING gitignored,\n" +
+    "   non-git-tracked deployed copies (e.g. scripts/commit_guardian/*.py, scripts/feedback/*.py\n" +
+    "   deployed by install_shims), not just git-tracked files.\n" +
+    "2. If ANY expected deployed artifact is missing, re-run the deterministic deploy:\n" +
+    `     python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}"\n` +
+    "   (same build.py deploy as the Step 0 baseline and the Step 3 pre-test build), then\n" +
+    "   re-verify and re-run the previously-failing tests so build-state failures clear.\n" +
+    "3. A test that FAILED before the re-deploy but PASSES after it is an environment/\n" +
+    "   build-state condition — report it in build_state_only_failures. This classification\n" +
+    "   is data-driven (passes-after-verified-redeploy), NEVER keyed on a hard-coded name.\n" +
+    "   A build/deploy inconsistency is NEVER a test regression.\n" +
+    "Return ONLY: { \"deploy_consistent\": true|false, \"redeployed\": true|false, " +
+    "\"build_state_only_failures\": [\"<file>::<test>\", ...], \"still_failing\": [\"<file>::<test>\", ...] }",
+    { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
+  )
+
+  let deployParity = {
+    build_state_only_failures: [],
+  };
+  {
+    try {
+      const parsedDp = parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }) || {};
+      deployParity.build_state_only_failures = Array.isArray(parsedDp.build_state_only_failures)
+        ? parsedDp.build_state_only_failures
+        : [];
+    } catch (_parseErr) {
+      log("[finalize-feature] step 3 deploy-parity parse malformed — proceeding with the original post-merge failures (conservative).");
+    }
+  }
+
+  // Build-state (deploy-skew) failures are environment conditions, never regressions:
+  // drop them from the set handed to triage so they cannot be classified as regressions.
+  if (deployParity.build_state_only_failures.length > 0) {
+    log(
+      `[finalize-feature] step 3: ${deployParity.build_state_only_failures.length} failure(s) cleared by a ` +
+      "deterministic re-deploy (FIN-100g-4) — build-state, not regressions; excluded from triage."
+    );
+    const buildStateSet = new Set(deployParity.build_state_only_failures);
+    postMergeFailures = postMergeFailures.filter((t) => !buildStateSet.has(t));
+    // If every failure was build-state deploy-skew, there are no real regressions
+    // to triage — the deployed layer is now consistent and the suite is green.
+    if (postMergeFailures.length === 0) {
+      testPassed = true;
+    }
+  }
+}
+
 if (testPassed) {
   // Zero failures: skip triage sub-steps entirely, proceed to step 4 (PR merge).
   completedSteps.push(3);
