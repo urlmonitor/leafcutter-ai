@@ -1,8 +1,8 @@
 id: TKT-500f-17
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "An unresolvable component value is warned about and validated against components.json, not silently emitted"
 component: ticket-creation
 level: L2
@@ -44,8 +44,38 @@ doc_links:
     status: exists
 delivers_to: null
 expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Graph-id validity must be determined by membership in docs/components.json loaded at generation time — the single ~42-entry source of truth — not by a partial hard-coded kebab-to-graph-id map embedded in the generator."
+    - "Adding a new component to docs/components.json must make that id resolvable with no change to generator code (data-driven, not name-hard-coded)."
+    - "An unresolvable value must produce a WARNING that names the value; it must not be silently emitted as an unknown/invalid id."
+    - "Touches both the migration-map loader (_load_migration_map, ~line 194) as the id source and the components-list builder (_build_components_list, ~line 1112) as the validity/warn site."
+    - "Error handling must follow the project error handling policy (log at WARNING or higher; no bare/blind except)."
+test_spec:
+  - name: test_unresolvable_component_emits_warning
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A fixture AC with a typo component (e.g. ticket_creaton_pipeline) causes a WARNING naming that value; the value is not silently replaced by a fabricated graph id."
+  - name: test_graph_id_validity_checked_against_components_json
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Validity is determined by membership in docs/components.json, not a hard-coded in-generator map."
+  - name: test_new_component_in_components_json_resolvable_without_code_change
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    description: "Adding an id to a components.json test double makes that id resolve without editing generator code."
 origin_agent: business-analyst-v3
 created: 2026-07-21
 amended_by: []

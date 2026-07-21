@@ -1,8 +1,8 @@
 id: TKT-500f-16
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Kebab values already present in the components LIST are normalised to underscore graph ids"
 component: ticket-creation
 level: L2
@@ -43,8 +43,36 @@ doc_links:
     status: exists
 delivers_to: null
 expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The components-list builder (_build_components_list, ~line 1112) must normalise element-wise: each list element is resolved to its components.json underscore graph id."
+    - "No kebab element may survive to the emitted LIST when an underscore graph id exists for it; already-valid underscore graph ids must be preserved and must not be duplicated by the normalisation pass."
+    - "Resolution must be driven by docs/components.json (the ~42-entry source of truth), not a hard-coded kebab-to-graph-id map."
+test_spec:
+  - name: test_kebab_list_element_normalised_to_graph_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A fixture AC with components LIST ['build-pipeline'] (kebab) yields a generated LIST == ['build_pipeline']."
+  - name: test_mixed_list_yields_all_underscore_graph_ids
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A mixed list ['ticket_creation_pipeline', 'build-orchestration'] emits only underscore graph ids; no element retains a hyphen."
+  - name: test_existing_graph_id_preserved_and_not_duplicated
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An element already a valid underscore graph id is preserved unchanged and appears exactly once (not duplicated)."
 origin_agent: business-analyst-v3
 created: 2026-07-21
 amended_by: []

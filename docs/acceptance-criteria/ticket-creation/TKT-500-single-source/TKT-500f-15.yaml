@@ -1,8 +1,8 @@
 id: TKT-500f-15
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A scalar-string components field becomes a single-element graph-id list, never a per-character shatter"
 component: ticket-creation
 level: L2
@@ -44,8 +44,36 @@ doc_links:
     status: exists
 delivers_to: null
 expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The components-list builder (_build_components_list, ~line 1112) must treat a scalar-string components field as a single logical value, not an iterable of characters — the emitted LIST must never be a per-character shatter."
+    - "A scalar that is an index.yaml kebab namespace key must be resolved to its components.json underscore graph id before emission; the raw kebab must not pass through verbatim."
+    - "Graph-id resolution must be driven by docs/components.json (the ~42-entry source of truth), not by a hard-coded kebab-to-graph-id map."
+test_spec:
+  - name: test_scalar_string_components_becomes_single_element_graph_id_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A fixture AC with scalar `components: build_orchestration` yields a generated components LIST == ['build_orchestration'] (exactly one element)."
+  - name: test_scalar_components_never_per_character_shatter
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A scalar-string components value never produces a LIST of single-character elements (never ['t','i','c','k','e','t',...])."
+  - name: test_scalar_kebab_namespace_key_resolves_to_graph_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A scalar index.yaml kebab namespace key is emitted as its components.json underscore graph id, not left verbatim."
 origin_agent: business-analyst-v3
 created: 2026-07-21
 amended_by: []

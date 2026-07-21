@@ -1,8 +1,8 @@
 id: ACD-1200a-14-i
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "When the repo root cannot be derived from git, the back-reference write degrades to a documented fallback"
 component: ac-driven-dev
 level: L3
@@ -42,8 +42,37 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1200a-14
   contract: "The git-derived repo-root relativisation in _write_implemented_by (generate_ticket_from_ac.py); this edge case bounds it so a missing git top-level degrades to a logged fallback root instead of crashing or recording an absolute path."
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "When git rev-parse --show-toplevel cannot resolve a repo root (not a git repo, or git unavailable), the write must not crash: fall back to the existing repo-root helper's documented non-git path and emit a WARNING that the git top-level could not be resolved."
+    - "The recorded value must still be made repo-relative against the fallback root — it must never record a raw absolute filesystem path with a leading '/'."
+    - "The fallback must be reached only when git cannot resolve the top-level — when git resolves a repo root the fallback is not used (no regression of ACD-1200a-14)."
+    - "Error handling must follow the project policy: catch the specific failure, log at WARNING or higher, no bare/blind except."
+test_spec:
+  - name: test_git_rev_parse_failure_falls_back_with_warning
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Simulate git rev-parse failing (not a git repo); the write uses the documented fallback root and emits a WARNING, never a raw absolute path."
+  - name: test_fallback_value_still_repo_relative_no_leading_slash
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "The value recorded via the fallback root is repo-relative with no leading '/' and no absolute prefix."
+  - name: test_no_fallback_when_git_resolves_repo_root
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "When git rev-parse resolves a repo root, the fallback path is not taken (no regression of ACD-1200a-14)."
 origin_agent: business-analyst-v3
 created: 2026-07-21
 amended_by: []

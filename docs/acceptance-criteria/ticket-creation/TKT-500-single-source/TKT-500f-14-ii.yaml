@@ -1,8 +1,8 @@
 id: TKT-500f-14-ii
 components:
   - ticket_creation_pipeline
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The recognised-source-extension set excludes markup/style/shell and includes common non-Python source"
 component: ticket-creation
 level: L3
@@ -46,8 +46,31 @@ delivers_to: null
 expects_from:
   ac_id: TKT-500f-14
   contract: "The recognised-source-code extension set (_SOURCE_CODE_EXTENSIONS) that TKT-500f-14 keys the code-ticket gate signal off; this edge case bounds its membership to exclude .html/.css/.sh and include .go/.rs/.mjs."
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Refine the recognised-source-code extension set (_SOURCE_CODE_EXTENSIONS, in _build_agents_map): markup/style/shell (.html/.css/.sh) alone must NOT be classified as gating source code."
+    - "Common non-Python compiled/module source (.go, .rs, .mjs) must be recognised as gating source code, wiring ac-validator and ac-fulfillment-gate as needed phases the same way .py/.js already do under TKT-500f-14."
+    - "The gate signal must be driven by set membership, not by special-casing individual filenames."
+test_spec:
+  - name: test_markup_style_shell_not_gating_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A generated ticket whose files_touched is only .html/.css/.sh on a non-coder agent does not force-add ac-validator or ac-fulfillment-gate."
+  - name: test_go_rs_mjs_recognised_as_gating_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A generated ticket with a .go, .rs, or .mjs file wires ac-validator and ac-fulfillment-gate as needed phases, the same as a .py/.js source file."
 origin_agent: business-analyst-v3
 created: 2026-07-21
 amended_by: []
