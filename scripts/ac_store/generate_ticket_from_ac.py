@@ -1130,6 +1130,53 @@ def _extract_doc_path(ac: AcRecord, genre: str, ac_id: str) -> str:
     return f"docs/{genre}/{slug}.md"
 
 
+def _build_doc_links_cross_link_lines(doc_links: list[Any]) -> list[str]:
+    """Render all qualifying doc_links entries as 'existing docs to update / cross-link' bullets.
+
+    Each entry is rendered with its path, relationship, status, and relevance
+    fields visible so the documentation-expert knows how each linked doc relates
+    (BO-2200c-4).  Entries with HTTP URLs and entries missing a path are skipped.
+
+    The metadata fields are rendered inline in the format:
+      ``- <path> (relationship: <val> | status: <val> | relevance: <val>)``
+    Any metadata field that is absent or empty is omitted from the inline list.
+    When no metadata is present for an entry, the path is rendered as a bare bullet.
+
+    Args:
+        doc_links: List of doc_link dicts from an AC record.  Each dict should
+            carry at least a ``path`` key; ``relationship``, ``status``, and
+            ``relevance`` are optional metadata fields.
+
+    Returns:
+        List of formatted bullet strings, one per qualifying doc_links entry.
+        Returns an empty list when *doc_links* is empty or no entry qualifies.
+    """
+    if not doc_links:
+        return []
+    result: list[str] = []
+    for link in doc_links:
+        if not isinstance(link, dict):
+            continue
+        path_val = link.get("path", "")
+        if not isinstance(path_val, str) or not path_val or path_val.startswith("http"):
+            continue
+        relationship = link.get("relationship", "")
+        status = link.get("status", "")
+        relevance = link.get("relevance", "")
+        meta: list[str] = []
+        if relationship:
+            meta.append(f"relationship: {relationship}")
+        if status:
+            meta.append(f"status: {status}")
+        if relevance:
+            meta.append(f"relevance: {relevance}")
+        if meta:
+            result.append(f"- {path_val} ({' | '.join(meta)})")
+        else:
+            result.append(f"- {path_val}")
+    return result
+
+
 def _derive_content_constraint(ac: AcRecord, ac_id: str) -> str:
     """Derive a content constraint from an AC record's criteria field.
 
@@ -1220,6 +1267,19 @@ def _build_agent_contracts_section(
         lines.extend([
             "### documentation-expert",
             "",
+        ])
+        # BO-2200c-4: Surface ALL doc_links entries as 'existing docs to update /
+        # cross-link' with relationship, status, and relevance metadata intact so
+        # the documentation-expert knows how each linked doc relates.  The previous
+        # behaviour (_extract_doc_path) reduced doc_links to a single bare path,
+        # discarding all metadata and every entry after the first.
+        cross_link_lines = _build_doc_links_cross_link_lines(ac.get("doc_links") or [])
+        if cross_link_lines:
+            lines.append("Existing docs to update / cross-link:")
+            lines.append("")
+            lines.extend(cross_link_lines)
+            lines.append("")
+        lines.extend([
             f"- [ ] AC-1: [{genre}] {doc_path} — {constraint}",
             "",
         ])
