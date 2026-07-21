@@ -478,6 +478,67 @@ rejected by the `check-ac-schema` guard — the test contract is not optional.
 
 ---
 
+## S2.8 — Intent-vs-Surface Consistency Check (BP-1100f-3)
+
+After populating `assigned_agent` (§2.1) and before finalising enrichment, apply this
+check to every AC whose `files_touched` list — or `reference_file_path` for
+package-surface ACs — is non-empty.
+
+**Purpose:** detect a technology CONTRADICTION where the assigned implementer and its
+checking test framework cannot act on the declared surface, and surface it BEFORE any
+implementer is dispatched. This is DISTINCT from:
+
+- **BP-1100a** — checks whether `files_touched` contains an executable surface at all.
+- **BP-1100e-1** — reconciles declared-vs-actual files POST-change.
+
+This check is solely about **intent(technology) vs surface**: can the assigned
+implementer and its implied test framework act on every file extension in the declared
+surface?
+
+### Technology-surface compatibility (non-exhaustive)
+
+| Assigned agent | Implied framework | Can act on | Cannot act on |
+|---|---|---|---|
+| `python-coder` | pytest | `.py`, `.yaml`, `.json`, `.md`, `.txt` | `.js`, `.ts`, `.tsx`, `.jsx`, `.sql` |
+| `sql-coder` | pytest (SQL tests) | `.sql` | `.py`, `.js`, `.ts`, `.tsx` |
+| `frontend-coder` | jest / vitest | `.ts`, `.tsx`, `.js`, `.jsx`, `.html`, `.css`, `.scss` | `.py`, `.sql` |
+| `llm-expert` | none (prose) | `.md` (templates and skills) | `.py`, `.sql`, `.ts`, `.js` |
+| `documentation-expert` | none (prose) | `.md` (docs) | `.py`, `.sql`, `.ts`, `.js` |
+
+### Check procedure
+
+For each AC:
+
+1. Identify the **stated intent**: the `assigned_agent` and its implied test framework.
+2. Collect the **declared surface**: all file extensions in `files_touched` (or the
+   extension of `reference_file_path` for package-surface ACs).
+3. Partition the declared surface into:
+   - **Matched portion** — extensions the stated intent CAN handle.
+   - **Unmatched portion** — extensions the stated intent CANNOT handle.
+
+### Verdict and action
+
+| Condition | Verdict | Action |
+|---|---|---|
+| Unmatched portion is empty | **Pass** — no contradiction. | Proceed. |
+| Unmatched portion is non-empty AND matched portion is also non-empty | **Partial flag (BP-1100f-3-i)** — mixed surface. | Flag ONLY the unmatched extensions; do NOT flag the matched portion. Propose a split (S3) for the unmatched portion, or record a caveat (S4) if a split would be trivial. |
+| All declared surface is unmatched (zero overlap) | **Full contradiction** — full flag. | Record as a high-priority caveat (S4) naming the mismatch. Mark the AC enrichment-blocked if no split can resolve it. |
+
+### How to name the mismatch in a caveat
+
+When recording a caveat, name the specific technology contradiction — do not use
+generic language. Example:
+
+> "AC is assigned `python-coder` checked by `pytest`, but `files_touched` contains
+> `scripts/build.js` (`.js` file). A Python implementer cannot modify JavaScript
+> engine files. The Python-compatible portion of the surface (if any) passes unflagged.
+> The `.js` portion requires `frontend-coder` or a separate ticket."
+
+A work item whose assigned implementer and test framework match its entire declared
+surface passes this check unflagged.
+
+---
+
 ## S3 Splitting Protocol
 
 A single AC must be split when it requires work from **multiple agents due to

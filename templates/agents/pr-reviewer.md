@@ -274,6 +274,95 @@ Severity classification for these findings:
 
 ---
 
+## Step 2b — Dispatch Instruction Lens (BP-1100f-1)
+
+> **Spec-parity note:** this lens mirrors the normative definition in the BP-1100f-4
+> harness test. The two cannot share code — keep them in sync manually; drift in
+> either direction is a defect (ADR-001 self-hosting boundary).
+
+For every `agent()`-style dispatch call visible in the diff whose evident purpose is
+to produce a **durable change** — a file written to disk, or an equivalent lasting
+artifact — examine the **first argument**:
+
+| First-argument form | Verdict |
+|---|---|
+| Non-empty, non-whitespace instruction string | **Pass — unflagged on this ground** |
+| Bare data object (dict / JSON object literal) | **High-confidence finding** |
+| `null` / `undefined` / omitted first argument | **High-confidence finding** |
+| Empty string (`""`) | **High-confidence finding** |
+| Whitespace-only string (spaces, tabs, or newlines only) | **High-confidence finding** |
+
+A whitespace-only string carries no instruction content and is treated identically to
+an empty string (BP-1100f-1-i). A trivially non-empty value that is entirely
+whitespace does NOT satisfy the instruction-string requirement.
+
+When this finding fires, emit it as a **high-confidence finding**:
+
+```
+[H-N] instruction-less dispatch — <file>:<line>
+      The first argument to agent() is <describe the form: bare object / empty
+      string / whitespace-only string / null / omitted>.
+      A dispatch aimed at producing a durable change must carry a non-empty,
+      non-whitespace instruction string as its first argument. A bare data
+      payload carries no actionable instruction and this step cannot be
+      accepted as-is.
+```
+
+Skip this check for `agent()` calls whose evident purpose is NOT to produce a durable
+change (e.g. a pure read-only research delegation whose result is held in a variable
+and never written to disk). When in doubt, apply the lens.
+
+---
+
+## Step 2c — Durable Side-Effect Coverage Lens (BP-1100f-2)
+
+When a ticket declares a **durable, observable side-effect** — an artifact the
+implementation writes to disk that can be read back (a file, a generated config, a
+deployed template) — evaluate whether the test evidence in the diff satisfies the
+**real effect**, not merely that a step ran.
+
+### What counts as topology evidence (NOT sufficient)
+
+The following test shapes prove only that a step ran; they do NOT prove the effect
+occurred. All three are classified as **dispatch topology**:
+
+- Assertions on whether an agent or helper was called (mock call count, `assert_called`,
+  spy presence).
+- Assertions on labels, names, or counts of dispatched helpers that a test mock controls.
+- Assertions that the artifact's **destination path was passed as an argument** to a
+  dispatched helper (BP-1100f-2-i): this checks the topology of the call. Even though
+  it names the artifact's path, nothing reads the artifact back — the path assertion
+  tests the call, not the file.
+
+### What counts as effect evidence (required)
+
+Coverage is satisfied when the test evidence includes at least one test that:
+
+1. Exercises the code under review without solely mocking it out.
+2. Produces the artifact by writing to a real or temporary location (not a mock).
+3. Reads the artifact back — or asserts its existence or content — after the code runs.
+
+This is the **real-effect round-trip**.
+
+### Finding format
+
+When the only evidence for a declared durable side-effect is topology:
+
+```
+[H-N] dispatch-topology coverage only — <file>:<context>
+      The declared durable side-effect (<artifact or description>) has no
+      real-effect test. Tests assert <dispatch presence / path argument /
+      mock call count> but no test produces the artifact and reads it back.
+      Topology evidence proves a step ran; it does not prove the artifact
+      was written. Add at least one round-trip test that writes the artifact
+      and asserts its existence or content.
+```
+
+When real-effect round-trip evidence is present for the declared side-effect, this
+lens passes unflagged.
+
+---
+
 ## Step 3 — Classify Every Finding
 
 For each finding from the raw set, assign exactly one confidence class:

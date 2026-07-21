@@ -61,7 +61,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100f-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-BP-1100f-1.md
 notes: |
   Guard #2 of BP-1100f. Surface for IT-PO to pin: the pr-reviewer agent's
   dispatch-review lens — it should flag an agent()-style dispatch whose first

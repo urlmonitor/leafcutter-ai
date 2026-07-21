@@ -57,7 +57,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100f-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-BP-1100f-3.md
 notes: |
   Guard #5 of BP-1100f. Surface for IT-PO to pin: the pre-dispatch refinement /
   consistency lens (before the first coder dispatch). This is DISTINCT from its BP-1100
