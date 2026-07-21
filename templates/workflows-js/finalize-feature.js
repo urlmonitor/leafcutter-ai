@@ -334,8 +334,19 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 
 // Extract the epic/ticket argument passed to the workflow.
 // For `/finalize-feature EPIC-FooBar`, args is the string "EPIC-FooBar".
-// When args is not a string (or is empty), fall back to CWD-based detection.
-const epicArg = (typeof args === 'string' ? args.trim() : '');
+// When args is an object (e.g. {target: "ge-116a-1"} from a /build-feature dispatch
+// or the workflow engine), extract args.target or args.target_branch (FIN-100g-2).
+// When args is empty, has no target/target_branch key, or carries an empty value,
+// epicArg is '' and the pre-flight falls back to CWD-based detection (FIN-100g-2-i).
+const _epicArgCandidate = (
+  typeof args === 'string'
+    ? args
+    : (args && (args.target || args.target_branch)) || ''
+);
+// A non-string target value (e.g. a number or object) is treated as no target —
+// it falls back to CWD detection (FIN-100g-2-i) rather than raising a .trim()
+// TypeError. Only a string candidate is trimmed.
+const epicArg = (typeof _epicArgCandidate === 'string' ? _epicArgCandidate : '').trim();
 
 const preflightResult = await agent(
   "Detect the target worktree branch and root path for /finalize-feature.\n" +
