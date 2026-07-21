@@ -1,0 +1,68 @@
+id: BP-1100f-3
+components:
+  - build_pipeline
+title: "A work item whose stated intent contradicts its declared surface is caught before implementation"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item whose stated intent assigns a Python implementer whose work is checked
+    by a Python test framework,
+  And the work item's declared surface consists of JavaScript source files,
+  When the pre-implementation intent-versus-surface consistency check evaluates the work item,
+  Then it detects the contradiction and surfaces it — naming the mismatch between the Python
+    implementer/checker and the JavaScript surface — before any implementer is dispatched,
+  And a work item whose implementer and checking technology match its declared surface passes
+    the check unflagged.
+depends_on:
+  - BP-1100f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100a.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is the pre-dispatch consistency lens in templates/agents/it-po.md (applied before the first coder dispatch): compare the work item's stated intent (assigned implementer + its checking test framework) against the declared surface (files_touched extensions)."
+  - "Detect a technology CONTRADICTION where the implementer/checker cannot act on the declared surface (e.g. a Python implementer checked by a Python test framework aimed at a JavaScript surface); surface the mismatch by name before any implementer is dispatched. A matching implementer/surface passes unflagged."
+  - "This is DISTINCT from BP-1100a (files_touched contains an executable surface at all) and from BP-1100e-1 (post-change declared-vs-actual reconciliation) — do not re-derive either; check intent(technology)-versus-surface only."
+  - "Per the selection_criteria DSL limits (no negation / no derived-path correlation), express this as an llm/judgment lens in the template, not as a DSL trigger; planning-time judgment degrades to advisory, so pair with a commit-time mechanical backstop only if a follow-up python-coder AC is authored (see caveat)."
+  - "Portable per ADR-001 — the rule lives in the packaged template and reaches any consumer that runs build.py; verify via the build.py round-trip."
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "Assigned llm-expert (it-po.md pre-dispatch consistency lens prose). Kept DISTINCT from BP-1100a and BP-1100e-1 per BA notes. test_required:false (prose judgment lens). CAVEAT raised: consider a python-coder commit-time backstop hook as a follow-up, since a planning-time llm judgment degrades to advisory when the LLM-eval path is unavailable."
+superseded_by: null
+covered_by:
+  - BP-1100f-3-i
+implemented_by: []
+notes: |
+  Guard #5 of BP-1100f. Surface for IT-PO to pin: the pre-dispatch refinement /
+  consistency lens (before the first coder dispatch). This is DISTINCT from its BP-1100
+  siblings and must not re-derive them: BP-1100a checks that files_touched contains an
+  executable surface at all; BP-1100e-1 (DONE) is the post-change declared-vs-actual
+  file reconciliation. This AC checks an intent(technology)-versus-surface CONTRADICTION
+  (implementer/checker technology cannot act on the declared surface). Origin RCA
+  Failure #1: python-coder + pytest were aimed at a .js surface. Portable per ADR-001.
