@@ -1285,25 +1285,40 @@ def _build_agent_contracts_section(
         ])
 
     # TKT-500f-10: emit delivers_to / expects_from contract fields when present.
+    # Both fields may be authored as a bare dict OR as a list of dicts (BA/IT-PO v3
+    # emits list form); normalise to a list so iteration always works and the
+    # single '## Agent Contracts' heading is never emitted more than once.
     if delivers_to is not None:
         lines.append("### Delivers To")
         lines.append("")
-        agent_name = delivers_to.get("agent", "")
-        contract_text = delivers_to.get("contract", "")
-        if agent_name:
-            lines.append(f"- **Agent:** {agent_name}")
-        if contract_text:
-            lines.append(f"- **Contract:** {contract_text}")
+        delivers_to_entries = (
+            delivers_to if isinstance(delivers_to, list) else [delivers_to]
+        )
+        for entry in delivers_to_entries:
+            if not isinstance(entry, dict):
+                continue
+            agent_name = entry.get("agent", "")
+            contract_text = entry.get("contract", "")
+            if agent_name:
+                lines.append(f"- **Agent:** {agent_name}")
+            if contract_text:
+                lines.append(f"- **Contract:** {contract_text}")
         lines.append("")
     if expects_from is not None:
         lines.append("### Expects From")
         lines.append("")
-        upstream_ac_id = expects_from.get("ac_id", "")
-        contract_text = expects_from.get("contract", "")
-        if upstream_ac_id:
-            lines.append(f"- **AC:** {upstream_ac_id}")
-        if contract_text:
-            lines.append(f"- **Contract:** {contract_text}")
+        expects_from_entries = (
+            expects_from if isinstance(expects_from, list) else [expects_from]
+        )
+        for entry in expects_from_entries:
+            if not isinstance(entry, dict):
+                continue
+            upstream_ac_id = entry.get("ac_id", "")
+            contract_text = entry.get("contract", "")
+            if upstream_ac_id:
+                lines.append(f"- **AC:** {upstream_ac_id}")
+            if contract_text:
+                lines.append(f"- **Contract:** {contract_text}")
         lines.append("")
 
     return "\n".join(lines)
