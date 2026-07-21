@@ -30,6 +30,8 @@ covered_by:
   - BO-2500c-1
   - BO-2500c-2
   - BO-2500c-3
+  - BO-2500c-4
+  - BO-2500c-5
 implemented_by: []
 documentation_triggers: [how-to, reference-doc]
 change_target: code

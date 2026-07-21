@@ -18,9 +18,51 @@ criteria: |
   And it carries the identity of the agent that produced it, so records can be grouped
     by lane and by agent.
 depends_on: [BO-2400d]
-doc_links: []
-delivers_to: null
-expects_from: null
+doc_links:
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    telemetry_record_tags:
+      type: object
+      required: [lane, agent]
+      properties:
+        lane:
+          type: string
+          enum: [fast, heavy]
+      description: "Each telemetry record carries a lane tag (fast|heavy) and the producing agent's identity so records can be grouped by lane and by agent."
+  reference_file_path: "scripts/feedback/submit_feedback.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Every telemetry record must carry the lane it ran under (fast lane or heavy pipeline) and the identity of the producing agent."
+    - "The lane and agent fields must be present on the same record shape defined by BO-2400d-1, so grouping by lane and by agent is possible without a join."
+    - "The agent identity must match an id in config/agent_registry.json so downstream grouping/reporting is registry-consistent."
+delivers_to:
+  agent: python-coder
+  contract: "Telemetry records tagged with { lane: fast|heavy, agent: <registry-agent-id> } on the BO-2400d-1 record shape, consumed by the comparison report BO-2400d-3."
+expects_from:
+  ac_id: BO-2400d-1
+  contract: "The per-invocation telemetry record shape onto which the lane and agent tags are added."
+test_spec:
+  - name: test_record_tagged_with_lane
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "A telemetry record carries the lane (fast|heavy) it ran under."
+  - name: test_record_tagged_with_agent_identity
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "A telemetry record carries the producing agent's identity, enabling grouping by lane and by agent."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

@@ -1,0 +1,41 @@
+id: BO-2500a-5
+components:
+  - build_orchestration
+  - testing_quality
+title: "Sequence diagram: done-proof evaluation from covers tag to done verdict"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader wants to understand how done-proof is evaluated,
+  When they view the sequence diagram,
+  Then it shows the flow from collecting "# covers:<id>" tags, resolving them to active
+    ACs, running the current tests, classifying pass/xfail/skip outcomes, to the final
+    per-AC eligible/blocked verdict
+  And it identifies the mechanical gate as the actor that emits the verdict.
+depends_on: [BO-2500a-1, BO-2500a-2, BO-2500a-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The sequence diagram must depict the done-proof evaluation authored in BO-2500a (tag collection, active-AC resolution, test-run pass classification, per-AC verdict) without introducing steps not present in the implemented behavior."
+  - "Diagram complexity must satisfy the check-mermaid-complexity guard used by the diagram surface."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

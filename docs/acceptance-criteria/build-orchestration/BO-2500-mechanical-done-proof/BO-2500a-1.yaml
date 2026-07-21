@@ -17,9 +17,49 @@ criteria: |
   Then the AC cannot be marked done
   And the result names the missing linked test as the reason.
 depends_on: [BO-2500a]
-doc_links: []
-delivers_to: null
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    done_proof_covers_linkage_gate:
+      type: object
+      description: "Verdict for a single AC id that is true only when at least one active test tagged '# covers:<id>' exists; when none exists the AC's done-status is blocked and the missing-linked-test reason is reported."
+  reference_file_path: "scripts/ac_store/mark_ac_done.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Reuse the existing covers-tag extraction (extract_covers_tag in scripts/ac_store/test_enforcement.py) rather than re-implementing a second '# covers:' parser, so linkage semantics cannot drift from the pytest enforcement layer."
+    - "The done gate must fail closed: the absence of any '# covers:<id>' test for an active AC id blocks that AC from being marked done."
+    - "The blocking result must be machine-readable and name the specific AC id together with the missing-linked-test reason."
+    - "The gate must be idempotent — re-evaluating the same tree yields the same verdict."
+    - "Must complete within the fast-lane latency budget (well under 2s for a typical batch of ACs)."
+delivers_to:
+  agent: python-coder
+  contract: "Per-AC done-proof verdict { ac_id: str, can_be_done: bool, reason: str } derived from covers-tag linkage; consumed by the pre-commit proof-of-done hook (BO-2500b-1) and the CI proof-of-done gate (BO-2500b-2)."
 expects_from: null
+test_spec:
+  - name: test_ac_without_covers_test_cannot_be_marked_done
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An active AC with no '# covers:<id>' test is blocked from being marked done."
+  - name: test_missing_linked_test_named_as_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The blocking verdict names the AC id and states the missing-linked-test reason."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

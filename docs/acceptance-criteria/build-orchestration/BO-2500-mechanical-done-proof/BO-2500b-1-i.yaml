@@ -19,9 +19,38 @@ criteria: |
   And blocks the merge, so the local skip cannot let unproven work reach the
     protected branch.
 depends_on: [BO-2500b-1]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The CI proof-of-done check must invoke the same done-proof engine (BO-2500a) the pre-commit hook uses, so a locally-skipped check cannot change the verdict in CI."
+  - "The CI check must derive its verdict solely from the committed/pushed branch state, independent of any local hook execution or worktree hook configuration."
+  - "When proof is missing or failing, the CI check must fail and block the merge (required status check), naming the offending AC ids and reasons."
+  - "The behavior must hold for the worktree-missing-hook-config case (see project memory: worktree pre-commit gap), not only the explicit-skip case."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2500b-2
+  contract: "The CI proof-of-done check running on a fresh clean checkout, whose verdict this edge case relies on to catch locally-skipped work."
+test_spec:
+  - name: test_ci_gate_catches_locally_skipped_proof
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A commit whose local proof-of-done check was skipped still fails the CI proof-of-done verdict on a fresh checkout."
+  - name: test_worktree_missing_hook_config_still_caught_by_ci
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A commit produced in a worktree lacking the hook config is still detected and blocked by the CI check."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

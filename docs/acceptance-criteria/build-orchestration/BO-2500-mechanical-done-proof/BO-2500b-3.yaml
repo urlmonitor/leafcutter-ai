@@ -18,9 +18,24 @@ criteria: |
   And the author cannot bypass it (it is not skippable the way the local pre-commit
     check is).
 depends_on: [BO-2500b]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The proof-of-done CI job must be added to the protected-branch required status checks (the `require-ci-lint` ruleset on main, id 17810993 — see project memory: main required checks = ruleset), so a failing verdict blocks merge."
+  - "The required check must not be author-bypassable (unlike the local pre-commit hook), and auto-merge must not land a PR while the check is failing/pending."
+  - "The check name registered in the ruleset must exactly match the CI job name emitted by BO-2500b-2, or the required-status wiring silently never gates."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2500b-2
+  contract: "The named CI proof-of-done job whose status is promoted to a required, non-bypassable status check on the protected branch."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

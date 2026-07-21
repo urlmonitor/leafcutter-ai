@@ -18,9 +18,31 @@ criteria: |
   Then the loop halts before the coder agent is dispatched
   And the halt report names the offending test and its associated AC id.
 depends_on: [BO-2400a-3]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "When any batch test passes before implementation, the loop must halt before dispatching the coder — a green-at-baseline test is a hard halt, never a warning that proceeds."
+  - "The halt report must name the offending test and its associated AC id so the operator can see which test failed to establish a red baseline."
+  - "The halt must be surfaced as a structured blocker result from the workflow (not a silent skip), mirroring the existing pre-dispatch guard abort shape."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2400a-3
+  contract: "The red-baseline verdict and the per-test pass/fail results for the batch that this halt path inspects."
+test_spec:
+  - name: test_loop_halts_when_batch_test_already_passes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "If any batch test passes before implementation, the loop halts before the coder is dispatched."
+  - name: test_halt_report_names_offending_test_and_ac
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The halt report identifies the offending test and its associated AC id."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

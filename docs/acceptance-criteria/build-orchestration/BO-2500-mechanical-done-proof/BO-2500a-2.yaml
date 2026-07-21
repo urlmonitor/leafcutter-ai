@@ -18,9 +18,49 @@ criteria: |
   Then the AC cannot be marked done
   And the result names the failing linked test as the reason.
 depends_on: [BO-2500a]
-doc_links: []
-delivers_to: null
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    done_proof_covers_pass_gate:
+      type: object
+      description: "Verdict for a single AC id that blocks done when any test tagged '# covers:<id>' fails in the current test run; the failing test is named as the reason."
+  reference_file_path: "scripts/ac_store/mark_ac_done.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The pass/fail signal must be derived from the actual current test run (exit-code / result-driven), never from a stored or self-reported status."
+    - "A single failing '# covers:<id>' test for an active AC id blocks that AC from being marked done."
+    - "The blocking result must name the specific failing linked test (nodeid) and the AC id, per the error handling policy."
+    - "The gate must be idempotent for a given tree + test-run result."
+    - "Must complete within the fast-lane latency budget for a typical batch."
+delivers_to:
+  agent: python-coder
+  contract: "Per-AC done-proof verdict augmented with test-run pass state { ac_id: str, can_be_done: bool, failing_tests: [str], reason: str }; consumed by the pre-commit hook (BO-2500b-1) and CI gate (BO-2500b-2)."
 expects_from: null
+test_spec:
+  - name: test_ac_with_failing_covers_test_cannot_be_marked_done
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An active AC whose '# covers:<id>' test fails in the current run is blocked from being marked done."
+  - name: test_failing_linked_test_named_as_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The blocking verdict names the failing linked test (nodeid) and the AC id."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

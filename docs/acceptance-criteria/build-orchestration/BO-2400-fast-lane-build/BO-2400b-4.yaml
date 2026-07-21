@@ -1,0 +1,43 @@
+id: BO-2400b-4
+components:
+  - build_orchestration
+  - documentation_system
+title: "How-to: choose the right build path (fast lane vs heavy pipeline)"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the path router and its single documented decision rule,
+  When an operator needs to decide which lane to use,
+  Then a how-to document explains the decision rule (scope size, attended/unattended,
+    defect-cost), the ambiguous-scope safe default, and how to supply an explicit
+    lane override.
+depends_on: [BO-2400b, BO-2400b-1, BO-2400b-2, BO-2400b-3, BO-2400b-3-i, BO-2400b-3-ii]
+doc_links:
+  - path: docs/how-to/choose-build-path.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to must document the single decision rule mapping (scope size, attended/unattended, defect-cost) to a lane, the ambiguous-scope heavy default, and how to supply an explicit lane override."
+  - "It must match the shipped decision rule (authored after the router is built)."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2400b-3
+  contract: "The implemented documented decision rule whose inputs, defaults, and override behavior this how-to explains."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

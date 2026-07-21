@@ -18,9 +18,44 @@ criteria: |
   Then a checksum comparison of the stable prefix across the drive flags the mismatch
   And the churn is surfaced (so unintended cache-busting cannot pass silently).
 depends_on: [BO-2400c-1]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/injection-builder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    stable_prefix_checksum:
+      type: string
+      description: "Checksum of the stable prefix recorded per invocation within a drive; a mismatch across invocations intended to share the cache flags churn."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Compute a checksum of the stable prefix for each invocation and compare across invocations in the same drive that are intended to share the cache; a difference must be flagged, never passed silently."
+    - "Use one shared checksum helper for the compute-and-compare so the record and verify paths cannot drift."
+    - "The churn must be surfaced (logged at WARNING or higher) so unintended cache-busting is observable."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2400c-1
+  contract: "The assembled prompt's stable-prefix segment (content before the cache breakpoint) whose checksum is compared across the drive."
+test_spec:
+  - name: test_stable_prefix_churn_flagged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "When the stable prefix differs between two invocations meant to share the cache, the checksum comparison flags the mismatch."
+  - name: test_matching_stable_prefix_not_flagged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "Identical stable prefixes across invocations produce no churn flag."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

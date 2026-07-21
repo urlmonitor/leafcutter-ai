@@ -28,6 +28,7 @@ covered_by:
   - BO-2400b-1
   - BO-2400b-2
   - BO-2400b-3
+  - BO-2400b-4
 implemented_by: []
 documentation_triggers: [how-to]
 change_target: pipeline

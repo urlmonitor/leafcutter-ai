@@ -29,6 +29,7 @@ covered_by:
   - BO-2400c-1
   - BO-2400c-2
   - BO-2400c-3
+  - BO-2400c-4
 implemented_by: []
 documentation_triggers: [reference-doc]
 change_target: prompt

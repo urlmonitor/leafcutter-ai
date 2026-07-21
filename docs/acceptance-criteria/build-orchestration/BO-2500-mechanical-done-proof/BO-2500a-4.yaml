@@ -1,0 +1,38 @@
+id: BO-2500a-4
+components:
+  - build_orchestration
+  - testing_quality
+title: "How-to: prove an AC is done with a passing covers-linked test"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a contributor wants an AC to count as done,
+  When they consult the how-to documentation,
+  Then it explains how to tag a test "# covers:<id>", how the done-proof evaluation
+    treats missing, failing, and xfail/skipped linked tests, and how dangling covers
+    tags are flagged
+  And it points to the mechanical done-proof gate as the arbiter of done.
+depends_on: [BO-2500a-1, BO-2500a-2, BO-2500a-3]
+doc_links: []
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Document the covers-tag done-proof rules authored in BO-2500a-1/-2/-3 and the edge cases in BO-2500a-1-i/-2-i (dangling tags, xfail/skip do not count) exactly as implemented — do not invent behavior."
+  - "The how-to must be discoverable from the build-orchestration documentation surface and cross-link the fast-lane build docs (BO-2400)."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

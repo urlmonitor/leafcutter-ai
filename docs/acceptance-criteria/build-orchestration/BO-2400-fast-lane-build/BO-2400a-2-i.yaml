@@ -19,9 +19,40 @@ criteria: |
   And the ACs left over are not included in this batch (they remain ready for a
     subsequent loop).
 depends_on: [BO-2400a-2]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    cohesion_cap:
+      type: integer
+      minimum: 1
+      description: "Maximum number of ACs a single fast-lane batch may contain (M). Read from config; not hard-coded."
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The cohesion cap M must be read from a config source, not hard-coded, so it can be tuned without a code change."
+    - "When available cohesive ACs exceed M, the batch is truncated to at most M ids and the remainder are left untouched in the ready set for a subsequent loop (no dropped or silently consumed ACs)."
+    - "Truncation must respect the same deterministic ordering as BO-2400a-2, so the first M in the stable order are selected reproducibly."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_batch_truncated_to_cohesion_cap
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "When ready cohesive ACs exceed M, the selected batch contains at most M ACs."
+  - name: test_overflow_acs_remain_ready
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "ACs beyond the cap are excluded from this batch and remain in the ready set for a later loop."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

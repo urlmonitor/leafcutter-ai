@@ -18,9 +18,40 @@ criteria: |
     local working tree)
   And its verdict is derived only from what is committed to the branch.
 depends_on: [BO-2500b]
-doc_links: []
-delivers_to: null
-expects_from: null
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The proof-of-done check must be wired as a CI job (in .github/workflows/ci.yml) that runs on pull_request open/synchronize against a fresh checkout — never against a cached or author-supplied working tree."
+  - "The job must build/deploy the package first if the check depends on deployed artifacts, mirroring the existing fresh-clone CI discipline (ADR-016), so it does not false-pass or false-fail on missing build outputs."
+  - "The verdict must be a function only of committed branch content; no step may read uncommitted or author-local state."
+  - "The job must invoke the same done-proof engine (BO-2500a) used locally, so CI and local semantics are identical."
+delivers_to:
+  agent: llm-expert
+  contract: "A CI proof-of-done job (fresh-checkout, committed-state-only) whose pass/fail status is the required gate consumed by BO-2500b-3 and relied on by BO-2500b-1-i."
+expects_from:
+  ac_id: BO-2500a-1
+  contract: "The done-proof engine/verdict (covers-linkage + pass-state from BO-2500a) that the CI job executes on the fresh checkout."
+test_spec:
+  - name: test_ci_workflow_defines_fresh_checkout_proof_of_done_job
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "ci.yml defines a proof-of-done job triggered on pull_request that checks out the branch fresh and runs the done-proof engine."
+  - name: test_proof_of_done_verdict_uses_committed_state_only
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The CI proof-of-done verdict is derived only from committed branch content, not from any uncommitted working-tree state."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

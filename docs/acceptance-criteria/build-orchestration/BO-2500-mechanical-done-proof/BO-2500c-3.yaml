@@ -19,9 +19,25 @@ criteria: |
   And it asserts the observable behavior on that artifact (not only on synthetic
     fixtures authored inside the test).
 depends_on: [BO-2500c]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-test-fixture-convention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Encode in the test-writer agent template the rule that any change to a parser, validator, or hook must be accompanied by an independent behavioral test that runs the component in a fresh process against a real on-disk artifact produced by the tool that writes it."
+  - "The independent check must assert observable behavior on the real artifact, not only on synthetic in-test fixtures, so a feature that is broken on real data cannot pass on tidy hand-made data (see project memory: files_touched drives surface / real-artifact behavioral spot-check)."
+  - "The convention must be consistent with the round-trip discipline (BO-2500c-2) and the fixture policy (BO-2500c-1); it states the WHAT that the fast lane's verification step invokes."
 delivers_to: null
 expects_from: null
+test_required: false
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

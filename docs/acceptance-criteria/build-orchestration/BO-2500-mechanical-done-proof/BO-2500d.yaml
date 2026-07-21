@@ -29,6 +29,7 @@ covered_by:
   - BO-2500d-1
   - BO-2500d-2
   - BO-2500d-3
+  - BO-2500d-4
 implemented_by: []
 documentation_triggers: [component-diagram]
 change_target: pipeline

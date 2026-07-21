@@ -17,9 +17,34 @@ criteria: |
   Then the LLM review, validator, and fulfillment gate agents are still present,
   So removing them from the fast lane does not remove them from the thorough path.
 depends_on: [BO-2500d]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The heavy-pipeline phase order must retain the LLM review, validator, and fulfillment-gate agents; the fast-lane removal (BO-2500d-1) must be scoped to the fast-lane order only."
+  - "The two phase orders must be defined such that a change to the fast-lane set cannot silently mutate the heavy-pipeline set (independent definitions or an explicit per-lane selector)."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_heavy_pipeline_retains_review_validator_fulfillment_agents
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "The heavy-pipeline phase order still contains the LLM review, validator, and fulfillment-gate agents."
+  - name: test_fast_lane_removal_does_not_affect_heavy_pipeline
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "Removing the opinion-only agents from the fast lane leaves the heavy-pipeline order unchanged."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

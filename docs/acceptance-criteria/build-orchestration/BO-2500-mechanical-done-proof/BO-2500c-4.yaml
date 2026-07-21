@@ -1,0 +1,39 @@
+id: BO-2500c-4
+components:
+  - build_orchestration
+  - testing_quality
+title: "How-to: author real-artifact fixtures and round-trip tests"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a contributor is writing tests for a parser, validator, or hook,
+  When they consult the how-to documentation,
+  Then it shows how to build fixtures with the real serializer (not hand-typed
+    literals), how to round-trip through a real on-disk artifact, and how to add an
+    independent real-artifact behavioral check
+  And it explains the defect blind-spot (e.g. indented block list vs column-0 dashes)
+    the fixture policy prevents.
+depends_on: [BO-2500c-1, BO-2500c-2, BO-2500c-3]
+doc_links: []
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Document the fixture, round-trip, and independent behavioral-check conventions authored in BO-2500c-1/-2/-3 and the fixture-quality lint in BO-2500c-1-i, consistent with ADR-007 test-fixture convention."
+  - "The how-to must be discoverable from the build-orchestration and testing documentation surfaces."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

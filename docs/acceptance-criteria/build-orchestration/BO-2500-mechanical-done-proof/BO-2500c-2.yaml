@@ -19,9 +19,25 @@ criteria: |
   And the assertion is made against the value obtained from that round-trip, so the
     on-disk format under test matches the format that actually occurs.
 depends_on: [BO-2500c]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-test-fixture-convention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Encode in the test-writer agent template the rule that parser/validator tests must write the input to a real on-disk artifact with the production producer and read it back, asserting on the round-tripped value — not on an in-memory literal."
+  - "The convention must require the same producer the system uses in production (e.g. the actual serializer / file-writer), so the on-disk format under test equals the format that actually occurs (see project memory: behavioral spot-check on REAL store)."
+  - "The convention must be consistent with the independent real-artifact behavioral check (BO-2500c-3) and the fixture policy (BO-2500c-1)."
 delivers_to: null
 expects_from: null
+test_required: false
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

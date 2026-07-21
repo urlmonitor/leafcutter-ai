@@ -18,9 +18,48 @@ criteria: |
   And it can be bypassed locally (e.g. via a skip flag or --no-verify) without hard
     blocking the commit, so it functions as fast feedback rather than the final gate.
 depends_on: [BO-2500b]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    proof_of_done_precommit_hook:
+      type: object
+      description: "A commit_guardian pre-commit hook entry that runs the proof-of-done check over staged work, reports pass/fail locally, and is skippable (SKIP=<hook-id> / --no-verify) so it never hard-blocks a local commit."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The hook must consume the done-proof verdict from BO-2500a rather than re-deriving covers/pass semantics, so local and CI verdicts stay identical."
+    - "The hook must be non-blocking locally: it reports pass/fail and is honored by SKIP=<hook-id> and git --no-verify (fast feedback, not the final gate)."
+    - "On failure it must print the specific AC ids and reasons (missing/failing/non-passing linked test), per the error handling policy."
+    - "The hook must be a no-op-safe fast check suitable for the pre-commit latency budget; it must not run the full test suite when a scoped check suffices."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2500a-1
+  contract: "Per-AC done-proof verdict { ac_id, can_be_done, reason } (and its failing/passing variants from BO-2500a-2/-3) that the pre-commit hook renders as local pass/fail feedback."
+test_spec:
+  - name: test_precommit_proof_of_done_reports_pass_and_fail
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The pre-commit proof-of-done check reports pass for proven staged work and fail (with AC ids + reasons) for unproven work."
+  - name: test_precommit_proof_of_done_is_skippable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The check is bypassable locally via skip flag / --no-verify and does not hard-block the commit."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

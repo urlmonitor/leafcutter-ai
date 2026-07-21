@@ -18,9 +18,43 @@ criteria: |
     rather than being omitted
   And the resulting cache miss is observable in the recorded telemetry.
 depends_on: [BO-2400c-2]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/injection-builder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    ttl_expiry_reprime:
+      type: object
+      description: "On TTL expiry mid-drive, the next invocation re-sends the stable prefix (cache-write) rather than omitting it; the cache miss is recorded in telemetry."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "On TTL expiry between invocations, the next invocation must re-send the full stable prefix so the cache is re-primed (a cache-write) — it must never omit the prefix on the assumption it is still cached."
+    - "The resulting cache miss must be observable in the recorded telemetry (BO-2400d), so cache behavior can be verified from the run record."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2400c-2
+  contract: "The one-hour cache TTL configuration whose expiry this behavior handles."
+test_spec:
+  - name: test_ttl_expiry_reprimes_stable_prefix
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "When the TTL has elapsed, the next invocation re-sends the stable prefix (cache-write) rather than omitting it."
+  - name: test_ttl_expiry_cache_miss_in_telemetry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "The cache miss caused by TTL expiry is observable in the recorded telemetry."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

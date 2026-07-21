@@ -1,0 +1,41 @@
+id: BO-2500d-4
+components:
+  - build_orchestration
+  - review_system
+title: "Component diagram: fast-lane vs heavy-pipeline phase order after review retirement"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader wants to understand the two build lanes,
+  When they view the component diagram,
+  Then it shows the fast-lane phase order with only mechanical proof-of-done gates as
+    completion arbiters, and the heavy-pipeline phase order that retains the LLM review,
+    validator, and fulfillment-gate agents
+  And it makes the difference between the two lanes explicit.
+depends_on: [BO-2500d-1, BO-2500d-2, BO-2500d-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The component diagram must depict the fast-lane and heavy-pipeline phase orders exactly as authored in BO-2500d-1/-2/-3 (mechanical gates in the fast lane; review/validator/fulfillment agents retained in the heavy pipeline)."
+  - "Diagram complexity must satisfy the check-mermaid-complexity guard used by the diagram surface."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

@@ -17,9 +17,47 @@ criteria: |
   When the done-status of that AC is evaluated,
   Then the AC is eligible to be marked done.
 depends_on: [BO-2500a]
-doc_links: []
-delivers_to: null
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    done_proof_eligibility_verdict:
+      type: object
+      description: "Positive verdict that an active AC is eligible to be marked done when at least one '# covers:<id>' test exists and every such test passes in the current run."
+  reference_file_path: "scripts/ac_store/mark_ac_done.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Eligibility requires BOTH presence (>=1 '# covers:<id>' test) AND that every covers-linked test passes; neither alone is sufficient."
+    - "Eligibility is the necessary precondition for the done write — it must not itself flip work_status; the actual transition remains a separate, explicit step."
+    - "The positive verdict must be idempotent for a given tree + test-run result."
+delivers_to:
+  agent: python-coder
+  contract: "Positive done-eligibility verdict { ac_id: str, eligible: true, passing_tests: [str] } consumed by the pre-commit hook (BO-2500b-1) and CI gate (BO-2500b-2) to permit the done transition."
 expects_from: null
+test_spec:
+  - name: test_ac_with_passing_covers_test_is_eligible_for_done
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An active AC with at least one covers-linked test where all such tests pass is reported eligible to be marked done."
+  - name: test_eligibility_requires_all_covers_tests_passing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Eligibility requires every '# covers:<id>' test to pass, not merely one of several."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

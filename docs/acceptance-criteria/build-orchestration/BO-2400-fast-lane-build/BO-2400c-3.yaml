@@ -19,9 +19,44 @@ criteria: |
   And the later phase does not re-derive that context from the raw inputs the earlier
     phase already processed.
 depends_on: [BO-2400c]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/injection-builder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    phase_output_threading:
+      type: object
+      description: "A later phase's assembled prompt includes the earlier phase's distilled output in the variable suffix; the raw inputs the earlier phase processed are not re-included for re-derivation."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The earlier phase's distilled output must be threaded into the later phase's variable suffix (after the cache breakpoint), so the later phase consumes the distilled result rather than the raw inputs."
+    - "The later phase's prompt must not re-include the raw inputs the earlier phase already processed for the purpose of re-deriving the same context."
+    - "Threading must preserve the stable-prefix / breakpoint / variable-suffix layout from BO-2400c-1 (distilled output goes in the variable suffix, never the stable prefix)."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2400c-1
+  contract: "The assembled prompt layout (stable prefix, breakpoint, variable suffix) into whose variable suffix the prior-phase distilled output is threaded."
+test_spec:
+  - name: test_prior_phase_output_in_variable_suffix
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "A later phase's assembled prompt includes the earlier phase's distilled output in the variable suffix."
+  - name: test_raw_inputs_not_rederived
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "The later phase does not re-include the raw inputs the earlier phase already processed for re-derivation."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

@@ -18,9 +18,48 @@ criteria: |
   Then that tag does not count toward the done proof of any active AC
   And the dangling tag is flagged.
 depends_on: [BO-2500a-1]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    done_proof_dangling_covers_flag:
+      type: object
+      description: "Covers-tag resolution that only counts a '# covers:<id>' tag when <id> resolves to an active AC; tags resolving to deprecated, superseded, or nonexistent ids are excluded from any done proof and reported as dangling."
+  reference_file_path: "scripts/ac_store/test_enforcement.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Active-status resolution must derive from the AC store's own status/req_status fields (data-driven), never from a hard-coded id list, so newly deprecated or superseded ids are handled automatically."
+    - "A tag whose id resolves to a non-active or nonexistent AC must not increment coverage for any active AC."
+    - "Every dangling tag must be reported (id + originating test location) so it can be reconciled, per the error handling policy."
+    - "Resolution must be idempotent for a given store + test tree."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2500a-1
+  contract: "The covers-tag linkage evaluation whose result this edge case constrains (only active-AC tags count toward done proof)."
+test_spec:
+  - name: test_covers_tag_for_nonactive_ac_does_not_count
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A '# covers:<id>' tag whose id is deprecated, superseded, or nonexistent contributes nothing to any active AC's done proof."
+  - name: test_dangling_covers_tag_is_flagged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A dangling covers tag is reported with its id and originating test location."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

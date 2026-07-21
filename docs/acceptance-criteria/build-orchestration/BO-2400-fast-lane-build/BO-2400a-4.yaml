@@ -21,9 +21,53 @@ criteria: |
   And commit staging is performed only after both the green check and the coverage
     check pass.
 depends_on: [BO-2400a]
-doc_links: []
-delivers_to: null
-expects_from: null
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_green_and_coverage_gate:
+      type: object
+      description: "Deterministic gate returning a verdict that (a) the batch test run exited zero and (b) every batch AC id has >=1 test tagged '# covers:<id>'; commit staging is gated on both."
+  reference_file_path: "scripts/ac_store/test_enforcement.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Reuse the existing covers-tag extraction (extract_covers_tag) rather than re-implementing a second '# covers:' parser, so the coverage semantics cannot drift from the pytest enforcement layer."
+    - "The coverage check must confirm EVERY batch AC id has at least one covering test; a missing tag for any single batch AC id fails the coverage gate."
+    - "The green verdict is derived from the batch test run exiting zero (deterministic, exit-code-driven)."
+    - "Commit staging must be gated on BOTH the green check and the coverage check passing; neither alone is sufficient."
+    - "The gate must be idempotent — re-running it against the same tree yields the same verdict."
+delivers_to:
+  agent: llm-expert
+  contract: "Green+coverage verdict object { green: bool, coverage_ok: bool, uncovered_ac_ids: [str] } that the fast-lane loop consumes to decide whether to stage the commit."
+expects_from:
+  ac_id: BO-2400a-2
+  contract: "The batch AC ids whose tests must pass and whose '# covers:<id>' coverage is verified."
+test_spec:
+  - name: test_green_gate_passes_when_all_batch_tests_pass
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The gate reports green when the batch test run exits zero."
+  - name: test_coverage_gate_requires_covers_tag_per_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Every batch AC id must have >=1 test tagged '# covers:<id>'; a missing tag fails the coverage gate."
+  - name: test_commit_staged_only_after_green_and_coverage
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Commit staging occurs only when both the green and coverage checks pass."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

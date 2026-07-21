@@ -17,9 +17,44 @@ criteria: |
   Then the cache TTL is set to the extended one-hour value
   And it is not left at the default (short) TTL.
 depends_on: [BO-2400c]
-doc_links: []
+doc_links:
+  - path: docs/architecture/components/injection-builder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    cache_ttl:
+      type: string
+      enum: ["1h"]
+      description: "Prompt cache TTL for fast-lane drive agent invocations; set to the extended one-hour value, not the default short TTL."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The cache_control TTL on the stable-prefix breakpoint for fast-lane drive invocations must be set to the extended one-hour value, explicitly — not left at the provider default short TTL."
+    - "The TTL value must be sourced from config so it is auditable and tunable, not a bare literal buried in the assembly path."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-2400c-1
+  contract: "The assembled prompt with the cache breakpoint marker on which the extended TTL is configured."
+test_spec:
+  - name: test_cache_ttl_set_to_one_hour
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "The cache TTL for fast-lane drive agent invocations is the extended one-hour value."
+  - name: test_cache_ttl_not_default_short
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "The cache TTL is not left at the default short TTL."
 origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []

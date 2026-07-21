@@ -1,0 +1,38 @@
+id: BO-2500c-5
+components:
+  - build_orchestration
+  - testing_quality
+title: "Reference: fixture policy and real-producer fixture rules"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a contributor or reviewer needs the authoritative fixture rules,
+  When they consult the reference documentation,
+  Then it enumerates the fixture policy: which data kinds must use the real producer,
+    what shapes are rejected by the fixture-quality lint, and what real-producer form
+    each rejected shape should use instead
+  And it states the rules precisely enough to be checked against the mechanical lint.
+depends_on: [BO-2500c-1, BO-2500c-1-i]
+doc_links: []
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The reference must state the fixture policy rules authored in BO-2500c-1 and enforced by the BO-2500c-1-i lint precisely and completely, so the doc and the lint cannot drift."
+  - "The reference must be discoverable from the testing/build-orchestration documentation surfaces and cross-link ADR-007."
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
