@@ -1,0 +1,51 @@
+id: BP-1400b-1-i
+components:
+  - build_pipeline
+title: "A web-app file containing an unescaped-entity style error blocks the pull request from merging"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes a web-app file (under leafcutter-web/) and
+    introduces an unescaped-entity style error — an unescaped character such as a
+    raw apostrophe rendered directly in markup, the react/no-unescaped-entities
+    class of violation that previously reached users while every check passed,
+  When the web-app style check runs on that pull request,
+  Then the check reports a failing result that identifies the unescaped-entity
+    violation,
+  And the pull request is reported as not mergeable while that check is failing.
+depends_on:
+  - BP-1400b-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1400b-1
+  contract: "The blocking web-app style check whose failing path this regression case exercises"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Real-regression anchor: the react/no-unescaped-entities class of error is named
+  here (per the authoring brief) because it is the concrete incident this gate
+  exists to prevent — an unescaped entity that shipped green because no web-app
+  style check ran. The deliberately-violating change is transient/scoped to the
+  verification so it does not become a standing red; this AC verifies the gate
+  blocks, it does not ship a broken web app.
+change_target: pipeline
+risk_surface: safety

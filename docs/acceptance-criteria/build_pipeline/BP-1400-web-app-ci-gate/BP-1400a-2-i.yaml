@@ -1,0 +1,48 @@
+id: BP-1400a-2-i
+components:
+  - build_pipeline
+title: "A pull request that changes both a web-app file and a non-web-app file still requires the web-app check to pass"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes at least one file under the web-app directory
+    (leafcutter-web/) together with one or more files outside it,
+  When the checks run on that pull request,
+  Then the web-app build/type-check check runs and its result is required for the
+    pull request to merge,
+  And a failing web-app check blocks the merge even though non-web-app files were
+    also changed.
+depends_on:
+  - BP-1400a-2
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1400a-2
+  contract: "The path-scoped triggering rule whose mixed-change boundary this case exercises"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Boundary edge for the path-scoping rule: a mixed pull request must not let a
+  web-app change slip through unchecked just because it is bundled with backend
+  or docs changes. The web-app trigger is "touches any leafcutter-web/ file",
+  not "touches only leafcutter-web/ files".
+change_target: pipeline
+risk_surface: safety

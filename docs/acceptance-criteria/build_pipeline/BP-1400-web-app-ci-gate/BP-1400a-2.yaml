@@ -1,0 +1,51 @@
+id: BP-1400a-2
+components:
+  - build_pipeline
+title: "The web-app build/type-check check is required only for pull requests that change the web app"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the web-app build/type-check check defined for the repository,
+  When a pull request is opened that changes one or more files under the web-app
+    directory (leafcutter-web/),
+  Then the web-app build/type-check check runs for that pull request and its
+    result is required for the pull request to merge,
+  And when a pull request changes no files under the web-app directory
+    (leafcutter-web/), the web-app build/type-check check is not required for that
+    pull request to merge.
+depends_on:
+  - BP-1400a
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1400a-1
+  contract: "The web-app build/type-check check whose triggering scope this AC constrains to web-app changes"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1400a-2-i
+implemented_by: []
+notes: |
+  Path-scoping is authored as a behavior (not merely an edge case) because "the
+  check runs when it should and does not needlessly block unrelated changes" is
+  independently testable and is the trigger contract the other web-app checks
+  follow. The precise path-filter mechanism (workflow path filter vs. required-
+  check-on-changed-paths wiring) is an implementation decision left to it-po.
+change_target: pipeline
+risk_surface: safety

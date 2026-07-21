@@ -1,0 +1,49 @@
+id: BP-1400a-3
+components:
+  - build_pipeline
+title: "Sequence diagram documents the web-app CI gate flow from pull request to merge decision"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the documentation set for the build pipeline,
+  When a reader opens the web-app CI gate documentation,
+  Then a sequence diagram shows the flow from a pull request that changes the web
+    app, through the automated build/type-check check running, to the pass/fail
+    result being reported on the pull request and gating the merge decision,
+  And the diagram identifies the participating actors: the pull request, the CI
+    system running the check, and the merge gate.
+depends_on:
+  - BP-1400a
+  - BP-1400a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: documents
+    status: planned
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1400a-1
+  contract: "The web-app build/type-check check whose pull-request-to-merge flow this diagram depicts"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the documentation_triggers [sequence-diagram] declared on BP-1400a.
+  The same diagram may cover all three web-app checks' shared pull-request flow;
+  BP-1400c-2 documents the route-render-specific interaction (headless load per
+  route) as its own sequence.
+change_target: docs
+risk_surface: internal

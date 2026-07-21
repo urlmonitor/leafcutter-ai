@@ -26,7 +26,8 @@ origin_agent: product-owner
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1400b-1
 implemented_by: []
 change_target: pipeline
 risk_surface: safety

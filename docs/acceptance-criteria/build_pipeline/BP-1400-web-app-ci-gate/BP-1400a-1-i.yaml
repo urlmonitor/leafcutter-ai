@@ -1,0 +1,50 @@
+id: BP-1400a-1-i
+components:
+  - build_pipeline
+title: "A web-app change that introduces a TypeScript type error is blocked from merging"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes a file under the web-app directory
+    (leafcutter-web/) and introduces a TypeScript type error — for example,
+    assigning a value of the wrong type to a typed variable so the type-check no
+    longer succeeds,
+  When the web-app build/type-check check runs on that pull request,
+  Then the check reports a failing result,
+  And the pull request is reported as not mergeable while that check is failing.
+depends_on:
+  - BP-1400a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1400a-1
+  contract: "The blocking web-app build/type-check check whose failing path this case exercises"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Negative acceptance scenario for the web-app build/type-check gate. The
+  deliberately type-erroring change is transient/scoped to the verification (a
+  throwaway pull request or a temporary edit removed before merge) so it does not
+  become a standing red — this AC verifies the GATE blocks, it does not ship a
+  broken web app. Merge-blocking is provided by the required-status-check wiring
+  covered by BP-1400a-4.
+change_target: pipeline
+risk_surface: safety

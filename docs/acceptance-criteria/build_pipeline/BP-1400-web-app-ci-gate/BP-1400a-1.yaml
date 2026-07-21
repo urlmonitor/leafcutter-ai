@@ -1,0 +1,54 @@
+id: BP-1400a-1
+components:
+  - build_pipeline
+title: "A blocking build and type-check check runs on every web-app pull request and fails on any build or type error"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the continuous-integration configuration for the repository,
+  When a pull request is opened or updated with one or more changed files under
+    the web-app directory (leafcutter-web/),
+  Then a dedicated web-app check builds the web app and runs its type-check
+    automatically,
+  And the check reports a failing (non-passing, blocking) result whenever the
+    build fails or any type error is reported,
+  And the check reports a passing result only when the web app builds and
+    type-checks with no errors,
+  And the check is a hard, blocking check — not an advisory or informational one
+    that a pull request can be merged despite.
+depends_on:
+  - BP-1400a
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  ac_id: BP-1400a-4
+  contract: "A named, blocking web-app build/type-check result reported on the pull request that the merge gate requires"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1400a-1-i
+implemented_by: []
+notes: |
+  Mirrors the Python test-gate check BP-1200b-1: a NEW blocking check added to
+  the pull-request CI flow, distinct from any existing informational job — a
+  build or type-check failure must FAIL the pull request (blocking), not merely
+  report status. The exact check name is a load-bearing contract consumed by the
+  cross-cutting merge-gate AC BP-1400a-4 (see delivers_to).
+change_target: pipeline
+risk_surface: safety

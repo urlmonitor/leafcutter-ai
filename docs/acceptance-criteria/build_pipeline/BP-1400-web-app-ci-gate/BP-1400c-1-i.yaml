@@ -1,0 +1,49 @@
+id: BP-1400c-1-i
+components:
+  - build_pipeline
+title: "The /about route is loaded headlessly and a non-200 or render error on it blocks the pull request"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes the web app (under leafcutter-web/), and the
+    web app exposes the /about route,
+  When the web-app route-render check runs and headlessly loads /about,
+  Then a /about response with a non-200 HTTP status, or any console error or
+    render error emitted while /about loads, makes the check report a failing
+    result and the pull request is reported as not mergeable,
+  And when /about loads with a 200 status and no console or render error, the
+    check reports /about as passing.
+depends_on:
+  - BP-1400c-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1400c-1
+  contract: "The blocking web-app route-render check whose per-route pass/fail behavior this case exercises on /about"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  /about is anchored explicitly (per the authoring brief) as the concrete route
+  the route-render gate must cover — it is a real, always-present page whose
+  render failure would otherwise reach users. Verifies both directions on a
+  single named route: a broken /about blocks the merge; a clean /about passes.
+change_target: pipeline
+risk_surface: safety
