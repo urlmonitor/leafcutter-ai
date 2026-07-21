@@ -1,22 +1,21 @@
 """
 MODULE: test_bo_2300_pause_resume
-GOAL: Red-baseline behavioral tests for BO-2300 interactive pause-resume feature.
+GOAL: Behavioral tests for BO-2300 interactive pause-resume feature.
 
 These tests drive the REAL JS workflow engine via run_workflow_under_e2() from
 _workflow_engine_harness.py and assert on observable JS behavior:
   - A pause-persist agent() dispatch is captured in agent_calls when a headless
     run hits an interactive gate.
-  - Resume via args.resume_answer proceeds past the gate without re-running
-    committed stages.
-  - Idempotency: duplicate pause records are not created.
-  - Durability: the paused state survives process exit and is resumable in a new
-    process.
-
-All assertions currently FAIL (red baseline) because:
-  (a) plan-feature.js cancels headless (parse-failure catch path) rather than pausing.
-  (b) The pause-persist agent() dispatch does not exist.
-  (c) pause-resume-substrate.js has not been created.
-  (d) The harness does not yet support injecting args.resume_answer for resume tests.
+  - The pause-persist prompt is a STRING carrying the pause_store.py write
+    instruction (not a bare object) — phantom-persistence guard.
+  - Resume via args.resume_answer + agent-mocked read-pause-record proceeds past
+    the gate without re-pausing.
+  - Wrong-shape and enum-invalid answers are rejected before the read-pause-record
+    agent is dispatched (fail-closed without re-persist).
+  - Fail-closed: read-pause-record returning exists:false → nothing-to-resume.
+  - Stale record: read-pause-record returning stale:true → unresumable.
+  - Idempotency: double-apply produces identical agent-call sequences.
+  - Finalize merge-gate (step-4-merge-gate): same pause/resume contract.
 
 TICKET: TICKET-20260720-BO-2300a-1
 ACs: BO-2300a-1, BO-2300a-2, BO-2300a-1-i, BO-2300b-1, BO-2300b-2,
@@ -26,6 +25,7 @@ ACs: BO-2300a-1, BO-2300a-2, BO-2300a-1-i, BO-2300b-1, BO-2300b-2,
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -41,6 +41,9 @@ _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _BUILD_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "build-feature.js"
 _FINALIZE_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
+_PAUSE_RESUME_SUBSTRATE_JS = (
+    _WORKTREE_ROOT / "templates" / "workflows-js" / "pause-resume-substrate.js"
+)
 
 _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
@@ -57,6 +60,30 @@ _EXPLICIT_CANCEL_RESPONSES = {
     "step-4-merge-gate": {"status": "blocked"},
 }
 
+# Label responses that guide finalize-feature.js through pre-flight and steps
+# 1-3 so the step-4-merge-gate is actually reached in harness tests.
+# step-4-merge-gate is intentionally absent here; tests that need to pause it
+# must add a response that returns no valid status (to force liveGateFn → null).
+_FINALIZE_PREFLIGHT_RESPONSES = {
+    "pre-flight": {
+        "found": True,
+        "branch": "feature/test-bo2300",
+        "worktree_root": "/tmp/test-wt",
+    },
+    "step-1-pr-probe": {
+        "found": True,
+        "number": 99,
+        "url": "https://github.com/test/test/pull/99",
+    },
+    "pre-step-4-sync-check": {
+        "status": "up_to_date",
+        "local_sha": "abc1234",
+        "origin_sha": "abc1234",
+        "ahead_count": 0,
+        "behind_count": 0,
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,6 +93,64 @@ _EXPLICIT_CANCEL_RESPONSES = {
 def _pause_calls(result: HarnessResult) -> list:
     """Return all agent() calls whose label is 'pause-persist'."""
     return [c for c in result.agent_calls if c.label == "pause-persist"]
+
+
+def _pause_record(call) -> dict:
+    """Extract the pending-question record dict from a pause-persist call.
+
+    The pause-persist prompt is a string containing:
+      python scripts/pause_store.py write --run-id <id> --record '<JSON>'
+    where <JSON> is JSON.stringify'd and may contain single quotes in string
+    values (e.g. "Interactive gate 'final-gate'...").  We find the opening {
+    after '--record '' and use a balanced-brace/string-aware walker to extract
+    the full JSON object, handling embedded single quotes correctly.
+
+    Falls back transparently to dict-style prompts (backward compat).
+    """
+    prompt = call.prompt
+    if isinstance(prompt, dict):
+        return prompt  # old dict-style; backward compat
+
+    text = str(prompt)
+    marker = "--record '"
+    idx = text.find(marker)
+    if idx == -1:
+        raise ValueError(
+            f"Cannot find '--record ' in pause-persist prompt: {text[:300]}"
+        )
+
+    # Find the opening brace of the JSON object.
+    brace_start = text.find("{", idx + len(marker))
+    if brace_start == -1:
+        raise ValueError(f"Cannot find '{{' after '--record ': {text[idx:idx+300]}")
+
+    # Walk forward with a depth counter, honouring JSON double-quoted strings
+    # (which may contain single quotes, backslash escapes, etc.).
+    depth = 0
+    in_string = False
+    i = brace_start
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if ch == "\\":
+                i += 2  # skip the escaped character
+                continue
+            if ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return json.loads(text[brace_start : i + 1])
+        i += 1
+
+    raise ValueError(
+        f"Unbalanced braces in --record payload: {text[brace_start:brace_start+500]}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -80,10 +165,11 @@ def test_gate_pauses_instead_of_cancelling():
     cancel), preserves committed work, and writes a run-keyed pending-question
     record via a pause-persist agent dispatch.
 
-    Must implement to make green:
-      - resolveGate() in pause-resume-substrate.js
-      - All 4 plan-feature.js gates migrated to call resolveGate()
-      - pause-persist agent dispatch when no answer available headlessly
+    Payload assertion (anti-phantom):
+      The pause-persist prompt must be an INSTRUCTION STRING — not a bare object.
+      It must contain the literal `pause_store.py write` command so that in
+      production a real agent executes it.  A bare-object dispatch (phantom
+      persistence) is caught here as a regression.
     """
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -98,16 +184,37 @@ def test_gate_pauses_instead_of_cancelling():
         f"hits an interactive gate. Dispatched labels: {[c.label for c in result.agent_calls]}"
     )
 
+    # Payload assertion: the prompt must be a string carrying the write command.
+    pause_call = pauses[0]
+    prompt = pause_call.prompt
+    assert isinstance(prompt, str), (
+        f"pause-persist prompt must be an INSTRUCTION STRING (not a bare object). "
+        f"Got type: {type(prompt).__name__}. "
+        f"A bare-object dispatch is phantom persistence — the agent never writes the file."
+    )
+
+    # The string must contain the pause_store.py write instruction.
+    assert "scripts/pause_store.py write" in prompt, (
+        f"pause-persist prompt must contain 'scripts/pause_store.py write'. "
+        f"Got: {prompt[:300]}"
+    )
+
+    # The record embedded in the command must carry paused_awaiting_input status.
+    assert "paused_awaiting_input" in prompt, (
+        f"pause-persist prompt must carry 'paused_awaiting_input'. Got: {prompt[:300]}"
+    )
+
+    # Extract the record and verify run_id is present.
+    rec = _pause_record(pause_call)
+    assert "run_id" in rec, f"pause record must have run_id. Got keys: {list(rec.keys())}"
+    assert "gate_id" in rec, f"pause record must have gate_id. Got keys: {list(rec.keys())}"
+
 
 def test_pause_is_idempotent_on_same_gate():
     # covers: BO-2300a-1
     """
     Re-reaching the same gate for an already-paused run does not create a
     duplicate pending-question record; exactly one pause-persist is emitted.
-
-    Must implement to make green:
-      - resolveGate() must call checkIdempotent() before writing the pause record.
-      - If a record already exists for this run_id+gate_id, skip the write.
     """
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -129,10 +236,6 @@ def test_paused_state_distinct_from_cancelled():
     A paused run (headless, no answer available) dispatches pause-persist and
     is resumable. A cancelled run (explicit cancel answer) does NOT dispatch
     pause-persist and is not resumable.
-
-    Must implement to make green:
-      - Headless gate path → pause-persist dispatch
-      - Explicit cancel answer path → graceful stop without pause-persist
     """
     # Paused run: headless gate → must emit pause-persist
     paused_result = run_workflow_under_e2(
@@ -168,17 +271,6 @@ def test_gateless_run_never_pauses():
     """
     A run that hits no interactive gate (build-feature.js) completes normally,
     records no pending question, and behaves as before the pause mechanism existed.
-
-    Must implement to make green:
-      - build-feature.js must complete without any pause-persist dispatch
-      - The gateless run must not be affected by the pause mechanism
-
-    Note: the pause/resume helper (resolveGate, validateAnswerShape,
-    applyAnswerByType) is inlined directly into the engine files
-    (plan-feature.js / finalize-feature.js) — E2 workflow bodies are
-    self-contained and cannot import local modules — so there is no separate
-    substrate module to assert on here. This test asserts the real behavior:
-    a gateless run never pauses.
     """
     result = run_workflow_under_e2(
         _BUILD_FEATURE_JS,
@@ -204,12 +296,8 @@ def test_pending_question_declares_type_and_shape():
     """
     The pause-persist agent dispatch includes a pending question that declares
     exactly one type (single_choice / priority_choice / free_text) and its
-    valid answer shape.
-
-    Must implement to make green:
-      - pause-persist agent prompt must include a `question` object with
-        at minimum a `type` field (single_choice | priority_choice | free_text)
-        and a `valid_shapes` or `options` field describing the allowed answers.
+    valid answer shape.  The prompt is a string carrying the pause_store.py
+    write instruction with the record JSON embedded.
     """
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -224,50 +312,37 @@ def test_pending_question_declares_type_and_shape():
         f"Got labels: {[c.label for c in result.agent_calls]}"
     )
 
-    # The pause-persist call's prompt must contain a `question` with a `type` field.
     pause_call = pauses[0]
-    # The prompt may be a string or a dict — after implementation it will be a dict
-    # or a structured string that encodes the pending-question record.
     prompt = pause_call.prompt
     assert prompt is not None, "pause-persist call must have a non-None prompt"
 
-    # If the prompt is a dict (structured call), check for `question.type`
-    if isinstance(prompt, dict):
-        assert "question" in prompt, (
-            f"pause-persist prompt dict missing 'question' key. Keys: {list(prompt.keys())}"
-        )
-        question = prompt["question"]
-        assert isinstance(question, dict), f"question must be a dict, got {type(question)}"
-        assert "type" in question, (
-            f"question must declare a 'type' field. Got keys: {list(question.keys())}"
-        )
-        assert question["type"] in ("single_choice", "priority_choice", "free_text"), (
-            f"question.type must be single_choice|priority_choice|free_text, "
-            f"got {question['type']!r}"
-        )
-    else:
-        # String prompt must contain type declaration
-        assert "single_choice" in str(prompt) or "free_text" in str(prompt) or \
-               "priority_choice" in str(prompt), (
-            f"pause-persist prompt must declare question type. "
-            f"Got prompt: {str(prompt)[:200]}"
-        )
+    # Extract the record from the instruction string and inspect question.type.
+    rec = _pause_record(pause_call)
+    assert "question" in rec, (
+        f"pause record missing 'question' key. Got keys: {list(rec.keys())}"
+    )
+    question = rec["question"]
+    assert isinstance(question, dict), f"question must be a dict, got {type(question)}"
+    assert "type" in question, (
+        f"question must declare a 'type' field. Got keys: {list(question.keys())}"
+    )
+    assert question["type"] in ("single_choice", "priority_choice", "free_text"), (
+        f"question.type must be single_choice|priority_choice|free_text, "
+        f"got {question['type']!r}"
+    )
 
 
 def test_wrong_shape_answer_rejected_and_reprompted():
     # covers: BO-2300b-2
     """
-    An answer not matching the declared shape is rejected early — before the live gate
-    agent is called.  The workflow returns paused status WITHOUT re-dispatching pause-persist.
+    An answer not matching the declared shape is rejected early (before
+    read-pause-record is dispatched).  The workflow returns paused status
+    WITHOUT re-dispatching pause-persist.
 
-    Must implement to make green:
-      - plan-feature.js gates must call resolveGate() from pause-resume-substrate.js.
-      - resolveGate() checks args.resume_answer BEFORE calling liveGateFn.
-      - validateAnswerShape() detects the missing action/choice and returns invalid.
-      - On invalid shape: return { status: "paused_awaiting_input" } without live-gate dispatch.
-
-    RED baseline: plan-feature.js ignores args.resume_answer entirely — the live gate is
-    always called → pause-persist dispatched in run 2 regardless of the answer shape.
+    resolveGate() calls validateAnswerShape() BEFORE consulting the durable
+    record via read-pause-record.  A wrong shape → early return
+    {status:"paused_awaiting_input"} with neither read-pause-record nor
+    pause-persist dispatched.
     """
     # Run 1: headless — discover which gate pauses.
     result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
@@ -277,10 +352,11 @@ def test_wrong_shape_answer_rejected_and_reprompted():
         "Run 1 must emit pause-persist before wrong-shape test can proceed. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
-    run_id = pauses1[0].prompt.get("run_id", "default-run")
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
 
-    # Wrong-shape: gate_id matches, type declared, but action/choice absent.
+    # Wrong-shape: gate_id matches, type declared as single_choice, but no action/choice.
     wrong_answer = {"gate_id": gate_id, "type": "single_choice"}  # no action or choice
 
     result2 = run_workflow_under_e2(
@@ -291,28 +367,33 @@ def test_wrong_shape_answer_rejected_and_reprompted():
     )
     assert result2.error == "", f"Wrong-shape answer must not crash the workflow: {result2.error}"
 
+    # No pause-persist: rejected early without calling the live gate.
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
-        f"Wrong-shape answer must be caught by validateAnswerShape() BEFORE the live gate — "
-        f"no new pause-persist expected (resolveGate returns early). "
+        f"Wrong-shape answer must be caught by validateAnswerShape() BEFORE read-pause-record — "
+        f"no new pause-persist expected (resolveGate returns {{'status':'paused_awaiting_input'}} early). "
         f"Got {len(pauses2)} pause-persist dispatch(es) in run 2. "
-        f"Fix: plan-feature.js gates must call resolveGate() which checks args.resume_answer first."
+        f"Fix: resolveGate() must call validateAnswerShape() before dispatching read-pause-record."
+    )
+
+    # No read-pause-record: validateAnswerShape short-circuits before the durable-record check.
+    reads2 = [c for c in result2.agent_calls if c.label == "read-pause-record"]
+    assert len(reads2) == 0, (
+        f"Wrong-shape answer must not reach the read-pause-record dispatch. "
+        f"Got {len(reads2)} read-pause-record dispatch(es). "
+        f"validateAnswerShape() must short-circuit before the record check."
     )
 
 
 def test_unparseable_answer_reprompts_never_crashes():
     # covers: BO-2300b-2-i
     """
-    A completely empty/malformed resume_answer (gate_id present but all other fields
-    absent) must not crash the workflow.  The malformed answer is not applied.
+    A completely empty/malformed resume_answer (gate_id present but all other
+    fields absent) must not crash the workflow.  The malformed answer is not
+    applied; no pause-persist or read-pause-record is emitted.
 
-    Must implement to make green:
-      - resolveGate() must handle answers where gate_id matches but no shape fields present.
-      - validateAnswerShape({gate_id: g}, "single_choice") returns invalid.
-      - Return paused status without dispatching pause-persist or the live gate.
-
-    RED baseline: plan-feature.js ignores args.resume_answer → live gate called
-    → pause-persist dispatched in run 2.
+    Empty answer {gate_id: g} → validateAnswerShape detects no action/choice/
+    priority/text → invalid → early return without crash.
     """
     result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
@@ -321,12 +402,11 @@ def test_unparseable_answer_reprompts_never_crashes():
         "Run 1 must emit pause-persist before unparseable-answer test can proceed. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
-    run_id = pauses1[0].prompt.get("run_id", "default-run")
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
 
-    # Malformed: gate_id present (truthy, matches), but no action/choice/text/priority.
-    # JS: args.resume_answer is a non-null object, gate_id matches → enters validation;
-    # validateAnswerShape({gate_id: g}, "single_choice") → invalid (no action or choice).
+    # Malformed: gate_id matches, but no action/choice/text/priority.
     malformed_answer = {"gate_id": gate_id}
 
     result2 = run_workflow_under_e2(
@@ -336,17 +416,79 @@ def test_unparseable_answer_reprompts_never_crashes():
         args={"run_id": run_id, "resume_answer": malformed_answer},
     )
 
-    # Primary: no crash (result.error is the harness-level subprocess error).
+    # Primary: no crash.
     assert result2.error == "", f"Malformed resume_answer must not crash the workflow: {result2.error}"
 
-    # Malformed answer with matching gate_id must be caught by validateAnswerShape() —
-    # no re-dispatch of pause-persist; answer not applied; workflow returns paused status.
+    # No re-dispatch of pause-persist (early return without live gate).
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
-        f"Malformed answer (gate_id present, no shape fields) must be caught by "
-        f"validateAnswerShape() before calling the live gate — no pause-persist expected. "
-        f"Got {len(pauses2)} pause-persist dispatch(es) in run 2. "
-        f"Fix: resolveGate() must short-circuit on invalid answer shape."
+        f"Malformed answer (no action/choice) must short-circuit at validateAnswerShape() — "
+        f"no pause-persist expected. Got {len(pauses2)} dispatch(es)."
+    )
+
+    # No read-pause-record (validateAnswerShape fires before record check).
+    reads2 = [c for c in result2.agent_calls if c.label == "read-pause-record"]
+    assert len(reads2) == 0, (
+        f"Malformed answer must not reach the read-pause-record dispatch. "
+        f"Got {len(reads2)} dispatch(es)."
+    )
+
+
+def test_enum_invalid_action_rejected_before_record_check():
+    # covers: BO-2300b-2
+    """
+    An answer whose action is not in the gate's declared option set is invalid
+    (enum validation — M-2 fix).  The run stays paused; no read-pause-record
+    or pause-persist emitted (early return before the durable-record check).
+
+    final-gate options: ["approve", "edit", "defer", "cancel"].
+    action "banana" is not in that set → validateAnswerShape returns invalid.
+    """
+    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    assert result1.error == "", f"Harness error on run 1: {result1.error}"
+    pauses1 = _pause_calls(result1)
+    assert len(pauses1) > 0, (
+        "Run 1 must emit pause-persist before enum-validation test. "
+        f"Got labels: {[c.label for c in result1.agent_calls]}"
+    )
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
+
+    # action "banana" is not in final-gate options → enum-invalid.
+    invalid_enum_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "banana",
+    }
+
+    result2 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS,
+        timeout=_TIMEOUT,
+        label_responses={},
+        args={"run_id": run_id, "resume_answer": invalid_enum_answer},
+    )
+    assert result2.error == "", f"Enum-invalid answer must not crash: {result2.error}"
+
+    # Stays paused: no read-pause-record (validateAnswerShape short-circuits).
+    reads2 = [c for c in result2.agent_calls if c.label == "read-pause-record"]
+    assert len(reads2) == 0, (
+        f"Enum-invalid action ('banana' not in gate options) must short-circuit at "
+        f"validateAnswerShape() — no read-pause-record expected. "
+        f"Got {len(reads2)} dispatch(es). "
+        f"validateAnswerShape must check action against the gate's validOptions."
+    )
+
+    # No pause-persist (no re-persist on invalid answer).
+    pauses2 = _pause_calls(result2)
+    assert len(pauses2) == 0, (
+        f"Enum-invalid answer must not re-dispatch pause-persist. "
+        f"Got {len(pauses2)} dispatch(es)."
+    )
+
+    # Answer must NOT be applied.
+    assert not any(c.label == "apply-approval" for c in result2.agent_calls), (
+        "Enum-invalid answer must not be applied (no apply-approval)."
     )
 
 
@@ -359,12 +501,8 @@ def test_context_snapshot_captured_at_pause_and_surfaced():
     # covers: BO-2300c-1
     """
     The pause captures a context snapshot at pause time (work done / proposal /
-    decision) and surfaces it with the pending question.
-
-    Must implement to make green:
-      - resolveGate() must capture a context snapshot (current stage results,
-        proposal text, decision options) at the moment of pausing.
-      - The context must be present in the pause-persist agent prompt.
+    decision) and surfaces it with the pending question embedded in the
+    pause-persist instruction string.
     """
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -379,23 +517,14 @@ def test_context_snapshot_captured_at_pause_and_surfaced():
         f"Got labels: {[c.label for c in result.agent_calls]}"
     )
 
-    pause_call = pauses[0]
-    prompt = pause_call.prompt
-    assert prompt is not None, "pause-persist call must have a non-None prompt"
-
-    if isinstance(prompt, dict):
-        assert "context" in prompt, (
-            f"pause-persist prompt dict missing 'context' key. Keys: {list(prompt.keys())}"
-        )
-        context = prompt["context"]
-        assert isinstance(context, dict), (
-            f"context must be a dict snapshot, got {type(context)}"
-        )
-    else:
-        assert "context" in str(prompt), (
-            f"pause-persist prompt must include context snapshot. "
-            f"Got: {str(prompt)[:300]}"
-        )
+    rec = _pause_record(pauses[0])
+    assert "context" in rec, (
+        f"pause record missing 'context' key. Got keys: {list(rec.keys())}"
+    )
+    context = rec["context"]
+    assert isinstance(context, dict), (
+        f"context must be a dict snapshot, got {type(context)}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -409,13 +538,9 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     A valid single_choice approve answer resolves the gate without re-pausing.
     The workflow advances past the gate: apply-approval is dispatched.
 
-    Must implement to make green:
-      - plan-feature.js gates must call resolveGate() which checks args.resume_answer FIRST.
-      - applyAnswerByType() returns { action: "approve" } → gate resolved.
-      - No pause-persist in run 2; apply-approval appears (post-gate progression).
-
-    RED baseline: plan-feature.js ignores args.resume_answer → live gate called with
-    default stub (no action field) → pause-persist dispatched; apply-approval never reached.
+    New fail-closed contract: read-pause-record must return {exists:true,stale:false}
+    for the answer to be applied.  The read-pause-record prompt must contain the
+    pause_store.py read instruction (anti-phantom assertion).
     """
     # Run 1: headless — discover gate and run_id.
     result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
@@ -425,16 +550,18 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
         "Run 1 must emit pause-persist before resume test can proceed. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
-    run_id = pauses1[0].prompt.get("run_id", "default-run")
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
 
     # Valid single_choice approve answer.
     approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
 
+    # Fail-closed mock: read-pause-record must return exists:true to apply the answer.
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses={"read-pause-record": {"exists": True, "stale": False}},
         args={"run_id": run_id, "resume_answer": approve_answer},
     )
     assert result2.error == "", f"Harness error on run 2: {result2.error}"
@@ -443,9 +570,19 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
         f"Valid approve answer must resolve the gate (no re-pause). "
-        f"Got {len(pauses2)} pause-persist dispatch(es) in run 2. "
-        f"Fix: plan-feature.js must call resolveGate() which consults args.resume_answer "
-        f"before invoking the live gate agent."
+        f"Got {len(pauses2)} pause-persist dispatch(es) in run 2."
+    )
+
+    # read-pause-record must have been dispatched (anti-phantom: instruction string check).
+    reads2 = [c for c in result2.agent_calls if c.label == "read-pause-record"]
+    assert len(reads2) > 0, (
+        "Valid resume must dispatch read-pause-record before applying the answer. "
+        f"Got labels: {[c.label for c in result2.agent_calls]}"
+    )
+    read_prompt = reads2[0].prompt
+    assert isinstance(read_prompt, str) and "pause_store.py read" in read_prompt, (
+        f"read-pause-record prompt must contain 'pause_store.py read' instruction. "
+        f"Got: {str(read_prompt)[:200]}"
     )
 
     # Workflow must have advanced past the gate: apply-approval appears.
@@ -462,13 +599,7 @@ def test_resume_preserves_committed_earlier_stages():
     On resume with approve, the workflow advances past the gate.  The pre-gate
     stage-author agent count in run 2 does not exceed run 1 (no extra repetitions).
 
-    Must implement to make green:
-      - resolveGate() resolves the gate → workflow advances to apply-approval.
-      - Stage authors are not re-dispatched beyond a single replay
-        (real committed-stage skipping requires real git commits; harness verifies count).
-
-    RED baseline: plan-feature.js ignores args.resume_answer → pause-persist in run 2;
-    apply-approval never reached.
+    Requires fail-closed label_responses for read-pause-record.
     """
     # Run 1: headless.
     result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
@@ -478,8 +609,9 @@ def test_resume_preserves_committed_earlier_stages():
         "Run 1 must emit pause-persist for stage-preservation test. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
-    run_id = pauses1[0].prompt.get("run_id", "default-run")
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
 
     # Capture pre-gate stage-author dispatches from run 1.
     pause_idx = pauses1[0].call_index
@@ -492,12 +624,12 @@ def test_resume_preserves_committed_earlier_stages():
         f"All labels: {[c.label for c in result1.agent_calls]}"
     )
 
-    # Run 2: approve.
+    # Run 2: approve with fail-closed mock.
     approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses={"read-pause-record": {"exists": True, "stale": False}},
         args={"run_id": run_id, "resume_answer": approve_answer},
     )
     assert result2.error == "", f"Harness error on run 2: {result2.error}"
@@ -506,8 +638,7 @@ def test_resume_preserves_committed_earlier_stages():
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
         f"Resume with approve must resolve the gate (no pause-persist in run 2). "
-        f"Got {len(pauses2)} pause-persist dispatch(es). "
-        f"Fix: plan-feature.js ignores args.resume_answer."
+        f"Got {len(pauses2)} pause-persist dispatch(es)."
     )
 
     # Workflow advanced past gate: apply-approval dispatched.
@@ -517,8 +648,6 @@ def test_resume_preserves_committed_earlier_stages():
     )
 
     # Stage-author dispatches in run 2 must not exceed those in run 1.
-    # (Real committed-stage skipping requires a git log with real commits;
-    # the harness invariant is that resume does not create extra stage runs.)
     run2_author_labels = [
         c.label for c in result2.agent_calls
         if c.label and "author" in c.label
@@ -535,14 +664,9 @@ def test_cancel_answer_graceful_keeps_stages_no_pr():
     """
     A cancel answer stops the workflow gracefully: no PR opened, no crash.
 
-    Must implement to make green:
-      - resolveGate() resolves the gate with action="cancel".
-      - applyAnswerByType() returns { action: "cancel" }.
-      - plan-feature.js final-gate cancel path: returns ok with cancel message,
-        no deliver-authoring-branch dispatch.
-
-    RED baseline: plan-feature.js ignores args.resume_answer → pause-persist in run 2;
-    cancel path is never reached.
+    Requires fail-closed label_responses for read-pause-record.
+    cancel is a valid option in the final-gate's option set:
+    ["approve", "edit", "defer", "cancel"] — so it passes enum validation.
     """
     # Run 1: headless.
     result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
@@ -552,16 +676,17 @@ def test_cancel_answer_graceful_keeps_stages_no_pr():
         "Run 1 must emit pause-persist before cancel-answer test can proceed. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
-    run_id = pauses1[0].prompt.get("run_id", "default-run")
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
 
-    # Cancel answer.
+    # Cancel answer — valid enum for final-gate.
     cancel_answer = {"gate_id": gate_id, "type": "single_choice", "action": "cancel"}
 
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses={"read-pause-record": {"exists": True, "stale": False}},
         args={"run_id": run_id, "resume_answer": cancel_answer},
     )
     # No crash.
@@ -571,8 +696,7 @@ def test_cancel_answer_graceful_keeps_stages_no_pr():
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
         f"Cancel answer must resolve the gate (no pause-persist in run 2). "
-        f"Got {len(pauses2)} pause-persist dispatch(es). "
-        f"Fix: plan-feature.js must call resolveGate() which consults args.resume_answer."
+        f"Got {len(pauses2)} pause-persist dispatch(es)."
     )
 
     # No PR opened after cancel.
@@ -590,18 +714,19 @@ def test_cancel_answer_graceful_keeps_stages_no_pr():
 # ADR-024 persistence contract:
 #   The E2 workflow BODY has NO filesystem access. Persistence of pause records
 #   (.leafcutter/paused_runs/<run_id>.json) and reads of those records are both
-#   AGENT-MEDIATED — the gate wrapper dispatches a "read-pause-record" agent to
-#   fetch the record state, then decides whether to apply the resume_answer based
-#   on the agent's structured response.
+#   AGENT-MEDIATED — the gate wrapper dispatches "pause-persist" (write) and
+#   "read-pause-record" (read) agents.  The harness mocks these via label_responses.
 #
-#   The harness mocks this agent-mediated read via label_responses:
-#     label_responses={"read-pause-record": {"exists": True,  "stale": False}} → apply answer
-#     label_responses={"read-pause-record": {"exists": False}}                  → nothing to resume
-#     label_responses={"read-pause-record": {"exists": True,  "stale": True}}  → reject (stale)
-#     label_responses={}  (default stub, no exists/stale keys)                 → apply answer
+#   Fail-closed: the gate applies a resume_answer ONLY when read-pause-record
+#   returns exists:true AND stale is not true.  Any other response →
+#   nothing_to_resume or unresumable_stale.
+#
+#   label_responses for read-pause-record:
+#     {"exists": True,  "stale": False} → apply answer (valid record)
+#     {"exists": False}                  → nothing to resume (absent record)
+#     {"exists": True,  "stale": True}  → reject (stale record)
 #
 #   Tests in this section NEVER write real files under .leafcutter/paused_runs/.
-#   The agent-dispatch mock is the ONLY mechanism that signals record presence/staleness.
 
 
 def test_paused_state_durable_across_process_exit():
@@ -612,21 +737,10 @@ def test_paused_state_durable_across_process_exit():
     past the gate without re-pausing.
 
     Durability contract (ADR-024):
-      - Run 1: workflow pauses and dispatches pause-persist (the pause-persist agent
-        writes the durable record in production; mocked in the harness).
-      - Run 2: "new process" — only args.resume_answer and the label_responses mock
-        for read-pause-record carry forward.  No real file is written or read by the
-        test or by the workflow body.
-      - The harness mocks read-pause-record → {"exists": True, "stale": False}, which
-        signals the gate wrapper that the record exists and is valid → apply the answer.
-
-    Must implement to make green:
-      - plan-feature.js gates must call resolveGate() which dispatches read-pause-record
-        BEFORE applying args.resume_answer.
-      - When read-pause-record returns exists:true and stale:false, apply the answer.
-
-    RED baseline: plan-feature.js ignores args.resume_answer → live gate called →
-    pause-persist dispatched in run 2.
+      Run 1 pauses and dispatches pause-persist (the pause-persist agent writes
+      the durable record in production — instruction string, not bare object).
+      Run 2 ("new process"): only args.resume_answer and the label_responses mock
+      for read-pause-record carry forward.  No real file is written or read.
     """
     # Run 1: first "process" — headless pause.
     result1 = run_workflow_under_e2(
@@ -641,11 +755,11 @@ def test_paused_state_durable_across_process_exit():
         "Run 1 must emit pause-persist for durability test. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
 
-    # Run 2: second "process" — agent-mocked record read returns {exists: true, stale: false}.
-    # The harness mocks the read-pause-record agent, simulating the durable record being
-    # present after the first process exited. No real file is created.
+    # Run 2: "new process" — agent-mocked record read returns {exists: true, stale: false}.
+    # Simulates the durable record being present after the first process exited.
     approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -655,13 +769,11 @@ def test_paused_state_durable_across_process_exit():
     )
     assert result2.error == "", f"Harness error on run 2 (resume): {result2.error}"
 
-    # Gate must be resolved in the new process: no pause-persist in run 2.
+    # Gate resolved in the new process: no pause-persist in run 2.
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
-        f"Run 2 (new process) must resume past the gate — agent-mocked record is present "
-        f"and valid (exists:true, stale:false). Got {len(pauses2)} pause-persist dispatch(es). "
-        f"Fix: plan-feature.js must call resolveGate() which dispatches read-pause-record "
-        f"and consults args.resume_answer."
+        f"Run 2 (new process) must resume past the gate. "
+        f"Got {len(pauses2)} pause-persist dispatch(es)."
     )
 
     # Workflow advanced past gate: apply-approval dispatched.
@@ -674,15 +786,10 @@ def test_paused_state_durable_across_process_exit():
 def test_reanswer_is_idempotent():
     # covers: BO-2300e-1-i
     """
-    Submitting the same resume_answer twice produces an identical agent-call sequence:
-    no double-apply, no extra agents, no re-pausing.
+    Submitting the same resume_answer twice produces an identical agent-call
+    sequence: no double-apply, no extra agents, no re-pausing.
 
-    Must implement to make green:
-      - resolveGate() applied in run 2 → advances. Run 3 with same answer must
-        produce the same observable sequence as run 2 (idempotent apply).
-
-    RED baseline: plan-feature.js ignores args.resume_answer → run 2 pauses
-    (pause-persist dispatched); len(_pause_calls(result2)) == 0 fails.
+    Both run 2 and run 3 use the same answer + read-pause-record mock.
     """
     # Run 1: headless.
     result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
@@ -692,45 +799,44 @@ def test_reanswer_is_idempotent():
         "Run 1 must emit pause-persist for idempotency test. "
         f"Got labels: {[c.label for c in result1.agent_calls]}"
     )
-    gate_id = pauses1[0].prompt["gate_id"]
-    run_id = pauses1[0].prompt.get("run_id", "default-run")
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "default-run")
 
     approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    read_mock = {"read-pause-record": {"exists": True, "stale": False}}
 
     # Run 2: first apply.
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=read_mock,
         args={"run_id": run_id, "resume_answer": approve_answer},
     )
     assert result2.error == "", f"Harness error on run 2: {result2.error}"
 
-    # Gate resolved in run 2 (primary RED assertion).
     pauses2 = _pause_calls(result2)
     assert len(pauses2) == 0, (
         f"Run 2 (first apply) must resolve the gate — no pause-persist. "
-        f"Got {len(pauses2)} pause-persist dispatch(es). "
-        f"Fix: plan-feature.js must call resolveGate() which checks args.resume_answer."
+        f"Got {len(pauses2)} dispatch(es)."
     )
 
-    # Run 3: second apply with the identical answer.
+    # Run 3: identical second apply.
     result3 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=read_mock,
         args={"run_id": run_id, "resume_answer": approve_answer},
     )
     assert result3.error == "", f"Harness error on run 3: {result3.error}"
 
-    # Idempotency: run 3 must not re-pause.
     pauses3 = _pause_calls(result3)
     assert len(pauses3) == 0, (
         f"Run 3 (same answer) must not re-pause — idempotent re-answer. "
-        f"Got {len(pauses3)} pause-persist dispatch(es)."
+        f"Got {len(pauses3)} dispatch(es)."
     )
 
-    # Idempotency: run 3 agent-call count must match run 2 (no extra double-apply agents).
+    # Idempotency: run 3 agent-call sequence must match run 2.
     run2_labels = [c.label for c in result2.agent_calls]
     run3_labels = [c.label for c in result3.agent_calls]
     assert run3_labels == run2_labels, (
@@ -742,25 +848,13 @@ def test_reanswer_is_idempotent():
 def test_resume_with_no_pending_pause_is_noop():
     # covers: BO-2300e-1-ii
     """
-    When args.resume_answer is set but the agent-mediated read returns {exists: false},
+    When args.resume_answer is set but read-pause-record returns {exists: false},
     the workflow reports 'nothing to resume': no crash, no pause-persist re-dispatch,
     and the answer is NOT applied (no apply-approval).
 
-    Agent-mediated read contract (ADR-024):
-      The gate wrapper dispatches a "read-pause-record" agent to fetch the record state.
-      label_responses={"read-pause-record": {"exists": False}} mocks that agent returning
-      "no record for this run_id" — the workflow body itself does NOT read any file.
-
-    Must implement to make green:
-      - resolveGate() dispatches read-pause-record BEFORE applying args.resume_answer.
-      - When read-pause-record returns exists:false, return 'nothing to resume' without
-        dispatching pause-persist or apply-approval.
-
-    RED baseline: plan-feature.js ignores args.resume_answer → live gate hit →
-    pause-persist dispatched (len(pauses) == 0 fails).
+    Agent-mediated read contract (ADR-024): no real file is created or accessed.
+    The gate wrapper dispatches read-pause-record; exists:false → nothing_to_resume.
     """
-    # Attempt to resume when the agent-mocked record read says {exists: false}.
-    # No real .leafcutter/paused_runs/ file is created or accessed.
     resume_answer = {"gate_id": "final-gate", "type": "single_choice", "action": "approve"}
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -772,10 +866,9 @@ def test_resume_with_no_pending_pause_is_noop():
     # No crash.
     assert result.error == "", f"Resume with no pending pause must not crash: {result.error}"
 
-    # 'Nothing to resume': the answer must NOT be applied (no apply-approval).
+    # 'Nothing to resume': answer must NOT be applied (no apply-approval).
     assert not any(c.label == "apply-approval" for c in result.agent_calls), (
-        f"read-pause-record → exists:false must block answer application — "
-        f"no apply-approval expected. "
+        f"read-pause-record → exists:false must block answer application. "
         f"Got labels: {[c.label for c in result.agent_calls]}"
     )
 
@@ -783,33 +876,26 @@ def test_resume_with_no_pending_pause_is_noop():
     pauses = _pause_calls(result)
     assert len(pauses) == 0, (
         f"read-pause-record → exists:false must stop cleanly — no pause-persist. "
-        f"Got {len(pauses)} pause-persist dispatch(es). "
-        f"Fix: resolveGate() must dispatch read-pause-record first; "
-        f"when exists:false, return 'nothing to resume' without calling pause-persist."
+        f"Got {len(pauses)} pause-persist dispatch(es)."
+    )
+
+    # read-pause-record WAS dispatched (the record-read is the mechanism that signals absence).
+    reads = [c for c in result.agent_calls if c.label == "read-pause-record"]
+    assert len(reads) > 0, (
+        "read-pause-record must be dispatched so the gate can check record presence. "
+        f"Got labels: {[c.label for c in result.agent_calls]}"
     )
 
 
 def test_stale_pause_fails_gracefully():
     # covers: BO-2300e-1-iii
     """
-    When the agent-mediated read returns {exists: true, stale: true}, the gate wrapper
-    must reject the resume: no crash, answer NOT applied, no new pause-persist emitted.
+    When read-pause-record returns {exists: true, stale: true}, the gate wrapper
+    rejects the resume: no crash, answer NOT applied, no new pause-persist emitted.
 
-    Agent-mediated read contract (ADR-024):
-      The gate wrapper dispatches a "read-pause-record" agent to fetch the record state.
-      label_responses={"read-pause-record": {"exists": True, "stale": True,
-      "stale_reason": "branch diverged after pause"}} mocks that agent returning a stale
-      record — the workflow body itself does NOT read any file.
-
-    Must implement to make green:
-      - resolveGate() dispatches read-pause-record first.
-      - When exists:true AND stale:true, return 'unresumable' without applying the answer,
-        dispatching apply-approval, or emitting a new pause-persist.
-
-    RED baseline: plan-feature.js ignores args.resume_answer → pause-persist dispatched
-    (len(pauses) == 0 fails).
+    Agent-mediated read contract (ADR-024): no real file is created or read.
+    stale:true → unresumable_stale → clean stop without applying the answer.
     """
-    # Agent-mocked read returns a stale record — no real file is created or read.
     resume_answer = {"gate_id": "final-gate", "type": "single_choice", "action": "approve"}
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
@@ -827,16 +913,178 @@ def test_stale_pause_fails_gracefully():
 
     # Stale record must NOT silently apply: no apply-approval.
     assert not any(c.label == "apply-approval" for c in result.agent_calls), (
-        f"read-pause-record → stale:true must block answer application — "
-        f"no apply-approval expected. "
+        f"read-pause-record → stale:true must block answer application. "
         f"Got labels: {[c.label for c in result.agent_calls]}"
     )
 
-    # No new pause-persist emitted (stale detection stops gracefully, does not re-pause).
+    # No new pause-persist (stale detection stops gracefully, does not re-pause).
     pauses = _pause_calls(result)
     assert len(pauses) == 0, (
         f"read-pause-record → stale:true must stop cleanly — no new pause-persist. "
-        f"Got {len(pauses)} pause-persist dispatch(es). "
-        f"Fix: resolveGate() must detect stale:true from read-pause-record and return "
-        f"'unresumable' without calling pause-persist."
+        f"Got {len(pauses)} pause-persist dispatch(es)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Finalize merge-gate (step-4-merge-gate) — new coverage
+# ---------------------------------------------------------------------------
+#
+# The finalize-feature.js step-4-merge-gate uses the same resolveGate() as
+# plan-feature.js gates. These tests prove the contract is honoured for the
+# finalize workflow too.
+#
+# To reach step 4, finalize-feature.js needs:
+#   - pre-flight: branch + worktree_root (otherwise aborts with no-branch error)
+#   - step-1-pr-probe: {found: true, number, url} (otherwise opens a PR, which
+#     is fine but adds noise; mocking skips that extra dispatch)
+#   - pre-step-4-sync-check: status:"up_to_date" (otherwise HALTS at pre-4)
+#
+# The step-4-merge-gate liveGateFn maps status:"ok" → {action:"ok"}.  The
+# default harness stub has status:"ok", so the gate PASSES without pausing.
+# To force the headless-pause path, override the gate with a response that
+# has no recognisable status (→ null → pauseAtGate).
+
+
+def test_finalize_merge_gate_pauses_headless():
+    # covers: BO-2300a-1
+    """
+    A headless finalize run whose step-4-merge-gate receives no valid status
+    (neither "ok" nor "blocked") pauses: a pause-persist dispatch appears and
+    no step-4-merge-pr dispatch follows.
+
+    The pause-persist prompt is a string carrying the pause_store.py write
+    instruction (payload assertion — anti-phantom).
+    """
+    label_responses = {
+        **_FINALIZE_PREFLIGHT_RESPONSES,
+        # Return a response with no recognisable status → liveGateFn returns null → pause.
+        "step-4-merge-gate": {"message": "gate-pending"},
+    }
+
+    result = run_workflow_under_e2(
+        _FINALIZE_FEATURE_JS,
+        timeout=_TIMEOUT,
+        label_responses=label_responses,
+    )
+    assert result.error == "", f"Harness error: {result.error}"
+
+    # pause-persist must be emitted.
+    pauses = _pause_calls(result)
+    assert len(pauses) > 0, (
+        "Headless finalize run (no valid gate status) must dispatch pause-persist. "
+        f"Got labels: {[c.label for c in result.agent_calls]}"
+    )
+
+    # Payload assertion: instruction string, not bare object.
+    prompt = pauses[0].prompt
+    assert isinstance(prompt, str), (
+        f"pause-persist prompt must be a STRING instruction. Got {type(prompt).__name__}."
+    )
+    assert "scripts/pause_store.py write" in prompt, (
+        f"pause-persist prompt must contain 'scripts/pause_store.py write'. Got: {prompt[:300]}"
+    )
+    assert "step-4-merge-gate" in prompt, (
+        f"pause-persist prompt must reference 'step-4-merge-gate'. Got: {prompt[:300]}"
+    )
+
+    # No merge dispatch (PR was NOT merged).
+    merge_labels = [c.label for c in result.agent_calls if c.label == "step-4-merge-pr"]
+    assert len(merge_labels) == 0, (
+        f"Paused finalize must NOT dispatch step-4-merge-pr. "
+        f"Got {len(merge_labels)} merge dispatch(es)."
+    )
+
+
+def test_finalize_merge_gate_resumes_and_merges():
+    # covers: BO-2300d-1
+    """
+    A resume invocation with a valid 'ok' answer (in the step-4-merge-gate's
+    option set ["ok", "blocked"]) and an agent-mocked valid record resolves the
+    gate; step-4-merge-pr is dispatched; no re-pause.
+
+    read-pause-record prompt must contain 'pause_store.py read' (anti-phantom).
+    """
+    # Discover gate_id and run_id from a headless pause.
+    headless_labels = {
+        **_FINALIZE_PREFLIGHT_RESPONSES,
+        "step-4-merge-gate": {"message": "gate-pending"},
+    }
+    result1 = run_workflow_under_e2(_FINALIZE_FEATURE_JS, timeout=_TIMEOUT, label_responses=headless_labels)
+    assert result1.error == "", f"Harness error on run 1: {result1.error}"
+    pauses1 = _pause_calls(result1)
+    assert len(pauses1) > 0, "Run 1 must pause at step-4-merge-gate."
+    rec1 = _pause_record(pauses1[0])
+    gate_id = rec1["gate_id"]
+    run_id = rec1.get("run_id", "feature/test-bo2300")
+
+    # Resume: valid 'ok' answer + exists:true read-pause-record mock.
+    ok_answer = {"gate_id": gate_id, "type": "single_choice", "action": "ok"}
+    result2 = run_workflow_under_e2(
+        _FINALIZE_FEATURE_JS,
+        timeout=_TIMEOUT,
+        label_responses={
+            **_FINALIZE_PREFLIGHT_RESPONSES,
+            "read-pause-record": {"exists": True, "stale": False},
+        },
+        args={"run_id": run_id, "resume_answer": ok_answer},
+    )
+    assert result2.error == "", f"Harness error on run 2: {result2.error}"
+
+    # Gate resolved: no re-pause.
+    pauses2 = _pause_calls(result2)
+    assert len(pauses2) == 0, (
+        f"Resume with 'ok' answer must resolve the step-4-merge-gate. "
+        f"Got {len(pauses2)} pause-persist dispatch(es)."
+    )
+
+    # read-pause-record dispatched with instruction string.
+    reads2 = [c for c in result2.agent_calls if c.label == "read-pause-record"]
+    assert len(reads2) > 0, (
+        "Valid resume must dispatch read-pause-record. "
+        f"Labels: {[c.label for c in result2.agent_calls]}"
+    )
+    read_prompt = reads2[0].prompt
+    assert isinstance(read_prompt, str) and "pause_store.py read" in read_prompt, (
+        f"read-pause-record prompt must contain 'pause_store.py read'. Got: {str(read_prompt)[:200]}"
+    )
+
+    # Merge agent dispatched (gate resolved and answer was "ok").
+    merge_labels = [c.label for c in result2.agent_calls if c.label == "step-4-merge-pr"]
+    assert len(merge_labels) > 0, (
+        f"Resume with 'ok' must dispatch step-4-merge-pr (merge proceeds). "
+        f"Run 2 labels: {[c.label for c in result2.agent_calls]}"
+    )
+
+
+def test_finalize_merge_gate_noop_when_record_absent():
+    # covers: BO-2300e-1-ii
+    """
+    A finalize resume invocation with read-pause-record returning {exists: false}
+    reports nothing-to-resume: no merge dispatch, no pause-persist, no crash.
+
+    Fail-closed: the gate does NOT merge when the durable record is absent.
+    """
+    ok_answer = {"gate_id": "step-4-merge-gate", "type": "single_choice", "action": "ok"}
+    result = run_workflow_under_e2(
+        _FINALIZE_FEATURE_JS,
+        timeout=_TIMEOUT,
+        label_responses={
+            **_FINALIZE_PREFLIGHT_RESPONSES,
+            "read-pause-record": {"exists": False},
+        },
+        args={"run_id": "test-bo2300-fz-noop", "resume_answer": ok_answer},
+    )
+
+    assert result.error == "", f"Must not crash: {result.error}"
+
+    # No merge (nothing to resume).
+    merge_labels = [c.label for c in result.agent_calls if c.label == "step-4-merge-pr"]
+    assert len(merge_labels) == 0, (
+        f"exists:false must block merge — no step-4-merge-pr. Got {len(merge_labels)} dispatch(es)."
+    )
+
+    # No pause-persist (clean stop, not re-pause).
+    pauses = _pause_calls(result)
+    assert len(pauses) == 0, (
+        f"exists:false must stop cleanly — no pause-persist. Got {len(pauses)} dispatch(es)."
     )

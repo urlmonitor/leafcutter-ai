@@ -1469,15 +1469,21 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
 
 /**
  * Validate a resume_answer's shape against its declared question type.
- * @param {object} answer       - args.resume_answer object.
- * @param {string} expectedType - "single_choice" | "priority_choice" | "free_text"
+ * @param {object}       answer       - args.resume_answer object.
+ * @param {string}       expectedType - "single_choice" | "priority_choice" | "free_text"
+ * @param {string[]|null} [validOptions] - Allowed action/choice values for single_choice gates.
  * @returns {{ valid: boolean }}
  */
-function validateAnswerShape(answer, expectedType) {
+function validateAnswerShape(answer, expectedType, validOptions) {
   if (!answer || typeof answer !== "object") { return { valid: false }; }
   if (expectedType === "single_choice") {
-    return (typeof answer.action === "string" || typeof answer.choice === "string")
-      ? { valid: true } : { valid: false };
+    const act = typeof answer.action === "string" ? answer.action
+      : (typeof answer.choice === "string" ? answer.choice : null);
+    if (!act) { return { valid: false }; }
+    if (Array.isArray(validOptions) && validOptions.length > 0 && !validOptions.includes(act)) {
+      return { valid: false };
+    }
+    return { valid: true };
   }
   if (expectedType === "priority_choice") {
     return (answer.priority != null) ? { valid: true } : { valid: false };
@@ -1513,36 +1519,47 @@ function applyAnswerByType(answer, type) {
  *   { status: "nothing_to_resume" }     — record absent (exists:false); caller MUST return.
  *   { status: "unresumable_stale" }     — record stale; caller MUST return.
  *
- * @param {string}   gateId     - Gate label (e.g. "final-gate").
- * @param {Function} liveGateFn - Zero-arg async fn; returns parsed gate decision or null (headless).
- * @param {object}   args       - Workflow args (may include resume_answer, run_id).
- * @param {object}   context    - Context snapshot for the pause record.
+ * @param {string}   gateId      - Gate label (e.g. "final-gate").
+ * @param {Function} liveGateFn  - Zero-arg async fn; returns parsed gate decision or null (headless).
+ * @param {object}   args        - Workflow args (may include resume_answer, run_id).
+ * @param {object}   context     - Context snapshot for the pause record.
+ * @param {object}   [descriptor] - Gate question descriptor: { type, options, prompt }.
+ * @param {string}   [runId]     - Explicit run id; falls back to args.run_id || "default-run".
  * @returns {Promise<object>}
  */
-async function resolveGate(gateId, liveGateFn, args, context) {
-  const runId = (args && args.run_id) || "default-run";
+async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {
+  runId = runId || (args && args.run_id) || "default-run";
+  const answerType = (descriptor && descriptor.type) || "single_choice";
+  const validOptions = (descriptor && Array.isArray(descriptor.options)) ? descriptor.options : null;
 
   // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
   if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
-    const answerType = args.resume_answer.type || "single_choice";
-    const validation = validateAnswerShape(args.resume_answer, answerType);
+    const incomingType = args.resume_answer.type || answerType;
+    const validation = validateAnswerShape(args.resume_answer, incomingType, validOptions);
     if (!validation.valid) {
-      // Wrong/malformed shape: return paused immediately — no liveGateFn, no read-pause-record, no pause-persist.
+      // Wrong/malformed shape or action not in valid options: stay paused.
       return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
     }
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
-    const rec = await agent(
-      { run_id: runId, gate_id: gateId },
-      { agentType: "status-checker", label: "read-pause-record" }
-    );
-    if (rec && rec.exists === false) {
+    const _readPrompt =
+      "Read the durable pause record for this run. Run exactly:\n" +
+      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
+    const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
+    let recCheck;
+    try {
+      recCheck = (typeof _rawRec === "string")
+        ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: "status-checker" })
+        : _rawRec;
+    } catch (_e) { recCheck = null; }
+    // FAIL CLOSED: apply ONLY when exists===true AND stale is not true.
+    if (!recCheck || recCheck.exists !== true) {
       return { status: "nothing_to_resume", run_id: runId, gate_id: gateId };
     }
-    if (rec && rec.stale === true) {
-      return { status: "unresumable_stale", run_id: runId, gate_id: gateId, reason: rec.stale_reason };
+    if (recCheck.stale === true) {
+      return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
     }
-    // Record present and not stale: apply the answer.
-    return applyAnswerByType(args.resume_answer, answerType);
+    return applyAnswerByType(args.resume_answer, incomingType);
   }
 
   // No matching resume_answer: call the live gate.
@@ -1556,7 +1573,7 @@ async function resolveGate(gateId, liveGateFn, args, context) {
     return gateAnswer;
   }
   // Headless or unparseable: pause and persist.
-  return pauseAtGate(gateId, runId, context);
+  return pauseAtGate(gateId, runId, context, descriptor);
 }
 
 /**
@@ -1571,28 +1588,37 @@ async function resolveGate(gateId, liveGateFn, args, context) {
  * Called by resolveGate() on the headless path. Direct callers should use
  * resolveGate() instead, which checks args.resume_answer first (ADR-024 Rule 4).
  *
- * @param {string} gateId      - Gate label (e.g. "final-gate", "covered-route-gate").
- * @param {string} runId       - Current run identifier.
- * @param {object} ctxSnapshot - Workflow context snapshot at pause time.
+ * @param {string} gateId        - Gate label (e.g. "final-gate", "covered-route-gate").
+ * @param {string} runId         - Current run identifier.
+ * @param {object} ctxSnapshot   - Workflow context snapshot at pause time.
+ * @param {object} [descriptor]  - Gate question descriptor: { type, options, prompt }.
  * @returns {Promise<{status: "paused_awaiting_input", run_id: string, gate_id: string}>}
  */
-async function pauseAtGate(gateId, runId, ctxSnapshot) {
+async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
+  const questionType = (descriptor && descriptor.type) || "single_choice";
+  const questionOptions = (descriptor && Array.isArray(descriptor.options))
+    ? descriptor.options : ["approve", "edit", "cancel", "defer"];
+  const questionPrompt = (descriptor && descriptor.prompt) ||
+    ("Interactive gate '" + gateId + "' requires a human decision. Options: " +
+      questionOptions.join(", ") + ".");
   const question = {
-    type: "single_choice",
+    type: questionType,
     gate_id: gateId,
-    options: ["approve", "edit", "cancel", "defer"],
-    prompt:
-      `Interactive gate '${gateId}' requires a human decision. ` +
-      "Options: approve (proceed), edit (re-draft with feedback), " +
-      "cancel (abort; keep prior committed stages), defer (leave as reviewed; resume later).",
+    options: questionOptions,
+    prompt: questionPrompt,
   };
   const context = ctxSnapshot || { gate_id: gateId };
-  // Dispatch the pause-persist agent call. The agent writes the durable
-  // pending-question record to .leafcutter/paused_runs/<runId>.json.
-  await agent(
-    { question, context, run_id: runId, gate_id: gateId, status: "paused_awaiting_input" },
-    { agentType: "status-checker", label: "pause-persist" }
-  );
+  const rec = {
+    run_id: runId, gate_id: gateId,
+    question: question, context: context,
+    status: "paused_awaiting_input",
+  };
+  const _persistPrompt =
+    "Interactive gate '" + gateId + "' has no reachable human answerer. " +
+    "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
+    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
+  await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
 }
 
@@ -1788,7 +1814,9 @@ if (route === "covered" && !force) {
       return (parsed && typeof parsed.choice === "string") ? parsed : null;
     },
     args,
-    { route: "covered", existing_acs }
+    { route: "covered", existing_acs },
+    { type: "single_choice", options: ["cancel", "amend", "force"] },
+    args.run_id || "default-run"
   );
   if (_covGateResult && _covGateResult.status &&
       ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_covGateResult.status)) {
@@ -1940,7 +1968,9 @@ if (ptRunSet.skip) {
             return (parsed && typeof parsed.action === "string") ? parsed : null;
           },
           args,
-          { stage: ptStep.stage }
+          { stage: ptStep.stage },
+          { type: "single_choice", options: ["approve", "edit", "cancel"] },
+          args.run_id || "default-run"
         );
         if (_ptGateResult && _ptGateResult.status &&
             ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_ptGateResult.status)) {
@@ -2232,7 +2262,9 @@ for (const step of pipeline) {
           return (parsed && typeof parsed.action === "string") ? parsed : null;
         },
         args,
-        { stage: step.stage, acs: written }
+        { stage: step.stage, acs: written },
+        { type: "single_choice", options: ["approve", "edit", "cancel"] },
+        args.run_id || "default-run"
       );
       if (_midGateResult && _midGateResult.status &&
           ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_midGateResult.status)) {
@@ -2327,7 +2359,9 @@ for (const step of pipeline) {
           return (parsed && typeof parsed.action === "string") ? parsed : null;
         },
         args,
-        { stage: "final", acs: written, all_acs: allAcsWritten }
+        { stage: "final", acs: written, all_acs: allAcsWritten },
+        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"] },
+        args.run_id || "default-run"
       );
       // Non-proceed outcomes: exit immediately.
       if (_finalGateResult && _finalGateResult.status &&
