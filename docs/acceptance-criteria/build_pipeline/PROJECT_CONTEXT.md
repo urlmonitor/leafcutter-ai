@@ -1,7 +1,11 @@
 ---
-description: Accumulated conventions for the build-pipeline AC namespace — naming, ID numbering, and scope boundaries for BP-series authoring agents.
+description: Accumulated conventions for the build-pipeline AC namespace — naming,
+  ID numbering, and scope boundaries for BP-series authoring agents.
+created: '2026-07-21'
+last_updated: '2026-07-21'
+type: tutorial
+status: active
 ---
-
 # build-pipeline — Project Context for Authoring Agents
 
 Accumulated conventions for the `build-pipeline` AC namespace. Read this before
@@ -77,7 +81,7 @@ BP-1200 = "does the WHOLE suite stay green on EVERY PR?" (standing CI gate).
 Phantom-done (a ticket passes every gate while the feature is absent) is OWNED
 by BP-1100 — do NOT create a new L0 for any "files_touched accuracy" / "work
 reported as done is genuinely done" request; attach it here as a BP-1100 sibling.
-The two files_touched-accuracy angles are split across DISTINCT L1s — keep them
+The files_touched-accuracy angles are split across DISTINCT L1s — keep them
 distinct when decomposing:
 
 - **BP-1100a** — PRE-DISPATCH scope completeness: a behavioral ticket whose
@@ -91,12 +95,27 @@ distinct when decomposing:
   "Did what actually got changed match what was declared?" BP-1100e is the
   opposite-end bookend to BP-1100a — decompose the declared-vs-actual diff
   comparison + the pre-`done` gate point here; do NOT re-derive BP-1100a's
-  pre-dispatch behavior.
+  pre-dispatch behavior. Guard #1 (BP-1100e-1, DONE) flags source files changed
+  but not declared.
+- **BP-1100f** — REAL-EFFECT / REAL-INTENT proof, distinct from the two
+  files_touched angles above (added 2026-07-21, PO run; origin RCA
+  /tmp/phantom-rca-bo2300.md — BO-2300 phantom-built twice). Verification must
+  key off the change's real EFFECT (the artifact exists on disk) and its stated
+  INTENT, not off dispatch TOPOLOGY (agent labels/counts a test mock controls).
+  Three benefit angles for the BA to decompose into L2/L3: (1) a step that
+  should make a real change is not accepted on "an agent ran" alone — confirm
+  the real artifact/effect; (2) a work item whose stated intent (assigned
+  helper / how-checked) contradicts the actual thing being changed is caught
+  BEFORE implementation begins (RCA Failure #1: python-coder+pytest aimed at a
+  .js surface); (3) a step meant to produce a durable result must carry a real,
+  actionable instruction — an empty/content-free step is caught, not silently
+  passed (RCA Failure #2: bare-object dispatch, no instruction, no consumer).
+  Do NOT re-derive BP-1100e-1 (undeclared-file changes) — reference it.
 
-Cross-cutting benefit invariant for BP-1100e (and all portable guardrails):
-state the benefit in PORTABLE terms — any project that installs leafcutter and
-runs build.py must get the check; it must NOT rely on the leafcutter repo's own
-root CLAUDE.md (not deployed to consumers per ADR-001).
+Cross-cutting benefit invariant for the BP-1100 family (and all portable
+guardrails): state the benefit in PORTABLE terms — any project that installs
+leafcutter and runs build.py must get the check; it must NOT rely on the
+leafcutter repo's own root CLAUDE.md (not deployed to consumers per ADR-001).
 
 ## BP-1200 family (CI test gate) — for BA v3 decomposition
 

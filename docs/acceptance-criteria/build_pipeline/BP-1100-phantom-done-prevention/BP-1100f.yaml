@@ -1,0 +1,69 @@
+id: BP-1100f
+components:
+  - build_pipeline
+title: "A feature is proven done by its real effect, not by the fact that a step ran"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A feature is done only when its real effect is proven, not because a step ran.
+
+  When the pipeline hands a piece of work to an automated helper to make a real
+  change, it confirms the change actually happened -- the real result exists and
+  can be observed -- rather than treating "a step took place" as proof on its own.
+  When a work item's stated intent (who is meant to do it and how it will be
+  checked) contradicts the actual thing being changed, that contradiction is caught
+  before the work begins, not discovered afterward. And a step that is supposed to
+  produce a lasting result must carry a real, actionable instruction; an empty or
+  content-free step is caught instead of quietly passing. Any project that installs
+  leafcutter and runs build.py gets this the same way. This complements BP-1100e-1,
+  which already flags source files changed but not declared; here the focus is
+  proving the change's real result and its stated intent, not merely that a step
+  occurred.
+depends_on:
+  - BP-1100
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml
+    relationship: relates
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100a.yaml
+    relationship: relates
+    status: exists
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Origin: BO-2300 "Interactive Pause/Resume" phantom-built twice (RCA
+  /tmp/phantom-rca-bo2300.md, 2026-07-20). A feature was signed off twice while its
+  real behavior was absent because tests keyed off dispatch TOPOLOGY (labels/counts
+  the harness mock controls) rather than the instruction PAYLOAD and the on-disk
+  EFFECT. Three benefit-level angles for the BA to decompose into L2/L3:
+  (1) a step that should make a real change is not accepted on "an agent ran"
+  alone -- the pipeline confirms the real artifact/effect;
+  (2) a work item whose stated intent (assigned helper / how-checked) contradicts
+  the actual thing being changed is caught BEFORE implementation begins
+  (root of RCA Failure #1: python-coder+pytest pointed at .js surface);
+  (3) a step meant to produce a durable result must carry a real, actionable
+  instruction -- an empty/content-free step is caught, not silently passed
+  (root of RCA Failure #2: bare-object dispatch with no instruction, no consumer).
+  Guard #1 (undeclared-file changes) is BP-1100e-1 (DONE) -- reference, do NOT
+  re-derive. Sibling boundaries: BP-1100a = pre-dispatch scope completeness;
+  BP-1100e = declared-vs-actual files after work. BP-1100f = proof of real
+  effect/intent vs dispatch topology.
