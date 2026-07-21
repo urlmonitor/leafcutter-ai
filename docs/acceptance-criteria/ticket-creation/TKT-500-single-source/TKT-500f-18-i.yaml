@@ -1,0 +1,53 @@
+id: TKT-500f-18-i
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "A malformed or unavailable mapping source degrades to a logged fallback and never makes the generator un-importable"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-18.yaml"
+criteria: |
+  This edge case bounds TKT-500f-18 so a broken mapping source degrades safely
+  rather than breaking every caller that imports the generator.
+
+  Given the kebab-to-graph-id mapping source is malformed or unavailable — for
+    example docs/components.json is missing or contains invalid JSON, or a sibling
+    data module raises a SyntaxError or other error when loaded,
+  When scripts/ac_store/generate_ticket_from_ac.py is imported,
+  Then the import succeeds and does not raise: the malformed/unavailable source is
+    caught and the generator degrades to a logged fallback mapping (an empty or
+    minimal mapping) with a WARNING that names the failed source,
+  And ticket generation still proceeds using the fallback mapping (component values
+    that cannot be resolved follow the TKT-500f-17 warn-and-surface path rather than
+    crashing the generator),
+  And the fallback is reached only on a genuine load failure — a well-formed
+    components.json is still loaded and used normally (no regression of
+    TKT-500f-18).
+depends_on: [TKT-500f-18]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

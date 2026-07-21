@@ -1,0 +1,51 @@
+id: TKT-500f-17-i
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "The unresolved value is surfaced verbatim with a single warning, never dropped nor replaced by a fabricated id"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-17.yaml"
+criteria: |
+  This edge case bounds TKT-500f-17 so the WARNING path stays visible and
+  deterministic rather than masking or guessing.
+
+  Given a leaf AC whose component value cannot be resolved to any valid
+    components.json graph id,
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the WARNING message identifies both the source AC id and the exact
+    unresolved component value,
+  And the unresolved value is passed through to the generated components LIST
+    verbatim — it is neither silently dropped nor replaced by a fabricated or
+    guessed graph id — so the downstream Component-vocab CI check surfaces it
+    visibly instead of the generator masking it,
+  And the WARNING is emitted at most once per distinct unresolved value even when
+    that value appears more than once in the AC's components.
+depends_on: [TKT-500f-17]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

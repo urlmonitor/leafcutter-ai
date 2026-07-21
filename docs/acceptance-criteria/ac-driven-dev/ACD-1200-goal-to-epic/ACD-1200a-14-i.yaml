@@ -1,0 +1,54 @@
+id: ACD-1200a-14-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "When the repo root cannot be derived from git, the back-reference write degrades to a documented fallback"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-14.yaml"
+criteria: |
+  This edge case bounds ACD-1200a-14 for the case where canonical git-based
+  repo-root derivation is unavailable.
+
+  Given the generator runs where git rev-parse --show-toplevel cannot resolve a
+    repo root — for example the tickets tree is not inside a git repository or the
+    git command is unavailable,
+  When the back-reference is written into the AC's implemented_by list by
+    _write_implemented_by,
+  Then the write does not crash: it falls back to a documented repo-root derivation
+    (the existing repo-root helper's non-git path) and emits a WARNING that the git
+    top-level could not be resolved,
+  And the recorded value is still made repo-relative against that fallback root — it
+    never records a raw absolute filesystem path with a leading "/",
+  And when git rev-parse does resolve a repo root the fallback is not used (no
+    regression of ACD-1200a-14).
+depends_on: [ACD-1200a-14]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-14
+  contract: "The git-derived repo-root relativisation in _write_implemented_by (generate_ticket_from_ac.py); this edge case bounds it so a missing git top-level degrades to a logged fallback root instead of crashing or recording an absolute path."
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

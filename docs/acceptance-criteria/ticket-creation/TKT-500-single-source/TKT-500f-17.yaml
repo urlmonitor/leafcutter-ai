@@ -1,0 +1,56 @@
+id: TKT-500f-17
+components:
+  - ticket_creation_pipeline
+readiness: draft
+priority: medium
+title: "An unresolvable component value is warned about and validated against components.json, not silently emitted"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose component value cannot be resolved to any valid
+    components.json graph id (it matches neither a known index.yaml kebab-namespace
+    mapping nor an existing underscore graph id — for example a typo such as
+    ticket_creaton_pipeline),
+  When a ticket is generated from that AC by generate_ticket_from_ac.py
+    (_build_components_list),
+  Then the generator emits a WARNING that names the unresolved component value (it
+    does not silently place an unknown/invalid id into the components LIST),
+  And graph-id validity is determined by membership in docs/components.json — the
+    single ~42-entry source of truth loaded at generation time — rather than by a
+    partial hard-coded kebab-to-graph-id map embedded in the generator,
+  And adding a new component to docs/components.json makes that id resolvable
+    without any change to the generator's code.
+depends_on: [TKT-500f, TKT-500f-13]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500f-17-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

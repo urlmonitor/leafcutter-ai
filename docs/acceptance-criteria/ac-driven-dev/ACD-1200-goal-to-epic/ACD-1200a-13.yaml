@@ -1,0 +1,57 @@
+id: ACD-1200a-13
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A legacy absolute or cross-worktree entry for the same ticket is collapsed to one repo-relative entry via a shared canonicaliser"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a.yaml"
+criteria: |
+  Given an AC whose implemented_by list already contains a legacy ABSOLUTE
+    filesystem path (or a cross-worktree path with a per-checkout prefix) that
+    points at the SAME ticket now being regenerated — a path whose repo-relative
+    form equals the ticket the generator is about to record,
+  When a ticket is generated again from that AC and the back-reference is written
+    by _write_implemented_by,
+  Then the legacy absolute/cross-worktree entry is recognised as the same ticket
+    and collapsed so the AC's implemented_by list contains exactly one entry for
+    that ticket, and that surviving entry is the repo-relative form (no leading "/",
+    no absolute or per-checkout prefix),
+  And the dedup comparison and the relativisation both run through ONE shared
+    repo-root-relative canonicaliser applied to both the incoming path and each
+    existing entry — not two different path forms — so an absolute existing entry
+    and a repo-relative incoming entry for the same ticket are treated as equal.
+depends_on: [ACD-1200a, ACD-1200a-11, ACD-1200a-12]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
