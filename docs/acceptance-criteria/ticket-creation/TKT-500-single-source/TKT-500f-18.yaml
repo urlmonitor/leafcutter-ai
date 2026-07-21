@@ -77,6 +77,7 @@ created: 2026-07-21
 amended_by: []
 superseded_by: null
 covered_by: [TKT-500f-18-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-TKT-500f-18.md
 change_target: pipeline
 risk_surface: internal
