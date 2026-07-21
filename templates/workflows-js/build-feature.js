@@ -199,7 +199,10 @@ const phaseOrder = [
   "how-to-author",               // priority 10
   "reference-author",            // priority 10
   "pr-reviewer",                 // priority 11
+  "ac-validator",                // priority 11 — after pr-reviewer, before commit
   "user-surface-smoker",         // priority 11.5
+  "ac-fulfillment-gate",         // priority 11.7
+  "live-surface-tester",         // priority 11.8
   "commit",                      // priority 12
   "pull-request",                // priority 13
 ];
