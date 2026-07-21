@@ -376,10 +376,22 @@ const preflightResult = await agent(
       "  Run: git -C \"<wt_path>\" rev-parse --show-toplevel\n" +
       "  Return ONLY: { \"found\": true, \"branch\": \"<branch_name>\", \"worktree_root\": \"<path>\" }\n" +
       "\n" +
-      "Step 3b — no matching worktree found:\n" +
+      "Step 3b — no matching worktree found (FIN-100g-3):\n" +
+      "  A target was supplied but resolves to no registered worktree. Build a\n" +
+      "  SINGLE actionable error string containing ALL THREE of:\n" +
+      `    (a) the unresolved target name '${epicArg}';\n` +
+      "    (b) the expected argument forms — a bare branch-name string, OR an\n" +
+      "        object with a target/target_branch key;\n" +
+      "    (c) the candidate worktrees that ARE currently registered and their\n" +
+      "        checked-out branches — list the '<path> [<branch>]' entries you\n" +
+      "        parsed from `git worktree list --porcelain` in Step 1, sorted by\n" +
+      "        path for deterministic output.\n" +
+      "  This message is intentionally more specific than the generic\n" +
+      "  branch-named error (it adds the expected forms and the candidate list).\n" +
       `  Return ONLY: { "found": false, "branch": null, "worktree_root": null,\n` +
-      `               "error": "No worktree found matching '${epicArg}'. ` +
-      `Run \\"git worktree list\\" to see all registered worktrees." }`
+      `               "error": "No worktree found matching target '${epicArg}'. ` +
+      `Expected a bare branch-name string OR an object with a target/target_branch key. ` +
+      `Candidate worktrees (from git worktree list --porcelain): <path> [<branch>], ..." }`
     : "No target argument provided — fall back to CWD-based detection.\n" +
       "1. Run: git branch --show-current\n" +
       "2. Run: git rev-parse --show-toplevel\n" +
@@ -405,8 +417,9 @@ if (preflightInfo.found === false) {
     status: "error",
     message:
       preflightInfo.error ||
-      `/finalize-feature could not find a worktree matching "${epicArg}". ` +
-      "Run `git worktree list` to see all registered worktrees, " +
+      `/finalize-feature could not find a worktree matching target "${epicArg}". ` +
+      "Expected a bare branch-name string OR an object with a target/target_branch key. " +
+      "Run `git worktree list` to see the candidate worktrees and their branches, " +
       "then re-run with the correct epic or ticket name.",
     action_required: "resolve_worktree_argument",
   };
