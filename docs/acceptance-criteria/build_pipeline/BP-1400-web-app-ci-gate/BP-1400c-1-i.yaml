@@ -56,7 +56,8 @@ amended_by:
     by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/10_TICKET-20260721-BP-1400c-1-i.md
 notes: |
   /about is anchored explicitly (per the authoring brief) as the concrete route
   the route-render gate must cover — it is a real, always-present page whose

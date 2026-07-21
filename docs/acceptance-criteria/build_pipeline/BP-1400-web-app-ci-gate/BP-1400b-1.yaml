@@ -60,7 +60,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1400b-1-i
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/06_TICKET-20260721-BP-1400b-1.md
 notes: |
   A NEW blocking style check on the web-app pull-request flow, distinct from the
   build/type-check check (BP-1400a-1). Motivated by the real incident where a

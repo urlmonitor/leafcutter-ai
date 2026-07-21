@@ -12,7 +12,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-21 10:40 UTC
+> Generated: 2026-07-21 11:22 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -183,6 +183,7 @@ task, then pull only those files.
 | EPIC SelfDescribingAgentsCorrections | [docs/retrospectives/EPIC-SelfDescribingAgentsCorrections.md](docs/retrospectives/EPIC-SelfDescribingAgentsCorrections.md) | Retrospective for EPIC-SelfDescribingAgentsCorrections |
 | EPIC TDDWorkflowEnforcement | [docs/retrospectives/EPIC-TDDWorkflowEnforcement.md](docs/retrospectives/EPIC-TDDWorkflowEnforcement.md) | **Date**: 2026-05-27 |
 | EPIC TrustworthyTestGate | [docs/retrospectives/EPIC-TrustworthyTestGate.md](docs/retrospectives/EPIC-TrustworthyTestGate.md) | Retrospective for EPIC-TrustworthyTestGate — AC-status-gated test enforcement gate (PR #172); 8 of 25 tickets completed. |
+| GenReviewFixes | [docs/retrospectives/GenReviewFixes.md](docs/retrospectives/GenReviewFixes.md) | Retrospective for the GenReviewFixes loose-ticket remediation batch (PR |
 | TICKET 20260601 FixHooksDeploymentPipeline | [docs/retrospectives/TICKET-20260601-FixHooksDeploymentPipeline.md](docs/retrospectives/TICKET-20260601-FixHooksDeploymentPipeline.md) | Date: 2026-06-01 |
 | TICKET 20260707 BP CollisionGuardrailAndDescriptiveSkills | [docs/retrospectives/TICKET-20260707-BP-CollisionGuardrailAndDescriptiveSkills.md](docs/retrospectives/TICKET-20260707-BP-CollisionGuardrailAndDescriptiveSkills.md) | Overview of Retrospective: BP-100m-1 + BP-1300a Build-Pipeline Remediation. |
 

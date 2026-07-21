@@ -8,7 +8,7 @@ component: ticket-creation
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-14.yaml"
 criteria: |
@@ -76,6 +76,7 @@ created: 2026-07-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-TKT-500f-14-ii.md
 change_target: pipeline
 risk_surface: internal
