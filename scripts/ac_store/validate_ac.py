@@ -8,7 +8,10 @@ Usage:
 Validates package-surface ACs for machine-checkable implementation specs.
 A package-surface AC is one where:
   - assigned_agent == "python-coder"
-  - component is in {"build_pipeline", "build-orchestration"}
+  - component scalar is in PACKAGE_SURFACE_COMPONENTS  OR  any entry in the
+    ``components`` list (graph ids) is in PACKAGE_SURFACE_COMPONENTS.
+    Recognised component identifiers: ``build_pipeline``, ``build-pipeline``,
+    ``build-orchestration``.
 
 For such ACs, it_requirements MUST be a structured object with:
   - config_schema_fragment  (any value — the JSON Schema fragment for the key)
@@ -37,8 +40,11 @@ import yaml
 # ---------------------------------------------------------------------------
 
 #: Component names that qualify an AC as "package-surface".
+#: Includes both kebab (``build-pipeline``) and underscore (``build_pipeline``)
+#: spellings so scalar ``component:`` fields and ``components:`` graph-id lists
+#: are both matched regardless of normalisation form.
 PACKAGE_SURFACE_COMPONENTS: frozenset[str] = frozenset(
-    {"build_pipeline", "build-orchestration"}
+    {"build_pipeline", "build-pipeline", "build-orchestration"}
 )
 
 #: Required sub-keys in it_requirements for package-surface ACs.
@@ -79,17 +85,30 @@ def is_package_surface_ac(ac_data: dict[str, Any]) -> bool:
 
     A package-surface AC must have:
       - assigned_agent == "python-coder"
-      - component in PACKAGE_SURFACE_COMPONENTS
+      - scalar ``component`` in PACKAGE_SURFACE_COMPONENTS, OR at least one
+        entry in the ``components`` list (graph ids) in PACKAGE_SURFACE_COMPONENTS.
+
+    Both the kebab form (``build-pipeline``) and the underscore form
+    (``build_pipeline``) are accepted for robustness against normalisation
+    divergence between the scalar and list representations.
 
     Args:
         ac_data: The parsed AC YAML as a Python dict.
 
     Returns:
-        True when both conditions are met; False otherwise.
+        True when the agent condition and at least one component condition are
+        met; False otherwise.
     """
-    agent = ac_data.get("assigned_agent")
-    component = ac_data.get("component", "")
-    return agent == "python-coder" and component in PACKAGE_SURFACE_COMPONENTS
+    if ac_data.get("assigned_agent") != "python-coder":
+        return False
+    # Fast path: scalar component field (accepts both kebab and underscore forms)
+    if ac_data.get("component", "") in PACKAGE_SURFACE_COMPONENTS:
+        return True
+    # Fallback: components list (graph ids, e.g. ["build_pipeline"])
+    components_list = ac_data.get("components", [])
+    if isinstance(components_list, list):
+        return any(c in PACKAGE_SURFACE_COMPONENTS for c in components_list)
+    return False
 
 
 def validate_package_surface_spec(
