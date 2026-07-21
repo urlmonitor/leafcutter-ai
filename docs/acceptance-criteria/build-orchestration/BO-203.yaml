@@ -1,0 +1,37 @@
+id: BO-203
+components:
+  - build_orchestration
+readiness: reviewed
+priority: high
+title: "AC-coverage phase gates sort before commit/pull-request in the phaseOrder"
+component: build-orchestration
+status: active
+created_by: "quick-fix: build-feature.js/build-ticket.js phaseOrder AC-gate ordering"
+criteria: |
+  Given the phaseOrder array in build-feature.js (and its twin build-ticket.js)
+  When getPriority() is used to sort a ticket's needed phase agents
+  Then ac-validator, ac-fulfillment-gate, and live-surface-tester each resolve
+    to a canonical priority index that is strictly less than the index of commit
+  And commit resolves to an index strictly less than pull-request
+
+  Given a ticket whose agents map includes ac-validator or ac-fulfillment-gate
+  When the per-ticket phase loop orders the phases by getPriority()
+  Then those AC-coverage gates run before the commit and pull-request phases
+  And the bug symptom ("AC-coverage/fulfillment gates fire after the commit/PR
+    they were meant to gate") must not occur
+
+  Given the phaseOrder arrays in build-feature.js and build-ticket.js
+  When both files are compared
+  Then their phaseOrder agent sequences are identical (the twin invariant holds)
+level: L2
+work_status: done
+origin_agent: BrainCandy
+superseded_by: null
+amended_by: []
+implemented_by:
+  - "templates/workflows-js/build-feature.js"
+  - "templates/workflows-js/build-ticket.js"
+covered_by:
+  - "unit_tests/prompt_assembly/test_phaseorder_ac_gates.py"
+change_target: code
+risk_surface: internal
