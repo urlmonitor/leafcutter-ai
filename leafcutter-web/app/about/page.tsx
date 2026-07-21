@@ -148,7 +148,7 @@ export default function AboutPage() {
                   <code className="rounded bg-muted/80 px-1 py-0.5 font-mono text-[11px] text-foreground">
                     templates/
                   </code>{" "}
-                  into your project's{" "}
+                  into your project&apos;s{" "}
                   <code className="rounded bg-muted/80 px-1 py-0.5 font-mono text-[11px] text-foreground">
                     .leafcutter/
                   </code>
