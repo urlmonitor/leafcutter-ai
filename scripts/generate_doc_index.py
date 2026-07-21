@@ -38,6 +38,7 @@ title: "Documentation Index"
 type: reference
 status: active
 created: {created}
+last_updated: {last_updated}
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -114,6 +115,44 @@ def _extract_created_date(index_path: Path) -> str | None:
     frontmatter = text[4:end]
     for line in frontmatter.splitlines():
         m = re.match(r"^created:\s*(.+?)\s*$", line)
+        if m:
+            val = m.group(1).strip().strip("'\"")
+            if val:
+                return val
+    return None
+
+
+def _extract_last_updated(index_path: Path) -> str | None:
+    """Extract the ``last_updated`` date from an existing INDEX.md frontmatter.
+
+    Reads the existing INDEX.md (if present) and extracts the ``last_updated:``
+    field value from its YAML frontmatter block.  Returns None when the file is
+    absent, has no frontmatter, or has no ``last_updated:`` field.
+
+    Args:
+        index_path: Path to the existing ``docs/INDEX.md`` file.
+
+    Returns:
+        The ``last_updated`` date string (e.g. ``"2026-07-21"``) if found,
+        else None.
+    """
+    if not index_path.exists():
+        return None
+    try:
+        text = index_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        log.warning("Cannot read %s for last_updated date: %s", index_path, exc)
+        return None
+    if not text.startswith("---"):
+        return None
+    # Find the closing --- delimiter (search from position 3 to skip opener)
+    end = text.find("\n---", 3)
+    if end == -1:
+        return None
+    # Frontmatter body: skip the opening "---\n" (4 chars)
+    frontmatter = text[4:end]
+    for line in frontmatter.splitlines():
+        m = re.match(r"^last_updated:\s*(.+?)\s*$", line)
         if m:
             val = m.group(1).strip().strip("'\"")
             if val:
@@ -284,9 +323,11 @@ def generate_index(repo_root: Path) -> str:
     Markdown section per category, and prepends the standard auto-generated
     header with a stable YAML frontmatter block.
 
-    The ``created`` field in the frontmatter is preserved from the existing
-    ``docs/INDEX.md`` when it contains a ``created:`` value, so repeated
-    regeneration does not reset the original creation date.
+    The ``created`` and ``last_updated`` fields in the frontmatter are preserved
+    from the existing ``docs/INDEX.md`` when those fields are present, so repeated
+    regeneration does not reset the original creation date or bump ``last_updated``
+    needlessly.  When the existing file has no ``last_updated`` field, the value
+    falls back to ``created`` (never to ``datetime.now()``).
 
     Args:
         repo_root: Absolute path to the repository root.  All relative paths
@@ -299,11 +340,16 @@ def generate_index(repo_root: Path) -> str:
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Preserve existing created date for idempotency across regeneration runs.
+    # Preserve existing created and last_updated dates for idempotency across
+    # regeneration runs.  last_updated falls back to the created value rather than
+    # datetime.now() so that regenerating without source changes does not bump it.
     existing_index = repo_root / "docs" / "INDEX.md"
     created = _extract_created_date(existing_index) or today_date
+    last_updated = _extract_last_updated(existing_index) or created
 
-    sections: list[str] = [_HEADER_TEMPLATE.format(timestamp=timestamp, created=created)]
+    sections: list[str] = [
+        _HEADER_TEMPLATE.format(timestamp=timestamp, created=created, last_updated=last_updated)
+    ]
 
     for heading, rel_path, recursive in _CATEGORIES:
         abs_path = repo_root / rel_path
