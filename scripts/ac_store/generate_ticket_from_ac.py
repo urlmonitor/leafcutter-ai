@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import glob as _glob
+import importlib.util
 import json
 import logging
 import re
@@ -65,6 +66,27 @@ _PROSE_PATH_EXTENSIONS: frozenset[str] = frozenset({
     ".py", ".md", ".yaml", ".yml", ".json", ".js", ".ts", ".sql",
     ".txt", ".toml", ".cfg", ".ini", ".html", ".css", ".sh",
 })
+
+#: Documentation and configuration file extensions excluded from source-code
+#: detection.  Used to derive _SOURCE_CODE_EXTENSIONS from _PROSE_PATH_EXTENSIONS.
+_DOC_CONFIG_EXTENSIONS: frozenset[str] = frozenset({
+    ".md", ".yaml", ".yml", ".json", ".txt", ".toml", ".cfg", ".ini",
+})
+
+#: Recognised source-code file extensions that signal a code-ticket for AC-gate
+#: wiring.  Derived from _PROSE_PATH_EXTENSIONS (the prose-path-detection allowlist)
+#: by removing documentation and configuration suffixes, then extended with common
+#: frontend framework extensions not present in the prose-detection set.  A single
+#: derivation (rather than a second independent hard-coded list) ensures both sets
+#: stay in sync when _PROSE_PATH_EXTENSIONS is updated (TKT-500f-14).
+_SOURCE_CODE_EXTENSIONS: frozenset[str] = (
+    (_PROSE_PATH_EXTENSIONS - _DOC_CONFIG_EXTENSIONS)
+    | frozenset({".tsx", ".jsx", ".vue", ".svelte"})
+)
+
+#: Known coder agents — any of these as the AC's assigned_agent signals a code
+#: ticket regardless of files_touched content (TKT-500f-14).
+_KNOWN_CODERS: frozenset[str] = frozenset({"python-coder", "frontend-coder", "sql-coder"})
 
 #: Path prefixes that identify extension-less tokens as source paths.
 #: A token that begins with one of these prefixes is included even when it
@@ -147,6 +169,40 @@ _DEFAULT_GUARDRAIL_GATES = "config/guardrail_gates.yaml"
 # ---------------------------------------------------------------------------
 
 AcRecord = dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Component vocabulary: kebab → underscore normalisation
+# ---------------------------------------------------------------------------
+
+
+def _load_migration_map() -> dict[str, str]:
+    """Load the canonical kebab-to-underscore MIGRATION_MAP from migrate_component_vocab.py.
+
+    MODULE: generate_ticket_from_ac
+    GOAL: Resolve the sibling module at ``scripts/migrate_component_vocab.py``
+          relative to this file's location and import its ``MIGRATION_MAP`` dict
+          at runtime so the generated ticket's ``components`` LIST carries the
+          underscore graph id rather than the kebab namespace scalar.
+
+    Returns:
+        Mapping from kebab component namespace key to underscore graph id.
+        Falls back to an empty dict on any I/O or import error (the caller uses
+        ``dict.get(key, key)`` so the raw kebab value is preserved as a
+        last-resort fallback).
+    """
+    sibling = Path(__file__).resolve().parent.parent / "migrate_component_vocab.py"
+    try:
+        spec = importlib.util.spec_from_file_location("migrate_component_vocab", sibling)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        return dict(mod.MIGRATION_MAP)
+    except (OSError, AttributeError, ImportError) as exc:
+        logger.warning("Cannot load MIGRATION_MAP from %s: %s", sibling, exc)
+        return {}
+
+
+_COMPONENT_MIGRATION_MAP: dict[str, str] = _load_migration_map()
 
 
 # ---------------------------------------------------------------------------
@@ -498,10 +554,14 @@ def _build_agents_map(
     cannot be excluded via not_needed_overrides when the computed chain requires
     them — the computed chain wins (BO-550-1-i).
 
-    When files_touched contains at least one implementation .py file, ac-validator
-    and ac-fulfillment-gate are wired as needed phases (TKT-500f-12).  This check
-    applies only in the computed path (when change_targets and risk_surface are
-    provided) and keys off the actual edit surface, not the change_target label.
+    When files_touched contains at least one recognised source-code file (not
+    limited to .py — any extension in _SOURCE_CODE_EXTENSIONS qualifies) OR
+    the assigned_agent is a known coder (python-coder/frontend-coder/sql-coder),
+    ac-validator and ac-fulfillment-gate are wired as needed phases
+    (TKT-500f-12, broadened by TKT-500f-14).  This check applies only in the
+    computed path (when change_targets and risk_surface are provided) and keys
+    off the actual edit surface and/or the assigned agent, not the change_target
+    label.
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
@@ -603,14 +663,23 @@ def _build_agents_map(
                 all_needed.add("test-runner")
                 break
 
-        # Wire ac-validator and ac-fulfillment-gate for code-AC tickets (TKT-500f-12).
-        # When files_touched contains at least one implementation .py file, these two
-        # store-fidelity gates must run against the ticket so AC traceability is verified
-        # before any commit is made.  Docs/config-only tickets (no .py in files_touched)
-        # are not affected — the check keys off the actual edit surface, not the
-        # change_target label, so a stale or doc_links-only files_touched would not
-        # mis-classify a code AC as docs-only.
-        if files_touched and any(p.endswith(".py") for p in files_touched):
+        # Wire ac-validator and ac-fulfillment-gate for code tickets
+        # (TKT-500f-12, broadened by TKT-500f-14). A ticket is classified as a
+        # code ticket when EITHER of the following is true:
+        #   (a) files_touched contains at least one recognised source-code file
+        #       extension (not limited to .py — covers .js, .ts, .tsx, .jsx,
+        #       .sql, .vue, .svelte, .html, .css, .sh, etc. as defined by
+        #       _SOURCE_CODE_EXTENSIONS, derived from _PROSE_PATH_EXTENSIONS);
+        #   (b) the assigned agent is a known coder (python-coder,
+        #       frontend-coder, or sql-coder) — coder assignment alone is
+        #       sufficient regardless of files_touched content.
+        # Docs/config/diagram-only tickets (no source file in files_touched AND
+        # a non-coder assigned agent) satisfy neither condition and are not gated.
+        _has_source_file = bool(files_touched) and any(
+            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS for p in files_touched
+        )
+        _is_coder_assigned = assigned_agent in _KNOWN_CODERS
+        if _has_source_file or _is_coder_assigned:
             all_needed.add("ac-validator")
             all_needed.add("ac-fulfillment-gate")
 
@@ -1022,6 +1091,31 @@ def _build_signoffs_section(agents: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def _build_components_list(ac: AcRecord) -> list[str]:
+    """Build the ``components`` LIST for a generated ticket frontmatter.
+
+    Prefers the AC's own ``components`` LIST when non-empty (already holds
+    underscore graph ids per the two-axis taxonomy).  Otherwise normalises the
+    scalar ``component`` key to its underscore graph id via
+    ``_COMPONENT_MIGRATION_MAP`` (kebab → underscore), falling back to the raw
+    value when the key is absent from the map.
+
+    The scalar ``component`` field in the ticket frontmatter is left unchanged
+    — only the LIST is normalised to the components.json graph vocabulary.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        List of underscore graph ids for the generated ticket ``components`` LIST.
+    """
+    existing = ac.get("components")
+    if existing:
+        return list(existing)
+    kebab = ac.get("component", "unknown")
+    return [_COMPONENT_MIGRATION_MAP.get(kebab, kebab)]
+
+
 def _build_frontmatter(
     ac: AcRecord,
     ac_id: str,
@@ -1051,7 +1145,7 @@ def _build_frontmatter(
         "title": ac.get("title", f"Implement {ac_id}"),
         "status": "todo",
         "source_ac": ac_id,
-        "components": [ac.get("component", "unknown")],
+        "components": _build_components_list(ac),
         "created": today,
         "depends_on": ac.get("depends_on") or [],
         "priority": _map_priority(ac),
@@ -1284,33 +1378,84 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
 # ---------------------------------------------------------------------------
 
 
-def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
+def _normalise_repo_relative(path: str) -> str:
+    """Strip leading ``./`` or ``/`` and normalise separators for dedup comparison.
+
+    Produces a canonical repo-relative form used only inside
+    :func:`_write_implemented_by` to compare a candidate path against existing
+    ``implemented_by`` entries.  The stored AC YAML value is never modified —
+    only the comparison is normalised so that ``./tickets/foo.md`` and
+    ``tickets/foo.md`` are treated as the same entry.
+
+    Args:
+        path: A raw path string, potentially prefixed with ``./`` or ``/``.
+
+    Returns:
+        The normalised repo-relative path with any leading ``./`` or ``/``
+        stripped and path separators unified to ``/``.
+    """
+    normalised = path.replace("\\", "/")
+    normalised = normalised.lstrip("/")
+    while normalised.startswith("./"):
+        normalised = normalised[2:]
+    return normalised
+
+
+def _write_implemented_by(
+    ac_path: Path,
+    ticket_path: str,
+    ac_id: str,
+    worktree: Path | None = None,
+) -> None:
     """Append *ticket_path* to the implemented_by list in the source AC YAML.
 
     Uses a targeted field update (not a full yaml.dump round-trip) to minimise
     diff noise in the AC store, per the risk mitigation note in the ticket.
 
     The update strategy:
-    1. Read the full file content.
-    2. Parse implemented_by from the YAML.
-    3. If ticket_path is already present, skip (idempotent).
-    4. Rewrite only the implemented_by lines using a targeted string replacement.
+    1. Normalise ticket_path to a repo-relative form (strip worktree prefix or
+       leading ``/``/``./`` characters).
+    2. Read the full file content.
+    3. Parse implemented_by from the YAML.
+    4. If ticket_path is already present, skip (idempotent).
+    5. Rewrite only the implemented_by lines using a targeted string replacement.
 
     Args:
         ac_path: Absolute path to the source AC YAML file.
-        ticket_path: Relative path of the generated ticket to record.
+        ticket_path: Path of the generated ticket to record.  May be absolute
+                     or relative; will be normalised to repo-relative form
+                     before writing.
         ac_id: The AC id (for diagnostic messages).
+        worktree: Optional worktree root.  When provided and *ticket_path* is
+                  absolute, the worktree prefix is stripped via
+                  ``Path.relative_to`` to produce a clean repo-relative path.
+                  When absent (or when ``relative_to`` raises ``ValueError``),
+                  ``_normalise_repo_relative`` is used as a fallback.
 
     Raises:
         OSError: When the file cannot be read or written.
         yaml.YAMLError: When the YAML cannot be parsed.
     """
+    # Normalise ticket_path to a repo-relative form before any read/write.
+    # When worktree is provided and the path is absolute, relativise against
+    # the worktree root.  Otherwise fall back to _normalise_repo_relative which
+    # strips any leading './' or '/' prefixes.
+    _p = Path(ticket_path)
+    if _p.is_absolute() and worktree is not None:
+        try:
+            ticket_path = str(_p.relative_to(worktree))
+        except ValueError:
+            ticket_path = _normalise_repo_relative(ticket_path)
+    else:
+        ticket_path = _normalise_repo_relative(ticket_path)
+
     content = ac_path.read_text(encoding="utf-8")
     data = yaml.safe_load(content)
     implemented_by: list[str] = data.get("implemented_by") or []
 
-    if ticket_path in implemented_by:
-        # Already recorded — idempotent, no write needed
+    normalised_incoming = _normalise_repo_relative(ticket_path)
+    if any(_normalise_repo_relative(entry) == normalised_incoming for entry in implemented_by):
+        # Already recorded (normalised repo-relative match) — idempotent, no write needed
         return
 
     implemented_by.append(ticket_path)
@@ -1750,7 +1895,7 @@ def main(argv: list[str] | None = None) -> int:
     # Write implemented_by back-reference into source AC
     relative_ticket_path = str(ticket_path.relative_to(worktree)) if ticket_path.is_relative_to(worktree) else str(ticket_path)
     try:
-        _write_implemented_by(ac_path, relative_ticket_path, ac_id)
+        _write_implemented_by(ac_path, relative_ticket_path, ac_id, worktree=worktree)
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"WARNING: ticket written but could not update implemented_by in {ac_path}: {exc}",

@@ -8,7 +8,7 @@ component: ticket-creation
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
 criteria: |
@@ -73,7 +73,9 @@ amended_by:
   agent: approve_acs
   date: '2026-07-20'
 superseded_by: null
-covered_by: [TKT-500f-14-i]
-implemented_by: []
+covered_by: [TKT-500f-14-i, unit_tests/ac_store/test_tkt_500f_14.py]
+implemented_by:
+- tickets/TICKET-20260720-TKT-500f-14.md
+- scripts/ac_store/generate_ticket_from_ac.py
 change_target: pipeline
 risk_surface: internal
