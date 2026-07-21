@@ -1,0 +1,73 @@
+id: ACD-400b-5-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Agent Contracts rendering handles multi-entry lists, stray non-mapping elements, and empty/absent fields"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given a source AC id ACS-100a-1 whose delivers_to is a LIST containing three
+    valid {agent, contract} mappings plus one stray non-mapping element
+    (e.g. a bare string mixed into the list), and whose expects_from is null,
+  When the generator is invoked with --ac ACS-100a-1,
+  Then the "## Agent Contracts" section renders one entry for every valid mapping
+    in the list (all three appear, not only the first),
+  And the stray non-mapping element is skipped without raising an error,
+  And given a different source AC whose delivers_to and expects_from are both null
+    or absent, when the generator is invoked for that AC,
+    no "## Agent Contracts" section is emitted at all,
+  And generation completes successfully in every one of these cases.
+depends_on: [ACD-400b-5]
+doc_links:
+  - docs/reference/ac-schema.md
+  - scripts/ac_store/generate_ticket_from_ac.py
+  - unit_tests/test_generate_ticket_from_ac.py
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Non-mapping elements mixed into a contract list must be skipped without raising, per the project error-handling policy (no silent crash, no partial render)."
+  - "When both delivers_to and expects_from are null or absent, no ## Agent Contracts section is emitted at all."
+  - "Generation must complete successfully across every edge-case shape (multi-entry list, stray non-mapping element, empty/absent fields)."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-400b-5
+    contract: "The shape-agnostic Agent Contracts renderer whose edge cases this exercises"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - scripts/ac_store/generate_ticket_from_ac.py
+  - unit_tests/test_generate_ticket_from_ac.py
+test_spec:
+  - name: test_list_form_multiple_entries_all_rendered
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    covers: [ACD-400b-5-i]
+    description: "Every valid mapping in a multi-entry delivers_to list renders (not only the first) (TestAgentContractsListOrDict)."
+  - name: test_list_form_expects_from_renders_ac_id
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    covers: [ACD-400b-5-i]
+    description: "List-shaped expects_from renders each entry naming its AC id."
+  - name: test_as_contract_entries_list_skips_non_dicts
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    covers: [ACD-400b-5-i]
+    description: "_as_contract_entries skips stray non-mapping list elements without raising."
+  - name: test_as_contract_entries_none_returns_empty
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    covers: [ACD-400b-5-i]
+    description: "_as_contract_entries returns an empty list for null/absent fields, so no section is emitted."
+change_target: code
+risk_surface: internal

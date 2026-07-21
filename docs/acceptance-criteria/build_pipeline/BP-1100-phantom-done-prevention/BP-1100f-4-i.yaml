@@ -1,0 +1,70 @@
+id: BP-1100f-4-i
+components:
+  - build_pipeline
+title: "The harness raises even when the mock is set to return success for the instruction-less call"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a workflow test whose dispatch test-double is configured to return a success value
+    for any call,
+  And the workflow under test dispatches a step whose request's first argument carries no
+    instruction string,
+  When the harness intercepts the dispatch,
+  Then it raises the contract violation regardless of the configured success return, because
+    the violation is on the dispatch contract itself, not on the test-double's return value,
+  And a return-value stub cannot suppress the instruction-less-dispatch violation.
+depends_on:
+  - BP-1100f-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Same instruction-less-dispatch contract_violation surface as BP-1100f-4; asserts the violation is independent of the test-double's configured return value."
+  reference_file_path: "unit_tests/_workflow_engine_harness.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The instruction-less-dispatch contract violation must be raised regardless of a test-double configured to return a success value for any call — the violation is on the dispatch contract, not on the return value."
+    - "A return-value stub cannot suppress the violation (this is the exact BO-2300 failure shape: a topology-controlling mock that made an absent behavior look done)."
+    - "Portable per ADR-001."
+test_spec:
+  - name: test_success_stub_does_not_suppress_instruction_less_violation
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "Configure the dispatch test-double to return a success value for any call, drive a workflow (via run_workflow_under_e2) that dispatches an instruction-less first argument, and assert the harness still raises the instruction-less-dispatch contract_violation."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "L3 edge for BP-1100f-4; same python-coder harness surface. Structured it_requirements (BO-2000d) + real-artifact test_spec. readiness left draft."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  L3 edge for BP-1100f-4: a test author must not be able to hide an instruction-less
+  dispatch by stubbing the mock to "succeed". This is the exact BO-2300 failure shape —
+  a topology-controlling mock that made an absent behavior look done — pushed down to
+  the harness contract.

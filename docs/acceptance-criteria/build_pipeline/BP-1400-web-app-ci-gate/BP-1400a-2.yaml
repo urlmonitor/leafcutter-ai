@@ -1,0 +1,69 @@
+id: BP-1400a-2
+components:
+  - build_pipeline
+title: "The web-app build/type-check check is required only for pull requests that change the web app"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the web-app build/type-check check defined for the repository,
+  When a pull request is opened that changes one or more files under the web-app
+    directory (leafcutter-web/),
+  Then the web-app build/type-check check runs for that pull request and its
+    result is required for the pull request to merge,
+  And when a pull request changes no files under the web-app directory
+    (leafcutter-web/), the web-app build/type-check check is not required for that
+    pull request to merge.
+depends_on:
+  - BP-1400a
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Scope the web-app job with a pull_request `paths:` filter on `leafcutter-web/**` in .github/workflows/ci.yml so the job is triggered only by PRs that change web-app files. This is the single triggering rule shared by all three web-app checks (build/type-check, style, route-render)."
+  - "KNOWN GOTCHA (reconcile with BP-1400a-4): a GitHub required status check that is path-filtered will sit as 'expected/pending' forever on a PR where the job never runs, permanently blocking non-web-app PRs. Choose ONE consistent mechanism and apply it identically across all three web-app checks: EITHER (a) required-checks-on-changed-paths / a job that always runs but no-ops (reporting success) when no leafcutter-web/ file changed, OR (b) rely on GitHub's 'skipped required check counts as neutral/passing' behavior — and verify the chosen mechanism actually lets a clean non-web-app PR merge."
+  - "The path filter MUST treat 'touches ANY leafcutter-web/ file' as in-scope (not 'touches ONLY leafcutter-web/ files') — see the mixed-change boundary in BP-1400a-2-i."
+  - "Path-scoping must be authored so the SAME filter definition is reused (or kept identical) across the a-1 build/type-check, b-1 style, and c-1 route-render jobs — divergent filters would let one check fire while another silently skips on the same web-app change."
+test_spec:
+  - name: test_web_check_path_filtered_to_leafcutter_web
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: unit
+    description: "Parse .github/workflows/ci.yml and assert the web-app job(s) are path-filtered on leafcutter-web/** so they trigger on web-app changes; assert the mechanism does not leave a non-web-app-only PR blocked by a never-run required check."
+delivers_to: null
+expects_from:
+  ac_id: BP-1400a-1
+  contract: "The web-app build/type-check check whose triggering scope this AC constrains to web-app changes"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (owns the ci.yml paths-filter config). Added it_requirements (leafcutter-web/** paths filter as the shared trigger for all three web-app checks; the path-filtered-required-check deadlock gotcha to reconcile with BP-1400a-4; ANY-not-ONLY scoping per BP-1400a-2-i; keep one identical filter across a-1/b-1/c-1), the planned web-app-ci-gate.md doc_link, and a ci.yml-parse test_spec. Criteria, expects_from, readiness, and components unchanged."
+    by: it-po
+superseded_by: null
+covered_by:
+  - BP-1400a-2-i
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/03_TICKET-20260721-BP-1400a-2.md
+notes: |
+  Path-scoping is authored as a behavior (not merely an edge case) because "the
+  check runs when it should and does not needlessly block unrelated changes" is
+  independently testable and is the trigger contract the other web-app checks
+  follow. The precise path-filter mechanism (workflow path filter vs. required-
+  check-on-changed-paths wiring) is an implementation decision left to it-po.
+change_target: pipeline
+risk_surface: safety

@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -19,10 +19,13 @@ criteria: |
   And the submission is reported as having nothing to resume rather than causing
     an error.
 depends_on: [BO-2300e-1]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-constraints.md
@@ -41,40 +44,47 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: asserted against the E2 workflow ENGINE (JavaScript). The no-op-resume guard lives in the shared JS helper's resume entry: if the record read (via the resume agent() dispatch) finds no paused_awaiting_input pause for the run, it returns 'nothing to resume' from the workflow body rather than erroring. Not a standalone Python module."
     - "Submitting an answer/resume for a run with no pending question (running, completed, or cancelled) must be a safe no-op: no step resumed, no answer applied, existing state unchanged, and the submission reported as 'nothing to resume' rather than erroring."
     - "Guards the resume side against being invoked when nothing is waiting — must be a safe no-op, not a crash or a spurious re-run."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) resuming a run whose record has no pending pause; assert the harness run reports 'nothing to resume', applies no answer, and does not error. Do NOT test a standalone Python module."
   delivers_shape:
     description: "No-op assertion surface; no downstream producer."
 delivers_to: null
 expects_from:
   ac_id: BO-2300e-1
-  contract: "The durable resume path; this edge asserts it is a safe no-op (report 'nothing to resume', state unchanged) when the run has no pending pause."
+  contract: "The durable resume path in the shared JS helper; this edge asserts it is a safe no-op (report 'nothing to resume', state unchanged) when the record read finds no pending pause for the run."
 test_spec:
   - name: test_resume_no_pending_is_noop
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Submitting an answer/resume for a run with no pending question resumes no step and applies no answer."
+    description: "Via run_workflow_under_e2, submitting an answer/resume for a run with no pending question resumes no step and applies no answer."
   - name: test_resume_no_pending_leaves_state_unchanged
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The run's existing state is left unchanged by a no-op resume."
+    description: "Via the harness, the run's existing state is left unchanged by a no-op resume."
   - name: test_resume_no_pending_reports_nothing_to_resume
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The submission is reported as having nothing to resume rather than causing an error."
+    description: "Via the harness, the submission is reported as having nothing to resume rather than causing an error."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; no-op-resume guard lives in the shared JS helper's resume entry (record read via a resume agent() dispatch); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |
