@@ -1078,6 +1078,89 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     ])
 
 
+def _extract_doc_genre(ac: AcRecord) -> str:
+    """Extract the Diataxis genre from an AC record's documentation_triggers field.
+
+    Returns the first value from ``documentation_triggers`` when the field is
+    present and non-empty.  Falls back to ``"explanation"`` when the field is
+    absent, empty, or contains a non-string first element (BO-2200c-2).
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        A genre string — one of the valid Diataxis genre labels or ``"explanation"``.
+    """
+    triggers = ac.get("documentation_triggers") or []
+    if triggers and isinstance(triggers[0], str) and triggers[0].strip():
+        return triggers[0].strip()
+    return "explanation"
+
+
+def _extract_doc_path(ac: AcRecord, genre: str, ac_id: str) -> str:
+    """Extract a target documentation path from an AC record's doc_links field.
+
+    Scans ``doc_links`` for the first entry whose ``path`` value is a non-empty
+    local string (not an http URL) containing at least one ``/`` separator.
+    When no qualifying link is found, a default path is computed under
+    ``docs/<genre>/<slugified-ac_id>.md`` (BO-2200c-2).
+
+    Args:
+        ac: Parsed AC record dict.
+        genre: Diataxis genre string (used in the computed default path).
+        ac_id: AC identifier string (used in the computed default path).
+
+    Returns:
+        A documentation path string that contains at least one ``/`` separator.
+    """
+    doc_links = ac.get("doc_links") or []
+    for link in doc_links:
+        if not isinstance(link, dict):
+            continue
+        path_val = link.get("path", "")
+        if (
+            isinstance(path_val, str)
+            and path_val
+            and "/" in path_val
+            and not path_val.startswith("http")
+        ):
+            return path_val
+    # Compute a sensible default: docs/<genre>/<ac-id-slug>.md
+    slug = re.sub(r"[^a-z0-9]+", "-", (ac_id or "ac").lower()).strip("-")
+    return f"docs/{genre}/{slug}.md"
+
+
+def _derive_content_constraint(ac: AcRecord, ac_id: str) -> str:
+    """Derive a content constraint from an AC record's criteria field.
+
+    Extracts the text of the first ``Then`` clause in the Gherkin criteria.
+    Falls back to the first non-empty criteria line when no ``Then`` clause is
+    found.  Returns a generic placeholder when the criteria field is absent or
+    blank (BO-2200c-2).
+
+    Args:
+        ac: Parsed AC record dict.
+        ac_id: AC identifier string (used in the fallback placeholder).
+
+    Returns:
+        A non-empty constraint string derived from the criteria (not the AC title).
+    """
+    criteria_text = str(ac.get("criteria") or "")
+    for line in criteria_text.split("\n"):
+        stripped = line.strip()
+        m = re.match(r"^Then\s+(.*)", stripped, re.IGNORECASE)
+        if m:
+            clause = m.group(1).rstrip(",").strip()
+            if clause:
+                return clause
+    # Fallback: first non-empty criteria line
+    for line in criteria_text.split("\n"):
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return f"cover the behaviour described in {ac_id}"
+
+
 def _build_agent_contracts_section(
     ac: AcRecord,
     ac_id: str = "",
@@ -1089,7 +1172,10 @@ def _build_agent_contracts_section(
 
     * ``documentation-expert`` appears in *agents_map* with status ``'needed'``
       (BO-2200c-1): a ``### documentation-expert`` subsection is appended listing
-      one globally-numbered ``- [ ] AC-1: <title>`` checklist item.
+      one globally-numbered ``- [ ] AC-1:`` checklist item.  Per BO-2200c-2, the
+      checklist item carries three parts: the Diataxis genre (from
+      ``documentation_triggers``), the target doc path (from ``doc_links`` or a
+      computed default), and a content constraint derived from the AC criteria.
     * The AC record has a non-null ``delivers_to`` or ``expects_from`` field
       (TKT-500f-10): the contract details are rendered under ``### Delivers To``
       or ``### Expects From`` subsections.
@@ -1103,8 +1189,8 @@ def _build_agent_contracts_section(
 
     Args:
         ac: Parsed AC record.
-        ac_id: The AC id (used to build the fallback title for the BO-2200c-1
-            subsection).
+        ac_id: The AC id (used in the computed default doc path and the
+            content-constraint fallback for the BO-2200c-1/c-2 subsection).
         agents_map: The computed agents map (agent name → status). When ``None``
             or when ``documentation-expert`` is absent or not ``'needed'``, the
             BO-2200c-1 subsection is suppressed.
@@ -1122,13 +1208,19 @@ def _build_agent_contracts_section(
 
     lines: list[str] = ["## Agent Contracts", ""]
 
-    # BO-2200c-1: emit documentation-expert subsection when the agent is needed.
+    # BO-2200c-1 / BO-2200c-2: emit the documentation-expert subsection when the
+    # agent is needed.  Per BO-2200c-2 each AC-N line must name three parts:
+    # 1. Diataxis genre from documentation_triggers (default "explanation").
+    # 2. Target doc path from doc_links or a computed default under docs/<genre>/.
+    # 3. Content constraint derived from the AC criteria Then/And clauses.
     if doc_expert_needed:
-        title = ac.get("title", f"Implement {ac_id}")
+        genre = _extract_doc_genre(ac)
+        doc_path = _extract_doc_path(ac, genre, ac_id)
+        constraint = _derive_content_constraint(ac, ac_id)
         lines.extend([
             "### documentation-expert",
             "",
-            f"- [ ] AC-1: {title}",
+            f"- [ ] AC-1: [{genre}] {doc_path} — {constraint}",
             "",
         ])
 
@@ -2021,5 +2113,14 @@ DECISION HISTORY
   appears.  Added documentation-verifier to _CANONICAL_PHASE_ORDER (after
   documentation-expert) and _FLOW_CHANGE_PHASE_ORDER (after documentation-expert).
   (AC BO-2200b-4) (#EPIC-DocumentationCoverageGuarantee/13)
+- 2026-07-21 [TICKET-20260715-BO-2200c-2]: Each documentation-expert contract line
+  carries a Diataxis genre, a target doc path, and a criteria-derived content constraint.
+  Added three helpers: _extract_doc_genre (reads documentation_triggers[0], defaults to
+  "explanation"), _extract_doc_path (scans doc_links for first local path with "/",
+  computes docs/<genre>/<slug>.md default), _derive_content_constraint (extracts first
+  Then clause from Gherkin criteria, falls back to first non-empty criteria line).
+  Modified _build_agent_contracts_section: the "- [ ] AC-1:" line now emits
+  "[<genre>] <doc_path> — <constraint>" instead of the AC title verbatim.
+  (AC BO-2200c-2) (#EPIC-DocumentationCoverageGuarantee/18)
 ====================================================================
 """
