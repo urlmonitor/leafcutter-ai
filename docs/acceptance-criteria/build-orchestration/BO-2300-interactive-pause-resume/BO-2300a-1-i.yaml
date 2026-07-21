@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -19,10 +19,13 @@ criteria: |
   And its behavior is unchanged from a run made before the pause mechanism
     existed.
 depends_on: [BO-2300a-1]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md
@@ -39,36 +42,44 @@ it_requirements:
   reference_file_path: "templates/workflows-js/build-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
-    - "A run that reaches no interactive gate must complete with behavior equivalent to a pre-pause-mechanism run: no paused state is entered and no pending-question record is written."
-    - "Regression guard: the pause machinery must be inert on runs that never pause (do not perturb the non-interactive path)."
-    - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "SURFACE: this edge is asserted against the E2 workflow ENGINE (JavaScript). build-feature.js has NO interactive gates today, so it is the natural home for the gateless-run assertion; the shared JS pause helper it imports must be inert on runs that never reach a gate."
+    - "A run that reaches no interactive gate must complete with behavior equivalent to a pre-pause-mechanism run: no paused state is entered and no persist agent() is dispatched / no pending-question record is written."
+    - "Regression guard: the shared JS pause machinery must be inert on runs that never pause (do not perturb the non-interactive path)."
+    - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001): python scripts/build.py --target-dir ."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(build-feature.js) with responses that complete the run; assert terminal status completed, no paused_awaiting_input, and no persist agent() dispatch in captured agent_calls. Do NOT test a standalone Python module."
 delivers_to: null
 expects_from:
   ac_id: BO-2300a-1
-  contract: "The pause/persist mechanism whose inertness this edge asserts: on a run with no interactive gate, that mechanism must not enter the paused state nor write a pending-question record."
+  contract: "The shared JS pause/persist mechanism whose inertness this edge asserts: on a run with no interactive gate, that mechanism must not enter the paused state nor dispatch a persist agent()/write a pending-question record."
 test_spec:
   - name: test_run_without_gate_completes_normally
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A run that reaches no interactive gate finishes normally and never enters the paused state."
+    description: "Via run_workflow_under_e2(build-feature.js), a run that reaches no interactive gate finishes with status completed and never enters paused_awaiting_input."
   - name: test_no_pending_question_recorded_for_gateless_run
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "No pending-question record is written for a run that hits no decision point."
+    description: "Via run_workflow_under_e2, no persist agent() is dispatched (agent_calls contain none) and no pending-question record is written for a run that hits no decision point."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE (build-feature.js has no gates). assigned_agent python-coder -> llm-expert; test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2 and asserts the shared JS pause helper is inert. Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |
-  Guards against a regression where the pause machinery accidentally affects
-  runs that never needed input.
+  Guards against a regression where the shared JS pause machinery accidentally
+  affects runs that never needed input. build-feature.js is gateless today, so it
+  is the correct surface for this assertion.

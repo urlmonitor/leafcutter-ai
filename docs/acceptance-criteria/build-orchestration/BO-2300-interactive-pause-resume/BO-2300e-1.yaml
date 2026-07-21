@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -20,10 +20,13 @@ criteria: |
   And the stages the run had committed before the process ended are carried
     forward and not redone.
 depends_on: [BO-2300e]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: L
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
@@ -38,57 +41,67 @@ doc_links:
 it_requirements:
   config_schema_fragment:
     type: object
-    description: "Durable, cross-process resumable pause state."
+    description: "Durable, cross-process resumable pause state at .leafcutter/paused_runs/<run_id>.json."
     properties:
       persisted: {type: boolean, description: "record survives the workflow process exiting"}
       run_id: {type: string}
       question: {type: object}
       context: {type: object}
-      pause_point: {type: object, description: "resumeFromRunId marker"}
+      pause_point: {type: object, description: "harness resumeFromRunId marker"}
     required: [persisted, run_id, pause_point]
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "all"
   required_skills:
+    - llm-expert
     - python-coder
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
-    - "The pending-question record, its context snapshot, and the run's pause point must survive the workflow process exiting (durable on-disk/run-scoped store, not in-memory); a fresh process must be able to load it and resume."
-    - "Resume in a new process must use the existing resumeFromRunId cache so committed prior stages are carried forward, not redone."
-    - "Durable-store access is external I/O and must follow the project error-handling policy (typed except, WARNING+ log, no silent swallow)."
-    - "E2 bans wall-clock/random in the workflow body (ADR-017): any staleness timestamp must be written into the record at pause or passed via args, never computed with Date.now() in the body."
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript) plus agent-mediated persistence. The record is written/read via an agent() dispatch to .leafcutter/paused_runs/<run_id>.json (the dispatched agent may use a small Python helper), and cross-process resume replays committed agent() calls via the harness resumeFromRunId contract. Not a standalone Python module."
+    - "FEASIBILITY (E2 body has no filesystem access per docs/reference/workflow-constraints.md): durability is achieved by the persist agent() dispatch writing to the on-disk store and, on resume, a new process supplying the answer via args (or a resume agent() reading the store); the workflow body itself performs no direct fs I/O and holds no in-memory state across process exit."
+    - "The pending-question record, its context snapshot, and the run's pause point must survive the workflow process exiting (durable on-disk .leafcutter/paused_runs/<run_id>.json, not in-memory); a fresh process must be able to load it and resume."
+    - "Resume in a new process must use the harness resumeFromRunId replay so committed prior stages are carried forward, not redone."
+    - "Durable-store access performed by the dispatched agent (and any Python helper it invokes) is external I/O and must follow the project error-handling policy (typed except, WARNING+ log, no silent swallow)."
+    - "E2 bans wall-clock/random in the workflow body (ADR-017): any staleness timestamp must be written into the record at pause (by the persist agent) or passed via args, never computed with Date.now() in the body."
     - "Deployed/template parity via the build.py round-trip (ADR-001)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js): a first harness run pauses and persists; a SECOND harness invocation (new process) supplies the answer via args and resumes from pause_point via resumeFromRunId, with committed stages carried forward (not re-dispatched in agent_calls). Do NOT test a standalone Python module."
 delivers_to:
-  agent: python-coder
-  contract: "Durable, cross-process resumability: pending question, context, and pause_point held in durable storage after the workflow process ends; a new process supplying a valid answer resumes from pause_point with committed stages carried forward. Consumed by idempotency (BO-2300e-1-i), no-op-resume (BO-2300e-1-ii), and stale-pause (BO-2300e-1-iii)."
+  agent: llm-expert
+  contract: "Durable, cross-process resumability: pending question, context, and pause_point held in .leafcutter/paused_runs/<run_id>.json (written via the persist agent() dispatch) after the workflow process ends; a new process supplying a valid answer via args (or via a resume agent() read) resumes from pause_point via harness resumeFromRunId with committed stages carried forward. Consumed by idempotency (BO-2300e-1-i), no-op-resume (BO-2300e-1-ii), and stale-pause (BO-2300e-1-iii)."
 expects_from:
   ac_id: BO-2300a-1
-  contract: "The pending-question record and its run-scoped durable store; this AC guarantees that record (question, context, pause_point) survives process exit and is loadable by a fresh process for resume."
+  contract: "The pending-question record and its .leafcutter/paused_runs/<run_id>.json store; this AC guarantees that record (question, context, pause_point) survives process exit and is loadable by a fresh process (via a resume agent() read / resume args) for resume."
 test_spec:
   - name: test_pending_state_survives_process_exit
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "After the workflow process ends, the pending question, context, and pause point remain in durable storage."
+    description: "Via run_workflow_under_e2(plan-feature.js), after the first harness run pauses and ends, the pending question, context, and pause point remain in the .leafcutter/paused_runs store."
   - name: test_new_process_resumes_from_pause_point
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "In a new process, submitting a valid answer for the run resumes it from the pause point."
+    description: "Via a SECOND run_workflow_under_e2 invocation (new process) supplying a valid answer in args, the run resumes from the pause point (resumeFromRunId)."
   - name: test_committed_stages_carried_forward_across_process
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Stages committed before the process ended are carried forward and not redone on cross-process resume."
+    description: "Via the two-invocation harness sequence, stages committed before the process ended are carried forward and not re-dispatched (absent from the second run's agent_calls)."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE + agent-mediated persistence. assigned_agent python-coder -> llm-expert; durability via persist agent() dispatch to .leafcutter/paused_runs and cross-process resume via harness resumeFromRunId (no fs in body); test_spec now drives the real JS via a two-invocation _workflow_engine_harness.run_workflow_under_e2 sequence. Criteria unchanged."
 superseded_by: null
 covered_by: [BO-2300e-1-i, BO-2300e-1-ii, BO-2300e-1-iii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |
   Durability means the pause outlives the workflow process; resume happens via
-  the existing resumeFromRunId cache which already preserves committed prior
-  stages. This is the reliability backbone for "come back minutes or hours later".
+  the harness resumeFromRunId replay which preserves committed prior stages, with
+  the record persisted/read via an agent() dispatch (the E2 body has no fs
+  access). This is the reliability backbone for "come back minutes or hours later".

@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -23,10 +23,13 @@ criteria: |
   And the gate that raised the question is the one that declares which of the
     three types it needs.
 depends_on: [BO-2300b]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: M
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md
@@ -47,57 +50,65 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "all"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript). The question type + valid-answer-shape vocabulary is defined once in the shared JS helper module (imported by all engine files, hence n_location_rule=all) and each JS gate declares its type. This is JS in the workflow files, not a standalone Python module."
     - "Exactly three question types are supported: single_choice (approve/edit/cancel), priority_choice (critical/high/medium/low), free_text; the raising gate declares which type it needs."
     - "Each emitted question must state its valid answer shape (allowed option set for the choice types; any-text for free_text) so the answer contract is unambiguous."
-    - "Define the type/answer-shape vocabulary once (a single shared definition), not duplicated per gate, so the gates that raise questions and the validator that checks answers (BO-2300b-2) cannot drift."
+    - "Define the type/answer-shape vocabulary once in the shared JS helper (a single shared definition), not duplicated per gate, so the gates that raise questions and the validator that checks answers (BO-2300b-2) cannot drift."
     - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js); assert the emitted question object (captured via the pause/persist agent() call args) carries the declared type and valid_answers for each of the three gate types. Do NOT test a standalone Python module."
   delivers_shape:
     description: "The question sub-schema this AC establishes populates the record's question field from BO-2300a-1."
 delivers_to:
-  agent: python-coder
-  contract: "Question object schema: { type: 'single_choice'|'priority_choice'|'free_text', prompt: string, valid_answers: [...] (single_choice -> approve/edit/cancel; priority_choice -> critical/high/medium/low) or accepts_any_text: true (free_text) }. Populates the question field of the pending-question record (BO-2300a-1). Consumed by wrong-shape rejection (BO-2300b-2) and apply-by-type (BO-2300d-1)."
+  agent: llm-expert
+  contract: "Question object schema: { type: 'single_choice'|'priority_choice'|'free_text', prompt: string, valid_answers: [...] (single_choice -> approve/edit/cancel; priority_choice -> critical/high/medium/low) or accepts_any_text: true (free_text) }, defined once in the shared JS helper. Populates the question field of the pending-question record (BO-2300a-1). Consumed by wrong-shape rejection (BO-2300b-2) and apply-by-type (BO-2300d-1)."
 expects_from:
   ac_id: BO-2300a-1
-  contract: "The pending-question record container into whose question field this declared-type/answer-shape object is written on pause."
+  contract: "The pending-question record container into whose question field this declared-type/answer-shape object is written on pause (via the persist agent() dispatch)."
 test_spec:
   - name: test_question_declares_type_single_choice
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A single_choice question declares type single_choice with valid_answers approve/edit/cancel."
+    description: "Via run_workflow_under_e2(plan-feature.js), a single_choice gate emits a question declaring type single_choice with valid_answers approve/edit/cancel (asserted from the persist agent() call args)."
   - name: test_question_declares_type_priority_choice
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A priority_choice question declares type priority_choice with valid_answers critical/high/medium/low."
+    description: "Via the harness, a priority_choice gate emits a question declaring type priority_choice with valid_answers critical/high/medium/low."
   - name: test_question_declares_type_free_text
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A free_text question declares type free_text and states that any text is accepted."
+    description: "Via the harness, a free_text gate emits a question declaring type free_text and stating that any text is accepted."
   - name: test_choice_question_states_valid_option_set
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A choice-type question states its allowed option set."
+    description: "Via the harness, a choice-type question states its allowed option set."
   - name: test_gate_declares_its_question_type
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The gate that raises a question is the one that declares which of the three types it needs."
+    description: "Via the harness, the JS gate that raises a question is the one that declares which of the three types it needs (vocabulary sourced from the shared helper)."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; the type/answer-shape vocabulary lives in the shared JS helper; test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |
   Three question types are in scope: single-choice approve/edit/cancel, a
-  priority enum (critical/high/medium/low), and free-text feedback. Each gate in
-  the workflow declares which type it raises so the answer shape is unambiguous.
+  priority enum (critical/high/medium/low), and free-text feedback. Each JS gate
+  in the workflow declares which type it raises so the answer shape is
+  unambiguous; the vocabulary is defined once in the shared JS helper.

@@ -266,13 +266,13 @@ function log(msg) { /* stub */ }
  * quick-fix.js guards: args.target_file, args.root_cause.
  * Other scripts use userInput / epicPath patterns (handled inside run()).
  */
-var args = {
+var args = Object.assign({
   target_file: 'stub/target.py',
   root_cause: 'stub root cause for harness execution',
   location_hint: 'line 1',
   symptom: 'stub symptom',
   userInput: 'stub user input',
-};
+}, {ARGS_OBJECT});
 
 // ─── Script body ─────────────────────────────────────────────────────────────
 
@@ -342,6 +342,7 @@ def _strip_exports(source: str) -> str:
 def _build_shim(
     script_path: Path,
     label_responses: dict[str, Any] | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """Build the Node.js shim source for a given workflow script.
 
@@ -350,6 +351,9 @@ def _build_shim(
         label_responses: Optional mapping from agent call labels to custom
             response objects. Serialised to JSON and injected into the shim's
             ``__labelResponses__`` constant.
+        args: Optional mapping merged over the default stub ``args`` global
+            (via ``Object.assign``), so callers can inject workflow inputs such
+            as ``resume_answer`` and ``run_id`` to drive pause/resume tests.
 
     Returns:
         Complete JavaScript source for the Node.js subprocess.
@@ -366,11 +370,14 @@ def _build_shim(
 
     # Serialise label_responses to a JSON object literal for inline injection.
     label_responses_json = json.dumps(label_responses or {})
+    # Serialise caller-supplied args; merged over the default stub args in the shim.
+    args_json = json.dumps(args or {})
 
     return (
         _JS_SHIM_TEMPLATE
         .replace("{SCRIPT_BODY}", body)
         .replace("{LABEL_RESPONSES}", label_responses_json)
+        .replace("{ARGS_OBJECT}", args_json)
     )
 
 
@@ -383,6 +390,7 @@ def run_workflow_under_e2(
     script_path: Path,
     timeout: int = 15,
     label_responses: dict[str, Any] | None = None,
+    args: dict[str, Any] | None = None,
 ) -> HarnessResult:
     """Execute a workflow script's top-level body under a stub E2 engine.
 
@@ -404,6 +412,10 @@ def run_workflow_under_e2(
             that the default stub would short-circuit past (e.g., the
             parallel() dispatch in build-epic.js requires the planner to
             return non-empty batches).
+        args: Optional mapping merged over the default stub ``args`` global.
+            Use this to inject workflow inputs such as ``resume_answer`` and
+            ``run_id`` so a second invocation can drive the resume path of a
+            paused run (two-invocation pause->resume tests).
 
     Returns:
         HarnessResult with captured agent() calls, contract violations, and
@@ -423,7 +435,9 @@ def run_workflow_under_e2(
         )
 
     try:
-        shim_source = _build_shim(script_path, label_responses=label_responses)
+        shim_source = _build_shim(
+            script_path, label_responses=label_responses, args=args
+        )
     except OSError as exc:
         logger.warning("Failed to build shim for %s: %s", script_path, exc)
         return HarnessResult(error=str(exc))

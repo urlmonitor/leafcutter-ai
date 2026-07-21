@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -18,10 +18,13 @@ criteria: |
   And their committed results are still present and unchanged,
   And the run continues from stage three onward.
 depends_on: [BO-2300d-1]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-constraints.md
@@ -39,39 +42,46 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: asserted against the E2 workflow ENGINE (JavaScript). plan-feature.js is the motivating engine (it commits the PO stage before the PO gate). The resumeFromRunId replay path in the shared JS helper must replay committed stages as done rather than re-executing them. Not a standalone Python module."
     - "On approve+resume of a multi-stage run, previously committed stages must not be re-run and their committed results must remain present and unchanged; the run continues from the paused stage onward."
-    - "Motivating case: /plan-feature committed the PO stage before hitting the PO gate; resuming must not discard or redo that committed PO stage."
+    - "Motivating case: /plan-feature (plan-feature.js) committed the PO stage before hitting the PO gate; resuming must not discard or redo that committed PO stage."
     - "Reuse the resumeFromRunId replay path from BO-2300d-1 (committed stages replayed as done, not re-executed)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js): pause during a later stage, resume with 'approve' in args, and assert (from captured agent_calls) that earlier committed stages are NOT re-dispatched and the run continues from the paused stage. Do NOT test a standalone Python module."
 delivers_to: null
 expects_from:
   ac_id: BO-2300d-1
-  contract: "The apply-by-type + resume-from-pause-point path; this edge asserts that on an approve resume the already-committed prior stages are preserved (not re-run)."
+  contract: "The apply-by-type + resume-from-pause-point path (resumeFromRunId replay) in the shared JS helper; this edge asserts that on an approve resume the already-committed prior stages are preserved (not re-run)."
 test_spec:
   - name: test_committed_stages_not_rerun_on_resume
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "On approve+resume, stages committed before the pause are not re-run."
+    description: "Via run_workflow_under_e2(plan-feature.js), on approve+resume, stages committed before the pause are not re-dispatched (absent from captured agent_calls)."
   - name: test_committed_results_unchanged_after_resume
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The committed results of earlier stages remain present and unchanged after resume."
+    description: "Via the harness, the committed results of earlier stages remain present and unchanged after resume."
   - name: test_run_continues_from_paused_stage
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The run continues from the paused stage (stage three) onward."
+    description: "Via the harness, the run continues from the paused stage (stage three) onward."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE (plan-feature.js). assigned_agent python-coder -> llm-expert; resume via harness resumeFromRunId replay in the shared JS helper; test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |

@@ -151,6 +151,165 @@ function parseAgentJson(raw, ctx) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// §R — Inline pause-resume helpers (ADR-024 BO-2300 RESUME half).
+// E2 workflow bodies are self-contained and cannot import local modules, so the
+// pause-resume helper is defined inline here. The same helper is inlined in
+// plan-feature.js — keep them in sync.
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a resume_answer's shape against its declared question type.
+ * @param {object}       answer       - args.resume_answer object.
+ * @param {string}       expectedType - "single_choice" | "priority_choice" | "free_text"
+ * @param {string[]|null} [validOptions] - Allowed action/choice values for single_choice gates.
+ * @returns {{ valid: boolean }}
+ */
+function validateAnswerShape(answer, expectedType, validOptions) {
+  if (!answer || typeof answer !== "object") { return { valid: false }; }
+  if (expectedType === "single_choice") {
+    const act = typeof answer.action === "string" ? answer.action
+      : (typeof answer.choice === "string" ? answer.choice : null);
+    if (!act) { return { valid: false }; }
+    if (Array.isArray(validOptions) && validOptions.length > 0 && !validOptions.includes(act)) {
+      return { valid: false };
+    }
+    return { valid: true };
+  }
+  if (expectedType === "priority_choice") {
+    return (answer.priority != null) ? { valid: true } : { valid: false };
+  }
+  if (expectedType === "free_text") {
+    return (typeof answer.text === "string") ? { valid: true } : { valid: false };
+  }
+  return { valid: false };
+}
+
+/**
+ * Apply a validated resume answer by its type and return the effective gate decision.
+ * @param {object} answer - Validated answer from args.resume_answer.
+ * @param {string} type   - "single_choice" | "priority_choice" | "free_text"
+ * @returns {object} Gate decision e.g. { action: "approve" }.
+ */
+function applyAnswerByType(answer, type) {
+  if (type === "priority_choice") { return { action: "approve", priority: answer.priority }; }
+  if (type === "free_text") { return { action: "approve", text: answer.text }; }
+  return { action: answer.action || answer.choice };
+}
+
+/**
+ * Resume-aware interactive gate resolver (ADR-024).
+ *
+ * CORRECTNESS INVARIANT (ADR-024 Rule 4): checks args.resume_answer BEFORE liveGateFn.
+ *
+ * Return value:
+ *   { action: "..." }                   — valid gate decision; caller proceeds.
+ *   { status: "paused_awaiting_input" } — headless or invalid answer; caller MUST return.
+ *   { status: "nothing_to_resume" }     — record absent (exists:false); caller MUST return.
+ *   { status: "unresumable_stale" }     — record stale; caller MUST return.
+ *
+ * @param {string}   gateId      - Gate label (e.g. "step-4-merge-gate").
+ * @param {Function} liveGateFn  - Zero-arg async fn; returns parsed gate decision or null (headless).
+ * @param {object}   args        - Workflow args (may include resume_answer, run_id).
+ * @param {object}   context     - Context snapshot for the pause record.
+ * @param {object}   [descriptor] - Gate question descriptor: { type, options, prompt }.
+ * @param {string}   [runId]     - Explicit run id; falls back to args.run_id || "default-run".
+ * @returns {Promise<object>}
+ */
+async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {
+  runId = runId || (args && args.run_id) || "default-run";
+  const answerType = (descriptor && descriptor.type) || "single_choice";
+  const validOptions = (descriptor && Array.isArray(descriptor.options)) ? descriptor.options : null;
+
+  // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
+  if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
+    const incomingType = args.resume_answer.type || answerType;
+    const validation = validateAnswerShape(args.resume_answer, incomingType, validOptions);
+    if (!validation.valid) {
+      // Wrong/malformed shape or action not in valid options: stay paused.
+      return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+    }
+    // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
+    const _readPrompt =
+      "Read the durable pause record for this run. Run exactly:\n" +
+      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
+    const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
+    let recCheck;
+    try {
+      recCheck = (typeof _rawRec === "string")
+        ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: "status-checker" })
+        : _rawRec;
+    } catch (_e) { recCheck = null; }
+    // FAIL CLOSED: apply ONLY when exists===true AND stale is not true.
+    if (!recCheck || recCheck.exists !== true) {
+      return { status: "nothing_to_resume", run_id: runId, gate_id: gateId };
+    }
+    if (recCheck.stale === true) {
+      return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
+    }
+    return applyAnswerByType(args.resume_answer, incomingType);
+  }
+
+  // No matching resume_answer: call the live gate.
+  let gateAnswer = null;
+  if (typeof liveGateFn === "function") {
+    try { gateAnswer = await liveGateFn(); } catch (_err) { gateAnswer = null; }
+  }
+  // Valid explicit decision.
+  if (gateAnswer !== null && gateAnswer !== undefined && typeof gateAnswer === "object" &&
+      (typeof gateAnswer.action === "string" || typeof gateAnswer.choice === "string")) {
+    return gateAnswer;
+  }
+  // Headless or unparseable: pause and persist.
+  return pauseAtGate(gateId, runId, context, descriptor);
+}
+
+/**
+ * Pause the workflow at an interactive gate and persist the pending-question
+ * record (ADR-024 pause-resume mechanism).
+ *
+ * Dispatches a "pause-persist" agent call carrying the question shape and
+ * context snapshot, then returns { status: "paused_awaiting_input" } so the
+ * caller can `return` it immediately, exiting without losing committed steps.
+ *
+ * Called by resolveGate() on the headless path. Direct callers should use
+ * resolveGate() instead, which checks args.resume_answer first (ADR-024 Rule 4).
+ *
+ * @param {string} gateId        - Gate label (e.g. "step-4-merge-gate").
+ * @param {string} runId         - Current run identifier.
+ * @param {object} ctxSnapshot   - Workflow context snapshot at pause time.
+ * @param {object} [descriptor]  - Gate question descriptor: { type, options, prompt }.
+ * @returns {Promise<{status: "paused_awaiting_input", run_id: string, gate_id: string}>}
+ */
+async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
+  const questionType = (descriptor && descriptor.type) || "single_choice";
+  const questionOptions = (descriptor && Array.isArray(descriptor.options))
+    ? descriptor.options : ["approve", "edit", "cancel", "defer"];
+  const questionPrompt = (descriptor && descriptor.prompt) ||
+    ("Interactive gate '" + gateId + "' requires a human decision. Options: " +
+      questionOptions.join(", ") + ".");
+  const question = {
+    type: questionType,
+    gate_id: gateId,
+    options: questionOptions,
+    prompt: questionPrompt,
+  };
+  const context = ctxSnapshot || { gate_id: gateId };
+  const rec = {
+    run_id: runId, gate_id: gateId,
+    question: question, context: context,
+    status: "paused_awaiting_input",
+  };
+  const _persistPrompt =
+    "Interactive gate '" + gateId + "' has no reachable human answerer. " +
+    "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
+    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
+  await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
+  return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+}
+
 // -------------------------------------------------------------------------
 // Pre-flight worktree resolution
 //
@@ -1468,13 +1627,49 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
   // explicit agent turn. The agent presents the question to the user, waits
   // for a response, and returns status: 'ok' (yes) or status: 'blocked' (no).
   // This matches the E2 user-gate convention from the workflow-authoring-contract.
-  const mergeConfirmResult = await agent(
-    `WARNING: This will merge PR #${prNumber} (\`${BRANCH}\` → main). This is a destructive operation.\n\n` +
-    `Ask the user: "Merge PR #${prNumber} (\`${BRANCH}\` → main)? (yes / no)"\n\n` +
-    `Return status:"ok" if the user says yes/confirm/y.\n` +
-    `Return status:"blocked" with message "User declined merge." if the user says no/cancel/n.`,
-    { agentType: "status-checker", label: "step-4-merge-gate", phase: "Step 4", schema: GATE_SCHEMA }
-  )
+  // ADR-024: resolveGate checks args.resume_answer before the live agent call.
+  const fzRunId = (args && typeof args === "object" && args.run_id)
+    ? args.run_id
+    : (BRANCH || "default-finalize-run");
+  const _fzGateResult = await resolveGate(
+    "step-4-merge-gate",
+    async () => {
+      const raw = await agent(
+        `WARNING: This will merge PR #${prNumber} (\`${BRANCH}\` → main). This is a destructive operation.\n\n` +
+        `Ask the user: "Merge PR #${prNumber} (\`${BRANCH}\` → main)? (yes / no)"\n\n` +
+        `Return status:"ok" if the user says yes/confirm/y.\n` +
+        `Return status:"blocked" with message "User declined merge." if the user says no/cancel/n.`,
+        { agentType: "status-checker", label: "step-4-merge-gate", phase: "Step 4" }
+      );
+      // FIX 3: parse raw before reading .status — raw may be an unparsed string.
+      let parsed;
+      try {
+        parsed = (typeof raw === "string")
+          ? parseAgentJson(raw, { stage: "step-4-merge-gate", agent: "status-checker" })
+          : raw;
+      } catch (_parseErr) { parsed = null; }
+      const s = parsed && parsed.status;
+      if (s === "ok") return { action: "ok" };
+      if (s === "blocked") return { action: "blocked" };
+      return null;
+    },
+    args,
+    { pr_number: prNumber, branch: BRANCH },
+    { type: "single_choice", options: ["ok", "blocked"] },
+    fzRunId
+  );
+  if (_fzGateResult && _fzGateResult.status &&
+      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_fzGateResult.status)) {
+    await cleanupBaselineWorktree();
+    return _fzGateResult;
+  }
+  // Normalise to the shape downstream code expects: { status: "ok" | "blocked" }
+  const _fzAction = _fzGateResult && _fzGateResult.action;
+  const mergeConfirmResult = (_fzAction === "ok" || _fzAction === "approve")
+    ? { status: "ok" }
+    : (_fzAction === "blocked" || _fzAction === "cancel")
+      ? { status: "blocked" }
+      : null;
 
   if (!mergeConfirmResult || mergeConfirmResult.status !== "ok") {
     await cleanupBaselineWorktree();
