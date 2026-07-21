@@ -38,7 +38,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from generate_ticket_from_ac import _write_implemented_by, _normalise_repo_relative  # noqa: E402
+from generate_ticket_from_ac import _write_implemented_by  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
