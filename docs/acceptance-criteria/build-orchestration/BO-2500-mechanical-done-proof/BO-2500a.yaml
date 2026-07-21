@@ -1,0 +1,32 @@
+id: BO-2500a
+components:
+  - build_orchestration
+  - testing_quality
+title: "Every requirement is backed by a test that actually passes"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No requirement counts as met until a real, passing test is tied to it.
+
+  Each added or changed requirement must have a live test linked to it that
+  genuinely passes; a requirement with no passing test cannot be treated as
+  delivered, so "done" can no longer be claimed for work that is not really there.
+depends_on: [BO-2500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+change_target: pipeline
+risk_surface: internal

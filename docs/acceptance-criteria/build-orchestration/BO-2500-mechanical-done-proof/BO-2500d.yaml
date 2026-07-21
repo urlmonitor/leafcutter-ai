@@ -1,0 +1,32 @@
+id: BO-2500d
+components:
+  - build_orchestration
+  - review_system
+title: "Keep the rigor, drop the slow review overhead"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Retire the slow opinion-only review steps once proof-of-done is mechanical.
+
+  Because completion is now proven mechanically, the extra review steps that only
+  ever gave a green opinion can be removed — cutting time and cost from every
+  build without weakening the guarantee that a feature is truly done.
+depends_on: [BO-2500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [component-diagram]
+change_target: pipeline
+risk_surface: internal
