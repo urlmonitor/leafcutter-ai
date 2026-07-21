@@ -560,6 +560,9 @@ def validate(fm: dict, ticket_path: Path) -> list[str]:
     errors.extend(_check_change_target(fm))
     errors.extend(_check_risk_surface(fm))
     errors.extend(_check_estimated_complexity(fm))
+    # Optional boolean field (BP-1100f-5): declares a durable observable side-effect.
+    # When present, must be true or false. When absent, treated as false (no side-effect).
+    errors.extend(_check_bool_field(fm, "declares_side_effect"))
     return errors
 
 
@@ -798,5 +801,10 @@ DECISION HISTORY
   guard to _check_risk_surface (mirroring _check_change_target). risk_surface: [] now
   returns a "must not be an empty list" error. Added risk_surface_empty_list subtest to
   TestNullAndEmptyAxesBO6103i in test_ticket_frontmatter_guard.py.
+- 2026-07-21 [feature/bp-1100f-hardening/BP-1100f-5]: Added declares_side_effect
+  validation. New optional boolean field in ticket frontmatter (BP-1100f-5). When
+  present, must be true or false; when absent, no error (field is optional). Wired
+  _check_bool_field(fm, "declares_side_effect") into validate(). Backward-compatible:
+  existing tickets without the field continue to pass without modification.
 ====================================================================
 """
