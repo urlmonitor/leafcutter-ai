@@ -1,0 +1,83 @@
+id: TKT-500f-16
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "Kebab values already present in the components LIST are normalised to underscore graph ids"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose components LIST already contains one or more kebab
+    (non-graph-id) values — for example ["build-orchestration"] or a mixed list
+    ["ticket_creation_pipeline", "build-orchestration"],
+  When a ticket is generated from that AC by generate_ticket_from_ac.py
+    (_build_components_list),
+  Then every element of the generated ticket's components LIST is the
+    components.json underscore graph id for that value (for example
+    build-orchestration is normalised to build_orchestration),
+  And no kebab element passes through unnormalised — the generated LIST contains no
+    element still bearing a hyphen when an underscore graph id exists for it,
+  And elements that were already valid underscore graph ids are preserved unchanged
+    and are not duplicated.
+depends_on: [TKT-500f, TKT-500f-13]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The components-list builder (_build_components_list, ~line 1112) must normalise element-wise: each list element is resolved to its components.json underscore graph id."
+    - "No kebab element may survive to the emitted LIST when an underscore graph id exists for it; already-valid underscore graph ids must be preserved and must not be duplicated by the normalisation pass."
+    - "Resolution must be driven by docs/components.json (the ~42-entry source of truth), not a hard-coded kebab-to-graph-id map."
+test_spec:
+  - name: test_kebab_list_element_normalised_to_graph_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A fixture AC with components LIST ['build-pipeline'] (kebab) yields a generated LIST == ['build_pipeline']."
+  - name: test_mixed_list_yields_all_underscore_graph_ids
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A mixed list ['ticket_creation_pipeline', 'build-orchestration'] emits only underscore graph ids; no element retains a hyphen."
+  - name: test_existing_graph_id_preserved_and_not_duplicated
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An element already a valid underscore graph id is preserved unchanged and appears exactly once (not duplicated)."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

@@ -1,0 +1,81 @@
+id: TKT-500f-14-ii
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "The recognised-source-extension set excludes markup/style/shell and includes common non-Python source"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-14.yaml"
+criteria: |
+  This edge case refines the recognised-source-code extension set that
+  TKT-500f-14 uses to decide the code-ticket gate signal, so the set neither
+  over-includes non-code files nor omits common compiled/module source.
+
+  Given a leaf AC whose generated ticket's files_touched contains only markup,
+    style, or shell files (.html, .css, .sh) and is assigned to a non-coder agent,
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then those extensions are NOT classified as gating source code — .html/.css/.sh
+    alone do not force-add ac-validator and ac-fulfillment-gate to the agents map.
+
+  Given a leaf AC whose generated ticket's files_touched contains a common
+    non-Python source file (.go, .rs, or .mjs),
+  When a ticket is generated from that AC,
+  Then that extension IS recognised as gating source code — ac-validator and
+    ac-fulfillment-gate are wired as needed phases, the same way a .py or .js
+    source file already triggers the gate under TKT-500f-14.
+depends_on: [TKT-500f-14]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-14
+  contract: "The recognised-source-code extension set (_SOURCE_CODE_EXTENSIONS) that TKT-500f-14 keys the code-ticket gate signal off; this edge case bounds its membership to exclude .html/.css/.sh and include .go/.rs/.mjs."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "Refine the recognised-source-code extension set (_SOURCE_CODE_EXTENSIONS, in _build_agents_map): markup/style/shell (.html/.css/.sh) alone must NOT be classified as gating source code."
+    - "Common non-Python compiled/module source (.go, .rs, .mjs) must be recognised as gating source code, wiring ac-validator and ac-fulfillment-gate as needed phases the same way .py/.js already do under TKT-500f-14."
+    - "The gate signal must be driven by set membership, not by special-casing individual filenames."
+test_spec:
+  - name: test_markup_style_shell_not_gating_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A generated ticket whose files_touched is only .html/.css/.sh on a non-coder agent does not force-add ac-validator or ac-fulfillment-gate."
+  - name: test_go_rs_mjs_recognised_as_gating_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A generated ticket with a .go, .rs, or .mjs file wires ac-validator and ac-fulfillment-gate as needed phases, the same as a .py/.js source file."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

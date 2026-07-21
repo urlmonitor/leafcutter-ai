@@ -1,0 +1,81 @@
+id: TKT-500f-17-i
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "The unresolved value is surfaced verbatim with a single warning, never dropped nor replaced by a fabricated id"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-17.yaml"
+criteria: |
+  This edge case bounds TKT-500f-17 so the WARNING path stays visible and
+  deterministic rather than masking or guessing.
+
+  Given a leaf AC whose component value cannot be resolved to any valid
+    components.json graph id,
+  When a ticket is generated from that AC by generate_ticket_from_ac.py,
+  Then the WARNING message identifies both the source AC id and the exact
+    unresolved component value,
+  And the unresolved value is passed through to the generated components LIST
+    verbatim — it is neither silently dropped nor replaced by a fabricated or
+    guessed graph id — so the downstream Component-vocab CI check surfaces it
+    visibly instead of the generator masking it,
+  And the WARNING is emitted at most once per distinct unresolved value even when
+    that value appears more than once in the AC's components.
+depends_on: [TKT-500f-17]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-17
+  contract: "The unresolved-component warn path in _build_components_list (generate_ticket_from_ac.py) whose validity is checked against docs/components.json; this edge case bounds it so the WARNING names the source AC id and exact value, the value is passed through verbatim (never dropped or fabricated), and the WARNING fires at most once per distinct unresolved value."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The WARNING for an unresolved component value must name both the source AC id and the exact unresolved value."
+    - "The unresolved value must be passed through to the emitted components LIST verbatim so the downstream Component-vocab CI check surfaces it — never silently dropped, never replaced by a guessed/fabricated graph id."
+    - "De-duplicate the WARNING: emit at most once per distinct unresolved value even when the value repeats in the AC's components."
+test_spec:
+  - name: test_warning_names_source_ac_id_and_unresolved_value
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The WARNING for an unresolvable component names both the source AC id and the exact unresolved value string."
+  - name: test_unresolved_value_passed_through_verbatim_not_dropped_or_fabricated
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The unresolved value appears in the emitted components LIST verbatim; it is neither dropped nor replaced by a fabricated graph id."
+  - name: test_warning_emitted_at_most_once_per_distinct_value
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "When the same unresolvable value appears multiple times, the WARNING is emitted at most once for that distinct value."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

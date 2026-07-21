@@ -72,8 +72,9 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-07-20'
+- reason: "added edge-case child TKT-500f-14-ii (recognised-source-extension set excludes .html/.css/.sh, includes .go/.rs/.mjs), from code-review of the merged generator, 2026-07-21"
 superseded_by: null
-covered_by: [TKT-500f-14-i, unit_tests/ac_store/test_tkt_500f_14.py]
+covered_by: [TKT-500f-14-i, TKT-500f-14-ii, unit_tests/ac_store/test_tkt_500f_14.py]
 implemented_by:
 - tickets/TICKET-20260720-TKT-500f-14.md
 - scripts/ac_store/generate_ticket_from_ac.py
