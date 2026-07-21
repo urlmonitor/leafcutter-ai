@@ -502,3 +502,56 @@ class TestPreflightArgNormalizationFIN100g2i:
             "a TypeError. Guard the trim behind a typeof-string check so a non-string "
             "target falls back to CWD detection (FIN-100g-2-i / M-1)."
         )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-3: unresolvable target -> single actionable error naming the target,
+# the expected argument forms, and the candidate worktrees.
+# ---------------------------------------------------------------------------
+
+class TestUnresolvableTargetErrorFIN100g3:
+    """FIN-100g-3: when a supplied target resolves to no registered worktree, the
+    pre-flight emits ONE actionable error naming (a) the target, (b) the expected
+    argument forms, and (c) the candidate worktrees + branches — more specific than
+    the generic FIN-100g-1 branch-named error.
+    """
+
+    def test_unresolvable_target_error_names_target(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        assert "No worktree found matching target '${epicArg}'" in preflight, (
+            "The no-matching-worktree error must name the unresolved target "
+            "(interpolate ${epicArg})."
+        )
+
+    def test_unresolvable_target_error_lists_expected_forms(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        assert "bare branch-name string" in preflight, (
+            "The unresolved-target error must name the bare-string argument form."
+        )
+        assert "target/target_branch key" in preflight, (
+            "The unresolved-target error must name the object {target/target_branch} form."
+        )
+
+    def test_unresolvable_target_error_lists_candidate_worktrees(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        assert "git worktree list --porcelain" in preflight, (
+            "The unresolved-target error must source candidates from "
+            "`git worktree list --porcelain`."
+        )
+        assert "andidate worktree" in preflight, (
+            "The unresolved-target error must list the candidate worktrees "
+            "(and their checked-out branches)."
+        )
+
+    def test_unresolvable_target_error_distinct_from_generic(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        # Distinct from the generic FIN-100g-1 error: the FIN-100g-3 message adds
+        # BOTH the expected-forms guidance AND the candidate list.
+        assert "target/target_branch key" in preflight and "andidate worktree" in preflight, (
+            "The unresolved-target error must be more specific than the generic "
+            "branch-named error — it must add expected-forms guidance and a candidate list."
+        )
