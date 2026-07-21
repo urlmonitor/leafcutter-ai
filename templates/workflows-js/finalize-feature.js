@@ -68,11 +68,18 @@ const GATE_SCHEMA = {
 }
 
 // ---------------------------------------------------------------------------
-// Narration helper — AC BO-1000a-1
+// Narration helper — AC BO-1000a-1, AC BO-1000a-1-i
 //
 // Emits a start-of-step progress line on the workflow's narration channel
-// (via log()) at the entry of each numbered step, BEFORE the step's first
-// agent() dispatch.
+// (via log()) at the entry of each numbered step, BEFORE any agent() dispatch
+// in that step.
+//
+// AC BO-1000a-1-i (error-path ordering guarantee): narrate() is always called
+// BEFORE the step's first agent() dispatch, so even when a sub-agent returns
+// an error or a malformed result the start-of-step line is already present in
+// the progress stream. The in-flight step at the moment of failure is therefore
+// identifiable from the progress output alone — the error branch need not (and
+// must not) emit its own separate 'Step X of N' diagnostic line.
 //
 // The 'progressText' argument carries the "Step X of N" label (AC BO-1000a-2):
 // N MUST equal STEP_COUNT. Use double-quoted strings so N appears as a
@@ -84,11 +91,17 @@ const GATE_SCHEMA = {
 /**
  * Emit a start-of-step progress line on the workflow's narration channel.
  *
- * Invoke at the entry of each numbered step, before the step's first agent()
- * dispatch (AC BO-1000a-1). Pass progressText as a double-quoted string with
- * N equal to STEP_COUNT (AC BO-1000a-2), e.g. "Step 0 of 9". Double-quoted
- * strings satisfy BO-1000a-1 static-text detection while not triggering the
- * single-quoted literal check in BO-1000a-2.
+ * Invoke at the entry of each numbered step, before ANY agent() dispatch in
+ * that step (AC BO-1000a-1, AC BO-1000a-1-i). This guarantees the start-of-step
+ * line is already in the progress stream before any sub-agent can error or
+ * return a malformed result, so the in-flight step is always identifiable from
+ * the progress output alone — step identification does not depend on the error
+ * branch emitting its own diagnostic line (AC BO-1000a-1-i).
+ *
+ * Pass progressText as a double-quoted string with N equal to STEP_COUNT
+ * (AC BO-1000a-2), e.g. "Step 0 of 9". Double-quoted strings satisfy
+ * BO-1000a-1 static-text detection while not triggering the single-quoted
+ * literal check in BO-1000a-2.
  *
  * @param {string} progressText - Position label, e.g. "Step 0 of 9".
  *   N must always equal STEP_COUNT; update both together when the step
