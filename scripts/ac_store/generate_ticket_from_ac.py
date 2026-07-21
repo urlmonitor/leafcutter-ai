@@ -1029,6 +1029,27 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     ])
 
 
+def _as_contract_entries(value: object) -> list[dict]:
+    """Normalize a delivers_to / expects_from field to a list of dict entries.
+
+    The field may be a single mapping (legacy dict form, e.g. GE-116a-1) or a
+    list of mappings (the BA/IT-PO v3 form, e.g. FIN-100a-4 / FIN-100c-4). Both
+    are valid per the AC schema, so the ticket generator must accept either.
+    Non-mapping list elements are skipped defensively.
+
+    Args:
+        value: The raw ``delivers_to`` or ``expects_from`` value from an AC.
+
+    Returns:
+        A list of mapping entries (possibly empty).
+    """
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, list):
+        return [entry for entry in value if isinstance(entry, dict)]
+    return []
+
+
 def _build_agent_contracts_section(ac: AcRecord) -> str:
     """Build the ## Agent Contracts section from delivers_to and expects_from.
 
@@ -1053,22 +1074,24 @@ def _build_agent_contracts_section(ac: AcRecord) -> str:
     if delivers_to is not None:
         lines.append("### Delivers To")
         lines.append("")
-        agent_name = delivers_to.get("agent", "")
-        contract_text = delivers_to.get("contract", "")
-        if agent_name:
-            lines.append(f"- **Agent:** {agent_name}")
-        if contract_text:
-            lines.append(f"- **Contract:** {contract_text}")
+        for entry in _as_contract_entries(delivers_to):
+            agent_name = entry.get("agent", "")
+            contract_text = entry.get("contract", "")
+            if agent_name:
+                lines.append(f"- **Agent:** {agent_name}")
+            if contract_text:
+                lines.append(f"- **Contract:** {contract_text}")
         lines.append("")
     if expects_from is not None:
         lines.append("### Expects From")
         lines.append("")
-        upstream_ac_id = expects_from.get("ac_id", "")
-        contract_text = expects_from.get("contract", "")
-        if upstream_ac_id:
-            lines.append(f"- **AC:** {upstream_ac_id}")
-        if contract_text:
-            lines.append(f"- **Contract:** {contract_text}")
+        for entry in _as_contract_entries(expects_from):
+            upstream_ac_id = entry.get("ac_id", "")
+            contract_text = entry.get("contract", "")
+            if upstream_ac_id:
+                lines.append(f"- **AC:** {upstream_ac_id}")
+            if contract_text:
+                lines.append(f"- **Contract:** {contract_text}")
         lines.append("")
     return "\n".join(lines)
 
