@@ -2937,18 +2937,22 @@ class TestAgentContractsListOrDict:
     """
 
     def test_as_contract_entries_dict_wrapped_in_list(self) -> None:
+        # covers: ACD-400b-5
         assert _as_contract_entries({"agent": "python-coder", "contract": "c"}) == [
             {"agent": "python-coder", "contract": "c"}
         ]
 
     def test_as_contract_entries_list_skips_non_dicts(self) -> None:
+        # covers: ACD-400b-5-i
         value = [{"agent": "a"}, "junk", {"agent": "b"}]
         assert _as_contract_entries(value) == [{"agent": "a"}, {"agent": "b"}]
 
     def test_as_contract_entries_none_returns_empty(self) -> None:
+        # covers: ACD-400b-5-i
         assert _as_contract_entries(None) == []
 
     def test_list_form_delivers_to_does_not_crash_and_renders(self) -> None:
+        # covers: ACD-400b-5
         ac = {"delivers_to": [{"agent": "python-coder", "contract": "does X"}]}
         section = _build_agent_contracts_section(ac)
         assert "### Delivers To" in section
@@ -2956,6 +2960,7 @@ class TestAgentContractsListOrDict:
         assert "- **Contract:** does X" in section
 
     def test_list_form_multiple_entries_all_rendered(self) -> None:
+        # covers: ACD-400b-5-i
         ac = {
             "delivers_to": [
                 {"agent": "python-coder", "contract": "c1"},
@@ -2968,12 +2973,14 @@ class TestAgentContractsListOrDict:
         assert "c1" in section and "c2" in section
 
     def test_dict_form_delivers_to_still_supported(self) -> None:
+        # covers: ACD-400b-5
         ac = {"delivers_to": {"agent": "python-coder", "contract": "legacy"}}
         section = _build_agent_contracts_section(ac)
         assert "- **Agent:** python-coder" in section
         assert "- **Contract:** legacy" in section
 
     def test_list_form_expects_from_renders_ac_id(self) -> None:
+        # covers: ACD-400b-5-i
         ac = {"expects_from": [{"ac_id": "FIN-100g-1", "contract": "upstream"}]}
         section = _build_agent_contracts_section(ac)
         assert "### Expects From" in section
