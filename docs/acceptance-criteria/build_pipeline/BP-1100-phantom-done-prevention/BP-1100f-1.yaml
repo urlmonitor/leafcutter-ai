@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: contract_boundary
@@ -31,15 +31,33 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml"
     relationship: relates
     status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-4.yaml"
+    relationship: relates
+    status: exists
   - path: "docs/architecture/agent_delivery_workflows.md"
     relationship: describes
     status: exists
-assigned_agent: null
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Implementation surface is the pr-reviewer agent template prose (templates/agents/pr-reviewer.md): add a dispatch-review lens, not code."
+  - "The lens flags any agent()-style dispatch whose first argument is not a non-empty instruction string (a bare object, a null/empty value, or an omitted first argument) as carrying no actionable instruction; a first argument that is a non-empty instruction string describing the change passes unflagged."
+  - "State the check in PORTABLE terms per ADR-001 — the rule must live in the packaged template and reach any consumer that runs build.py; it must NOT depend on the leafcutter repo's own root CLAUDE.md."
+  - "Maintain SPEC PARITY with the harness-level predicate in BP-1100f-4 (the same 'instruction-less first argument' definition). The .md lens and the .py harness cannot share code, so mirror the single normative definition and note the drift risk rather than implying a code import bridges them."
+  - "Deployed/template parity per ADR-001: edit the packaged template source and verify via the build.py round-trip; do not edit only the deployed copy."
+test_required: false
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "Assigned llm-expert (pr-reviewer.md dispatch-review lens prose); added it_requirements, estimated_complexity, doc_links (ADR-001 + relates BP-1100f-4). test_required:false — deliverable is agent-template review-lens prose, not a unit-testable code surface (mechanically backstopped by the BP-1100f-4 harness test). readiness left draft for the final user gate."
 superseded_by: null
 covered_by:
   - BP-1100f-1-i

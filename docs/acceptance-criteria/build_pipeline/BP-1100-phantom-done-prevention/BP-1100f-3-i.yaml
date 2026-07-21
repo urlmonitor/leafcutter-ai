@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: contract_boundary
@@ -25,12 +25,25 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-3.yaml"
     relationship: parent
     status: exists
-assigned_agent: null
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Extends BP-1100f-3 (templates/agents/it-po.md): the check is surface-partitioned, not all-or-nothing — for a mixed-surface work item, flag only the portion the stated intent cannot handle (the JavaScript files) and do not flag the portion it can (the Python files)."
+  - "No false pass (whole item accepted) and no false full-reject (Python portion wrongly flagged)."
+  - "Portable per ADR-001."
+test_required: false
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "L3 edge for BP-1100f-3; same llm-expert prose surface (it-po.md). test_required:false (prose judgment lens)."
 superseded_by: null
 covered_by: []
 implemented_by: []

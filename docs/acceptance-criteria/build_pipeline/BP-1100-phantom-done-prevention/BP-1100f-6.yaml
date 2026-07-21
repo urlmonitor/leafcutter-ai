@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -38,12 +38,26 @@ doc_links:
   - path: "docs/architecture/agent_delivery_workflows.md"
     relationship: describes
     status: exists
+  - path: "docs/architecture/components/build-orchestration.md"
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid sequenceDiagram embedded in the build pipeline's phantom-done-prevention architecture documentation (extend docs/architecture/components/build-orchestration.md, or a linked phantom-done-prevention section, rather than creating an orphan diagram file)."
+  - "The diagram must place each of the five gates on the timeline relative to dispatch and to the done state: intent-vs-surface consistency (BP-1100f-3) pre-dispatch; instruction-carrying dispatch review (BP-1100f-1) pre-dispatch; harness instruction-less-dispatch violation (BP-1100f-4) at test time; real-artifact test-evidence requirement (BP-1100f-2) at coverage-sufficiency; automatic side-effect smoke check (BP-1100f-5) in the verification phase before done."
+  - "The diagram must visibly distinguish proof by real effect/intent from proof by dispatch topology (the BO-2300 failure mode it prevents)."
+  - "Portable framing per ADR-001 — describe the packaged behavior, not the leafcutter repo's own root CLAUDE.md."
+test_required: false
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "Docs AC already correctly assigned architecture-diagram-author (documentation_triggers: [sequence-diagram]). Light enrichment only: added estimated_complexity, it_requirements (target doc + Mermaid sequenceDiagram + gate placement), a build-orchestration.md doc_link, and test_required:false (docs, not a code AC). S7b documentation gate satisfied by this AC. readiness left draft."
 superseded_by: null
 covered_by: []
 implemented_by: []

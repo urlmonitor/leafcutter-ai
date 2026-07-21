@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: contract_boundary
@@ -27,12 +27,25 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-1.yaml"
     relationship: parent
     status: exists
-assigned_agent: null
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Extends the BP-1100f-1 lens in templates/agents/pr-reviewer.md: a first argument that is an empty string or a whitespace-only string is treated as no instruction, the same outcome as a bare data payload."
+  - "A non-empty, non-whitespace instruction string is not flagged on this ground — the guard must not become trivially satisfied by any string."
+  - "Maintain spec-parity with BP-1100f-4's empty/whitespace handling and keep the rule portable per ADR-001."
+test_required: false
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "L3 edge for BP-1100f-1; same llm-expert prose surface (pr-reviewer.md). Added it_requirements, complexity, ADR-001 doc_link. test_required:false (prose lens)."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: contract_boundary
@@ -26,12 +26,43 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-5.yaml"
     relationship: parent
     status: exists
-assigned_agent: null
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Scope-narrowing for the smoke-routing selector — items with no declared durable side-effect are exempt from mandatory smoke routing."
+  reference_file_path: "config/agent_registry.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py"
+  constraints:
+    - "A work item that declares no durable observable side-effect (e.g. a documentation-only change) is not mandated through the observable-side-effect smoke check."
+    - "The exemption is data-driven (the absence of a declared side-effect), never keyed to a hard-coded item name."
+    - "This scope-narrowing must not weaken the mandatory routing for items that DO declare a durable side-effect."
+    - "Portable per ADR-001; verify via the build.py round-trip."
+test_spec:
+  - name: test_docs_only_item_not_force_routed_to_smoker
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Generate a ticket from a docs-only AC that declares no durable side-effect; assert user-surface-smoker is NOT forced into the agents map, while a side-effect-declaring AC in the same run still routes to it (proving the narrowing does not weaken the mandatory case)."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BP-1100f-5
+  contract: "The data-driven durable-side-effect selector that BP-1100f-5 introduces for the user-surface-smoker routing; this AC narrows that same selector so a no-declared-side-effect item is exempt."
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "L3 edge for BP-1100f-5; same python-coder routing surface. Structured it_requirements (BO-2000d) + real-artifact test_spec. Added expects_from BP-1100f-5 (the selector it narrows). readiness left draft."
 superseded_by: null
 covered_by: []
 implemented_by: []

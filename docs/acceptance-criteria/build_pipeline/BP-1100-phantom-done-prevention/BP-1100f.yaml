@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 # 6 L2 children = 5 behavioral guards + 1 mandatory sequence-diagram doc AC
 # (BP-1100f-6, required by documentation_triggers: [sequence-diagram]), not an
 # extra behavior. Waiver approved during /plan-feature (BrainCandy, 2026-07-21).
