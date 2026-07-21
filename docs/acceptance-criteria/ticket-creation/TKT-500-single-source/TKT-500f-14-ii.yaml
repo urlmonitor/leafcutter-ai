@@ -8,7 +8,7 @@ component: ticket-creation
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-14.yaml"
 criteria: |
