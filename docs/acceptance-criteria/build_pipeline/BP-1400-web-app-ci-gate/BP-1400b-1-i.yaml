@@ -1,0 +1,68 @@
+id: BP-1400b-1-i
+components:
+  - build_pipeline
+title: "A web-app file containing an unescaped-entity style error blocks the pull request from merging"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes a web-app file (under leafcutter-web/) and
+    introduces an unescaped-entity style error — an unescaped character such as a
+    raw apostrophe rendered directly in markup, the react/no-unescaped-entities
+    class of violation that previously reached users while every check passed,
+  When the web-app style check runs on that pull request,
+  Then the check reports a failing result that identifies the unescaped-entity
+    violation,
+  And the pull request is reported as not mergeable while that check is failing.
+depends_on:
+  - BP-1400b-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Exercises the FAILING path of the blocking web-app style job (BP-1400b-1): a fixture web-app file under leafcutter-web/ containing a raw apostrophe / unescaped entity in JSX markup (the react/no-unescaped-entities rule) must make `next lint` report a failing result that names the violation, so the check concludes red and the PR is marked not-mergeable."
+  - "react/no-unescaped-entities must actually be an ENABLED rule in the leafcutter-web/ ESLint config (eslint-config-next enables it by default) — if a project override has disabled it, the gate would not catch the real incident this AC exists to prevent; confirm it is active."
+  - "The deliberately-violating change must be transient/scoped to the verification (a throwaway PR or a temporary fixture removed before merge) so it does not become a standing lint failure — this AC verifies the GATE blocks, it does not ship a broken web app."
+  - "Not-mergeable enforcement assumes the required-status-check wiring in BP-1400a-4; the blocking OUTCOME of THIS AC is the style check reporting failure."
+test_spec:
+  - name: test_lint_catches_unescaped_entity
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: behavioral
+    description: "A leafcutter-web/ fixture containing a raw apostrophe in JSX (react/no-unescaped-entities) causes next lint to exit non-zero and name the violation (style check reports failing); a clean fixture lints green."
+delivers_to: null
+expects_from:
+  ac_id: BP-1400b-1
+  contract: "The blocking web-app style check whose failing path this regression case exercises"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (exercises the ci.yml web-app style job). Added it_requirements (failing-path via a react/no-unescaped-entities fixture caught by next lint; confirm the rule is enabled in eslint-config-next and not overridden off; transient/fixture-scoped so it is not a standing red; merge-block via BP-1400a-4), the planned web-app-ci-gate.md doc_link, and a behavioral test_spec whose fixture is a web file with an unescaped entity the lint job must catch (red). Criteria, expects_from, readiness, and components unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Real-regression anchor: the react/no-unescaped-entities class of error is named
+  here (per the authoring brief) because it is the concrete incident this gate
+  exists to prevent — an unescaped entity that shipped green because no web-app
+  style check ran. The deliberately-violating change is transient/scoped to the
+  verification so it does not become a standing red; this AC verifies the gate
+  blocks, it does not ship a broken web app.
+change_target: pipeline
+risk_surface: safety

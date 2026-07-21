@@ -1,0 +1,34 @@
+id: BP-1400c
+components:
+  - build_pipeline
+title: "A web-app page that won't load is caught before it reaches users"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every page of the web app is automatically loaded and verified to render without error.
+
+  When a pull request changes the web app, each of its pages is loaded
+  automatically and checked to render without error, so a broken page or route is
+  caught before the change merges — not after it ships, by a person who happens to
+  open it.
+depends_on:
+  - BP-1400
+doc_links: []
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1400c-1
+  - BP-1400c-2
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

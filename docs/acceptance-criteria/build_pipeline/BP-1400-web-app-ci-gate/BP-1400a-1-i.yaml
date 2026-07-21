@@ -1,0 +1,66 @@
+id: BP-1400a-1-i
+components:
+  - build_pipeline
+title: "A web-app change that introduces a TypeScript type error is blocked from merging"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes a file under the web-app directory
+    (leafcutter-web/) and introduces a TypeScript type error — for example,
+    assigning a value of the wrong type to a typed variable so the type-check no
+    longer succeeds,
+  When the web-app build/type-check check runs on that pull request,
+  Then the check reports a failing result,
+  And the pull request is reported as not mergeable while that check is failing.
+depends_on:
+  - BP-1400a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Exercises the FAILING path of the blocking web-app build/type-check job added in BP-1400a-1: a fixture web-app file (or a transient PR edit) under leafcutter-web/ that introduces a TypeScript type error must drive `next build` (which runs tsc) to a non-zero exit, so the check concludes red and the PR is marked not-mergeable."
+  - "The deliberately type-erroring change must be transient/scoped to the verification (a throwaway PR or a temporary file/edit removed before merge, or an isolated fixture the test compiles in isolation) so it does not become a standing build break — this AC verifies the GATE blocks, it does not ship a broken web app."
+  - "Not-mergeable enforcement here assumes the required-status-check wiring covered by BP-1400a-4; the blocking OUTCOME of THIS AC is the check reporting failure, with merge-blocking provided by branch protection."
+test_spec:
+  - name: test_web_typecheck_fails_on_type_error
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: behavioral
+    description: "A leafcutter-web/ fixture that assigns a wrong-typed value causes next build/tsc to exit non-zero (the web-app build/type-check check reports failing); a clean baseline compiles green."
+delivers_to: null
+expects_from:
+  ac_id: BP-1400a-1
+  contract: "The blocking web-app build/type-check check whose failing path this case exercises"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (exercises the ci.yml web-app build/type-check job python-coder builds in BP-1400a-1). Added it_requirements (failing-path acceptance scenario via a TS type error caught by next build/tsc; transient/fixture-scoped so it is not a standing red; merge-block provided by BP-1400a-4 wiring), the planned web-app-ci-gate.md doc_link, and a behavioral test_spec. Criteria, expects_from, readiness, and components unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Negative acceptance scenario for the web-app build/type-check gate. The
+  deliberately type-erroring change is transient/scoped to the verification (a
+  throwaway pull request or a temporary edit removed before merge) so it does not
+  become a standing red — this AC verifies the GATE blocks, it does not ship a
+  broken web app. Merge-blocking is provided by the required-status-check wiring
+  covered by BP-1400a-4.
+change_target: pipeline
+risk_surface: safety
