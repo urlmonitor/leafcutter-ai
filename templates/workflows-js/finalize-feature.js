@@ -775,6 +775,8 @@ if (mergeStatus === "conflict") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
 
@@ -1070,6 +1072,8 @@ if (testPassed) {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
   // blocks_finalization is false: all failures are pre-existing.
@@ -1400,6 +1404,8 @@ let syncCheckInfo;
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
@@ -1426,6 +1432,8 @@ if (!KNOWN_SYNC_STATUSES.has(syncStatus)) {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "verify_and_push",
   };
 }
@@ -1447,6 +1455,8 @@ if (syncStatus === "fetch_failed") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "retry_after_fetch",
   };
 }
@@ -1466,6 +1476,8 @@ if (syncStatus === "push_failed") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "push_local_commits",
   };
 }
@@ -1491,6 +1503,8 @@ if (syncStatus === "diverged") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "resolve_divergence",
   };
 }
@@ -1516,6 +1530,8 @@ if (syncStatus === "pushed") {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
@@ -1540,6 +1556,8 @@ if (syncStatus === "pushed") {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
@@ -1582,6 +1600,8 @@ if (triageReport !== null && triageReport.blocks_finalization) {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
 
@@ -1631,6 +1651,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
 
@@ -1839,6 +1861,8 @@ if (!worktreeProbe.exists) {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       tickets_closed: ticketsClosed,
     };
   }
