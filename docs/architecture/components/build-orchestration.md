@@ -8,6 +8,8 @@ created: 2026-07-10
 last_updated: 2026-07-21
 components:
   - build_orchestration
+children:
+  - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
 ---
 
 # Build Orchestration

@@ -12,7 +12,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-21 10:59 UTC
+> Generated: 2026-07-21 17:43 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -103,6 +103,8 @@ task, then pull only those files.
 | approval gate | [docs/how-to/approval-gate.md](docs/how-to/approval-gate.md) | Task-oriented guide: read the readiness report, choose a gate option (yes / review-all / cancel), and manage the IT PO review-all path. |
 | authoring product truth artifacts | [docs/how-to/authoring-product-truth-artifacts.md](docs/how-to/authoring-product-truth-artifacts.md) | Step-by-step guide for authoring product-truth artifacts by hand, including the mandatory search-index.json then add-vs-create protocol that keeps exactly one canonical dataset per entity per component. |
 | build ac unified | [docs/how-to/build-ac-unified.md](docs/how-to/build-ac-unified.md) | Task-oriented guide: /build-ac auto-detects leaf vs goal mode — leaf ACs generate a single ticket, goal ACs generate a full EPIC folder. |
+| choose build path | [docs/how-to/choose-build-path.md](docs/how-to/choose-build-path.md) | Decide whether to invoke the fast-lane or heavy-pipeline build path for a ticket based on scope, attended mode, and defect cost. |
+| compare build lanes | [docs/how-to/compare-build-lanes.md](docs/how-to/compare-build-lanes.md) | Step-by-step guide to generating and interpreting the fast-lane vs heavy-pipeline cost and time comparison report from agent telemetry data. |
 | configure workflow allowlist | [docs/how-to/configure-workflow-allowlist.md](docs/how-to/configure-workflow-allowlist.md) | How to configure the workflow shell-command allowlist |
 | creating a claude code hook | [docs/how-to/creating-a-claude-code-hook.md](docs/how-to/creating-a-claude-code-hook.md) | How to create a Claude Code hook |
 | creating a skill | [docs/how-to/creating-a-skill.md](docs/how-to/creating-a-skill.md) | How to create a skill |
@@ -110,8 +112,10 @@ task, then pull only those files.
 | declare a knowledge surface | [docs/how-to/declare-a-knowledge-surface.md](docs/how-to/declare-a-knowledge-surface.md) | Step-by-step guide for registering a new source of knowledge in config/paths.json so it participates in the cross-surface knowledge map. |
 | declare component membership | [docs/how-to/declare-component-membership.md](docs/how-to/declare-component-membership.md) | Step-by-step guide for adding a components list to a knowledge item so it joins the cross-surface component view, and for querying a component back to its criteria, source files, and tests. |
 | deprecating or removing artifacts | [docs/how-to/deprecating-or-removing-artifacts.md](docs/how-to/deprecating-or-removing-artifacts.md) | Step-by-step guide for safely deprecating or deleting agents, skills, hooks, and scripts from the leafcutter package without breaking consumer builds. |
+| done proof enforcement | [docs/how-to/done-proof-enforcement.md](docs/how-to/done-proof-enforcement.md) | Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work. |
 | drain backlog with build backlog | [docs/how-to/drain-backlog-with-build-backlog.md](docs/how-to/drain-backlog-with-build-backlog.md) | How to drain the backlog automatically with /build-backlog |
 | drive epic manually | [docs/how-to/drive-epic-manually.md](docs/how-to/drive-epic-manually.md) | How to drive an epic manually when epic-supervisor is unavailable |
+| fast lane build | [docs/how-to/fast-lane-build.md](docs/how-to/fast-lane-build.md) | Run the lean two-agent batch build loop that selects a cohesive AC batch, writes failing test stubs, gates on red baseline, implements the batch, and gates on green coverage before staging a commit. |
 | finalize feature | [docs/how-to/finalize-feature.md](docs/how-to/finalize-feature.md) | Step-by-step guide for running /finalize-feature to merge a feature branch, |
 | goal to epic | [docs/how-to/goal-to-epic.md](docs/how-to/goal-to-epic.md) | Task-oriented guide: invoke /build-ac with a goal-level AC ID to generate a full EPIC folder of tickets in one command. |
 | inject project knowledge into agents | [docs/how-to/inject-project-knowledge-into-agents.md](docs/how-to/inject-project-knowledge-into-agents.md) | How to inject project knowledge into a portable agent |
@@ -119,6 +123,8 @@ task, then pull only those files.
 | managing pre commit hooks | [docs/how-to/managing-pre-commit-hooks.md](docs/how-to/managing-pre-commit-hooks.md) | Step-by-step guide for enabling, disabling, configuring, and opt-ing in to pre-commit hooks in the leafcutter commit_guardian system. |
 | adopt consolidated output root | [docs/how-to/output-layout/adopt-consolidated-output-root.md](docs/how-to/output-layout/adopt-consolidated-output-root.md) | How to adopt the consolidated output root (.leafcutter/) |
 | product truth schema reference | [docs/how-to/product-truth-schema-reference.md](docs/how-to/product-truth-schema-reference.md) | Field-by-field reference for the four product-truth schemas — Flow, Mock Data, Mockup, and Classifier eval — including required fields, enums, id patterns, and which fields are authored vs derived. |
+| prove ac done | [docs/how-to/prove-ac-done.md](docs/how-to/prove-ac-done.md) | Tag a test with # covers:<AC-ID>, understand how the done-proof gate classifies each outcome, and confirm the mechanical gate—not human judgment—is the arbiter of done. |
+| real artifact fixtures | [docs/how-to/real-artifact-fixtures.md](docs/how-to/real-artifact-fixtures.md) | How to produce test fixtures from the real serializer, round-trip them through an on-disk artifact, and add an independent behavioral check — and why hand-typed fixtures hide the bugs they are meant to catch. |
 | ticket creation workflow | [docs/how-to/ticket-creation-workflow.md](docs/how-to/ticket-creation-workflow.md) | Guide to the canonical ticket-creation workflow (/plan-feature then /build-ac) that replaced the retired create-ticket.js, with a migration note. |
 | upgrade frontend coder unified agent | [docs/how-to/upgrade-frontend-coder-unified-agent.md](docs/how-to/upgrade-frontend-coder-unified-agent.md) | Step-by-step guide for adopters migrating from the separate frontend-coder and frontend-design split to the unified frontend-coder agent — covers what build.py does automatically, verification steps, and rollback instructions. |
 | using frontend coder with design integration | [docs/how-to/using-frontend-coder-with-design-integration.md](docs/how-to/using-frontend-coder-with-design-integration.md) | How to use frontend-coder with design integration |
@@ -133,8 +139,11 @@ task, then pull only those files.
 | ac schema | [docs/reference/ac-schema.md](docs/reference/ac-schema.md) | Field-by-field reference for AC YAML files, the hierarchical ID format and parent derivation algorithm, status lifecycle, and pre-commit hooks that enforce the AC store at commit time. |
 | agent teams constraints | [docs/reference/agent-teams-constraints.md](docs/reference/agent-teams-constraints.md) | Reference: Claude Code Agent Teams Constraints |
 | agent template frontmatter | [docs/reference/agent-template-frontmatter.md](docs/reference/agent-template-frontmatter.md) | Reference: Agent Template Frontmatter Fields |
+| build telemetry | [docs/reference/build-telemetry.md](docs/reference/build-telemetry.md) | Lookup reference for the build telemetry JSONL record schema, the lane comparison aggregate fields, the emitter API, and the fail-loud sink behavior. |
 | claude code hooks | [docs/reference/claude-code-hooks.md](docs/reference/claude-code-hooks.md) | Reference guide for Claude Code PreToolUse and PostToolUse hooks — hook types, registration format, exit-code contract, and the fail-open convention. |
+| fast lane prompt caching | [docs/reference/fast-lane-prompt-caching.md](docs/reference/fast-lane-prompt-caching.md) | Parameter table, ordering contract, breakpoint marker, and cacheable-prefix guarantee for assemble_context_bundle in scripts/injection_builders.py. |
 | feedback concurrency | [docs/reference/feedback-concurrency.md](docs/reference/feedback-concurrency.md) | Reference: Feedback Client Concurrency Limitation |
+| fixture policy | [docs/reference/fixture-policy.md](docs/reference/fixture-policy.md) | Lookup reference for the fixture authenticity rules: which data kinds must use the real serializer, what fixture forms are rejected, and the round-trip requirement for parser and validator tests. |
 | frontend coder capabilities | [docs/reference/frontend-coder-capabilities.md](docs/reference/frontend-coder-capabilities.md) | frontend-coder Unified Agent — Preserved Capabilities Reference |
 | skill frontmatter | [docs/reference/skill-frontmatter.md](docs/reference/skill-frontmatter.md) | Reference: SKILL.md Frontmatter Fields |
 | skills config fields | [docs/reference/skills-config-fields.md](docs/reference/skills-config-fields.md) | Overview of Reference: skills_config.json Fields. |

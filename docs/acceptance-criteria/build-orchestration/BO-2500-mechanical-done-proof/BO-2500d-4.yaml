@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -36,6 +36,7 @@ created: 2026-07-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md"
 change_target: docs
 risk_surface: internal
