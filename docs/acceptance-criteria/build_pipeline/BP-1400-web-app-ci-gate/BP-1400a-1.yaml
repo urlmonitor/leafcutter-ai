@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the continuous-integration configuration for the repository,
@@ -31,15 +31,34 @@ doc_links:
   - path: .github/workflows/ci.yml
     relationship: implements
     status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Add a NEW web-app build/type-check job to the existing .github/workflows/ci.yml alongside the current Python jobs (lint, component-vocab, test, typecheck). The job MUST be blocking: do NOT set continue-on-error — a build or type error fails the job and the check (contrast the existing informational typecheck job)."
+  - "Scope the job to web-app changes via a `paths:` filter on `leafcutter-web/**` (or an equivalent changed-files guard) so it runs only when a PR touches the web app — the trigger contract owned by BP-1400a-2. Match ci.yml conventions: actions/checkout@v4, runs-on ubuntu-latest, triggered on pull_request targeting main (and push to main)."
+  - "The job MUST use Node via actions/setup-node (with npm caching keyed on leafcutter-web/package-lock.json) and run `npm ci` then `next build` in the leafcutter-web/ working directory. `next build` runs the TypeScript compiler (tsc), so a type error fails the build and therefore the check — no separate tsc invocation is required, though one may be added."
+  - "Pin the check NAME deterministically (a stable `name:` on the job). This exact name is a cross-AC contract consumed by the merge-gate/required-status-checks wiring in BP-1400a-4 — if the name changes, branch protection silently stops requiring it (mirrors the BP-1200b-1 -> BP-1200c-1 name contract)."
+  - "Errors in the npm ci / build prepare step must fail the job loudly (non-zero exit) rather than skipping to a misleading green; the blocking guarantee must not be defeatable by a silently-skipped preparation step."
+  - "PREREQUISITE: `next build` must already succeed on leafcutter-web/ from a clean `npm ci` (no pre-existing build break) before this check is made blocking, or every web-app PR is blocked. Verify a clean baseline first (analogous to the BP-1200a-1 fresh-clone-green prerequisite for the Python test gate)."
+test_spec:
+  - name: test_web_build_typecheck_job_present_and_blocking
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: unit
+    description: "Parse .github/workflows/ci.yml and assert a web-app build/type-check job exists, is path-filtered on leafcutter-web/**, runs npm ci + next build, and does NOT set continue-on-error (blocking)."
 delivers_to:
   ac_id: BP-1400a-4
   contract: "A named, blocking web-app build/type-check result reported on the pull request that the merge gate requires"
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed assigned_agent python-coder (CI workflow YAML is python-coder's build/config surface, per the BP-1200b precedent). Added it_requirements (NEW blocking web-app job in ci.yml with a leafcutter-web/** paths filter; actions/setup-node + npm ci + next build where next build runs tsc; stable check-name as a cross-AC contract with BP-1400a-4; fail-loud prepare step; clean-build prerequisite). Added the planned web-app-ci-gate.md doc_link and a ci.yml-parse test_spec. Criteria, contracts, readiness, and components unchanged."
+    by: it-po
 superseded_by: null
 covered_by:
   - BP-1400a-1-i

@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a pull request that changes at least one file under the web-app directory
@@ -27,15 +27,31 @@ doc_links:
   - path: .github/workflows/ci.yml
     relationship: implements
     status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Exercises the mixed-change boundary of the leafcutter-web/** paths filter from BP-1400a-2: a changed-file set containing at least one leafcutter-web/ file AND one or more non-web-app files must still TRIGGER and REQUIRE the web-app check — the trigger predicate is 'ANY changed path matches leafcutter-web/**', not 'ALL changed paths match'."
+  - "A failing web-app check on such a mixed PR must block the merge; a web-app change must not slip through unchecked just because it is bundled with backend or docs changes."
+  - "Verify against the ACTUAL paths-filter semantics chosen in BP-1400a-2 (GitHub `paths:` matches if any changed file matches) — do not assume; a mis-specified filter that requires all-paths-in-scope would silently skip mixed PRs."
+test_spec:
+  - name: test_web_check_runs_on_mixed_change
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: behavioral
+    description: "A changed-file set mixing a leafcutter-web/ file with a non-web-app file still triggers and requires the web-app check; a failing web-app check on that mixed set blocks the merge."
 delivers_to: null
 expects_from:
   ac_id: BP-1400a-2
   contract: "The path-scoped triggering rule whose mixed-change boundary this case exercises"
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (exercises the ci.yml paths-filter behavior). Added it_requirements (ANY-not-ALL trigger predicate on the mixed-change boundary; failing web-app check blocks a mixed PR; verify against real GitHub paths: semantics), the planned web-app-ci-gate.md doc_link, and a behavioral test_spec. Criteria, expects_from, readiness, and components unchanged."
+    by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

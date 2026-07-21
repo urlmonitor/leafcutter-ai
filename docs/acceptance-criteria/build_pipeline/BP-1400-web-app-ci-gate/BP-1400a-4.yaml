@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the web-app build/type-check, style, and route-render checks defined for
@@ -32,8 +32,24 @@ doc_links:
   - path: .github/workflows/ci.yml
     relationship: implements
     status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Wire all THREE web-app check names — the build/type-check job (BP-1400a-1), the style job (BP-1400b-1), and the route-render job (BP-1400c-1) — into the main branch's required-status-checks list so a failing web-app check blocks the merge and each result is visible on the PR."
+  - "Making these checks REQUIRED is a repo-admin / branch-protection RULESET step — it is NOT achievable in .github/workflows/ci.yml alone. Mirror how the Python 'Test suite (pytest)' gate became required (BP-1200c): the current main protection is a Ruleset (`require-ci-lint`), so the required-checks change is a ruleset edit, applied as settings-as-code via the GitHub branch-protection/rulesets API with a DOCUMENTED MANUAL fallback runbook."
+  - "The three check names added to the required list MUST match the exact ci.yml job names verbatim (the stable `name:` values pinned in BP-1400a-1 / BP-1400b-1 / BP-1400c-1). A mismatched name silently fails to enforce."
+  - "Reconcile with the path-scoping in BP-1400a-2: because the web-app jobs are path-filtered, a required-status-check that never runs on a non-web-app PR must not permanently block that PR. Verify a non-web-app-only PR still merges under the chosen required-check mechanism (skipped-as-neutral, or a no-op success job on non-web changes)."
+  - "EMU/account constraint (CLAUDE.md): branch-protection/ruleset API calls require the non-EMU urlmonitor account. The settings-as-code script must run under (or document switching to) `gh auth switch --user urlmonitor`; verify with `gh auth status` before invoking the API. Note the repo main protection is a Ruleset (id 17810993), so use the Rulesets API/UI, not classic branch-protection endpoints."
+  - "The settings-as-code change must be idempotent: re-running against already-correct protection converges to the same required-checks set without duplicating or dropping the existing required checks (Lint (ruff), Component vocab style, Test suite (pytest))."
+test_spec:
+  - name: test_all_web_checks_in_required_status_checks
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: integration
+    description: "Assert the branch-protection/ruleset required-status-checks config (settings-as-code artifact) includes all three web-app check names verbatim-matching the ci.yml job names, without dropping the pre-existing required Python checks."
 delivers_to: null
 expects_from:
   - ac_id: BP-1400a-1
@@ -44,7 +60,10 @@ expects_from:
     contract: "The named, blocking web-app route-render result whose visibility and merge-gating this AC asserts"
 origin_agent: business-analyst
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (authors the settings-as-code ruleset script; a documentation-expert follow-up may own the manual-fallback runbook prose). Added it_requirements: all three web-app check names into main's required-status-checks via a RULESET edit (repo-admin step, NOT ci.yml — mirrors the BP-1200c pytest-gate promotion; main protection is the `require-ci-lint` ruleset id 17810993); exact-name parity with the a-1/b-1/c-1 job names; reconcile the path-filtered-required-check deadlock with BP-1400a-2; EMU/urlmonitor account constraint; idempotency preserving the existing required checks. Added the planned web-app-ci-gate.md doc_link and an integration test_spec. Criteria, contracts, readiness, and components unchanged."
+    by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -57,5 +76,8 @@ notes: |
   and the exact branch-protection required-status-check list (mirroring BP-1200c-1
   for the Python gate), is the it-po's technical decision at enrichment; this AC
   fixes the OUTCOME, not the wiring mechanism.
+  IT-PO note: DECIDED = settings-as-code ruleset edit (the required-checks list
+  lives in the `require-ci-lint` ruleset, not classic branch protection) with a
+  documented manual fallback; needs the non-EMU urlmonitor account.
 change_target: pipeline
 risk_surface: safety
