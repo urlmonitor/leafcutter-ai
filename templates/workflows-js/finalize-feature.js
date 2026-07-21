@@ -166,6 +166,13 @@ function outcome(progressText, description) {
 /** Total number of numbered steps in the finalize sequence (AC BO-1000a-2). */
 const STEP_COUNT = 9;
 
+// AC BO-1000a-2-i: step 3.5 is the intermediate closure step — it is
+// included in STEP_COUNT so its position is monotonic (3 < 3.5 < 4) and N
+// is unchanged for all other steps. Pre-flight aborts occur BEFORE the
+// first numbered step: no narrate() call is made in the pre-flight section
+// (phase('Pre-flight') through phase('Pre-flight 2')); pre-flight failures
+// use a distinct non-numbered return ({ status: 'error', ... }).
+
 // ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 //
