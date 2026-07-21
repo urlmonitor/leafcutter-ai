@@ -1,0 +1,105 @@
+id: FIN-100g-4
+readiness: approved
+priority: high
+components:
+  - finalize
+  - build_pipeline
+title: "Post-merge deploy layer is verified consistent (or re-deployed) before failures are triaged"
+level: L2
+component: finalize
+status: active
+parent: FIN-100g
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given Step 3 has produced the post-merge feature worktree and (per FIN-100a-4)
+  has run the project build/deploy against that worktree root before executing
+  the test suite
+  When the workflow prepares to triage the post-merge test failures
+  Then it first verifies the post-merge worktree's deployed layer is consistent —
+  every runtime artifact the tests import is present at its expected deployed
+  location under the worktree, including gitignored deployed copies that are NOT
+  git-tracked (for example the commit-guardian hook scripts deployed under
+  scripts/)
+  And if any expected deployed artifact is missing, the workflow re-runs the
+  deterministic deploy against the worktree root and re-verifies, rather than
+  proceeding to triage on a skewed layout
+  And triage (FIN-100c) runs only once the deployed layer is verified consistent
+  And a build/deploy inconsistency detected by this self-check is reported as an
+  environment/build-state condition, and is never classified as a test regression
+depends_on:
+  - FIN-100g
+  - FIN-100a-4
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js, between Step 3 (post-merge
+    test run, which per FIN-100a-4 builds/deploys before running) and the FIN-100c
+    triage dispatch. This is workflow-body logic (python-coder); the triage agent
+    stays read-only and must not re-run tests or re-deploy.
+  - PRE-TRIAGE VERIFY: before triage, verify every runtime artifact the tests
+    import is present at its expected deployed location under the post-merge
+    worktree root — INCLUDING gitignored, non-git-tracked deployed copies
+    (e.g. scripts/commit_guardian/* hook scripts deployed by install_shims).
+  - RE-DEPLOY ON MISS: if any expected deployed artifact is missing, re-run the
+    deterministic deploy against the worktree root
+    (`python scripts/build.py --target-dir <WORKTREE_ROOT>`, via
+    git -C "${WORKTREE_ROOT}") and re-verify, rather than proceeding to triage on a
+    skewed layout. Build parity with FIN-100a-4 / FIN-100c-4 — same command and the
+    same --self-description-enforcement level used by Step 0 / Step 3.
+  - GATING: triage (FIN-100c) runs ONLY once the deployed layer is verified
+    consistent.
+  - CLASSIFICATION: a build/deploy inconsistency detected by this self-check MUST be
+    reported as an environment/build-state condition and MUST NEVER be classified as
+    a test regression. This removes environment/build-state skew only; it does not
+    weaken real-regression detection (see FIN-100g-4-i).
+  - E2 determinism: no Date.now; derive any temp path from args.baseline_ts exactly
+    as the Step 0 baseline worktree path does. Deploy/verify I/O MUST be wrapped and
+    logged at WARNING+ per the project error-handling policy; guarantee cleanup on
+    every exit path (no /tmp leak).
+delivers_to:
+  - agent: test-failure-triage
+    contract: "a verified-consistent (or deterministically re-deployed) post-merge deployed layer, so the FIN-100c set-difference triage never sees a build-state ImportError/missing-helper failure as a regression"
+expects_from:
+  - agent: test-runner
+    contract: "post-merge test failures collected on the built post-merge worktree (per FIN-100a-4's build/deploy-before-tests contract)"
+test_spec:
+  - name: test_deploy_parity_check_runs_before_triage
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The deploy-consistency self-check runs after Step 3 and before the FIN-100c triage dispatch."
+  - name: test_missing_deployed_artifact_triggers_redeploy
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "When an expected deployed artifact (including a gitignored, non-git-tracked helper) is missing under the worktree, the workflow re-runs the deterministic deploy (`python scripts/build.py --target-dir <WORKTREE_ROOT>`) against the worktree root and re-verifies."
+  - name: test_triage_runs_only_after_deploy_verified_consistent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Triage (FIN-100c) is dispatched only once the deployed layer is verified consistent, never on a skewed layout."
+  - name: test_deploy_inconsistency_reported_as_build_state_not_regression
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "A build/deploy inconsistency detected by the self-check is reported as an environment/build-state condition and is never classified as a test regression."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Between Step 3 (post-merge tests) and the FIN-100c triage — the deploy-parity self-check / deterministic re-deploy of the worktree root"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map — the pre-triage deploy-consistency verification step"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Post-merge run must operate on a fully-deployed worktree before triage"
+  - path: "unit_tests/workflows/test_finalize_feature_preflight.py"
+    relevance: "Regression tests asserting the pre-triage deploy-consistency self-check, re-deploy on missing artifact, triage gating, and build-state (not regression) classification"
+origin_agent: business-analyst
+created: 2026-07-21
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (workflow-side pre-triage deploy-consistency self-check in finalize-feature.js between Step 3 and FIN-100c; verify every imported runtime artifact incl. gitignored non-tracked deployed copies like scripts/commit_guardian/*; re-run deterministic build.py --target-dir <WORKTREE_ROOT> on miss with parity to FIN-100a-4/FIN-100c-4; gate triage on a consistent layer; classify inconsistency as build-state never regression; E2 no-Date.now, wrapped/logged I/O, guaranteed cleanup) and test_spec (4 descriptors, one per Then). Added the test-file doc_link. Kept assigned_agent python-coder, estimated_complexity M, delivers_to/expects_from, and criteria unchanged."
+    by: it-po
+covered_by:
+  - FIN-100g-4-i
+implemented_by: []

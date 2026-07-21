@@ -1,0 +1,89 @@
+id: FIN-100g-2
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "Pre-flight accepts its target as a bare string OR an object with a target/target_branch key"
+level: L2
+component: finalize
+status: active
+parent: FIN-100g
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the finalize workflow is invoked with its target supplied as a bare
+  string "ge-116a-1"
+  When the pre-flight normalizes its arguments
+  Then it resolves the target branch to "ge-116a-1"
+  And given the same workflow is instead invoked with its target supplied as an
+  object {target: "ge-116a-1"} (or equivalently {target_branch: "ge-116a-1"})
+  When the pre-flight normalizes its arguments
+  Then it resolves the target branch to "ge-116a-1" — identically to the
+  bare-string invocation
+  And the object form does NOT collapse to an empty target (the previous
+  typeof-string-only check that silently dropped object arguments is removed)
+  And in both invocation forms the pre-flight proceeds into worktree resolution
+  (FIN-100g-1) carrying the same resolved target
+depends_on:
+  - FIN-100g
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js pre-flight argument
+    normalization — the branch that currently gates on `typeof args === 'string'`
+    and silently drops object arguments. This is workflow-body logic (python-coder),
+    not an agent template.
+  - Must accept BOTH argument shapes and reduce them to a single normalized target
+    string: a bare string, AND an object carrying a `target` OR `target_branch`
+    key. Both shapes must yield the identical resolved target handed unchanged to
+    the worktree-resolution step (FIN-100g-1).
+  - Must NOT regress existing bare-string callers (backward compatible).
+  - The object form must never collapse to an empty target purely because the old
+    typeof-string-only check rejected non-strings.
+  - E2 determinism: normalization must be pure and deterministic — the resolved
+    target is a function of the args only (no Date.now, no ambient CWD read in the
+    normalization step itself).
+  - A regression test SHOULD assert bare-string and object forms resolve to the
+    identical target and that the object form does not collapse to empty.
+delivers_to:
+  - agent: python-coder
+    contract: "a normalized target branch string extracted from either a bare-string OR an object ({target}/{target_branch}) argument, consumed unchanged by the worktree-resolution step (FIN-100g-1)"
+expects_from: []
+test_spec:
+  - name: test_preflight_accepts_bare_string_target
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Invoked with the bare string \"ge-116a-1\", the pre-flight resolves the target branch to \"ge-116a-1\"."
+  - name: test_preflight_accepts_object_target_key
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Invoked with {target: \"ge-116a-1\"}, the pre-flight resolves the target branch to \"ge-116a-1\", identically to the bare-string form."
+  - name: test_preflight_accepts_object_target_branch_key
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Invoked with {target_branch: \"ge-116a-1\"}, the pre-flight resolves the target branch to \"ge-116a-1\", identically to the bare-string form."
+  - name: test_preflight_object_form_does_not_collapse_to_empty
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The object form does not collapse to an empty target; the pre-flight proceeds into worktree resolution (FIN-100g-1) carrying the same resolved target as the bare-string form."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Pre-flight argument handling — the typeof args === 'string' branch that must also accept an object with a target/target_branch key"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map pre-flight row — the accepted argument contract"
+  - path: "unit_tests/workflows/test_finalize_feature_preflight.py"
+    relevance: "Regression tests asserting bare-string and object ({target}/{target_branch}) args resolve to the identical target"
+origin_agent: business-analyst
+created: 2026-07-21
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (arg-normalization surface in finalize-feature.js; accept bare string AND object {target}/{target_branch} yielding the identical resolved target for FIN-100g-1; remove the typeof-string-only drop; preserve bare-string callers; pure/deterministic normalization per E2) and test_spec (4 descriptors: one per accepted form plus the no-empty-collapse Then). Added the test-file doc_link (unit_tests/workflows/test_finalize_feature_preflight.py). Kept assigned_agent python-coder, estimated_complexity S, delivers_to/expects_from, and criteria unchanged."
+    by: it-po
+covered_by:
+  - FIN-100g-2-i
+implemented_by: []
