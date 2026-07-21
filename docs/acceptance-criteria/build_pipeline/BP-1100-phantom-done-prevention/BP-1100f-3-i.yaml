@@ -1,0 +1,41 @@
+id: BP-1100f-3-i
+components:
+  - build_pipeline
+title: "A mixed-surface work item flags only the portion its stated intent cannot handle"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item whose stated intent assigns a Python implementer checked by a Python
+    test framework,
+  And its declared surface contains both Python source files and JavaScript source files,
+  When the pre-implementation intent-versus-surface consistency check evaluates the work item,
+  Then it flags the JavaScript portion of the surface as unhandled by the stated intent,
+  And it does not flag the Python portion, which the stated intent does handle.
+depends_on:
+  - BP-1100f-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-3.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  L3 edge for BP-1100f-3: the check must be surface-partitioned, not all-or-nothing —
+  a work item that legitimately spans two technologies is flagged only on the portion
+  its declared implementer/checker cannot act on, so it does not produce a false pass
+  (whole item accepted) nor a false full-reject (Python portion wrongly flagged).

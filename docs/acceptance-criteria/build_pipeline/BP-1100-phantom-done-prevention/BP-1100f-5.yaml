@@ -1,0 +1,51 @@
+id: BP-1100f-5
+components:
+  - build_pipeline
+title: "A work item declaring a durable side-effect is routed through the smoke check automatically"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item declares a durable, observable side-effect (an artifact written to disk),
+  And an observable-side-effect smoke check exists in the pipeline,
+  When the pipeline runs the work item's verification phase,
+  Then the smoke check runs automatically for that work item — selected by its declared
+    side-effect rather than by an opt-in flag — and produces a smoke result,
+  And the work item cannot reach a done state with the smoke check left unrun or silently
+    skipped.
+depends_on:
+  - BP-1100f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100f-5-i
+implemented_by: []
+notes: |
+  Guard #6 of BP-1100f. Surface for IT-PO to pin: the drive/verification-phase routing
+  that already owns the observable-side-effect smoke check. The check EXISTS today; the
+  gap this AC closes is that it is opt-in and can be silently skipped. This AC makes
+  routing to it automatic and mandatory for any work item that declares a durable
+  side-effect. Portable per ADR-001 — a consumer project that runs build.py must get the
+  automatic routing, not only the leafcutter repo.

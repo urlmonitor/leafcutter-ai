@@ -1,0 +1,53 @@
+id: BP-1100f-3
+components:
+  - build_pipeline
+title: "A work item whose stated intent contradicts its declared surface is caught before implementation"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item whose stated intent assigns a Python implementer whose work is checked
+    by a Python test framework,
+  And the work item's declared surface consists of JavaScript source files,
+  When the pre-implementation intent-versus-surface consistency check evaluates the work item,
+  Then it detects the contradiction and surfaces it — naming the mismatch between the Python
+    implementer/checker and the JavaScript surface — before any implementer is dispatched,
+  And a work item whose implementer and checking technology match its declared surface passes
+    the check unflagged.
+depends_on:
+  - BP-1100f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100a.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100f-3-i
+implemented_by: []
+notes: |
+  Guard #5 of BP-1100f. Surface for IT-PO to pin: the pre-dispatch refinement /
+  consistency lens (before the first coder dispatch). This is DISTINCT from its BP-1100
+  siblings and must not re-derive them: BP-1100a checks that files_touched contains an
+  executable surface at all; BP-1100e-1 (DONE) is the post-change declared-vs-actual
+  file reconciliation. This AC checks an intent(technology)-versus-surface CONTRADICTION
+  (implementer/checker technology cannot act on the declared surface). Origin RCA
+  Failure #1: python-coder + pytest were aimed at a .js surface. Portable per ADR-001.

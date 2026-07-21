@@ -1,0 +1,52 @@
+id: BP-1100f-4
+components:
+  - build_pipeline
+title: "The workflow test harness raises a contract violation on an instruction-less dispatch"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a workflow test exercises a workflow that dispatches a step whose request's first
+    argument is an object or empty value carrying no instruction string,
+  When the workflow test harness intercepts the dispatch,
+  Then the harness raises a contract violation that names the instruction-less dispatch and
+    fails the test, so such a dispatch cannot pass unseen,
+  And the harness raises no such violation when the dispatched request's first argument is a
+    non-empty instruction string.
+depends_on:
+  - BP-1100f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100f-4-i
+implemented_by: []
+notes: |
+  Guard #4 of BP-1100f. Surface for IT-PO to pin: the workflow-js test harness /
+  dispatch interceptor (the agent() test double used by workflow unit tests). This is
+  the harness-level counterpart to BP-1100f-1: BP-1100f-1 is a pr-review of a PROPOSED
+  dispatch; this AC makes the test double itself refuse to silently accept an
+  instruction-less first argument, so an instruction-less dispatch is mechanically
+  detectable in tests rather than passing unnoticed. Origin RCA Failure #2. Portable
+  per ADR-001.

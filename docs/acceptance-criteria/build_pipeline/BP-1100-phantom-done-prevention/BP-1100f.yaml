@@ -9,6 +9,10 @@ req_status: draft
 work_status: todo
 readiness: draft
 priority: medium
+# 6 L2 children = 5 behavioral guards + 1 mandatory sequence-diagram doc AC
+# (BP-1100f-6, required by documentation_triggers: [sequence-diagram]), not an
+# extra behavior. Waiver approved during /plan-feature (BrainCandy, 2026-07-21).
+child_limit_override: 6
 roadmap_phase: phase_1
 criteria: |
   A feature is done only when its real effect is proven, not because a step ran.
@@ -43,7 +47,13 @@ origin_agent: product-owner
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1100f-1
+  - BP-1100f-2
+  - BP-1100f-3
+  - BP-1100f-4
+  - BP-1100f-5
+  - BP-1100f-6
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

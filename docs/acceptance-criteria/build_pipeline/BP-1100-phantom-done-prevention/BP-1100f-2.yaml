@@ -1,0 +1,53 @@
+id: BP-1100f-2
+components:
+  - build_pipeline
+title: "A durable-side-effect work item requires a test that exercises the real effect, not only that a step ran"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item declares a durable, observable side-effect (an artifact written to
+    disk that can be read back),
+  And its test evidence consists solely of tests asserting that a step was dispatched —
+    the presence, labels, or counts of dispatched helpers,
+  When the test-evidence sufficiency check evaluates coverage for the work item,
+  Then it reports the side-effect as uncovered, because dispatch-only evidence proves a
+    step ran but not that the effect occurred,
+  And the same work item satisfies the check once its evidence includes at least one test
+    that produces the artifact and then reads it back (a round-trip of the real effect).
+depends_on:
+  - BP-1100f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100f-2-i
+implemented_by: []
+notes: |
+  Guard #3 of BP-1100f. Surface for IT-PO to pin: the test-evidence /
+  coverage-sufficiency gate (pr-reviewer's evidence lens or the ac-fulfillment gate).
+  Key distinction the check must make: "topology" evidence = dispatch labels/counts a
+  test mock controls; "effect" evidence = the artifact actually on disk. Root cause of
+  the RCA: BO-2300 tests keyed off dispatch topology, never the on-disk effect, so the
+  feature was signed off twice while absent. Portable per ADR-001.

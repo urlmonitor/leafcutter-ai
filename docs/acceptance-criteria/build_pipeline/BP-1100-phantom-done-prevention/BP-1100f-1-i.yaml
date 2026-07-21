@@ -1,0 +1,41 @@
+id: BP-1100f-1-i
+components:
+  - build_pipeline
+title: "A whitespace-only or empty instruction string is treated as no instruction"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a workflow step dispatches an automated helper to produce a durable change,
+  And the dispatch request's first argument is a string that is empty or contains only
+    whitespace characters,
+  When the pre-implementation dispatch review examines the step,
+  Then the step is flagged as carrying no actionable instruction, the same outcome as a
+    bare data payload,
+  And a first argument that is a non-empty, non-whitespace instruction string is not
+    flagged on this ground.
+depends_on:
+  - BP-1100f-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-1.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  L3 edge for BP-1100f-1: a content-free instruction (empty or whitespace) must not
+  slip past the non-empty-string check. Prevents a trivially-satisfied guard.

@@ -1,0 +1,41 @@
+id: BP-1100f-5-i
+components:
+  - build_pipeline
+title: "A work item with no declared durable side-effect is not force-routed through the smoke check"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item that declares no durable observable side-effect (for example a
+    documentation-only change),
+  When the pipeline runs the work item's verification phase,
+  Then the observable-side-effect smoke check is not mandated for that work item, so a
+    side-effect-free item is not blocked by a check for an effect it never claimed,
+  And this scope narrowing does not weaken the mandatory routing for items that do declare
+    a durable side-effect.
+depends_on:
+  - BP-1100f-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-5.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  L3 edge for BP-1100f-5: scope-narrowing so the mandatory smoke routing does not
+  become a false-positive gate on docs-only / side-effect-free items — the automatic
+  routing keys off a DECLARED durable side-effect, not on every work item.
