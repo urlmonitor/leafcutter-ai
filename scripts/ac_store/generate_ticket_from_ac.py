@@ -726,9 +726,21 @@ def _build_agents_map(
         # Remove any agent that has an explicit not_needed override,
         # but protect TDD-mandated agents (BO-550-1-i: computed chain wins)
         # and doc-mandatory agents (BO-2200b-5: computed doc chain wins).
+        # BO-2200b-5-i (silent-proof): when a doc-mandatory agent override is
+        # blocked, emit a WARNING so the hand-edit attempt is surfaced rather
+        # than silently overwritten.  The warning names the blocked agent so
+        # operators and CI tooling can detect ticket hand-edit interference.
         for agent in overrides:
             if agent not in tdd_protected and agent not in doc_protected:
                 all_needed.discard(agent)
+            elif agent in doc_protected:
+                logger.warning(
+                    "Doc-mandatory agent %r not_needed override blocked — "
+                    "the documentation trigger fired and the computed chain wins. "
+                    "A hand-edited not_needed for this protected agent is restored "
+                    "to needed at generation time (BO-2200b-5-i).",
+                    agent,
+                )
 
         # Build ordered result according to the chosen phase order.
         # Non-canonical agents (not in phase_order) are inserted in stable
