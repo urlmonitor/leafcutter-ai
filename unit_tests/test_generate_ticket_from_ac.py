@@ -21,6 +21,8 @@ _SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from generate_ticket_from_ac import (  # noqa: E402
+    _as_contract_entries,
+    _build_agent_contracts_section,
     _build_agents_map,
     _build_frontmatter as _build_frontmatter_top,
     _build_ticket_body,
@@ -2923,3 +2925,57 @@ class TestBO650ArchitectC4DiagramProduction:
             "     parameter on every create or update.'\n\n"
             f"Skill path: {_WRITE_C4_DIAGRAM_SKILL_PATH}"
         )
+
+
+class TestAgentContractsListOrDict:
+    """Regression: _build_agent_contracts_section must accept delivers_to /
+    expects_from as EITHER a dict (legacy, e.g. GE-116a-1) or a list of dicts
+    (BA/IT-PO v3, e.g. FIN-100a-4 / FIN-100g-2). A list-form delivers_to
+    previously crashed the generator with
+    "AttributeError: 'list' object has no attribute 'get'", blocking
+    /build-ac for every v3-authored AC.
+    """
+
+    def test_as_contract_entries_dict_wrapped_in_list(self) -> None:
+        assert _as_contract_entries({"agent": "python-coder", "contract": "c"}) == [
+            {"agent": "python-coder", "contract": "c"}
+        ]
+
+    def test_as_contract_entries_list_skips_non_dicts(self) -> None:
+        value = [{"agent": "a"}, "junk", {"agent": "b"}]
+        assert _as_contract_entries(value) == [{"agent": "a"}, {"agent": "b"}]
+
+    def test_as_contract_entries_none_returns_empty(self) -> None:
+        assert _as_contract_entries(None) == []
+
+    def test_list_form_delivers_to_does_not_crash_and_renders(self) -> None:
+        ac = {"delivers_to": [{"agent": "python-coder", "contract": "does X"}]}
+        section = _build_agent_contracts_section(ac)
+        assert "### Delivers To" in section
+        assert "- **Agent:** python-coder" in section
+        assert "- **Contract:** does X" in section
+
+    def test_list_form_multiple_entries_all_rendered(self) -> None:
+        ac = {
+            "delivers_to": [
+                {"agent": "python-coder", "contract": "c1"},
+                {"agent": "documentation-expert", "contract": "c2"},
+            ]
+        }
+        section = _build_agent_contracts_section(ac)
+        assert "- **Agent:** python-coder" in section
+        assert "- **Agent:** documentation-expert" in section
+        assert "c1" in section and "c2" in section
+
+    def test_dict_form_delivers_to_still_supported(self) -> None:
+        ac = {"delivers_to": {"agent": "python-coder", "contract": "legacy"}}
+        section = _build_agent_contracts_section(ac)
+        assert "- **Agent:** python-coder" in section
+        assert "- **Contract:** legacy" in section
+
+    def test_list_form_expects_from_renders_ac_id(self) -> None:
+        ac = {"expects_from": [{"ac_id": "FIN-100g-1", "contract": "upstream"}]}
+        section = _build_agent_contracts_section(ac)
+        assert "### Expects From" in section
+        assert "- **AC:** FIN-100g-1" in section
+        assert "- **Contract:** upstream" in section
