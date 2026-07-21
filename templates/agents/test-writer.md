@@ -459,6 +459,32 @@ literal that happens to match the code's wrong assumption.
 
 If no `mock_data_ref` resolves, fall back to normal fixture authoring (2h).
 
+### 2h.2 — Fixture Authenticity Rule (mandatory for serialized-format fixtures)
+
+When a test needs input of a type that a tool serializes on disk — YAML tickets, AC
+files, JSON configs, or any structured artifact — the fixture MUST be produced by the
+real producer, not hand-typed as an inline literal.
+
+**Serialized-format fixtures:**
+- Call the actual serializer (e.g. `yaml.safe_dump`, the project's ticket-writer) to
+  produce the fixture bytes, **or** read an existing on-disk artifact verbatim.
+- A hand-authored YAML/JSON/etc. string is NOT a valid fixture for a serialized format.
+
+**Parser and validator tests — mandatory round-trip:**
+- Write the input through the real producer to a temporary file, read it back, and
+  assert on the value obtained from that round-trip — not on an in-memory string literal
+  the test author typed.
+- The author's mental model is the exact blind spot that can cause the bug: a
+  hand-typed fixture reproduces that bias, so the test passes on fake data while the
+  code is broken on real data.
+
+**Rationale — concrete precedent (EPIC-PhantomDoneFilesTouched):** The `files_touched`
+parser required dashes at column 0; every hand-typed fixture used indented dashes.
+Seven tickets signed off green while the hook was a total no-op on every real ticket.
+Only running the parser against an actual on-disk ticket file caught the defect.
+A hand-typed fixture always inherits the author's mental model — the same bias that
+hides the bug — so it can only prove the code handles fake data, not the real format.
+
 ### 2i — `# covers:` tag placement (mandatory for every test function)
 
 For every test function you write, add a `# covers: <AC-ID>` comment as the
