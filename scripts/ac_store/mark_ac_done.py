@@ -221,6 +221,15 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Log what would happen but do not write any files.",
     )
+    parser.add_argument(
+        "--test-root",
+        metavar="DIR",
+        default=None,
+        help=(
+            "When supplied, enforce the coverage gate before marking done. "
+            "Exits 3 when no passing covers-tagged test exists for the AC."
+        ),
+    )
     return parser
 
 
@@ -238,6 +247,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     ac_root = Path(args.ac_root)
 
+    test_root = Path(args.test_root) if args.test_root else None
+
     if args.ticket:
         ticket_path = Path(args.ticket)
         try:
@@ -254,10 +265,12 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        return mark_ac_done(ac_id, ac_root, dry_run=args.dry_run, ticket_path=ticket_path)
+        return mark_ac_done(
+            ac_id, ac_root, dry_run=args.dry_run, ticket_path=ticket_path, test_root=test_root
+        )
 
     # --ac mode
-    return mark_ac_done(args.ac, ac_root, dry_run=args.dry_run)
+    return mark_ac_done(args.ac, ac_root, dry_run=args.dry_run, test_root=test_root)
 
 
 if __name__ == "__main__":
