@@ -642,6 +642,7 @@ let prProbe;
 if (prProbe.found) {
   prNumber = prProbe.number;
   prUrl = prProbe.url;
+  log("Step 1 of 9: [skipped] PR #" + prNumber + " is already open");
   skippedSteps.push({ step: 1, reason: `PR already open (#${prNumber}) — skipping step 1` });
 } else {
   // Dispatch pull-request agent to open the PR.
@@ -758,6 +759,7 @@ if (mergeStatus === "conflict") {
 }
 
 if (mergeStatus === "already_up_to_date") {
+  log("Step 2 of 9: [skipped] origin/main already integrated into branch — no merge step needed");
   skippedSteps.push({
     step: 2,
     reason: "Already up-to-date with origin/main",
@@ -1093,6 +1095,7 @@ let closureAlreadyCommitted = false;
 }
 
 if (closureAlreadyCommitted) {
+  log("Step 3.5 of 9: [skipped] Closure commit already present on this branch — skipping pre-merge closure");
   skippedSteps.push({
     step: "3.5",
     reason: "Pre-merge closure commit already present — skipping step 3.5",
@@ -1117,6 +1120,7 @@ if (closureAlreadyCommitted) {
   }
 
   if (prAlreadyMergedAtClosure) {
+    log("Step 3.5 of 9: [skipped] PR is already merged — pre-merge closure step omitted");
     skippedSteps.push({
       step: "3.5",
       reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
@@ -1580,6 +1584,7 @@ let prState;
 
 if ((prState.state || "").toUpperCase() === "MERGED") {
   // PR already merged — skip the merge gate and proceed.
+  log("Step 4 of 9: [skipped] PR #" + prNumber + " is already merged — skipping merge gate");
   skippedSteps.push({ step: 4, reason: "PR already merged — skipping step 4" });
 } else {
   // E2 has no prompt() global — implement the merge confirmation gate as an
@@ -1777,6 +1782,7 @@ let worktreeProbe;
 
 if (!worktreeProbe.exists) {
   worktreeRemoved = false;
+  log("Step 7 of 9: [skipped] Worktree already absent — skipping removal");
   skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
 } else {
   // Dispatch worktree-agent (it owns its own confirmation gate).
