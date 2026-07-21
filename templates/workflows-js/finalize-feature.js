@@ -1082,7 +1082,7 @@ if (testPassed) {
 }
 
 outcome('Step 3 of 9', testPassed
-  ? `Tests passed on post-merge worktree`
+  ? `Tests passed: no new failures (${baselineFailures !== null ? baselineFailures.length : 'N/A'} pre-existing on main)`
   : `Tests completed: ${postMergeFailures.length} pre-existing failure(s) — no regressions, proceeding`);
 
 // -------------------------------------------------------------------------
@@ -1699,9 +1699,21 @@ const syncResult = await agent(
   { agentType: "status-checker", label: "step-5-sync-main", phase: "Step 5" }
 )
 
+let headSha = null;
+let headMessage = null;
+{
+  try {
+    const syncInfo = parseAgentJson(syncResult, { stage: "step-5-sync-main", agent: "status-checker" }) || {};
+    headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
+    headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
+  } catch (_parseErr) {
+    log("[finalize-feature] step 5 sync-main parse malformed — HEAD SHA and message will be unknown");
+  }
+}
+
 completedSteps.push(5);
 
-outcome('Step 5 of 9', 'Local main synced to origin/main HEAD');
+outcome('Step 5 of 9', `Local main synced: HEAD ${headSha || 'unknown'} — ${headMessage || 'message unknown'}`);
 
 // -------------------------------------------------------------------------
 // Step 6 — Report untracked pre-existing/flaky failures, then detect scope
