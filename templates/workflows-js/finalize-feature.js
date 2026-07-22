@@ -110,7 +110,9 @@ const GATE_SCHEMA = {
  *   is about to do.
  */
 function narrate(progressText, description) {
-  log(progressText + ': ' + description);
+  const line = progressText + ': ' + description;
+  log(line);
+  appendJournal(line);
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +148,9 @@ const stepOutcomes = [];
 function outcome(progressText, description) {
   const entry = { step: progressText, outcome: description };
   stepOutcomes.push(entry);
-  log(progressText + ': ' + description);
+  const line = progressText + ': ' + description;
+  log(line);
+  appendJournal(line);
 }
 
 // ---------------------------------------------------------------------------
@@ -360,6 +364,38 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
       "Checkout your feature branch and re-run.",
     action_required: "switch_to_feature_branch",
   };
+}
+
+// ---------------------------------------------------------------------------
+// Run-progress journal — AC BO-1000c-1a
+//
+// Durable append-only file at a worktree-keyed path so the launcher
+// (BO-1000c-1b) can read it while the run is in flight. Each narrate()
+// and outcome() call appends a line incrementally (append-as-you-go),
+// not only at end-of-run, so an external poller sees progress live.
+//
+// Path: run-progress.journal.jsonl under WORKTREE_ROOT — deterministically
+// locatable by the launcher without parsing log output.
+// ---------------------------------------------------------------------------
+const journalPath = WORKTREE_ROOT + '/run-progress.journal.jsonl';
+
+/**
+ * Append one progress line to the durable run-progress journal.
+ *
+ * Best-effort: a journal-write failure is logged at WARNING level and
+ * never aborts the finalize run (AC BO-1000c-1a policy). The journal is
+ * append-only (fs.appendFileSync) so emission order is preserved across
+ * all steps (AC BO-1000c-1a AC-2).
+ *
+ * @param {string} line - The progress line to append (newline appended automatically).
+ */
+function appendJournal(line) {
+  try {
+    const fs = require('fs');
+    fs.appendFileSync(journalPath, line + '\n');
+  } catch (journalErr) {
+    log('[finalize-feature] WARNING: journal write failed (best-effort) — ' + journalErr.message);
+  }
 }
 
 // Track completed and skipped steps for the final summary.
@@ -663,6 +699,7 @@ if (prProbe.found) {
   prNumber = prProbe.number;
   prUrl = prProbe.url;
   log("Step 1 of 9: [skipped] PR #" + prNumber + " is already open");
+  outcome(`Step 1 of ${STEP_COUNT}`, 'skipped: PR #' + prNumber + ' already open');
   skippedSteps.push({ step: 1, reason: `PR already open (#${prNumber}) — skipping step 1` });
 } else {
   // Dispatch pull-request agent to open the PR.
@@ -782,6 +819,7 @@ if (mergeStatus === "conflict") {
 
 if (mergeStatus === "already_up_to_date") {
   log("Step 2 of 9: [skipped] origin/main already integrated into branch — no merge step needed");
+  outcome(`Step 2 of ${STEP_COUNT}`, 'skipped: already up-to-date with origin/main');
   skippedSteps.push({
     step: 2,
     reason: "Already up-to-date with origin/main",
@@ -1120,6 +1158,7 @@ let closureAlreadyCommitted = false;
 
 if (closureAlreadyCommitted) {
   log("Step 3.5 of 9: [skipped] Closure commit already present on this branch — skipping pre-merge closure");
+  outcome(`Step 3.5 of ${STEP_COUNT}`, 'skipped: pre-merge closure commit already present on branch');
   skippedSteps.push({
     step: "3.5",
     reason: "Pre-merge closure commit already present — skipping step 3.5",
@@ -1145,6 +1184,7 @@ if (closureAlreadyCommitted) {
 
   if (prAlreadyMergedAtClosure) {
     log("Step 3.5 of 9: [skipped] PR is already merged — pre-merge closure step omitted");
+    outcome(`Step 3.5 of ${STEP_COUNT}`, 'skipped: PR already merged — pre-merge closure step omitted');
     skippedSteps.push({
       step: "3.5",
       reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
@@ -1625,6 +1665,7 @@ let prState;
 if ((prState.state || "").toUpperCase() === "MERGED") {
   // PR already merged — skip the merge gate and proceed.
   log("Step 4 of 9: [skipped] PR #" + prNumber + " is already merged — skipping merge gate");
+  outcome(`Step 4 of ${STEP_COUNT}`, 'skipped: PR #' + prNumber + ' already merged');
   skippedSteps.push({ step: 4, reason: "PR already merged — skipping step 4" });
 } else {
   // E2 has no prompt() global — implement the merge confirmation gate as an
@@ -1798,6 +1839,7 @@ if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
 }
 
 if (closeInfo.skipped) {
+  outcome(`Step 6 of ${STEP_COUNT}`, 'skipped: scope detection — no in-scope tickets found');
   skippedSteps.push({ step: 6, reason: "Scope detection skipped — no in-scope tickets found" });
 } else {
   completedSteps.push(6);
@@ -1837,6 +1879,7 @@ let worktreeProbe;
 if (!worktreeProbe.exists) {
   worktreeRemoved = false;
   log("Step 7 of 9: [skipped] Worktree already absent — skipping removal");
+  outcome(`Step 7 of ${STEP_COUNT}`, 'skipped: worktree already absent — skipping step 7');
   skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
 } else {
   // Dispatch worktree-agent (it owns its own confirmation gate).
