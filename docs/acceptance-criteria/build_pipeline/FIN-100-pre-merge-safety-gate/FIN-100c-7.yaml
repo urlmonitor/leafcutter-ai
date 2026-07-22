@@ -70,9 +70,11 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added estimated_complexity (S), it_requirements (instance-specific integration only: recovered baseline is non-null so Step 1 does not fire and the existing Step 2/Step 5 partition applies unchanged — no new triage branch, no schema change; behavioral rules inherited from FIN-100c-1/2 are deliberately NOT restated), and test_spec (3 descriptors). assigned_agent test-failure-triage kept per the read-only classification boundary and sibling convention (FIN-100c-1/2/3); contracts and criteria unchanged."
     by: it-po
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_fin_100c_7_pass_on_main_excluded_from_baseline"
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_fin_100c_7_triage_prompt_encodes_classification_rule"
 implemented_by:
 - tickets/00_inbox/TICKET-20260721-FIN-100c-7.md
 change_target: pipeline
 risk_surface: contract_boundary
-work_status: todo
+work_status: done
