@@ -95,7 +95,6 @@ sys.path.insert(0, str(_AC_STORE_DIR))
 # The ImportError IS the intended red state — all tests fail here until
 # check_changed_done_acs is implemented.
 from check_done_proof import check_changed_done_acs  # noqa: E402
-from check_done_proof import main  # noqa: E402  (already exists; imported for CLI tests)
 
 _PYTHON_EXE = sys.executable
 

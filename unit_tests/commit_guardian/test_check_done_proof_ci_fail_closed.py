@@ -189,7 +189,7 @@ class TestCheckDoneProofCiFailClosed(unittest.TestCase):
         self.assertNotEqual(
             result,
             0,
-            f"DEFECT M-2: main(--mode ci) returned 0 when verify_done_eligible "
+            "DEFECT M-2: main(--mode ci) returned 0 when verify_done_eligible "
             "returned a malformed verdict (missing 'eligible' key). "
             "CI mode must return non-zero (fail-CLOSED) so that checker errors "
             "block the PR rather than silently passing (BO-2500b-2).",

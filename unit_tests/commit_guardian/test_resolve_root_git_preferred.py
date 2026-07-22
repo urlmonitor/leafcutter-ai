@@ -129,7 +129,7 @@ class TestFindProjectRootGitPreferred(unittest.TestCase):
 
         with unittest.mock.patch("subprocess.run", return_value=mock_result) as mock_run:
             _reset_cache()
-            result = find_project_root()
+            find_project_root()
 
         # Assert subprocess.run was called at least once.
         # DEFECT M-4: This assertion fails because subprocess.run is never called.

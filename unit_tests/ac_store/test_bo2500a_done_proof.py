@@ -735,7 +735,6 @@ class TestMarkAcDoneWithCoverageGate(unittest.TestCase):
         Captures stdout/stderr via sys.stdout/sys.stderr redirection.
         The reason is derived from verify_done_eligible and must be machine-readable.
         """
-        import io
         from unittest.mock import patch
 
         buf_out = io.StringIO()

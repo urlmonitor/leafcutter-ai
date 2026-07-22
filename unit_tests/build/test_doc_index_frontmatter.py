@@ -216,9 +216,9 @@ class TestDeployedGeneratorFrontmatter(unittest.TestCase):
         self.assertTrue(
             fm["last_updated"].strip(),
             (
-                f"Deployed generator emitted an empty last_updated value. "
-                f"After the fix, last_updated should equal the 'created' date "
-                f"(or a preserved existing value) rather than an empty string."
+                "Deployed generator emitted an empty last_updated value. "
+                "After the fix, last_updated should equal the 'created' date "
+                "(or a preserved existing value) rather than an empty string."
             ),
         )
 
