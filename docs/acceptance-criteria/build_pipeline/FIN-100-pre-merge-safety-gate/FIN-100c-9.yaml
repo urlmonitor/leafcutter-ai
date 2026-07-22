@@ -87,9 +87,12 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added estimated_complexity (M), it_requirements (narrowed-successor role vs FIN-100c-3; fallback reuses the existing null-baseline triage Step 1 rather than re-implementing; modified_by_branch surfaced in the halt payload ~L808; specific checkout/build failure signals + graceful degradation + worktree cleanup; distinct observability log), and test_spec (4 descriptors). RECONCILIATION: dropped depends_on FIN-100c-3 because this AC now supersedes it (a superseded AC cannot be a live dependency) and updated the finalize-feature.js doc_link to state the supersession. assigned_agent python-coder and criteria unchanged."
     by: it-po
-covered_by: []
+covered_by:
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_behavioral_recovery_checkout_failed_triage_gets_null"
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_fin_100c_9_build_failed_triage_gets_null"
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_fin_100c_9_fallback_surfaces_modified_by_branch"
 implemented_by:
 - tickets/00_inbox/TICKET-20260721-FIN-100c-9.md
 change_target: pipeline
 risk_surface: safety
-work_status: todo
+work_status: done
