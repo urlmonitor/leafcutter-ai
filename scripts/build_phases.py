@@ -790,13 +790,17 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
     scripts_src = PACKAGE_ROOT / "scripts"
 
-    # The seven files to deploy: (source_path, destination_filename)
+    # The files to deploy: (source_path, destination_filename)
     deploy_map = [
         (ac_store_src / "scan_ac_store.py",            "scan_ac_store.py"),
         (ac_store_src / "generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
         (ac_store_src / "ac_prioritizer.py",            "ac_prioritizer.py"),
         (ac_store_src / "mark_ac_done.py",              "mark_ac_done.py"),
         (ac_store_src / "scan_ac_orphans.py",           "scan_ac_orphans.py"),
+        # done_proof.py backs the check_done_proof commit-guardian hook and the
+        # fast-lane green+coverage gate; it MUST deploy or the (required) CI
+        # done-proof check crashes with ModuleNotFoundError in the deployed layout.
+        (ac_store_src / "done_proof.py",                "done_proof.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
