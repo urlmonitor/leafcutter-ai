@@ -555,3 +555,67 @@ class TestUnresolvableTargetErrorFIN100g3:
             "The unresolved-target error must be more specific than the generic "
             "branch-named error — it must add expected-forms guidance and a candidate list."
         )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-4: deploy-parity self-check runs between Step 3 and FIN-100c triage;
+# a missing deployed artifact triggers a re-deploy and is classified as
+# build-state, never a regression. FIN-100g-4-i: exclusion is data-driven.
+# ---------------------------------------------------------------------------
+
+class TestDeployParitySelfCheckFIN100g4:
+    """FIN-100g-4: before triaging post-merge failures, the workflow verifies the
+    deployed layer is consistent (incl. gitignored deployed copies), re-deploys on
+    a miss, and classifies deploy-skew as build-state — never a regression.
+    """
+
+    def test_deploy_parity_check_runs_before_triage(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        dp = js.find('label: "step-3-deploy-parity"')
+        triage = js.find('label: "step-3-triage"')
+        assert dp != -1, "The deploy-parity self-check (label step-3-deploy-parity) must exist."
+        assert triage != -1, "The triage dispatch (label step-3-triage) must exist."
+        assert dp < triage, (
+            "The deploy-parity self-check must run BEFORE the FIN-100c triage dispatch."
+        )
+
+    def test_missing_deployed_artifact_triggers_redeploy(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        assert 'scripts/build.py" --target-dir' in js, (
+            "On a missing deployed artifact the self-check must re-run the deterministic "
+            "deploy (build.py --target-dir <WORKTREE_ROOT>)."
+        )
+        assert "gitignored" in js and "non-git-tracked" in js, (
+            "The self-check must verify gitignored, non-git-tracked deployed copies "
+            "(e.g. scripts/commit_guardian/*), not just git-tracked files."
+        )
+
+    def test_triage_runs_only_after_deploy_verified_consistent(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        # The self-check filters build-state failures out of postMergeFailures BEFORE
+        # the triage branch consumes them, so triage only ever sees a consistent layer.
+        assert "build_state_only_failures" in js, (
+            "The self-check must produce a build_state_only_failures set."
+        )
+        assert "postMergeFailures = postMergeFailures.filter" in js, (
+            "Build-state failures must be filtered out of the set handed to triage."
+        )
+
+    def test_deploy_inconsistency_reported_as_build_state_not_regression(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        assert "build-state, not regressions" in js, (
+            "A build/deploy inconsistency must be reported as a build-state condition, "
+            "never classified as a test regression."
+        )
+
+    def test_build_state_exclusion_is_data_driven_not_name_based(self):
+        # covers: FIN-100g-4-i
+        js = _js_text()
+        assert "data-driven" in js and "hard-coded name" in js, (
+            "FIN-100g-4-i: the build-state exclusion must be data-driven "
+            "(passes-after-verified-redeploy), never keyed on a hard-coded test/helper name."
+        )
