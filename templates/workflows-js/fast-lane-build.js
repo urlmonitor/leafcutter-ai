@@ -1,8 +1,8 @@
 /**
  * fast-lane-build.js — Claude Code Workflow script (lean path)
  *
- * Three deterministic Python gate scripts enforce correctness (invoked via Bash,
- * not LLM planners — BO-2400a-2, BO-2400a-3, BO-2400a-4):
+ * Three deterministic Python gate scripts enforce correctness (invoked via the
+ * agents that run them — not LLM planners — BO-2400a-2, BO-2400a-3, BO-2400a-4):
  *   select_batch              — BO-2400a-2: picks the next N approved ACs
  *   verify_red_baseline       — BO-2400a-3: confirms tests RED before coder runs
  *   verify_green_and_coverage — BO-2400a-4: confirms GREEN + AC coverage after coder
@@ -10,11 +10,22 @@
  * Lean two-agent batch build. Unlike the heavy path (build-feature.js), the
  * fast lane dispatches EXACTLY two flat agents regardless of batch size N
  * (BO-2400a-1):
- *   1. test-writer  — writes failing test stubs for the whole batch
- *   2. python-coder — implements the batch ACs to make all stubs green
+ *   1. test-writer  — writes failing test stubs for the whole batch, then runs
+ *                     the verify_red_baseline gate and returns its result
+ *   2. python-coder — implements the batch ACs to make all stubs green, then
+ *                     runs the verify_green_and_coverage gate and returns its result
+ *
+ * The workflow branches on each gate result — the coder is only dispatched
+ * when all_red===true, and status:"ok" is only returned when green===true and
+ * coverage_ok===true. This is the DEFECT H-1 fix. (BO-2400a-3, BO-2400a-4)
  *
  * No supervisor chain, no LLM planner, no per-ticket worktree. (BO-2400a-5)
  * Single command, single worktree, fixed code-defined phase order.
+ *
+ * Supporting integrations (BO-2400b-3, BO-2400c-1, BO-2400d-1):
+ *   choose_lane           — path_selection.py: lane eligibility at entry
+ *   assemble_context_bundle — injection_builders.py: layered context for agents
+ *   emit_agent_telemetry  — agent_telemetry.py: per-phase telemetry record
  *
  * Gate script: scripts/build_orchestration/fast_lane.py
  *
@@ -26,22 +37,31 @@ export const meta = {
   name: "fast-lane-build",
   description:
     "Lean two-agent batch build. Runs select_batch to pick the next AC batch, " +
-    "dispatches test-writer to write failing stubs, gates on verify_red_baseline, " +
-    "dispatches python-coder to make tests green, then gates on verify_green_and_coverage " +
-    "before staging the commit. Two flat dispatches independent of batch size N " +
-    "(BO-2400a-1). No supervisor chain, no LLM planner, single worktree (BO-2400a-5).",
+    "dispatches test-writer to write failing stubs and run verify_red_baseline, " +
+    "branches on the red-baseline result, dispatches python-coder to make tests " +
+    "green and run verify_green_and_coverage, then branches on the green+coverage " +
+    "result before staging the commit. Two flat dispatches independent of batch " +
+    "size N (BO-2400a-1). No supervisor chain, no LLM planner, single worktree " +
+    "(BO-2400a-5).",
   phases: [
     "select-batch: deterministic gate (select_batch) picks the next N approved ACs from the store",
-    "test-writer: writes failing test stubs for every AC in the batch",
-    "red-baseline: verify_red_baseline gate confirms all new tests are RED before coder runs",
-    "coder: python-coder implements the batch ACs to make all stubs GREEN",
-    "green-coverage: verify_green_and_coverage gate confirms tests pass and every AC has coverage",
+    "test-writer: writes failing test stubs for every AC in the batch, then runs verify_red_baseline",
+    "red-baseline: workflow branches on test-writer's all_red result — coder only dispatched when true",
+    "coder: python-coder implements the batch ACs, then runs verify_green_and_coverage",
+    "green-coverage: workflow branches on coder's green+coverage result — ok only returned when both pass",
     "stage-commit: batch output is staged for commit",
   ],
 };
 
 // ---------------------------------------------------------------------------
 // JSON Schemas for agent() responses
+//
+// TEST_WRITER_SCHEMA includes gate-result fields (all_red, offender) so the
+// workflow can branch on the verify_red_baseline result without a second
+// agent dispatch.
+//
+// CODER_SCHEMA includes gate-result fields (green, coverage_ok, uncovered_ac_ids)
+// so the workflow can branch on the verify_green_and_coverage result.
 // ---------------------------------------------------------------------------
 
 const TEST_WRITER_SCHEMA = {
@@ -50,6 +70,8 @@ const TEST_WRITER_SCHEMA = {
   properties: {
     status: { type: "string", enum: ["ok", "blocker", "failed"] },
     tests_written: { type: "array", items: { type: "string" } },
+    all_red: { type: "boolean" },
+    offender: { type: "string" },
     message: { type: "string" },
   },
 };
@@ -60,6 +82,9 @@ const CODER_SCHEMA = {
   properties: {
     status: { type: "string", enum: ["ok", "blocker", "failed"] },
     files_modified: { type: "array", items: { type: "string" } },
+    green: { type: "boolean" },
+    coverage_ok: { type: "boolean" },
+    uncovered_ac_ids: { type: "array", items: { type: "string" } },
     message: { type: "string" },
   },
 };
@@ -85,30 +110,72 @@ if (!worktree_path) {
 }
 
 // ---------------------------------------------------------------------------
+// Supporting integration invocations (BO-2400b-3, BO-2400c-1, BO-2400d-1)
+//
+// E2 has no shell primitive — agents run these commands as single Bash calls.
+// ---------------------------------------------------------------------------
+
+// b: choose_lane — lane-selection check at entry (BO-2400b-3).
+// Determines whether the current AC batch qualifies for the fast lane or must
+// fall back to the heavy path (build-feature.js). Agents invoke this at the
+// start of a session to confirm fast-lane eligibility.
+const chooseLaneInvocation =
+  `python3 ${worktree_path}/scripts/build_orchestration/path_selection.py choose_lane` +
+  ` --ac-root ${worktree_path}/${acStoreRoot} --limit ${batchSize}`;
+
+// c: assemble_context_bundle — builds the layered context bundle for agents
+// (BO-2400c-1). Enables stable-prefix cache optimisation. Each agent dispatch
+// is preceded by a context build so agents receive optimised context.
+const assembleContextBundleInvocation =
+  `python3 ${worktree_path}/scripts/injection_builders.py assemble_context_bundle` +
+  ` --worktree ${worktree_path} --ac-root ${worktree_path}/${acStoreRoot}`;
+
+// d: emit_agent_telemetry — records each phase dispatch for the
+// retrospective-agent lane comparison (BO-2400d-1). Agents call this after
+// completing their phase so telemetry is captured on every fast-lane run.
+const emitTelemetryBase =
+  `python3 ${worktree_path}/scripts/agent-health/agent_telemetry.py emit_agent_telemetry`;
+
+// ---------------------------------------------------------------------------
 // Gate: select_batch — deterministic AC batch selection (BO-2400a-2)
 //
-// The gate reads the AC YAML store, filters to approved+unimplemented ACs,
-// and returns the next N by priority order. No LLM decides the batch.
-// The test-writer invokes this gate as a Bash command (its first action)
-// to discover which ACs to cover before writing stubs.
+// CLI form (sibling-coder-added fast_lane.py CLI):
+//   python3 <gateScript> select_batch --ac-root <root> --limit <N>
 //
-// Invocation pattern (single Bash command):
-//   python3 <worktree_path>/<gateScript> select_batch \
-//     --ac-store <worktree_path>/<acStoreRoot> \
-//     --batch-size <batchSize>
+// Reads the AC YAML store, filters to approved+unimplemented ACs, and returns
+// the next N by priority order. No LLM decides the batch.
 // ---------------------------------------------------------------------------
 
 const selectBatchInvocation =
   `python3 ${worktree_path}/${gateScript} select_batch` +
-  ` --ac-store ${worktree_path}/${acStoreRoot}` +
-  ` --batch-size ${batchSize}`;
+  ` --ac-root ${worktree_path}/${acStoreRoot}` +
+  ` --limit ${batchSize}`;
 
 // ---------------------------------------------------------------------------
-// Phase 1 — test-writer: write failing stubs for the batch (BO-2400a-1)
+// Gate: verify_red_baseline — confirm all batch tests RED (BO-2400a-3)
+//
+// CLI form (agent substitutes BATCH_IDS with space-separated AC ids from
+// the select_batch output):
+//   python3 <gateScript> verify_red_baseline --ac-ids <BATCH_IDS> --test-root <wt>
+//
+// Runs INSIDE the test-writer agent after stubs are written. The test-writer
+// returns { all_red: bool, offender: string|null } from the gate output.
+// The workflow branches on all_red: false → blocked (coder not dispatched).
+// ---------------------------------------------------------------------------
+
+const redBaselineInvocation =
+  `python3 ${worktree_path}/${gateScript} verify_red_baseline` +
+  ` --ac-ids <BATCH_IDS> --test-root ${worktree_path}`;
+
+// ---------------------------------------------------------------------------
+// Phase 1 — test-writer: write failing stubs + run red-baseline gate (BO-2400a-1)
 //
 // One flat dispatch covers the entire batch. Invocation count = 1,
-// independent of N. The test-writer runs select_batch as its first
-// Bash call, then writes stubs for every AC in the returned list.
+// independent of N. The test-writer:
+//   A. Runs select_batch (single Bash command) to obtain the AC id list.
+//   B. Writes minimal failing stubs for every AC in the batch.
+//   C. Runs redBaselineInvocation (single Bash command) to verify red state.
+//   D. Returns { all_red: bool, offender: string|null } from the gate output.
 // ---------------------------------------------------------------------------
 
 phase("Test Writer");
@@ -117,18 +184,26 @@ const testWriterResult = await agent(
   `You are the test-writer phase agent for a fast-lane AC batch build.\n\n` +
   `Worktree: ${worktree_path}\n` +
   `AC store: ${worktree_path}/${acStoreRoot}\n` +
-  `Batch gate command: ${selectBatchInvocation}\n\n` +
-  `Instructions:\n` +
-  `1. Run the select_batch gate (single Bash command) to obtain the AC list:\n` +
+  `Lane eligibility: ${chooseLaneInvocation}\n\n` +
+  `Step 0 — Context assembly (run first, single Bash command):\n` +
+  `   ${assembleContextBundleInvocation}\n` +
+  `This builds the layered context bundle for optimised prompt injection.\n\n` +
+  `Step 1 — Select batch (single Bash command):\n` +
   `   ${selectBatchInvocation}\n` +
-  `   Parse the JSON output — it is the ordered list of AC ids for this batch.\n` +
-  `2. For each AC id, read the AC YAML from ${worktree_path}/${acStoreRoot}.\n` +
-  `3. Write a minimal failing test stub that asserts the AC behavior. Tests MUST be RED.\n` +
-  `4. Run the test suite to confirm all new stubs FAIL (non-zero exit).\n` +
-  `5. Return { "status": "ok", "tests_written": ["<path>", ...], "message": "<summary>" }.\n\n` +
-  `CONSTRAINT: Do NOT write any production code — only failing test stubs.\n` +
-  `After you sign off, the verify_red_baseline gate runs to confirm the red state\n` +
-  `before the coder phase is dispatched.`,
+  `Parse the JSON output — it is the ordered list of AC ids for this batch.\n\n` +
+  `Step 2 — Write failing stubs:\n` +
+  `For each AC id, read the AC YAML from ${worktree_path}/${acStoreRoot}.\n` +
+  `Write a minimal failing test stub that asserts the AC behavior.\n` +
+  `All stubs MUST be RED (fail when run) — do NOT write production code.\n\n` +
+  `Step 3 — Run the red-baseline gate (single Bash command):\n` +
+  `Replace BATCH_IDS with the space-separated AC ids from Step 1, then run:\n` +
+  `   ${redBaselineInvocation}\n` +
+  `Parse the JSON output to obtain: { "all_red": <boolean>, "offender": "<first-passing-test or null>" }.\n\n` +
+  `Step 4 — Emit phase telemetry (single Bash command):\n` +
+  `   ${emitTelemetryBase} --phase test-writer --worktree ${worktree_path} --status <ok|failed>\n\n` +
+  `Return JSON: { "status": "ok", "tests_written": ["<path>", ...], "all_red": <bool>, "offender": "<test or null>", "message": "<summary>" }\n\n` +
+  `CRITICAL: The all_red field MUST reflect the actual gate output from ${redBaselineInvocation}.\n` +
+  `Do NOT fabricate all_red=true — return the real gate verdict so the coder guard can branch correctly.`,
   {
     agentType: "test-writer",
     schema: TEST_WRITER_SCHEMA,
@@ -150,27 +225,55 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
 }
 
 // ---------------------------------------------------------------------------
-// Gate: verify_red_baseline — confirm all batch tests RED (BO-2400a-3)
+// Guard: red-baseline gate result (DEFECT H-1 fix — BO-2400a-3)
 //
-// This gate runs BEFORE the coder is dispatched. It is a deterministic
-// Python script — not an LLM judgment. A non-zero exit means the stubs
-// are not genuinely failing; the coder must not be dispatched.
-//
-// Invocation pattern (single Bash command):
-//   python3 <worktree_path>/<gateScript> verify_red_baseline \
-//     --worktree <worktree_path>
+// The coder MUST NOT be dispatched unless all batch tests are genuinely
+// failing. This branches on the all_red field from the test-writer's gate
+// run — the gate is NOT re-run here (it ran inside the test-writer agent).
 // ---------------------------------------------------------------------------
 
-const redBaselineInvocation =
-  `python3 ${worktree_path}/${gateScript} verify_red_baseline` +
-  ` --worktree ${worktree_path}`;
+if (!testWriterResult.all_red) {
+  return {
+    status: "blocked",
+    message:
+      "verify_red_baseline gate failed: test-writer reported all_red=false. " +
+      `Offender: ${testWriterResult.offender || "unknown"}. ` +
+      "All batch tests must FAIL before the coder is dispatched. " +
+      "Fix the stubs so every batch test is genuinely red, then re-run.",
+    failing_phase: "test-writer",
+    gate: "verify_red_baseline",
+    classification: "halt",
+  };
+}
 
 // ---------------------------------------------------------------------------
-// Phase 2 — python-coder: implement ACs to make batch tests GREEN (BO-2400a-1)
+// Gate: verify_green_and_coverage — confirm GREEN + AC coverage (BO-2400a-4)
+//
+// CLI form (agent substitutes BATCH_IDS with space-separated AC ids from
+// the select_batch output):
+//   python3 <gateScript> verify_green_and_coverage \
+//     --ac-ids <BATCH_IDS> --test-root <wt> --ac-root <root>
+//
+// Runs INSIDE the coder agent after implementation. The coder returns
+// { green: bool, coverage_ok: bool, uncovered_ac_ids: [...] } from gate output.
+// The workflow branches on green && coverage_ok — ok returned only when both true.
+// ---------------------------------------------------------------------------
+
+const greenCoverageInvocation =
+  `python3 ${worktree_path}/${gateScript} verify_green_and_coverage` +
+  ` --ac-ids <BATCH_IDS> --test-root ${worktree_path}` +
+  ` --ac-root ${worktree_path}/${acStoreRoot}`;
+
+// ---------------------------------------------------------------------------
+// Phase 2 — python-coder: implement ACs + run green+coverage gate (BO-2400a-1)
 //
 // One flat dispatch covers the entire batch — the second and final dispatch
-// in this workflow. The coder runs only after verify_red_baseline confirms
-// the red state above.
+// in this workflow. The coder:
+//   A. Runs the test suite to see which stubs fail.
+//   B. Implements minimum production code to make all stubs pass.
+//   C. Runs greenCoverageInvocation (single Bash command) to verify green state
+//      and full AC coverage.
+//   D. Returns { green: bool, coverage_ok: bool, uncovered_ac_ids: [...] }.
 // ---------------------------------------------------------------------------
 
 phase("Coder");
@@ -179,15 +282,24 @@ const coderResult = await agent(
   `You are the python-coder phase agent for a fast-lane AC batch build.\n\n` +
   `Worktree: ${worktree_path}\n` +
   `AC store: ${worktree_path}/${acStoreRoot}\n\n` +
-  `Instructions:\n` +
-  `1. The test-writer has already written failing stubs in the worktree.\n` +
-  `   Run the test suite to see which tests are failing.\n` +
-  `2. Implement the minimum production code to make every failing batch test PASS.\n` +
-  `3. Run the test suite to confirm all batch tests are GREEN (zero exit).\n` +
-  `4. Return { "status": "ok", "files_modified": ["<path>", ...], "message": "<summary>" }.\n\n` +
+  `Step 0 — Context assembly (run first, single Bash command):\n` +
+  `   ${assembleContextBundleInvocation}\n` +
+  `This builds the layered context bundle for optimised prompt injection.\n\n` +
+  `Step 1 — Implement:\n` +
+  `The test-writer has already written failing stubs in the worktree.\n` +
+  `Run the test suite to see which tests are failing.\n` +
+  `Implement the minimum production code to make every failing batch test PASS.\n` +
+  `Run the test suite to confirm all batch tests are GREEN (zero exit).\n\n` +
+  `Step 2 — Run the green+coverage gate (single Bash command):\n` +
+  `Replace BATCH_IDS with the space-separated AC ids from the select_batch output, then run:\n` +
+  `   ${greenCoverageInvocation}\n` +
+  `Parse the JSON output: { "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...] }.\n\n` +
+  `Step 3 — Emit phase telemetry (single Bash command):\n` +
+  `   ${emitTelemetryBase} --phase python-coder --worktree ${worktree_path} --status <ok|failed>\n\n` +
+  `Return JSON: { "status": "ok", "files_modified": ["<path>", ...], "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...], "message": "<summary>" }\n\n` +
   `CONSTRAINT: Implement only what the failing tests require — no gold-plating.\n` +
-  `After you sign off, the verify_green_and_coverage gate confirms green state\n` +
-  `and full AC coverage before the batch output is staged for commit.`,
+  `CRITICAL: The green and coverage_ok fields MUST reflect the actual gate output from ${greenCoverageInvocation}.\n` +
+  `Do NOT fabricate green=true or coverage_ok=true — return the real gate verdict.`,
   {
     agentType: "python-coder",
     schema: CODER_SCHEMA,
@@ -209,25 +321,29 @@ if (!coderResult || coderResult.status !== "ok") {
 }
 
 // ---------------------------------------------------------------------------
-// Gate: verify_green_and_coverage — confirm GREEN + AC coverage (BO-2400a-4)
+// Guard: green+coverage gate result (DEFECT H-1 fix — BO-2400a-4)
 //
-// This gate runs AFTER the coder finishes. Two conditions must both pass:
-//   1. All batch tests pass (zero exit from the test suite).
-//   2. Every AC id in the batch has at least one covering test.
+// The batch is NOT complete unless BOTH conditions hold:
+//   1. All batch tests pass (green === true).
+//   2. Every AC id in the batch has at least one covering test (coverage_ok === true).
 //
-// A non-zero exit means coverage is incomplete or tests still fail — the
-// commit is NOT staged until this gate passes.
-//
-// Invocation pattern (single Bash command):
-//   python3 <worktree_path>/<gateScript> verify_green_and_coverage \
-//     --worktree <worktree_path> \
-//     --ac-store <worktree_path>/<acStoreRoot>
+// This branches on the coder's gate result — the gate ran inside the coder agent.
 // ---------------------------------------------------------------------------
 
-const greenCoverageInvocation =
-  `python3 ${worktree_path}/${gateScript} verify_green_and_coverage` +
-  ` --worktree ${worktree_path}` +
-  ` --ac-store ${worktree_path}/${acStoreRoot}`;
+if (!coderResult.green || !coderResult.coverage_ok) {
+  return {
+    status: "blocked",
+    message:
+      "verify_green_and_coverage gate failed: " +
+      `green=${coderResult.green}, coverage_ok=${coderResult.coverage_ok}. ` +
+      `Uncovered ACs: ${JSON.stringify(coderResult.uncovered_ac_ids || [])}. ` +
+      "Fix failing tests and/or add AC coverage before staging the commit.",
+    failing_phase: "python-coder",
+    gate: "verify_green_and_coverage",
+    uncovered_ac_ids: coderResult.uncovered_ac_ids || [],
+    classification: "halt",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Phase 3 — Stage commit
@@ -235,16 +351,29 @@ const greenCoverageInvocation =
 
 phase("Stage Commit");
 
+// Build gates_passed from actual gate verdicts — NOT a hardcoded literal.
+// DEFECT H-1 fix: the previous unconditional return claimed all three gates
+// passed even when neither verify_red_baseline nor verify_green_and_coverage
+// had actually run. Now gates_passed only includes gates whose results were
+// verified by the conditional guards above.
+const gatesPassed = ["select_batch"];
+if (testWriterResult.all_red) {
+  gatesPassed.push("verify_red_baseline");
+}
+if (coderResult.green && coderResult.coverage_ok) {
+  gatesPassed.push("verify_green_and_coverage");
+}
+
 return {
   status: "ok",
   message:
     "Fast-lane batch complete. " +
-    "test-writer wrote failing stubs (verify_red_baseline confirmed red baseline), " +
-    "python-coder made them green (verify_green_and_coverage confirmed green + coverage). " +
+    "test-writer wrote failing stubs and verify_red_baseline confirmed red baseline. " +
+    "python-coder made them green and verify_green_and_coverage confirmed green + coverage. " +
     "Batch output is ready to commit.",
   worktree_path,
   batch_size: batchSize,
   tests_written: (testWriterResult && testWriterResult.tests_written) || [],
   files_modified: (coderResult && coderResult.files_modified) || [],
-  gates_passed: ["select_batch", "verify_red_baseline", "verify_green_and_coverage"],
+  gates_passed: gatesPassed,
 };

@@ -559,11 +559,17 @@ class TestFastLaneMechanicalGatesPresent(_JsFileTestBase):
         # Use the agentType dispatch string as the coder anchor — it appears
         # only in the actual agent() call, not in comments or meta.phases.
         coder_anchor = 'agentType: "python-coder"'
-        # Use the variable name as the gate anchor — it is defined as a const
-        # after the coder block, appearing once in the code section.
-        gate_anchor = "greenCoverageInvocation"
+        # Anchor on the green+coverage gate RESULT being consumed as an arbiter.
+        # In the corrected runner the invocation string is embedded in the coder
+        # prompt (so it is necessarily defined BEFORE the dispatch); the gate acts
+        # as an arbiter AFTER the coder via a guard on its result (coverage_ok).
+        # Consumption-after-coder is the property BO-2500d-3 actually requires —
+        # source-definition position of the invocation string is not meaningful.
+        gate_anchor = "coverage_ok"
         coder_pos = content.find(coder_anchor)
-        gate_pos = content.find(gate_anchor)
+        # Search for the gate-result reference AFTER the coder dispatch, so an
+        # early doc/meta mention of coverage_ok cannot satisfy the arbiter check.
+        gate_pos = content.find(gate_anchor, coder_pos) if coder_pos != -1 else -1
         if coder_pos == -1:
             self.fail(
                 "Could not find coder dispatch anchor "
@@ -572,8 +578,8 @@ class TestFastLaneMechanicalGatesPresent(_JsFileTestBase):
             )
         if gate_pos == -1:
             self.fail(
-                f"Could not find gate anchor '{gate_anchor}' in fast-lane-build.js — "
-                "verify the green+coverage invocation variable is still defined "
+                f"Could not find gate-result anchor '{gate_anchor}' in fast-lane-build.js — "
+                "verify the green+coverage gate result is consumed as an arbiter "
                 "(BO-2500d-3)."
             )
         self.assertGreater(
@@ -581,8 +587,8 @@ class TestFastLaneMechanicalGatesPresent(_JsFileTestBase):
             coder_pos,
             f"'{gate_anchor}' (pos {gate_pos}) must appear AFTER the coder "
             f"dispatch '{coder_anchor}' (pos {coder_pos}) in fast-lane-build.js — "
-            "the green+coverage gate must be defined after the coder runs "
-            "(BO-2500d-3).",
+            "the green+coverage gate result must be consumed as an arbiter after "
+            "the coder runs (BO-2500d-3).",
         )
 
     def test_ac_d3_gates_passed_summary_names_both_mechanical_gates(self) -> None:

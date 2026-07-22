@@ -86,13 +86,12 @@ def emit_agent_telemetry(record: dict, *, sink_path: Path) -> None:
     if "ts" not in payload:
         payload["ts"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    line = json.dumps(payload, ensure_ascii=False) + "\n"
-
     try:
+        line = json.dumps(payload, ensure_ascii=False) + "\n"
         sink_path.parent.mkdir(parents=True, exist_ok=True)
         with open(sink_path, "a", encoding="utf-8") as fh:
             fh.write(line)
-    except OSError as exc:
+    except (OSError, TypeError) as exc:
         logger.warning(
             "emit_agent_telemetry: failed to write to sink %s — record dropped: %s",
             sink_path,

@@ -12,11 +12,14 @@ ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
     to keep coverage semantics in sync with the done-proof gate.  All subprocess
     and file I/O is wrapped inside the delegated helpers per the Error Handling
     Policy (Rule 1).  The public functions themselves are pure orchestration with
-    no direct I/O — they carry no try/except (Rule 4).
+    no direct I/O — they carry no try/except (Rule 4).  A CLI entry point
+    (main()) wraps each function for subprocess-based pipeline invocation.
 """
 
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -231,3 +234,118 @@ def verify_green_and_coverage(
         "uncovered_ac_ids": uncovered_ac_ids,
         "failing_tests": failing_tests,
     }
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def _build_cli_parser() -> argparse.ArgumentParser:
+    """Return the argument parser for the fast_lane CLI.
+
+    Returns:
+        Configured ArgumentParser with select_batch, verify_red_baseline,
+        and verify_green_and_coverage subcommands.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Fast-lane build pipeline gates (BO-2400a). "
+            "Select a ready AC batch, verify the red baseline before coding, "
+            "or verify green coverage before staging."
+        ),
+    )
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+
+    # --- select_batch ---
+    sb = subparsers.add_parser(
+        "select_batch",
+        help="Select up to --limit ready leaf ACs and print their ids as a JSON list.",
+    )
+    sb.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+    sb.add_argument("--limit", required=True, type=int, metavar="N", help="Cohesion cap.")
+
+    # --- verify_red_baseline ---
+    vrb = subparsers.add_parser(
+        "verify_red_baseline",
+        help="Verify that all tests covering ac-ids are currently failing (red).",
+    )
+    vrb.add_argument(
+        "--ac-ids",
+        required=True,
+        metavar="IDS",
+        help="Comma-separated AC ids whose covering tests must all be red.",
+    )
+    vrb.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
+
+    # --- verify_green_and_coverage ---
+    vgc = subparsers.add_parser(
+        "verify_green_and_coverage",
+        help="Verify all batch tests pass and every AC id has a covering test.",
+    )
+    vgc.add_argument(
+        "--ac-ids",
+        required=True,
+        metavar="IDS",
+        help="Comma-separated AC ids to verify.",
+    )
+    vgc.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
+    vgc.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for the fast-lane pipeline gates.
+
+    Dispatches to select_batch, verify_red_baseline, or
+    verify_green_and_coverage based on the subcommand, prints the result as
+    JSON to stdout, and returns an exit code matching the gate outcome.
+
+    Exit codes:
+
+    * ``select_batch``: always 0 (an empty list is a valid result).
+    * ``verify_red_baseline``: 0 when all_red is True (gate passes); 1
+      otherwise (at least one test already passes — coder must not run).
+    * ``verify_green_and_coverage``: 0 when both green and coverage_ok are
+      True; 1 when either condition fails.
+
+    Args:
+        argv: Argument list.  Defaults to ``sys.argv[1:]`` when ``None``.
+
+    Returns:
+        Integer exit code per the gate outcome described above.
+    """
+    parser = _build_cli_parser()
+    args = parser.parse_args(argv)
+
+    if args.subcommand == "select_batch":
+        result = select_batch(ac_root=Path(args.ac_root), limit=args.limit)
+        print(json.dumps(result))
+        return 0
+
+    if args.subcommand == "verify_red_baseline":
+        ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+        result = verify_red_baseline(ac_ids=ac_ids, test_root=Path(args.test_root))
+        print(json.dumps(result))
+        return 0 if result["all_red"] else 1
+
+    if args.subcommand == "verify_green_and_coverage":
+        ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+        result = verify_green_and_coverage(
+            ac_ids=ac_ids,
+            test_root=Path(args.test_root),
+            ac_root=Path(args.ac_root),
+        )
+        print(json.dumps(result))
+        return 0 if (result["green"] and result["coverage_ok"]) else 1
+
+    return 1  # unreachable with argparse required=True, but satisfies mypy
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, ValueError) as exc:
+        print(f"[fast-lane] unexpected error: {exc}", file=sys.stderr)
+        sys.exit(1)

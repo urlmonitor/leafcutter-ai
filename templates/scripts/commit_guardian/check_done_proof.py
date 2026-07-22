@@ -258,7 +258,7 @@ def check_all_done_acs(
             continue
         ac_id_str = str(ac_id)
         verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
-        if not verdict["eligible"]:
+        if not verdict.get("eligible"):
             violations.append(
                 {
                     "ac_id": ac_id_str,
@@ -336,7 +336,14 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.mode == "ci":
-        violations = check_all_done_acs(ac_root=ac_root, test_root=test_root)
+        try:
+            violations = check_all_done_acs(ac_root=ac_root, test_root=test_root)
+        except (OSError, ValueError, KeyError) as exc:
+            print(
+                f"[check-done-proof] CI checker error (fail-closed): {exc}",
+                file=sys.stderr,
+            )
+            return 1
     else:
         staged_paths = _get_staged_ac_yaml_paths(project_root)
         violations = check_staged_done_proofs(staged_paths, test_root=test_root)
