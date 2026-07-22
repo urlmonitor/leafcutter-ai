@@ -136,12 +136,14 @@ jobs:
   done-proof:
     name: Proof-of-done coverage check (BO-2500b)
     runs-on: ubuntu-latest
-    # Informational — many pre-existing done ACs do not yet carry covers tags.
-    # Promote to blocking (remove continue-on-error) once the full AC store is
-    # covered (BO-2500b-3 tracking ticket).
-    continue-on-error: true
+    # Blocking gate (BO-2500b-3): diff-scoped ci-changed mode evaluates only ACs
+    # changed in the PR, making this safe to require without failing on pre-existing
+    # done ACs that predate the covers-tag mandate.
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history required so git diff <base>...HEAD is reachable.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -157,8 +159,8 @@ jobs:
         # resolve correctly on a fresh checkout (ADR-016).
         run: python scripts/build.py --target-dir .
 
-      - name: Run proof-of-done check (CI mode)
-        run: python scripts/commit_guardian/check_done_proof.py --mode ci
+      - name: Run proof-of-done check (CI-changed mode)
+        run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }}
 
   typecheck:
     name: Type-check changed files (mypy, informational)

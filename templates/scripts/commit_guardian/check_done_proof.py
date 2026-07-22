@@ -11,7 +11,7 @@ BUSINESS CONTEXT: BO-2500b mandates that no AC may reach work_status:done withou
     is the authoritative backstop: it calls verify_done_eligible for every done AC
     in the store and requires every linked test to PASS — so --no-verify commits
     and hook-config-less worktrees (BO-2500b-1-i) are still caught before merge.
-ARCHITECTURE: Three public symbols consumed by tests and the CLI:
+ARCHITECTURE: Four public symbols consumed by tests and the CLI:
     check_staged_done_proofs(staged_yaml_paths, *, test_root) -> list[dict]
         STATIC pre-commit check. Scans test_root for covers tags; returns
         violation dicts for done ACs that have no tag. No subprocess calls.
@@ -19,8 +19,14 @@ ARCHITECTURE: Three public symbols consumed by tests and the CLI:
         CI-authoritative check. Calls verify_done_eligible (from done_proof)
         for every done AC under ac_root; returns violation dicts for ineligible
         ACs. Invokes pytest as a subprocess via the done_proof engine.
+    check_changed_done_acs(changed_yaml_paths, *, ac_root, test_root) -> list[dict]
+        PR-scoped CI check. Calls verify_done_eligible only for done ACs in the
+        provided changed_yaml_paths list; never scans the full store. Makes it
+        safe to promote to a required gate without failing on legacy done ACs
+        that predate the covers-tag mandate (BO-2500b-3).
     main(argv) -> int
-        CLI entry point. --mode precommit (default) or --mode ci.
+        CLI entry point. --mode precommit (default), --mode ci, or
+        --mode ci-changed (with --base <ref>, default origin/main).
 
     Root resolution: uses _resolve_root.find_project_root() for project-root
     defaults in main(); sibling-directory lookup (__file__ parent / ac_store)
@@ -122,6 +128,47 @@ def _get_staged_ac_yaml_paths(project_root: Path) -> list[Path]:
             capture_output=True,
             text=True,
             timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"WARNING: check_done_proof: git diff failed: {exc}",
+            file=sys.stderr,
+        )
+        return []
+    result: list[Path] = []
+    for line in proc.stdout.splitlines():
+        rel = Path(line.strip())
+        if rel.suffix != ".yaml":
+            continue
+        if "acceptance-criteria" not in rel.parts:
+            continue
+        abs_path = project_root / rel
+        if abs_path.exists():
+            result.append(abs_path)
+    return result
+
+
+def _get_changed_ac_yaml_paths(base_ref: str, project_root: Path) -> list[Path]:
+    """Return absolute paths of AC YAML files changed since *base_ref* via git diff.
+
+    Runs ``git diff --name-only <base_ref>...HEAD`` and filters for files under
+    ``docs/acceptance-criteria/`` with a ``.yaml`` extension.  Git errors are
+    logged and an empty list is returned (fail-open for the diff step).
+
+    Args:
+        base_ref: Git reference to diff against (e.g., ``"origin/main"``).
+        project_root: Absolute path to the project (git) root.
+
+    Returns:
+        List of absolute Paths for changed AC YAML files.  Returns an empty list
+        when the git command fails or no matching files were changed.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--name-only", f"{base_ref}...HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         print(
@@ -268,6 +315,66 @@ def check_all_done_acs(
     return violations
 
 
+def check_changed_done_acs(
+    changed_yaml_paths: list[Path],
+    *,
+    ac_root: Path,
+    test_root: Path,
+) -> list[dict]:
+    """PR-scoped CI check: done-proof evaluated only for changed AC yaml paths.
+
+    For each AC YAML path in *changed_yaml_paths* whose ``work_status`` is
+    ``"done"``, calls :func:`done_proof.verify_done_eligible` to confirm the
+    AC has a covers-tagged, passing test.  ACs NOT in *changed_yaml_paths* are
+    never evaluated — this scoping invariant makes it safe to promote this mode
+    to a required CI gate without failing on pre-existing done ACs that predate
+    the covers-tag mandate (BO-2500b-3).
+
+    Args:
+        changed_yaml_paths: AC YAML paths changed in the current PR (e.g. from
+            ``git diff --name-only <base>...HEAD``).  Only these paths are
+            evaluated.  Pre-existing done ACs not in this list are silently
+            ignored.
+        ac_root: Root directory of the AC YAML store; passed to
+            :func:`done_proof.verify_done_eligible`.
+        test_root: Root directory to scan for covers-tagged tests; passed to
+            :func:`done_proof.verify_done_eligible`.
+
+    Returns:
+        List of violation dicts, each containing ``"ac_id"`` (str) and
+        ``"reason"`` (str, non-empty).  An empty list means no violations among
+        the changed done ACs.
+    """
+    violations: list[dict] = []
+    for yaml_path in changed_yaml_paths:
+        try:
+            with open(yaml_path, encoding="utf-8") as fh:
+                data = yaml.safe_load(fh)
+        except (yaml.YAMLError, OSError) as exc:
+            print(
+                f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        if not isinstance(data, dict):
+            continue
+        if data.get("work_status") != "done":
+            continue
+        ac_id = data.get("id")
+        if not ac_id:
+            continue
+        ac_id_str = str(ac_id)
+        verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
+        if not verdict.get("eligible"):
+            violations.append(
+                {
+                    "ac_id": ac_id_str,
+                    "reason": verdict.get("reason", "coverage gate failed"),
+                }
+            )
+    return violations
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -288,9 +395,21 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=["precommit", "ci"],
+        choices=["precommit", "ci", "ci-changed"],
         default="precommit",
-        help="Operating mode: 'precommit' (fast static, default) or 'ci' (full).",
+        help=(
+            "Operating mode: 'precommit' (fast static, default), 'ci' (full store), "
+            "or 'ci-changed' (PR-scoped; only changed AC yamls are evaluated)."
+        ),
+    )
+    parser.add_argument(
+        "--base",
+        metavar="REF",
+        default="origin/main",
+        help=(
+            "Git base ref for diff in ci-changed mode "
+            "(default: origin/main). Ignored in precommit and ci modes."
+        ),
     )
     parser.add_argument(
         "--ac-root",
@@ -316,9 +435,10 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for the proof-of-done gate.
 
-    Dispatches to check_staged_done_proofs (pre-commit mode) or
-    check_all_done_acs (ci mode) based on --mode, prints each violation's
-    ac_id and reason, and exits 1 when violations are found.
+    Dispatches to check_staged_done_proofs (precommit mode),
+    check_all_done_acs (ci mode), or check_changed_done_acs (ci-changed mode)
+    based on --mode.  Prints each violation's ac_id and reason; exits 1 when
+    violations are found, 0 otherwise.
 
     Args:
         argv: Argument list.  Defaults to ``sys.argv[1:]`` when ``None``.
@@ -341,6 +461,18 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError, KeyError) as exc:
             print(
                 f"[check-done-proof] CI checker error (fail-closed): {exc}",
+                file=sys.stderr,
+            )
+            return 1
+    elif args.mode == "ci-changed":
+        changed_paths = _get_changed_ac_yaml_paths(args.base, project_root)
+        try:
+            violations = check_changed_done_acs(
+                changed_paths, ac_root=ac_root, test_root=test_root
+            )
+        except (OSError, ValueError, KeyError) as exc:
+            print(
+                f"[check-done-proof] CI-changed checker error (fail-closed): {exc}",
                 file=sys.stderr,
             )
             return 1

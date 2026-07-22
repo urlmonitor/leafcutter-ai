@@ -2,7 +2,8 @@
 title: "Documentation Index"
 type: reference
 status: active
-created: 2026-06-30
+created: 2026-07-22
+last_updated: 2026-07-22
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -12,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-22 08:00 UTC
+> Generated: 2026-07-22 10:17 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -24,7 +25,7 @@ task, then pull only those files.
 |------|------|-------------|
 | ac driven dev | [docs/architecture/components/ac-driven-dev.md](docs/architecture/components/ac-driven-dev.md) | The AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog. |
 | agent registry | [docs/architecture/components/agent-registry.md](docs/architecture/components/agent-registry.md) | Central registry of all phase agents with is_ticket_phase flags, produces traits, and model tier assignments used by ticket-supervisor for dispatch and validation. |
-| agent telemetry | [docs/architecture/components/agent-telemetry.md](docs/architecture/components/agent-telemetry.md) | Event emission and tracking system for recording supervisor dispatch, agent sign-offs, retries, and failure events to JSONL logs for retrospective analysis. |
+| agent telemetry | [docs/architecture/components/agent-telemetry.md](docs/architecture/components/agent-telemetry.md) | Per-invocation metric emitter and lane comparison reporter. Appends structured JSONL records to the telemetry sink after each agent call, exposing duration, token volumes, and cache-hit counts for fast-lane vs heavy-pipeline cost comparison. |
 | bootstrap installer | [docs/architecture/components/bootstrap-installer.md](docs/architecture/components/bootstrap-installer.md) | Self-hosting installation system that deploys leafcutter-ai agents, skills, hooks, and config scaffolds into consumer projects with zero manual setup. |
 | build epic workflow dispatch | [docs/architecture/components/build-epic-workflow-dispatch.md](docs/architecture/components/build-epic-workflow-dispatch.md) | build-epic.js Workflow Dispatch — Agent Flow |
 | build orchestration | [docs/architecture/components/build-orchestration.md](docs/architecture/components/build-orchestration.md) | Build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks. |
@@ -113,6 +114,7 @@ task, then pull only those files.
 | declare a knowledge surface | [docs/how-to/declare-a-knowledge-surface.md](docs/how-to/declare-a-knowledge-surface.md) | Step-by-step guide for registering a new source of knowledge in config/paths.json so it participates in the cross-surface knowledge map. |
 | declare component membership | [docs/how-to/declare-component-membership.md](docs/how-to/declare-component-membership.md) | Step-by-step guide for adding a components list to a knowledge item so it joins the cross-surface component view, and for querying a component back to its criteria, source files, and tests. |
 | deprecating or removing artifacts | [docs/how-to/deprecating-or-removing-artifacts.md](docs/how-to/deprecating-or-removing-artifacts.md) | Step-by-step guide for safely deprecating or deleting agents, skills, hooks, and scripts from the leafcutter package without breaking consumer builds. |
+| write reference | [docs/how-to/documentation/write-reference.md](docs/how-to/documentation/write-reference.md) | Canonical guide for authoring reference documents in this repo: genre definition, when to choose reference over other genres, required frontmatter, canonical skeleton, voice conventions, placement rule, and cross-linking. |
 | done proof enforcement | [docs/how-to/done-proof-enforcement.md](docs/how-to/done-proof-enforcement.md) | Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work. |
 | drain backlog with build backlog | [docs/how-to/drain-backlog-with-build-backlog.md](docs/how-to/drain-backlog-with-build-backlog.md) | How to drain the backlog automatically with /build-backlog |
 | drive epic manually | [docs/how-to/drive-epic-manually.md](docs/how-to/drive-epic-manually.md) | How to drive an epic manually when epic-supervisor is unavailable |
