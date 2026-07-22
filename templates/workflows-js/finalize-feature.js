@@ -923,7 +923,13 @@ let postMergeFailures;
 // failure that persists after a verified-consistent deploy still reaches triage
 // and can HALT.
 // -------------------------------------------------------------------------
-if (!testPassed) {
+// Only meaningful when there are CONCRETE post-merge failures to reclassify.
+// A malformed Step-3 test-runner reply is treated conservatively above as
+// testPassed=false with an EMPTY postMergeFailures; the deploy-parity self-check
+// must NOT run (and must never flip testPassed→true) in that case — there is
+// nothing to attribute to deploy skew, and rescuing an ambiguous/empty result to
+// "passed" would skip triage and merge on a malformed test run (H-1).
+if (!testPassed && postMergeFailures.length > 0) {
   const deployParityResult = await agent(
     `Verify the deployed layer of the post-merge worktree "${WORKTREE_ROOT}" is consistent BEFORE triage (FIN-100g-4).\n` +
     "1. For every runtime artifact the failing tests import, check it is present at its\n" +
@@ -943,31 +949,43 @@ if (!testPassed) {
     { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
   )
 
-  let deployParity = {
-    build_state_only_failures: [],
-  };
+  let buildStateOnly = [];
+  let stillFailing = null;
   {
     try {
       const parsedDp = parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }) || {};
-      deployParity.build_state_only_failures = Array.isArray(parsedDp.build_state_only_failures)
+      buildStateOnly = Array.isArray(parsedDp.build_state_only_failures)
         ? parsedDp.build_state_only_failures
         : [];
+      // still_failing is the agent's post-redeploy remaining-failure set; null
+      // when the agent did not report it (older/ambiguous replies).
+      stillFailing = Array.isArray(parsedDp.still_failing) ? parsedDp.still_failing : null;
     } catch (_parseErr) {
       log("[finalize-feature] step 3 deploy-parity parse malformed — proceeding with the original post-merge failures (conservative).");
     }
   }
 
+  // Contradiction guard (M-2): never exclude a test the agent itself still reports
+  // failing after the re-deploy. Only tests classified build-state AND absent from
+  // still_failing are treated as deploy-skew. This bounds the trust placed in the
+  // agent's classification — a test the agent both "cleared" and lists as still
+  // failing is kept and sent to triage, the sole authority that can HALT.
+  const stillFailingSet = new Set(stillFailing || []);
+  const excludable = buildStateOnly.filter((t) => !stillFailingSet.has(t));
+
   // Build-state (deploy-skew) failures are environment conditions, never regressions:
   // drop them from the set handed to triage so they cannot be classified as regressions.
-  if (deployParity.build_state_only_failures.length > 0) {
+  if (excludable.length > 0) {
     log(
-      `[finalize-feature] step 3: ${deployParity.build_state_only_failures.length} failure(s) cleared by a ` +
+      `[finalize-feature] step 3: ${excludable.length} failure(s) cleared by a ` +
       "deterministic re-deploy (FIN-100g-4) — build-state, not regressions; excluded from triage."
     );
-    const buildStateSet = new Set(deployParity.build_state_only_failures);
+    const buildStateSet = new Set(excludable);
     postMergeFailures = postMergeFailures.filter((t) => !buildStateSet.has(t));
-    // If every failure was build-state deploy-skew, there are no real regressions
-    // to triage — the deployed layer is now consistent and the suite is green.
+    // Flip to passed ONLY when the run started with genuine failures (guaranteed
+    // by the postMergeFailures.length>0 guard on this block) and EVERY one was
+    // verified build-state deploy-skew. Any genuine failure remaining stays in
+    // postMergeFailures → triage → can HALT (FIN-100g-4-i).
     if (postMergeFailures.length === 0) {
       testPassed = true;
     }

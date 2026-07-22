@@ -619,3 +619,30 @@ class TestDeployParitySelfCheckFIN100g4:
             "FIN-100g-4-i: the build-state exclusion must be data-driven "
             "(passes-after-verified-redeploy), never keyed on a hard-coded test/helper name."
         )
+
+
+class TestUnresolvableTargetAbortOrderingFIN100g3i:
+    """FIN-100g-3-i: a supplied-but-unresolvable target must hit the found:false
+    unresolved-target error, NOT the misleading main-branch abort. The two early
+    returns both short-circuit before Step 0, so the guarantee is an ORDERING one:
+    the found:false return must precede the '!BRANCH || main/master' abort in the
+    workflow body (otherwise a supplied target that resolves to branch:null →
+    BRANCH="" would fire the '!BRANCH' main-abort first).
+    """
+
+    def test_found_false_return_precedes_main_branch_abort(self):
+        # covers: FIN-100g-3-i
+        js = _js_text()
+        found_false_idx = js.find("if (preflightInfo.found === false)")
+        # Anchor on the actual abort CONDITION, not the message text (which also
+        # appears in an earlier explanatory comment).
+        main_abort_idx = js.find('if (!BRANCH || BRANCH === "main"')
+        assert found_false_idx != -1, "found:false early-return must exist in the workflow body."
+        assert main_abort_idx != -1, "main-branch abort condition must exist in the workflow body."
+        assert found_false_idx < main_abort_idx, (
+            "The found:false unresolved-target return must come BEFORE the main-branch "
+            "abort (FIN-100g-3-i). If the abort is reordered above it, a supplied-but-"
+            "unresolvable target (branch:null → BRANCH='') would fire the misleading "
+            "'must be run from a feature branch' abort instead of the actionable "
+            "unresolved-target error."
+        )
