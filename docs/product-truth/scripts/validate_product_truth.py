@@ -79,6 +79,7 @@ from generate_product_truth import (
     _load_json,
     _load_yaml,
     _read_text,
+    _without_asof,
     build_by_ac,
     build_by_component,
     build_by_entity,
@@ -103,6 +104,40 @@ except ImportError:
     jsonschema = None  # type: ignore[assignment]
 
 logger = logging.getLogger("validate_product_truth")
+
+
+def _strip_by_ac_asof(by_ac: dict) -> dict:
+    """Return by_ac with 'asof' stripped from every entry, for date-agnostic comparison.
+
+    The stored by_ac index carries an ``asof`` timestamp per entry that records
+    when the edge was last written.  The validator's fresh rebuild always uses
+    today's date, so comparing with asof intact produces false mismatches on any
+    day after the last regen. Stripping both sides before the equality check lets
+    us verify that the *logical* content (flow / node / entities / source / …)
+    is current without being confused by the calendar.
+    """
+    return {
+        ac_id: [_without_asof(entry) for entry in entries]
+        for ac_id, entries in by_ac.items()
+    }
+
+
+def _strip_by_flow_asof(by_flow: dict) -> dict:
+    """Return by_flow with 'asof' stripped from every impl_summary, for date-agnostic comparison.
+
+    The stored by_flow index carries an ``asof`` timestamp inside each flow's
+    ``impl_summary``.  Same rationale as ``_strip_by_ac_asof``: stripping both
+    sides isolates logical content (done / in_progress / not_started counts) from
+    the calendar date.
+    """
+    result = {}
+    for flow_id, entry in by_flow.items():
+        entry_copy = dict(entry)
+        if "impl_summary" in entry_copy and isinstance(entry_copy["impl_summary"], dict):
+            entry_copy["impl_summary"] = _without_asof(entry_copy["impl_summary"])
+        result[flow_id] = entry_copy
+    return result
+
 
 # Flow realizations exempt from the anti-phantom-done truth-evidence gate:
 # seeds/specs may legitimately badge done/in_progress without impl evidence.
@@ -325,12 +360,23 @@ def _check_expands(flows: dict, index: dict, errors: list[str]) -> None:
 
 
 def _check_product_truth(ac_records: dict, by_ac: dict, errors: list[str]) -> None:
-    """D2 — each AC's product_truth must equal the by_ac inversion of implements."""
+    """D2 — each AC's product_truth must equal the by_ac inversion of implements.
+
+    Comparison strips the ``asof`` timestamp from both sides so that a
+    re-validate on a later calendar date (without any content change) does not
+    produce false "does not match" errors.  The generator preserves existing
+    asof values when content is unchanged; the validator only cares whether the
+    logical content (flow, node, entities, source, …) is correct.
+    """
     for ac_id, expected in by_ac.items():
         record = ac_records.get(ac_id)
         if record is None:
             continue
-        if record.get("product_truth") != expected:
+        stored = record.get("product_truth") or []
+        # Strip asof from both sides: the date stamp is not part of the logical content.
+        stored_stripped = [_without_asof(e) for e in stored if isinstance(e, dict)]
+        expected_stripped = [_without_asof(e) for e in expected]
+        if stored_stripped != expected_stripped:
             errors.append(
                 f"[product_truth] AC '{ac_id}': product_truth does not match the by_ac inversion "
                 "— run generate_product_truth.py"
@@ -343,7 +389,14 @@ def _check_product_truth(ac_records: dict, by_ac: dict, errors: list[str]) -> No
 def _check_derived_indexes(
     index: dict, flows: dict, flow_paths: dict, mocks: dict, ac_map: dict, errors: list[str]
 ) -> None:
-    """D3 — the derived index maps must equal a fresh rebuild."""
+    """D3 — the derived index maps must equal a fresh rebuild.
+
+    For ``by_ac`` and ``by_flow``, asof timestamps are stripped from both the
+    stored index and the fresh rebuild before comparison.  This avoids false
+    "does not match" errors when the calendar date has advanced past the last
+    regeneration but no logical content has changed.  ``by_component`` and
+    ``by_entity`` contain no asof fields and are compared as-is.
+    """
     rebuilds = {
         "by_component": build_by_component(index.get("artifacts", [])),
         "by_entity": build_by_entity(flows, mocks),
@@ -351,7 +404,17 @@ def _check_derived_indexes(
         "by_ac": build_by_ac(flows),
     }
     for key, expected in rebuilds.items():
-        if index.get(key) != expected:
+        stored = index.get(key)
+        if key == "by_ac":
+            stored_cmp = _strip_by_ac_asof(stored or {})
+            expected_cmp = _strip_by_ac_asof(expected)
+        elif key == "by_flow":
+            stored_cmp = _strip_by_flow_asof(stored or {})
+            expected_cmp = _strip_by_flow_asof(expected)
+        else:
+            stored_cmp = stored
+            expected_cmp = expected
+        if stored_cmp != expected_cmp:
             errors.append(f"[index] {key} does not match a fresh rebuild — run generate_product_truth.py")
 
 

@@ -25,10 +25,21 @@ script writes is the recomputed reverse edge / rollup — never hand-edit it.
 
 The todo -> not_started mapping lives in ONE place: WORK_STATUS_TO_IMPL.
 
+IDEMPOTENCY: `asof` fields (on by_ac entries, impl_summary blocks, and impl_asof
+node stamps) are PRESERVED from the stored file when the rest of the derived
+content is unchanged. Only when the derived content genuinely changes (e.g. an
+AC's work_status changed its impl_status) is `asof` updated to the run date.
+This means running the generator twice in a row produces no diff, and
+validate_product_truth.py is silent when the store is current — even when the
+calendar date has advanced past the last regeneration.
+
 CLI
   (default)   write all derived data in place.
   --check     compute everything and exit non-zero if ANY file would change
               (nothing is written) — for CI / pre-commit.
+  --now DATE  override the run date (YYYY-MM-DD) used for new/changed asof
+              stamps. Accepts any ISO-8601 date string. Useful for testing
+              idempotency across simulated date boundaries.
 
 ERROR HANDLING: every file read/write is wrapped in try/except with a SPECIFIC
 exception type (OSError, json.JSONDecodeError, yaml.YAMLError) that logs via the
@@ -51,10 +62,6 @@ logger = logging.getLogger("generate_product_truth")
 STORE = Path(__file__).resolve().parent.parent
 AC_STORE = STORE.parent / "acceptance-criteria"
 
-# Fixed "as of" stamp for this run — every derived field written in one run
-# carries the same date.
-ASOF = date.today().isoformat()
-
 # THE central status mapping. AC work_status vocab is
 # {todo, not_started, in_progress, done} (+ null / missing); flow impl_status
 # vocab is {not_started, in_progress, done}. `todo` (and null / missing) map to
@@ -71,6 +78,28 @@ WORK_STATUS_TO_IMPL = {
 # Matches a top-level `product_truth:` block (the key line plus its indented /
 # blank continuation lines) up to the next top-level key or end-of-file.
 _PRODUCT_TRUTH_BLOCK = re.compile(r"^product_truth:.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL)
+
+
+# --------------------------------------------------------------------------- #
+# Date helpers
+# --------------------------------------------------------------------------- #
+def _run_date(override: str | None = None) -> str:
+    """Return the effective run date for asof stamps.
+
+    Returns `override` when provided (enabling injection in tests and CLI
+    ``--now``); otherwise returns today's date as an ISO-8601 string.
+    """
+    return override if override is not None else date.today().isoformat()
+
+
+def _without_asof(d: dict) -> dict:
+    """Return a copy of d with the 'asof' key removed.
+
+    Used to compare logical content independently of the timestamp stamp so
+    that a re-run on a later calendar date does not see a difference when
+    nothing substantive has changed.
+    """
+    return {k: v for k, v in d.items() if k != "asof"}
 
 
 # --------------------------------------------------------------------------- #
@@ -127,12 +156,22 @@ def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = (
     return compute_node_impl_status(node.get("implements", []), ac_map)
 
 
-def compute_flow_impl_summary(flow: dict, ac_map: dict, flows: dict, _stack: tuple = ()) -> dict:
+def compute_flow_impl_summary(
+    flow: dict,
+    ac_map: dict,
+    flows: dict,
+    _stack: tuple = (),
+    run_date: str | None = None,
+) -> dict:
     """Roll up a flow's node impl_status into a counted summary.
 
     Node statuses are recomputed from source (ac_map + expands_to recursion),
     never read from stored fields, so the rollup is deterministic and idempotent
     regardless of iteration order.
+
+    The returned dict includes an ``asof`` key set to ``_run_date(run_date)``.
+    Write functions replace this with a preserved value when the non-asof counts
+    are unchanged from the stored summary, so the generator is date-idempotent.
     """
     counts = {"done": 0, "in_progress": 0, "not_started": 0}
     for node, _kind in iter_nodes(flow):
@@ -143,7 +182,7 @@ def compute_flow_impl_summary(flow: dict, ac_map: dict, flows: dict, _stack: tup
         "in_progress": counts["in_progress"],
         "not_started": counts["not_started"],
         "total": total,
-        "asof": ASOF,
+        "asof": _run_date(run_date),
     }
 
 
@@ -178,9 +217,16 @@ def build_expands_map(flows: dict) -> dict:
     }
 
 
-def build_by_ac(flows: dict) -> dict:
-    """Invert the flow->AC edges into ac_id -> sorted list of back-references."""
+def build_by_ac(flows: dict, run_date: str | None = None) -> dict:
+    """Invert the flow->AC edges into ac_id -> sorted list of back-references.
+
+    Each entry includes an ``asof`` field set to ``_run_date(run_date)``.
+    Write functions replace individual entry asof values with preserved dates
+    when the rest of the entry is unchanged, so re-running the generator on a
+    later date does not churn asof stamps for unchanged edges.
+    """
     by_ac: dict[str, list] = {}
+    effective_date = _run_date(run_date)
     for flow in sorted(flows.values(), key=lambda item: item["id"]):
         for node, node_kind in iter_nodes(flow):
             entry = {
@@ -192,7 +238,7 @@ def build_by_ac(flows: dict) -> dict:
                 "mock_data": flow.get("mock_data_ref"),
                 "entities": sorted(set(node.get("reads", []) + node.get("writes", []))),
                 "source": flow["source"],
-                "asof": ASOF,
+                "asof": effective_date,
             }
             for ac_id in node.get("implements", []):
                 by_ac.setdefault(ac_id, []).append(dict(entry))
@@ -240,7 +286,7 @@ def build_by_entity(flows: dict, mocks: dict) -> dict:
     return dict(sorted(result.items()))
 
 
-def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict) -> dict:
+def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict, run_date: str | None = None) -> dict:
     """Rebuild the by_flow lookup: derived impl_status/impl_summary + hierarchy view.
 
     Adds the drill-down hierarchy fields alongside the existing ones:
@@ -248,12 +294,16 @@ def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict) -> dict:
       * `expands` — the child flow ids this flow's steps drill into (downward).
       * `parents` — the {flow, step} back-refs of steps that expand into this
                     flow (upward), for quick tree traversal.
+
+    The ``impl_summary.asof`` in each returned entry is ``_run_date(run_date)``.
+    The caller (write_index) applies preserve logic to replace it with the stored
+    asof when the non-asof summary counts are unchanged.
     """
     parents_map = build_parents_map(flows)
     expands_map = build_expands_map(flows)
     result: dict[str, dict] = {}
     for flow in flows.values():
-        summary = compute_flow_impl_summary(flow, ac_map, flows)
+        summary = compute_flow_impl_summary(flow, ac_map, flows, run_date=run_date)
         entry = {"component": flow["component"], "level": flow.get("level"), "entities": flow.get("entities", [])}
         if flow.get("mock_data_ref"):
             entry["mock_data_ref"] = flow["mock_data_ref"]
@@ -384,14 +434,35 @@ def load_mocks() -> dict:
 # --------------------------------------------------------------------------- #
 # Write steps
 # --------------------------------------------------------------------------- #
-def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool) -> bool:
-    """Recompute + write node impl_status/impl_asof and flow impl_summary."""
+def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool, run_date: str) -> bool:
+    """Recompute + write node impl_status/impl_asof and flow impl_summary.
+
+    ``impl_asof`` on each node is preserved from the stored file when the
+    derived ``impl_status`` is unchanged; otherwise it is stamped with
+    ``run_date``. ``impl_summary.asof`` is similarly preserved when the
+    non-asof counts (done/in_progress/not_started/total) are unchanged.
+    """
     changed = False
     for flow_id, flow in flows.items():
         for node, _kind in iter_nodes(flow):
-            node["impl_status"] = compute_node_status(node, ac_map, flows)
-            node["impl_asof"] = ASOF
-        flow["impl_summary"] = compute_flow_impl_summary(flow, ac_map, flows)
+            new_status = compute_node_status(node, ac_map, flows)
+            existing_status = node.get("impl_status")
+            existing_impl_asof = node.get("impl_asof")
+            # Preserve impl_asof when status has not changed.
+            if new_status == existing_status and existing_impl_asof is not None:
+                node["impl_asof"] = existing_impl_asof
+            else:
+                node["impl_asof"] = run_date
+            node["impl_status"] = new_status
+
+        # Preserve impl_summary.asof when the non-asof counts are unchanged.
+        existing_summary = flow.get("impl_summary", {})
+        new_summary = compute_flow_impl_summary(flow, ac_map, flows, run_date=run_date)
+        if _without_asof(existing_summary) == _without_asof(new_summary) and "asof" in existing_summary:
+            flow["impl_summary"] = {**_without_asof(new_summary), "asof": existing_summary["asof"]}
+        else:
+            flow["impl_summary"] = new_summary
+
         path = STORE / flow_paths[flow_id]
         new_text = json.dumps(flow, indent=2, ensure_ascii=False) + "\n"
         if new_text != _read_text(path):
@@ -401,8 +472,38 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool) -> boo
     return changed
 
 
-def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool) -> bool:
-    """Overwrite each AC's product_truth from by_ac (omit when empty)."""
+def _preserve_entry_asof(new_entries: list[dict], existing_truth: list, run_date: str) -> list[dict]:
+    """Return new_entries with asof preserved from existing_truth where content matches.
+
+    For each new entry, locate the stored entry with the same (flow, node) key.
+    If the non-asof fields are identical, keep the stored asof; otherwise stamp
+    with run_date. This is a pure helper — no I/O.
+    """
+    if not isinstance(existing_truth, list):
+        return new_entries
+    existing_by_key: dict[tuple, dict] = {}
+    for ex in existing_truth:
+        if isinstance(ex, dict):
+            key = (ex.get("flow"), ex.get("node"))
+            existing_by_key[key] = ex
+    result = []
+    for entry in new_entries:
+        key = (entry.get("flow"), entry.get("node"))
+        existing = existing_by_key.get(key)
+        if existing is not None and _without_asof(existing) == _without_asof(entry) and "asof" in existing:
+            result.append({**_without_asof(entry), "asof": existing["asof"]})
+        else:
+            result.append(entry)
+    return result
+
+
+def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str) -> bool:
+    """Overwrite each AC's product_truth from by_ac (omit when empty).
+
+    For each entry in by_ac, the ``asof`` stamp is preserved from the stored
+    AC file when the rest of the entry content is unchanged. Only genuinely
+    new or changed entries receive the current ``run_date``.
+    """
     changed = False
     for ac_id in by_ac:
         if ac_id not in ac_map:
@@ -410,7 +511,15 @@ def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool) -> bool:
     for ac_id, meta in ac_map.items():
         path = meta["path"]
         text = _read_text(path)
-        new_text = apply_product_truth_text(text, by_ac.get(ac_id, []))
+        new_entries = by_ac.get(ac_id, [])
+
+        if new_entries:
+            # Preserve asof per entry from the stored product_truth block.
+            existing_data = yaml.safe_load(text) or {}
+            existing_truth = existing_data.get("product_truth") or []
+            new_entries = _preserve_entry_asof(new_entries, existing_truth, run_date)
+
+        new_text = apply_product_truth_text(text, new_entries)
         if new_text != text:
             changed = True
             if not check:
@@ -418,20 +527,50 @@ def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool) -> bool:
     return changed
 
 
-def write_index(flows: dict, flow_paths: dict, mocks: dict, ac_map: dict, check: bool) -> bool:
-    """Rebuild the derived index maps (by_component/by_entity/by_flow/by_ac)."""
+def write_index(
+    flows: dict,
+    flow_paths: dict,
+    mocks: dict,
+    ac_map: dict,
+    check: bool,
+    run_date: str,
+) -> bool:
+    """Rebuild the derived index maps (by_component/by_entity/by_flow/by_ac).
+
+    ``asof`` stamps inside ``by_flow[*].impl_summary`` and ``by_ac[*][i]`` are
+    preserved from the existing ``index.json`` when the non-asof content is
+    unchanged, preventing spurious date-only diffs on re-runs.
+    """
     index_path = STORE / "index.json"
     index = _load_json(index_path)
 
-    by_flow = build_by_flow(flows, flow_paths, ac_map)
+    by_flow = build_by_flow(flows, flow_paths, ac_map, run_date)
+
+    # Preserve impl_summary.asof for flows whose counts haven't changed.
+    existing_by_flow = index.get("by_flow") or {}
+    for flow_id, flow_entry in by_flow.items():
+        existing_entry = existing_by_flow.get(flow_id) or {}
+        existing_summary = existing_entry.get("impl_summary") or {}
+        new_summary = flow_entry["impl_summary"]
+        if _without_asof(existing_summary) == _without_asof(new_summary) and "asof" in existing_summary:
+            flow_entry["impl_summary"] = {**_without_asof(new_summary), "asof": existing_summary["asof"]}
+
+    # Sync artifact impl_summary entries (use the by_flow values, now with preserved asof).
     for artifact in index.get("artifacts", []):
         if artifact.get("type") == "flow" and artifact["id"] in by_flow:
             artifact["impl_summary"] = by_flow[artifact["id"]]["impl_summary"]
 
+    # Rebuild by_ac and preserve per-entry asof from the existing index.
+    new_by_ac = build_by_ac(flows, run_date)
+    existing_by_ac = index.get("by_ac") or {}
+    for ac_id, entries in new_by_ac.items():
+        existing_entries = existing_by_ac.get(ac_id) or []
+        new_by_ac[ac_id] = _preserve_entry_asof(entries, existing_entries, run_date)
+
     index["by_component"] = build_by_component(index.get("artifacts", []))
     index["by_entity"] = build_by_entity(flows, mocks)
     index["by_flow"] = by_flow
-    index["by_ac"] = build_by_ac(flows)
+    index["by_ac"] = new_by_ac
 
     new_text = json.dumps(index, indent=2, ensure_ascii=False) + "\n"
     if new_text != _read_text(index_path):
@@ -441,17 +580,24 @@ def write_index(flows: dict, flow_paths: dict, mocks: dict, ac_map: dict, check:
     return False
 
 
-def generate(check: bool) -> bool:
-    """Run all derivation steps. Returns True if anything changed (or would)."""
+def generate(check: bool, run_date: str | None = None) -> bool:
+    """Run all derivation steps. Returns True if anything changed (or would).
+
+    ``run_date`` overrides the effective date used for new/changed asof stamps.
+    When None, defaults to today (``date.today().isoformat()``).  Pass an
+    explicit date string in tests to verify idempotency across simulated date
+    boundaries.
+    """
+    effective_date = _run_date(run_date)
     ac_map = build_ac_map()
     flows, flow_paths = load_flows()
     mocks = load_mocks()
-    by_ac = build_by_ac(flows)
+    by_ac = build_by_ac(flows, effective_date)
 
     changed = False
-    changed |= write_flows(flows, flow_paths, ac_map, check)
-    changed |= write_ac_product_truth(ac_map, by_ac, check)
-    changed |= write_index(flows, flow_paths, mocks, ac_map, check)
+    changed |= write_flows(flows, flow_paths, ac_map, check, effective_date)
+    changed |= write_ac_product_truth(ac_map, by_ac, check, effective_date)
+    changed |= write_index(flows, flow_paths, mocks, ac_map, check, effective_date)
 
     logger.info(
         "%s: %d flows, %d mocks, %d ACs indexed, %d ACs with product_truth (asof %s)",
@@ -460,7 +606,7 @@ def generate(check: bool) -> bool:
         len(mocks),
         len(ac_map),
         len(by_ac),
-        ASOF,
+        effective_date,
     )
     return changed
 
@@ -469,10 +615,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate the product-truth derived data (single writer).")
     parser.add_argument("--check", action="store_true", help="Compute only; exit non-zero if anything would change.")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--now",
+        default=None,
+        metavar="DATE",
+        help=(
+            "Override the run date (YYYY-MM-DD) used for new/changed asof stamps. "
+            "When unchanged content is detected the stored asof is preserved regardless "
+            "of this value. Useful for testing idempotency across simulated date boundaries."
+        ),
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="%(message)s")
 
-    changed = generate(check=args.check)
+    changed = generate(check=args.check, run_date=args.now)
     if args.check and changed:
         logger.error("FAIL: product-truth derived data is stale — run generate_product_truth.py")
         return 1

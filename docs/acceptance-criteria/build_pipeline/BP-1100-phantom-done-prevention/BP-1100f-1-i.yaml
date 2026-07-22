@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -48,7 +48,9 @@ amended_by:
     note: "L3 edge for BP-1100f-1; same llm-expert prose surface (pr-reviewer.md). Added it_requirements, complexity, ADR-001 doc_link. test_required:false (prose lens)."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-1.md
+- templates/agents/pr-reviewer.md
 notes: |
   L3 edge for BP-1100f-1: a content-free instruction (empty or whitespace) must not
   slip past the non-empty-string check. Prevents a trivially-satisfied guard.

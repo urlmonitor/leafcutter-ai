@@ -142,6 +142,10 @@ _NOT_NEEDED_AGENTS: list[str] = [
 ]
 
 #: Canonical phase order for agent map output.
+#: user-surface-smoker (priority 11.5) sits between pr-reviewer (11) and ac-validator (11.5)
+#: so that the observable-side-effect smoke check runs before AC coverage validation and
+#: before commit. A ticket with user-surface-smoker: needed cannot reach done
+#: with the smoke check unrun (BP-1100f-5).
 _CANONICAL_PHASE_ORDER: list[str] = [
     "architect-review",
     "test-writer",
@@ -150,6 +154,7 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "test-runner",
     "documentation-expert",
     "pr-reviewer",
+    "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
     "ac-validator",
     "ac-fulfillment-gate",
     "commit",
@@ -158,6 +163,8 @@ _CANONICAL_PHASE_ORDER: list[str] = [
 
 #: Phase order for flow-change pairs: documentation-expert is placed before
 #: any coder (priority 4 → doc planning before implementation).
+#: user-surface-smoker is included at priority 11.5 for consistency with
+#: _CANONICAL_PHASE_ORDER so flow-change tickets also gate correctly.
 _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "architect-review",
     "documentation-expert",
@@ -166,6 +173,7 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "sql-coder",
     "test-runner",
     "pr-reviewer",
+    "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
     "ac-validator",
     "ac-fulfillment-gate",
     "commit",
@@ -603,6 +611,7 @@ def _build_agents_map(
     guardrail_config_path: Path | str | None = None,
     agent_registry_path: Path | str | None = None,
     files_touched: list[str] | None = None,
+    declares_side_effect: bool = False,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -628,6 +637,13 @@ def _build_agents_map(
     off the actual edit surface and/or the assigned agent, not the change_target
     label.
 
+    When declares_side_effect is True, user-surface-smoker is added as a needed
+    gating phase automatically (BP-1100f-5). The selection is data-driven — the
+    smoke check runs because the work item DECLARED a durable observable
+    side-effect, not because of an opt-in flag or hard-coded item name. A work
+    item that does not declare a side-effect (declares_side_effect=False, the
+    default) is NOT force-routed through the smoke check (BP-1100f-5-i).
+
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
         change_targets: List of change target categories (e.g. ['python_code', 'config']).
@@ -638,6 +654,8 @@ def _build_agents_map(
         files_touched: List of file paths the ticket will touch.  Used to detect
             implementation .py files so that ac-validator and ac-fulfillment-gate
             are wired when needed.
+        declares_side_effect: When True, include user-surface-smoker as a needed
+            gating verification phase (BP-1100f-5). Default: False.
 
     Returns:
         Ordered dict suitable for YAML frontmatter serialisation.
@@ -748,17 +766,43 @@ def _build_agents_map(
             all_needed.add("ac-validator")
             all_needed.add("ac-fulfillment-gate")
 
-        # Determine TDD-mandated agents that cannot be overridden (BO-550-1-i).
-        # When the computed chain requires test-writer or test-runner (via guardrail
-        # lookup or auto-inject), those agents cannot be excluded by not_needed_overrides.
-        # Non-TDD agents (e.g. architect-review) remain freely overridable.
+        # Auto-include user-surface-smoker when the work item declares a durable
+        # observable side-effect (BP-1100f-5). The routing is data-driven — the
+        # agent is included because the item DECLARED a side-effect, not because
+        # of an opt-in flag or hard-coded name. Items without a declared
+        # side-effect are exempt (BP-1100f-5-i): the absence of declares_side_effect
+        # is the data property that grants the exemption, never a hard-coded
+        # item name or type.
+        if declares_side_effect:
+            all_needed.add("user-surface-smoker")
+
+        # Determine all agents that cannot be overridden by not_needed_overrides.
+        #
+        # TDD-mandated agents (BO-550-1-i): test-writer and test-runner are
+        # mandatory when production_code is in the computed chain; an explicit
+        # not_needed override cannot remove them (the computed chain wins).
         _TDD_MANDATORY: frozenset[str] = frozenset({"test-writer", "test-runner"})
         tdd_protected: set[str] = all_needed & _TDD_MANDATORY
+        #
+        # Side-effect-mandated agents (BP-1100f-5): user-surface-smoker is
+        # mandatory when declares_side_effect=True. An explicit not_needed
+        # override cannot cancel a declared side-effect gate — the declaration
+        # wins (mirrors BO-550-1-i for TDD). Without this protection a ticket
+        # author could add user-surface-smoker: not_needed to their AC and
+        # silently bypass the mandatory smoke check.
+        _SIDE_EFFECT_MANDATORY: frozenset[str] = frozenset({"user-surface-smoker"})
+        side_effect_protected: set[str] = (
+            (all_needed & _SIDE_EFFECT_MANDATORY) if declares_side_effect else set()
+        )
+        #
+        # Combined protection: neither TDD-mandated nor side-effect-mandated
+        # agents can be excluded by not_needed_overrides.
+        all_protected: set[str] = tdd_protected | side_effect_protected
 
         # Remove any agent that has an explicit not_needed override,
-        # but protect TDD-mandated agents (BO-550-1-i: computed chain wins).
+        # but protect all mandatory agents (computed chain wins).
         for agent in overrides:
-            if agent not in tdd_protected:
+            if agent not in all_protected:
                 all_needed.discard(agent)
 
         # Build ordered result according to the chosen phase order.
@@ -785,8 +829,8 @@ def _build_agents_map(
                     agents[nc_agent] = "needed"
                 for nc_agent in non_canonical_not_needed:
                     agents[nc_agent] = "not_needed"
-            if phase_agent in tdd_protected:
-                # TDD-mandated agents are never overridable (BO-550-1-i).
+            if phase_agent in all_protected:
+                # Mandatory agents (TDD-mandated or side-effect-mandated) are never overridable.
                 agents[phase_agent] = "needed"
             elif phase_agent in overrides:
                 agents[phase_agent] = "not_needed"
@@ -1352,6 +1396,13 @@ def _build_frontmatter(
     risk_surface = ac.get("risk_surface")
     if risk_surface is not None:
         fm["risk_surface"] = risk_surface
+    # Propagate declares_side_effect from the AC to the ticket frontmatter (BP-1100f-5).
+    # This field is optional; absent on the AC → absent from the ticket (no default emitted).
+    # Emitting it enables downstream tools and ticket-supervisor to read the declaration
+    # directly from the ticket without re-reading the source AC.
+    declares_side_effect = ac.get("declares_side_effect")
+    if declares_side_effect is not None:
+        fm["declares_side_effect"] = bool(declares_side_effect)
     return "---\n" + yaml.dump(fm, default_flow_style=False, allow_unicode=True) + "---"
 
 
@@ -2185,11 +2236,13 @@ def main(argv: list[str] | None = None) -> int:
         assigned_agent = ac.get("assigned_agent", "python-coder")
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
+        declares_side_effect = bool(ac.get("declares_side_effect", False))
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
             files_touched=files_touched,
+            declares_side_effect=declares_side_effect,
         )
         frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
         body = _build_ticket_body(ac, ac_id, agents_map=agents)
@@ -2220,11 +2273,13 @@ def main(argv: list[str] | None = None) -> int:
     assigned_agent = ac.get("assigned_agent", "python-coder")
     change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
+    declares_side_effect = bool(ac.get("declares_side_effect", False))
     agents = _build_agents_map(
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
         files_touched=files_touched,
+        declares_side_effect=declares_side_effect,
     )
     frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
     body = _build_ticket_body(ac, ac_id, agents_map=agents)
@@ -2287,5 +2342,18 @@ DECISION HISTORY
   _build_verification_report() that prints the would-be ticket plus a PASS/WARN/
   FAIL readiness report (exits non-zero on FAIL) so an author can confirm the AC
   gives a coder enough to build and test-writer enough to test. (AC BO-2000e)
+- 2026-07-21 [feature/bp-1100f-hardening/BP-1100f-5]: Add declares_side_effect
+  routing (BP-1100f-5). Added declares_side_effect: bool = False parameter to
+  _build_agents_map. When True, user-surface-smoker is added to all_needed so
+  the observable-side-effect smoke check runs automatically and gates the done
+  state. The routing is data-driven: the smoke check fires because the work item
+  DECLARED a durable side-effect, not because of an opt-in flag or hard-coded
+  name. Items without the declaration are exempt (BP-1100f-5-i). Added
+  user-surface-smoker to _CANONICAL_PHASE_ORDER and _FLOW_CHANGE_PHASE_ORDER at
+  position 11.5 (after pr-reviewer, before ac-validator) so the phase is correctly
+  ordered and cannot be silently skipped. _build_frontmatter propagates
+  declares_side_effect from the source AC to the ticket frontmatter so downstream
+  tools can read the declaration directly. Both call sites in main() updated to
+  extract and pass declares_side_effect from the AC record.
 ====================================================================
 """

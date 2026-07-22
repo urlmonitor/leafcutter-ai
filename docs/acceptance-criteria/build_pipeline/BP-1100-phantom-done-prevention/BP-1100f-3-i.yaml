@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -46,7 +46,9 @@ amended_by:
     note: "L3 edge for BP-1100f-3; same llm-expert prose surface (it-po.md). test_required:false (prose judgment lens)."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-3.md
+- templates/agents/it-po.md
 notes: |
   L3 edge for BP-1100f-3: the check must be surface-partitioned, not all-or-nothing —
   a work item that legitimately spans two technologies is flagged only on the portion

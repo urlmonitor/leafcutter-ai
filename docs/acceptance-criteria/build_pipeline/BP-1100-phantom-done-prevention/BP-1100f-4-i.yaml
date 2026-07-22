@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -62,7 +62,10 @@ amended_by:
     note: "L3 edge for BP-1100f-4; same python-coder harness surface. Structured it_requirements (BO-2000d) + real-artifact test_spec. readiness left draft."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-4.md
+- unit_tests/_workflow_engine_harness.py
+- unit_tests/test_bp_1100f_4.py
 notes: |
   L3 edge for BP-1100f-4: a test author must not be able to hide an instruction-less
   dispatch by stubbing the mock to "succeed". This is the exact BO-2300 failure shape —

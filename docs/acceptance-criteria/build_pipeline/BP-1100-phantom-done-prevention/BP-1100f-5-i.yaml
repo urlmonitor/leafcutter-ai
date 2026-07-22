@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -65,7 +65,10 @@ amended_by:
     note: "L3 edge for BP-1100f-5; same python-coder routing surface. Structured it_requirements (BO-2000d) + real-artifact test_spec. Added expects_from BP-1100f-5 (the selector it narrows). readiness left draft."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-5.md
+- scripts/ac_store/generate_ticket_from_ac.py
+- templates/hooks/ticket_frontmatter_guard.py
 notes: |
   L3 edge for BP-1100f-5: scope-narrowing so the mandatory smoke routing does not
   become a false-positive gate on docs-only / side-effect-free items — the automatic

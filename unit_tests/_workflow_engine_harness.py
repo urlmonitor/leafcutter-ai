@@ -171,6 +171,38 @@ const __labelResponses__ = {LABEL_RESPONSES};
  * without modifying the workflow script under test.
  */
 async function agent(promptOrOpts, opts) {
+  // ─── Instruction-less dispatch check (BP-1100f-4) ────────────────────────────
+  // A dispatch is instruction-less when its first argument is not a non-empty
+  // (non-whitespace) string. This check fires unconditionally — before any
+  // label_responses lookup — so a return-value stub cannot suppress it.
+  var _isInstructionless = (
+    typeof promptOrOpts !== 'string' ||
+    promptOrOpts.trim() === ''
+  );
+  if (_isInstructionless) {
+    var _step = (
+      (opts && opts.label)
+        ? String(opts.label)
+        : (typeof promptOrOpts === 'object' && promptOrOpts !== null
+            ? JSON.stringify(promptOrOpts).slice(0, 80)
+            : String(promptOrOpts))
+    );
+    __contractViolations__.push({
+      type: 'instruction_less_dispatch',
+      step: _step,
+      received_type: typeof promptOrOpts,
+      detail: (
+        'agent() first argument must be a non-empty instruction string ' +
+        '(E2 API contract). An object, null, undefined, empty string, or ' +
+        'whitespace-only string carries no instruction. ' +
+        'Dispatch: agent(<' + typeof promptOrOpts + '>, ...). ' +
+        'To fix: pass a non-empty string as the first argument, e.g. ' +
+        'agent("Do the thing", { agentType: "..." }).'
+      ),
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   var label =
     (opts && opts.label) ||
     (typeof promptOrOpts === 'object' && promptOrOpts && promptOrOpts.label) ||

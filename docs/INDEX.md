@@ -12,7 +12,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-21 17:43 UTC
+> Generated: 2026-07-22 08:00 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -40,6 +40,7 @@ task, then pull only those files.
 | knowledge management | [docs/architecture/components/knowledge-management.md](docs/architecture/components/knowledge-management.md) | The cross-surface knowledge graph: surface ingestion from config/paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation. |
 | knowledge system | [docs/architecture/components/knowledge-system.md](docs/architecture/components/knowledge-system.md) | Knowledge harvesting and context file maintenance system that persists learnings across agent sessions for improved future-invocation quality. |
 | persona management | [docs/architecture/components/persona-management.md](docs/architecture/components/persona-management.md) | Persona definitions, AC targeting by persona, and persona knowledge-graph queries. |
+| phantom done prevention | [docs/architecture/components/phantom-done-prevention.md](docs/architecture/components/phantom-done-prevention.md) | Container-level overview of the BP-1100f phantom-done-prevention gates: five checks that prove a durable change by its real effect and stated intent (not by dispatch topology), each anchored to a fixed point relative to dispatch and to the done state. Groups the L3 sequence diagram that documents the end-to-end verification flow. |
 | release manager | [docs/architecture/components/release-manager.md](docs/architecture/components/release-manager.md) | Semantic version computation and schema diff checking system for managing structured releases of the leafcutter-ai package. |
 | roadmap | [docs/architecture/components/roadmap.md](docs/architecture/components/roadmap.md) | Phase-based roadmap that tracks current outcomes, exit criteria, and the tickets advancing each outcome toward the stable MVP target. |
 | skill registry | [docs/architecture/components/skill-registry.md](docs/architecture/components/skill-registry.md) | Registry of all available skills with metadata on usage context, allowed tools, and configuration constraints for agent invocation. |
