@@ -294,6 +294,39 @@ hardcoded `deploy_map`, so the deployed hook crashed with `ModuleNotFoundError: 
 hook firing on its own commit.
 (Source: fast-lane build + review, 2026-07-22.)
 
+### Skip-Branch Side-Effects — Conditionalize, Don't Add (+ tests must see all quote styles)
+
+When adding a per-step side-effect call (e.g. `outcome()`, an append, a status push) inside
+an already-satisfied **skip branch** of an `if/else`, you MUST also conditionalize the
+pre-existing **unconditional** call that sits after the `if/else` — move it into the
+`else`/execute branch, or guard it — so the step is recorded **exactly once per path**.
+Adding a skip-branch call while leaving the unconditional one produces a **duplicate** entry
+on the skip path (and, symmetrically, moving without leaving one on every path produces a
+gap). One recorded outcome per step per non-halt path; zero only on a full-workflow halt.
+
+Static/structural tests that assert "the call is present" MUST match **all** JS quote styles
+for the call's arguments — single-quote, double-quote, AND backtick template literals. A
+regex that matches only `outcome\s*\(\s*['\"]` is **blind** to a template-literal call and
+will pass on the buggy double-recording code. Pair any such structural test with a review
+that reasons about runtime paths — static presence ≠ correct runtime cardinality.
+
+**Why this matters:** `BO-1000b-1-i` added skip-branch `outcome(\`Step X…\`, 'skipped: …')`
+calls (template literals) but left the unconditional `outcome('Step X…', …)` calls (string
+literals) after each `if/else`; every skipped step double-recorded in `stepOutcomes[]`. The
+count-guard test's regex only matched quoted-string first args, so it was blind to the
+template-literal calls and stayed green. Caught only by an independent code-review + a
+logic-check that enumerated runtime paths.
+(Source: EPIC-InFlightVisibility retrospective, 2026-07-23.)
+
+### TDD Order — test-writer Must Precede python-coder
+
+The supervisor must dispatch `test-writer` BEFORE any coder phase. If `test-writer` runs and
+finds the target suite already **green** (tests satisfied before the implementation phase),
+that is a TDD-order violation, not a pass — document it in the ticket and do NOT mark the
+ticket TDD-compliant. A red baseline captured before the coder runs is the evidence that the
+tests actually constrain the implementation.
+(Source: EPIC-InFlightVisibility retrospective, 2026-07-23.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -500,6 +533,29 @@ though they passed under `unittest discover`; (2) `ruff F401/F841` unused-import
 violations in new test files that the (unestablished) worktree ruff hook never ran. Both
 forced extra fix commits at finalize.
 (Source: EPIC-WorktreeQualityGateGuard retrospective KI-3, 2026-07-06.)
+
+### Post-origin/main-merge diff audit — catch silently-dropped logic
+
+After merging `origin/main` into a long-diverged feature/epic branch (especially when both
+sides heavily edited the same file), git's 3-way auto-merge can produce a **textually clean
+but semantically broken** result — silently dropping hunks one side added. Tests can stay
+green because the dropped logic had no failing test. Before approving the merge:
+
+```bash
+git diff origin/main -- <heavily-diverged-file>   # should be ADDITIVE only (your feature's changes)
+```
+
+Every deletion line in that diff must be one you can explain. Any of main's logic that is
+altered or removed (not just reformatted) is a HIGH-severity regression — restore it (take
+main's version of that region and re-apply your change on top), then re-run the suite.
+
+**Why this matters:** merging `origin/main` into EPIC-InFlightVisibility auto-merged
+`finalize-feature.js` with no conflict but silently dropped main's hardened deploy-parity
+guards (H-1: `if (!testPassed && postMergeFailures.length > 0)`; H-2: the `still_failing`
+contradiction filter) — which could let a malformed test run merge to main. All 353 tests
+stayed green; caught only by a fresh `git diff origin/main` review that showed non-additive
+deletions.
+(Source: EPIC-InFlightVisibility retrospective, 2026-07-23.)
 
 ### Real-artifact behavioral spot-check before declaring done
 

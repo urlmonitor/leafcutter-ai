@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-23 10:55 UTC
+> Generated: 2026-07-23 12:05 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -186,6 +186,7 @@ task, then pull only those files.
 | EPIC FlattenSupervisorChain | [docs/retrospectives/EPIC-FlattenSupervisorChain.md](docs/retrospectives/EPIC-FlattenSupervisorChain.md) | Date: 2026-05-29 |
 | EPIC FrontendAgent | [docs/retrospectives/EPIC-FrontendAgent.md](docs/retrospectives/EPIC-FrontendAgent.md) | Date: 2026-05-28 |
 | EPIC GoalToEpicLeafFilter | [docs/retrospectives/EPIC-GoalToEpicLeafFilter.md](docs/retrospectives/EPIC-GoalToEpicLeafFilter.md) | Epic retrospective for EPIC-GoalToEpicLeafFilter — leaf filter correctness fixes for scan_ac_store.py (done/superseded exclusion and out-of-scope cycle resilience). |
+| EPIC InFlightVisibility | [docs/retrospectives/EPIC-InFlightVisibility.md](docs/retrospectives/EPIC-InFlightVisibility.md) | Date: 2026-07-23 |
 | EPIC MoveOnMainOnly | [docs/retrospectives/EPIC-MoveOnMainOnly.md](docs/retrospectives/EPIC-MoveOnMainOnly.md) | Date: 2026-06-03 |
 | EPIC Oneagenthandlesboththelookandthecodefor | [docs/retrospectives/EPIC-Oneagenthandlesboththelookandthecodefor.md](docs/retrospectives/EPIC-Oneagenthandlesboththelookandthecodefor.md) | Retrospective for the frontend-coder/frontend-design unification epic (BP-700) |
 | EPIC PhantomDoneFilesTouched | [docs/retrospectives/EPIC-PhantomDoneFilesTouched.md](docs/retrospectives/EPIC-PhantomDoneFilesTouched.md) | Epic retrospective for EPIC-PhantomDoneFilesTouched: real-format parser no-op, fail-open hole, AC audit, and finalize workflow bugs discovered during post-merge remediation. |
