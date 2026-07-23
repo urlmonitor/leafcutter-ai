@@ -1,0 +1,36 @@
+id: BO-2500b
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Fast feedback as you work, with a final check that cannot be skipped"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Instant local checks give quick feedback; an automatic gate has the final say.
+
+  You get fast feedback locally while you work, and an automatic check running on
+  a clean, fresh copy makes the final decision — so nobody can quietly bypass the
+  proof-of-done, whatever happens on their own machine.
+depends_on: [BO-2500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500b-1
+  - BO-2500b-2
+  - BO-2500b-3
+  - BO-2500b-4
+implemented_by: []
+documentation_triggers: [how-to]
+change_target: pipeline
+risk_surface: internal

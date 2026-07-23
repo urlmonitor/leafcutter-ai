@@ -1,0 +1,45 @@
+id: BO-2400c-4
+components:
+  - build_orchestration
+  - documentation_system
+title: "Reference: fast-lane prompt caching (layout, TTL, prefix reuse)"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane prompt-caching behavior (stable-prefix/breakpoint/variable-suffix
+    layout, one-hour TTL, prior-phase output threading, churn detection),
+  When a contributor needs the precise caching contract,
+  Then a reference document specifies the prompt layout, the cache breakpoint and TTL
+    configuration, the prior-phase-output threading rule, and the stable-prefix churn
+    checksum behavior.
+depends_on: [BO-2400c, BO-2400c-1, BO-2400c-1-i, BO-2400c-2, BO-2400c-2-i, BO-2400c-3]
+doc_links:
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/injection-builder.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The reference must specify: the stable-prefix / cache-breakpoint / variable-suffix layout, the extended one-hour TTL configuration, the TTL-expiry re-prime behavior, the prior-phase distilled-output threading rule, and the stable-prefix churn checksum detection."
+  - "It must state values as the shipped configuration keys (e.g. cache TTL, cohesion-relevant knobs) so it stays a faithful contract."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2400c-1
+  contract: "The implemented prompt-assembly caching layout and TTL/threading/checksum behaviors this reference documents."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/reference/fast-lane-prompt-caching.md"

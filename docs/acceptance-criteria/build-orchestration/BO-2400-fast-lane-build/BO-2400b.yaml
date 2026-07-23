@@ -1,0 +1,35 @@
+id: BO-2400b
+components:
+  - build_orchestration
+title: "Pick the right build path for the job"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Fast path for scoped interactive work; the thorough path for big unattended jobs.
+
+  You choose the fast lane for small, hands-on changes and keep the full,
+  fully-autonomous path for large, unattended, or high-stakes builds — so you
+  never lose the thorough process, you just stop using it where it is overkill.
+depends_on: [BO-2400]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400b-1
+  - BO-2400b-2
+  - BO-2400b-3
+  - BO-2400b-4
+implemented_by: []
+documentation_triggers: [how-to]
+change_target: pipeline
+risk_surface: internal

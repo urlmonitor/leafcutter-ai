@@ -1,0 +1,50 @@
+id: BO-2400b-3-i
+components:
+  - build_orchestration
+title: "Ambiguous scope defaults to the heavy pipeline"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given routing inputs that do not clearly classify as scoped/interactive (ambiguous
+    scope),
+  When the path router applies the decision rule,
+  Then it selects the heavy pipeline as the safe default
+  And it records the reason the request was treated as ambiguous.
+depends_on: [BO-2400b-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Ambiguity must fail safe to the heavy pipeline — the fast lane is never chosen on an unclear classification (fail-closed default)."
+  - "The rule must record the reason the request was treated as ambiguous so the routing decision is auditable after the fact."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400b-3
+  contract: "The decision rule whose ambiguous-input branch this edge case exercises."
+test_spec:
+  - name: test_ambiguous_scope_defaults_heavy
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Inputs that do not clearly classify as scoped/interactive route to the heavy pipeline."
+  - name: test_ambiguity_reason_recorded
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The reason the request was treated as ambiguous is recorded."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/path_selection.py"

@@ -1,0 +1,55 @@
+id: BO-2400b-2
+components:
+  - build_orchestration
+title: "Large, unattended, or high-defect-cost work routes to the heavy pipeline"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build request classified as large in scope, OR unattended, OR high
+    defect-cost,
+  When the path router decides which lane to use,
+  Then it selects the heavy pipeline (any one of those three conditions being true
+    is sufficient to route heavy).
+depends_on: [BO-2400b]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Any single one of {large scope, unattended, high defect-cost} being true is sufficient to route to the heavy pipeline — the heavy condition is a logical OR, not a requirement that all three hold."
+  - "The heavy-routing decision must come from the same single documented decision rule (BO-2400b-3), keeping fast/heavy routing mutually consistent."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400b-3
+  contract: "The documented decision rule mapping (scope size, attended/unattended, defect-cost) to a lane, applied here for the heavy-routing cases."
+test_spec:
+  - name: test_large_scope_routes_heavy
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A large-scope request routes to the heavy pipeline."
+  - name: test_unattended_routes_heavy
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "An unattended request routes to the heavy pipeline."
+  - name: test_high_defect_cost_routes_heavy
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A high-defect-cost request routes to the heavy pipeline (any single condition is sufficient)."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/path_selection.py"

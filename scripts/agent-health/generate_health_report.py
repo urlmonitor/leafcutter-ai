@@ -67,18 +67,25 @@ def _load_jsonl(path: Path) -> list[dict]:
     if not path.exists():
         return []
     entries: list[dict] = []
-    with open(path, encoding="utf-8") as fh:
-        for lineno, line in enumerate(fh, 1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entries.append(json.loads(line))
-            except json.JSONDecodeError as exc:
-                print(
-                    f"WARNING: Skipping malformed JSON on line {lineno} of {path}: {exc}",
-                    file=sys.stderr,
-                )
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for lineno, line in enumerate(fh, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError as exc:
+                    print(
+                        f"WARNING: Skipping malformed JSON on line {lineno} of {path}: {exc}",
+                        file=sys.stderr,
+                    )
+    except OSError as exc:
+        print(
+            f"WARNING: Could not read {path}: {exc}",
+            file=sys.stderr,
+        )
+        return []
     return entries
 
 
@@ -238,6 +245,65 @@ def _render_json(rows: list[dict[str, Any]]) -> str:
         }
         output.append(entry)
     return json.dumps(output, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Lane comparison report (BO-2400d-3)
+# ---------------------------------------------------------------------------
+
+
+def build_lane_comparison_report(sink_path: Path) -> dict:
+    """Read telemetry JSONL records and return per-lane aggregates side by side.
+
+    Groups records by their "lane" field and computes for each lane:
+    count, total_duration_ms, avg_duration_ms, total_tokens_in,
+    total_tokens_out, total_cache_read_tokens, avg_total_tokens (mean of the
+    per-invocation token sum: tokens_in + tokens_out + cache_read_tokens).
+
+    A lane with no records is absent from the result (not an empty sub-dict),
+    letting callers detect the single-lane case and report it gracefully.
+    An absent or empty sink file returns an empty dict without raising.
+
+    Args:
+        sink_path: Path to the JSONL file produced by emit_agent_telemetry.
+
+    Returns:
+        dict: Keys are lane strings present in the data (e.g. "fast", "heavy");
+            values are aggregate sub-dicts with the keys described above.
+            Returns {} when the sink is absent or contains no valid records.
+    """
+    records = _load_jsonl(sink_path)
+    if not records:
+        return {}
+
+    lanes: dict[str, list[dict]] = {}
+    for rec in records:
+        lane = rec.get("lane")
+        if lane:
+            lanes.setdefault(lane, []).append(rec)
+
+    result: dict = {}
+    for lane, recs in lanes.items():
+        count = len(recs)
+        total_dur = sum(r.get("duration_ms", 0) for r in recs)
+        total_in = sum(r.get("tokens_in", 0) for r in recs)
+        total_out = sum(r.get("tokens_out", 0) for r in recs)
+        total_cache = sum(r.get("cache_read_tokens", 0) for r in recs)
+        per_rec_totals = [
+            r.get("tokens_in", 0) + r.get("tokens_out", 0) + r.get("cache_read_tokens", 0)
+            for r in recs
+        ]
+        result[lane] = {
+            "count": count,
+            "total_duration_ms": total_dur,
+            "avg_duration_ms": total_dur / count,
+            "total_tokens_in": total_in,
+            "total_tokens_out": total_out,
+            "total_cache_read_tokens": total_cache,
+            "avg_total_tokens": sum(per_rec_totals) / count,
+        }
+
+    return result
 
 
 # ---------------------------------------------------------------------------

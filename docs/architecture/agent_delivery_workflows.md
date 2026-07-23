@@ -14,10 +14,11 @@ tags:
   - "workflows"
   - "slash commands"
   - "supervisor"
+children:
+  - docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md
+  - docs/architecture/diagrams/c2-fast-lane-build-path-components.md
 related_docs:
   - "docs/agents/README.md"
-  - "docs/architecture/adrs/ADR-010-agent-supervisor-signoff-pattern.md"
-  - "docs/superpowers/specs/2026-05-08-agent-supervisor-design.md"
 related_agents:
   - "leafcutter/templates/agents/epic-supervisor.md"
   - "leafcutter/templates/agents/ticket-supervisor.md"

@@ -84,21 +84,43 @@ def _read_ticket_source_ac(ticket_path: Path) -> Optional[str]:
 def mark_ac_done(
     ac_id: str,
     ac_root: Path,
+    *,
+    test_root: Optional[Path] = None,
     dry_run: bool = False,
     ticket_path: Optional[Path] = None,
 ) -> int:
     """Set work_status: done on the AC YAML file identified by ac_id.
 
+    When *test_root* is provided the function calls ``verify_done_eligible``
+    first and refuses (exit code 3) when the AC is not eligible, printing a
+    refusal message that names the AC id and the reason.  When *test_root* is
+    ``None`` the coverage gate is skipped (backward-compatible path).
+
     Args:
         ac_id: The AC identifier string.
         ac_root: Directory to search recursively for the AC YAML file.
+        test_root: Optional root of the test tree to scan for ``# covers:``
+            tags.  When supplied, the coverage gate is enforced before writing.
         dry_run: When True, log what would happen but do not write files.
         ticket_path: Optional ticket path — used only for log context.
 
     Returns:
         0 on success (including idempotent no-op), 1 on lookup/read failure,
-        2 when AC status is not ``active``.
+        2 when AC status is not ``active``, 3 when the coverage gate refuses
+        (AC not eligible: no linked test or a linked test is not passing).
     """
+    if test_root is not None:
+        from test_enforcement import verify_done_eligible  # noqa: PLC0415
+
+        verdict = verify_done_eligible(ac_id, ac_root=ac_root, test_root=test_root)
+        if not verdict["eligible"]:
+            reason = verdict.get("reason", "coverage gate failed")
+            print(
+                f"REFUSED: {ac_id} is not eligible for done — {reason}",
+                file=sys.stderr,
+            )
+            return 3
+
     ac_file = _find_ac_file(ac_root, ac_id)
     if ac_file is None:
         ticket_context = "docs/acceptance-criteria/"
@@ -199,6 +221,15 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Log what would happen but do not write any files.",
     )
+    parser.add_argument(
+        "--test-root",
+        metavar="DIR",
+        default=None,
+        help=(
+            "When supplied, enforce the coverage gate before marking done. "
+            "Exits 3 when no passing covers-tagged test exists for the AC."
+        ),
+    )
     return parser
 
 
@@ -209,11 +240,14 @@ def main(argv: list[str] | None = None) -> int:
         argv: Argument list (defaults to sys.argv[1:] when None).
 
     Returns:
-        Exit code: 0 on success, 1 on input/lookup error, 2 on status error.
+        Exit code: 0 on success, 1 on input/lookup error, 2 on status error,
+        3 when the coverage gate refuses the done transition.
     """
     parser = _build_parser()
     args = parser.parse_args(argv)
     ac_root = Path(args.ac_root)
+
+    test_root = Path(args.test_root) if args.test_root else None
 
     if args.ticket:
         ticket_path = Path(args.ticket)
@@ -231,10 +265,12 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        return mark_ac_done(ac_id, ac_root, dry_run=args.dry_run, ticket_path=ticket_path)
+        return mark_ac_done(
+            ac_id, ac_root, dry_run=args.dry_run, ticket_path=ticket_path, test_root=test_root
+        )
 
     # --ac mode
-    return mark_ac_done(args.ac, ac_root, dry_run=args.dry_run)
+    return mark_ac_done(args.ac, ac_root, dry_run=args.dry_run, test_root=test_root)
 
 
 if __name__ == "__main__":

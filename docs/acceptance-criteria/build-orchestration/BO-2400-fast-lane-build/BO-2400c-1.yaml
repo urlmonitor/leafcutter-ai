@@ -1,0 +1,67 @@
+id: BO-2400c-1
+components:
+  - build_orchestration
+  - injection_builder
+title: "Agent prompts are assembled as stable-prefix, cache breakpoint, then variable suffix"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent prompt is assembled for a fast-lane invocation,
+  When the assembled prompt is inspected,
+  Then the static boilerplate (role, standing instructions, schema) appears before
+    the cache breakpoint marker
+  And all request-variable content (this batch's ACs, prior-phase outputs) appears
+    after the cache breakpoint marker.
+depends_on: [BO-2400c]
+doc_links:
+  - path: docs/architecture/components/injection-builder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    prompt_cache_layout:
+      type: object
+      description: "Assembled prompt places static boilerplate (role, standing instructions, schema) before the cache breakpoint marker and all request-variable content after it."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The assembly must emit exactly one cache breakpoint marker with the static boilerplate (role, standing instructions, schema) strictly before it and all request-variable content (batch ACs, prior-phase outputs) strictly after it."
+    - "The stable prefix must contain no request-variable data, so it is byte-identical across invocations that intend to share the cache (paired constraint for the churn detection in BO-2400c-1-i)."
+    - "Companion authoring constraint for llm-expert: agent template bodies contributing to the stable prefix must hold only stable content (role/instructions/schema), never per-request data — flagged as a caveat for template-side review."
+delivers_to:
+  agent: python-coder
+  contract: "Assembled prompt payload with a single cache breakpoint marker: static boilerplate before it, request-variable content (batch ACs, prior-phase outputs) after it."
+expects_from: null
+test_spec:
+  - name: test_static_boilerplate_before_breakpoint
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "Role, standing instructions, and schema appear before the cache breakpoint marker in the assembled prompt."
+  - name: test_variable_content_after_breakpoint
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    description: "Batch ACs and prior-phase outputs appear after the cache breakpoint marker."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400c-1-i
+implemented_by:
+  - "scripts/injection_builders.py"

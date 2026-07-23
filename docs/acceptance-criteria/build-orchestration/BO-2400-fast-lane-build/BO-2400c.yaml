@@ -1,0 +1,37 @@
+id: BO-2400c
+components:
+  - build_orchestration
+  - injection_builder
+title: "Spend less time and money on every build"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Reuse context across steps instead of re-deriving it from scratch every time.
+
+  Each step of a build reuses the stable groundwork and carries forward what
+  earlier steps already worked out, rather than starting cold and re-deriving the
+  same context repeatedly — so the same feature costs less and finishes sooner.
+depends_on: [BO-2400]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400c-1
+  - BO-2400c-2
+  - BO-2400c-3
+  - BO-2400c-4
+  - BO-2400c-5
+implemented_by: []
+documentation_triggers: [reference-doc]
+change_target: prompt
+risk_surface: internal
