@@ -261,9 +261,26 @@ class TestCheckDoneProofCiFailClosed(unittest.TestCase):
 
         Regression test: the M-2 fix must not break the happy path.
         When all done ACs pass verify_done_eligible, CI mode returns 0.
+
+        The fixture writes a REAL passing covers test so the REAL
+        verify_done_eligible also returns eligible=True.  This makes the test
+        self-sufficient in CI full-suite runs where mock module-identity
+        mismatches can prevent the patch from applying (the mock is kept as a
+        belt-and-suspenders fast-path for isolated runs).
         """
         ac_id = "BO-M2-PASS-001"
         _write_done_ac(self.ac_root, ac_id)
+
+        # Write a REAL passing test file with a covers tag.
+        # This ensures the real verify_done_eligible returns eligible=True when
+        # the mock does not apply due to module-identity caching in CI full-suite.
+        covers_test = self.test_root / "test_m2_pass_covers.py"
+        covers_test.write_text(
+            f"def test_m2_pass_for_{ac_id.lower().replace('-', '_')}():\n"
+            f"    # covers: {ac_id}\n"
+            f"    pass  # genuinely passes\n",
+            encoding="utf-8",
+        )
 
         passing_verdict: dict = {
             "eligible": True,

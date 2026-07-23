@@ -18,12 +18,15 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
     check_all_done_acs(*, ac_root, test_root) -> list[dict]
         CI-authoritative check. Calls verify_done_eligible (from done_proof)
         for every done AC under ac_root; returns violation dicts for ineligible
-        ACs. Invokes pytest as a subprocess via the done_proof engine.
+        ACs. ACs with ``test_required: false`` are silently exempted — they do
+        not require a covers-tagged test (documentation/prompt-convention ACs).
+        Invokes pytest as a subprocess via the done_proof engine.
     check_changed_done_acs(changed_yaml_paths, *, ac_root, test_root) -> list[dict]
         PR-scoped CI check. Calls verify_done_eligible only for done ACs in the
-        provided changed_yaml_paths list; never scans the full store. Makes it
-        safe to promote to a required gate without failing on legacy done ACs
-        that predate the covers-tag mandate (BO-2500b-3).
+        provided changed_yaml_paths list; never scans the full store. ACs with
+        ``test_required: false`` are silently exempted from the covers-tag
+        mandate. Makes it safe to promote to a required gate without failing on
+        legacy done ACs that predate the covers-tag mandate (BO-2500b-3).
     main(argv) -> int
         CLI entry point. --mode precommit (default), --mode ci, or
         --mode ci-changed (with --base <ref>, default origin/main).
@@ -302,6 +305,12 @@ def check_all_done_acs(
     ``"done"``, then calls :func:`done_proof.verify_done_eligible` for each.
     ACs for which ``eligible`` is ``False`` are reported as violations.
 
+    ACs with ``test_required: false`` (the Python boolean ``False``, not the
+    string ``"false"``) are silently exempted and never passed to
+    verify_done_eligible.  This covers documentation ACs and prompt-convention
+    ACs where a covers-tagged test is structurally impossible.  An absent or
+    ``True`` value for ``test_required`` is always enforced.
+
     Unlike the pre-commit check, this function DOES run pytest (via
     verify_done_eligible → subprocess) so that a covers tag whose linked test
     is failing still produces a violation.  This is the authoritative backstop
@@ -345,6 +354,8 @@ def check_all_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
+        if data.get("test_required") is False:
+            continue
         verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
             violations.append(
@@ -370,6 +381,12 @@ def check_changed_done_acs(
     never evaluated — this scoping invariant makes it safe to promote this mode
     to a required CI gate without failing on pre-existing done ACs that predate
     the covers-tag mandate (BO-2500b-3).
+
+    ACs with ``test_required: false`` (the Python boolean ``False``, not the
+    string ``"false"``) are silently exempted and never passed to
+    verify_done_eligible.  This covers documentation ACs and prompt-convention
+    ACs where a covers-tagged test is structurally impossible.  An absent or
+    ``True`` value for ``test_required`` is always enforced.
 
     Args:
         changed_yaml_paths: AC YAML paths changed in the current PR (e.g. from
@@ -405,6 +422,8 @@ def check_changed_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
+        if data.get("test_required") is False:
+            continue
         verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
             violations.append(
