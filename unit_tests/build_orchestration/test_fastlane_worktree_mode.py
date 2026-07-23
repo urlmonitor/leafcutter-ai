@@ -62,7 +62,7 @@ import tempfile
 import subprocess
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Repo path wiring
