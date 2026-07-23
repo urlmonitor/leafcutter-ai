@@ -590,9 +590,9 @@ class TestPerStepRecordHasNoGaps(unittest.TestCase):
             duplicates,
             {},
             msg=(
-                f"The following step labels appear in more than one outcome() "
-                f"call — a duplicate entry would be written to stepOutcomes[] "
-                f"whenever both calls fire on the same path:\n"
+                "The following step labels appear in more than one outcome() "
+                "call — a duplicate entry would be written to stepOutcomes[] "
+                "whenever both calls fire on the same path:\n"
                 + "\n".join(
                     f"  {label!r}: appears {count} time(s)"
                     for label, count in duplicates.items()
