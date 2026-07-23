@@ -9,6 +9,7 @@ req_status: draft
 work_status: todo
 readiness: approved
 priority: medium
+child_limit_override: 6  # cohesive single-guard set: 4 decision cases (-1..-4) + registration (-5) + reference doc (-6); one L2 over the max-5 heuristic, no natural sub-split worth renaming committed ACs/tests for
 criteria: |
   An agent that can't do what it promises is stopped at commit.
 

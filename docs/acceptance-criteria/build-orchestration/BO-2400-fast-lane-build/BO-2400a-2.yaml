@@ -1,0 +1,65 @@
+id: BO-2400a-2
+components:
+  - build_orchestration
+  - testing_quality
+title: "Batch AC selection is done by a deterministic script, not an agent"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the AC store contains a fixed set of ready leaf ACs,
+  When the fast lane selects the batch of ACs to build,
+  Then selection is performed by a deterministic script (no agent invocation is
+    made for selection)
+  And running the selection twice against the same store state yields the identical
+    ordered list of AC ids.
+depends_on: [BO-2400a]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_batch_selection:
+      type: object
+      description: "Deterministic (no-agent) selection of the ready-leaf-AC batch; identical store state yields the identical ordered id list."
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Selection must be a pure deterministic script over the AC store — no agent invocation, no LLM call, in the selection path."
+    - "The output ordering must be a total, stable order derived from AC fields (e.g. id / priority), so two runs against unchanged store state return byte-identical ordered id lists (verify run-twice-and-diff)."
+    - "Reuse the existing ready-leaf-AC scan surface rather than introducing a parallel selector, so fast-lane selection tracks the same readiness semantics as the scanner."
+    - "Must complete within a few seconds for a store of up to ~2000 ACs; must not depend on network or agent availability."
+delivers_to:
+  agent: llm-expert
+  contract: "Ordered list of selected leaf AC ids (the cohesive batch), stable across identical store state; consumed by the fast-lane loop to drive the single test-writer and single coder invocations."
+expects_from: null
+test_spec:
+  - name: test_batch_selection_is_deterministic
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Running selection twice against the same store state yields the identical ordered AC-id list."
+  - name: test_batch_selection_no_agent_invocation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Selection is performed by the deterministic script with no agent/LLM call in its path."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400a-2-i
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"

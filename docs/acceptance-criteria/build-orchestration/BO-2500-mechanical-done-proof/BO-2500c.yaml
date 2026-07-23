@@ -1,0 +1,38 @@
+id: BO-2500c
+components:
+  - build_orchestration
+  - testing_quality
+title: "Tests check the real thing, not convenient fakes"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Tests run against the real data your tools produce — never hand-typed stand-ins.
+
+  Tests build their inputs from the actual thing the system produces and read back,
+  and behaviour is checked against the real on-disk artifact — so a test can never
+  pass on tidy hand-made data that never occurs in reality while the feature is
+  broken on the data that does.
+depends_on: [BO-2500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500c-1
+  - BO-2500c-2
+  - BO-2500c-3
+  - BO-2500c-4
+  - BO-2500c-5
+implemented_by: []
+documentation_triggers: [how-to, reference-doc]
+change_target: code
+risk_surface: internal

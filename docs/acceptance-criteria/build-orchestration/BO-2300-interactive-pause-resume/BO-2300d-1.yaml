@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -23,10 +23,13 @@ criteria: |
     restarting from the beginning,
   And any stages the run had already completed before pausing are not repeated.
 depends_on: [BO-2300d]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: L
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
@@ -50,66 +53,84 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "all"
   required_skills:
+    - llm-expert
     - python-coder
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript). Apply-by-type and resume live in resolveGate() in the shared JS helper, imported by plan-feature.js and finalize-feature.js (n_location_rule=all). This is JS in the workflow files, not a standalone Python module."
+    - "CORRECTNESS INVARIANT (ADR-024 rule 4): resolveGate() MUST consult the pending record's answer (supplied via the resume args, or read by the resume agent() dispatch) BEFORE making the gate's live agent() call. Otherwise, on resume the harness replays the cached headless-default answer and the gate re-cancels. Checking the record's answer first is what makes resume correct and idempotent."
+    - "FEASIBILITY (E2 body has no filesystem access): on resume, the human's answer is supplied via args (or read from .leafcutter/paused_runs/<run_id>.json via a resume agent() dispatch); the workflow body performs no direct fs read. Persisting the applied/answered state is likewise done via an agent() dispatch."
     - "Apply-by-type semantics: approve -> proceed past the gate; edit -> re-dispatch the paused step carrying the supplied feedback; cancel -> graceful stop; priority_choice value -> set that priority on the run; free_text -> carry the feedback forward into the paused step (the four apply behaviors map to the three types in BO-2300b-1)."
-    - "Resume must continue from the exact pause point using the existing run-resume cache (resumeFromRunId), replaying already-committed stages as done rather than re-executing them — never restart from the beginning."
-    - "Validate the answer against the declared question type before apply (reuse the BO-2300b-1/b-2 validator; do not fork a second validator)."
-    - "State-store and resume-cache access is external I/O and must follow the project error-handling policy (typed except, WARNING+ log)."
+    - "Resume must continue from the exact pause point using the harness resumeFromRunId replay (committed agent() calls replayed as done), replaying already-committed stages as done rather than re-executing them — never restart from the beginning."
+    - "Validate the answer against the declared question type before apply (reuse the shared JS BO-2300b-1/b-2 validator; do not fork a second validator)."
+    - "State-store and resume access performed by the dispatched agent (and any Python helper it invokes) is external I/O and must follow the project error-handling policy (typed except, WARNING+ log)."
     - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js): first a headless run pauses; then resume with an answer in args and assert the apply-by-type behavior and that committed stages are not re-run (agent_calls show no re-execution of prior stages). Include a test that resolveGate consults the record's answer BEFORE the gate agent() call. Do NOT test a standalone Python module."
 delivers_to:
-  agent: python-coder
-  contract: "Resumed-run outcome: on a valid answer the run continues from pause_point via the existing resumeFromRunId cache with prior committed stages replayed as already-done, and the answer applied by type. Consumed by preserve-committed-stages (BO-2300d-1-i), cancel (BO-2300d-1-ii), and durability/idempotency (BO-2300e-1, BO-2300e-1-i)."
+  agent: llm-expert
+  contract: "Resumed-run outcome: on a valid answer (supplied via resume args / read by the resume agent) resolveGate() consults it BEFORE the gate's agent() call, applies it by type, and the run continues from pause_point via the harness resumeFromRunId replay with prior committed stages replayed as already-done. Consumed by preserve-committed-stages (BO-2300d-1-i), cancel (BO-2300d-1-ii), and durability/idempotency (BO-2300e-1, BO-2300e-1-i)."
 expects_from:
   ac_id: BO-2300a-1
-  contract: "The durable pending-question record with its captured context and pause_point marker, which this AC reads to validate the answer, apply it by type, and resume from the exact pause point."
+  contract: "The durable pending-question record with its captured context and pause_point marker at .leafcutter/paused_runs/<run_id>.json, which this AC reads (via the resume agent dispatch / resume args) to validate the answer, apply it by type, and resume from the exact pause point."
 test_spec:
   - name: test_approve_proceeds_past_gate
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "An 'approve' answer lets the run proceed past the gate."
+    description: "Via run_workflow_under_e2(plan-feature.js), resuming with an 'approve' answer in args lets the run proceed past the gate."
   - name: test_edit_redispatches_step_with_feedback
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "An 'edit' answer re-dispatches the paused step carrying the supplied feedback."
+    description: "Via the harness, an 'edit' answer re-dispatches the paused step carrying the supplied feedback (visible in the re-dispatched agent() call args)."
   - name: test_cancel_stops_gracefully
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A 'cancel' answer stops the run gracefully."
+    description: "Via the harness, a 'cancel' answer stops the run gracefully."
   - name: test_priority_choice_sets_run_priority
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A priority-choice value sets that priority on the run."
+    description: "Via the harness, a priority-choice value sets that priority on the run."
   - name: test_free_text_carried_into_step
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Free-text feedback is carried forward into the paused step."
+    description: "Via the harness, free-text feedback is carried forward into the paused step."
+  - name: test_resolvegate_consults_answer_before_gate_agent_call
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Via the harness, on resume resolveGate() consults the record's answer BEFORE the gate's live agent() call, so the cached headless-default is not replayed (no re-cancel)."
   - name: test_resume_from_pause_point_not_restart
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The run resumes from the exact pause point rather than restarting from the beginning."
+    description: "Via the harness, the run resumes from the exact pause point (resumeFromRunId replay) rather than restarting from the beginning."
   - name: test_completed_stages_not_repeated
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Stages completed before pausing are not repeated on resume."
+    description: "Via the harness, stages committed before pausing are not repeated on resume (agent_calls show no re-execution)."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; added the ADR-024 rule-4 correctness invariant (resolveGate consults the record's answer BEFORE the gate agent() call) with a dedicated test; resume answer supplied via args / resume agent (no fs in body); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: [BO-2300d-1-i, BO-2300d-1-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |
-  Resume-from-pause-point (not restart) uses the existing resumeFromRunId cache
+  Resume-from-pause-point (not restart) uses the harness resumeFromRunId replay
   so committed prior stages are replayed as already-done rather than re-executed.
   The four apply behaviors correspond to the three question types in BO-2300b-1.
+  Correctness key (ADR-024 rule 4): resolveGate() must consult the record's
+  answer before the gate's agent() call, or resume replays the cached
+  headless-default and re-cancels.

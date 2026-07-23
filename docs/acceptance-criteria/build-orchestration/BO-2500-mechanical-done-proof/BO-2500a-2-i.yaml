@@ -1,0 +1,71 @@
+id: BO-2500a-2-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "An xfailed or skipped linked test does not count as passing"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the only test tagged "# covers:<id>" for an active AC is marked xfail or is
+    skipped in the current run,
+  When the done-status of that AC is evaluated,
+  Then that test does not count as a passing linked test
+  And the AC cannot be marked done on the basis of it.
+depends_on: [BO-2500a-2]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    done_proof_xfail_skip_exclusion:
+      type: object
+      description: "Pass-state classification that treats xfail, xpass, and skipped outcomes as non-passing for done-proof purposes, so a covers-linked test with only those outcomes cannot make an AC eligible for done."
+  reference_file_path: "scripts/ac_store/pytest_ac_enforcement.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Only an actual passing outcome counts toward done proof; xfail, xpass, skip, and error outcomes must all be treated as non-passing."
+    - "This must reuse the same outcome classification used by the pytest enforcement layer so xfail-masking cannot silently satisfy the done gate (see project memory: pytest xfail-masking)."
+    - "When the only covers-linked test is xfail/skipped, the AC is blocked and the reason names the non-passing outcome."
+    - "Classification must be idempotent for a given test-run result."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500a-2
+  contract: "The pass/fail done-proof evaluation whose non-passing outcomes (xfail/skip) this edge case constrains."
+test_spec:
+  - name: test_xfail_covers_test_does_not_count_as_passing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An AC whose only '# covers:<id>' test is xfail cannot be marked done."
+  - name: test_skipped_covers_test_does_not_count_as_passing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An AC whose only '# covers:<id>' test is skipped cannot be marked done."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/ac_store/done_proof.py"
+  - "scripts/ac_store/test_enforcement.py"
+  - "scripts/ac_store/mark_ac_done.py"

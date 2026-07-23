@@ -1,0 +1,37 @@
+id: BO-2400c-5
+components:
+  - build_orchestration
+  - injection_builder
+title: "Build agents receive a layered context bundle assembled by change-frequency"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane build agent (test-writer or coder) is dispatched for a batch of ACs,
+  When its prompt context is assembled,
+  Then it receives a layered context bundle containing, in this composition:
+    the high-level picture (the batch's parent L0/L1 ACs),
+    the batch's specific L2/L3 ACs,
+    the prior tests already written for the same area/component,
+    and the relevant architecture docs,
+  And the layers are ordered stable-first by change-frequency
+    (architecture + conventions + template first, then ACs, then prior tests,
+     then the most-volatile working diff last)
+  And that ordering is consistent with the cacheable stable-prefix rule (BO-2400c-1)
+    so the rarely-changing layers form the cacheable prefix.
+depends_on: [BO-2400c]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/injection_builders.py"
+change_target: pipeline
+risk_surface: internal

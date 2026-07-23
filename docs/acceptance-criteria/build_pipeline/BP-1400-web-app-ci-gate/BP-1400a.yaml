@@ -1,0 +1,35 @@
+id: BP-1400a
+components:
+  - build_pipeline
+title: "A web-app change that won't build is automatically stopped"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The web app is automatically built and type-checked on every change that touches it.
+
+  When a pull request changes the web app, it is built and type-checked
+  automatically, and the request is stopped the moment a build or type error
+  appears — so a change that would not compile can never merge.
+depends_on:
+  - BP-1400
+doc_links: []
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1400a-1
+  - BP-1400a-2
+  - BP-1400a-3
+  - BP-1400a-4
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

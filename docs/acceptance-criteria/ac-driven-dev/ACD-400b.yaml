@@ -39,7 +39,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4]
+covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4, ACD-400b-5]
 implemented_by:
 - scripts/ac_store/generate_ticket_from_ac.py
 change_target: code

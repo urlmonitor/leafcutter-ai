@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -18,10 +18,13 @@ criteria: |
   And the earlier committed stages remain present and unchanged,
   And no pull request is opened as a result of the cancellation.
 depends_on: [BO-2300d-1]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-constraints.md
@@ -39,40 +42,47 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
+    - "SURFACE: asserted against the E2 workflow ENGINE (JavaScript). The cancel branch of resolveGate() in the shared JS helper returns a graceful stop from the workflow body; for finalize-feature.js's merge gate a cancel must not proceed to open/merge a PR. Not a standalone Python module."
     - "A valid 'cancel' answer must stop the run gracefully (not error); earlier committed stages remain present and unchanged; no pull request is opened as a result of the cancellation."
     - "Cancel is a graceful stop, not a rollback: prior committed work is retained, but the run does not proceed to open a PR for the incomplete work."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js): pause, resume with 'cancel' in args, and assert the harness run stops without error, committed stages are unchanged, and no PR-opening agent() is dispatched (absent from captured agent_calls). Do NOT test a standalone Python module."
   delivers_shape:
     description: "Terminal cancel state consumed only as an assertion surface; no downstream producer."
 delivers_to: null
 expects_from:
   ac_id: BO-2300d-1
-  contract: "The cancel branch of apply-by-type; this edge asserts a graceful stop that retains committed stages and opens no PR."
+  contract: "The cancel branch of apply-by-type in the shared JS resolveGate(); this edge asserts a graceful stop that retains committed stages and opens no PR."
 test_spec:
   - name: test_cancel_stops_without_error
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A valid 'cancel' answer stops the run gracefully rather than erroring."
+    description: "Via run_workflow_under_e2(plan-feature.js), a 'cancel' answer on resume stops the run gracefully rather than erroring."
   - name: test_cancel_keeps_committed_stages
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Earlier committed stages remain present and unchanged after cancel."
+    description: "Via the harness, earlier committed stages remain present and unchanged after cancel."
   - name: test_cancel_opens_no_pr
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "No pull request is opened as a result of the cancellation."
+    description: "Via the harness, no PR-opening agent() is dispatched (absent from captured agent_calls) as a result of the cancellation."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; cancel branch lives in resolveGate() in the shared JS helper (and must not open/merge a PR at finalize's merge gate); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |

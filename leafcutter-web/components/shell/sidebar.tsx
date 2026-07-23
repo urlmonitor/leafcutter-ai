@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BookOpen,
   GitBranch,
   Map as MapIcon,
   Workflow,
@@ -23,6 +24,7 @@ const NAV = [
   { href: "/flows", label: "Flows", icon: Route, desc: "Product truth, coloured by build status" },
   { href: "/roadmap", label: "Roadmap", icon: MapIcon, desc: "Phases & what's next" },
   { href: "/coverage", label: "Coverage", icon: ShieldCheck, desc: "How many tests guard each AC" },
+  { href: "/about", label: "About", icon: BookOpen, desc: "What leafcutter is & how it works" },
   { href: "/pipeline", label: "Pipeline", icon: Workflow, desc: "How leafcutter builds software" },
   { href: "/architecture", label: "Architecture", icon: Boxes, desc: "The component map" },
 ];

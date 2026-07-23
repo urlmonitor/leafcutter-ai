@@ -1,0 +1,52 @@
+id: BO-2400a-4-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Green gate refuses commit staging when the coder cannot make all tests pass"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the coder agent has run and the green-verification script finds one or more
+    batch tests still failing,
+  When the green check completes,
+  Then commit staging is NOT performed
+  And the loop reports the AC ids whose covering tests are still failing.
+depends_on: [BO-2400a-4]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "When the green check reports one or more failing batch tests, the loop must NOT perform commit staging — a red batch is a hard block on staging, never a warn-and-proceed."
+  - "The loop must report the AC ids whose covering tests are still failing, mapped from the failing tests' covers tags, so the operator sees which behaviors remain unmet."
+  - "The refusal must be a structured blocker result from the workflow (not a silent no-op)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-4
+  contract: "The green+coverage verdict object (including which batch tests failed) that this refusal path acts on."
+test_spec:
+  - name: test_commit_refused_when_batch_tests_failing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "When the green check finds failing batch tests, commit staging is not performed."
+  - name: test_reports_failing_ac_ids
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The loop reports the AC ids whose covering tests are still failing."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"

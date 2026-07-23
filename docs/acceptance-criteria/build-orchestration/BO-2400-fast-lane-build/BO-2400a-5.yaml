@@ -1,0 +1,63 @@
+id: BO-2400a-5
+components:
+  - build_orchestration
+  - testing_quality
+title: "No heavy-path coordination constructs are used in the fast lane"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a batch is built through the fast lane,
+  When the loop executes from selection to commit staging,
+  Then no per-ticket supervisor agent is dispatched
+  And no planner-as-agent invocation is made to sequence the phases
+  And the batch is built within a single worktree under a single command invocation
+    (not the heavy path's split of three commands across three worktrees).
+depends_on: [BO-2400a]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The fast-lane loop must not dispatch any ticket-supervisor agent; phase sequencing is inlined in the loop (deterministic order), per ADR-019 inline-phase dispatch."
+  - "No planner-as-agent invocation may be made to sequence the phases — the phase order is a fixed, code-defined sequence, not an LLM decision."
+  - "The whole batch is built within a single worktree under a single command invocation — it must not split into the heavy path's three-command / three-worktree topology."
+  - "Only test-writer and coder are dispatched as phase agents (both at depth 1), consistent with BO-2400a-1's two-invocation invariant."
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_no_ticket_supervisor_dispatched
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "No per-ticket supervisor agent is dispatched during a fast-lane batch build."
+  - name: test_no_planner_agent_invocation
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "No planner-as-agent invocation sequences the phases."
+  - name: test_single_worktree_single_command
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The batch is built within one worktree under one command invocation (not the three-command/three-worktree heavy path)."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-build.js"

@@ -1,0 +1,35 @@
+id: BP-1400
+components:
+  - build_pipeline
+title: "Changes to the web app can't reach users broken"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The web app gets the same automatic safety net the rest of the project already has.
+
+  Today only the project's code is checked before a change merges — the web app
+  (the Atlas project-intelligence site) is not, so a change that breaks it can
+  merge and ship looking perfectly healthy, only to be discovered when a person
+  happens to run it. This has already happened: a broken page shipped while every
+  check passed. After this goal, anyone changing the web app gets the same
+  dependable, automatic protection contributors already get elsewhere — a change
+  that breaks the web app is caught and stopped before it merges, not after.
+depends_on: []
+doc_links: []
+origin_agent: product-owner
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1400a
+  - BP-1400b
+  - BP-1400c
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

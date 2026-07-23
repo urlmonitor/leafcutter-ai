@@ -1,0 +1,78 @@
+id: FIN-100g-3-i
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "When a target was supplied but is unresolvable, the misleading main-branch abort never fires"
+level: L3
+component: finalize
+status: active
+parent: FIN-100g-3
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the finalize workflow is invoked with a target that WAS supplied (as a
+  bare string or as an object with a target/target_branch key) but cannot be
+  resolved to any registered worktree
+  And the process CWD happens to be the main repository checked out on main
+  When the pre-flight cannot resolve the supplied target
+  Then the not-a-feature-branch abort — "must be run from a feature branch, not
+  main" — does NOT fire, because a target was in fact supplied (the abort keys
+  off the resolved TARGET branch, never the ambient CWD branch)
+  And instead the actionable unresolved-target error defined in FIN-100g-3 is
+  emitted, naming the target and listing the candidate worktrees
+depends_on:
+  - FIN-100g-3
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js main/master abort guard AND
+    the target-resolution failure path (FIN-100g-3).
+  - When a target WAS supplied but is unresolvable AND the ambient CWD is the main
+    repo checked out on main, the "must be run from a feature branch, not main"
+    abort MUST NOT fire — the abort keys off the resolved TARGET branch, never the
+    ambient CWD branch (consistent with the FIN-100g / FIN-100g-1 guard contract).
+  - The supplied-but-unresolvable case MUST route to the actionable
+    unresolved-target error of FIN-100g-3 (naming the target and listing candidate
+    worktrees), not to the CWD/main guard.
+  - The supplied-but-unresolvable signal MUST be distinguishable from the genuine
+    no-target-supplied case (FIN-100g-2-i), which legitimately triggers CWD-based
+    detection and the main guard when the resolved CWD branch is main/master. Do
+    NOT over-correct: a genuine no-target invocation on main must still trigger the
+    guard.
+delivers_to: []
+expects_from:
+  - agent: python-coder
+    contract: "the unresolved-target signal from the pre-flight (FIN-100g-3), distinguishable from the genuine no-target-supplied case that legitimately triggers the CWD/main guard"
+test_spec:
+  - name: test_supplied_unresolvable_target_on_main_cwd_does_not_abort_feature_branch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "With a supplied-but-unresolvable target and CWD on main, the \"must be run from a feature branch, not main\" abort does NOT fire (the abort keys off the resolved TARGET branch, not the ambient CWD branch)."
+  - name: test_supplied_unresolvable_target_emits_unresolved_error_not_main_abort
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The supplied-but-unresolvable case emits the FIN-100g-3 actionable unresolved-target error (naming the target and listing candidate worktrees) instead of the main-branch abort."
+  - name: test_no_target_supplied_on_main_still_triggers_guard
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Guard against over-correction: a genuine no-target-supplied invocation whose resolved CWD branch is main STILL triggers the not-a-feature-branch guard."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Pre-flight main/master abort guard — must not fire when a (possibly unresolvable) target was supplied"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map pre-flight row — the abort keys off the resolved TARGET branch, not the ambient CWD"
+  - path: "unit_tests/workflows/test_finalize_feature_preflight.py"
+    relevance: "Regression tests asserting the main abort does not fire for a supplied-but-unresolvable target, that the FIN-100g-3 error is emitted instead, and that genuine no-target on main still guards"
+origin_agent: business-analyst
+created: 2026-07-21
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (main/master abort guard keys off the resolved TARGET branch never the ambient CWD; supplied-but-unresolvable routes to the FIN-100g-3 error not the CWD/main guard; the unresolvable signal must be distinguishable from genuine no-target per FIN-100g-2-i; explicit over-correction guard so genuine no-target on main still aborts) and test_spec (3 descriptors: no-abort, emits-FIN-100g-3-error, and the no-target-still-guards regression). Added step-map and test-file doc_links. Kept assigned_agent python-coder, estimated_complexity S, expects_from, and criteria unchanged."
+    by: it-po
+covered_by: []
+implemented_by: []

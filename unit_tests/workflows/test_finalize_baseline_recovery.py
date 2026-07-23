@@ -321,3 +321,94 @@ def test_behavioral_empty_post_merge_failures_skips_recovery():
         "is empty (condition: baselineFailures===null AND postMergeFailures.length>0). "
         f"All dispatched labels: {dispatched_labels!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Coverage backfill (ac-audit 2026-07-21) — direct tests for the thin spots the
+# audit flagged on FIN-100c-4/-7/-9 (each previously covered only transitively).
+# ---------------------------------------------------------------------------
+
+
+def test_fin_100c_9_build_failed_triage_gets_null():
+    """AC FIN-100c-9: build_failed (not only checkout_failed) → conservative fallback.
+
+    A recovery build failure traverses the same non-ok arm as checkout_failed and must
+    preserve the null baseline, so triage treats all post-merge failures as regressions.
+    """
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "build_failed", "recovered_failures": None},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        f"step-3-triage not dispatched. labels={[c.label for c in result.agent_calls]!r}"
+    )
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures is None, (
+        f"build_failed must fall back to a null baseline (conservative), got {baseline_failures!r}."
+    )
+
+
+def test_fin_100c_9_fallback_surfaces_modified_by_branch():
+    """AC FIN-100c-9: the conservative fallback surfaces modified_by_branch so operators
+    can see which failing tests the branch touched."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    assert "modified_by_branch" in js, (
+        "finalize-feature.js must surface 'modified_by_branch' on the rerun-unavailable "
+        "conservative fallback path (FIN-100c-9)."
+    )
+
+
+def test_fin_100c_7_pass_on_main_excluded_from_baseline():
+    """AC FIN-100c-7: a test that PASSES on main HEAD is excluded from the recovered
+    baseline (→ regression); tests that FAIL on main are included (→ pre_existing).
+
+    Post-merge [T1,T2,T3]; recovery reports [T2,T3] fail on main (T1 passes on main).
+    Forwarded baseline_failures must be exactly [T2,T3] — T1 excluded.
+    """
+    fail_on_main = ["tests/bar.py::test_two", "tests/baz.py::test_three"]
+    passes_on_main = "tests/foo.py::test_one"
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "ok", "recovered_failures": fail_on_main},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        f"step-3-triage not dispatched. labels={[c.label for c in result.agent_calls]!r}"
+    )
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures == fail_on_main, (
+        f"Expected baseline_failures={fail_on_main!r} (fail-on-main subset); got {baseline_failures!r}."
+    )
+    assert passes_on_main not in (baseline_failures or []), (
+        f"{passes_on_main!r} passes on main HEAD, so it must be EXCLUDED from the baseline "
+        "(→ regression per FIN-100c-7), but it is present."
+    )
+
+
+def test_fin_100c_7_triage_prompt_encodes_classification_rule():
+    """AC FIN-100c-7: the triage agent encodes the rule applied to the (recovered)
+    baseline — in-baseline → pre_existing, absent → regression."""
+    triage = (_REPO_ROOT / "templates" / "agents" / "test-failure-triage.md").read_text(encoding="utf-8")
+    low = triage.lower()
+    assert "pre_existing" in low or "pre-existing" in low, (
+        "test-failure-triage.md must define the pre_existing classification (FIN-100c-7)."
+    )
+    assert "regression" in low, (
+        "test-failure-triage.md must define the regression classification (FIN-100c-7)."
+    )
+
+
+def test_fin_100c_4_recovery_deploys_before_targeted_rerun():
+    """AC FIN-100c-4: the targeted rerun deploys against the fresh main-HEAD checkout
+    BEFORE re-running the failing tests (build parity with Step 0 / Step 3)."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    idx_label = js.find("step-3-targeted-rerun")
+    assert idx_label != -1, "step-3-targeted-rerun dispatch must exist (FIN-100c-4)."
+    region = js[max(0, idx_label - 2500):idx_label + 400]
+    assert "Deploy shims before rerun" in region or "build parity" in region, (
+        "The targeted-rerun recovery prompt must deploy (build.py) before re-running the "
+        "failing tests, for build parity (FIN-100c-4)."
+    )

@@ -1,0 +1,83 @@
+id: TKT-500f-18
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "The kebab-to-graph-id mapping is obtained from a side-effect-free source that does not reconfigure global logging on import"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given the generator module scripts/ac_store/generate_ticket_from_ac.py is
+    imported,
+  When the kebab-to-graph-id mapping used to normalise the components LIST is
+    obtained,
+  Then the mapping is read from a side-effect-free source — parsing
+    docs/components.json or importing a plain data module — rather than from a
+    module whose import runs configuration side effects,
+  And importing the generator does NOT reconfigure global logging: no
+    logging.basicConfig call (or equivalent root-logger reconfiguration) runs as a
+    side effect of importing the generator or the mapping source,
+  And a program that imports the generator keeps whatever root logging
+    configuration it had before the import (handlers and level are unchanged by the
+    import).
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The kebab-to-graph-id mapping must be obtained from a side-effect-free source (parse docs/components.json or import a plain data module) — the migration-map loader (_load_migration_map, ~line 194) must stop exec-ing the sibling scripts/migrate_component_vocab.py at import time."
+    - "Importing the generator (or its mapping source) must NOT reconfigure global logging: no logging.basicConfig or equivalent root-logger reconfiguration may run as an import side effect."
+    - "A program importing the generator must retain its pre-existing root logging configuration (handlers and level unchanged by the import)."
+    - "Import of the generator must not raise on a sibling-script error (no exec-at-import coupling to a script that can fail)."
+test_spec:
+  - name: test_import_does_not_call_logging_basicconfig
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Importing generate_ticket_from_ac does not call logging.basicConfig / does not mutate the root logger's handlers or level."
+  - name: test_import_preserves_preexisting_root_logging_config
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A root logger configured before the import keeps its handlers and level after importing the generator."
+  - name: test_mapping_read_from_side_effect_free_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The kebab-to-graph-id mapping is obtained by parsing components.json / a plain data module, not by exec-ing the sibling migrate_component_vocab.py script."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500f-18-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-TKT-500f-18.md
+change_target: pipeline
+risk_surface: internal

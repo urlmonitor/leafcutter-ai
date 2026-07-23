@@ -1,0 +1,54 @@
+id: BO-2400b-3
+components:
+  - build_orchestration
+title: "A single documented rule deterministically decides the lane"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the routing inputs (scope size, attended/unattended, defect-cost),
+  When the path router makes its decision,
+  Then the lane is derived from a single documented decision rule that maps those
+    inputs to a lane
+  And routing the same inputs twice yields the same lane (the decision is
+    deterministic, not a per-run judgment call).
+depends_on: [BO-2400b]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "There must be exactly ONE documented decision rule mapping (scope size, attended/unattended, defect-cost) to a lane — no second, divergent routing rule may exist elsewhere in the pipeline."
+  - "The mapping must be table-driven / documented so it is auditable, and identical inputs must always yield the identical lane (deterministic, not a per-run LLM judgment)."
+  - "The rule is the single source consumed by BO-2400b-1 (fast case) and BO-2400b-2 (heavy case); those ACs must reference it rather than re-deriving routing logic."
+delivers_to:
+  agent: llm-expert
+  contract: "The documented, deterministic lane-decision rule (inputs: scope size, attended/unattended, defect-cost; output: fast | heavy) consumed by BO-2400b-1, BO-2400b-2, and its edge-case children."
+expects_from: null
+test_spec:
+  - name: test_lane_decision_is_deterministic
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Routing the same inputs twice yields the same lane."
+  - name: test_lane_derived_from_single_documented_rule
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The lane is derived from the single documented input-to-lane mapping rule."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400b-3-i
+  - BO-2400b-3-ii
+implemented_by:
+  - "scripts/build_orchestration/path_selection.py"

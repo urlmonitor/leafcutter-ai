@@ -1,0 +1,58 @@
+id: BP-1100f-2-i
+components:
+  - build_pipeline
+title: "Asserting the artifact path was passed as an argument is topology, not effect coverage"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item declares a durable side-effect (an artifact written to disk),
+  And its only side-effect-related test asserts that the artifact's destination path was
+    passed as an argument to the dispatched helper, without ever reading the artifact back,
+  When the test-evidence sufficiency check evaluates coverage,
+  Then it still reports the side-effect as uncovered, treating a path-argument assertion as
+    dispatch topology rather than proof the artifact was written,
+  And coverage is satisfied only by a test that observes the artifact's actual existence or
+    content after the work runs.
+depends_on:
+  - BP-1100f-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Extends the BP-1100f-2 evidence lens (templates/agents/pr-reviewer.md): a test that only asserts the artifact's destination path was passed as an argument to the dispatched helper — without reading the artifact back — is dispatch topology, not effect coverage."
+  - "Coverage is satisfied only by a test that observes the artifact's actual existence or content after the work runs (a real round-trip)."
+  - "Portable per ADR-001."
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "L3 edge for BP-1100f-2; same llm-expert prose surface. test_required:false (review-lens prose)."
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-2.md
+- templates/agents/pr-reviewer.md
+- templates/agents/test-writer.md
+notes: |
+  L3 edge for BP-1100f-2: closes the near-miss where a test looks effect-oriented
+  (it names the artifact path) but only inspects the arguments handed to a mock —
+  still topology, because nothing reads the artifact back.

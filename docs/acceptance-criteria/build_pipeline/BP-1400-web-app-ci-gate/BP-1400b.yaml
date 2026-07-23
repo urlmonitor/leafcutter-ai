@@ -1,0 +1,33 @@
+id: BP-1400b
+components:
+  - build_pipeline
+title: "Web-app code that breaks the style rules is automatically stopped"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The web app's code style is automatically checked, so style violations block the merge.
+
+  When a pull request changes the web app, its code style is checked
+  automatically and the request is stopped if any style rule is broken — the same
+  incident that shipped in production, where a style violation slipped through
+  every check, is prevented from merging.
+depends_on:
+  - BP-1400
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Adds one more check to the same pull-request CI flow already illustrated for the build/type-check gate; no new user-facing command or distinct flow, so no how-to or diagram adds value."
+origin_agent: product-owner
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1400b-1
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

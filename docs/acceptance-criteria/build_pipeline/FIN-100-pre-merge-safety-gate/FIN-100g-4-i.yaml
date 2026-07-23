@@ -1,0 +1,96 @@
+id: FIN-100g-4-i
+readiness: approved
+priority: high
+components:
+  - finalize
+  - build_pipeline
+title: "A missing gitignored deployed helper is re-deployed and excluded from regressions; a real failure still HALTs"
+level: L3
+component: finalize
+status: active
+parent: FIN-100g-4
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given a genuinely-passing test imports a deployed helper that is not
+  git-tracked (for example a commit-guardian hook script), and that helper failed
+  to land under the post-merge worktree, so the test fails with an
+  ImportError / ModuleNotFound
+  When the deploy-parity self-check (FIN-100g-4) runs before triage
+  Then the missing-artifact condition is detected and the deterministic deploy is
+  re-run against the worktree root so the helper lands, and the test passes on
+  re-run
+  And that transient import failure is excluded from the regression_candidates
+  set — it is not counted as a regression and does not HALT finalize
+  And a genuine new test failure that STILL fails after a verified-consistent
+  deploy is still classified as a "regression" and still HALTs finalize (the
+  self-check removes environment/build-state skew only; it does not weaken
+  real-regression detection)
+depends_on:
+  - FIN-100g-4
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  - SURFACE: templates/workflows-js/finalize-feature.js deploy-parity self-check
+    re-run path (FIN-100g-4) AND the regression_candidates set-difference that feeds
+    the FIN-100c triage.
+  - RE-DEPLOY + RE-RUN: a test failing with ImportError/ModuleNotFound because a
+    non-git-tracked deployed helper failed to land MUST trigger the deterministic
+    re-deploy (build.py --target-dir <WORKTREE_ROOT>); the affected failing tests
+    are then re-executed, and any that now pass MUST be excluded from
+    regression_candidates (not counted, does not HALT finalize).
+  - DO NOT WEAKEN REAL-REGRESSION DETECTION: a genuine new failure that STILL fails
+    after a verified-consistent deploy MUST still be classified `regression` and
+    MUST still HALT finalize. The self-check removes environment/build-state skew
+    only.
+  - DATA-DRIVEN EXCLUSION: the exclusion MUST be keyed on the observable property
+    "passes after a verified-consistent re-deploy", NOT on a hard-coded test or
+    helper name, so new deploy-dependent tests inherit the behavior automatically.
+  - PARITY + DETERMINISM: the re-deploy uses the same build/deploy command and
+    --self-description-enforcement level as Step 0 / Step 3 / FIN-100g-4; E2 no
+    Date.now (derive temp paths from args.baseline_ts); deploy/re-run I/O wrapped
+    and logged at WARNING+ per the error-handling policy; guaranteed cleanup on all
+    exit paths.
+delivers_to:
+  - agent: test-failure-triage
+    contract: "a regression_candidates set from which build-state-only import failures have been removed via re-deploy, while genuine post-deploy failures remain and still HALT"
+expects_from:
+  - agent: test-runner
+    contract: "the initial post-merge failure set including any missing-deployed-helper ImportErrors, and the re-run result after deterministic re-deploy"
+test_spec:
+  - name: test_missing_helper_import_failure_redeployed_and_excluded
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "A test failing with ImportError from a missing non-git-tracked deployed helper triggers the deterministic re-deploy; the test passes on re-run and is excluded from regression_candidates."
+  - name: test_transient_import_failure_does_not_halt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "A build-state-only import failure that passes after re-deploy is not counted as a regression and does not HALT finalize."
+  - name: test_genuine_failure_after_verified_deploy_still_regression_and_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "A genuine new test failure that STILL fails after a verified-consistent deploy is still classified regression and still HALTs finalize (real-regression detection is not weakened)."
+  - name: test_exclusion_is_data_driven_not_name_based
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The regression_candidates exclusion is keyed on \"passes after a verified-consistent re-deploy\", not on a hard-coded test or helper name, so a new deploy-dependent test inherits the behavior."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Deploy-parity self-check re-run path and the regression_candidates set-difference that must exclude build-state-only failures but retain genuine ones"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map — re-deploy-and-re-run before the FIN-100c triage set-difference"
+  - path: "unit_tests/workflows/test_finalize_feature_preflight.py"
+    relevance: "Regression tests asserting re-deploy-and-exclude for build-state import failures, no-HALT on those, still-HALT on genuine post-deploy failures, and data-driven (not name-based) exclusion"
+origin_agent: business-analyst
+created: 2026-07-21
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (re-deploy + re-run for ImportError from a missing non-git-tracked deployed helper, then exclude the now-passing test from regression_candidates; explicit do-not-weaken-real-regression clause — a genuine failure after a verified-consistent deploy still HALTs; DATA-DRIVEN exclusion keyed on pass-after-redeploy not a hard-coded name; build/deploy parity with FIN-100g-4/FIN-100a-4, E2 no-Date.now, wrapped/logged I/O, guaranteed cleanup) and test_spec (4 descriptors: redeploy-and-exclude, no-halt-on-transient, still-halt-on-genuine, and data-driven-exclusion). Added step-map and test-file doc_links. Kept assigned_agent python-coder, estimated_complexity M, delivers_to/expects_from, and criteria unchanged."
+    by: it-po
+covered_by: []
+implemented_by: []

@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -20,10 +20,13 @@ criteria: |
   And the same question is presented again together with a statement of the
     valid answer shape.
 depends_on: [BO-2300b]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md
@@ -41,40 +44,47 @@ it_requirements:
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "1"
   required_skills:
-    - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
-    - "A well-formed answer that does not satisfy the pending question's declared type must be rejected and not applied; the run stays paused on the same pending question and re-presents it together with its valid answer shape."
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript). The wrong-shape rejection runs inside resolveGate() in the shared JS helper: when the resume answer (supplied via args / read by the resume agent) does not satisfy the declared type, the gate keeps the run paused and re-presents the question. This is JS in the workflow files, not a standalone Python module."
+    - "A well-formed answer that does not satisfy the pending question's declared type must be rejected and not applied; the run stays paused (paused_awaiting_input) on the same pending question and re-presents it together with its valid answer shape."
     - "Rejection must not advance the run and must not mutate committed prior stages."
-    - "Reuse the single shared type/answer-shape validator established by BO-2300b-1; do not fork a second validator."
+    - "Reuse the single shared JS type/answer-shape validator established by BO-2300b-1; do not fork a second validator."
     - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) resuming with a wrong-shape answer in args (e.g. 'high' to an approve/edit/cancel gate); assert status stays paused_awaiting_input and the same question is re-emitted. Do NOT test a standalone Python module."
 delivers_to: null
 expects_from:
   ac_id: BO-2300b-1
-  contract: "The declared question type and its valid answer shape (allowed option set), against which a submitted answer is validated and, on mismatch, rejected and re-prompted."
+  contract: "The declared question type and its valid answer shape (allowed option set), against which a submitted answer is validated in the shared JS validator and, on mismatch, rejected and re-prompted."
 test_spec:
   - name: test_wrong_type_answer_rejected
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A well-formed answer of the wrong type (e.g. 'high' to an approve/edit/cancel gate) is rejected and not applied."
+    description: "Via run_workflow_under_e2, a well-formed answer of the wrong type (e.g. 'high' to an approve/edit/cancel gate) supplied on resume is rejected and not applied."
   - name: test_run_stays_paused_after_wrong_shape
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "After a wrong-shape answer the run stays paused on the same pending question."
+    description: "Via the harness, after a wrong-shape answer the run stays paused_awaiting_input on the same pending question."
   - name: test_same_question_represented_with_valid_shape
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "The same question is re-presented together with a statement of its valid answer shape."
+    description: "Via the harness, the same question is re-presented together with a statement of its valid answer shape."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; rejection runs in resolveGate() in the shared JS helper with the answer supplied via resume args; test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: [BO-2300b-2-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |

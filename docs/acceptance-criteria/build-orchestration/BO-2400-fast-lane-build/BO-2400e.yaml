@@ -1,0 +1,32 @@
+id: BO-2400e
+components:
+  - build_orchestration
+title: "The lean lane keeps git isolation and incremental commits"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The fast lane drops heavy agent orchestration, not git discipline.
+
+  A lean build still runs on an isolated branch created from the latest origin/main
+  and records incremental, logical commits (a red-baseline commit, then the green
+  implementation, then each further logical change) rather than one squashed drop or
+  no commits at all. What the fast lane removes is the orchestration overhead — the
+  supervisor, planner-as-agent, per-phase cold-starts, the three-command/three-worktree
+  split, and the opinion-only gate agents — never the branch isolation or the
+  commit trail that make the work reviewable and revertible.
+depends_on: [BO-2400]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400e-1, BO-2400e-2]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

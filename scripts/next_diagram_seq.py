@@ -70,7 +70,9 @@ def next_seq(level: int, arch_dir: Path) -> int:
     """
     used: list[int] = []
     pattern = f"c{level}-*.md"
-    for path in arch_dir.glob(pattern):
+    # Recursive: C4 diagrams live under arch_dir/diagrams/, so a non-recursive
+    # glob at arch_dir would miss them and restart numbering at 1 (BP-1401).
+    for path in arch_dir.rglob(pattern):
         match = _SEQ_RE.match(path.name)
         if match and int(match.group(1)) == level:
             used.append(int(match.group(2)))

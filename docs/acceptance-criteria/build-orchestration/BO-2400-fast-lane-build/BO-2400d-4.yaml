@@ -1,0 +1,45 @@
+id: BO-2400d-4
+components:
+  - build_orchestration
+  - documentation_system
+title: "Reference: build telemetry record schema and lane tagging"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the per-invocation build telemetry record (duration, token counts, lane tag,
+    agent identity) and the sink,
+  When a contributor needs the telemetry contract,
+  Then a reference document specifies the telemetry record schema, the fields it
+    carries, the lane and agent tags, the sink location, and the failed-write
+    surfacing behavior.
+depends_on: [BO-2400d, BO-2400d-1, BO-2400d-1-i, BO-2400d-2]
+doc_links:
+  - path: docs/reference/build-telemetry.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The reference must specify the telemetry record schema (duration, input/output/cache-read token counts), the lane and agent tags, the sink location (debugging/logs/agent_telemetry.jsonl), and the unreachable-sink WARNING + failed-write-count surfacing."
+  - "Field names in the reference must match the shipped record shape (BO-2400d-1 / BO-2400d-2)."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2400d-1
+  contract: "The implemented telemetry record shape and sink behavior this reference documents."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/reference/build-telemetry.md"

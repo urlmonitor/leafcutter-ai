@@ -1,0 +1,68 @@
+id: BO-2400d-1
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "Each agent invocation records duration and token counts to the telemetry sink"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent invocation completes during a build,
+  When its telemetry is recorded,
+  Then exactly one telemetry record is appended to the sink for that invocation
+  And the record contains its duration, input token count, output token count, and
+    cache-read token count.
+depends_on: [BO-2400d]
+doc_links:
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    telemetry_invocation_record:
+      type: object
+      required: [duration, input_tokens, output_tokens, cache_read_tokens]
+      description: "One JSONL record appended per agent invocation with duration and input/output/cache-read token counts."
+  reference_file_path: "scripts/feedback/submit_feedback.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Exactly one telemetry record must be appended to the sink per completed agent invocation — no duplicate and no missing record."
+    - "The record must contain duration, input token count, output token count, and cache-read token count for that invocation."
+    - "Model the append-to-JSONL-sink path on the existing submit_feedback.py sink-write pattern (structured record, fail-loud on write failure per BO-2400d-1-i); if the emit path is a new sibling module, keep its sink semantics consistent with the existing sink."
+    - "The sink is debugging/logs/agent_telemetry.jsonl unless overridden by config."
+delivers_to:
+  agent: python-coder
+  contract: "One JSONL telemetry record per invocation { duration, input_tokens, output_tokens, cache_read_tokens, ... } appended to debugging/logs/agent_telemetry.jsonl."
+expects_from: null
+test_spec:
+  - name: test_one_record_per_invocation
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "Exactly one telemetry record is appended to the sink for a completed agent invocation."
+  - name: test_record_contains_duration_and_token_counts
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "The record contains duration, input token count, output token count, and cache-read token count."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400d-1-i
+implemented_by:
+  - "scripts/agent-health/agent_telemetry.py"

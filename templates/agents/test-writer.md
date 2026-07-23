@@ -147,6 +147,34 @@ behaviour above and proceed with the standard step-by-step flow below.
 
 If the ticket is a bug fix, or if `python-coder` / `sql-coder` discovered and fixed a bug during implementation, you MUST write a regression test that reproduces the original bug and verifies the fix. This test must fail when the bug is reintroduced (red-green proof). This is non-negotiable — no bug fix is complete without a corresponding regression test.
 
+## Real-Artifact Behavioral Test Mandate (BP-1100f-2)
+
+When the ticket declares a **durable, observable side-effect** — an artifact the
+implementation writes to disk that can be read back (a file, a generated config, a
+deployed template) — you MUST author at least one **real-artifact behavioral test**
+in addition to any dispatch-topology tests. The test must:
+
+1. Invoke the code under review in a way that actually runs it (not solely mock it out).
+2. Allow the code to write to a real location — use `tempfile` or
+   `testing_context.test_output_dir`; do NOT mock the write call itself.
+3. Read the artifact back, or assert its existence and content, after the code runs.
+
+This is the **real-effect round-trip**. A dispatch-topology-only test — one that
+checks whether an agent or helper was called, inspects `call_args`, or asserts that
+the destination path was passed as an argument — does NOT satisfy this requirement.
+A path-argument assertion is topology: it tests the call, not the file on disk.
+
+This mandate is the test-authoring complement of the `pr-reviewer` evidence lens
+(BP-1100f-2) and ties to the **"Real-artifact behavioral spot-check"** convention in
+the project root CLAUDE.md: "Green sign-offs prove the code runs; they do not prove
+it works on the real data format." A mock-only test suite on a durable-side-effect
+ticket is the documented failure mode that produced multiple phantom-done incidents in
+this repo (EPIC-PhantomDoneFilesTouched; EPIC-GlossaryAutomation; BO-2300 postmortem).
+
+If the ticket declares a durable side-effect but `test_required: false` is also set
+(e.g. the deliverable is a prompt template — a soft artifact), this mandate does not
+apply; note the reason in `## Comments`.
+
 ## Dispatch Contract
 
 You run **before `python-coder`** (and all other coders) in the ticket build
@@ -458,6 +486,32 @@ literal that happens to match the code's wrong assumption.
    properties the PO signed off (e.g. `status == 'out-of-stock' iff stock == 0`).
 
 If no `mock_data_ref` resolves, fall back to normal fixture authoring (2h).
+
+### 2h.2 — Fixture Authenticity Rule (mandatory for serialized-format fixtures)
+
+When a test needs input of a type that a tool serializes on disk — YAML tickets, AC
+files, JSON configs, or any structured artifact — the fixture MUST be produced by the
+real producer, not hand-typed as an inline literal.
+
+**Serialized-format fixtures:**
+- Call the actual serializer (e.g. `yaml.safe_dump`, the project's ticket-writer) to
+  produce the fixture bytes, **or** read an existing on-disk artifact verbatim.
+- A hand-authored YAML/JSON/etc. string is NOT a valid fixture for a serialized format.
+
+**Parser and validator tests — mandatory round-trip:**
+- Write the input through the real producer to a temporary file, read it back, and
+  assert on the value obtained from that round-trip — not on an in-memory string literal
+  the test author typed.
+- The author's mental model is the exact blind spot that can cause the bug: a
+  hand-typed fixture reproduces that bias, so the test passes on fake data while the
+  code is broken on real data.
+
+**Rationale — concrete precedent (EPIC-PhantomDoneFilesTouched):** The `files_touched`
+parser required dashes at column 0; every hand-typed fixture used indented dashes.
+Seven tickets signed off green while the hook was a total no-op on every real ticket.
+Only running the parser against an actual on-disk ticket file caught the defect.
+A hand-typed fixture always inherits the author's mental model — the same bias that
+hides the bug — so it can only prove the code handles fake data, not the real format.
 
 ### 2i — `# covers:` tag placement (mandatory for every test function)
 

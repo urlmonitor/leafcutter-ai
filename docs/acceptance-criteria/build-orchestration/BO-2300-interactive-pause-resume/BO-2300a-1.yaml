@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -19,10 +19,13 @@ criteria: |
   And the run enters a paused state that records a pending question tied to the
     run so the run can be resumed from that exact point later.
 depends_on: [BO-2300a]
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: L
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
@@ -37,67 +40,77 @@ doc_links:
 it_requirements:
   config_schema_fragment:
     type: object
-    description: "Durable pending-question record persisted on pause, keyed by run id."
+    description: "Durable pending-question record persisted on pause, keyed by run id, at .leafcutter/paused_runs/<run_id>.json."
     properties:
       run_id: {type: string}
       status: {type: string, enum: [paused_awaiting_input, cancelled, running, completed]}
       question: {type: object, description: "shape defined by BO-2300b-1"}
       context: {type: object, description: "snapshot, shape defined by BO-2300c-1"}
-      pause_point: {type: object, description: "resume marker referencing the existing resumeFromRunId run-resume cache"}
+      pause_point: {type: object, description: "resume marker referencing the harness resumeFromRunId run + gate id"}
       answer: {type: [object, "null"]}
     required: [run_id, status, question, pause_point]
   reference_file_path: "templates/workflows-js/plan-feature.js"
   n_location_rule: "all"
   required_skills:
+    - llm-expert
     - python-coder
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
-    - "This is the defect being fixed: at an interactive gate with no reachable answerer the E2 engine today resolves the gate as blocked and CANCELS headless. The run must instead PAUSE and persist, discarding no committed work."
-    - "The pending-question record must be keyed to the run id and written to a run-scoped durable store that survives the workflow process exiting; align with how the existing crash-resume run state is persisted (the workflow body itself stays stateless per docs/reference/workflow-constraints.md)."
-    - "Every interactive gate that today cancels headless must be migrated to pause: apply the same mechanism across templates/workflows-js/plan-feature.js, build-feature.js, and finalize-feature.js (hence n_location_rule=all) so no gate silently retains the cancel-on-headless bug."
-    - "All state-store reads/writes are external I/O and must follow the project error-handling policy (typed except, WARNING+ log, no bare except, no silent swallow)."
+    - "SURFACE (corrects the prior mis-build): the defect lives in the interactive gates of the E2 workflow ENGINE, which is JavaScript. Today, at an interactive gate with no reachable answerer, the parse-failure catch blocks resolve the gate to a hardcoded safe default (cancel/defer) and immediately return, exiting with status ok/cancelled. The fix migrates those gates to PAUSE and persist, discarding no committed work. Correct files: templates/workflows-js/plan-feature.js (4 gates) and templates/workflows-js/finalize-feature.js (1 merge gate). Do NOT implement this as a standalone Python module — a Python module in isolation never touches the gates that cancel headless and leaves the defect unfixed."
+    - "SHARED JS HELPER: implement the pause/persist mechanism (resolveGate(), question declaration + validation, context capture, apply-by-type, durability/stale handling) as ONE shared JavaScript helper module imported by all three engine files (plan-feature.js, build-feature.js, finalize-feature.js). This is what n_location_rule=all means."
+    - "FEASIBILITY (E2 body has no filesystem or Node.js access per docs/reference/workflow-constraints.md): the workflow body performs NO direct filesystem I/O; the pending-question record is persisted and read via an agent() dispatch (agents have Bash/Write tools), never by fs calls in the body, and on resume the human's answer is supplied via args. The dispatched agent MAY invoke a small Python helper to do the actual JSON read/write, but the ENGINE INTEGRATION (gate migration, resolveGate, return paused_awaiting_input) is JavaScript in the workflow files."
+    - "The pending-question record must be keyed to the run id (.leafcutter/paused_runs/<run_id>.json) and survive the workflow process exiting; resume is via the harness resumeFromRunId replay contract (a Workflow-tool mechanism, not a repo artifact). No pre-existing in-repo pending-question store exists — this ADR-024 store is new; do NOT try to reuse a non-existent crash-resume store."
+    - "Every interactive gate that today cancels headless must be migrated to pause via the shared helper across templates/workflows-js/plan-feature.js and finalize-feature.js so no gate silently retains the cancel-on-headless bug (build-feature.js has no gates today but imports the same helper)."
+    - "All state-store reads/writes performed by the dispatched persist/resume agent (and any Python helper it invokes) are external I/O and must follow the project error-handling policy (typed except, WARNING+ log, no bare except, no silent swallow)."
     - "Authored in E2 top-level-body form per ADR-017; do not use Date.now()/new Date()/Math.random() in the workflow body (pass any timestamp/seed via args); the build-time E1 shim is regenerated by build.py, never hand-authored."
-    - "Engine JS under templates/workflows-js/ and any Python glue under scripts/ must keep deployed/template parity via the build.py round-trip (ADR-001)."
-    - "Pausing must be idempotent: re-reaching the same gate for an already-paused run must not create a duplicate pending-question record."
+    - "Engine JS under templates/workflows-js/ and any Python glue must keep deployed/template parity via the build.py round-trip (ADR-001): python scripts/build.py --target-dir ."
+    - "Pausing must be idempotent: re-reaching the same gate for an already-paused run must not dispatch a second persist agent nor create a duplicate pending-question record."
     - "Pause/persist transitions must be logged at an appropriate severity for observability."
+    - "TEST STRATEGY: tests drive the REAL JS workflow via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(script_path, label_responses={...}), which executes the workflow under node with mocked agent() responses and captures agent_calls. Assert on the JS engine's observable behavior (status paused_awaiting_input, a persist agent() dispatch present in agent_calls). Do NOT build a standalone Python module and pytest it in isolation — that exercises none of the defective gates."
 delivers_to:
-  agent: python-coder
-  contract: "Durable pending-question record keyed by run id: { run_id: string, status: 'paused_awaiting_input', question: <object, shape from BO-2300b-1>, context: <snapshot, shape from BO-2300c-1>, pause_point: <resume marker referencing the existing resumeFromRunId cache>, answer: null }, written to a run-scoped durable state store that survives process exit. Consumed by the distinct-state (BO-2300a-2), apply/resume (BO-2300d-1), and durability (BO-2300e-1) behaviors."
+  agent: llm-expert
+  contract: "Durable pending-question record keyed by run id: { run_id: string, status: 'paused_awaiting_input', question: <object, shape from BO-2300b-1>, context: <snapshot, shape from BO-2300c-1>, pause_point: <resume marker referencing the harness resumeFromRunId run + gate id>, answer: null }, persisted via an agent() dispatch to .leafcutter/paused_runs/<run_id>.json (a new ADR-024 store; run-scoped, survives process exit) — never by fs calls in the workflow body. Consumed by the distinct-state (BO-2300a-2), apply/resume (BO-2300d-1), and durability (BO-2300e-1) behaviors."
 expects_from: null
 test_spec:
   - name: test_gate_pauses_instead_of_cancelling
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "A headless run reaching an interactive gate enters the paused state and does not cancel."
+    description: "Drive the real JS engine via run_workflow_under_e2(plan-feature.js) with headless (no-answer) label_responses; assert the run returns status paused_awaiting_input (not ok/cancelled) and does not cancel."
   - name: test_pause_preserves_completed_work
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Work committed before the gate is retained (not discarded) when the run pauses."
+    description: "Via run_workflow_under_e2 on the JS engine, a headless run that committed stages before the gate retains them (agent_calls show no rollback / no discard) when it pauses."
   - name: test_pending_question_record_keyed_to_run
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "On pause a pending-question record tied to the run id is written to the durable store."
+    description: "Via run_workflow_under_e2, on pause the JS engine dispatches a persist agent() (visible in captured agent_calls) to write a pending-question record keyed by run_id to .leafcutter/paused_runs/<run_id>.json — the workflow body performs no direct fs write."
   - name: test_pause_is_idempotent_on_same_gate
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Re-reaching the same gate for an already-paused run does not create a duplicate pending-question record."
+    description: "Via run_workflow_under_e2, re-reaching the same gate for an already-paused run does not dispatch a second persist agent() and does not create a duplicate pending-question record."
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted technical enrichment from a standalone Python module to the E2 workflow ENGINE (templates/workflows-js/*.js). assigned_agent python-coder -> llm-expert; added E2-body feasibility (agent-mediated persistence, no fs I/O in the workflow body); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: null
 covered_by: [BO-2300a-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
 change_target: pipeline
 risk_surface: internal
 notes: |
   Engineering shape (kept out of criteria prose): the E2 workflow engine
   (templates/workflows-js/*.js, run by the Workflow tool) today cannot prompt
-  the user mid-run when headless/background, so at an interactive gate it
-  cancels. This behavior requires that the gate PAUSE and persist a
-  pending-question record keyed to the run id (resumable via the existing
-  resumeFromRunId cache) rather than terminating the run.
+  the user mid-run when headless/background, so at an interactive gate its
+  parse-failure catch resolves to a safe default and cancels. This behavior
+  requires that the gate PAUSE and persist a pending-question record keyed to
+  the run id, via an agent() dispatch (the E2 body has no fs access), resumable
+  via the harness resumeFromRunId replay -- rather than terminating the run.

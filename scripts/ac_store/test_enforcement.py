@@ -196,3 +196,36 @@ def extract_covers_tag(item: object) -> str | None:
             return match.group(1)
 
     return None
+
+
+# ---------------------------------------------------------------------------
+# Done-proof eligibility gate — implemented in done_proof.py, re-exported here
+# so callers can import from test_enforcement without knowing the split.
+# The import is lazy (deferred to call time) so that importing test_enforcement
+# itself does not require done_proof to be on sys.path — the pytest_ac_enforcement
+# plugin imports test_enforcement in subprocess contexts where done_proof is absent.
+# ---------------------------------------------------------------------------
+
+
+def verify_done_eligible(
+    ac_id: str,
+    *,
+    ac_root: Path,
+    test_root: Path,
+) -> dict:
+    """Check whether *ac_id* is eligible to be marked done via covers-tag linkage.
+
+    Delegates entirely to :func:`done_proof.verify_done_eligible`.  See that
+    module for the full contract and return-value specification.
+
+    Args:
+        ac_id: The AC identifier string to evaluate.
+        ac_root: Root directory of the AC YAML store.
+        test_root: Root directory to scan for ``# covers:`` tags.
+
+    Returns:
+        Eligibility verdict dict; see ``done_proof.verify_done_eligible``.
+    """
+    from done_proof import verify_done_eligible as _impl  # noqa: PLC0415
+
+    return _impl(ac_id, ac_root=ac_root, test_root=test_root)

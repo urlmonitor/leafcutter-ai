@@ -173,9 +173,9 @@ const STEP_COUNT = 9;
 // AC BO-1000a-2-i: step 3.5 is the intermediate closure step — it is
 // included in STEP_COUNT so its position is monotonic (3 < 3.5 < 4) and N
 // is unchanged for all other steps. Pre-flight aborts occur BEFORE the
-// first numbered step: no narrate() call is made in the pre-flight section
-// (phase('Pre-flight') through phase('Pre-flight 2')); pre-flight failures
-// use a distinct non-numbered return ({ status: 'error', ... }).
+// first numbered step: no narrate() call is made in the pre-flight sections
+// (Pre-flight and Pre-flight 2); pre-flight failures use a distinct
+// non-numbered return ({ status: 'error', ... }).
 
 // ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
@@ -261,6 +261,165 @@ function parseAgentJson(raw, ctx) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// §R — Inline pause-resume helpers (ADR-024 BO-2300 RESUME half).
+// E2 workflow bodies are self-contained and cannot import local modules, so the
+// pause-resume helper is defined inline here. The same helper is inlined in
+// plan-feature.js — keep them in sync.
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a resume_answer's shape against its declared question type.
+ * @param {object}       answer       - args.resume_answer object.
+ * @param {string}       expectedType - "single_choice" | "priority_choice" | "free_text"
+ * @param {string[]|null} [validOptions] - Allowed action/choice values for single_choice gates.
+ * @returns {{ valid: boolean }}
+ */
+function validateAnswerShape(answer, expectedType, validOptions) {
+  if (!answer || typeof answer !== "object") { return { valid: false }; }
+  if (expectedType === "single_choice") {
+    const act = typeof answer.action === "string" ? answer.action
+      : (typeof answer.choice === "string" ? answer.choice : null);
+    if (!act) { return { valid: false }; }
+    if (Array.isArray(validOptions) && validOptions.length > 0 && !validOptions.includes(act)) {
+      return { valid: false };
+    }
+    return { valid: true };
+  }
+  if (expectedType === "priority_choice") {
+    return (answer.priority != null) ? { valid: true } : { valid: false };
+  }
+  if (expectedType === "free_text") {
+    return (typeof answer.text === "string") ? { valid: true } : { valid: false };
+  }
+  return { valid: false };
+}
+
+/**
+ * Apply a validated resume answer by its type and return the effective gate decision.
+ * @param {object} answer - Validated answer from args.resume_answer.
+ * @param {string} type   - "single_choice" | "priority_choice" | "free_text"
+ * @returns {object} Gate decision e.g. { action: "approve" }.
+ */
+function applyAnswerByType(answer, type) {
+  if (type === "priority_choice") { return { action: "approve", priority: answer.priority }; }
+  if (type === "free_text") { return { action: "approve", text: answer.text }; }
+  return { action: answer.action || answer.choice };
+}
+
+/**
+ * Resume-aware interactive gate resolver (ADR-024).
+ *
+ * CORRECTNESS INVARIANT (ADR-024 Rule 4): checks args.resume_answer BEFORE liveGateFn.
+ *
+ * Return value:
+ *   { action: "..." }                   — valid gate decision; caller proceeds.
+ *   { status: "paused_awaiting_input" } — headless or invalid answer; caller MUST return.
+ *   { status: "nothing_to_resume" }     — record absent (exists:false); caller MUST return.
+ *   { status: "unresumable_stale" }     — record stale; caller MUST return.
+ *
+ * @param {string}   gateId      - Gate label (e.g. "step-4-merge-gate").
+ * @param {Function} liveGateFn  - Zero-arg async fn; returns parsed gate decision or null (headless).
+ * @param {object}   args        - Workflow args (may include resume_answer, run_id).
+ * @param {object}   context     - Context snapshot for the pause record.
+ * @param {object}   [descriptor] - Gate question descriptor: { type, options, prompt }.
+ * @param {string}   [runId]     - Explicit run id; falls back to args.run_id || "default-run".
+ * @returns {Promise<object>}
+ */
+async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {
+  runId = runId || (args && args.run_id) || "default-run";
+  const answerType = (descriptor && descriptor.type) || "single_choice";
+  const validOptions = (descriptor && Array.isArray(descriptor.options)) ? descriptor.options : null;
+
+  // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
+  if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
+    const incomingType = args.resume_answer.type || answerType;
+    const validation = validateAnswerShape(args.resume_answer, incomingType, validOptions);
+    if (!validation.valid) {
+      // Wrong/malformed shape or action not in valid options: stay paused.
+      return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+    }
+    // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
+    const _readPrompt =
+      "Read the durable pause record for this run. Run exactly:\n" +
+      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
+    const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
+    let recCheck;
+    try {
+      recCheck = (typeof _rawRec === "string")
+        ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: "status-checker" })
+        : _rawRec;
+    } catch (_e) { recCheck = null; }
+    // FAIL CLOSED: apply ONLY when exists===true AND stale is not true.
+    if (!recCheck || recCheck.exists !== true) {
+      return { status: "nothing_to_resume", run_id: runId, gate_id: gateId };
+    }
+    if (recCheck.stale === true) {
+      return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
+    }
+    return applyAnswerByType(args.resume_answer, incomingType);
+  }
+
+  // No matching resume_answer: call the live gate.
+  let gateAnswer = null;
+  if (typeof liveGateFn === "function") {
+    try { gateAnswer = await liveGateFn(); } catch (_err) { gateAnswer = null; }
+  }
+  // Valid explicit decision.
+  if (gateAnswer !== null && gateAnswer !== undefined && typeof gateAnswer === "object" &&
+      (typeof gateAnswer.action === "string" || typeof gateAnswer.choice === "string")) {
+    return gateAnswer;
+  }
+  // Headless or unparseable: pause and persist.
+  return pauseAtGate(gateId, runId, context, descriptor);
+}
+
+/**
+ * Pause the workflow at an interactive gate and persist the pending-question
+ * record (ADR-024 pause-resume mechanism).
+ *
+ * Dispatches a "pause-persist" agent call carrying the question shape and
+ * context snapshot, then returns { status: "paused_awaiting_input" } so the
+ * caller can `return` it immediately, exiting without losing committed steps.
+ *
+ * Called by resolveGate() on the headless path. Direct callers should use
+ * resolveGate() instead, which checks args.resume_answer first (ADR-024 Rule 4).
+ *
+ * @param {string} gateId        - Gate label (e.g. "step-4-merge-gate").
+ * @param {string} runId         - Current run identifier.
+ * @param {object} ctxSnapshot   - Workflow context snapshot at pause time.
+ * @param {object} [descriptor]  - Gate question descriptor: { type, options, prompt }.
+ * @returns {Promise<{status: "paused_awaiting_input", run_id: string, gate_id: string}>}
+ */
+async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
+  const questionType = (descriptor && descriptor.type) || "single_choice";
+  const questionOptions = (descriptor && Array.isArray(descriptor.options))
+    ? descriptor.options : ["approve", "edit", "cancel", "defer"];
+  const questionPrompt = (descriptor && descriptor.prompt) ||
+    ("Interactive gate '" + gateId + "' requires a human decision. Options: " +
+      questionOptions.join(", ") + ".");
+  const question = {
+    type: questionType,
+    gate_id: gateId,
+    options: questionOptions,
+    prompt: questionPrompt,
+  };
+  const context = ctxSnapshot || { gate_id: gateId };
+  const rec = {
+    run_id: runId, gate_id: gateId,
+    question: question, context: context,
+    status: "paused_awaiting_input",
+  };
+  const _persistPrompt =
+    "Interactive gate '" + gateId + "' has no reachable human answerer. " +
+    "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
+    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
+  await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
+  return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+}
+
 // -------------------------------------------------------------------------
 // Pre-flight worktree resolution
 //
@@ -285,8 +444,19 @@ function parseAgentJson(raw, ctx) {
 
 // Extract the epic/ticket argument passed to the workflow.
 // For `/finalize-feature EPIC-FooBar`, args is the string "EPIC-FooBar".
-// When args is not a string (or is empty), fall back to CWD-based detection.
-const epicArg = (typeof args === 'string' ? args.trim() : '');
+// When args is an object (e.g. {target: "ge-116a-1"} from a /build-feature dispatch
+// or the workflow engine), extract args.target or args.target_branch (FIN-100g-2).
+// When args is empty, has no target/target_branch key, or carries an empty value,
+// epicArg is '' and the pre-flight falls back to CWD-based detection (FIN-100g-2-i).
+const _epicArgCandidate = (
+  typeof args === 'string'
+    ? args
+    : (args && (args.target || args.target_branch)) || ''
+);
+// A non-string target value (e.g. a number or object) is treated as no target —
+// it falls back to CWD detection (FIN-100g-2-i) rather than raising a .trim()
+// TypeError. Only a string candidate is trimmed.
+const epicArg = (typeof _epicArgCandidate === 'string' ? _epicArgCandidate : '').trim();
 
 const preflightResult = await agent(
   "Detect the target worktree branch and root path for /finalize-feature.\n" +
@@ -316,10 +486,22 @@ const preflightResult = await agent(
       "  Run: git -C \"<wt_path>\" rev-parse --show-toplevel\n" +
       "  Return ONLY: { \"found\": true, \"branch\": \"<branch_name>\", \"worktree_root\": \"<path>\" }\n" +
       "\n" +
-      "Step 3b — no matching worktree found:\n" +
+      "Step 3b — no matching worktree found (FIN-100g-3):\n" +
+      "  A target was supplied but resolves to no registered worktree. Build a\n" +
+      "  SINGLE actionable error string containing ALL THREE of:\n" +
+      `    (a) the unresolved target name '${epicArg}';\n` +
+      "    (b) the expected argument forms — a bare branch-name string, OR an\n" +
+      "        object with a target/target_branch key;\n" +
+      "    (c) the candidate worktrees that ARE currently registered and their\n" +
+      "        checked-out branches — list the '<path> [<branch>]' entries you\n" +
+      "        parsed from `git worktree list --porcelain` in Step 1, sorted by\n" +
+      "        path for deterministic output.\n" +
+      "  This message is intentionally more specific than the generic\n" +
+      "  branch-named error (it adds the expected forms and the candidate list).\n" +
       `  Return ONLY: { "found": false, "branch": null, "worktree_root": null,\n` +
-      `               "error": "No worktree found matching '${epicArg}'. ` +
-      `Run \\"git worktree list\\" to see all registered worktrees." }`
+      `               "error": "No worktree found matching target '${epicArg}'. ` +
+      `Expected a bare branch-name string OR an object with a target/target_branch key. ` +
+      `Candidate worktrees (from git worktree list --porcelain): <path> [<branch>], ..." }`
     : "No target argument provided — fall back to CWD-based detection.\n" +
       "1. Run: git branch --show-current\n" +
       "2. Run: git rev-parse --show-toplevel\n" +
@@ -345,8 +527,9 @@ if (preflightInfo.found === false) {
     status: "error",
     message:
       preflightInfo.error ||
-      `/finalize-feature could not find a worktree matching "${epicArg}". ` +
-      "Run `git worktree list` to see all registered worktrees, " +
+      `/finalize-feature could not find a worktree matching target "${epicArg}". ` +
+      "Expected a bare branch-name string OR an object with a target/target_branch key. " +
+      "Run `git worktree list` to see the candidate worktrees and their branches, " +
       "then re-run with the correct epic or ticket name.",
     action_required: "resolve_worktree_argument",
   };
@@ -884,6 +1067,92 @@ let postMergeFailures;
     testPassed = false;
     postMergeFailures = [];
     testResult = { passed: false, output: "(parse malformed)", failing_tests: [] };
+  }
+}
+
+// -------------------------------------------------------------------------
+// Step 3 (deploy-parity self-check — FIN-100g-4 / FIN-100g-4-i)
+//
+// Before triaging any failures, verify the post-merge worktree's DEPLOYED
+// layer is consistent: every runtime artifact the tests import must be present
+// at its expected deployed location under WORKTREE_ROOT, INCLUDING gitignored,
+// non-git-tracked deployed copies (e.g. scripts/commit_guardian/*.py deployed
+// by install_shims). A missing deployed artifact is an environment/build-state
+// condition, NEVER a test regression. On a miss, re-run the deterministic
+// deploy against the worktree root (build parity with FIN-100a-4 / FIN-100c-4)
+// and re-verify + re-run the previously-failing tests, so build-state failures
+// clear before triage. Triage (FIN-100c) runs ONLY once the deployed layer is
+// verified consistent. The exclusion is data-driven (tests that pass after a
+// verified re-deploy), never keyed on a hard-coded test/helper name — a genuine
+// failure that persists after a verified-consistent deploy still reaches triage
+// and can HALT.
+// -------------------------------------------------------------------------
+// Only meaningful when there are CONCRETE post-merge failures to reclassify.
+// A malformed Step-3 test-runner reply is treated conservatively above as
+// testPassed=false with an EMPTY postMergeFailures; the deploy-parity self-check
+// must NOT run (and must never flip testPassed→true) in that case — there is
+// nothing to attribute to deploy skew, and rescuing an ambiguous/empty result to
+// "passed" would skip triage and merge on a malformed test run (H-1).
+if (!testPassed && postMergeFailures.length > 0) {
+  const deployParityResult = await agent(
+    `Verify the deployed layer of the post-merge worktree "${WORKTREE_ROOT}" is consistent BEFORE triage (FIN-100g-4).\n` +
+    "1. For every runtime artifact the failing tests import, check it is present at its\n" +
+    "   expected DEPLOYED location under the worktree root — INCLUDING gitignored,\n" +
+    "   non-git-tracked deployed copies (e.g. scripts/commit_guardian/*.py, scripts/feedback/*.py\n" +
+    "   deployed by install_shims), not just git-tracked files.\n" +
+    "2. If ANY expected deployed artifact is missing, re-run the deterministic deploy:\n" +
+    `     python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}"\n` +
+    "   (same build.py deploy as the Step 0 baseline and the Step 3 pre-test build), then\n" +
+    "   re-verify and re-run the previously-failing tests so build-state failures clear.\n" +
+    "3. A test that FAILED before the re-deploy but PASSES after it is an environment/\n" +
+    "   build-state condition — report it in build_state_only_failures. This classification\n" +
+    "   is data-driven (passes-after-verified-redeploy), NEVER keyed on a hard-coded name.\n" +
+    "   A build/deploy inconsistency is NEVER a test regression.\n" +
+    "Return ONLY: { \"deploy_consistent\": true|false, \"redeployed\": true|false, " +
+    "\"build_state_only_failures\": [\"<file>::<test>\", ...], \"still_failing\": [\"<file>::<test>\", ...] }",
+    { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
+  )
+
+  let buildStateOnly = [];
+  let stillFailing = null;
+  {
+    try {
+      const parsedDp = parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }) || {};
+      buildStateOnly = Array.isArray(parsedDp.build_state_only_failures)
+        ? parsedDp.build_state_only_failures
+        : [];
+      // still_failing is the agent's post-redeploy remaining-failure set; null
+      // when the agent did not report it (older/ambiguous replies).
+      stillFailing = Array.isArray(parsedDp.still_failing) ? parsedDp.still_failing : null;
+    } catch (_parseErr) {
+      log("[finalize-feature] step 3 deploy-parity parse malformed — proceeding with the original post-merge failures (conservative).");
+    }
+  }
+
+  // Contradiction guard (M-2): never exclude a test the agent itself still reports
+  // failing after the re-deploy. Only tests classified build-state AND absent from
+  // still_failing are treated as deploy-skew. This bounds the trust placed in the
+  // agent's classification — a test the agent both "cleared" and lists as still
+  // failing is kept and sent to triage, the sole authority that can HALT.
+  const stillFailingSet = new Set(stillFailing || []);
+  const excludable = buildStateOnly.filter((t) => !stillFailingSet.has(t));
+
+  // Build-state (deploy-skew) failures are environment conditions, never regressions:
+  // drop them from the set handed to triage so they cannot be classified as regressions.
+  if (excludable.length > 0) {
+    log(
+      `[finalize-feature] step 3: ${excludable.length} failure(s) cleared by a ` +
+      "deterministic re-deploy (FIN-100g-4) — build-state, not regressions; excluded from triage."
+    );
+    const buildStateSet = new Set(excludable);
+    postMergeFailures = postMergeFailures.filter((t) => !buildStateSet.has(t));
+    // Flip to passed ONLY when the run started with genuine failures (guaranteed
+    // by the postMergeFailures.length>0 guard on this block) and EVERY one was
+    // verified build-state deploy-skew. Any genuine failure remaining stays in
+    // postMergeFailures → triage → can HALT (FIN-100g-4-i).
+    if (postMergeFailures.length === 0) {
+      testPassed = true;
+    }
   }
 }
 
@@ -1673,13 +1942,49 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
   // explicit agent turn. The agent presents the question to the user, waits
   // for a response, and returns status: 'ok' (yes) or status: 'blocked' (no).
   // This matches the E2 user-gate convention from the workflow-authoring-contract.
-  const mergeConfirmResult = await agent(
-    `WARNING: This will merge PR #${prNumber} (\`${BRANCH}\` → main). This is a destructive operation.\n\n` +
-    `Ask the user: "Merge PR #${prNumber} (\`${BRANCH}\` → main)? (yes / no)"\n\n` +
-    `Return status:"ok" if the user says yes/confirm/y.\n` +
-    `Return status:"blocked" with message "User declined merge." if the user says no/cancel/n.`,
-    { agentType: "status-checker", label: "step-4-merge-gate", phase: "Step 4", schema: GATE_SCHEMA }
-  )
+  // ADR-024: resolveGate checks args.resume_answer before the live agent call.
+  const fzRunId = (args && typeof args === "object" && args.run_id)
+    ? args.run_id
+    : (BRANCH || "default-finalize-run");
+  const _fzGateResult = await resolveGate(
+    "step-4-merge-gate",
+    async () => {
+      const raw = await agent(
+        `WARNING: This will merge PR #${prNumber} (\`${BRANCH}\` → main). This is a destructive operation.\n\n` +
+        `Ask the user: "Merge PR #${prNumber} (\`${BRANCH}\` → main)? (yes / no)"\n\n` +
+        `Return status:"ok" if the user says yes/confirm/y.\n` +
+        `Return status:"blocked" with message "User declined merge." if the user says no/cancel/n.`,
+        { agentType: "status-checker", label: "step-4-merge-gate", phase: "Step 4" }
+      );
+      // FIX 3: parse raw before reading .status — raw may be an unparsed string.
+      let parsed;
+      try {
+        parsed = (typeof raw === "string")
+          ? parseAgentJson(raw, { stage: "step-4-merge-gate", agent: "status-checker" })
+          : raw;
+      } catch (_parseErr) { parsed = null; }
+      const s = parsed && parsed.status;
+      if (s === "ok") return { action: "ok" };
+      if (s === "blocked") return { action: "blocked" };
+      return null;
+    },
+    args,
+    { pr_number: prNumber, branch: BRANCH },
+    { type: "single_choice", options: ["ok", "blocked"] },
+    fzRunId
+  );
+  if (_fzGateResult && _fzGateResult.status &&
+      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_fzGateResult.status)) {
+    await cleanupBaselineWorktree();
+    return _fzGateResult;
+  }
+  // Normalise to the shape downstream code expects: { status: "ok" | "blocked" }
+  const _fzAction = _fzGateResult && _fzGateResult.action;
+  const mergeConfirmResult = (_fzAction === "ok" || _fzAction === "approve")
+    ? { status: "ok" }
+    : (_fzAction === "blocked" || _fzAction === "cancel")
+      ? { status: "blocked" }
+      : null;
 
   if (!mergeConfirmResult || mergeConfirmResult.status !== "ok") {
     await cleanupBaselineWorktree();
