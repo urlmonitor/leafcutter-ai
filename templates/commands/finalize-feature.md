@@ -67,11 +67,43 @@ If the journal file is absent or unreadable at any polling interval:
 - If the journal remains absent after 3 consecutive polls, stop active polling and
   await the workflow's exit payload rather than continuing to poll an absent file.
 
+### Halt-Flush Protocol
+
+When the polling loop detects that the background run has terminated with a halt
+or error payload, the launcher MUST perform the following steps in this exact
+order before presenting the halt summary (AC `BO-1000c-2-i`):
+
+1. **Perform a final journal read immediately on halt detection.** Before surfacing
+   the halt payload to the user, read the journal from the last-relayed position to
+   the end of the file. Do this immediately when the workflow exit is detected —
+   do not skip this read even if the previous poll was recent.
+2. **Relay all remaining lines first.** Emit every unrelayed journal line
+   (including the halting step's start-of-step line, which BO-1000a-1-i guarantees
+   was written before the step failed) into the main conversation, in order.
+3. **Present the halt summary only after the flush completes.** After the final
+   flush is emitted to the conversation, present the halt payload (halt reason,
+   halting step, status). The user MUST see the halting step's start-of-step
+   progress line as the most recent conversation line before the halt summary
+   arrives.
+
+**Why a final flush is mandatory:** BO-1000a-1-i guarantees that the halting step
+emits its start-of-step journal line before the step fails. BO-1000c-1a guarantees
+that line reaches the journal. However, without a final flush on halt detection,
+the halting step's line may still be in the unread journal tail when the relay loop
+exits — the user would then see the halt payload without ever seeing the step that
+caused it in the conversation. The halt-flush closes that gap: the live conversation
+stream reflects the halting step, not only the returned halt payload.
+
+**Anti-pattern to avoid:** Do NOT present the halt summary first and then relay
+remaining journal lines as trailing output. The halt-flush must precede the halt
+summary so the final progress line the user reads before the halt result is the
+halting step's own line.
+
 ### Over-Time Delivery Guarantee
 
 This section asserts the combined delivery contract of the incremental journal
 (BO-1000c-1a) and the poll/relay loop (BO-1000c-1b). The launcher MUST uphold
-all three invariants:
+all four invariants:
 
 1. **In-flight delivery** — a progress line for a step MUST appear in the
    conversation while the run is still in flight, before the run has finished,
@@ -88,11 +120,21 @@ all three invariants:
    advances it on every successful relay batch (duplicates defeat the dedup
    requirement and produce confusing output).
 
-These invariants define the observable contract for AC `BO-1000c-2`. They depend
-on BO-1000c-1a writing the journal incrementally (append-as-you-go) and
-BO-1000c-1b's poll/relay loop running while the workflow is active. Do NOT
-attempt to satisfy them by buffering all journal output and emitting it after
-the run ends — that is the anti-pattern this AC exists to prohibit.
+4. **Halt-flush invariant** — when the run terminates with a halt, ALL remaining
+   unrelayed journal lines MUST be emitted into the conversation BEFORE the halt
+   payload is presented. The halting step's start-of-step line MUST appear as the
+   last relayed progress line visible in the conversation before the halt summary.
+   The user MUST learn which step halted from the relayed journal, not only from
+   the halt payload. This invariant is the observable contract for AC `BO-1000c-2-i`
+   and depends on the Halt-Flush Protocol above being executed on every run
+   termination that carries a halt payload.
+
+These invariants define the observable contract for AC `BO-1000c-2` and its
+sub-criterion `BO-1000c-2-i`. They depend on BO-1000c-1a writing the journal
+incrementally (append-as-you-go) and BO-1000c-1b's poll/relay loop running while
+the workflow is active. Do NOT attempt to satisfy them by buffering all journal
+output and emitting it after the run ends — that is the anti-pattern this AC
+exists to prohibit.
 
 ### User experience goal
 
