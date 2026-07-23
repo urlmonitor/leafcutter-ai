@@ -6,8 +6,11 @@ diagram_type: sequence
 status: active
 created: 2026-06-08
 last_updated: 2026-06-08
-flight_level: L1
+flight_level: L1-Context
 parent: agent_delivery_workflows.md
+children:
+  - docs/architecture/diagrams/finalize-progress-narration-sequence.md
+  - docs/architecture/diagrams/finalize-progress-relay-sequence.md
 components:
   - ac_store
   - ticket_creation_pipeline

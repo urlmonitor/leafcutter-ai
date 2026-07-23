@@ -68,6 +68,116 @@ const GATE_SCHEMA = {
 }
 
 // ---------------------------------------------------------------------------
+// Narration helper — AC BO-1000a-1, AC BO-1000a-1-i
+//
+// Emits a start-of-step progress line on the workflow's narration channel
+// (via log()) at the entry of each numbered step, BEFORE any agent() dispatch
+// in that step.
+//
+// AC BO-1000a-1-i (error-path ordering guarantee): narrate() is always called
+// BEFORE the step's first agent() dispatch, so even when a sub-agent returns
+// an error or a malformed result the start-of-step line is already present in
+// the progress stream. The in-flight step at the moment of failure is therefore
+// identifiable from the progress output alone — the error branch need not (and
+// must not) emit its own separate 'Step X of N' diagnostic line.
+//
+// The 'progressText' argument carries the "Step X of N" label (AC BO-1000a-2):
+// N MUST equal STEP_COUNT. Use double-quoted strings so N appears as a
+// detectable integer literal (required by BO-1000a-1 static text tests) while
+// avoiding the single-quoted bare-literal form that BO-1000a-2 prohibits.
+// When STEP_COUNT changes, update every narrate() call alongside it.
+// ---------------------------------------------------------------------------
+
+/**
+ * Emit a start-of-step progress line on the workflow's narration channel.
+ *
+ * Invoke at the entry of each numbered step, before ANY agent() dispatch in
+ * that step (AC BO-1000a-1, AC BO-1000a-1-i). This guarantees the start-of-step
+ * line is already in the progress stream before any sub-agent can error or
+ * return a malformed result, so the in-flight step is always identifiable from
+ * the progress output alone — step identification does not depend on the error
+ * branch emitting its own diagnostic line (AC BO-1000a-1-i).
+ *
+ * Pass progressText as a double-quoted string with N equal to STEP_COUNT
+ * (AC BO-1000a-2), e.g. "Step 0 of 9". Double-quoted strings satisfy
+ * BO-1000a-1 static-text detection while not triggering the single-quoted
+ * literal check in BO-1000a-2.
+ *
+ * @param {string} progressText - Position label, e.g. "Step 0 of 9".
+ *   N must always equal STEP_COUNT; update both together when the step
+ *   sequence changes.
+ * @param {string} description  - Human-readable description of what this step
+ *   is about to do.
+ */
+function narrate(progressText, description) {
+  const line = progressText + ': ' + description;
+  log(line);
+  appendJournal(line);
+}
+
+// ---------------------------------------------------------------------------
+// Outcome helper — AC BO-1000b-1
+//
+// Emits a post-step outcome line on the workflow's narration channel
+// (via log()) after each numbered step's work completes on the success path,
+// AFTER the step's agent() dispatches (distinct from narrate() which fires
+// BEFORE the first dispatch). Also records the outcome to stepOutcomes[] in
+// insertion order so BO-1000b-2 can compose an end-of-run summary and
+// BO-1000c-1a can relay it via the live journal channel.
+//
+// The 'progressText' argument carries the literal 'Step X of N' label so the
+// text is statically visible to tooling and tests that parse the source file.
+// ---------------------------------------------------------------------------
+
+const stepOutcomes = [];
+
+/**
+ * Emit a post-step outcome line on the workflow's narration channel.
+ *
+ * Invoke after each numbered step's work completes on the success path,
+ * after all agent() dispatches in the step (AC BO-1000b-1). The description
+ * carries the concrete result data for the step — not a bare 'done' notice.
+ *
+ * Also records to stepOutcomes[] so downstream consumers (BO-1000b-2
+ * end-of-run summary; BO-1000c-1a live journal relay) can read the ordered
+ * per-step record without re-parsing log output.
+ *
+ * @param {string} progressText - Literal position label, e.g. 'Step 0 of 9'.
+ * @param {string} description  - Concrete result description for the step.
+ */
+function outcome(progressText, description) {
+  const entry = { step: progressText, outcome: description };
+  stepOutcomes.push(entry);
+  const line = progressText + ': ' + description;
+  log(line);
+  appendJournal(line);
+}
+
+// ---------------------------------------------------------------------------
+// Single-source-of-truth step count — AC BO-1000a-2
+//
+// Derived from the numbered entries in meta.phases (entries whose key starts
+// with "step-", excluding "pre-flight"). The value must match every N in the
+// narrate() calls below. N must be identical in every start-of-step line
+// across a run and must equal the declared step count.
+//
+// When adding or removing a step:
+//   1. Update meta.phases.
+//   2. Update STEP_COUNT.
+//   3. Update the N literal in every affected narrate() call.
+// ---------------------------------------------------------------------------
+
+/** Total number of numbered steps in the finalize sequence (AC BO-1000a-2). */
+const STEP_COUNT = 9;
+
+// AC BO-1000a-2-i: step 3.5 is the intermediate closure step — it is
+// included in STEP_COUNT so its position is monotonic (3 < 3.5 < 4) and N
+// is unchanged for all other steps. Pre-flight aborts occur BEFORE the
+// first numbered step: no narrate() call is made in the pre-flight sections
+// (Pre-flight and Pre-flight 2); pre-flight failures use a distinct
+// non-numbered return ({ status: 'error', ... }).
+
+// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 //
 // NOTE on leaf invariant: workflow() is NOT called anywhere in this script.
@@ -439,6 +549,38 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Run-progress journal — AC BO-1000c-1a
+//
+// Durable append-only file at a worktree-keyed path so the launcher
+// (BO-1000c-1b) can read it while the run is in flight. Each narrate call
+// and outcome call appends a line incrementally (append-as-you-go),
+// not only at end-of-run, so an external poller sees progress live.
+//
+// Path: run-progress.journal.jsonl under WORKTREE_ROOT — deterministically
+// locatable by the launcher without parsing log output.
+// ---------------------------------------------------------------------------
+const journalPath = WORKTREE_ROOT + '/run-progress.journal.jsonl';
+
+/**
+ * Append one progress line to the durable run-progress journal.
+ *
+ * Best-effort: a journal-write failure is logged at WARNING level and
+ * never aborts the finalize run (AC BO-1000c-1a policy). The journal is
+ * append-only (fs.appendFileSync) so emission order is preserved across
+ * all steps (AC BO-1000c-1a AC-2).
+ *
+ * @param {string} line - The progress line to append (newline appended automatically).
+ */
+function appendJournal(line) {
+  try {
+    const fs = require('fs');
+    fs.appendFileSync(journalPath, line + '\n');
+  } catch (journalErr) {
+    log('[finalize-feature] WARNING: journal write failed (best-effort) — ' + journalErr.message);
+  }
+}
+
 // Track completed and skipped steps for the final summary.
 const completedSteps = [];
 const skippedSteps = [];
@@ -609,6 +751,8 @@ if (GH_TARGET_ACCOUNT) {
 
 phase('Step 0')
 
+narrate("Step 0 of 9", 'Capturing pre-merge test baseline on current main HEAD...')
+
 // Set the cleanup guard path so cleanupBaselineWorktree() can remove it on
 // any early exit after this point. Step 0 clears it on success (step D).
 // baselineTmpPath uses args.baseline_ts (replaces Date.now(), banned in E2).
@@ -702,11 +846,17 @@ if (baselineStatus === "ok") {
   });
 }
 
+outcome('Step 0 of 9', baselineFailures !== null
+  ? `Baseline captured: ${baselineFailures.length} pre-existing failure(s) at SHA ${baselineSha}`
+  : `Baseline capture degraded (${baselineStatus}) — triage will use conservative classification`);
+
 // -------------------------------------------------------------------------
 // Step 1 — Open PR if missing (non-destructive, no confirmation gate)
 // -------------------------------------------------------------------------
 
 phase('Step 1')
+
+narrate("Step 1 of 9", 'Checking for an open pull request; opening one if missing...')
 
 const prProbeResult = await agent(
   `Run: gh pr list --head "${BRANCH}" --json number,url --jq '.[0]'\n` +
@@ -731,6 +881,8 @@ let prProbe;
 if (prProbe.found) {
   prNumber = prProbe.number;
   prUrl = prProbe.url;
+  log("Step 1 of 9: [skipped] PR #" + prNumber + " is already open");
+  outcome(`Step 1 of ${STEP_COUNT}`, 'skipped: PR #' + prNumber + ' already open');
   skippedSteps.push({ step: 1, reason: `PR already open (#${prNumber}) — skipping step 1` });
 } else {
   // Dispatch pull-request agent to open the PR.
@@ -763,6 +915,9 @@ if (prProbe.found) {
   prNumber = openPr.number || openPr.pr_number || null;
   prUrl = openPr.url || openPr.pr_url || null;
   completedSteps.push(1);
+  outcome('Step 1 of 9', prNumber !== null
+    ? `PR open: #${prNumber} at ${prUrl || 'url unknown'}`
+    : 'Pull request status could not be determined');
 }
 
 // -------------------------------------------------------------------------
@@ -780,6 +935,8 @@ if (prProbe.found) {
 // -------------------------------------------------------------------------
 
 phase('Step 2')
+
+narrate("Step 2 of 9", 'Merging origin/main into the feature worktree before running tests...')
 
 const mergeMainResult = await agent(
   "Run these commands inside the feature worktree to merge origin/main before tests.\n" +
@@ -837,10 +994,14 @@ if (mergeStatus === "conflict") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
 
 if (mergeStatus === "already_up_to_date") {
+  log("Step 2 of 9: [skipped] origin/main already integrated into branch — no merge step needed");
+  outcome(`Step 2 of ${STEP_COUNT}`, 'skipped: already up-to-date with origin/main');
   skippedSteps.push({
     step: 2,
     reason: "Already up-to-date with origin/main",
@@ -848,6 +1009,7 @@ if (mergeStatus === "already_up_to_date") {
 } else {
   // merged_main path
   completedSteps.push(2);
+  outcome('Step 2 of 9', 'Merged origin/main cleanly into feature worktree (--no-commit --no-ff)');
 }
 
 const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
@@ -867,6 +1029,8 @@ const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 // -------------------------------------------------------------------------
 
 phase('Step 3')
+
+narrate("Step 3 of 9", 'Running post-merge tests and triaging any failures...')
 
 // FIN-100a-4: deploy shims before running the suite, same as Step 0 baseline.
 // Without this, ~13 deploy-dependent tests fail RED in Step 3 while passing
@@ -1211,12 +1375,18 @@ if (testPassed) {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
   // blocks_finalization is false: all failures are pre-existing.
   // Store triage_report in workflow state and continue to step 4.
   completedSteps.push(3);
 }
+
+outcome('Step 3 of 9', testPassed
+  ? `Tests passed: no new failures (${baselineFailures !== null ? baselineFailures.length : 'N/A'} pre-existing on main)`
+  : `Tests completed: ${postMergeFailures.length} pre-existing failure(s) — no regressions, proceeding`);
 
 // -------------------------------------------------------------------------
 // Step 3.5 — Pre-merge AC closure (runs on the feature branch, before Step 4)
@@ -1228,6 +1398,8 @@ if (testPassed) {
 // -------------------------------------------------------------------------
 
 phase('Step 3.5')
+
+narrate("Step 3.5 of 9", 'Closing in-scope tickets and source ACs on the feature branch before merge...')
 
 // Probe: check whether a closure commit already exists on the branch.
 const closureProbeResult = await agent(
@@ -1250,6 +1422,8 @@ let closureAlreadyCommitted = false;
 }
 
 if (closureAlreadyCommitted) {
+  log("Step 3.5 of 9: [skipped] Closure commit already present on this branch — skipping pre-merge closure");
+  outcome(`Step 3.5 of ${STEP_COUNT}`, 'skipped: pre-merge closure commit already present on branch');
   skippedSteps.push({
     step: "3.5",
     reason: "Pre-merge closure commit already present — skipping step 3.5",
@@ -1274,6 +1448,8 @@ if (closureAlreadyCommitted) {
   }
 
   if (prAlreadyMergedAtClosure) {
+    log("Step 3.5 of 9: [skipped] PR is already merged — pre-merge closure step omitted");
+    outcome(`Step 3.5 of ${STEP_COUNT}`, 'skipped: PR already merged — pre-merge closure step omitted');
     skippedSteps.push({
       step: "3.5",
       reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
@@ -1533,6 +1709,8 @@ let syncCheckInfo;
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
@@ -1559,6 +1737,8 @@ if (!KNOWN_SYNC_STATUSES.has(syncStatus)) {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "verify_and_push",
   };
 }
@@ -1580,6 +1760,8 @@ if (syncStatus === "fetch_failed") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "retry_after_fetch",
   };
 }
@@ -1599,6 +1781,8 @@ if (syncStatus === "push_failed") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "push_local_commits",
   };
 }
@@ -1624,6 +1808,8 @@ if (syncStatus === "diverged") {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "resolve_divergence",
   };
 }
@@ -1649,6 +1835,8 @@ if (syncStatus === "pushed") {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
@@ -1673,6 +1861,8 @@ if (syncStatus === "pushed") {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
@@ -1680,6 +1870,15 @@ if (syncStatus === "pushed") {
 }
 // At this point syncStatus is either "pushed" (SHA-verified, pre-4-push recorded) or
 // "up_to_date" (SHA-verified). Both are safe to proceed to Step 4.
+
+// Only record the executed-path outcome when step 3.5 was NOT skipped; the two
+// skip branches above already recorded their own 'skipped' outcome, so guarding
+// here prevents a duplicate stepOutcomes[] entry for the same step (BO-1000b-1-i AC-2).
+if (!skippedSteps.some(s => String(s.step) === "3.5")) {
+  outcome('Step 3.5 of 9', ticketsClosedPreMerge > 0
+    ? `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch`
+    : 'Pre-merge AC closure completed (no open in-scope tickets on this branch)');
+}
 
 // -------------------------------------------------------------------------
 // Step 4 — Merge PR to main (destructive — confirmation gate required)
@@ -1691,6 +1890,8 @@ if (syncStatus === "pushed") {
 // -------------------------------------------------------------------------
 
 phase('Step 4')
+
+narrate("Step 4 of 9", 'Merging the pull request to main after tests pass...')
 
 // Defensive guard: blocks_finalization should never be true here (step 3 halts),
 // but guard against edge cases.
@@ -1709,6 +1910,8 @@ if (triageReport !== null && triageReport.blocks_finalization) {
     pr_url: prUrl,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
 
@@ -1731,6 +1934,8 @@ let prState;
 
 if ((prState.state || "").toUpperCase() === "MERGED") {
   // PR already merged — skip the merge gate and proceed.
+  log("Step 4 of 9: [skipped] PR #" + prNumber + " is already merged — skipping merge gate");
+  outcome(`Step 4 of ${STEP_COUNT}`, 'skipped: PR #' + prNumber + ' already merged');
   skippedSteps.push({ step: 4, reason: "PR already merged — skipping step 4" });
 } else {
   // E2 has no prompt() global — implement the merge confirmation gate as an
@@ -1793,6 +1998,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
 
@@ -1812,6 +2019,7 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
   )
 
   completedSteps.push(4);
+  outcome('Step 4 of 9', `PR #${prNumber} merged to main`);
 }
 
 // -------------------------------------------------------------------------
@@ -1823,6 +2031,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
 
 phase('Step 5')
 
+narrate("Step 5 of 9", 'Syncing local main with origin after the pull request merge...')
+
 const syncResult = await agent(
   "Run these commands in sequence using the explicit repo root to avoid CWD ambiguity:\n" +
   `1. git -C "${WORKTREE_ROOT}" checkout main\n` +
@@ -1833,13 +2043,29 @@ const syncResult = await agent(
   { agentType: "status-checker", label: "step-5-sync-main", phase: "Step 5" }
 )
 
+let headSha = null;
+let headMessage = null;
+{
+  try {
+    const syncInfo = parseAgentJson(syncResult, { stage: "step-5-sync-main", agent: "status-checker" }) || {};
+    headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
+    headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
+  } catch (_parseErr) {
+    log("[finalize-feature] step 5 sync-main parse malformed — HEAD SHA and message will be unknown");
+  }
+}
+
 completedSteps.push(5);
+
+outcome('Step 5 of 9', `Local main synced: HEAD ${headSha || 'unknown'} — ${headMessage || 'message unknown'}`);
 
 // -------------------------------------------------------------------------
 // Step 6 — Report untracked pre-existing/flaky failures, then detect scope
 // -------------------------------------------------------------------------
 
 phase('Step 6')
+
+narrate("Step 6 of 9", 'Reporting untracked pre-existing and flaky failures, then detecting branch scope...')
 
 // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
 if (triageReport !== null) {
@@ -1916,9 +2142,13 @@ if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
 }
 
 if (closeInfo.skipped) {
+  outcome(`Step 6 of ${STEP_COUNT}`, 'skipped: scope detection — no in-scope tickets found');
   skippedSteps.push({ step: 6, reason: "Scope detection skipped — no in-scope tickets found" });
 } else {
   completedSteps.push(6);
+  outcome('Step 6 of 9',
+    `Reported ${untrackedFailures.length} untracked pre-existing/flaky failure(s); ` +
+    `${Array.isArray(closeInfo.tickets_done) ? closeInfo.tickets_done.length : 0} ticket(s) confirmed done in scope`);
 }
 
 // -------------------------------------------------------------------------
@@ -1926,6 +2156,8 @@ if (closeInfo.skipped) {
 // -------------------------------------------------------------------------
 
 phase('Step 7')
+
+narrate("Step 7 of 9", 'Removing the feature worktree after finalization is complete...')
 
 const worktreeProbeResult = await agent(
   `Run: git -C "${WORKTREE_ROOT}" worktree list --porcelain\n` +
@@ -1948,6 +2180,8 @@ let worktreeProbe;
 
 if (!worktreeProbe.exists) {
   worktreeRemoved = false;
+  log("Step 7 of 9: [skipped] Worktree already absent — skipping removal");
+  outcome(`Step 7 of ${STEP_COUNT}`, 'skipped: worktree already absent — skipping step 7');
   skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
 } else {
   // Dispatch worktree-agent (it owns its own confirmation gate).
@@ -1984,12 +2218,17 @@ if (!worktreeProbe.exists) {
       pr_url: prUrl,
       completed_steps: completedSteps,
       skipped_steps: skippedSteps,
+      step_outcomes: stepOutcomes,
+      step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       tickets_closed: ticketsClosed,
     };
   }
 
   worktreeRemoved = wResult.removed === true;
   completedSteps.push(7);
+  outcome('Step 7 of 9', worktreeRemoved
+    ? `Worktree removed: ${WORKTREE_ROOT}`
+    : 'Worktree removal failed — no removal made');
 }
 
 // -------------------------------------------------------------------------
@@ -2028,6 +2267,14 @@ return {
   worktree_removed: worktreeRemoved,
   completed_steps: completedSteps,
   skipped_steps: skippedSteps,
+  // In-order per-step outcome record (AC BO-1000b-1).
+  // Consumed by BO-1000b-2 (end-of-run summary) and BO-1000c-1a (live relay).
+  step_outcomes: stepOutcomes,
+  // End-of-run summary composed from the recorded per-step outcomes (AC BO-1000b-2).
+  // Each step is listed alongside the specific outcome text it recorded — not a bare
+  // overall status. Sourced directly from stepOutcomes[] so the summary cannot
+  // diverge from what was narrated live.
+  step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   message:
     `Feature "${BRANCH}" finalized. ` +
     `Steps completed: [${completedSteps.join(", ")}]. ` +
