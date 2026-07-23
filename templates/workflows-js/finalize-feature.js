@@ -370,8 +370,8 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
 // Run-progress journal — AC BO-1000c-1a
 //
 // Durable append-only file at a worktree-keyed path so the launcher
-// (BO-1000c-1b) can read it while the run is in flight. Each narrate()
-// and outcome() call appends a line incrementally (append-as-you-go),
+// (BO-1000c-1b) can read it while the run is in flight. Each narrate call
+// and outcome call appends a line incrementally (append-as-you-go),
 // not only at end-of-run, so an external poller sees progress live.
 //
 // Path: run-progress.journal.jsonl under WORKTREE_ROOT — deterministically
@@ -732,11 +732,10 @@ if (prProbe.found) {
   prNumber = openPr.number || openPr.pr_number || null;
   prUrl = openPr.url || openPr.pr_url || null;
   completedSteps.push(1);
+  outcome('Step 1 of 9', prNumber !== null
+    ? `PR open: #${prNumber} at ${prUrl || 'url unknown'}`
+    : 'Pull request status could not be determined');
 }
-
-outcome('Step 1 of 9', prNumber !== null
-  ? `PR open: #${prNumber} at ${prUrl || 'url unknown'}`
-  : 'Pull request status could not be determined');
 
 // -------------------------------------------------------------------------
 // Step 2 — Merge origin/main into the feature worktree (no commit)
@@ -827,11 +826,8 @@ if (mergeStatus === "already_up_to_date") {
 } else {
   // merged_main path
   completedSteps.push(2);
+  outcome('Step 2 of 9', 'Merged origin/main cleanly into feature worktree (--no-commit --no-ff)');
 }
-
-outcome('Step 2 of 9', mergeStatus === 'already_up_to_date'
-  ? 'Mainline already up-to-date with origin/main — no merge needed'
-  : 'Merged origin/main cleanly into feature worktree (--no-commit --no-ff)');
 
 const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
@@ -1606,9 +1602,14 @@ if (syncStatus === "pushed") {
 // At this point syncStatus is either "pushed" (SHA-verified, pre-4-push recorded) or
 // "up_to_date" (SHA-verified). Both are safe to proceed to Step 4.
 
-outcome('Step 3.5 of 9', ticketsClosedPreMerge > 0
-  ? `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch`
-  : 'Pre-merge AC closure skipped (already committed, PR already merged, or no open tickets)');
+// Only record the executed-path outcome when step 3.5 was NOT skipped; the two
+// skip branches above already recorded their own 'skipped' outcome, so guarding
+// here prevents a duplicate stepOutcomes[] entry for the same step (BO-1000b-1-i AC-2).
+if (!skippedSteps.some(s => String(s.step) === "3.5")) {
+  outcome('Step 3.5 of 9', ticketsClosedPreMerge > 0
+    ? `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch`
+    : 'Pre-merge AC closure completed (no open in-scope tickets on this branch)');
+}
 
 // -------------------------------------------------------------------------
 // Step 4 — Merge PR to main (destructive — confirmation gate required)
@@ -1713,11 +1714,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
   )
 
   completedSteps.push(4);
+  outcome('Step 4 of 9', `PR #${prNumber} merged to main`);
 }
-
-outcome('Step 4 of 9', (prState.state || '').toUpperCase() === 'MERGED'
-  ? `PR #${prNumber} was already merged — step skipped`
-  : `PR #${prNumber} merged to main`);
 
 // -------------------------------------------------------------------------
 // Step 5 — Sync local main (resumable)
@@ -1843,11 +1841,10 @@ if (closeInfo.skipped) {
   skippedSteps.push({ step: 6, reason: "Scope detection skipped — no in-scope tickets found" });
 } else {
   completedSteps.push(6);
+  outcome('Step 6 of 9',
+    `Reported ${untrackedFailures.length} untracked pre-existing/flaky failure(s); ` +
+    `${Array.isArray(closeInfo.tickets_done) ? closeInfo.tickets_done.length : 0} ticket(s) confirmed done in scope`);
 }
-
-outcome('Step 6 of 9',
-  `Reported ${untrackedFailures.length} untracked pre-existing/flaky failure(s); ` +
-  `${Array.isArray(closeInfo.tickets_done) ? closeInfo.tickets_done.length : 0} ticket(s) confirmed done in scope`);
 
 // -------------------------------------------------------------------------
 // Step 7 — Remove worktree (resumable; confirmation gate delegated to agent)
@@ -1924,11 +1921,10 @@ if (!worktreeProbe.exists) {
 
   worktreeRemoved = wResult.removed === true;
   completedSteps.push(7);
+  outcome('Step 7 of 9', worktreeRemoved
+    ? `Worktree removed: ${WORKTREE_ROOT}`
+    : 'Worktree removal failed — no removal made');
 }
-
-outcome('Step 7 of 9', worktreeRemoved
-  ? `Worktree removed: ${WORKTREE_ROOT}`
-  : 'Worktree already absent or removal failed — no removal made');
 
 // -------------------------------------------------------------------------
 // Final — Return success summary

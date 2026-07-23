@@ -161,13 +161,22 @@ class TestOutcomeLineEmittedAfterEachStepCompletes(unittest.TestCase):
     def test_ac1_outcome_line_appears_after_step_work(self):
         # covers: BO-1000b-1
         """For each numbered step that dispatches at least one agent() call,
-        the outcome() call must appear AFTER the last agent() dispatch in that
-        step's block (i.e. after the step's work completes, not before it).
+        at least one outcome() call must appear AFTER the last agent() dispatch
+        in that step's block (i.e. after the step's work completes on the
+        execute path).
+
+        Note: BO-1000b-1-i legitimately added skip-branch outcome() calls near
+        the TOP of some step blocks (inside 'if (<already-satisfied>) { ... }'
+        branches, before the execute path's await agent() dispatches). These
+        early outcome() calls are intentional and must be allowed. The check
+        therefore looks for an after-work outcome() on the execute path, not
+        the FIRST outcome() in the block — using finditer() over all matches
+        rather than search() which returns only the first.
 
         Must be implemented to make this test green:
-          Place each outcome() call AFTER all await agent(...) calls in the
-          same step block — not at the entry of the step (that is narrate()'s
-          position per BO-1000a-1).
+          Place at least one outcome() call AFTER all await agent(...) calls on
+          the execute path in each step block. Skip-branch outcomes that precede
+          the work are fine alongside the required after-work outcome.
         """
         js = _js_text()
         ordering_violations: list[str] = []
@@ -183,8 +192,7 @@ class TestOutcomeLineEmittedAfterEachStepCompletes(unittest.TestCase):
                 )
                 continue
 
-            outcome_match = _OUTCOME_PATTERN.search(block)
-            if outcome_match is None:
+            if _OUTCOME_PATTERN.search(block) is None:
                 ordering_violations.append(
                     f"{label} ({name}): no outcome() call found in block "
                     "(ordering cannot be verified — add outcome() first)"
@@ -201,26 +209,40 @@ class TestOutcomeLineEmittedAfterEachStepCompletes(unittest.TestCase):
                 # not apply (there is no work to follow). Skip.
                 continue
 
-            # outcome() must appear after the last agent() dispatch.
-            if outcome_match.start() <= last_agent_match.start():
+            # At least one outcome() must appear AFTER the last agent() dispatch
+            # (the execute-path / after-work outcome). Skip-branch outcome()
+            # calls added by BO-1000b-1-i that appear before the work are
+            # legitimate; we search ALL outcome() occurrences in the block to
+            # find at least one that follows the last agent dispatch.
+            has_after_work_outcome = any(
+                m.start() > last_agent_match.start()
+                for m in _OUTCOME_PATTERN.finditer(block)
+            )
+            if not has_after_work_outcome:
+                all_outcome_offsets = [
+                    m.start() for m in _OUTCOME_PATTERN.finditer(block)
+                ]
                 ordering_violations.append(
-                    f"{label} ({name}): outcome() at block offset "
-                    f"{outcome_match.start()} appears BEFORE or AT the last "
-                    f"agent() dispatch at offset {last_agent_match.start()}. "
-                    "Outcome must be emitted AFTER the step's work completes."
+                    f"{label} ({name}): no outcome() call found AFTER the last "
+                    f"agent() dispatch at block offset {last_agent_match.start()}. "
+                    f"All outcome() offsets in block: {all_outcome_offsets}. "
+                    "The execute-path outcome must be emitted AFTER the step's "
+                    "work completes."
                 )
 
         self.assertEqual(
             ordering_violations,
             [],
             msg=(
-                "The following steps have outcome() positioned incorrectly "
-                "(before the step's last agent() dispatch):\n"
+                "The following steps have no outcome() positioned after the "
+                "step's last agent() dispatch:\n"
                 + "\n".join(f"  - {v}" for v in ordering_violations)
                 + "\n\nAC BO-1000b-1 requires the outcome line to be emitted "
                 "AFTER the step's work completes — the inverse ordering to "
                 "narrate() which must precede the first agent() dispatch "
-                "(BO-1000a-1)."
+                "(BO-1000a-1). Skip-branch outcome() calls (BO-1000b-1-i) "
+                "that appear before the execute path are allowed alongside "
+                "the required after-work outcome."
             ),
         )
 
