@@ -35,14 +35,7 @@
 
 export const meta = {
   name: "fast-lane-build",
-  description:
-    "Lean two-agent batch build. Runs select_batch to pick the next AC batch, " +
-    "dispatches test-writer to write failing stubs and run verify_red_baseline, " +
-    "branches on the red-baseline result, dispatches python-coder to make tests " +
-    "green and run verify_green_and_coverage, then branches on the green+coverage " +
-    "result before staging the commit. Two flat dispatches independent of batch " +
-    "size N (BO-2400a-1). No supervisor chain, no LLM planner, single worktree " +
-    "(BO-2400a-5).",
+  description: "Lean two-agent batch build. Runs select_batch to pick the next AC batch, dispatches test-writer to write failing stubs and run verify_red_baseline, branches on the red-baseline result, dispatches python-coder to make tests green and run verify_green_and_coverage, then branches on the green+coverage result before staging the commit. Two flat dispatches independent of batch size N (BO-2400a-1). No supervisor chain, no LLM planner, single worktree (BO-2400a-5).",
   phases: [
     "select-batch: deterministic gate (select_batch) picks the next N approved ACs from the store",
     "test-writer: writes failing test stubs for every AC in the batch, then runs verify_red_baseline",
@@ -99,15 +92,6 @@ const worktree_path = (args && args.worktree_path) || null;
 const batchSize = (args && args.batch_size) || 5;
 const acStoreRoot = (args && args.ac_store_root) || "docs/acceptance-criteria";
 const gateScript = "scripts/build_orchestration/fast_lane.py";
-
-if (!worktree_path) {
-  return {
-    status: "error",
-    message:
-      "No worktree_path provided. Pass args: { worktree_path: '<absolute-worktree-path>' }.\n" +
-      "The fast lane requires an isolated worktree (not the main clone).",
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Supporting integration invocations (BO-2400b-3, BO-2400c-1, BO-2400d-1)

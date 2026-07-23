@@ -2,8 +2,8 @@
 title: "Documentation Index"
 type: reference
 status: active
-created: 2026-07-22
-last_updated: 2026-07-22
+created: 2026-07-23
+last_updated: 2026-07-23
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-07-22 10:41 UTC
+> Generated: 2026-07-23 06:57 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current

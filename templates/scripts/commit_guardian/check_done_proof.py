@@ -53,12 +53,45 @@ import yaml
 # deployed layout (.leafcutter/scripts/commit_guardian/ → parent/ac_store/).
 # ---------------------------------------------------------------------------
 _HERE = Path(__file__).resolve().parent
-_AC_STORE_PATH = _HERE.parent / "ac_store"
-if str(_AC_STORE_PATH) not in sys.path:
-    sys.path.insert(0, str(_AC_STORE_PATH))
 
-from done_proof import verify_done_eligible  # noqa: E402
 from _resolve_root import find_project_root  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Fail-safe top-level import so ``verify_done_eligible`` is a module-level
+# attribute that unittest.mock.patch can replace.  Falls back to None when
+# ``done_proof`` is not importable (e.g. the templates/ source layout whose
+# sibling ac_store/ contains only .gitkeep).  The _load_verify_done_eligible()
+# helper below is kept as the None-fallback path.
+# ---------------------------------------------------------------------------
+try:
+    _ac_store = _HERE.parent / "ac_store"
+    if str(_ac_store) not in sys.path:
+        sys.path.insert(0, str(_ac_store))
+    from done_proof import verify_done_eligible
+except (ImportError, ModuleNotFoundError):
+    verify_done_eligible = None  # resolved lazily / patched by tests
+
+
+def _load_verify_done_eligible():
+    """Import ``done_proof.verify_done_eligible`` from the sibling ac_store.
+
+    Serves as the None-fallback when the top-level import failed (e.g. in the
+    templates/ source layout where ``scripts/ac_store/done_proof.py`` is
+    absent) or when the module attribute is None.  Call sites read the module
+    global ``verify_done_eligible`` first and only invoke this helper when it
+    is None, so that ``unittest.mock.patch("check_done_proof.verify_done_eligible",
+    ...)`` takes effect without requiring done_proof to be importable at test
+    collection time.
+
+    Returns:
+        The ``verify_done_eligible`` callable from the ac_store ``done_proof`` module.
+    """
+    ac_store = _HERE.parent / "ac_store"
+    if str(ac_store) not in sys.path:
+        sys.path.insert(0, str(ac_store))
+    from done_proof import verify_done_eligible
+
+    return verify_done_eligible
 
 _COVERS_TAG_RE = re.compile(r"#\s*covers:\s*(\S+)")
 
@@ -304,7 +337,8 @@ def check_all_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
-        verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
+        _verify = verify_done_eligible if verify_done_eligible is not None else _load_verify_done_eligible()
+        verdict = _verify(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
             violations.append(
                 {
@@ -364,7 +398,8 @@ def check_changed_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
-        verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
+        _verify = verify_done_eligible if verify_done_eligible is not None else _load_verify_done_eligible()
+        verdict = _verify(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
             violations.append(
                 {
