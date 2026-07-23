@@ -69,7 +69,15 @@ try:
         sys.path.insert(0, str(_ac_store))
     from done_proof import verify_done_eligible
 except (ImportError, ModuleNotFoundError):
-    verify_done_eligible = None  # resolved lazily / patched by tests
+    def verify_done_eligible(*args, **kwargs):
+        """Lazy shim used when done_proof is not importable at module load.
+
+        Keeps ``verify_done_eligible`` a real, patchable module-level attribute
+        (so unittest.mock.patch("check_done_proof.verify_done_eligible") always
+        takes effect) while deferring the real import until first call, resolved
+        via the sibling ac_store in the deployed layout.
+        """
+        return _load_verify_done_eligible()(*args, **kwargs)
 
 
 def _load_verify_done_eligible():
@@ -337,8 +345,7 @@ def check_all_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
-        _verify = verify_done_eligible if verify_done_eligible is not None else _load_verify_done_eligible()
-        verdict = _verify(ac_id_str, ac_root=ac_root, test_root=test_root)
+        verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
             violations.append(
                 {
@@ -398,8 +405,7 @@ def check_changed_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
-        _verify = verify_done_eligible if verify_done_eligible is not None else _load_verify_done_eligible()
-        verdict = _verify(ac_id_str, ac_root=ac_root, test_root=test_root)
+        verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
             violations.append(
                 {
