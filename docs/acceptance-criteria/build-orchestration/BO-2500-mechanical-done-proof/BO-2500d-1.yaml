@@ -1,0 +1,60 @@
+id: BO-2500d-1
+components:
+  - build_orchestration
+  - review_system
+title: "Opinion-only gate agents are absent from the fast-lane phase order"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane phase order,
+  When its phases are enumerated,
+  Then it contains no LLM review agent, no LLM validator agent, and no LLM fulfillment
+    gate agent
+  And the only completion arbiters it lists are the mechanical proof-of-done gates.
+depends_on: [BO-2500d]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Remove the opinion-only LLM gate agents (pr-reviewer / code-review-architect, ac-validator, ac-fulfillment-gate) from the fast-lane phase order in the workflow layer (templates/workflows-js/build-ticket.js and the computed agents-map in scripts/ac_store/generate_ticket_from_ac.py)."
+  - "The exclusion must be identified by the agent's role/kind (review / validator / fulfillment-gate), not by a hard-coded single agent name, so future opinion-only agents are excluded by the same rule."
+  - "After removal, the only completion arbiters in the fast-lane order are the mechanical proof-of-done gates (red-baseline, green+coverage, covers-tag linkage)."
+  - "This change must not alter the heavy-pipeline phase order (see BO-2500d-2)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500d-3
+  contract: "The mechanical proof-of-done gates that must be present as the fast-lane completion arbiters once the opinion-only agents are removed."
+test_spec:
+  - name: test_fast_lane_phase_order_excludes_review_agents
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "The fast-lane phase order contains no LLM review, validator, or fulfillment-gate agent."
+  - name: test_fast_lane_completion_arbiters_are_mechanical_only
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "The only completion arbiters in the fast-lane order are the mechanical proof-of-done gates."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500d-1-i
+implemented_by:
+  - "templates/workflows-js/fast-lane-build.js"

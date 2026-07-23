@@ -1,0 +1,45 @@
+id: BO-2400a-6
+components:
+  - build_orchestration
+  - documentation_system
+title: "How-to: run the fast-lane build loop for a cohesive batch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane build loop exists (selection, single test-writer, red-baseline
+    gate, single coder, green + coverage gate, commit staging),
+  When an operator wants to run a scoped, interactive batch through the fast lane,
+  Then a how-to document explains how to invoke the fast lane, what the tight
+    test-first-then-make-pass loop does at each step, and how it differs from the
+    heavy path.
+depends_on: [BO-2400a, BO-2400a-1, BO-2400a-2, BO-2400a-3, BO-2400a-4, BO-2400a-5]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to must document invocation, the per-step loop behavior (selection -> single test-writer -> red-baseline gate -> single coder -> green + coverage gate -> commit staging), and the contrast with the heavy path."
+  - "It must be authored after the behavior is built so the steps match the shipped loop (documentation-after-implementation timing)."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-1
+  contract: "The implemented fast-lane loop behavior (agent invocations and gate flow) that this how-to documents."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/how-to/fast-lane-build.md"

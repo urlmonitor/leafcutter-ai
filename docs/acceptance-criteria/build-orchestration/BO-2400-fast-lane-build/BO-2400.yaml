@@ -1,0 +1,40 @@
+id: BO-2400
+components:
+  - build_orchestration
+title: "Ship small, hands-on features fast without paying for heavy machinery"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A lean build path for scoped, interactive work — the thorough path stays for big jobs.
+
+  Most day-to-day feature work is small and done with a human close at hand, yet
+  every build today pays the full cost of the heavy, fully-autonomous process:
+  layers of coordination, repeated cold starts, and split-up steps designed for
+  large unattended runs. This goal gives you a fast lane for that scoped,
+  interactive work — a tight, low-overhead loop that gets a cohesive batch of
+  requirements built quickly and cheaply. It does not replace the thorough path:
+  large, unattended, high-stakes builds still run the full process. You simply
+  stop paying big-job overhead for small-job work, and you can see, in real
+  numbers, that the fast lane is genuinely faster and cheaper. Trust in "done"
+  is not sacrificed for speed — that guarantee lives in BO-2500, which the fast
+  lane relies on.
+depends_on: [BO-2500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400a, BO-2400b, BO-2400c, BO-2400d, BO-2400e]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

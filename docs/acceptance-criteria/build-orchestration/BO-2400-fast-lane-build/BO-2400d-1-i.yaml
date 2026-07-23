@@ -1,0 +1,67 @@
+id: BO-2400d-1-i
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "An unreachable telemetry sink is surfaced loudly, never silently"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the telemetry sink is unreachable or unwritable,
+  When an agent invocation attempts to record its telemetry,
+  Then the failure emits a WARNING (it is not swallowed silently)
+  And a count of failed telemetry writes is surfaced to the operator,
+    so a run cannot complete with undetected dropped events
+    (as in the prior incident where 23 submit-failed events went unnoticed).
+depends_on: [BO-2400d-1]
+doc_links:
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    telemetry_write_failure_surface:
+      type: object
+      required: [failed_write_count]
+      description: "On an unreachable/unwritable sink, a WARNING is emitted per failed write and a total failed-write count is surfaced to the operator at run end."
+  reference_file_path: "scripts/feedback/submit_feedback.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "A failed telemetry write must emit a WARNING (or higher) per the project error-handling policy — never a silent swallow, never a bare except."
+    - "A count of failed telemetry writes must be surfaced to the operator so a run cannot complete with undetected dropped events (the 23-submit-failed incident is the anti-pattern to prevent)."
+    - "Catch the specific I/O exceptions around the sink write (OSError family) and log-and-continue; telemetry emission must not crash the build, but its failure must be visible."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400d-1
+  contract: "The telemetry emit path whose sink-write failures this behavior detects and surfaces."
+test_spec:
+  - name: test_unreachable_sink_emits_warning
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "When the sink is unreachable/unwritable, a WARNING is emitted rather than the failure being swallowed silently."
+  - name: test_failed_write_count_surfaced
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "A count of failed telemetry writes is surfaced to the operator."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/agent-health/agent_telemetry.py"

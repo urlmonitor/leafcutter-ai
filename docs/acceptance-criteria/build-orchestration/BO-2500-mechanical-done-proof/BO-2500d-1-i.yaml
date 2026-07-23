@@ -1,0 +1,66 @@
+id: BO-2500d-1-i
+components:
+  - build_orchestration
+  - review_system
+title: "Removing a gate before its mechanical replacement exists is rejected"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a change proposes removing an opinion-only gate agent from the fast-lane phase
+    order while its mechanical proof-of-done replacement is not yet present in that
+    phase order,
+  When the phase-order change is validated,
+  Then the removal is rejected
+  And the rejection states that the mechanical replacement gate must exist in the fast
+    lane before the opinion-only gate can be removed.
+depends_on: [BO-2500d-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Add a phase-order validation that rejects removing an opinion-only gate agent from the fast-lane order whenever the corresponding mechanical proof-of-done gate is not present in that same order (fail-closed)."
+  - "The replacement mapping (which mechanical gate stands in for which opinion-only agent) must be data-driven, not a hard-coded pairing, so it stays correct as gates evolve."
+  - "The rejection message must state that the mechanical replacement gate must exist in the fast lane before the opinion-only gate can be removed, per the error handling policy."
+  - "Validation must be idempotent and deterministic for a given phase-order definition."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500d-1
+  contract: "The fast-lane phase-order change (opinion-only agent removal) whose safety precondition this validation enforces."
+test_spec:
+  - name: test_removal_without_mechanical_replacement_is_rejected
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "Removing an opinion-only gate from the fast lane while its mechanical replacement is absent is rejected."
+  - name: test_rejection_names_required_mechanical_replacement
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "The rejection states the mechanical replacement gate must exist in the fast lane first."
+  - name: test_removal_with_mechanical_replacement_present_is_allowed
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "Removal is allowed once the mechanical replacement gate is present in the fast-lane order."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-build.js"

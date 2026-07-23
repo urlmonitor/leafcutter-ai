@@ -1,0 +1,44 @@
+id: BO-2400b-1
+components:
+  - build_orchestration
+title: "Scoped interactive work routes to the fast lane"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build request classified as scoped and interactive (attended, small blast
+    radius, low defect-cost),
+  When the path router decides which lane to use,
+  Then it selects the fast lane.
+depends_on: [BO-2400b]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The fast-lane selection for scoped+interactive requests must be produced by the single documented decision rule (BO-2400b-3), not an ad-hoc per-request judgment."
+  - "All three signals (attended, small blast radius, low defect-cost) must be present for the fast lane to be selected; the rule must not route fast on a partial match."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400b-3
+  contract: "The documented decision rule mapping (scope size, attended/unattended, defect-cost) to a lane, applied here for the scoped+interactive case."
+test_spec:
+  - name: test_scoped_interactive_routes_fast_lane
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A request classified scoped + interactive (attended, small blast radius, low defect-cost) routes to the fast lane."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/path_selection.py"

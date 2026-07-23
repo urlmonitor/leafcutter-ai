@@ -1055,6 +1055,19 @@
                 "script": "check_hook_parity.py",
                 "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
                 "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
+            },
+            {
+                "id": "check-done-proof",
+                "tier": "judgment",
+                "name": "Check Done Proof (BO-2500b — covers-tag presence gate)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_done_proof.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "BO-2500b-1: For each AC YAML staged as work_status:done, requires at least one # covers:<ac_id> tag anywhere under the test tree. STATIC only — no pytest run at pre-commit time. CI-mode (check_done_proof.py --mode ci) is the authoritative backstop that runs verify_done_eligible on all done ACs so --no-verify and hook-config-less worktrees are still caught (BO-2500b-1-i). Bypassable via SKIP=check-done-proof or --no-verify."
             }
         ]
     },
@@ -1136,6 +1149,10 @@
         "coverage_xml_path": "coverage.xml",
         "compare_branch": "origin/main",
         "max_age_seconds": 3600
+    },
+    "done_proof": {
+        "_comment": "check_done_proof.py — Mechanical proof-of-done gate (BO-2500b). Pre-commit mode: static covers-tag presence check for staged done ACs (fast, no pytest). CI mode: full verify_done_eligible run over every done AC in the store (authoritative). Hook is bypassable via SKIP=check-done-proof or --no-verify; CI backstop (BO-2500b-1-i) then catches bypassed proofs.",
+        "enabled": true
     },
     "hook_parity": {
         "_comment": "check_hook_parity.py — Parity enforcement across runtime dir, canonical template dir, legacy template dir, and deployed output dir. All paths are relative to the project root.",

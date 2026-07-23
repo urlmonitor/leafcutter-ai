@@ -1,0 +1,61 @@
+id: BO-2500d-3
+components:
+  - build_orchestration
+  - review_system
+title: "The mechanical proof-of-done gates stand in for the removed review agents in the fast lane"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane phase order after the opinion-only agents are removed,
+  When its phases are enumerated,
+  Then the deterministic proof-of-done gates (red-baseline verification, green plus
+    coverage verification, and the covers-tag linkage check) are present as the
+    completion arbiters
+  So the fast lane still has an enforced proof-of-done in place of the removed review.
+depends_on: [BO-2500d]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The fast-lane phase order must list the deterministic proof-of-done gates as its completion arbiters: red-baseline verification and green+coverage verification (from BO-2400) plus the covers-tag linkage / done-proof check (from BO-2500a)."
+  - "The gates must be positioned so completion cannot be signed off before all of them pass (they are the terminal arbiters of the fast lane)."
+  - "The presence of these gates is the precondition that makes the opinion-only removal (BO-2500d-1) and the removal-safety validation (BO-2500d-1-i) satisfiable."
+delivers_to:
+  agent: llm-expert
+  contract: "The set of mechanical proof-of-done gates present in the fast-lane phase order, which BO-2500d-1 and BO-2500d-1-i require as the replacement for the removed opinion-only agents."
+expects_from:
+  ac_id: BO-2500a-3
+  contract: "The covers-tag linkage / done-proof eligibility check (BO-2500a) that, together with the BO-2400 red-baseline and green+coverage gates, forms the fast-lane completion arbiters."
+test_spec:
+  - name: test_fast_lane_lists_mechanical_proof_of_done_gates
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "The fast-lane phase order contains the red-baseline, green+coverage, and covers-tag linkage gates as completion arbiters."
+  - name: test_fast_lane_signoff_requires_all_mechanical_gates_pass
+    target_dir: unit_tests/build/
+    framework: unittest
+    type: unit
+    description: "Fast-lane completion cannot be signed off until every mechanical proof-of-done gate passes."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-build.js"
