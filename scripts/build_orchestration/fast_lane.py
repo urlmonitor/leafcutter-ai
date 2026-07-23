@@ -49,6 +49,7 @@ from scan_ac_store import (  # noqa: E402
     _matches_work_status,
     _sort_ready,
     _walk_ac_yamls,
+    traverse_ac_tree,
 )
 
 
@@ -114,6 +115,126 @@ def select_batch(*, ac_root: Path, limit: int) -> list[str]:
 
     ready = _sort_ready(ready)
     return [ac.get("id", "") for ac in ready[:limit]]
+
+
+def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
+    """Resolve the connected build set for *ac_id* in dependency order.
+
+    The connected build set is::
+
+        subtree(ac_id)  UNION  transitive_unmet_depends_on_closure(ac_id)
+
+    where ``subtree(ac_id)`` is every L2/L3 descendant of *ac_id* reachable via
+    ``covered_by`` (plus *ac_id* itself when it is a leaf), and the closure is
+    every L2/L3 AC that is a direct or transitive ``depends_on`` prerequisite of
+    a member of the set and is not yet ``work_status: done``.
+
+    Selection rules (differs from :func:`select_batch`):
+        * Only L2/L3 leaves with ``work_status != 'done'`` are returned.
+        * Readiness is NOT a filter — a not-done ``draft``/``reviewed`` leaf is
+          included (pointing at the AC is the operator's go-ahead).
+        * The result is in dependency order: a prerequisite leaf always appears
+          before any leaf that (transitively) depends on it.
+        * Dependency cycles are broken deterministically (no infinite loop).
+        * Already-done prerequisites are not pulled in (the dep is met).
+
+    Args:
+        ac_id: The target AC id to resolve the connected set for.
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Ordered list of not-done leaf AC ids (deps first). ``[]`` when the whole
+        connected set is already done.
+
+    Raises:
+        ValueError: When *ac_id* does not exist in the store (message names the
+            missing id — never a silent empty list).
+    """
+    yaml_paths = _walk_ac_yamls(ac_root) if ac_root.exists() else []
+    all_records: list[dict] = []
+    for path in yaml_paths:
+        record = _load_ac(path)
+        if record is not None:
+            all_records.append(record)
+
+    id_index = _build_id_index(all_records)
+    _drain_cycles(id_index, all_records)
+
+    if ac_id not in id_index:
+        msg = (
+            f"resolve_connected_build_set: AC id {ac_id!r} not found in the store "
+            f"at {ac_root} — check the id for typos (no build set resolved)."
+        )
+        raise ValueError(msg)
+
+    # 1. Subtree leaves (not-done L2/L3 descendants via covered_by).
+    build_set: set[str] = set(traverse_ac_tree(ac_id, ac_root, exclude_done=True))
+
+    # 2. Transitive unmet depends_on closure. A done prerequisite is already met
+    #    and is not pulled in; a not-done composite dep expands to its leaves.
+    worklist: list[str] = list(build_set)
+    while worklist:
+        node = worklist.pop()
+        rec = id_index.get(node)
+        if rec is None:
+            continue
+        for dep in rec.get("depends_on") or []:
+            dep_rec = id_index.get(dep)
+            if dep_rec is None or dep_rec.get("work_status", "") == "done":
+                continue  # unknown or already-met prerequisite
+            if _is_leaf(dep_rec):
+                if dep not in build_set:
+                    build_set.add(dep)
+                    worklist.append(dep)
+            else:
+                for leaf in traverse_ac_tree(dep, ac_root, exclude_done=True):
+                    if leaf not in build_set:
+                        build_set.add(leaf)
+                        worklist.append(leaf)
+
+    return _topo_order_build_set(build_set, id_index)
+
+
+def _topo_order_build_set(
+    build_set: set[str],
+    id_index: dict[str, dict],
+) -> list[str]:
+    """Return *build_set* ids in dependency order (prerequisites first).
+
+    Depth-first post-order over the ``depends_on`` edges restricted to
+    *build_set*. Nodes and in-set dependencies are visited in ascending id order
+    so the same store state always yields the identical list (deterministic).
+    A grey-node guard breaks any residual dependency cycle without recursing
+    forever.
+
+    Args:
+        build_set: The set of AC ids to order.
+        id_index: Full id-to-record mapping (for ``depends_on`` lookup).
+
+    Returns:
+        Ordered list of the ids in *build_set*, prerequisites before dependents.
+    """
+    order: list[str] = []
+    black: set[str] = set()
+    grey: set[str] = set()
+
+    def _visit(node: str) -> None:
+        if node in black or node in grey:
+            return
+        grey.add(node)
+        rec = id_index.get(node) or {}
+        in_set_deps = sorted(
+            dep for dep in (rec.get("depends_on") or []) if dep in build_set
+        )
+        for dep in in_set_deps:
+            _visit(dep)
+        grey.discard(node)
+        black.add(node)
+        order.append(node)
+
+    for node in sorted(build_set):
+        _visit(node)
+    return order
 
 
 def verify_red_baseline(*, ac_ids: list[str], test_root: Path) -> dict:
@@ -265,6 +386,17 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     sb.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
     sb.add_argument("--limit", required=True, type=int, metavar="N", help="Cohesion cap.")
 
+    # --- select_connected ---
+    sc = subparsers.add_parser(
+        "select_connected",
+        help=(
+            "Resolve the connected build set for one AC (subtree + unmet deps, "
+            "dependency-ordered, readiness-agnostic) and print the ids as a JSON list."
+        ),
+    )
+    sc.add_argument("--ac", required=True, metavar="ID", help="Target AC id to resolve.")
+    sc.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+
     # --- verify_red_baseline ---
     vrb = subparsers.add_parser(
         "verify_red_baseline",
@@ -321,6 +453,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.subcommand == "select_batch":
         result = select_batch(ac_root=Path(args.ac_root), limit=args.limit)
+        print(json.dumps(result))
+        return 0
+
+    if args.subcommand == "select_connected":
+        try:
+            result = resolve_connected_build_set(args.ac, ac_root=Path(args.ac_root))
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
         print(json.dumps(result))
         return 0
 

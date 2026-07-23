@@ -1,0 +1,42 @@
+id: BO-2400f-6
+components:
+  - build_orchestration
+title: "Export the build backlog as a JSON dataflow of ACs that need building"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the acceptance-criteria store,
+  When the build-backlog dataflow is exported,
+  Then it emits a JSON document listing every leaf (L2/L3) acceptance criterion whose
+    work_status is not done, each node carrying its title, component, level, readiness,
+    test_required, parent, depends_on, unmet dependencies, and a ready flag,
+  And it includes a dependency-ordered build_order (every prerequisite before its
+    dependents) and totals for todo/ready/blocked leaves,
+  And the export is deterministic — the same store state yields byte-identical JSON so
+    the artifact can be committed and re-generated with a clean diff.
+
+  Given a target AC id is supplied,
+  When the dataflow is exported in connected scope,
+  Then the nodes and build_order are restricted to that AC's connected build set
+    (its subtree plus unmet-dependency closure), readiness-agnostic.
+
+  Given a non-existent AC id in connected scope,
+  When the export runs,
+  Then it fails with a clear error naming the missing id rather than writing an empty
+    artifact.
+depends_on: [BO-2400f-1]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: [scripts/build_orchestration/build_dataflow.py]
+change_target: pipeline
+risk_surface: internal
