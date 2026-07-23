@@ -35,13 +35,7 @@
 
 export const meta = {
   name: "fast-lane-ship",
-  description:
-    "Full-arc fast lane: point at one AC id and get a PR back. Opens a fresh " +
-    "worktree off origin/main, resolves the AC's connected build set (subtree + " +
-    "unmet deps, dependency-ordered, readiness-agnostic), runs the inlined lean " +
-    "two-agent loop (test-writer → coder) gated by verify_red_baseline and " +
-    "verify_green_and_coverage, then auto-commits and opens the PR. Empty set is " +
-    "a clean no-op. No per-ticket supervisor chain, no planner (BO-2400f).",
+  description: "Full-arc fast lane: point at one AC id and get a PR back. Opens a fresh worktree off origin/main, resolves the AC's connected build set (subtree + unmet deps, dependency-ordered, readiness-agnostic), runs the inlined lean two-agent loop (test-writer then coder) gated by verify_red_baseline and verify_green_and_coverage, then auto-commits and opens the PR. Empty set is a clean no-op. No per-ticket supervisor chain, no planner (BO-2400f).",
   phases: [
     { title: "Worktree", detail: "create-fastlane-worktree off origin/main" },
     { title: "Resolve", detail: "select_connected — the connected build set" },

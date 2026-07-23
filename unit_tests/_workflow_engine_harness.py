@@ -296,6 +296,7 @@ function log(msg) { /* stub */ }
  * args — stub inputs object. Pre-populated with common fields so scripts that
  * guard on required inputs do not return before the first agent() dispatch.
  * quick-fix.js guards: args.target_file, args.root_cause.
+ * fast-lane-ship.js guards: args.ac (target AC id).
  * Other scripts use userInput / epicPath patterns (handled inside run()).
  */
 var args = Object.assign({
@@ -304,6 +305,7 @@ var args = Object.assign({
   location_hint: 'line 1',
   symptom: 'stub symptom',
   userInput: 'stub user input',
+  ac: 'BO-STUB-1',
 }, {ARGS_OBJECT});
 
 // ─── Script body ─────────────────────────────────────────────────────────────
