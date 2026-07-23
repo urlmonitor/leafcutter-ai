@@ -10,6 +10,7 @@ flight_level: L1-Context
 parent: agent_delivery_workflows.md
 children:
   - docs/architecture/diagrams/finalize-progress-narration-sequence.md
+  - docs/architecture/diagrams/finalize-progress-relay-sequence.md
 components:
   - ac_store
   - ticket_creation_pipeline

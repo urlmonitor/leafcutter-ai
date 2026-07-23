@@ -67,6 +67,33 @@ If the journal file is absent or unreadable at any polling interval:
 - If the journal remains absent after 3 consecutive polls, stop active polling and
   await the workflow's exit payload rather than continuing to poll an absent file.
 
+### Over-Time Delivery Guarantee
+
+This section asserts the combined delivery contract of the incremental journal
+(BO-1000c-1a) and the poll/relay loop (BO-1000c-1b). The launcher MUST uphold
+all three invariants:
+
+1. **In-flight delivery** — a progress line for a step MUST appear in the
+   conversation while the run is still in flight, before the run has finished,
+   reflecting the step currently underway. Deferring all relay until after the
+   workflow exits violates this guarantee.
+
+2. **Multiple distinct updates** — at least one progress update MUST arrive in
+   the conversation per executed or skipped step that emits a journal line, spread
+   across the run's execution. Delivering all lines in a single batch only after
+   run completion violates this guarantee.
+
+3. **No re-delivery** — lines already relayed MUST NOT be re-emitted on
+   subsequent polls. The launcher tracks the last-relayed file position and
+   advances it on every successful relay batch (duplicates defeat the dedup
+   requirement and produce confusing output).
+
+These invariants define the observable contract for AC `BO-1000c-2`. They depend
+on BO-1000c-1a writing the journal incrementally (append-as-you-go) and
+BO-1000c-1b's poll/relay loop running while the workflow is active. Do NOT
+attempt to satisfy them by buffering all journal output and emitting it after
+the run ends — that is the anti-pattern this AC exists to prohibit.
+
 ### User experience goal
 
 The user receives finalize-feature progress directly in the main conversation, without
