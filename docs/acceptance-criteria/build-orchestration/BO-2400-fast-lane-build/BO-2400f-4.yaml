@@ -1,0 +1,35 @@
+id: BO-2400f-4
+components:
+  - build_orchestration
+title: "Auto-commit the green batch and open a pull request"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the lean two-agent loop has taken the connected set to green (all batch tests
+    pass and every AC has a passing covers test),
+  When the run finishes,
+  Then the changes are committed on the worktree's branch and a pull request is opened
+    against main,
+  And the operator does not run commit or open the PR by hand,
+  And the PR is opened non-interactively under the correct account, with the EMU REST
+    fallback used when gh pr create is blocked.
+
+  Given the green+coverage gate does NOT pass,
+  When the run finishes,
+  Then no PR is opened and the failing AC ids are reported (the gate is the arbiter).
+depends_on: [BO-2400f-3]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

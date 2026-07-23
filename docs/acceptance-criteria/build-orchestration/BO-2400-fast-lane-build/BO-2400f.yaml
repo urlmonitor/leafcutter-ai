@@ -1,0 +1,32 @@
+id: BO-2400f
+components:
+  - build_orchestration
+title: "Point at one AC and it builds the whole connected set, hands back a PR"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  One command, one AC id, a PR back — no other input.
+
+  An operator names any single acceptance criterion and the fast lane does the rest:
+  it opens a fresh isolated worktree from the latest mainline, works out everything
+  that AC is connected to (the whole subtree beneath it plus any prerequisites it
+  depends on that are not yet done), builds that set in dependency order through the
+  lean two-agent loop, and opens a pull request. The operator does not create a
+  worktree, list a batch, or open the PR by hand. Pointing at the AC is the go-ahead,
+  so a not-yet-approved AC is still built.
+depends_on: [BO-2400a, BO-2400e]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-23
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400f-1, BO-2400f-2, BO-2400f-3, BO-2400f-4, BO-2400f-5]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
