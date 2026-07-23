@@ -258,6 +258,42 @@ happily commit straight to `main`.
 found in production.
 (Source: EPIC-QuickFixWorkflow retrospective KI-3, 2026-07-10.)
 
+### Gate / Workflow ACs — Verify Behaviorally, Not by Grep
+
+An acceptance criterion about a workflow, runner, hook, or gate must be covered by
+a test that **executes the behavior** (or, for a workflow the unit layer cannot run,
+asserts the results are actually **consumed** in control flow) — never by a test that
+only greps the source for a string's presence or ordering. A grep-only test passes on
+dead code, so it cannot distinguish "the gate is wired and runs" from "the gate string
+is defined and ignored." Pair every such AC with an independent adversarial review
+(code-review + a logic-check that runs the code) before marking it done.
+
+**Why this matters:** The fast-lane feature — built specifically to defeat phantom-done —
+itself shipped a phantom-done runner: `fast-lane-build.js` passed its grep-only structural
+tests while **never executing** its red/green gates, and `fast_lane.py` had no CLI so the
+runner's `select_batch` call was a silent no-op. Both were invisible to the structural
+tests and were caught only by an independent code-review agent + a logic-check agent that
+executed the code; the fix required behavioral (CLI) and semantic-consumption (guarded
+control-flow) tests.
+(Source: fast-lane build + review, 2026-07-22.)
+
+### New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest
+
+When a commit-guardian hook or a CI gate imports a module, that module MUST be added to
+the build deploy list (`build_ac_store` `deploy_map` in `scripts/build_phases.py`, or the
+equivalent phase for its directory). The hook runs from the **deployed** layout, not the
+source tree, so a dependency that is not deployed raises `ModuleNotFoundError` at hook
+runtime. Once the gate is a **required** status check, that crash blocks **every** merge.
+Verify by running the deployed hook (or `build.py` then the hook) — not just the unit tests,
+which import from the source tree and mask the gap.
+
+**Why this matters:** `done_proof.py` (backing the `check_done_proof` hook and the required
+CI done-proof gate) was created in `scripts/ac_store/` but omitted from `build_ac_store`'s
+hardcoded `deploy_map`, so the deployed hook crashed with `ModuleNotFoundError: done_proof`
+— which would have blocked all merges once the gate became required. Caught live by the
+hook firing on its own commit.
+(Source: fast-lane build + review, 2026-07-22.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
