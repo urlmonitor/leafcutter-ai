@@ -121,8 +121,8 @@ class TestStartOfStepLineEmittedForEveryNonerrorStep(unittest.TestCase):
             steps_missing_progress,
             [],
             msg=(
-                f"The following numbered steps are missing a start-of-step "
-                f"progress line on the success path:\n"
+                "The following numbered steps are missing a start-of-step "
+                "progress line on the success path:\n"
                 + "\n".join(f"  - {v}" for v in steps_missing_progress)
                 + f"\n\nAC BO-1000a-1 requires every non-error step (all "
                 f"{_STEP_COUNT} numbered steps) to emit a human-readable "
@@ -231,8 +231,8 @@ class TestStartOfStepLinePrecedesStepWork(unittest.TestCase):
             [],
             msg=(
                 "The following steps have their start-of-step progress line "
-                f"positioned incorrectly (after, not before, the step's "
-                f"first agent() dispatch):\n"
+                "positioned incorrectly (after, not before, the step's "
+                "first agent() dispatch):\n"
                 + "\n".join(f"  - {v}" for v in ordering_violations)
                 + "\n\nAC BO-1000a-1 requires the progress line to be emitted "
                 "BEFORE the step's work is dispatched (ordering is load-bearing "
