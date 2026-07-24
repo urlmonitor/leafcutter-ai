@@ -1,0 +1,37 @@
+id: BO-2400f-1
+components:
+  - build_orchestration
+title: "Resolve one AC id to its connected build set, in dependency order"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criteria id in the store,
+  When the connected build set is resolved,
+  Then the set is the union of that AC's subtree (itself and all descendants via
+    covered_by) and the transitive closure of its unmet depends_on prerequisites,
+  And the set is restricted to leaf (L2/L3) acceptance criteria whose work_status is
+    not done,
+  And the set is returned in dependency order (every prerequisite appears before the
+    AC that depends on it),
+  And a dependency cycle is broken deterministically rather than looping forever.
+
+  Given an AC id that does not exist in the store,
+  When resolution runs,
+  Then it fails with a clear error naming the missing id (it does not silently
+    return an empty set).
+depends_on: [BO-2400f]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: [scripts/build_orchestration/fast_lane.py]
+change_target: pipeline
+risk_surface: internal

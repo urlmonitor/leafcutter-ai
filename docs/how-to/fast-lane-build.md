@@ -5,7 +5,7 @@ type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-07-23
 components:
   - build_orchestration
 related_docs:
@@ -19,12 +19,32 @@ related_docs:
 # How to run the fast-lane build loop
 
 The fast-lane build loop is a lean alternative to the full ticket-supervisor
-pipeline. It selects a cohesive batch of approved ACs from the store, runs a
-single test-writer agent to produce failing stubs for the entire batch, confirms
-the red baseline with a deterministic Python gate, runs a single coder agent to
-make the batch green, and confirms green state and AC coverage with a second
-deterministic gate before staging the output for commit. Total LLM dispatches:
-two, regardless of batch size.
+pipeline. It runs a single test-writer agent to produce failing stubs for a
+cohesive set of ACs, confirms the red baseline with a deterministic Python gate,
+runs a single coder agent to make them green, and confirms green state and AC
+coverage with a second deterministic gate before staging the output for commit.
+Total LLM dispatches for the loop: two, regardless of set size.
+
+**One-command entry (recommended): `/fast-lane-build <AC-id>`.** Point the
+command at any one acceptance-criterion id and it does the whole arc with no
+other input (BO-2400f): it opens a fresh isolated worktree off the latest
+`origin/main`, resolves that AC's **connected build set** (its subtree plus any
+unmet `depends_on` prerequisites, in dependency order, readiness-agnostic —
+pointing at the AC is the go-ahead), runs the lean loop above scoped to that set,
+then auto-commits and opens a pull request. This is the `fast-lane-ship`
+workflow, shimmed by [templates/commands/fast-lane-build.md](../../templates/commands/fast-lane-build.md).
+The lean loop itself (`fast-lane-build.js`) remains the inner primitive it drives.
+
+To see everything that still needs building first, export the build backlog as a
+JSON dataflow:
+
+```bash
+python scripts/build_orchestration/build_dataflow.py \
+  --ac-root docs/acceptance-criteria --out docs/build-dataflow.json
+# or scope to one AC's connected set:
+python scripts/build_orchestration/build_dataflow.py \
+  --ac-root docs/acceptance-criteria --ac BO-2400f
+```
 
 This guide covers:
 
@@ -88,36 +108,43 @@ If any condition is unmet, use the heavy path (`/build-feature`). See
 
 ## 2. Invocation
 
+### One-command AC-scoped build (recommended)
+
+Pass a single acceptance-criterion id. Nothing else is required — no worktree,
+no batch size, no manual PR:
+
 ```
-/fast-lane-build {
-  "worktree_path": "/absolute/path/to/my-worktree",
-  "batch_size": 5,
-  "ac_store_root": "docs/acceptance-criteria"
-}
+/fast-lane-build BO-2400f
 ```
 
-**Arguments:**
+The `fast-lane-ship` workflow then, in fixed code-defined order:
+
+1. **Worktree** — `create-fastlane-worktree <slug>` opens `fast-lane/<slug>` off
+   the latest `origin/main`, bootstrapped.
+2. **Resolve** — `select_connected --ac <id>` computes the connected build set.
+   An empty set (already done, or nothing not-done) is a clean no-op: no PR.
+3. **Lean loop** — the two-agent test-writer → coder loop, scoped to the resolved
+   ids and gated by `verify_red_baseline` and `verify_green_and_coverage`.
+4. **Commit + PR** — a commit agent marks the built ACs done (coverage-gated) and
+   commits; a pull-request agent opens the PR against `main`.
+
+The green+coverage gate is the arbiter: if it does not pass, **no PR is opened**
+and the failing AC ids are reported.
+
+### Inner primitive (advanced)
+
+The lean loop is also runnable directly as the `fast-lane-build` workflow when you
+already have a worktree and want the global ready-batch rather than one AC's
+connected set:
 
 | Argument | Required | Default | Description |
 |---|---|---|---|
-| `worktree_path` | Yes | — | Absolute path to the isolated worktree. The workflow halts immediately if this is absent. |
-| `batch_size` | No | `5` | Maximum number of ACs to select in this batch. |
-| `ac_store_root` | No | `"docs/acceptance-criteria"` | Relative path (from the worktree root) to the AC YAML store. |
+| `worktree_path` | Yes | — | Absolute path to the isolated worktree. |
+| `batch_size` | No | `5` | Maximum number of ready ACs to select. |
+| `ac_store_root` | No | `"docs/acceptance-criteria"` | Path (from the worktree root) to the AC YAML store. |
 
-**Minimum invocation (batch size 5, default store path):**
-
-```
-/fast-lane-build { "worktree_path": "/home/user/worktrees/my-feature" }
-```
-
-**Custom batch size of 3:**
-
-```
-/fast-lane-build {
-  "worktree_path": "/home/user/worktrees/my-feature",
-  "batch_size": 3
-}
-```
+Most users should prefer the one-command form above; the inner primitive does not
+create a worktree, commit, or open a PR.
 
 ---
 

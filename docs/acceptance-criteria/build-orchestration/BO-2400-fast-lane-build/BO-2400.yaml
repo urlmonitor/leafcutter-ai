@@ -34,7 +34,8 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: [BO-2400a, BO-2400b, BO-2400c, BO-2400d, BO-2400e]
+covered_by: [BO-2400a, BO-2400b, BO-2400c, BO-2400d, BO-2400e, BO-2400f]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+child_limit_override: 6  # 6 L1 goal-facets (a-f) under this L0; auditable waiver
