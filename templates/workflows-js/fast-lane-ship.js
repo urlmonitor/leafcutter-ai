@@ -203,6 +203,31 @@ const resolverResult = await agent(
 
 const acIds = (resolverResult && resolverResult.ac_ids) || [];
 
+// Distinguish a RESOLUTION ERROR from a genuinely-empty connected set.
+// A bad --ac-root (e.g. an un-deployed create-fastlane-worktree returning the
+// wrong ac_store_path), a missing store, or a typo'd id all make the resolver
+// exit non-zero with a diagnostic message while still yielding an empty ac_ids
+// list. Treating that as a clean "nothing to build" no-op hides a real failure
+// (observed 2026-08-10: ac_store_path resolved to <worktree>/tickets, so every
+// id was "not found"). Fail loudly instead so the operator sees the cause.
+const resolverMsg = (resolverResult && resolverResult.message) || "";
+if (acIds.length === 0 && /not found|no build set|no such|does not exist|no module|traceback|error/i.test(resolverMsg)) {
+  return {
+    status: "error",
+    message:
+      `Resolver could not resolve the connected build set for ${targetAc} — ` +
+      `this is a failure, not an empty set. Check that the AC store path is ` +
+      `correct (a stale/un-deployed create-fastlane-worktree can return the ` +
+      `wrong ac_store_path) and that ${targetAc} exists on origin/main. ` +
+      `Resolver said: ${resolverMsg}`,
+    failing_phase: "resolve",
+    worktree_path: worktreePath,
+    branch,
+    ac_store_root: acStoreRoot,
+    classification: "halt",
+  };
+}
+
 // Empty set — clean no-op (nothing to build). No worktree churn beyond the
 // created worktree, no empty PR (BO-2400f-2).
 if (acIds.length === 0) {
