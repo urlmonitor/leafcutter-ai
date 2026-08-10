@@ -1,13 +1,20 @@
 ---
 agent_id: user-surface-smoker
-title: "Agent Card: user-surface-smoker"
-description: "Conditional phase agent that invokes a user-facing surface end-to-end and asserts its observable side-effects against declared regexes. Guards against placeholder-dispatch defects (EPIC-GlossaryAutomation postmortem). Only dispatched when user_facing_surface != null in ticket frontmatter (priority 11.5 — after pr-reviewer, before commit). Reads the ## Smoke Fixture block from the ticket body, invokes each surface, captures git status + diff, applies assertion and placeholder_signature regexes, runs git restore after assertion, and emits (status: ok) or (status: blocker) accordingly. Use when: ticket-supervisor dispatches this agent at priority 11.5 for a ticket whose user_facing_surface field is non-null."
+title: 'Agent Card: user-surface-smoker'
+description: 'Conditional phase agent that invokes a user-facing surface end-to-end
+  and asserts its observable side-effects against declared regexes. Guards against
+  placeholder-dispatch defects (EPIC-GlossaryAutomation postmortem). Only dispatched
+  when user_facing_surface != null in ticket frontmatter (priority 11.5 — after pr-reviewer,
+  before commit). Reads the ## Smoke Fixture block from the ticket body, invokes each
+  surface, captures git status + diff, applies assertion and placeholder_signature
+  regexes, runs git restore after assertion, and emits (status: ok) or (status: blocker)
+  accordingly. Use when: ticket-supervisor dispatches this agent at priority 11.5
+  for a ticket whose user_facing_surface field is non-null.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - testing_quality
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # user-surface-smoker
 

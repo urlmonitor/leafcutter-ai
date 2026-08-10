@@ -1,13 +1,16 @@
 ---
 agent_id: onboard
-title: "Agent Card: onboard"
-description: "Portable guided installation wizard. Auto-discovers the repo structure, fans out onboard-config-section Haiku sub-agents per config section, assembles a proposed skills_config.json, presents a diff for sign-off, and runs build.py on approval. Invoked via /onboard or auto-fired on SessionStart when skills_config.json is absent or all values are defaults."
+title: 'Agent Card: onboard'
+description: Portable guided installation wizard. Auto-discovers the repo structure,
+  fans out onboard-config-section Haiku sub-agents per config section, assembles a
+  proposed skills_config.json, presents a diff for sign-off, and runs build.py on
+  approval. Invoked via /onboard or auto-fired on SessionStart when skills_config.json
+  is absent or all values are defaults.
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - onboarding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # onboard
 

@@ -1,13 +1,19 @@
 ---
 agent_id: changelog-agent
-title: "Agent Card: changelog-agent"
-description: "Automated changelog entry agent. Reads git log since the last deployment tag, categorizes commits by file path and conventional-commit prefixes, and writes a new per-file changelog entry with YAML frontmatter via emit_entry.py. Also invoked standalone for on-demand changelog generation between arbitrary git refs. Does NOT modify the legacy CHANGELOG.md. Use when: /prod-deploy completes successfully; user invokes /changelog; or epic-supervisor needs a manual entry. Call site 1 (standalone /changelog and /prod-deploy tail). (internal — Call site 2 is handled directly by epic-supervisor Step 2.)"
+title: 'Agent Card: changelog-agent'
+description: 'Automated changelog entry agent. Reads git log since the last deployment
+  tag, categorizes commits by file path and conventional-commit prefixes, and writes
+  a new per-file changelog entry with YAML frontmatter via emit_entry.py. Also invoked
+  standalone for on-demand changelog generation between arbitrary git refs. Does NOT
+  modify the legacy CHANGELOG.md. Use when: /prod-deploy completes successfully; user
+  invokes /changelog; or epic-supervisor needs a manual entry. Call site 1 (standalone
+  /changelog and /prod-deploy tail). (internal — Call site 2 is handled directly by
+  epic-supervisor Step 2.)'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - changelog
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # changelog-agent
 

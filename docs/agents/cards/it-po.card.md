@@ -1,20 +1,30 @@
 ---
 agent_id: it-po
-title: "Agent Card: it-po"
-description: "IT Product Owner — technical enrichment agent for the AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links to architecture documents.  Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work.  Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work.  This agent operates on AC YAML files directly."
+title: 'Agent Card: it-po'
+description: 'IT Product Owner — technical enrichment agent for the AC pipeline. Operates
+  AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields:
+  assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from
+  contracts, doc_links to architecture documents, and the test contract (test_spec
+  / test_required) that the ticket''s Test Requirements is derived from.  Does NOT
+  create tickets. Does NOT modify the BA''s criteria field. Uses architecture docs,
+  component registries, and agent registries to understand the technical landscape.
+  Splits ACs when technical boundaries reveal multi-agent work.  Use when: the BA
+  has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation
+  agents can begin work.  This agent operates on AC YAML files directly.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - ticket_creation_pipeline
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # it-po
 
 **IT Product Owner — technical enrichment agent for the AC pipeline. Operates
 AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
 fields: assigned_agent, it_requirements, estimated_complexity,
-delivers_to/expects_from contracts, and doc_links to architecture documents.
+delivers_to/expects_from contracts, doc_links to architecture documents, and
+the test contract (test_spec / test_required) that the ticket's Test
+Requirements is derived from.
 
 Does NOT create tickets. Does NOT modify the BA's criteria field. Uses
 architecture docs, component registries, and agent registries to understand

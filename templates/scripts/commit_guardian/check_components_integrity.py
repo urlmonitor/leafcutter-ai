@@ -544,11 +544,15 @@ def validate_depends_on(
     component_data: object,
     all_component_ids: set[str],
 ) -> list[str]:
-    """Validate depends_on references only valid component IDs (ACS-300j-1).
+    """Validate depends_on references only valid component IDs (ACS-300j-1, ACS-300j-1-i).
 
-    Each element of the depends_on list must match an ID present in
-    ``all_component_ids``.  On failure the error message names the invalid
-    reference, the declaring component, and the sorted list of valid IDs.
+    Each element of the depends_on list is checked individually:
+      1. Fast-path self-reference rejection (ACS-300j-1-i): if the element
+         equals component_id, an error is emitted immediately for that entry
+         before the unknown-ID check runs, so a self-reference is always caught
+         even when the component ID is in all_component_ids.
+      2. Unknown-ID rejection (ACS-300j-1): any element not present in
+         all_component_ids is also flagged.
 
     Args:
         component_id: Top-level key name for this component.
@@ -569,6 +573,12 @@ def validate_depends_on(
         return []
     valid_ids_sorted = sorted(all_component_ids)
     for dep_id in depends_on:
+        # Fast-path: self-reference check runs before unknown-ID check (ACS-300j-1-i).
+        if dep_id == component_id:
+            errors.append(
+                f"Component '{component_id}' cannot depend on itself."
+            )
+            continue
         if dep_id not in all_component_ids:
             errors.append(
                 f"Component '{component_id}': depends_on references unknown ID "

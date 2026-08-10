@@ -1,13 +1,17 @@
 ---
 agent_id: sql-coder
-title: "Agent Card: sql-coder"
-description: "Standards-enforcing SQL implementation agent. Reads PROJECT_CONTEXT.md for project-specific database conventions, runs the postgres skill, dispatches to specialist sub-agents (sql-table-creator, sql-index-creator, sql-procedure-creator, sql-function-creator, sql-view-creator) by artifact type, and gates \"done\" on local-DB deploy + sql-test pass. Use when: user types /sql-coder; asks to write a SQL procedure/function/view/ index/table; asks to refactor SQL or apply a SQL change to the local DB."
+title: 'Agent Card: sql-coder'
+description: 'Standards-enforcing SQL implementation agent. Reads PROJECT_CONTEXT.md
+  for project-specific database conventions, runs the postgres skill, dispatches to
+  specialist sub-agents (sql-table-creator, sql-index-creator, sql-procedure-creator,
+  sql-function-creator, sql-view-creator) by artifact type, and gates "done" on local-DB
+  deploy + sql-test pass. Use when: user types /sql-coder; asks to write a SQL procedure/function/view/
+  index/table; asks to refactor SQL or apply a SQL change to the local DB.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - sql_coding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # sql-coder
 

@@ -12,9 +12,9 @@ description: 'Fast triage agent for /plan-feature workflow. Reads the AC store f
   any authoring agent is invoked.'
 type: card
 status: active
-created: 2026-07-15
+created: 2026-08-10
 card_version: generated
-last_updated: '2026-07-17'
+last_updated: '2026-08-10'
 ---
 # ac-triage
 

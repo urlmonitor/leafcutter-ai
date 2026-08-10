@@ -11,9 +11,9 @@ description: Internal-only single-perspective analyst. Spawned exclusively by `b
   this is a single-shot read-only analyst.
 type: card
 status: active
-created: 2026-07-15
+created: 2026-08-10
 card_version: generated
-last_updated: '2026-07-17'
+last_updated: '2026-08-10'
 ---
 # brainstorm-worker
 

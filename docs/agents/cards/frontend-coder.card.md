@@ -1,13 +1,20 @@
 ---
 agent_id: frontend-coder
-title: "Agent Card: frontend-coder"
-description: "Standards-enforcing frontend/UI implementation agent. Writes, edits, and refactors HTML, CSS, JavaScript, TypeScript, React, Vue, Svelte, and other web-layer files. Loads optional webapp-testing skill when installed. Embeds design principles directly (does NOT load the legacy frontend-design skill even if present). Delegates Python logic to python-coder and SQL changes to sql-coder via Stop-and-Ask rules.  Use when: ticket involves creating or modifying frontend/UI components, markup, or styles; ticket requires visual changes to a web interface; files_touched contains .tsx, .jsx, .vue, .svelte, .html, .css, or .scss.  See ADR-005 for the sibling-agent design rationale."
+title: 'Agent Card: frontend-coder'
+description: 'Standards-enforcing frontend/UI implementation agent. Writes, edits,
+  and refactors HTML, CSS, JavaScript, TypeScript, React, Vue, Svelte, and other web-layer
+  files. Loads optional webapp-testing skill when installed. Embeds design principles
+  directly (does NOT load the legacy frontend-design skill even if present). Delegates
+  Python logic to python-coder and SQL changes to sql-coder via Stop-and-Ask rules.  Use
+  when: ticket involves creating or modifying frontend/UI components, markup, or styles;
+  ticket requires visual changes to a web interface; files_touched contains .tsx,
+  .jsx, .vue, .svelte, .html, .css, or .scss.  See ADR-005 for the sibling-agent design
+  rationale.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - frontend_coding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # frontend-coder
 
@@ -141,4 +148,55 @@ flowchart TD
 
 ### frontend-coder
 
+- BO-2100a-3: build-ticket.js phase ordering includes live-surface-tester after the smoker and before commit
+- BO-2100a-3-i: Relative phase order 11.5 < 11.8 < 12 is preserved after insertion
+- TQ-200a-2-iii: MARKUP output is scored by schema, render, and data-binding checks plus a visual judge
 - UXP-100d-2: Frontend-coder agent consumes the handoff artifact without human translation
+- UXP-210a: Customer can browse the plant catalogue
+- UXP-210b: Customer can open a plant's detail and add it to the cart
+- UXP-210b-2: Out-of-stock plant offers a notify-me action instead of add-to-cart
+- UXP-210c: Customer can review the cart before paying
+- UXP-210c-2: Empty cart shows an empty state instead of a checkout
+- UXP-210d: Customer can check out and pay
+- UXP-210d-2: Declined payment is handled without creating an order
+- UXP-210d-3: Plant that sold out after being carted blocks checkout
+- UXP-210d-4: Order summary is shown before payment
+- UXP-210d-5: Entering payment details creates a Payment record
+- UXP-210d-6: Successful authorization captures the Payment and marks the Order paid
+- UXP-210e: Customer sees an order confirmation
+- UXP-210f: Customer signs in before checkout and keeps their cart
+- UXP-220a: Customer can see a list of their past orders
+- UXP-220a-2: Customer with no orders sees an empty state
+- UXP-220b: Customer can open an order to see its details
+- UXP-220c: Customer can track the shipment of a paid order
+- UXP-220c-2: Paid-but-not-dispatched order shows tracking-unavailable state
+- UXP-410: The /flows loader reads the flow and index JSON from the product-truth store
+- UXP-410a: The loader discovers every flow file in the store rather than a hardcoded list
+- UXP-412: The resolved flow is drawn as a graph on the Atlas /flows page
+- UXP-412a: Each rendered step is colour-coded by its resolved work_status
+- UXP-421: The Atlas reads the product-truth store live and renders its flows
+- UXP-421a: The Atlas /flows view colours each step live from the acceptance-criteria store
+- UXP-515: Mockup is a first-class artifact type whose screen resolves from flow steps
+- UXP-520: The Flows view lists flows and renders the selected one as a graph
+- UXP-521: A source toggle filters flows by mock vs real
+- UXP-522: A kind chooser filters flows by user/data/architecture
+- UXP-523: Opening a step shows its ACs' live status, the mock records it uses, and its mockup
+- UXP-524: An AC node links to the flows it appears in
+- UXP-544: pt-classifier is dispatched once after ac-triage and the run-set is derived from its outcome
+- UXP-544a: An unparseable or inconsistent classifier result skips the product-truth phase but still runs the AC pipeline
+- UXP-544b: The product-truth agents run in a fixed order regardless of classifier list order
+- UXP-545: Each product-truth stage is gated (approve/edit/cancel) and committed under a plan-feature(<STAGE>) subject
+- UXP-545a: A product-truth stage commit refuses to run against the main branch
+- UXP-545b: A failed product-truth stage commit aborts the phase before the next agent runs
+- UXP-545c: Cancelling at a product-truth gate opens no PR and preserves prior committed stages
+- UXP-546: Product-truth stage commits stage only the reported artifact paths plus index.json
+- UXP-547: An approved flow is handed to the business-analyst to derive ACs, forcing BA in when the route skipped it
+- UXP-549: Crash-resume recognizes committed product-truth stages, skips them, and recovers the flow reference
+- UXP-550: One repoRoot() seam swaps the entire Atlas to the fixture repo when mock mode is active
+- UXP-551: A bundled fixture repo mirrors each loader input's native format so all Atlas views render populated
+- UXP-551-1: The JSON entity mock-data records are repurposed directly as test fixtures, no separate authoring
+- UXP-552: A visible mock-mode badge tells the reviewer the Atlas is showing fixtures
+- UXP-553: LEAFCUTTER_MOCK env sets the default mock state; a runtime override takes precedence
+- UXP-553-1: An optional production lock forbids runtime overrides so a deployment can guarantee real data
+- UXP-554: A drift guard validates fixtures against real schemas and parses each through its native-format loader in CI
+- UXP-595a: When the product-truth store is absent the phase self-skips with an observable signal and AC authoring proceeds

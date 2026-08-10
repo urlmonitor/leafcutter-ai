@@ -12,9 +12,9 @@ description: 'Internal-only escalation tier between `ticket-supervisor` and the 
   cap is 1 invocation per ticket per `building-epics` §4.'
 type: card
 status: active
-created: 2026-07-15
+created: 2026-08-10
 card_version: generated
-last_updated: '2026-07-17'
+last_updated: '2026-08-10'
 ---
 # brainstorm-lead
 

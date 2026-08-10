@@ -1,13 +1,17 @@
 ---
 agent_id: workflow-architect
-title: "Agent Card: workflow-architect"
-description: "Meta-agent that owns the leafcutter package surface area. Manages the agent registry, hook registry, skill registry, and build pipeline. Invokes four skills to extend the package: create-hook (new pre-commit hook),  add-agent-to-package (promote a project-local agent),  add-skill-to-package (promote a project-local skill), and  package-audit (surface package gap analysis). Use when adding new tooling  to the leafcutter package or auditing package boundary drift."
+title: 'Agent Card: workflow-architect'
+description: 'Meta-agent that owns the leafcutter package surface area. Manages the
+  agent registry, hook registry, skill registry, and build pipeline. Invokes four
+  skills to extend the package: create-hook (new pre-commit hook),  add-agent-to-package
+  (promote a project-local agent),  add-skill-to-package (promote a project-local
+  skill), and  package-audit (surface package gap analysis). Use when adding new tooling  to
+  the leafcutter package or auditing package boundary drift.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - build_pipeline
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # workflow-architect
 
@@ -117,6 +121,14 @@ flowchart TD
 ### workflow-architect
 
 - ACS-500f-2: Pattern-first inventory recognizes a pattern AC by the same definition the hook uses
+- BO-1900a-1: Preflight runs before spawn and holds back an unfit ticket with a reason
+- BO-1900a-1-i: Preflight that errors internally fails closed and holds the ticket back
+- BO-1900a-1-ii: Held-back reason is surfaced to the operator, not only buried in logs
+- BO-1900a-2: A fit ticket passes preflight and dispatch proceeds unchanged
+- BO-1900d-1: A payload of only allowlisted pointers is accepted
+- BO-1900d-1-i: A payload missing a required pointer is held back
+- BO-1900d-2: A payload carrying a free-composed prose prompt is rejected before spawn
+- BO-1900d-2-i: A premise injected inside an allowlisted pointer value is rejected
 - BP-1100a-1: Refinement files_touched lens flags a behavior ticket missing its executable target
 - BP-1100a-1-i: Behavior ticket with both documentation and an executable surface passes the lens
 - BP-1100a-2: Ticket-supervisor pre-dispatch read halts a behavior ticket with only documentation in files_touched

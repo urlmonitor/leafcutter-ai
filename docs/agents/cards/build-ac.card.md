@@ -12,9 +12,9 @@ description: 'Entry-point coordinator for the AC-to-ticket-to-build pipeline. Fi
   /build-feature manually. See ADR-006-flatten-supervisor-chain.md.'
 type: card
 status: active
-created: 2026-07-15
+created: 2026-08-10
 card_version: generated
-last_updated: '2026-07-17'
+last_updated: '2026-08-10'
 ---
 # build-ac
 
