@@ -364,8 +364,9 @@ Use `Edit` to replace the `TODO` markers in the frontmatter with the discovered
 paths: `stylesheets:` (token SSOT first, then any tailwind/uno config),
 `component_library:` (the `components/` or `ui/` dir/kit file), `fonts:` (the
 `layout.tsx` or the stylesheet's `@font-face`/`@import` block), and the inferred
-`stack:` values. Keep `filled: false` and the shipped frontend-design convention
-entry under `design_principles`. Do NOT paste any token values — pointers only.
+`stack:` values. Keep `filled: false` and the scaffold's default `design_principles`
+entry (the shipped design convention embedded in the frontend-coder agent). Do NOT
+paste any token values — pointers only.
 
 ### iii. Confirm / correct with the user
 
