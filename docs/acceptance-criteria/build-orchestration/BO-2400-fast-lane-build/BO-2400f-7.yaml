@@ -1,0 +1,69 @@
+id: BO-2400f-7
+components:
+  - build_orchestration
+title: "At build start, claim the resolved set: flip todo -> in_progress on mainline first"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a connected build set has been resolved for a fast-lane run and it contains
+    one or more leaf acceptance criteria whose work_status is todo,
+  When the run starts, before any test or code work begins,
+  Then each of those acceptance criteria is transitioned from work_status todo to
+    work_status in_progress on mainline,
+  And because mainline accepts changes only through pull requests, this transition is
+    landed as a dedicated status-only change (touching only the work_status field of
+    the resolved acceptance criteria) that is opened and merged before the build
+    proceeds,
+  And the build does not begin its test or code work until that status-only change is
+    merged on mainline,
+  And once merged, a concurrent fast-lane or heavy-lane run scanning for ready work
+    excludes the now in_progress acceptance criteria from its ready set.
+depends_on: [BO-2400f, BO-2400f-1]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: describes
+    status: exists
+estimated_complexity: M
+test_required: true
+test_spec:
+  - name: test_claim_flips_todo_to_in_progress_before_build
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "At run start every resolved leaf AC with work_status todo is transitioned to in_progress before any test/code work runs."
+  - name: test_claim_lands_as_merged_status_only_change_first
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "The claim is landed as a dedicated status-only change touching only work_status, opened and merged on mainline; the build does not proceed until that change is merged."
+  - name: test_claimed_acs_excluded_from_concurrent_ready_scan
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "Once the claim is merged, a concurrent fast-lane/heavy-lane ready scan excludes the now in_progress ACs from its ready set."
+delivers_to:
+  agent: python-coder
+  contract: "Claimed set landed on mainline via a merged status-only PR — each resolved leaf AC's work_status flipped todo->in_progress; the finish step (BO-2400f-9) and the release step (BO-2400f-10) act on this claimed set."
+expects_from:
+  ac_id: BO-2400f-1
+  contract: "Resolved connected build set: dependency-ordered list of leaf (L2/L3) AC ids whose work_status is todo (readiness-agnostic)."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400f-7-i, BO-2400f-7-ii]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

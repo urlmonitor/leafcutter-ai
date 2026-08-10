@@ -1,0 +1,53 @@
+id: BO-2400f-7-ii
+components:
+  - build_orchestration
+title: "Claim step stays readiness-agnostic: draft and reviewed ACs are still flipped"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the resolved connected build set contains acceptance criteria whose readiness
+    is draft or reviewed rather than approved,
+  When the start-of-run work_status flip to in_progress runs,
+  Then those draft and reviewed acceptance criteria are still flipped to in_progress,
+  And readiness does not filter which resolved criteria are claimed — pointing at the
+    AC is the operator's go-ahead, extending the readiness-agnostic selection
+    guarantee (BO-2400f-2) to the new lifecycle-claim step.
+depends_on: [BO-2400f-7]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_claim_flips_draft_and_reviewed_acs
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "A resolved set containing draft and reviewed (not-approved) ACs still has every member flipped to in_progress at claim time."
+  - name: test_claim_does_not_filter_by_readiness
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "Readiness is not consulted at the claim step; the claimed set equals the resolved todo set regardless of draft/reviewed/approved mix."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7
+  contract: "The start-of-run claim step and the resolved set it flips to in_progress."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

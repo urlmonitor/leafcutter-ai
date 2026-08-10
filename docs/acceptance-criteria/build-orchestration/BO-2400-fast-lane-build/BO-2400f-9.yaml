@@ -1,0 +1,66 @@
+id: BO-2400f-9
+components:
+  - build_orchestration
+title: "At build finish, coverage-gated mark-done flips every built AC to done (no stale-todo)"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has taken its built set to green and the coverage gate has
+    passed (every built acceptance criterion has a passing covering test),
+  When the run finishes,
+  Then every acceptance criterion that was built in the run is transitioned to
+    work_status done as a formal step of the run's lifecycle, whether it entered the
+    run as todo or as in_progress,
+  And no built acceptance criterion is left in work_status todo or in_progress after a
+    passing run (the stale-todo state cannot occur on success),
+  And an acceptance criterion whose coverage gate did not pass is NOT transitioned to
+    done.
+depends_on: [BO-2400f, BO-2400f-4]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+estimated_complexity: M
+test_required: true
+test_spec:
+  - name: test_finish_flips_every_built_ac_to_done
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "On a passing run every built AC (entered as todo or in_progress) is transitioned to work_status done; none remains todo/in_progress."
+  - name: test_uncovered_ac_not_marked_done
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "An AC whose coverage gate did not pass is NOT transitioned to done."
+  - name: test_done_transition_is_coverage_gated
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "The finish-time done-flip goes through the coverage-gated done marker so the coverage invariant is enforced for every built AC."
+delivers_to:
+  agent: python-coder
+  contract: "Every built AC flipped to work_status done on mainline once its coverage gate passed; the stale-todo guard (BO-2400f-9-i) asserts over this transition's result."
+expects_from:
+  ac_id: BO-2400f-4
+  contract: "Green batch committed plus the green+coverage gate result per built AC (pass/fail)."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400f-9-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
