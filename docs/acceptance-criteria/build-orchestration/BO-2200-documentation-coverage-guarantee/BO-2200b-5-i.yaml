@@ -9,7 +9,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
 criteria: |
   Given a doc-triggering ticket whose agents map was generated with `documentation-expert`

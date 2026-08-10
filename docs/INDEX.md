@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-08-10 12:10 UTC
+> Generated: 2026-08-10 15:34 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -181,6 +181,7 @@ task, then pull only those files.
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](docs/retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](docs/retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
 | EPIC ComputedQualityGates | [docs/retrospectives/EPIC-ComputedQualityGates.md](docs/retrospectives/EPIC-ComputedQualityGates.md) | Post-merge retrospective for EPIC-ComputedQualityGates (PR #201), covering the phantom-done remediation, three-layer integration gap root cause analysis, backfill of 1,802 ACs, and five proposed knowledge items. |
+| EPIC DocumentationCoverageGuarantee | [docs/retrospectives/EPIC-DocumentationCoverageGuarantee.md](docs/retrospectives/EPIC-DocumentationCoverageGuarantee.md) | Retrospective: EPIC-DocumentationCoverageGuarantee |
 | EPIC ErrorHandlingEnforcement | [docs/retrospectives/EPIC-ErrorHandlingEnforcement.md](docs/retrospectives/EPIC-ErrorHandlingEnforcement.md) | Date: 2026-06-01 |
 | EPIC Exceptionhandlingguardenforcestheerror | [docs/retrospectives/EPIC-Exceptionhandlingguardenforcestheerror.md](docs/retrospectives/EPIC-Exceptionhandlingguardenforcestheerror.md) | Date: 2026-06-18 |
 | EPIC FinalizeFeatureHardening | [docs/retrospectives/EPIC-FinalizeFeatureHardening.md](docs/retrospectives/EPIC-FinalizeFeatureHardening.md) | Retrospective: EPIC-FinalizeFeatureHardening |
