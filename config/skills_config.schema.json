@@ -150,6 +150,11 @@
       "description": "Root directory for project documentation (relative to project root, with trailing slash). All docs-related paths in paths.json, commit guardian, and doc compliance derive from this value.",
       "default": "docs/"
     },
+    "ui_context_path": {
+      "type": "string",
+      "description": "Path to the human-curated UI context pointer file that mockup-author, frontend-coder, and user-surface-smoker read to reach the host app's real design system (css/tokens/components/fonts). Configurable so projects that place the file outside docs/ can override without editing agent templates.",
+      "default": "docs/ui-context.md"
+    },
     "changelog_folder": {
       "type": "string",
       "description": "Folder where per-entry changelog Markdown files are written.",

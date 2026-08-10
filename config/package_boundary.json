@@ -85,6 +85,15 @@
                 "strategy-builder.md":           "project-specific"
             }
         },
+        "docs-templates": {
+            "_comment": "Templates under leafcutter/templates/docs/ that build.py scaffolds write-if-absent into target projects. All entries here are portable (shipped with the package).",
+            "live_dir": "docs",
+            "template_dir": "leafcutter/templates/docs",
+            "items": {
+                "ui-context.template.md": "portable",
+                "components.json.template": "portable"
+            }
+        },
         "skills": {
             "_comment": "Maps .claude/skills/ (live) vs leafcutter/templates/skills/ (template). Skills without a template are candidates for promotion.",
             "live_dir": ".claude/skills",

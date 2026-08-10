@@ -46,6 +46,8 @@
     "exclude_paths": []
   },
 
+  "ui_context_path": "docs/ui-context.md",
+
   "frontend": {
     "project_context_path": ".agents/agents/frontend-coder/PROJECT_CONTEXT.md",
     "optional_skills": [],
