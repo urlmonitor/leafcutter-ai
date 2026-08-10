@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a component entry "agent_registry" has
     depends_on: ["agent_registry"],

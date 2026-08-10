@@ -38,6 +38,7 @@ created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
 covered_by:
+  - ACS-300j-1-i
   - unit_tests/commit_guardian/test_check_components_integrity.py::TestValidateDependsOnAcs300j1
 implemented_by:
   - templates/scripts/commit_guardian/check_components_integrity.py

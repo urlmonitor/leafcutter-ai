@@ -1,13 +1,17 @@
 ---
 agent_id: sql-query
-title: "Agent Card: sql-query"
-description: "Ad-hoc SQL query authoring specialist. Reads PROJECT_CONTEXT.md for project- specific database conventions, past-queries folder, and connection details. Invokes the sql-query-past-queries skill to surface reusable prior queries. Returns reviewed, runnable SQL for human approval before any execution. Use when: user needs to write or refine a query for analysis, debugging, or reporting; does NOT create SQL schema objects (use sql-coder for that)."
+title: 'Agent Card: sql-query'
+description: 'Ad-hoc SQL query authoring specialist. Reads PROJECT_CONTEXT.md for
+  project- specific database conventions, past-queries folder, and connection details.
+  Invokes the sql-query-past-queries skill to surface reusable prior queries. Returns
+  reviewed, runnable SQL for human approval before any execution. Use when: user needs
+  to write or refine a query for analysis, debugging, or reporting; does NOT create
+  SQL schema objects (use sql-coder for that).'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - sql_coding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # sql-query
 

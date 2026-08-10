@@ -1,13 +1,16 @@
 ---
 agent_id: conflict-resolver
-title: "Agent Card: conflict-resolver"
-description: "Resolves merge conflicts in the working tree after a failed merge or rebase. Classifies each conflict as line-by-line (resolved on Sonnet inline) or structural (escalated to Opus via conflict-resolver-deep). Returns a structured payload: resolved_files, escalation, escalation_reason, unresolved_files. (internal — invoked by parent agents only)"
+title: 'Agent Card: conflict-resolver'
+description: 'Resolves merge conflicts in the working tree after a failed merge or
+  rebase. Classifies each conflict as line-by-line (resolved on Sonnet inline) or
+  structural (escalated to Opus via conflict-resolver-deep). Returns a structured
+  payload: resolved_files, escalation, escalation_reason, unresolved_files. (internal
+  — invoked by parent agents only)'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - git_vcs_operations
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # conflict-resolver
 

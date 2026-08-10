@@ -1,13 +1,20 @@
 ---
 agent_id: documentation-expert
-title: "Agent Card: documentation-expert"
-description: "Diataxis-routing documentation orchestrator. Classifies a \"write or update a doc\" request by intent (do / decide-record / design / look up / understand), dispatches to the matching specialist sub-agent (how-to-author, adr-author, architecture-author, reference-author, explanation-author), and returns a unified payload listing every doc file produced. Use when: user says \"write a doc for X\"; \"document this feature\"; \"add a how-to for Y\"; \"write an ADR for Z\"; \"update the reference for W\"; \"explain why V works this way\"; or asks to \"document this end-to-end\". Auto-triggers on any request whose primary verb is \"document\", \"write a doc\", \"update a doc\", or \"add documentation\"."
+title: 'Agent Card: documentation-expert'
+description: 'Diataxis-routing documentation orchestrator. Classifies a "write or
+  update a doc" request by intent (do / decide-record / design / look up / understand),
+  dispatches to the matching specialist sub-agent (how-to-author, adr-author, architecture-author,
+  reference-author, explanation-author), and returns a unified payload listing every
+  doc file produced. Use when: user says "write a doc for X"; "document this feature";
+  "add a how-to for Y"; "write an ADR for Z"; "update the reference for W"; "explain
+  why V works this way"; or asks to "document this end-to-end". Auto-triggers on any
+  request whose primary verb is "document", "write a doc", "update a doc", or "add
+  documentation".'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - documentation_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # documentation-expert
 
@@ -120,7 +127,7 @@ flowchart TD
 |-------|------|-----------|
 | `route-knowledge` | conditional | — |
 | `signoff` | conditional | — |
-| `direct-write` | conditional | glossary coverage lint — agent writes directly to docs/glossary.md and docs/glossary_blacklist.md for simple glossary updates, without spawning a specialist |
+| `direct-write` | conditional | — |
 ---
 
 ## Configuration
@@ -155,6 +162,28 @@ flowchart TD
 - ACS-900d-3: How-to guide documents the legitimate-pass cases so the check is trusted
 - BO-1300a-3: How-to guide: requesting an independent spot-check of a finished feature
 - BO-1500c-4: How-to guide for delivering approved ACs via the reviewed PR path
+- BO-1700a-10: How-to guide: proving pre-commit protection is live in a worktree
+- BO-1800b-1: The hub's main accepts changes only through a pull request; direct push, force-push, and branch deletion are rejected server-side
+- BO-1800b-1-i: An agent's direct push to main is rejected at the hub
+- BO-1800b-2: Merges to main are performed by the merge queue only after required checks pass
+- BO-1800b-3: No privileged bypass exists, and agents authenticate as a least-privilege identity with no direct-push right
+- BO-1800b-3-i: An admin merge attempt on main is rejected outside the gate
+- BO-1800b-5: Reference doc for the hub main-branch protection and merge-queue configuration
+- BO-1800c-4: Reference doc for the two parallelism axes and the resource-aware scheduler
+- BO-1800e-4: Reference doc for the no-shared-local-main model and read-only main sync
+- BO-2100b-4: How-to guide for turning live-app testing on for a project and a feature
+- BO-2100b-5: Reference documentation for the live_surface_testing config block
+- BO-2100d-4: How-to guide for diagnosing a live-app check that cannot run
+- BO-2200c-6: A reference doc explains the documentation-coverage gate, the verifier, and the Agent Contracts brief
+- BO-2400a-6: How-to: run the fast-lane build loop for a cohesive batch
+- BO-2400b-4: How-to: choose the right build path (fast lane vs heavy pipeline)
+- BO-2400c-4: Reference: fast-lane prompt caching (layout, TTL, prefix reuse)
+- BO-2400d-4: Reference: build telemetry record schema and lane tagging
+- BO-2400d-5: How-to: generate and read the fast-lane vs heavy-pipeline comparison report
+- BO-2500a-4: How-to: prove an AC is done with a passing covers-linked test
+- BO-2500b-4: How-to: local pre-commit proof-of-done feedback and the required CI gate
+- BO-2500c-4: How-to: author real-artifact fixtures and round-trip tests
+- BO-2500c-5: Reference: fixture policy and real-producer fixture rules
 - BP-1000c-2: How-to guide for reading a parity failure and resolving the drift it names
 - BP-1000d-2: Reference doc defining which scripts are in scope for the parity check and which are exempt
 - BP-100b-10: Drift hook docs include a developer checklist for adding new template categories
@@ -173,15 +202,23 @@ flowchart TD
 - BP-800d-4: How-to guide for legacy agent retirement
 - BP-800e-4: How-to guide for upgrading from legacy agent layout
 - BP-800f-4: Reference documentation for database paradigm support
+- FIN-100c-10: How-to guide describes the null-baseline targeted rerun, not the old blanket-halt
 - FIN-200a-4: How-to guide documents the automatic changelog step
 - GE-102e: The pre-commit hooks how-to documents the new transform hooks and their silent auto-fix behavior
 - GE-104a-3: A how-to guide ships with the page-documentation guardrail so operators can configure and respond to it
 - GE-111a-3: How-to guide: reconciling a blocked commit when a refactor breaks an AC link
 - GE-111b-4: Reference doc: the file-vs-symbol resolution model and #symbol anchor contract
 - GE-111d-4: How-to guide: the two routes to reconcile a flagged AC link
+- GE-116a-6: Reference documentation covers the agent-definition consistency guard
+- GE-117a-2: How-to guide: naming your file's component in the module docstring
+- GE-117b-3: How-to guide: citing the AC a public function or class satisfies
+- GE-117c-2: How-to guide: the extended decision-history tail-tag with ticket and AC references
+- GE-117d-4: How-to guide: understanding and clearing a declaration-guardrail block
+- GE-117e-3: How-to guide: fixing a missing declaration or deliberately opting out
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface
+- KM-KGS-100e-7: How-to guide: declare a component on a knowledge item and query it back
 - PER-100a-4: How-to guide for creating and maintaining personas
 - PER-100a-5: Reference doc for persona YAML schema
 - PER-100b-4: How-to guide for tagging ACs with persona references

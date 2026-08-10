@@ -1,13 +1,19 @@
 ---
 agent_id: llm-expert
-title: "Agent Card: llm-expert"
-description: "LLM-instructions specialist that owns the craft of writing, auditing, and maintaining LLM instructions inside agent templates, skill files, and slash-command prompts. Writes and edits agent templates (templates/agents/*.md), writes and edits skill bodies (templates/skills/*/SKILL.md), and audits prompts for convention violations (shell rules, nesting limits, tool allowlists, signoff protocol adherence). Use when: a ticket's agents: map is marked as requiring prompt-engineering or template work; user asks to \"write an agent template\", \"audit a skill\", or \"create a slash-command prompt\"."
+title: 'Agent Card: llm-expert'
+description: 'LLM-instructions specialist that owns the craft of writing, auditing,
+  and maintaining LLM instructions inside agent templates, skill files, and slash-command
+  prompts. Writes and edits agent templates (templates/agents/*.md), writes and edits
+  skill bodies (templates/skills/*/SKILL.md), and audits prompts for convention violations
+  (shell rules, nesting limits, tool allowlists, signoff protocol adherence). Use
+  when: a ticket''s agents: map is marked as requiring prompt-engineering or template
+  work; user asks to "write an agent template", "audit a skill", or "create a slash-command
+  prompt".'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - llm_authoring
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # llm-expert
 
@@ -202,6 +208,9 @@ flowchart TD
 - ACS-800f-1-i: Guidance documents the child-limit override as removable once tooling reads metadata
 - ACS-800f-2: The authoring agent instructions describe the UID-and-metadata model
 - ACS-800f-3: The schema reference prose describes stable UIDs and metadata hierarchy
+- BO-1000c-1b: The /finalize-feature launcher polls the run-progress journal and relays it into the main conversation
+- BO-1000c-2: Surfaced progress reflects the in-flight step, arriving over time rather than only at the end
+- BO-1000c-2-i: On a mid-flight halt the last conversation line reflects the halting step, live
 - BO-100d-1b: build-feature.md prose hard-blocks the drive before dispatch when the telemetry sink is unreachable
 - BO-100d-2b: build-feature.md prose lets the drive proceed when the telemetry sink is reachable
 - BO-1100a-2: Matched routing group produces its pattern-specific commit subject line
@@ -234,10 +243,39 @@ flowchart TD
 - BO-1400a-2: Pre-PR review confirms a delivered artifact lands in the deployable package source, not only a build-output tree
 - BO-1400a-2-i: A build-output-only artifact that is not consumer-shipped by design is not falsely flagged
 - BO-1500b-3: Partial-run recovery pre-flight still detects stranded AC files on the isolated branch
+- BO-1700b-3: A commit made with --no-verify is still refused where the main repo has gates
+- BO-1700d-2: Pre-drive gate: no ticket starts until the probe passes against the worktree
+- BO-1700d-3: Commit-phase gate: the commit driver runs the probe and refuses on failure
+- BO-1700d-3-i: A shared-hook mutation between the pre-drive gate and commit is caught at commit
+- BO-1800c-1: The number of agents collaborating on a single feature is capped
+- BO-1800c-1-i: An inherently sequential task is not force-parallelized
+- BO-2000a-1: Sign-off block resolves its skill in both consumer and source layouts
+- BO-2000a-1-i: Source-layout fallback is used when the consumer skills location is absent
+- BO-2000a-2: Sign-off updates frontmatter, checklist, and comment as one atomic edit
+- BO-2000a-2-i: Sign-off comment heading uses an em-dash so the parser can find it
+- BO-2000a-3: Sign-off degrades safely when the feedback sink is unreachable
+- BO-2000a-4: Sign-off self-verifies its write and reports a lost write
+- BO-2000a-4-i: A dropped sign-off write returns signoff-write-lost, never success
+- BO-2000a-5: Sign-off block includes the mandatory knowledge-capture step
+- BO-2000b-1: python-coder-authored hooks fail open on unexpected errors
+- BO-2000b-1-i: A hook that raises an unexpected OSError exits 0
+- BO-2000b-2: python-coder treats templates as source and generated dirs as build outputs
+- BO-2000b-3: python-coder registers new hooks, agents, and skills through their skills
+- BO-2000b-4: python-coder reads a file before editing it
+- BO-2000b-5: python-coder spot-checks against the real artifact and bans phantom tests
+- BO-2000b-6: python-coder restates the single-simple-command shell discipline
+- BO-2000d-3: The IT-PO template states the package-surface spec obligation
 - BO-200c-1: Commit message follows the project's conventional-commit format
 - BO-200c-2: Commit message body explains the intent, not just the file changes
 - BO-200c-3: Commit message is written by a dedicated agent, not inline by the supervisor
 - BO-200c-4: An approved commit message subject line is never rewritten by hooks or subsequent staging
+- BO-2100a-1: Ticket authoring adds live-surface-tester to the agents map when both toggles are on
+- BO-2100a-1-i: live-surface-tester is absent from the agents map unless both toggles are on
+- BO-2100a-2: ticket-supervisor Spawn Allowlist permits live-surface-tester
+- BO-2100a-4: building-epics canonical dispatch order documents live-surface-tester at 11.8
+- BO-2100b-1: Project toggle off means the check never runs, even when the ticket opts in
+- BO-2100b-2: Ticket not opted in means the check is skipped, even when the project enables it
+- BO-2100b-3: Both toggles on means the check runs
 - BO-210b-1: Coder emits a context_capsule with the five required design fields only when a warn-tier signal trips
 - BO-210b-1-i: An oversized context_capsule is truncated to the length cap rather than written unbounded
 - BO-210b-2: Consumers tolerate an absent context_capsule exactly like an absent completion_manifest
@@ -247,6 +285,45 @@ flowchart TD
 - BO-210c-1-iii: Every bash command in new or edited safety-net templates is a single simple command
 - BO-210c-2: Mechanical-tier hooks keep the generic light-model route and the commit retries exactly once
 - BO-210c-2-i: Re-dispatched coder returns a blocker when the fix genuinely needs fresh cross-file lookup
+- BO-2200b-2: The verifier fails the ticket when a required documentation file was not changed
+- BO-2200b-2-i: Partial documentation coverage still fails, naming the specific missing doc
+- BO-2200b-3: The verifier fails placeholder documentation and passes real content
+- BO-2200b-3-i: A short but genuine doc passes while a heading-only or token-filled stub fails
+- BO-2200b-6: The verifier is registered in every canonical phase-order source so it never sorts to the end
+- BO-2300a-1: A gate pauses and persists resumable state instead of cancelling
+- BO-2300a-1-i: A run that hits no decision point completes normally without pausing
+- BO-2300a-2: Paused-awaiting-input is a distinct state, separable from cancelled
+- BO-2300b-1: Each pending question declares its type and its valid answer shape
+- BO-2300b-2: An answer of the wrong shape is rejected and the question is re-asked
+- BO-2300b-2-i: An unparseable answer re-prompts and never crashes the run
+- BO-2300c-1: The pause surfaces the decision context captured at pause time
+- BO-2300d-1: A valid answer is applied by type and the run resumes from the pause point
+- BO-2300d-1-i: Pausing mid multi-stage run preserves the earlier committed stages
+- BO-2300d-1-ii: A cancel answer stops gracefully, keeps committed stages, opens no PR
+- BO-2300e-1: A paused run's state survives process exit and is resumable later
+- BO-2300e-1-i: Applying the same answer twice is idempotent and never double-applies
+- BO-2300e-1-ii: Resuming a run with no pending pause is a no-op
+- BO-2300e-1-iii: A stale or expired pause is handled gracefully
+- BO-2400a-1: Exactly one test-writer and one coder agent per batch
+- BO-2400a-3: Red-baseline verification is a deterministic script gate before the coder runs
+- BO-2400a-3-i: Red-baseline gate halts when a batch test will not go red
+- BO-2400a-4-i: Green gate refuses commit staging when the coder cannot make all tests pass
+- BO-2400a-5: No heavy-path coordination constructs are used in the fast lane
+- BO-2400b-1: Scoped interactive work routes to the fast lane
+- BO-2400b-2: Large, unattended, or high-defect-cost work routes to the heavy pipeline
+- BO-2400b-3: A single documented rule deterministically decides the lane
+- BO-2400b-3-i: Ambiguous scope defaults to the heavy pipeline
+- BO-2400b-3-ii: An explicit lane override wins over the decision rule
+- BO-2500b-1-i: Work whose local pre-commit check was skipped is still caught by the CI gate
+- BO-2500b-2: The final proof-of-done check runs on a fresh clean checkout in CI
+- BO-2500b-3: The CI proof-of-done check is required and blocks merge
+- BO-2500c-1: Fixtures for serialized data are produced by the real serializer, not hand-typed
+- BO-2500c-2: Parser and validator tests round-trip through the real on-disk artifact
+- BO-2500c-3: An independent real-artifact behavioral check runs for parsers, validators, and hooks
+- BO-2500d-1: Opinion-only gate agents are absent from the fast-lane phase order
+- BO-2500d-1-i: Removing a gate before its mechanical replacement exists is rejected
+- BO-2500d-2: The opinion-only gate agents remain present in the heavy pipeline
+- BO-2500d-3: The mechanical proof-of-done gates stand in for the removed review agents in the fast lane
 - BO-400a-1: ticket-supervisor sets status to in_progress at drive start
 - BO-400a-1-i: Ticket already in_progress from a previous failed run
 - BO-400a-2: ticket-supervisor sets status to done when all agents complete
@@ -297,6 +374,12 @@ flowchart TD
 - BO-800d-2: An amended AC (amended_by non-empty) is read in its current state, not its original state
 - BO-800e-1: PR body includes a Goal line with the L0 AC ID and title, linking to the AC file path
 - BO-800e-1-i: A ticket whose source_ac chain has multiple L0 ancestors lists all of them
+- BP-1100f-1: A durable-change dispatch that carries no instruction is flagged before it is accepted
+- BP-1100f-1-i: A whitespace-only or empty instruction string is treated as no instruction
+- BP-1100f-2: A durable-side-effect work item requires a test that exercises the real effect, not only that a step ran
+- BP-1100f-2-i: Asserting the artifact path was passed as an argument is topology, not effect coverage
+- BP-1100f-3: A work item whose stated intent contradicts its declared surface is caught before implementation
+- BP-1100f-3-i: A mixed-surface work item flags only the portion its stated intent cannot handle
 - BP-200a-1: Agent template frontmatter declares all required fields for a phase agent
 - BP-200a-2: Agent template body contains the six-item Prompt-Quality Checklist with detection heuristics
 - BP-200a-3: Agent template defines stop-and-ask boundaries deferring infrastructure edits
@@ -323,6 +406,7 @@ flowchart TD
 - BP-200e-1: Agent runs the Prompt-Quality Checklist before declaring any written prompt complete
 - BP-200e-2: Agent emits a structured completion report showing checklist pass/fail per item
 - BP-200e-3: Prompt-audit skill compound-bash check distinguishes side-effect pipes from read-only pipes
+- BP-300e-6: Agents dispatched for a machine-parsed result return only the structured payload, with any anomaly carried inside it
 - BP-400a-3: Supervisor templates contain imperative feedback emission instructions
 - BP-400c-5: feedback-analyst agent is read-only and never modifies feedback files
 - BP-700a-1: Unified agent template embeds design principles directly
@@ -367,6 +451,8 @@ flowchart TD
 - INF-400f-1-i: If the PO captures no learnings, the BA still runs correctly with baseline context
 - INF-400f-2: BA v3 component discoveries are available to the IT PO v3 in the same pipeline run
 - INF-400f-3: Cross-agent knowledge flows through shared persistence, not agent-to-agent message passing
+- INF-600l-3: The pr-reviewer prose backstop for card/registry consistency delegates the search to research-agent
+- KM-KGS-100e-8: The authoring-agent templates instruct emitting a component on every criterion
 - KM-KQS-032: Agent Protocol specifies standard invocation syntax with keyword and surface parameters
 - KM-KQS-033: Agent Protocol specifies zero-result and empty-graph handling as non-error conditions
 - KM-KQS-034: Agent Protocol specifies graceful degradation when the knowledge-query script fails

@@ -1,13 +1,16 @@
 ---
 agent_id: explanation-author
-title: "Agent Card: explanation-author"
-description: "Diataxis \"understand\" specialist. Produces understanding-oriented explanation docs — concept explainers and \"why-it-works-this-way\" discussions — by loading the canonical how-to before writing. Applies a genre guard and hands back to the correct specialist when the request is not \"understand\". (internal — invoked by documentation-expert only)"
+title: 'Agent Card: explanation-author'
+description: Diataxis "understand" specialist. Produces understanding-oriented explanation
+  docs — concept explainers and "why-it-works-this-way" discussions — by loading the
+  canonical how-to before writing. Applies a genre guard and hands back to the correct
+  specialist when the request is not "understand". (internal — invoked by documentation-expert
+  only)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - documentation_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # explanation-author
 

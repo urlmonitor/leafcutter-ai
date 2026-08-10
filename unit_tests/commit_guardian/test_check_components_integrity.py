@@ -813,6 +813,7 @@ class TestValidateExposedInterfacesAcs300i1Acs300i2(unittest.TestCase):
     _SCHEMA_MOD_OK,
     f"schema module load failed: {_SCHEMA_MOD_ERR}",
 )
+# covers: ACS-300j-1
 class TestValidateDependsOnAcs300j1(unittest.TestCase):
     """Unit tests for validate_depends_on (ACS-300j-1).
 

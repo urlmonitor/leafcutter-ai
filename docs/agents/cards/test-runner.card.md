@@ -1,13 +1,16 @@
 ---
 agent_id: test-runner
-title: "Agent Card: test-runner"
-description: "Picks the right test suite based on what has changed, runs it, and returns a structured failure report (file, test name, stacktrace excerpt, rerun command) instead of a raw stdout dump. Use when: user types /test; asks \"run the tests\"; asks \"did I break anything?\"; asks \"run the SQL tests\"; or any implementation agent (python-coder, sql-coder) invokes this agent for its inner-loop test cycle."
+title: 'Agent Card: test-runner'
+description: 'Picks the right test suite based on what has changed, runs it, and returns
+  a structured failure report (file, test name, stacktrace excerpt, rerun command)
+  instead of a raw stdout dump. Use when: user types /test; asks "run the tests";
+  asks "did I break anything?"; asks "run the SQL tests"; or any implementation agent
+  (python-coder, sql-coder) invokes this agent for its inner-loop test cycle.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - testing_quality
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # test-runner
 
@@ -128,6 +131,7 @@ flowchart TD
 
 ### test-runner
 
+- BO-2100e-1: An opted-in ticket driven through ticket-supervisor demonstrably spawns live-surface-tester
 - BP-006a-2: test_no_orphaned_directories passes with no unregistered skill directories
 - BP-006a-3: Edge case: new skill directory added without registry entry is detected
 - BP-006c-2: test_build_workflow_phase validates .claude/workflows/ path

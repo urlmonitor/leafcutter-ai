@@ -1,13 +1,16 @@
 ---
 agent_id: reference-author
-title: "Agent Card: reference-author"
-description: "Diataxis \"look up\" specialist. Produces lookup-oriented reference docs — API tables, schema dictionaries, configuration enums, parameter glossaries — by loading the canonical how-to before writing. Applies a genre guard and hands back to the correct specialist when the request is not \"look up\". (internal — invoked by documentation-expert only)"
+title: 'Agent Card: reference-author'
+description: Diataxis "look up" specialist. Produces lookup-oriented reference docs
+  — API tables, schema dictionaries, configuration enums, parameter glossaries — by
+  loading the canonical how-to before writing. Applies a genre guard and hands back
+  to the correct specialist when the request is not "look up". (internal — invoked
+  by documentation-expert only)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - documentation_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # reference-author
 
@@ -129,4 +132,10 @@ flowchart TD
 
 ### reference-author
 
+- BO-1900c-3: Reference doc defines the charter-vs-task-verb matching rules
+- BO-1900d-3: Reference doc specifies the allowlisted dispatch-payload contract
+- BP-1300a-3: Reference doc specifies canonical-source skill-pointer resolution for the build
+- BP-1300b-3: Reference doc states the canonical-source-resolution rule for all guardrails
+- BP-1300c-4: Reference doc lists the warn-to-fail checks and the drive-context rule
+- TKT-200e-3: Reference doc defines the premise-capture format for tickets
 - TQ-100e-2: Reference doc for the enforcement rollout stages and their controlling configuration

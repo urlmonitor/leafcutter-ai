@@ -1,13 +1,16 @@
 ---
 agent_id: architect-review
-title: "Agent Card: architect-review"
-description: "Structural impact gatekeeper for proposed changes. Receives a refined ticket from create-ticket, calls research-agent for blast-radius analysis, classifies impact as small or large using a documented rubric, and either writes an inline architectural note (Sonnet only) or escalates to an Opus sub-agent. (internal — invoked by parent agents only)"
+title: 'Agent Card: architect-review'
+description: Structural impact gatekeeper for proposed changes. Receives a refined
+  ticket from create-ticket, calls research-agent for blast-radius analysis, classifies
+  impact as small or large using a documented rubric, and either writes an inline
+  architectural note (Sonnet only) or escalates to an Opus sub-agent. (internal —
+  invoked by parent agents only)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - review_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # architect-review
 

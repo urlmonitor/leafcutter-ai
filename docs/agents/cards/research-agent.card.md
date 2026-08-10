@@ -1,13 +1,16 @@
 ---
 agent_id: research-agent
-title: "Agent Card: research-agent"
-description: "Central context-gathering hub. Accepts a structured question from a parent agent, searches the codebase or documentation using the full search toolkit, and returns curated findings: file paths with 1-3 line descriptions each, plus a synthesis paragraph. Owns Grep, Glob, jcodemunch, serena, and context7 — no other coding agent carries these tools. (internal — invoked by parent agents only)"
+title: 'Agent Card: research-agent'
+description: 'Central context-gathering hub. Accepts a structured question from a
+  parent agent, searches the codebase or documentation using the full search toolkit,
+  and returns curated findings: file paths with 1-3 line descriptions each, plus a
+  synthesis paragraph. Owns Grep, Glob, jcodemunch, serena, and context7 — no other
+  coding agent carries these tools. (internal — invoked by parent agents only)'
 type: card
 status: active
-created: 2026-07-07
-card_version: "generated"
-components:
-  - research_analysis
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # research-agent
 

@@ -1,13 +1,16 @@
 ---
 agent_id: test-failure-triage
-title: "Agent Card: test-failure-triage"
-description: "Classifies post-merge test failures into structured categories before any remediation work begins. Receives a post-merge failure list, a baseline failure list, and the set of files changed by the feature branch, then emits a triage report so downstream finalize-feature.js steps can route each failure to the correct handler without re-running LLM reasoning. (internal — spawned by finalize-feature only)"
+title: 'Agent Card: test-failure-triage'
+description: Classifies post-merge test failures into structured categories before
+  any remediation work begins. Receives a post-merge failure list, a baseline failure
+  list, and the set of files changed by the feature branch, then emits a triage report
+  so downstream finalize-feature.js steps can route each failure to the correct handler
+  without re-running LLM reasoning. (internal — spawned by finalize-feature only)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - testing_quality
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # test-failure-triage
 
@@ -111,4 +114,5 @@ flowchart TD
 
 - FIN-100c-1: Failures present in baseline are classified as pre-existing
 - FIN-100c-2: Failures absent from baseline are classified as regressions
-- FIN-100c-3: Null baseline causes all failures to be treated as regressions
+- FIN-100c-7: Failures that also fail on main HEAD are pre_existing; only failures that pass on main are regressions
+- FIN-100c-8: Only real regressions block finalization; pre_existing failures do not halt
