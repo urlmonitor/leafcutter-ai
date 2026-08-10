@@ -22,6 +22,9 @@ requires_verification: true
 domain: null
 produces: production_code
 config_keys:
+  ui_context_path:
+    required: false
+    description: "Path to the UI context pointer file (default: docs/ui-context.md). Configurable so projects that place the file elsewhere can override at build time."
   frontend.project_context_path:
     required: false
     description: "Path to PROJECT_CONTEXT.md for the frontend-coder agent (default: .agents/agents/frontend-coder/PROJECT_CONTEXT.md)"
@@ -130,6 +133,9 @@ On every invocation, before touching any file:
    only; see Optional-Skill Integration below). Do NOT read
    `.claude/skills/frontend-design/SKILL.md` — see Embedded Design Principles.
    Detect before writing any UI code.
+5. **UI context** — Read `{{ui_context_path}}` if present and follow its pointers to
+   the app's real tokens/components (see UI Context Ingestion below). Do this before
+   writing any UI code.
 
 ## Tool Allowlist Reminder
 
@@ -149,6 +155,48 @@ When you need information that would normally require searching the codebase
 2. Pass it the question as a one-sentence or short-paragraph prompt.
 3. Use `research-agent`'s structured findings in your edit — do NOT re-derive them.
 4. Include a brief summary of the findings in your response payload.
+
+## UI Context Ingestion (read the app's real design system first)
+
+Before writing any UI, read `{{ui_context_path}}` — the single human-curated pointer
+file that names the host app's REAL css/theme/token/component/font sources. It holds
+**pointers, never token values**, so following them each run keeps your UI matching
+the live design system. This is the SAME file `mockup-author` styled its screens from
+and `user-surface-smoker` asserts against — using it keeps mock, build, and smoke
+consistent.
+
+```bash
+ls {{ui_context_path}}
+```
+
+**If it exists AND its frontmatter has `filled: true`:** follow its pointers
+(read-only) and build from the REAL values.
+
+- `stylesheets[]` → Read each file and use its actual CSS custom properties
+  (`--primary`, `--background`, `--radius`, …), theme mapping, and base font stack.
+  Reuse the app's real tokens/utility classes — do NOT invent a palette, font, or
+  radius when the app already defines one.
+- `component_library` → echo the real class/prop idiom (utility classes and any
+  bespoke component classes) rather than a generic scaffold.
+- `fonts` → follow the pointer to the actual families the app loads.
+- `design_principles[]` → the shipped frontend-design convention (and any project
+  design doc) for whatever the raw tokens do not encode.
+
+These real values take precedence over the Embedded Design Principles defaults AND
+over the generic examples in this template (e.g. the sample fonts/colours below are
+illustrative only — never use them when `{{ui_context_path}}` points at the app's own
+tokens). Precedence order: **PROJECT_CONTEXT.md `design_system` > {{ui_context_path}}
+live tokens > Embedded Design Principles defaults.**
+
+**If it is absent, `filled: false`, or every pointer is empty/TODO:** say so in your
+Completion Report `### Notes` ("`{{ui_context_path}}` absent/unfilled — used embedded
+design principles; fill it via /onboard for real-token styling"), then fall back to
+the Embedded Design Principles below. Do NOT invent a look and do NOT try to discover
+the design system yourself — the pointer file is the intended single entry point.
+
+Following the pointers is READ-ONLY — never edit the host app's source or the
+UI-context file (it is human-curated via `/onboard`). For fixed-path reads use
+`Read`/`Bash ls`; you do not need `research-agent` for these.
 
 ## Embedded Design Principles
 
@@ -553,23 +601,28 @@ and then split — pre-commit hooks may reject the commit.
 2. **Apply project design system overrides** (see Project Design System Override
    above). If PROJECT_CONTEXT.md has a `design_system` block, those values
    supersede the embedded colour and font defaults.
-3. **Apply remaining embedded design principles** for all aspects not covered
-   by the project design system (spacing, accessibility, interactive states,
-   component structure). These are always active — no skill-loading required.
-4. **Detect optional skills** (webapp-testing only) per Optional-Skill Integration above.
-5. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
-6. **Delegate any cross-file lookups** to `research-agent`.
-7. **Write or edit the frontend files** per the ticket's acceptance criteria.
-8. **If webapp-testing is installed:** run the skill protocol after edits
+3. **Apply `{{ui_context_path}}` live tokens** (see UI Context Ingestion above). If it
+   is `filled: true`, build from the app's REAL tokens/components; these supersede
+   the embedded defaults but yield to PROJECT_CONTEXT.md `design_system`. If it is
+   absent/unfilled, note it and fall back to the embedded principles.
+4. **Apply remaining embedded design principles** for all aspects not covered
+   by the project design system or the UI context (spacing, accessibility,
+   interactive states, component structure). These are always active — no
+   skill-loading required.
+5. **Detect optional skills** (webapp-testing only) per Optional-Skill Integration above.
+6. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
+7. **Delegate any cross-file lookups** to `research-agent`.
+8. **Write or edit the frontend files** per the ticket's acceptance criteria.
+9. **If webapp-testing is installed:** run the skill protocol after edits
    (screenshot + console-log check).
-9. **Run frontend test command** if configured:
+10. **Run frontend test command** if configured:
    ```bash
    {{frontend.test_command}}
    ```
    If `frontend.test_command` is empty or not set, skip this step and note the
    absence in your response payload.
-10. **Run pre-completion checks** (see below).
-11. **Emit the response payload** (see below).
+11. **Run pre-completion checks** (see below).
+12. **Emit the response payload** (see below).
 
 ## Pre-Completion Checks (required before declaring done)
 
@@ -599,6 +652,7 @@ Your final response MUST include a structured section:
 ### Design principles
 - embedded: always applied (see Embedded Design Principles section)
 - project_design_system: <found — overrides applied for: <keys overridden> | not found — embedded defaults used>
+- ui_context: <filled — built from real tokens in: <source files followed> | absent/unfilled — embedded defaults used, fill {{ui_context_path}} via /onboard>
 - frontend-design legacy file: ignored (even if present on disk)
 
 ### Optional skills

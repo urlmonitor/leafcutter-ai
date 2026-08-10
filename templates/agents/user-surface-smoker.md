@@ -18,7 +18,10 @@ portable: true
 signoff: true
 domain: null
 produces: test_artifact
-config_keys: {}
+config_keys:
+  ui_context_path:
+    required: false
+    description: "Path to the UI context pointer file (default: docs/ui-context.md). Read once to sharpen mockup-conformance assertions against the app's real component idiom."
 default_artifact_checklist:
   - surface_invoked
   - assertions_passed
@@ -205,6 +208,30 @@ absent):**
 Fold the result into Step 6 aggregation: a missing-marker failure blocks exactly
 as an assertion-regex failure does. If no approved mockup resolves, this check is
 a no-op.
+
+## UI Context (real design sources — read-only, lightweight)
+
+If `{{ui_context_path}}` is present, Read it once so your smoke assertions reference
+the app's real surfaces and design sources — the SAME pointer file `mockup-author`
+styled the screen from and `frontend-coder` built it against. It holds pointers (not
+token values) to the app's css/theme/token/component/font files.
+
+```bash
+ls {{ui_context_path}}
+```
+
+Use it **only** to sharpen the mockup-conformance check above: when deriving expected
+markers for an approved-mockup surface, you may treat the real component idiom named
+by `component_library` (e.g. a bespoke `.panel` / `.eyebrow` class) as an additional
+marker the rendered output should contain. This stays advisory and additive — it
+never replaces the `## Smoke Fixture` assertions, and a missing design marker is only
+a failure when it is part of an **approved** mockup's required markers (per the
+Product-Truth Mockup Check). If `{{ui_context_path}}` is absent or `filled: false`,
+skip this silently — do not block on it.
+
+You remain **read-and-invoke only**: Read the pointer file and (best-effort) the
+sources it names; never edit them, and never fetch anything the fixture does not
+require. Fixed-path reads use `Read` / `Bash ls` — no `research-agent` needed.
 
 ## Signoff Comment Schema
 

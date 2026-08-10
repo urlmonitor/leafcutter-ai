@@ -61,7 +61,14 @@ STRIPPED_HEADING_PREFIXES = (
     "## Post-edit verification",
 )
 
-_PLACEHOLDER_RE = re.compile(r"\{\{config\.([a-zA-Z0-9_]+)\}\}")
+# Matches {{config.simple_key}} (existing style) and {{dotted.key}} / {{simple_key}}
+# (dot-notation style used by frontend.project_context_path, ui_context_path, etc.).
+# For {{config.key}}, the optional (?:config\.)? prefix is consumed and group 1 captures
+# only the key name (e.g. "output_root").  For {{dotted.key}} the full dotted name is
+# captured as group 1 (e.g. "frontend.project_context_path") so that config.get() finds
+# the matching entry in the flattened config dict produced by config_loader._flatten_nested_keys.
+# Unknown keys are left as-is (graceful degradation).
+_PLACEHOLDER_RE = re.compile(r"\{\{(?:config\.)?([a-zA-Z0-9_.]+)\}\}")
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATES_DIR = _PACKAGE_ROOT / "templates"

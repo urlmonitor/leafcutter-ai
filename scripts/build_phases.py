@@ -1466,6 +1466,43 @@ def build_components_registry(target_root: Path, config: dict[str, Any],
     return 0
 
 
+def build_ui_context(target_root: Path, config: dict[str, Any],
+                     dry_run: bool, force: bool) -> int:
+    """Materialise the UI-context pointer file from the template — write-if-absent only.
+
+    This phase intentionally ignores the ``force`` flag.  The UI-context file is a
+    human-curated living document (filled via ``/onboard``); once it exists it must
+    never be clobbered by a build run.  The destination path is read from the
+    ``ui_context_path`` config key (default ``docs/ui-context.md``).
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary used for placeholder injection.
+        dry_run: When True, logs intent but writes nothing.
+        force: Ignored — this phase always uses write-if-absent semantics.
+
+    Returns:
+        1 if the file was (or would be in dry-run mode) written; 0 if skipped.
+    """
+    template_path = TEMPLATES_DIR / "docs" / "ui-context.template.md"
+    if not template_path.exists():
+        return 0
+    ui_context_rel = config.get("ui_context_path", "docs/ui-context.md")
+    target_path = target_root / ui_context_rel
+    if target_path.exists():
+        print(f"  ui-context: {ui_context_rel} exists (skipped)")
+        return 0
+    content = inject_config(template_path.read_text(encoding="utf-8"), config)
+    # Always force=False — write-if-absent is the non-negotiable contract for this phase.
+    if _write(target_path, content, dry_run, force=False):
+        print(
+            f"  ui-context: created {ui_context_rel} from template "
+            "(set filled: true after curating the pointer fields — see /onboard Step 5c)"
+        )
+        return 1
+    return 0
+
+
 def build_feedback(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy feedback scripts and config to ``<target_root>/scripts/feedback/`` and ``<target_root>/config/``.

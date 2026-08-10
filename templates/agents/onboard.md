@@ -75,6 +75,7 @@ silently on failure — halt and surface the error.
 4.  Read discovery whitelist (README.md, pyproject.toml, etc.)           [ ]
 5.  Fan out onboard-config-section sub-agents (parallel, Haiku tier)     [ ]
 5b. Frontend optional skills: webapp-testing                             [ ]
+5c. UI Context: discover design sources; scaffold {{ui_context_path}}     [ ]
 6.  Collect sub-agent config fragments; merge into proposed config       [ ]
 7.  Present diff — ask for sign-off                                      [ ]
 8.  On approval: write .claude/skills_config.json                        [ ]
@@ -294,6 +295,101 @@ The detection heuristic is a simple environment-variable check: `[ -n "$ANTIGRAV
 Adopters who use a different mechanism can override this by pre-setting `ANTIGRAVITY=1`
 in their shell or `.env` before invoking `/onboard`. Setting `ANTIGRAVITY=""` (empty
 string) is treated the same as not set — the check looks for non-empty value.
+
+## Step 5c — UI Context (design-system pointer file)
+
+Scaffold `{{ui_context_path}}` — the single human-curated pointer file that
+`mockup-author`, `frontend-coder`, and `user-surface-smoker` follow to the host
+app's REAL css/theme/token/component/font sources. The file holds **pointers, never
+token values**, so mockups and built UI always render from the live design system
+instead of an invented look. See the filled example that ships with the package at
+`docs/ui-context.md` in the leafcutter-ai repo (the Atlas dogfood), and the scaffold
+at `leafcutter/templates/docs/ui-context.template.md`.
+
+**Idempotency / re-onboard:** First check whether the file already exists.
+
+```bash
+ls {{ui_context_path}}
+```
+
+If it exists, do NOT overwrite it. Ask:
+
+> "`{{ui_context_path}}` already exists. Review and update its pointers against the
+> current tree? (review / skip)"
+
+On `skip`: proceed to Step 6. On `review`: Read the file, re-run the discovery
+below, and offer the user any newly-found sources to add — apply changes with
+`Edit` (never a wholesale `Write` that would clobber their curated prose).
+
+If the file does NOT exist, scaffold it (sub-steps i–iv).
+
+### i. Discover candidate design sources
+
+Run these as **separate single-command** Bash calls (per the shell convention —
+no chaining, absolute or repo-relative paths, stderr → `/tmp/`). Each is
+best-effort; a non-zero exit just means "no hit".
+
+```bash
+find . -maxdepth 4 -type f \( -name globals.css -o -name app.css -o -name theme.css -o -name styles.css \) -not -path '*/node_modules/*' 2>/tmp/uic_css.txt
+```
+```bash
+find . -maxdepth 4 -type d \( -name styles -o -name components -o -name ui \) -not -path '*/node_modules/*' 2>/tmp/uic_dirs.txt
+```
+```bash
+find . -maxdepth 4 -type f \( -name 'tokens.json' -o -name '*.tokens.*' -o -name '_variables.scss' \) -not -path '*/node_modules/*' 2>/tmp/uic_tokens.txt
+```
+```bash
+find . -maxdepth 4 -type f \( -name 'tailwind.config.*' -o -name 'uno.config.*' \) -not -path '*/node_modules/*' 2>/tmp/uic_tw.txt
+```
+```bash
+find . -maxdepth 4 -type f -name 'layout.tsx' -not -path '*/node_modules/*' 2>/tmp/uic_layout.txt
+```
+
+Collect the hits. Infer `stack.css` from what was found (a `tailwind.config.*`
+→ `tailwind`; a `*.scss` → `scss`; only a plain `globals.css`/`theme.css` →
+`plain-css`) and `stack.framework` from the folder shape (a `layout.tsx` under
+`app/` → `next`; a `src/App.vue` → `vue`; etc.). Leave a field as `TODO` when the
+discovery is ambiguous — do not guess a value you cannot see.
+
+### ii. Scaffold from the template with hits pre-filled
+
+Copy the scaffold, then pre-fill the discovered hits as pointers (leaving
+`filled: false` so nothing styles from an unconfirmed file):
+
+```bash
+cp leafcutter/templates/docs/ui-context.template.md {{ui_context_path}}
+```
+
+Use `Edit` to replace the `TODO` markers in the frontmatter with the discovered
+paths: `stylesheets:` (token SSOT first, then any tailwind/uno config),
+`component_library:` (the `components/` or `ui/` dir/kit file), `fonts:` (the
+`layout.tsx` or the stylesheet's `@font-face`/`@import` block), and the inferred
+`stack:` values. Keep `filled: false` and the shipped frontend-design convention
+entry under `design_principles`. Do NOT paste any token values — pointers only.
+
+### iii. Confirm / correct with the user
+
+Show the pre-filled frontmatter and ask:
+
+> "I scaffolded `{{ui_context_path}}` with the design sources I found. Please confirm
+> or correct: (1) the stylesheet/token files, (2) the component library dir,
+> (3) where fonts are loaded, and (4) any brand or design-principle docs to add.
+> Reply with corrections, or 'looks good' to accept."
+
+Apply the user's corrections with `Edit`. Add any brand/principle docs they name
+under `design_principles` / `brand_links`, and the real font source under `fonts`.
+
+### iv. Flip filled:true and record
+
+Once the user confirms every pointer resolves, set `filled: true` in the
+frontmatter (via `Edit`) and print:
+
+> "`{{ui_context_path}}` filled — mockup-author, frontend-coder, and user-surface-smoker
+> will now render/build against your real design system."
+
+If the user cannot confirm the pointers now, leave `filled: false` and add
+"Fill `{{ui_context_path}}` pointers, then set filled: true" to the post-onboard
+checklist (Step 15). Do not guess values to make it "filled".
 
 ## Step 6 — Merge Config Fragments
 
