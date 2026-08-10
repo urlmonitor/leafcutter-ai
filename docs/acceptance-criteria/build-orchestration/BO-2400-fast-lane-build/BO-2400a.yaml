@@ -1,0 +1,42 @@
+id: BO-2400a
+components:
+  - build_orchestration
+  - testing_quality
+title: "A streamlined build path for small, hands-on changes"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One tight loop: write the tests for the batch, then make them pass.
+
+  For a cohesive batch of requirements you get a single, low-overhead build loop
+  that first writes failing tests for the whole batch, then makes them pass —
+  without the layered coordination, repeated cold starts, and split-up steps that
+  the heavy path uses for large unattended runs.
+depends_on: [BO-2400]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400a-1
+  - BO-2400a-2
+  - BO-2400a-3
+  - BO-2400a-4
+  - BO-2400a-5
+  - BO-2400a-6
+  - BO-2400a-7
+  - BO-2400a-8
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram, component-diagram]
+change_target: pipeline
+risk_surface: internal
+child_limit_override: 9  # 5 behavior L2s + 3 doc ACs (how-to/sequence/component); waiver pending a tree-split review (see PR description)

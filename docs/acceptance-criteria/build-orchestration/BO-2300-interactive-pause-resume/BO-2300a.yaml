@@ -1,0 +1,31 @@
+id: BO-2300a
+components:
+  - build_orchestration
+title: "A run waits at a decision point instead of cancelling"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Decision points become pauses, not dead ends.
+
+  When a background or autonomous run reaches a point that needs your input, it
+  pauses and holds its place rather than cancelling and throwing away the work
+  it has done so far.
+depends_on: [BO-2300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-2300a-1, BO-2300a-2, BO-2300a-3]
+implemented_by: []
+documentation_triggers: [state-diagram, sequence-diagram]
+change_target: pipeline
+risk_surface: internal

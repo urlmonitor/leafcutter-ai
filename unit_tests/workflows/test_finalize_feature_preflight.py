@@ -5,12 +5,18 @@ GOAL: Verify that both the Step 0 baseline dispatch prompt and the Step 3
     install_shims instruction, so the two test runs share identical deploy
     state and cannot drift apart (FIN-100a-4).
 
+    Also verifies (FIN-100g-2, FIN-100g-2-i) that the pre-flight argument
+    normalization accepts the target as a bare string OR as an object carrying
+    a `target` / `target_branch` key, and that an empty/missing key routes to
+    CWD-based detection rather than producing an empty-target collapse.
+
     The tests parse finalize-feature.js as text so they guard the actual prompt
     content reaching the agent, mirroring the pattern in
     test_finalize_feature_step6a.py.
 
-TICKET: TICKET-20260707-FinalizeFeaturePreflightAndBuildSymmetry.md
-ACs: FIN-100a-4
+TICKET: TICKET-20260707-FinalizeFeaturePreflightAndBuildSymmetry.md (FIN-100a-4)
+        TICKET-20260721-FIN-100g-2.md (FIN-100g-2, FIN-100g-2-i)
+ACs: FIN-100a-4, FIN-100g-2, FIN-100g-2-i
 
 DECISION HISTORY
 ----------------
@@ -24,6 +30,10 @@ DECISION HISTORY
             branch's now-discarded args.target_branch approach) was removed to
             avoid a competing-solution collision; this ticket delivers only the
             build/deploy-symmetry change.
+2026-07-21: Added FIN-100g-2 and FIN-100g-2-i test classes. FIN-100g-2 covers
+            the argument normalization (bare string AND object {target}/
+            {target_branch} forms). FIN-100g-2-i covers the empty/missing-key
+            fallback to CWD-based detection (TICKET-20260721-FIN-100g-2.md).
 """
 
 from __future__ import annotations
@@ -170,4 +180,469 @@ class TestBaselineAndPostMergeBuildSymmetry:
             "test-suite run instruction in Step 3's dispatch prompt so shims are "
             "deployed before the suite runs. Current Step 3 order: build at char "
             f"offset {build_idx}, test-suite run at char offset {run_idx}."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Shared helper for the FIN-100g-2 / FIN-100g-2-i test classes
+# ---------------------------------------------------------------------------
+
+def _get_preflight_block(js: str) -> str:
+    """Extract the Pre-flight argument-normalization block.
+
+    Returns text from phase('Pre-flight') up to (but not including)
+    phase('Pre-flight 2'). This is the segment that contains the epicArg
+    normalization code which FIN-100g-2 and FIN-100g-2-i require to handle
+    both bare strings and object {target}/{target_branch} arguments.
+    """
+    return _get_step_block(js, "Pre-flight", "Pre-flight 2")
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-2: pre-flight must accept bare string AND object {target}/{target_branch}
+# ---------------------------------------------------------------------------
+
+class TestPreflightArgNormalizationFIN100g2:
+    """FIN-100g-2: pre-flight normalizes its argument from a bare string OR an
+    object carrying a `target` / `target_branch` key, yielding the identical
+    resolved target for the worktree-resolution step (FIN-100g-1).
+
+    The current (broken) implementation at line 338 of finalize-feature.js:
+        const epicArg = (typeof args === 'string' ? args.trim() : '');
+    silently collapses any object argument to empty string, so
+    {target: 'ge-116a-1'} routes to CWD detection instead of the intended
+    worktree. All tests in this class are RED against the current code because
+    the normalization block never references args.target or args.target_branch.
+    """
+
+    def test_ac_fin100g2_preflight_accepts_bare_string_target(self):
+        # covers: FIN-100g-2
+        """FIN-100g-2: bare string argument is resolved to the same target as object forms.
+
+        The normalization block must handle BOTH the bare-string case and the object
+        case. A normalizer that only handles strings (the current code) fails AC
+        FIN-100g-2 even for the string path, because the spec requires the same
+        resolved-target contract to hold across all three invocation forms.
+
+        This test asserts that the pre-flight block contains object-form extraction
+        code (args.target or args.target_branch) alongside the existing string check,
+        confirming the normalization is complete and covers the bare-string case as
+        one of the documented input forms.
+
+        Must be implemented to make green:
+          Extend the epicArg normalization to extract args.target / args.target_branch
+          from object args so that both string and object forms yield the same result.
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        has_string_check = (
+            "typeof args === 'string'" in preflight
+            or 'typeof args === "string"' in preflight
+        )
+        has_object_extraction = (
+            "args.target" in preflight
+            or "args.target_branch" in preflight
+        )
+
+        assert has_string_check, (
+            "Pre-flight must retain the typeof-string check for bare-string args."
+        )
+        assert has_object_extraction, (
+            "Pre-flight must ALSO extract the target from object args "
+            "(args.target / args.target_branch). "
+            "Current code only has the typeof-string check; object args collapse to empty. "
+            "FIN-100g-2 requires BOTH string and object forms to resolve identically."
+        )
+
+    def test_ac_fin100g2_preflight_accepts_object_target_key(self):
+        # covers: FIN-100g-2
+        """FIN-100g-2: {target: 'ge-116a-1'} resolves to 'ge-116a-1'.
+
+        The pre-flight normalization must explicitly read args.target when args is
+        an object. The current code (typeof args === 'string' ? args.trim() : '')
+        never checks args.target, so the {target: ...} form silently collapses to
+        empty string and routes to CWD detection instead of the named branch.
+
+        Must be implemented to make green:
+          The epicArg normalization must contain args.target (e.g. extracting it
+          as: const epicArg = typeof args === 'string' ? args.trim()
+                              : (args && (args.target || args.target_branch) || '').trim())
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        assert "args.target" in preflight, (
+            "Pre-flight normalization must reference args.target to handle "
+            "{target: 'ge-116a-1'} invocations. "
+            "Current code: `typeof args === 'string' ? args.trim() : ''` "
+            "never reads args.target, collapsing the object form to empty string. "
+            "FIN-100g-2 requires {target: 'ge-116a-1'} to resolve to 'ge-116a-1'."
+        )
+
+    def test_ac_fin100g2_preflight_accepts_object_target_branch_key(self):
+        # covers: FIN-100g-2
+        """FIN-100g-2: {target_branch: 'ge-116a-1'} resolves to 'ge-116a-1'.
+
+        The pre-flight normalization must explicitly read args.target_branch when
+        args is an object carrying that key. The current code never checks
+        args.target_branch, so this form also silently collapses to empty string.
+
+        Must be implemented to make green:
+          The epicArg normalization must contain args.target_branch (in addition to
+          args.target) so that both {target: ...} and {target_branch: ...} forms
+          resolve to the same target string.
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        assert "args.target_branch" in preflight, (
+            "Pre-flight normalization must reference args.target_branch to handle "
+            "{target_branch: 'ge-116a-1'} invocations. "
+            "Current code: `typeof args === 'string' ? args.trim() : ''` "
+            "never reads args.target_branch, collapsing the object form to empty string. "
+            "FIN-100g-2 requires {target_branch: 'ge-116a-1'} to resolve identically "
+            "to the bare-string and {target: ...} forms."
+        )
+
+    def test_ac_fin100g2_preflight_object_form_does_not_collapse_to_empty(self):
+        # covers: FIN-100g-2
+        """FIN-100g-2: object form does NOT collapse to an empty target.
+
+        The original (broken) code:
+            const epicArg = (typeof args === 'string' ? args.trim() : '');
+        produces '' for ANY non-string argument, including {target: 'ge-116a-1'}.
+        This test asserts that this pattern is NOT the sole normalization present —
+        explicit object-key extraction (args.target / args.target_branch) must also
+        be present so that the object form carries through its target value.
+
+        Must be implemented to make green:
+          Replace the single-line collapse with a normalization that extracts
+          args.target / args.target_branch when args is an object, ensuring a
+          non-empty target is NOT reduced to empty string.
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        # The collapse pattern: typeof args === 'string' ? args.trim() : ''
+        # with no additional object-key extraction is the broken state.
+        collapse_pattern_present = (
+            "typeof args === 'string' ? args.trim() : ''" in preflight
+            or "typeof args === 'string' ? args.trim() : \"\"" in preflight
+        )
+        object_extraction_present = (
+            "args.target" in preflight
+            or "args.target_branch" in preflight
+        )
+
+        assert not (collapse_pattern_present and not object_extraction_present), (
+            "Pre-flight uses `typeof args === 'string' ? args.trim() : ''` as the "
+            "SOLE normalization, which collapses {target: 'ge-116a-1'} to empty string. "
+            "FIN-100g-2 requires object-key extraction (args.target / args.target_branch) "
+            "to be present alongside the string check so that the object form does NOT "
+            "collapse to an empty target."
+        )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-2-i: empty/missing-key object falls back to CWD detection
+# ---------------------------------------------------------------------------
+
+class TestPreflightArgNormalizationFIN100g2i:
+    """FIN-100g-2-i: when the object argument has no target/target_branch key
+    (e.g. {}) or carries an empty value (e.g. {target: ''}), the pre-flight
+    treats the invocation as 'no explicit target supplied' and routes to the
+    existing CWD-based branch/worktree detection (FIN-100g-1).
+
+    It must NOT abort with 'must be run from a feature branch, not main' solely
+    because the object argument could not be reduced to a non-empty string.
+
+    All tests are RED against the current code because explicit object extraction
+    (args.target / args.target_branch) is absent — the accidental CWD fallback
+    via the collapse-to-empty pattern does not satisfy the AC requirement for
+    intentional, documented fallback logic.
+    """
+
+    def test_ac_fin100g2i_empty_object_falls_back_to_cwd_detection(self):
+        # covers: FIN-100g-2-i
+        """FIN-100g-2-i: {} is treated as 'no target supplied' → CWD detection.
+
+        When args is {} (empty object with no target/target_branch key), the
+        pre-flight must treat this as 'no explicit target supplied' and fall back
+        to the CWD-based detection path (FIN-100g-1), NOT produce an empty-target
+        collapse that bypasses the resolution step in an undocumented way.
+
+        The current code achieves the CWD fallback accidentally (via '' being falsy)
+        but does not explicitly handle the case. This test asserts that explicit
+        object extraction (args.target / args.target_branch) is present so the
+        fallback is intentional.
+
+        Must be implemented to make green:
+          Extend the normalization to check (args.target || args.target_branch || '')
+          for object args; the resulting '' for {} triggers the documented CWD
+          fallback path.
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        # Explicit object extraction must be present.
+        has_object_extraction = (
+            "args.target" in preflight
+            or "args.target_branch" in preflight
+        )
+
+        assert has_object_extraction, (
+            "Pre-flight must explicitly extract args.target / args.target_branch "
+            "from object args so that {} is intentionally recognized as 'no target "
+            "supplied' and routes to CWD-based detection. "
+            "The current accidental fallback (via collapse-to-empty '') does not "
+            "satisfy FIN-100g-2-i's requirement for intentional/documented handling."
+        )
+
+    def test_ac_fin100g2i_object_empty_target_string_falls_back_to_cwd(self):
+        # covers: FIN-100g-2-i
+        """FIN-100g-2-i: {target: ''} is treated as 'no target supplied' → CWD detection.
+
+        When args is {target: ''} (object with an empty-string target value), the
+        pre-flight must also treat this as 'no explicit target supplied'. This requires
+        the normalization to trim the extracted value and check for emptiness, rather
+        than merely reading args.target and using it verbatim.
+
+        This test asserts that the normalization contains both object-key extraction
+        AND a trim/empty-check so that {target: ''} routes to CWD detection the
+        same way {} does.
+
+        Must be implemented to make green:
+          The normalization must apply .trim() to the extracted value and treat an
+          empty-trimmed result as 'no target supplied' (same CWD fallback as {}).
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        # Must have explicit object extraction…
+        has_object_extraction = (
+            "args.target" in preflight
+            or "args.target_branch" in preflight
+        )
+        # …and must apply trim() to handle whitespace/empty values.
+        has_trim_on_extraction = ".trim()" in preflight
+
+        assert has_object_extraction, (
+            "Pre-flight must explicitly extract args.target / args.target_branch "
+            "from object args to handle the {target: ''} empty-value case. "
+            "Current code has no object extraction — FIN-100g-2-i is unsatisfied."
+        )
+        assert has_trim_on_extraction, (
+            "Pre-flight normalization must call .trim() on the extracted target value "
+            "so that {target: ''} (or {target: '  '}) produces an empty string that "
+            "routes to CWD detection rather than a non-empty whitespace target."
+        )
+
+    def test_ac_fin100g2i_missing_target_key_does_not_trigger_main_abort(self):
+        # covers: FIN-100g-2-i
+        """FIN-100g-2-i: the main-branch abort does NOT fire solely because the object
+        arg had no resolvable target key.
+
+        The 'must be run from a feature branch, not main' abort must be based on the
+        RESOLVED BRANCH (from the pre-flight agent call), not on epicArg alone. An
+        empty epicArg from {} or {target: ''} must trigger the CWD-detection path,
+        which then returns the actual branch. Only if THAT branch is main/master does
+        the abort fire — not as a direct consequence of the object failing to normalize.
+
+        This test asserts:
+        (a) the abort check is on BRANCH (not epicArg) — already correct in current code.
+        (b) explicit object extraction is present so the empty-epicArg path is reached
+            intentionally (not via accidental collapse) for the no-key object case.
+
+        Must be implemented to make green:
+          Implement explicit object-key extraction in the normalization so (b) is met.
+          The abort check (a) must remain on BRANCH, unchanged from the current code.
+        """
+        preflight = _get_preflight_block(_js_text())
+
+        # (a) The abort condition must reference BRANCH, not epicArg directly.
+        # This ensures the abort fires on the resolved branch, not the raw arg.
+        abort_on_branch = (
+            'BRANCH === "main"' in preflight
+            or "BRANCH === 'main'" in preflight
+            or "BRANCH === \"master\"" in preflight
+            or "BRANCH === 'master'" in preflight
+        )
+        # (b) Explicit object extraction must be present (the missing piece in current code).
+        has_object_extraction = (
+            "args.target" in preflight
+            or "args.target_branch" in preflight
+        )
+
+        assert abort_on_branch, (
+            "Pre-flight main-branch abort must check the resolved BRANCH variable, "
+            "not the raw epicArg. This ensures the abort fires on the actual branch "
+            "returned by CWD detection, not on an empty epicArg from a missing-key object."
+        )
+        assert has_object_extraction, (
+            "Pre-flight must have explicit object-key extraction (args.target / "
+            "args.target_branch) so that the no-key object case reaches the CWD-detection "
+            "fallback intentionally. "
+            "FIN-100g-2-i requires the fallback to be the documented path, not an "
+            "accidental side-effect of the collapse-to-empty pattern."
+        )
+
+    def test_ac_fin100g2i_non_string_target_does_not_reach_trim(self):
+        # covers: FIN-100g-2-i
+        """A truthy non-string target (e.g. {target: 5}) must NOT reach .trim()
+        (which would raise a TypeError); it falls back to the empty/CWD path.
+
+        Regression guard for M-1: the normalization must NOT call .trim() directly on
+        the raw object extraction `(args.target || args.target_branch) || ''`, because a
+        non-string extracted value would crash. The trim must be guarded behind a
+        typeof-string check on the extracted candidate.
+        """
+        preflight = _get_preflight_block(_js_text())
+        trims_raw_extraction = (
+            "args.target_branch) || '').trim()" in preflight
+            or 'args.target_branch) || "").trim()' in preflight
+        )
+        assert not trims_raw_extraction, (
+            "Normalization calls .trim() directly on the object extraction "
+            "(args.target || args.target_branch); a truthy non-string target would raise "
+            "a TypeError. Guard the trim behind a typeof-string check so a non-string "
+            "target falls back to CWD detection (FIN-100g-2-i / M-1)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-3: unresolvable target -> single actionable error naming the target,
+# the expected argument forms, and the candidate worktrees.
+# ---------------------------------------------------------------------------
+
+class TestUnresolvableTargetErrorFIN100g3:
+    """FIN-100g-3: when a supplied target resolves to no registered worktree, the
+    pre-flight emits ONE actionable error naming (a) the target, (b) the expected
+    argument forms, and (c) the candidate worktrees + branches — more specific than
+    the generic FIN-100g-1 branch-named error.
+    """
+
+    def test_unresolvable_target_error_names_target(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        assert "No worktree found matching target '${epicArg}'" in preflight, (
+            "The no-matching-worktree error must name the unresolved target "
+            "(interpolate ${epicArg})."
+        )
+
+    def test_unresolvable_target_error_lists_expected_forms(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        assert "bare branch-name string" in preflight, (
+            "The unresolved-target error must name the bare-string argument form."
+        )
+        assert "target/target_branch key" in preflight, (
+            "The unresolved-target error must name the object {target/target_branch} form."
+        )
+
+    def test_unresolvable_target_error_lists_candidate_worktrees(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        assert "git worktree list --porcelain" in preflight, (
+            "The unresolved-target error must source candidates from "
+            "`git worktree list --porcelain`."
+        )
+        assert "andidate worktree" in preflight, (
+            "The unresolved-target error must list the candidate worktrees "
+            "(and their checked-out branches)."
+        )
+
+    def test_unresolvable_target_error_distinct_from_generic(self):
+        # covers: FIN-100g-3
+        preflight = _get_preflight_block(_js_text())
+        # Distinct from the generic FIN-100g-1 error: the FIN-100g-3 message adds
+        # BOTH the expected-forms guidance AND the candidate list.
+        assert "target/target_branch key" in preflight and "andidate worktree" in preflight, (
+            "The unresolved-target error must be more specific than the generic "
+            "branch-named error — it must add expected-forms guidance and a candidate list."
+        )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-4: deploy-parity self-check runs between Step 3 and FIN-100c triage;
+# a missing deployed artifact triggers a re-deploy and is classified as
+# build-state, never a regression. FIN-100g-4-i: exclusion is data-driven.
+# ---------------------------------------------------------------------------
+
+class TestDeployParitySelfCheckFIN100g4:
+    """FIN-100g-4: before triaging post-merge failures, the workflow verifies the
+    deployed layer is consistent (incl. gitignored deployed copies), re-deploys on
+    a miss, and classifies deploy-skew as build-state — never a regression.
+    """
+
+    def test_deploy_parity_check_runs_before_triage(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        dp = js.find('label: "step-3-deploy-parity"')
+        triage = js.find('label: "step-3-triage"')
+        assert dp != -1, "The deploy-parity self-check (label step-3-deploy-parity) must exist."
+        assert triage != -1, "The triage dispatch (label step-3-triage) must exist."
+        assert dp < triage, (
+            "The deploy-parity self-check must run BEFORE the FIN-100c triage dispatch."
+        )
+
+    def test_missing_deployed_artifact_triggers_redeploy(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        assert 'scripts/build.py" --target-dir' in js, (
+            "On a missing deployed artifact the self-check must re-run the deterministic "
+            "deploy (build.py --target-dir <WORKTREE_ROOT>)."
+        )
+        assert "gitignored" in js and "non-git-tracked" in js, (
+            "The self-check must verify gitignored, non-git-tracked deployed copies "
+            "(e.g. scripts/commit_guardian/*), not just git-tracked files."
+        )
+
+    def test_triage_runs_only_after_deploy_verified_consistent(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        # The self-check filters build-state failures out of postMergeFailures BEFORE
+        # the triage branch consumes them, so triage only ever sees a consistent layer.
+        assert "build_state_only_failures" in js, (
+            "The self-check must produce a build_state_only_failures set."
+        )
+        assert "postMergeFailures = postMergeFailures.filter" in js, (
+            "Build-state failures must be filtered out of the set handed to triage."
+        )
+
+    def test_deploy_inconsistency_reported_as_build_state_not_regression(self):
+        # covers: FIN-100g-4
+        js = _js_text()
+        assert "build-state, not regressions" in js, (
+            "A build/deploy inconsistency must be reported as a build-state condition, "
+            "never classified as a test regression."
+        )
+
+    def test_build_state_exclusion_is_data_driven_not_name_based(self):
+        # covers: FIN-100g-4-i
+        js = _js_text()
+        assert "data-driven" in js and "hard-coded name" in js, (
+            "FIN-100g-4-i: the build-state exclusion must be data-driven "
+            "(passes-after-verified-redeploy), never keyed on a hard-coded test/helper name."
+        )
+
+
+class TestUnresolvableTargetAbortOrderingFIN100g3i:
+    """FIN-100g-3-i: a supplied-but-unresolvable target must hit the found:false
+    unresolved-target error, NOT the misleading main-branch abort. The two early
+    returns both short-circuit before Step 0, so the guarantee is an ORDERING one:
+    the found:false return must precede the '!BRANCH || main/master' abort in the
+    workflow body (otherwise a supplied target that resolves to branch:null →
+    BRANCH="" would fire the '!BRANCH' main-abort first).
+    """
+
+    def test_found_false_return_precedes_main_branch_abort(self):
+        # covers: FIN-100g-3-i
+        js = _js_text()
+        found_false_idx = js.find("if (preflightInfo.found === false)")
+        # Anchor on the actual abort CONDITION, not the message text (which also
+        # appears in an earlier explanatory comment).
+        main_abort_idx = js.find('if (!BRANCH || BRANCH === "main"')
+        assert found_false_idx != -1, "found:false early-return must exist in the workflow body."
+        assert main_abort_idx != -1, "main-branch abort condition must exist in the workflow body."
+        assert found_false_idx < main_abort_idx, (
+            "The found:false unresolved-target return must come BEFORE the main-branch "
+            "abort (FIN-100g-3-i). If the abort is reordered above it, a supplied-but-"
+            "unresolvable target (branch:null → BRANCH='') would fire the misleading "
+            "'must be run from a feature branch' abort instead of the actionable "
+            "unresolved-target error."
         )

@@ -1,0 +1,71 @@
+id: GE-117a-1
+readiness: draft
+priority: medium
+title: "A changed module docstring naming a registered component satisfies the module-component declaration"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a.yaml"
+criteria: |
+  Given a source file is new or changed in the staged commit
+  And its module-level docstring names a component that resolves to a registered
+    component id in the component registry
+  When the declaration check evaluates the module docstring
+  Then the check produces a satisfied verdict for that file's module-component
+    declaration
+
+  Given a source file is new or changed in the staged commit
+  And its module-level docstring exists but names no component at all
+  When the declaration check evaluates the module docstring
+  Then the check produces a missing-declaration verdict for that file naming the
+    module-component declaration as the missing requirement
+
+  Given a source file is unchanged in the staged commit
+  And its module-level docstring names no component
+  When the declaration check evaluates the staged diff
+  Then the check produces no verdict for that unchanged file
+depends_on:
+  - GE-117a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/components.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement the module-component surface in a NEW hook check_declaration_traceability.py under scripts/commit_guardian/ (deployed) with canonical source in templates/commit-guardian/; register it in commit_guardian.json (a new config section + one hooks_manifest entry with tier: judgment) and add its row to the hook documentation index."
+  - "Parse the module-level docstring in-process with the Python stdlib ast module (ast.get_docstring on the parsed module) over the STAGED blob only; a commit hook has no MCP/jcodemunch channel."
+  - "A declared component name is VALID only if it resolves to a registered component id in docs/components.json (the code-component registry, e.g. 'commit_guardian'); reuse the same components.json loader that check_components_integrity.py uses rather than re-reading the file ad hoc. Do NOT resolve against docs/acceptance-criteria/index.yaml (that is the AC-store component index, a different id namespace)."
+  - "Emit the per-file verdict with the exact stable shape {file, surface: 'module-component', verdict: 'satisfied'|'missing'|'invalid', declared_value, resolved: bool}; keep this structurally identical to the symbol-ac and decision-history-ac verdicts so GE-117d-1 can aggregate all three uniformly."
+  - "Scope is diff-only: evaluate only files new or changed in the staged commit; never retrofit unchanged files (third criteria scenario)."
+  - "Fail-open on INTERNAL hook error only (unexpected exception): exit 0 with a stderr-prefixed advisory and clean stdout so an internal fault is never mistaken for a declaration violation; a real missing/invalid declaration must still fail-closed via GE-117d-1."
+  - "Edit the templates/commit-guardian/ source AND the scripts/commit_guardian/ deployed copy together and verify parity via the build.py round-trip (ADR-001 self-hosting constraint); never edit one side only."
+delivers_to:
+  agent: python-coder
+  contract: "Per-file module-component declaration verdict {file, surface: 'module-component', verdict: 'satisfied'|'missing'|'invalid', declared_value, resolved: bool} consumed by GE-117d (block decision) and GE-117e (message/autofix)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-117a-1-i
+  - GE-117a-1-ii
+implemented_by: []
+notes: |
+  Owns the HAPPY-PATH and MISSING-PATH for the module->component surface (GE-117a).
+  Scope is diff-only: only new/changed files are evaluated; unchanged files with a
+  legacy component-less docstring are never retrofitted (third scenario pins this).
+  Presence of the docstring itself is GE-100's concern, NOT re-specified here — this
+  AC assumes a docstring exists (or is added in the diff) and asserts it must name a
+  RESOLVABLE component. The invalid-but-present-name case is GE-117a-1-i; the
+  no-module-docstring boundary vs GE-100 is GE-117a-1-ii. The verdict object shape
+  is the spine consumed by GE-117d/e — keep it stable across all three surfaces
+  (module-component, symbol-ac, decision-history-ac).

@@ -1,0 +1,44 @@
+id: BO-2400a-8
+components:
+  - build_orchestration
+  - documentation_system
+title: "Component diagram: fast-lane build path and its collaborators"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane build path and the components it collaborates with (AC store
+    selection, test-writer, coder, deterministic gates, commit staging, telemetry),
+  When the fast-lane path's structure is documented,
+  Then a component diagram shows the fast-lane path and its collaborating components
+    and how it sits alongside the heavy pipeline.
+depends_on: [BO-2400a, BO-2400a-5]
+doc_links:
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The component diagram must show the fast-lane path and its collaborating components (selection, test-writer, coder, deterministic gates, commit staging, telemetry) and its relationship to the heavy pipeline."
+  - "It must make clear the fast lane uses no per-ticket supervisor and no planner-as-agent (BO-2400a-5)."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-5
+  contract: "The implemented fast-lane topology (single worktree, no supervisor/planner) whose component structure this diagram depicts."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/architecture/diagrams/c2-fast-lane-build-path-components.md"

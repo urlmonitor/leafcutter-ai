@@ -1,0 +1,40 @@
+id: BO-2300
+components:
+  - build_orchestration
+title: "Background automation can ask you a question mid-run instead of giving up"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background runs pause to ask you, then finish — instead of cancelling.
+
+  Today, automation you launch in the background gives up the moment it needs a
+  decision from you: it reaches a point where it would normally ask "approve,
+  edit, or cancel?", "which priority?", or "how should this look?", cannot reach
+  you, and quietly cancels — leaving the work half-done. This goal turns those
+  dead ends into real conversation points. When a run needs your input, it pauses,
+  shows you enough context to decide, asks a clear question, waits for your answer,
+  and then picks up exactly where it left off. The result is automation you can
+  trust to run start-to-finish on its own and still involve you at the moments
+  that genuinely need a human. This is distinct from BO-1000, which surfaces
+  one-way progress WHILE a run works; BO-2300 is two-way — the run asks, you
+  answer, and it resumes.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-2300a, BO-2300b, BO-2300c, BO-2300d, BO-2300e]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

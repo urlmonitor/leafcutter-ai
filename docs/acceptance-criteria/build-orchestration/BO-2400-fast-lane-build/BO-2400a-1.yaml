@@ -1,0 +1,60 @@
+id: BO-2400a-1
+components:
+  - build_orchestration
+  - testing_quality
+title: "Exactly one test-writer and one coder agent per batch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a cohesive batch of N ready leaf ACs selected for the fast lane (N >= 2),
+  When the fast-lane build loop runs the batch to completion,
+  Then exactly one test-writer agent invocation is dispatched for the whole batch
+  And exactly one coder agent invocation is dispatched for the whole batch
+  And the total count of test-writer plus coder agent invocations equals 2,
+    independent of N (it does not grow per-AC or per-ticket).
+depends_on: [BO-2400a]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The fast-lane loop dispatches exactly one test-writer invocation and one coder invocation for the entire batch; the invocation count must not scale with N (no per-AC or per-ticket agent fan-out)."
+  - "Both the single test-writer and the single coder must receive the entire batch context in one invocation (no internal per-AC re-dispatch loop inside the phase)."
+  - "The loop runs as a depth-0 workflow that dispatches phase agents at depth 1 only, per ADR-006 (no nested supervisor spawning agents)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-2
+  contract: "The selected ordered batch of leaf AC ids that the single test-writer and single coder invocations operate over."
+test_spec:
+  - name: test_fast_lane_dispatches_one_testwriter_one_coder
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "For a batch of N>=2 ACs, exactly one test-writer and one coder invocation are dispatched; their combined count equals 2."
+  - name: test_fast_lane_agent_count_independent_of_batch_size
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Test-writer + coder invocation count stays 2 as N varies (no per-AC or per-ticket growth)."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-build.js"
+  - "scripts/build_orchestration/fast_lane.py"

@@ -1,0 +1,58 @@
+id: GE-116b-1
+components:
+  - commit_guardian
+title: "Block message names the offending definition and both valid fixes"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+assigned_agent: python-coder
+estimated_complexity: S
+criteria: |
+  Given a commit is blocked because a staged agent definition requires
+    verification while granting neither the ability to edit nor to create files,
+  When the block message is shown to the person committing,
+  Then the message identifies the specific offending agent definition,
+  And it states both valid fixes: grant the ability to edit or create files, or
+    mark the agent as not requiring verification,
+  And the message is specific enough to resolve without searching for which
+    definition is at fault.
+depends_on:
+  - GE-116b
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The fail-closed block path (non-zero exit) of the verification-consistency guard, whose stderr message this AC populates."
+it_requirements:
+  - "The block message must name the specific offending template path (e.g. templates/agents/pt-classifier.md) and state BOTH valid fixes: add Edit or Write to tools, OR set requires_verification: false."
+  - "The message must be self-sufficient — a contributor resolves it without searching for which definition is at fault."
+test_spec:
+  - name: test_block_message_names_offender_and_both_fixes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "On a blocked commit the message contains the offending template path and both remediation options (add Edit/Write, or set requires_verification: false)."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-116b-1-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Message must name the offending template path (e.g. templates/agents/
+  pt-classifier.md) and state the two fixes: add Edit or Write to tools, OR set
+  requires_verification: false. Remediation-message content for the same guard
+  introduced under GE-116a.

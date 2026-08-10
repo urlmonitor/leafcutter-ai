@@ -1,0 +1,85 @@
+id: TKT-500f-18-i
+components:
+  - ticket_creation_pipeline
+readiness: approved
+priority: high
+title: "A malformed or unavailable mapping source degrades to a logged fallback and never makes the generator un-importable"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-18.yaml"
+criteria: |
+  This edge case bounds TKT-500f-18 so a broken mapping source degrades safely
+  rather than breaking every caller that imports the generator.
+
+  Given the kebab-to-graph-id mapping source is malformed or unavailable — for
+    example docs/components.json is missing or contains invalid JSON, or a sibling
+    data module raises a SyntaxError or other error when loaded,
+  When scripts/ac_store/generate_ticket_from_ac.py is imported,
+  Then the import succeeds and does not raise: the malformed/unavailable source is
+    caught and the generator degrades to a logged fallback mapping (an empty or
+    minimal mapping) with a WARNING that names the failed source,
+  And ticket generation still proceeds using the fallback mapping (component values
+    that cannot be resolved follow the TKT-500f-17 warn-and-surface path rather than
+    crashing the generator),
+  And the fallback is reached only on a genuine load failure — a well-formed
+    components.json is still loaded and used normally (no regression of
+    TKT-500f-18).
+depends_on: [TKT-500f-18]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-18
+  contract: "The side-effect-free mapping load in _load_migration_map (generate_ticket_from_ac.py) that reads docs/components.json without reconfiguring global logging; this edge case bounds it so a malformed/unavailable source is caught, the import still succeeds, and the generator degrades to a logged fallback mapping with a WARNING naming the failed source."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "A malformed or unavailable mapping source (missing/invalid components.json, sibling module raising on load) must be caught: importing the generator must still succeed and must not raise."
+    - "On a genuine load failure the generator must degrade to a logged fallback mapping (empty/minimal) and emit a WARNING naming the failed source; unresolved values then follow the TKT-500f-17 warn-and-surface path."
+    - "The fallback must be reached only on a genuine load failure — a well-formed components.json must still load and be used normally (no regression of TKT-500f-18)."
+    - "Error handling must follow the project policy: catch a specific exception type, log at WARNING or higher, no bare/blind except."
+test_spec:
+  - name: test_malformed_components_json_import_still_succeeds
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "With components.json missing or containing invalid JSON, importing the generator does not raise and a WARNING names the failed source."
+  - name: test_generation_proceeds_with_fallback_mapping
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After a load failure, ticket generation proceeds using the fallback mapping; unresolvable values follow the warn-and-surface path rather than crashing."
+  - name: test_wellformed_source_still_loaded_no_fallback
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A well-formed components.json is loaded and used normally; the fallback path is not taken (no regression of TKT-500f-18)."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-TKT-500f-18-i.md
+change_target: pipeline
+risk_surface: internal

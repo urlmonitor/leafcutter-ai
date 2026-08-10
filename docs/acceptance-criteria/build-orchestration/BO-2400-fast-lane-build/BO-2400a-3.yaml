@@ -1,0 +1,59 @@
+id: BO-2400a-3
+components:
+  - build_orchestration
+  - testing_quality
+title: "Red-baseline verification is a deterministic script gate before the coder runs"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer has written the batch's tests and no implementation change
+    has been made yet,
+  When the fast-lane loop verifies the red baseline,
+  Then a deterministic script runs the batch's tests and confirms every newly added
+    test for the batch fails (the batch test run exits non-zero)
+  And the coder agent is dispatched only after this red-baseline check passes.
+depends_on: [BO-2400a]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The red-baseline gate runs the batch's tests via a deterministic, exit-code-driven invocation (fixed test collection for the batch, stable ordering) — the pass/fail decision is derived from the process exit code, not an agent judgment."
+  - "The coder must be dispatched only after the red-baseline check confirms the batch test run exited non-zero (every newly added batch test fails); the gate is a hard precondition on coder dispatch, not advisory."
+  - "The set of 'newly added' batch tests must be identified from the batch under build (e.g. via the tests' covers tags for the batch AC ids), not from the whole suite, so unrelated pre-existing failures do not mask a missing red baseline."
+  - "The gate must be idempotent — re-running it against the same tree yields the same verdict."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-2
+  contract: "The batch AC ids whose newly-added tests are run to establish the red baseline."
+test_spec:
+  - name: test_red_baseline_passes_when_all_batch_tests_fail
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "With tests written and no implementation, the batch test run exits non-zero and the red-baseline check passes."
+  - name: test_coder_dispatched_only_after_red_baseline
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The coder agent is dispatched only after the red-baseline check passes."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400a-3-i
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-build.js"

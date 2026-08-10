@@ -12,7 +12,8 @@ ARCHITECTURE: Public functions: build_per_agent_spawn_table (Type 1),
     build_per_agent_skills_table (Type 2), build_registry_block (Type 3),
     build_doc_type_reference_table (Type 4), build_project_paths_table (Type 5),
     build_agent_priority_table (Type 6), build_doc_types_dispatch_table (Type 7),
-    build_signoff_block (sign-off appender). Internal: _load_registry,
+    build_signoff_block (sign-off appender), assemble_context_bundle (LLM
+    prompt assembly — pure string function, no I/O). Internal: _load_registry,
     _TICKET_PHASE_MACRO. No file I/O other than reading JSON config files and
     SKILL.md frontmatter headers. Imported by template_compiler; not intended
     for standalone CLI use.
@@ -542,6 +543,72 @@ If you were invoked with a `ticket_path` argument:
 3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
 4. Skip this section entirely if no `ticket_path` was provided.
 """
+
+
+def assemble_context_bundle(
+    *,
+    architecture: str,
+    conventions: str,
+    high_level: str,
+    acs: str,
+    prior_tests: str,
+    prior_outputs: str | None = None,
+    working_diff: str | None = None,
+    breakpoint_marker: str = "<!-- CACHE_BREAKPOINT -->",
+) -> str:
+    """Assemble a layered LLM context bundle ordered by change-frequency.
+
+    Builds a single string suitable for injection into an LLM prompt. Layers
+    are ordered from most-stable (architecture) to most-volatile (working_diff)
+    so that an LLM KV cache can anchor on the stable prefix. Exactly one
+    ``breakpoint_marker`` separates the stable prefix from the volatile suffix.
+
+    Stable prefix (before breakpoint, in order):
+        1. ``architecture`` — rarely-changing architecture docs.
+        2. ``conventions`` — project coding/workflow conventions.
+        3. ``high_level`` — L0/L1 parent ACs describing the big picture.
+
+    Volatile suffix (after breakpoint, in order):
+        4. ``acs`` — per-batch L2/L3 ACs.
+        5. ``prior_tests`` — tests already written for the same area.
+        6. ``prior_outputs`` — prior-phase distilled outputs (omitted when None).
+        7. ``working_diff`` — current working diff, most volatile (omitted when None).
+
+    The stable prefix is byte-identical across invocations whenever
+    ``architecture``, ``conventions``, ``high_level``, and ``breakpoint_marker``
+    are unchanged, regardless of volatile inputs. This is the cacheable-prefix
+    property (BO-2400c-1).
+
+    This function is pure: no I/O, no external calls, no shared-state mutation.
+
+    Args:
+        architecture: Architecture documentation content (most stable layer).
+        conventions: Project coding and workflow conventions content.
+        high_level: L0/L1 parent AC content describing the big picture.
+        acs: Per-batch L2/L3 AC content (first volatile layer).
+        prior_tests: Tests already written for the same component or area.
+        prior_outputs: Distilled outputs carried forward from a prior phase.
+            Placed in the volatile suffix only. Omitted when ``None``.
+        working_diff: Current working diff (most volatile layer). Placed last
+            in the volatile suffix. Omitted when ``None``.
+        breakpoint_marker: Delimiter separating the stable prefix from the
+            volatile suffix. Defaults to ``<!-- CACHE_BREAKPOINT -->``.
+
+    Returns:
+        A single string with stable layers, exactly one ``breakpoint_marker``,
+        and then volatile layers, all separated by double newlines.
+    """
+    stable_prefix = "\n\n".join([architecture, conventions, high_level])
+    stable_prefix = stable_prefix + "\n\n" + breakpoint_marker
+
+    volatile_layers = [acs, prior_tests]
+    if prior_outputs is not None:
+        volatile_layers.append(prior_outputs)
+    if working_diff is not None:
+        volatile_layers.append(working_diff)
+
+    volatile_suffix = "\n\n".join(volatile_layers)
+    return stable_prefix + "\n\n" + volatile_suffix
 
 
 # ====================================================================

@@ -1,0 +1,75 @@
+id: TQ-300a-2
+title: "Spawn bidirectionality checking is covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a registry in which agent A lists B in its spawn allowlist and B lists A
+    in its spawned-by (reverse) relationship,
+  When _check_spawn_bidirectionality runs,
+  Then it reports no asymmetry for that edge.
+
+  Given a registry with a one-directional spawn edge — agent A declares it can
+    spawn B, but B does not declare A as an allowed spawner,
+  When _check_spawn_bidirectionality runs,
+  Then it flags the asymmetry and the reported error names both the spawner (A)
+    and the target (B) and the missing reverse direction.
+
+  Given a registry with a spawn edge that points to an agent id that does not
+    exist in the registry,
+  When _check_spawn_bidirectionality runs,
+  Then it reports an error naming the dangling target id rather than silently
+    ignoring the edge.
+depends_on:
+  - TQ-300a
+doc_links:
+  - path: scripts/registry_validator.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_symmetric_spawn_edge_reports_no_asymmetry
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A.spawn_allowlist has B and B.spawned_by has A yields no error."
+  - name: test_one_directional_edge_names_both_agents_and_direction
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A one-way edge yields an error whose text names both A and B and the missing reverse direction."
+  - name: test_dangling_target_reports_unknown_agent
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A spawn edge whose target id is absent from registry_ids yields an error naming the dangling target."
+it_requirements:
+  - "Author fresh unit tests in tests/test_registry_validator_spawn.py (new file, kept separate from the a-1 registry_validator tests so the two ACs do not edit one file). Write from scratch and verify run-to-green before sign-off."
+  - "Function under test (scripts/registry_validator.py): _check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids). It takes THREE plain arguments — spawn_map (id -> spawn_allowlist), spawned_by_map (id -> spawned_by), registry_ids (set of ids) — NOT a registry object; construct these dicts/sets directly in the test. Import by bare module name after adding scripts/ to sys.path."
+  - "'allowed-spawner (reverse) relationship' in the criteria maps to the spawned_by field."
+  - "Assert the current error text formats: one-directional edge -> 'asymmetric spawn: A.spawn_allowlist includes B, but B.spawned_by does not include A'; dangling target -> 'references unknown agent <id>'. If the coder changes the wording, keep the assertion on the named agents/ids rather than the exact sentence."
+  - "No production change is expected for this AC — the function already exists and behaves as specified; this is pure coverage recovery."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

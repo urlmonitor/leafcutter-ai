@@ -1,0 +1,43 @@
+id: BO-2400d-5
+components:
+  - build_orchestration
+  - documentation_system
+title: "How-to: generate and read the fast-lane vs heavy-pipeline comparison report"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the comparison report that emits cost and time per unit of work for each lane,
+  When an operator wants to prove the fast lane is faster and cheaper,
+  Then a how-to document explains how to generate the report and how to read the
+    side-by-side fast-lane vs heavy-pipeline cost and time metrics.
+depends_on: [BO-2400d, BO-2400d-2, BO-2400d-3]
+doc_links:
+  - path: docs/how-to/compare-build-lanes.md
+    relationship: specifies
+    status: planned
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to must explain how to generate the comparison report and how to interpret the side-by-side cost-per-unit and time-per-unit metrics for the fast lane vs the heavy pipeline."
+  - "It must be authored after the report is built so the invocation and output columns match the shipped report."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2400d-3
+  contract: "The implemented comparison report whose generation and output this how-to explains."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/how-to/compare-build-lanes.md"

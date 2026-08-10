@@ -1,0 +1,31 @@
+id: BO-2300d
+components:
+  - build_orchestration
+title: "Your answer is applied and the run picks up where it paused"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Answer once, and the run continues from the exact point it stopped.
+
+  Once you respond, the run takes your answer, acts on it, and resumes from where
+  it paused — carrying forward everything it had already done — so a single reply
+  is enough to drive it the rest of the way.
+depends_on: [BO-2300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-2300d-1, BO-2300d-2]
+implemented_by: []
+documentation_triggers: [state-diagram, sequence-diagram]
+change_target: pipeline
+risk_surface: internal

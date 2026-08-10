@@ -1,0 +1,86 @@
+id: ACD-1200a-14
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A ticket path outside the passed worktree is still recorded repo-relative via a git-derived repo root"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a.yaml"
+criteria: |
+  Given a ticket whose path is not under the worktree passed to the generator — for
+    example a tickets-root located outside that worktree,
+  When the back-reference is written into the AC's implemented_by list by
+    _write_implemented_by,
+  Then the recorded value is still a repo-relative path (for example
+    tickets/00_inbox/epics/EPIC-.../NN_TICKET-....md) with no leading "/", no
+    absolute filesystem prefix, and no "worktrees/..." or other per-checkout
+    segment,
+  And the same AC records an identical repo-relative value regardless of which
+    tickets-root or worktree location the ticket lives in,
+  And the repo root used for relativisation is derived canonically from the
+    repository (git rev-parse --show-toplevel or the shared repo-root helper), and
+    both the incoming path and every existing implemented_by entry are normalised
+    through that same repo root rather than against the passed worktree directory.
+depends_on: [ACD-1200a, ACD-1200a-12]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "The repo root used to relativise implemented_by entries in _write_implemented_by (~line 1456) must be derived canonically from the repository (git rev-parse --show-toplevel or the shared repo-root helper), NOT from the passed worktree directory."
+    - "Both the incoming path and every existing implemented_by entry must be normalised through that same repo root, so a ticket outside the passed worktree still records a repo-relative value with no leading '/', no absolute prefix, and no 'worktrees/...' or per-checkout segment."
+    - "The same AC must record an identical repo-relative value regardless of which tickets-root or worktree location the ticket lives in (location-invariant)."
+test_spec:
+  - name: test_ticket_outside_worktree_recorded_repo_relative
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Writing via a tickets-root OUTSIDE the passed worktree records a repo-relative path (no leading '/', no 'worktrees/' segment)."
+  - name: test_same_ac_records_identical_value_regardless_of_location
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "The same AC records an identical repo-relative value regardless of which tickets-root/worktree the ticket lives in."
+  - name: test_repo_root_git_derived_and_applied_to_existing_entries
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Relativisation uses a git-derived repo root and normalises both the incoming path and every existing implemented_by entry through it (not against the passed worktree dir)."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1200a-14-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-ACD-1200a-14.md
+change_target: pipeline
+risk_surface: internal

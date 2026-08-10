@@ -1,0 +1,63 @@
+id: GE-117b-1-i
+readiness: draft
+priority: medium
+title: "A private symbol is never required to declare an AC, and __all__ overrides the underscore rule"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+criteria: |
+  Given a function named "_helper" is new or changed in the staged commit
+  And the module does not define __all__
+  And the docstring of "_helper" references no acceptance criterion
+  When the declaration check evaluates the symbol
+  Then the check produces no missing-declaration verdict for "_helper"
+
+  Given a module defines __all__ that does NOT list the public-named function
+    "widget"
+  And "widget" is new or changed in the staged commit
+  And the docstring of "widget" references no acceptance criterion
+  When the declaration check evaluates the symbol
+  Then the check treats "widget" as not public
+  And produces no missing-declaration verdict for "widget"
+
+  Given a module defines __all__ that lists a function named "_public_api" whose
+    name starts with an underscore
+  And "_public_api" is new or changed in the staged commit
+  And the docstring of "_public_api" references no acceptance criterion
+  When the declaration check evaluates the symbol
+  Then the check treats "_public_api" as public
+  And produces a missing-declaration verdict naming "_public_api"
+depends_on:
+  - GE-117b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b-1.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Determine __all__ membership from the staged blob via ast: read the module-level __all__ assignment (list/tuple of string literals). When __all__ is present it is authoritative for BOTH inclusion (underscore-named name in __all__ => public) and exclusion (public-named name absent from __all__ => not public). When __all__ is absent, fall back to the underscore-name rule. No MCP."
+  - "Non-public symbols produce NO verdict at all (not a satisfied verdict) so they never reach GE-117d-1's block set — private/internal helpers must never be forced to carry an AC."
+  - "Same shared public/private classification used by GE-117b-1; do not re-derive it. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117b-1
+  contract: "The public/private classification rule (underscore, __all__ authoritative) whose boundary this edge case pins"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Locks the deferred "public" definition (resolution #1) at its three boundaries:
+  underscore-named symbol without __all__ is private (not required); a public-named
+  symbol absent from a present __all__ is not public (not required); an
+  underscore-named symbol listed in __all__ IS public (required). This is the exact
+  negative-space guarantee the PO asked for — private/internal helpers must NOT be
+  forced to carry an AC. Determinable from ast alone (no MCP).

@@ -102,8 +102,11 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added estimated_complexity (M), it_requirements (workflow-side surface; null+non-empty trigger; insertion point ~L713->L747; build.py parity with Step 0 ~L440 / Step 3 ~L677 and FIN-100a-4; temp-worktree lifecycle + guaranteed cleanup; E2 determinism no-Date.now; defer halt to triage; route errors to FIN-100c-9), and test_spec (4 descriptors, one per Then). Kept assigned_agent python-coder, delivers_to/expects_from, and criteria unchanged."
     by: it-po
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_behavioral_recovery_ok_subset_triage_gets_recovered_list"
+  - "unit_tests/workflows/test_finalize_baseline_recovery.py::test_fin_100c_4_recovery_deploys_before_targeted_rerun"
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-FIN-100c-4.md
 change_target: pipeline
 risk_surface: contract_boundary
-work_status: todo
+work_status: done

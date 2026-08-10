@@ -1,0 +1,37 @@
+id: BO-2400d
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "See what each build costs and how long it takes"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Real time-and-cost numbers per build, so you can prove the fast lane is worth it.
+
+  Every build records how long each step took and how much it consumed, so you
+  can compare the fast lane against the thorough path with real evidence, catch
+  regressions in speed or cost, and keep the whole system honest.
+depends_on: [BO-2400]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400d-1
+  - BO-2400d-2
+  - BO-2400d-3
+  - BO-2400d-4
+  - BO-2400d-5
+implemented_by: []
+documentation_triggers: [reference-doc, how-to]
+change_target: pipeline
+risk_surface: internal

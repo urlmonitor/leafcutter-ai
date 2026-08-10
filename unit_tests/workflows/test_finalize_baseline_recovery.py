@@ -321,3 +321,189 @@ def test_behavioral_empty_post_merge_failures_skips_recovery():
         "is empty (condition: baselineFailures===null AND postMergeFailures.length>0). "
         f"All dispatched labels: {dispatched_labels!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Coverage backfill (ac-audit 2026-07-21) — direct tests for the thin spots the
+# audit flagged on FIN-100c-4/-7/-9 (each previously covered only transitively).
+# ---------------------------------------------------------------------------
+
+
+def test_fin_100c_9_build_failed_triage_gets_null():
+    """AC FIN-100c-9: build_failed (not only checkout_failed) → conservative fallback.
+
+    A recovery build failure traverses the same non-ok arm as checkout_failed and must
+    preserve the null baseline, so triage treats all post-merge failures as regressions.
+    """
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "build_failed", "recovered_failures": None},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        f"step-3-triage not dispatched. labels={[c.label for c in result.agent_calls]!r}"
+    )
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures is None, (
+        f"build_failed must fall back to a null baseline (conservative), got {baseline_failures!r}."
+    )
+
+
+def test_fin_100c_9_fallback_surfaces_modified_by_branch():
+    """AC FIN-100c-9: the conservative fallback surfaces modified_by_branch so operators
+    can see which failing tests the branch touched."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    assert "modified_by_branch" in js, (
+        "finalize-feature.js must surface 'modified_by_branch' on the rerun-unavailable "
+        "conservative fallback path (FIN-100c-9)."
+    )
+
+
+def test_fin_100c_7_pass_on_main_excluded_from_baseline():
+    """AC FIN-100c-7: a test that PASSES on main HEAD is excluded from the recovered
+    baseline (→ regression); tests that FAIL on main are included (→ pre_existing).
+
+    Post-merge [T1,T2,T3]; recovery reports [T2,T3] fail on main (T1 passes on main).
+    Forwarded baseline_failures must be exactly [T2,T3] — T1 excluded.
+    """
+    fail_on_main = ["tests/bar.py::test_two", "tests/baz.py::test_three"]
+    passes_on_main = "tests/foo.py::test_one"
+    label_responses = _base_label_responses(
+        targeted_rerun_response={"status": "ok", "recovered_failures": fail_on_main},
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=label_responses, timeout=_HARNESS_TIMEOUT)
+    triage_call = _find_triage_call(result)
+    assert triage_call is not None, (
+        f"step-3-triage not dispatched. labels={[c.label for c in result.agent_calls]!r}"
+    )
+    baseline_failures, err = _extract_baseline_failures(triage_call)
+    assert err is None, f"Failed to parse baseline_failures: {err}"
+    assert baseline_failures == fail_on_main, (
+        f"Expected baseline_failures={fail_on_main!r} (fail-on-main subset); got {baseline_failures!r}."
+    )
+    assert passes_on_main not in (baseline_failures or []), (
+        f"{passes_on_main!r} passes on main HEAD, so it must be EXCLUDED from the baseline "
+        "(→ regression per FIN-100c-7), but it is present."
+    )
+
+
+def test_fin_100c_7_triage_prompt_encodes_classification_rule():
+    """AC FIN-100c-7: the triage agent encodes the rule applied to the (recovered)
+    baseline — in-baseline → pre_existing, absent → regression."""
+    triage = (_REPO_ROOT / "templates" / "agents" / "test-failure-triage.md").read_text(encoding="utf-8")
+    low = triage.lower()
+    assert "pre_existing" in low or "pre-existing" in low, (
+        "test-failure-triage.md must define the pre_existing classification (FIN-100c-7)."
+    )
+    assert "regression" in low, (
+        "test-failure-triage.md must define the regression classification (FIN-100c-7)."
+    )
+
+
+def test_fin_100c_4_recovery_deploys_before_targeted_rerun():
+    """AC FIN-100c-4: the targeted rerun deploys against the fresh main-HEAD checkout
+    BEFORE re-running the failing tests (build parity with Step 0 / Step 3)."""
+    js = _JS_PATH.read_text(encoding="utf-8")
+    idx_label = js.find("step-3-targeted-rerun")
+    assert idx_label != -1, "step-3-targeted-rerun dispatch must exist (FIN-100c-4)."
+    region = js[max(0, idx_label - 2500):idx_label + 400]
+    assert "Deploy shims before rerun" in region or "build parity" in region, (
+        "The targeted-rerun recovery prompt must deploy (build.py) before re-running the "
+        "failing tests, for build parity (FIN-100c-4)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100g-4 deploy-parity self-check — behavioral guards (post-review remediation).
+# These execute the real JS via the E2 harness, so they FAIL if the gate/exclusion
+# logic is broken. They cover the two load-bearing behaviors the source-substring
+# tests could not: the H-1 empty-set flip, and "a genuine failure survives → triage".
+# ---------------------------------------------------------------------------
+
+
+def _base_with_captured_baseline(post_merge_failing_tests, deploy_parity_response):
+    """label_responses with a SUCCESSFUL Step 0 baseline (non-null) so the
+    null-baseline recovery branch does NOT run — isolating the deploy-parity
+    self-check — plus a step-3-deploy-parity response.
+    """
+    lr = _base_label_responses(post_merge_failing_tests=post_merge_failing_tests)
+    lr["step-0-baseline"] = {
+        "status": "ok",
+        "baseline_sha": "deadbeef",
+        "baseline_failures": [],
+        "baseline_run_at": "2026-07-21T00:00:00Z",
+    }
+    lr["step-3-deploy-parity"] = deploy_parity_response
+    return lr
+
+
+def test_h1_empty_post_merge_failures_does_not_run_deploy_parity():
+    """H-1: a Step-3 run with testPassed=false but an EMPTY failure set (the
+    malformed/ambiguous case) must NOT enter the deploy-parity self-check, so it can
+    never flip testPassed→true and skip triage/merge on a malformed test run.
+    """
+    lr = _base_with_captured_baseline(
+        post_merge_failing_tests=[],  # testPassed=false, postMergeFailures=[]
+        deploy_parity_response={
+            "deploy_consistent": False, "redeployed": True,
+            "build_state_only_failures": ["tests/x.py::t"], "still_failing": [],
+        },
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
+    labels = [c.label for c in result.agent_calls]
+    assert "step-3-deploy-parity" not in labels, (
+        "deploy-parity ran on an EMPTY post-merge failure set — the H-1 gate "
+        "(postMergeFailures.length > 0) is missing; an empty set could flip "
+        f"testPassed→true and skip triage. Dispatched: {labels!r}. stderr: {result.stderr[:300]!r}"
+    )
+
+
+def test_fin_100g_4i_genuine_failure_survives_exclusion_and_reaches_triage():
+    """FIN-100g-4-i: when some failures are build-state (cleared by re-deploy) but a
+    GENUINE failure remains, the genuine one is NOT excluded and triage IS dispatched
+    (so it can HALT). If the exclusion wrongly cleared everything, testPassed would flip
+    true and triage would be skipped — this test would then fail.
+    """
+    failures = ["tests/a.py::t1", "tests/b.py::t2", "tests/c.py::t3"]
+    lr = _base_with_captured_baseline(
+        post_merge_failing_tests=failures,
+        deploy_parity_response={
+            "deploy_consistent": True, "redeployed": True,
+            "build_state_only_failures": ["tests/a.py::t1", "tests/b.py::t2"],
+            "still_failing": ["tests/c.py::t3"],
+        },
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
+    labels = [c.label for c in result.agent_calls]
+    assert "step-3-deploy-parity" in labels, (
+        f"deploy-parity self-check did not run with a non-empty failure set. Dispatched: {labels!r}"
+    )
+    assert "step-3-triage" in labels, (
+        "A genuine failure (tests/c.py::t3) remained after build-state exclusion, so triage "
+        "must be dispatched (it can HALT). It was not — the exclusion likely cleared a genuine "
+        f"failure or flipped testPassed→true. Dispatched: {labels!r}"
+    )
+
+
+def test_fin_100g_4i_still_failing_contradiction_is_not_excluded():
+    """M-2 contradiction guard: a test the agent lists in BOTH build_state_only_failures
+    AND still_failing must NOT be excluded — it reaches triage. Without the guard all
+    three would be excluded, testPassed would flip true, and triage would be skipped.
+    """
+    failures = ["tests/a.py::t1", "tests/b.py::t2", "tests/c.py::t3"]
+    lr = _base_with_captured_baseline(
+        post_merge_failing_tests=failures,
+        deploy_parity_response={
+            "deploy_consistent": True, "redeployed": True,
+            "build_state_only_failures": failures,            # claims all cleared
+            "still_failing": ["tests/c.py::t3"],              # but c.py::t3 still fails
+        },
+    )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
+    labels = [c.label for c in result.agent_calls]
+    assert "step-3-triage" in labels, (
+        "A test listed in BOTH build_state_only_failures and still_failing was excluded "
+        "anyway (contradiction), flipping testPassed→true and skipping triage. The M-2 guard "
+        f"must keep it. Dispatched: {labels!r}"
+    )

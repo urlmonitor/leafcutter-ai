@@ -1,0 +1,50 @@
+id: BO-2400b-3-ii
+components:
+  - build_orchestration
+title: "An explicit lane override wins over the decision rule"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an explicit lane override is supplied with the build request,
+  When the path router decides,
+  Then the selected lane equals the override regardless of what the decision rule
+    would have chosen from the inputs
+  And the override (and that it superseded the rule) is recorded.
+depends_on: [BO-2400b-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "An explicit lane override supplied with the request must take precedence over the decision rule's computed lane, unconditionally."
+  - "The router must record both the override value and the fact that it superseded the rule (including what the rule would otherwise have chosen), so overrides are auditable."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400b-3
+  contract: "The decision rule whose computed lane the explicit override supersedes."
+test_spec:
+  - name: test_override_wins_over_rule
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "When an explicit lane override is supplied, the selected lane equals the override regardless of the rule's computed lane."
+  - name: test_override_supersession_recorded
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The override and the fact that it superseded the rule are recorded."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/path_selection.py"

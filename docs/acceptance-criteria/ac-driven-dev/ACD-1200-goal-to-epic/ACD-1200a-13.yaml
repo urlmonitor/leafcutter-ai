@@ -1,0 +1,86 @@
+id: ACD-1200a-13
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A legacy absolute or cross-worktree entry for the same ticket is collapsed to one repo-relative entry via a shared canonicaliser"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a.yaml"
+criteria: |
+  Given an AC whose implemented_by list already contains a legacy ABSOLUTE
+    filesystem path (or a cross-worktree path with a per-checkout prefix) that
+    points at the SAME ticket now being regenerated — a path whose repo-relative
+    form equals the ticket the generator is about to record,
+  When a ticket is generated again from that AC and the back-reference is written
+    by _write_implemented_by,
+  Then the legacy absolute/cross-worktree entry is recognised as the same ticket
+    and collapsed so the AC's implemented_by list contains exactly one entry for
+    that ticket, and that surviving entry is the repo-relative form (no leading "/",
+    no absolute or per-checkout prefix),
+  And the dedup comparison and the relativisation both run through ONE shared
+    repo-root-relative canonicaliser applied to both the incoming path and each
+    existing entry — not two different path forms — so an absolute existing entry
+    and a repo-relative incoming entry for the same ticket are treated as equal.
+depends_on: [ACD-1200a, ACD-1200a-11, ACD-1200a-12]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  notes:
+    - "_write_implemented_by (~line 1456) must dedup and relativise through ONE shared repo-root-relative canonicaliser applied to BOTH the incoming path and every existing implemented_by entry — not two different path forms (replacing the leading-slash-only _normalise_repo_relative)."
+    - "A legacy absolute or cross-worktree entry that canonicalises to the same ticket must be recognised as equal to the repo-relative incoming entry and collapsed, so implemented_by holds exactly one entry for that ticket."
+    - "The surviving entry must be the repo-relative form: no leading '/', no absolute or per-checkout prefix."
+test_spec:
+  - name: test_absolute_same_ticket_entry_collapsed_to_single_repo_relative
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Pre-seed implemented_by with an ABSOLUTE same-ticket path, write the relative form; the resulting list has exactly one collapsed repo-relative entry for that ticket."
+  - name: test_dedup_uses_shared_canonicaliser_on_both_path_forms
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "An absolute existing entry and a repo-relative incoming entry for the same ticket are treated as equal (single shared canonicaliser), producing no duplicate."
+  - name: test_surviving_entry_is_repo_relative_no_prefix
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "The surviving entry has no leading '/', no absolute prefix, and no per-checkout/worktrees segment."
+origin_agent: business-analyst-v3
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260721-ACD-1200a-13.md
+change_target: pipeline
+risk_surface: internal

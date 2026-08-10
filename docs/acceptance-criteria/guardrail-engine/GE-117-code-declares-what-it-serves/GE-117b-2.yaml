@@ -1,0 +1,66 @@
+id: GE-117b-2
+readiness: draft
+priority: medium
+title: "A well-formatted AC reference that points to no existing AC fails as invalid"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+criteria: |
+  Given a public function is new or changed in the staged commit
+  And its docstring references an acceptance criterion whose identifier is well
+    formatted but names no AC that exists in the store
+  When the declaration check evaluates the symbol
+  Then the check produces an invalid-declaration verdict for that symbol
+  And the verdict records the unresolved AC identifier that was declared
+  And the invalid verdict is distinct from the missing-declaration verdict (a
+    reference to a non-existent AC is not treated the same as no reference)
+
+  Given a public function is new or changed in the staged commit
+  And its docstring references an acceptance criterion whose identifier resolves to
+    an AC that exists in the store
+  When the declaration check evaluates the symbol
+  Then the check produces a satisfied verdict for that symbol
+depends_on:
+  - GE-117b
+  - GE-117b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The invalid branch is triggered when the AC-id string is well-formed (parses as an AC-id token per the ADR-007 id format) but _load_ac_by_id returns None (no such AC in the store); verdict: 'invalid', declared_refs records the unresolved id, resolved: false — distinct from 'missing' (no ref at all)."
+  - "Resolution uses the SAME extracted _load_ac_by_id shared module as GE-117b-1; the AC store is the authority for existence (ADR-010). Do not treat a well-formed-but-dangling ref as satisfied."
+  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: GE-117b-1
+  contract: "The per-symbol verdict object whose invalid (unresolvable-id) branch this AC specifies"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the VALIDITY dimension the PO stressed on GE-117b: the reference must resolve
+  to a REAL AC id, not merely be well-formatted text. Kept as its own L2 (not folded
+  into GE-117b-1) because resolution against the AC store is a materially different
+  check from the missing-vs-present parse, and it is the exact failure the brief
+  named (a reference that is syntactically fine but dangling). Distinct verdict from
+  missing so GE-117e can suggest the likely-intended id on invalid.

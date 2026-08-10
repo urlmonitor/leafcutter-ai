@@ -6,6 +6,7 @@ priority: medium
 title: "Get a full epic from a single goal reference"
 component: ac-driven-dev
 level: L1
+child_limit_override: 10
 status: active
 req_status: draft
 work_status: todo
@@ -25,6 +26,8 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by:
   - reason: "split: ACD-1200a -> ACD-1200a + ACD-1200f + ACD-1200g, 2026-06-17 (moved traversal children -1/-9 to ACD-1200f, doc children -4/-5 to ACD-1200g)"
+  - reason: "added implemented_by back-ref hygiene children ACD-1200a-11 (same-ticket dedup on regeneration) + ACD-1200a-12 (repo-relative back-ref path), 2026-07-20"
+  - reason: "added implemented_by back-ref canonicalisation children ACD-1200a-13 (legacy absolute/cross-worktree same-ticket entry collapsed via a shared canonicaliser) + ACD-1200a-14 (ticket path outside the passed worktree still recorded repo-relative via git-derived repo root), from code-review + logic-check of the merged generator, 2026-07-21; 9 direct children remain within child_limit_override 10"
 superseded_by: null
 covered_by:
   - ACD-1200a-2
@@ -32,6 +35,10 @@ covered_by:
   - ACD-1200a-8
   - ACD-1200a-9
   - ACD-1200a-10
+  - ACD-1200a-11
+  - ACD-1200a-12
+  - ACD-1200a-13
+  - ACD-1200a-14
 implemented_by: []
 documentation_triggers:
   - how-to

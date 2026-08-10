@@ -1,0 +1,32 @@
+id: BO-2300b
+components:
+  - build_orchestration
+title: "It asks you exactly what it needs, with the right kind of answer"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Clear, structured questions — approve/edit/cancel, a choice, or free text.
+
+  At a pause the run asks you a specific question and offers the matching way to
+  answer: an approve / edit / cancel decision, a choice from options such as a
+  priority, or a free-text response — so you can reply directly without guessing
+  what's being asked.
+depends_on: [BO-2300]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-2300b-1, BO-2300b-2]
+implemented_by: []
+documentation_triggers: [sequence-diagram]
+change_target: pipeline
+risk_surface: internal

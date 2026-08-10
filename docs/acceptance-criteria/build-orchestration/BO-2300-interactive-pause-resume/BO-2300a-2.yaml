@@ -1,0 +1,94 @@
+id: BO-2300a-2
+components:
+  - build_orchestration
+title: "Paused-awaiting-input is a distinct state, separable from cancelled"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that has paused at an interactive decision point with a pending
+    question,
+  And a separate run that reached an interactive decision point but was
+    genuinely cancelled,
+  When the state of each run is inspected,
+  Then the paused run reports status "paused awaiting input" and the cancelled
+    run reports status "cancelled",
+  And the two states are distinguishable from each other,
+  And only the "paused awaiting input" run is eligible to be resumed by
+    supplying an answer.
+depends_on: [BO-2300a]
+assigned_agent: llm-expert
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Run-status enum discriminating a resumable pause from a genuine cancellation."
+    properties:
+      status: {type: string, enum: [paused_awaiting_input, cancelled, running, completed]}
+      resume_eligible: {type: boolean, description: "true only when status == paused_awaiting_input"}
+    required: [status]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - llm-expert
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SURFACE: implemented in the E2 workflow ENGINE (JavaScript). The JS engine must return the distinct status 'paused_awaiting_input' from a paused gate (never 'ok' and never 'cancelled'), and the persisted record's status field must record the same. This is the return-status change in the workflow files, not a standalone Python module."
+    - "'paused_awaiting_input' and 'cancelled' must be distinct, inspectable run statuses; only 'paused_awaiting_input' is eligible for resume-by-answer."
+    - "Status inspection must be read-only (must not mutate run state); reading the record is done via an agent() dispatch (the E2 body performs no direct fs read)."
+    - "The distinction is load-bearing for the rest of BO-2300: resume/durability must target only pause records and never attempt to revive a truly-cancelled run."
+    - "Deployed/template parity via the build.py round-trip (ADR-001); E2 top-level-body form (ADR-017)."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) — a headless gate returns paused_awaiting_input while an explicit-cancel answer returns cancelled; assert the two are distinguishable and only the former is resume-eligible. Do NOT test a standalone Python module."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300a-1
+  contract: "The durable pending-question record carrying a status field; this AC reads that status (via the resume/inspect agent dispatch) to distinguish paused_awaiting_input from cancelled and to gate resume-eligibility."
+test_spec:
+  - name: test_paused_status_distinct_from_cancelled
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Via run_workflow_under_e2(plan-feature.js), a headless-paused run returns paused_awaiting_input; a run answered 'cancel' returns cancelled; the two are distinguishable."
+  - name: test_only_paused_is_resume_eligible
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Via the harness, only a paused_awaiting_input run is eligible to be resumed by supplying an answer; a cancelled run is not."
+  - name: test_status_inspection_is_readonly
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Via the harness, inspecting a run's state (record read) does not mutate the run or its persisted record."
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by:
+  - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; clarified the distinct-status change is a JS return-status change and record read is agent-mediated; test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/finalize-feature.js
+- scripts/pause_store.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Distinguishing "paused awaiting input" from "cancelled" is what lets the rest
+  of BO-2300 (resume, durability) target only pause records and never attempt to
+  revive a truly-cancelled run.

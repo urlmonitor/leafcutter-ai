@@ -1,0 +1,55 @@
+id: GE-117a-2
+readiness: draft
+priority: medium
+title: "How-to guide: naming your file's component in the module docstring"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a.yaml"
+criteria: |
+  Given a developer is adding or changing a source file that must declare its
+    component
+  When the developer opens the how-to guide for the module-component declaration
+  Then the guide states that a new or changed file's module docstring must name a
+    registered component
+  And the guide shows where in the module docstring the component name goes and the
+    expected form of the name
+  And the guide explains how to find the correct registered component id for a file
+  And the guide states that the named component must resolve to a registered id or
+    the commit is blocked
+depends_on:
+  - GE-117a
+  - GE-117a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author the guide under docs/how-to/ as a Markdown file with the frontmatter fields check_doc_frontmatter requires for docs/** (title, type: how-to, status, created, last_updated, components); keep the doc body within the doc-length hook budget."
+  - "The registered component id the guide teaches developers to write is a docs/components.json id (e.g. 'commit_guardian') — the same registry GE-117a-1 validates against; do NOT point developers at docs/acceptance-criteria/index.yaml ids."
+  - "Do NOT re-document the commit block flow here — link to the GE-117d-4 how-to for that; keep the declaration format consistent with what GE-117a-1 implements."
+delivers_to: null
+expects_from:
+  ac_id: GE-117a-1
+  contract: "The module-component declaration behavior (valid vs missing vs invalid) that the how-to documents"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117a documentation_triggers [how-to]. Authors need a
+  task guide for what to write in a module docstring. Keep it consistent with the
+  actual declaration format the coder implements (GE-117a-1) and with the shared
+  commit-time guardrail interaction documented on GE-117d — do not re-document the
+  block flow here, link to it.

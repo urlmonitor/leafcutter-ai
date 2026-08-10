@@ -27,14 +27,16 @@ assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
-child_limit_override: 12
+child_limit_override: 18
 origin_agent: product-owner-v3
 created: 2026-06-08
 amended_by:
   - reason: "split: TKT-500d -> TKT-500d + TKT-500f, 2026-06-18 (TKT-500d exceeded 5 L2 children; migration + generator-integrity cluster moved here)"
   - reason: "added generate_ticket_from_ac fidelity children TKT-500f-8..12 (files_touched edit surface, ac_traceability, delivers_to/expects_from rendering, machine-parseable AC checkboxes, gate wiring), 2026-07-15; child_limit_override 7 -> 12"
+  - reason: "added generator-quirk children TKT-500f-13 (components LIST uses components.json graph id) + TKT-500f-14 (AC-gate wiring covers non-.py code tickets), 2026-07-20; child_limit_override 12 -> 14"
+  - reason: "added components-list robustness children TKT-500f-15 (scalar-string not char-shattered) + TKT-500f-16 (kebab-in-list normalised) + TKT-500f-17 (unresolvable value warned, validated against components.json) + TKT-500f-18 (side-effect-free mapping source), from code-review + logic-check of the merged generator, 2026-07-21; child_limit_override 14 -> 18"
 superseded_by: null
-covered_by: [TKT-500f-1, TKT-500f-2, TKT-500f-3, TKT-500f-4, TKT-500f-5, TKT-500f-6, TKT-500f-7, TKT-500f-8, TKT-500f-9, TKT-500f-10, TKT-500f-11, TKT-500f-12]
+covered_by: [TKT-500f-1, TKT-500f-2, TKT-500f-3, TKT-500f-4, TKT-500f-5, TKT-500f-6, TKT-500f-7, TKT-500f-8, TKT-500f-9, TKT-500f-10, TKT-500f-11, TKT-500f-12, TKT-500f-13, TKT-500f-14, TKT-500f-15, TKT-500f-16, TKT-500f-17, TKT-500f-18]
 implemented_by: []
 documentation_triggers: [sequence-diagram, component-diagram]
 change_target: code

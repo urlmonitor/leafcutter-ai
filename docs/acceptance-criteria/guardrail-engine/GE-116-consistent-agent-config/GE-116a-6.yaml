@@ -1,0 +1,57 @@
+id: GE-116a-6
+components:
+  - commit_guardian
+title: "Reference documentation covers the agent-definition consistency guard"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+estimated_complexity: S
+criteria: |
+  Given the agent-definition consistency guard exists and blocks
+    verification-required read-only agents at commit time,
+  When a contributor reads the pre-commit hook reference documentation,
+  Then the documentation describes the guard's rule (an agent that requires
+    verification must be able to edit or create files),
+  And it states what triggers a block and the two valid fixes,
+  And it records that this contradiction was previously caught only after merge
+    by the registry self-description validation.
+depends_on:
+  - GE-116a
+  - GE-116a-1
+assigned_agent: documentation-expert
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-116a-1
+  contract: "The implemented guard's rule (requires_verification: true requires Edit or Write), its block triggers, the two valid fixes, and the block message, plus the historical registry self-description validation context to document."
+it_requirements:
+  - "Document in docs/pre-commit-hooks.md (the commit_guardian reference doc): the guard rule (requires_verification: true requires Edit or Write), what triggers a block, and the two valid fixes (add Edit/Write to tools, or set requires_verification: false)."
+  - "Record that this contradiction was previously caught only post-merge by build.py's registry self-description validation, and is now caught fail-closed at commit time."
+  - "Keep docs/how-to/managing-pre-commit-hooks.md consistent if it enumerates hooks (add the new guard where hooks are listed)."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260720-GE-116a-6.md
+change_target: docs
+risk_surface: internal
+notes: |
+  Mandated by GE-116a documentation_triggers: [reference-doc] (BA spec sec 7b).
+  assigned_agent: documentation-expert is dictated by the reference-doc trigger
+  mapping, NOT discretionary IT-PO enrichment — flagged to the dispatcher as the
+  single exception to "do not set assigned_agent". IT-PO should still confirm
+  the exact target doc path (managing-pre-commit-hooks.md vs the AC-schema
+  reference) during enrichment.

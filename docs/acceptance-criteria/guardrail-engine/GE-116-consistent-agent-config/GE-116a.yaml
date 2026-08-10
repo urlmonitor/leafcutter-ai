@@ -1,0 +1,43 @@
+id: GE-116a
+components:
+  - commit_guardian
+title: "An agent that can't do what it promises is stopped at commit"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+child_limit_override: 6  # cohesive single-guard set: 4 decision cases (-1..-4) + registration (-5) + reference doc (-6); one L2 over the max-5 heuristic, no natural sub-split worth renaming committed ACs/tests for
+criteria: |
+  An agent that can't do what it promises is stopped at commit.
+
+  If an agent is marked as needing to verify the changes it makes, but it has no
+  ability to edit or create files, that contradiction blocks the commit
+  fail-closed — instead of passing silently and breaking a later build.
+depends_on:
+  - GE-116
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-116a-1
+  - GE-116a-2
+  - GE-116a-3
+  - GE-116a-4
+  - GE-116a-5
+  - GE-116a-6
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: "User-authored intent: BrainCandy. Framed by product-owner. Today this contradiction is only caught inside build.py's registry self-description validation (post-merge). Move it to a commit-time commit_guardian guard scoped to staged agent definitions."
+change_target: code
+risk_surface: internal

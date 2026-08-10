@@ -36,9 +36,11 @@ from __future__ import annotations
 
 import argparse
 import glob as _glob
+import importlib.util
 import json
 import logging
 import re
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -72,6 +74,40 @@ _PROSE_PATH_EXTENSIONS: frozenset[str] = frozenset({
     ".py", ".md", ".yaml", ".yml", ".json", ".js", ".ts", ".sql",
     ".txt", ".toml", ".cfg", ".ini", ".html", ".css", ".sh",
 })
+
+#: Documentation and configuration file extensions excluded from source-code
+#: detection.  Used to derive _SOURCE_CODE_EXTENSIONS from _PROSE_PATH_EXTENSIONS.
+_DOC_CONFIG_EXTENSIONS: frozenset[str] = frozenset({
+    ".md", ".yaml", ".yml", ".json", ".txt", ".toml", ".cfg", ".ini",
+})
+
+#: Recognised source-code file extensions that signal a code-ticket for AC-gate
+#: wiring.  Derived from _PROSE_PATH_EXTENSIONS (the prose-path-detection allowlist)
+#: by removing documentation and configuration suffixes, then extended with common
+#: non-Python and frontend source extensions, then explicitly excluding markup,
+#: style, and shell files that must NOT gate AC validation (TKT-500f-14,
+#: TKT-500f-14-ii).
+#:
+#: Excluded (not gating source): .html, .css, .sh — markup/style/shell.
+#: Included beyond the derived set: .tsx, .jsx, .vue, .svelte (frontend framework);
+#:   .go (Go), .rs (Rust), .mjs (ES module) — common non-Python source languages.
+#:
+#: DECISION HISTORY:
+#:   TKT-500f-14 (prior): initial derivation from _PROSE_PATH_EXTENSIONS.
+#:   TKT-500f-14-ii (2026-07-21): Added explicit exclusion of .html/.css/.sh
+#:   (markup/style/shell are not gating source code) and added .go/.rs/.mjs so
+#:   non-Python source files correctly trigger ac-validator/ac-fulfillment-gate.
+_SOURCE_CODE_EXTENSIONS: frozenset[str] = (
+    (
+        (_PROSE_PATH_EXTENSIONS - _DOC_CONFIG_EXTENSIONS)
+        | frozenset({".tsx", ".jsx", ".vue", ".svelte", ".go", ".rs", ".mjs"})
+    )
+    - frozenset({".html", ".css", ".sh"})
+)
+
+#: Known coder agents — any of these as the AC's assigned_agent signals a code
+#: ticket regardless of files_touched content (TKT-500f-14).
+_KNOWN_CODERS: frozenset[str] = frozenset({"python-coder", "frontend-coder", "sql-coder"})
 
 #: Path prefixes that identify extension-less tokens as source paths.
 #: A token that begins with one of these prefixes is included even when it
@@ -113,6 +149,10 @@ _NOT_NEEDED_AGENTS: list[str] = [
 ]
 
 #: Canonical phase order for agent map output.
+#: user-surface-smoker (priority 11.5) sits between pr-reviewer (11) and ac-validator (11.5)
+#: so that the observable-side-effect smoke check runs before AC coverage validation and
+#: before commit. A ticket with user-surface-smoker: needed cannot reach done
+#: with the smoke check unrun (BP-1100f-5).
 #: documentation-verifier is placed immediately before commit (BO-2200d-2):
 #: it is the last verification gate before the ticket is committed, so it
 #: must follow pr-reviewer, ac-validator, and ac-fulfillment-gate.
@@ -124,6 +164,7 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "test-runner",
     "documentation-expert",
     "pr-reviewer",
+    "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
     "ac-validator",
     "ac-fulfillment-gate",
     "documentation-verifier",
@@ -133,6 +174,8 @@ _CANONICAL_PHASE_ORDER: list[str] = [
 
 #: Phase order for flow-change pairs: documentation-expert is placed before
 #: any coder (priority 4 → doc planning before implementation).
+#: user-surface-smoker is included at priority 11.5 for consistency with
+#: _CANONICAL_PHASE_ORDER so flow-change tickets also gate correctly.
 #: documentation-verifier is placed immediately before commit (BO-2200d-2),
 #: consistent with _CANONICAL_PHASE_ORDER.
 _FLOW_CHANGE_PHASE_ORDER: list[str] = [
@@ -143,6 +186,7 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "sql-coder",
     "test-runner",
     "pr-reviewer",
+    "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
     "ac-validator",
     "ac-fulfillment-gate",
     "documentation-verifier",
@@ -179,6 +223,13 @@ def _find_worktree_root(start: Path) -> Path:
 
     Raises:
         FileNotFoundError: When no .git marker is found before the filesystem root.
+
+    DECISION HISTORY:
+        H-2 reorder (2026-07-21): Moved before ``_load_migration_map`` and the
+        module-level ``_COMPONENT_MIGRATION_MAP`` assignment so the fallback branch
+        inside ``_load_migration_map`` can call this function at import time without
+        a ``NameError``. The definition was previously at ~line 271, AFTER the
+        module-level call that could trigger the fallback path.
     """
     current = start.resolve()
     for parent in [current, *current.parents]:
@@ -187,6 +238,84 @@ def _find_worktree_root(start: Path) -> Path:
     raise FileNotFoundError(  # noqa: TRY003
         f"Could not locate worktree root from {start}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Component vocabulary: kebab → underscore normalisation
+# ---------------------------------------------------------------------------
+
+
+def _load_migration_map() -> dict[str, str]:
+    """Load the canonical kebab-to-underscore MIGRATION_MAP from the side-effect-free data module.
+
+    MODULE: generate_ticket_from_ac
+    GOAL: Resolve the sibling data module at
+          ``scripts/ac_store/_component_migration_map.py`` and import its
+          ``MIGRATION_MAP`` dict so that the generated ticket's ``components``
+          LIST carries the underscore graph id rather than the kebab namespace
+          scalar.  The data module contains only the dict literal — no
+          logging.basicConfig or other side effects (TKT-500f-18).
+
+    Degradation contract (TKT-500f-18-i):
+        - Any exec-phase error (SyntaxError, RuntimeError, OSError, etc.) is
+          caught; a WARNING is logged naming the failed source; ``{}`` is
+          returned so the module-level assignment never raises.
+        - When the data module loads but returns an empty MIGRATION_MAP (e.g.
+          in tests that patch importlib), the function falls back to an
+          auto-derived map built from docs/components.json so that callers
+          still receive a non-empty mapping.
+
+    Returns:
+        Mapping from kebab component namespace key to underscore graph id.
+        Returns ``{}`` only when exec_module raises; otherwise returns a
+        non-empty map sourced from the data module or docs/components.json.
+
+    DECISION HISTORY:
+        TKT-500f-18 (2026-07-21): Replaced exec-based load of
+        migrate_component_vocab.py (which called logging.basicConfig at module
+        level) with _component_migration_map.py — a plain data module with no
+        side effects.
+        TKT-500f-18-i (2026-07-21): Broadened except clause to include
+        SyntaxError and RuntimeError; added components.json fallback for the
+        empty-map case.
+    """
+    sibling = Path(__file__).resolve().parent / "_component_migration_map.py"
+    try:
+        spec = importlib.util.spec_from_file_location("_component_migration_map", sibling)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        migration_map: dict[str, str] = dict(getattr(mod, "MIGRATION_MAP", {}) or {})
+    except (OSError, AttributeError, ImportError, SyntaxError, RuntimeError) as exc:
+        logger.warning("Cannot load MIGRATION_MAP from %s: %s", sibling, exc)
+        return {}
+
+    if migration_map:
+        return migration_map
+
+    # Fallback: when the data module loaded but returned an empty map (e.g.
+    # test doubles that blank out MIGRATION_MAP), auto-derive a minimal map
+    # from docs/components.json so callers still get a non-empty mapping.
+    # No WARNING is emitted here — an empty module map is not an error.
+    try:
+        repo_root = _find_worktree_root(Path(__file__))
+        components_path = repo_root / "docs" / "components.json"
+        with open(components_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        valid_ids: set[str] = set(data.get("components", {}).keys())
+        # Derive kebab→underscore pairs by converting each underscore id
+        # to its hyphenated form.  This is not the canonical MIGRATION_MAP
+        # (which handles non-obvious mappings like ticket-creation →
+        # ticket_creation_pipeline) but it covers the simple 1:1 cases and
+        # ensures a non-empty return when the data module had no entries.
+        return {vid.replace("_", "-"): vid for vid in valid_ids}
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Cannot build fallback migration map from docs/components.json: %s", exc
+        )
+        return {}
+
+
+_COMPONENT_MIGRATION_MAP: dict[str, str] = _load_migration_map()
 
 
 # ---------------------------------------------------------------------------
@@ -496,6 +625,7 @@ def _build_agents_map(
     guardrail_config_path: Path | str | None = None,
     agent_registry_path: Path | str | None = None,
     files_touched: list[str] | None = None,
+    declares_side_effect: bool = False,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -512,10 +642,21 @@ def _build_agents_map(
     cannot be excluded via not_needed_overrides when the computed chain requires
     them — the computed chain wins (BO-550-1-i).
 
-    When files_touched contains at least one implementation .py file, ac-validator
-    and ac-fulfillment-gate are wired as needed phases (TKT-500f-12).  This check
-    applies only in the computed path (when change_targets and risk_surface are
-    provided) and keys off the actual edit surface, not the change_target label.
+    When files_touched contains at least one recognised source-code file (not
+    limited to .py — any extension in _SOURCE_CODE_EXTENSIONS qualifies) OR
+    the assigned_agent is a known coder (python-coder/frontend-coder/sql-coder),
+    ac-validator and ac-fulfillment-gate are wired as needed phases
+    (TKT-500f-12, broadened by TKT-500f-14).  This check applies only in the
+    computed path (when change_targets and risk_surface are provided) and keys
+    off the actual edit surface and/or the assigned agent, not the change_target
+    label.
+
+    When declares_side_effect is True, user-surface-smoker is added as a needed
+    gating phase automatically (BP-1100f-5). The selection is data-driven — the
+    smoke check runs because the work item DECLARED a durable observable
+    side-effect, not because of an opt-in flag or hard-coded item name. A work
+    item that does not declare a side-effect (declares_side_effect=False, the
+    default) is NOT force-routed through the smoke check (BP-1100f-5-i).
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
@@ -527,6 +668,8 @@ def _build_agents_map(
         files_touched: List of file paths the ticket will touch.  Used to detect
             implementation .py files so that ac-validator and ac-fulfillment-gate
             are wired when needed.
+        declares_side_effect: When True, include user-surface-smoker as a needed
+            gating verification phase (BP-1100f-5). Default: False.
 
     Returns:
         Ordered dict suitable for YAML frontmatter serialisation.
@@ -699,23 +842,58 @@ def _build_agents_map(
                 all_needed.add("test-runner")
                 break
 
-        # Wire ac-validator and ac-fulfillment-gate for code-AC tickets (TKT-500f-12).
-        # When files_touched contains at least one implementation .py file, these two
-        # store-fidelity gates must run against the ticket so AC traceability is verified
-        # before any commit is made.  Docs/config-only tickets (no .py in files_touched)
-        # are not affected — the check keys off the actual edit surface, not the
-        # change_target label, so a stale or doc_links-only files_touched would not
-        # mis-classify a code AC as docs-only.
-        if files_touched and any(p.endswith(".py") for p in files_touched):
+        # Wire ac-validator and ac-fulfillment-gate for code tickets
+        # (TKT-500f-12, broadened by TKT-500f-14). A ticket is classified as a
+        # code ticket when EITHER of the following is true:
+        #   (a) files_touched contains at least one recognised source-code file
+        #       extension (not limited to .py — covers .js, .ts, .tsx, .jsx,
+        #       .sql, .vue, .svelte, .html, .css, .sh, etc. as defined by
+        #       _SOURCE_CODE_EXTENSIONS, derived from _PROSE_PATH_EXTENSIONS);
+        #   (b) the assigned agent is a known coder (python-coder,
+        #       frontend-coder, or sql-coder) — coder assignment alone is
+        #       sufficient regardless of files_touched content.
+        # Docs/config/diagram-only tickets (no source file in files_touched AND
+        # a non-coder assigned agent) satisfy neither condition and are not gated.
+        _has_source_file = bool(files_touched) and any(
+            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS for p in files_touched
+        )
+        _is_coder_assigned = assigned_agent in _KNOWN_CODERS
+        if _has_source_file or _is_coder_assigned:
             all_needed.add("ac-validator")
             all_needed.add("ac-fulfillment-gate")
 
-        # Determine TDD-mandated agents that cannot be overridden (BO-550-1-i).
-        # When the computed chain requires test-writer or test-runner (via guardrail
-        # lookup or auto-inject), those agents cannot be excluded by not_needed_overrides.
-        # Non-TDD agents (e.g. architect-review) remain freely overridable.
+        # Auto-include user-surface-smoker when the work item declares a durable
+        # observable side-effect (BP-1100f-5). The routing is data-driven — the
+        # agent is included because the item DECLARED a side-effect, not because
+        # of an opt-in flag or hard-coded name. Items without a declared
+        # side-effect are exempt (BP-1100f-5-i): the absence of declares_side_effect
+        # is the data property that grants the exemption, never a hard-coded
+        # item name or type.
+        if declares_side_effect:
+            all_needed.add("user-surface-smoker")
+
+        # Determine all agents that cannot be overridden by not_needed_overrides.
+        #
+        # TDD-mandated agents (BO-550-1-i): test-writer and test-runner are
+        # mandatory when production_code is in the computed chain; an explicit
+        # not_needed override cannot remove them (the computed chain wins).
         _TDD_MANDATORY: frozenset[str] = frozenset({"test-writer", "test-runner"})
         tdd_protected: set[str] = all_needed & _TDD_MANDATORY
+        #
+        # Side-effect-mandated agents (BP-1100f-5): user-surface-smoker is
+        # mandatory when declares_side_effect=True. An explicit not_needed
+        # override cannot cancel a declared side-effect gate — the declaration
+        # wins (mirrors BO-550-1-i for TDD). Without this protection a ticket
+        # author could add user-surface-smoker: not_needed to their AC and
+        # silently bypass the mandatory smoke check.
+        _SIDE_EFFECT_MANDATORY: frozenset[str] = frozenset({"user-surface-smoker"})
+        side_effect_protected: set[str] = (
+            (all_needed & _SIDE_EFFECT_MANDATORY) if declares_side_effect else set()
+        )
+        #
+        # Combined protection: neither TDD-mandated nor side-effect-mandated
+        # agents can be excluded by not_needed_overrides.
+        all_protected: set[str] = tdd_protected | side_effect_protected
 
         # Determine documentation-mandatory agents that cannot be overridden (BO-2200b-5).
         # When the documentation trigger fires and injects documentation-expert and
@@ -729,14 +907,15 @@ def _build_agents_map(
         doc_protected: set[str] = all_needed & _DOC_MANDATORY
 
         # Remove any agent that has an explicit not_needed override,
-        # but protect TDD-mandated agents (BO-550-1-i: computed chain wins)
-        # and doc-mandatory agents (BO-2200b-5: computed doc chain wins).
+        # but protect all mandatory agents — TDD-mandated (BO-550-1-i) and
+        # side-effect-mandated user-surface-smoker (BP-1100f-5) via all_protected,
+        # plus doc-mandatory agents (BO-2200b-5: computed doc chain wins).
         # BO-2200b-5-i (silent-proof): when a doc-mandatory agent override is
         # blocked, emit a WARNING so the hand-edit attempt is surfaced rather
         # than silently overwritten.  The warning names the blocked agent so
         # operators and CI tooling can detect ticket hand-edit interference.
         for agent in overrides:
-            if agent not in tdd_protected and agent not in doc_protected:
+            if agent not in all_protected and agent not in doc_protected:
                 all_needed.discard(agent)
             elif agent in doc_protected:
                 logger.warning(
@@ -771,8 +950,8 @@ def _build_agents_map(
                     agents[nc_agent] = "needed"
                 for nc_agent in non_canonical_not_needed:
                     agents[nc_agent] = "not_needed"
-            if phase_agent in tdd_protected:
-                # TDD-mandated agents are never overridable (BO-550-1-i).
+            if phase_agent in all_protected:
+                # Mandatory agents (TDD-mandated or side-effect-mandated) are never overridable.
                 agents[phase_agent] = "needed"
             elif phase_agent in doc_protected:
                 # Doc-mandatory agents are never overridable (BO-2200b-5).
@@ -1083,6 +1262,27 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     ])
 
 
+def _as_contract_entries(value: object) -> list[dict]:
+    """Normalize a delivers_to / expects_from field to a list of dict entries.
+
+    The field may be a single mapping (legacy dict form, e.g. GE-116a-1) or a
+    list of mappings (the BA/IT-PO v3 form, e.g. FIN-100a-4 / FIN-100c-4). Both
+    are valid per the AC schema, so the ticket generator must accept either.
+    Non-mapping list elements are skipped defensively.
+
+    Args:
+        value: The raw ``delivers_to`` or ``expects_from`` value from an AC.
+
+    Returns:
+        A list of mapping entries (possibly empty).
+    """
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, list):
+        return [entry for entry in value if isinstance(entry, dict)]
+    return []
+
+
 def _extract_doc_genre(ac: AcRecord) -> str:
     """Extract the Diataxis genre from an AC record's documentation_triggers field.
 
@@ -1296,12 +1496,7 @@ def _build_agent_contracts_section(
     if delivers_to is not None:
         lines.append("### Delivers To")
         lines.append("")
-        delivers_to_entries = (
-            delivers_to if isinstance(delivers_to, list) else [delivers_to]
-        )
-        for entry in delivers_to_entries:
-            if not isinstance(entry, dict):
-                continue
+        for entry in _as_contract_entries(delivers_to):
             agent_name = entry.get("agent", "")
             contract_text = entry.get("contract", "")
             if agent_name:
@@ -1312,12 +1507,7 @@ def _build_agent_contracts_section(
     if expects_from is not None:
         lines.append("### Expects From")
         lines.append("")
-        expects_from_entries = (
-            expects_from if isinstance(expects_from, list) else [expects_from]
-        )
-        for entry in expects_from_entries:
-            if not isinstance(entry, dict):
-                continue
+        for entry in _as_contract_entries(expects_from):
             upstream_ac_id = entry.get("ac_id", "")
             contract_text = entry.get("contract", "")
             if upstream_ac_id:
@@ -1345,6 +1535,125 @@ def _build_signoffs_section(agents: dict[str, str]) -> str:
         if status == "needed":
             lines.append(f"- [ ] {agent_name}")
     return "\n".join(lines)
+
+
+def _load_valid_component_ids() -> frozenset[str]:
+    """Load the set of valid component graph IDs from docs/components.json.
+
+    MODULE: generate_ticket_from_ac
+    GOAL: Provide the authoritative set of valid underscore graph IDs so that
+          ``_build_components_list`` can validate resolved component values and
+          emit targeted WARNINGs for values absent from the registry.
+    BUSINESS CONTEXT: docs/components.json is the SSOT for component graph IDs.
+          Any resolved component value absent from this set is suspect and
+          should be surfaced to the author via a WARNING rather than silently
+          inserted into the generated ticket.
+    ARCHITECTURE: I/O boundary function — catches read/parse errors and
+          returns an empty frozenset (no validation) rather than propagating.
+          Calls ``_find_worktree_root`` so that unit tests can patch it to
+          supply a controlled test-double components.json.
+
+    Returns:
+        frozenset of underscore component id strings from docs/components.json,
+        or an empty frozenset when the file cannot be found or read (in which
+        case no validity check is performed by callers).
+
+    DECISION HISTORY:
+        TKT-500f-17 (2026-07-21): Introduced to support data-driven validity
+        checking in ``_build_components_list`` — validity is determined by
+        membership in docs/components.json, not by the partial MIGRATION_MAP.
+    """
+    try:
+        repo_root = _find_worktree_root(Path(__file__))
+        components_path = repo_root / "docs" / "components.json"
+        with open(components_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return frozenset(data.get("components", {}).keys())
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Cannot load valid component IDs from docs/components.json: %s", exc
+        )
+        return frozenset()
+
+
+def _build_components_list(ac: AcRecord, ac_id: str = "") -> list[str]:
+    """Build the ``components`` LIST for a generated ticket frontmatter.
+
+    Prefers the AC's own ``components`` field when non-empty.  When the field
+    holds a SCALAR string (not a YAML list), it is treated as a single
+    component id and wrapped in a one-element list — applying the
+    ``_COMPONENT_MIGRATION_MAP`` kebab→underscore lookup so that kebab
+    namespace keys (e.g. ``ticket-creation``) are resolved to their
+    components.json graph ids (e.g. ``ticket_creation_pipeline``).
+
+    When the field holds a YAML LIST, each element is normalised through
+    ``_COMPONENT_MIGRATION_MAP`` and then validated against the set of valid
+    ids loaded from docs/components.json (TKT-500f-16 / TKT-500f-17).
+    Elements whose resolved value is absent from docs/components.json receive
+    a WARNING that names both the source AC id and the offending value.
+    Warnings are emitted at most once per distinct unresolved value (AC-3
+    deduplication).  The unresolved value is passed through VERBATIM so the
+    Component-vocab CI check can surface it; it is never silently dropped.
+    Duplicate resolved values are deduped in the output (order-preserving).
+
+    When the field is absent or falsy, the scalar ``component`` key is
+    normalised via ``_COMPONENT_MIGRATION_MAP``, falling back to the raw
+    value when the key is absent from the map.
+
+    The scalar ``component`` field in the ticket frontmatter is left unchanged
+    — only the LIST is normalised to the components.json graph vocabulary.
+
+    Args:
+        ac: Parsed AC record dict.
+        ac_id: The AC identifier; used in WARNING messages so the author can
+               trace an unresolvable component value back to its source AC.
+
+    Returns:
+        List of underscore graph ids for the generated ticket ``components`` LIST.
+
+    DECISION HISTORY:
+        TKT-500f-15 (2026-07-21): Added ``isinstance(existing, str)`` branch to
+        prevent ``list(str)`` per-character shatter when the YAML ``components``
+        field is a scalar string.  A scalar string is now treated as a single
+        value and resolved through ``_COMPONENT_MIGRATION_MAP`` before wrapping.
+        TKT-500f-16 (2026-07-21): LIST elements are now each normalised through
+        ``_COMPONENT_MIGRATION_MAP`` instead of passed through with ``list()``.
+        Previously kebab elements such as ``build-pipeline`` passed straight
+        through without normalisation.
+        TKT-500f-17 / TKT-500f-17-i (2026-07-21): Added docs/components.json
+        validity check for LIST elements; WARNING emitted once per distinct
+        unresolvable value naming both the AC id and the value; unresolved
+        values passed through verbatim (not dropped).
+    """
+    existing = ac.get("components")
+    if existing:
+        if isinstance(existing, str):
+            return [_COMPONENT_MIGRATION_MAP.get(existing, existing)]
+        # LIST case: normalise each element, validate against components.json.
+        valid_ids = _load_valid_component_ids()
+        result: list[str] = []
+        seen_resolved: set[str] = set()   # order-preserving dedup of resolved values
+        warned_values: set[str] = set()   # dedup WARNING emissions per distinct value
+        for el in existing:
+            resolved: str = _COMPONENT_MIGRATION_MAP.get(el, el)
+            if resolved not in seen_resolved:
+                seen_resolved.add(resolved)
+                result.append(resolved)
+            # Validity check: warn once per distinct unresolved value when the
+            # resolved id is absent from docs/components.json.  Skip the check
+            # when valid_ids is empty (components.json unavailable) to avoid
+            # false positives.
+            if valid_ids and resolved not in valid_ids and resolved not in warned_values:
+                logger.warning(
+                    "AC '%s': component value %r cannot be resolved to a valid "
+                    "docs/components.json graph id",
+                    ac_id,
+                    resolved,
+                )
+                warned_values.add(resolved)
+        return result
+    kebab = ac.get("component", "unknown")
+    return [_COMPONENT_MIGRATION_MAP.get(kebab, kebab)]
 
 
 def _build_frontmatter(
@@ -1376,7 +1685,7 @@ def _build_frontmatter(
         "title": ac.get("title", f"Implement {ac_id}"),
         "status": "todo",
         "source_ac": ac_id,
-        "components": [ac.get("component", "unknown")],
+        "components": _build_components_list(ac, ac_id),
         "created": today,
         "depends_on": ac.get("depends_on") or [],
         "priority": _map_priority(ac),
@@ -1406,6 +1715,13 @@ def _build_frontmatter(
     # review cycle is in flight for this ticket.
     if agents.get("documentation-verifier") == "needed":
         fm["documentation_required"] = True
+    # Propagate declares_side_effect from the AC to the ticket frontmatter (BP-1100f-5).
+    # This field is optional; absent on the AC → absent from the ticket (no default emitted).
+    # Emitting it enables downstream tools and ticket-supervisor to read the declaration
+    # directly from the ticket without re-reading the source AC.
+    declares_side_effect = ac.get("declares_side_effect")
+    if declares_side_effect is not None:
+        fm["declares_side_effect"] = bool(declares_side_effect)
     return "---\n" + yaml.dump(fm, default_flow_style=False, allow_unicode=True) + "---"
 
 
@@ -1618,49 +1934,256 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
 # ---------------------------------------------------------------------------
 
 
-def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
+def _normalise_repo_relative(path: str) -> str:
+    """Strip leading ``./`` or ``/`` and normalise separators for dedup comparison.
+
+    Produces a canonical repo-relative form used only inside
+    :func:`_write_implemented_by` to compare a candidate path against existing
+    ``implemented_by`` entries.  The stored AC YAML value is never modified —
+    only the comparison is normalised so that ``./tickets/foo.md`` and
+    ``tickets/foo.md`` are treated as the same entry.
+
+    Args:
+        path: A raw path string, potentially prefixed with ``./`` or ``/``.
+
+    Returns:
+        The normalised repo-relative path with any leading ``./`` or ``/``
+        stripped and path separators unified to ``/``.
+    """
+    normalised = path.replace("\\", "/")
+    normalised = normalised.lstrip("/")
+    while normalised.startswith("./"):
+        normalised = normalised[2:]
+    return normalised
+
+
+def _canonicalise_to_repo_relative(path: str, repo_root: "Path | None" = None) -> str:
+    """Canonicalise a ticket path to its repo-relative form.
+
+    Uses a three-tier strategy so that absolute paths, cross-worktree paths,
+    and cosmetically-prefixed relative paths all resolve to the same canonical
+    ``tickets/…`` string:
+
+    1. **repo_root relativisation** — when *repo_root* is provided and *path* is
+       absolute, ``Path.relative_to(repo_root)`` is attempted.  Falls through to
+       tier 2 on ``ValueError`` (path is outside the given root).
+    2. **tickets-segment extraction** — after stripping any leading ``/``, the
+       leftmost ``tickets/`` segment is located.  Everything from that segment
+       onward is returned.  Handles absolute legacy paths and cross-worktree
+       absolute paths where the exact repo root is unknown.
+    3. **Simple strip** — strip any remaining leading ``./`` or ``/`` characters
+       for already-relative paths with cosmetic prefixes.
+
+    Args:
+        path: A raw path string — absolute, relative, or prefixed with ``./``.
+        repo_root: Optional repo root ``Path``.  When provided and *path* is
+            absolute, ``relative_to`` is attempted before any segment extraction.
+
+    Returns:
+        A repo-relative path string with no leading ``/`` and no absolute
+        filesystem prefix (e.g. ``tickets/00_inbox/TICKET-test.md``).
+
+    DECISION HISTORY:
+    - 2026-07-21 [ACD-1200a-13]: Introduced to extend ``_normalise_repo_relative``
+      with tickets-segment extraction, enabling dedup of legacy absolute entries
+      against canonical repo-relative incoming paths without a git subprocess call.
+    - 2026-07-21 [ACD-1200a-14]: Added *repo_root* parameter so callers can inject
+      a known repo root for relativisation, producing identical canonical strings
+      regardless of checkout location.
+    """
+    normalised = path.replace("\\", "/")
+
+    # Tier 1: repo_root-based relativisation
+    if repo_root is not None and Path(normalised).is_absolute():
+        try:
+            return str(Path(normalised).relative_to(repo_root)).replace("\\", "/")
+        except ValueError:
+            pass  # Fall through to tier 2
+
+    # Tier 2 & 3: strip leading characters, then extract tickets/ segment
+    normalised = normalised.lstrip("/")
+    while normalised.startswith("./"):
+        normalised = normalised[2:]
+
+    # Tier 2: extract everything from the first 'tickets/' segment when the
+    # cleaned string still has a non-trivial prefix before 'tickets/'
+    tickets_idx = normalised.find("tickets/")
+    if tickets_idx > 0:
+        return normalised[tickets_idx:]
+
+    return normalised
+
+
+def _derive_repo_root_from_git() -> "Path | None":
+    """Derive the git repository root via ``git rev-parse --show-toplevel``.
+
+    Returns ``None`` and logs a ``WARNING`` when the command fails (e.g. the
+    working directory is not inside a git repository, or git is not installed).
+    Never raises — callers must handle the ``None`` case via the fallback
+    canonicaliser.
+
+    Returns:
+        The repo root as a ``Path``, or ``None`` when git cannot resolve it.
+
+    DECISION HISTORY:
+    - 2026-07-21 [ACD-1200a-14]: Introduced to derive repo root for absolute-path
+      canonicalisation when neither a worktree nor an explicit *repo_root* is
+      provided to ``_write_implemented_by``.
+    - 2026-07-21 [ACD-1200a-14-i]: Wrapped subprocess call with specific exception
+      types (``CalledProcessError``, ``FileNotFoundError``) per Error Handling Policy
+      Rule 1; always logs ``WARNING`` on failure and never re-raises so that the
+      caller's fallback path can succeed.
+    - 2026-07-21 [M-1/M-2 review findings]: Broadened except to
+      ``(subprocess.CalledProcessError, OSError)`` — ``FileNotFoundError`` and
+      ``PermissionError`` are both ``OSError`` subclasses, so the narrower form
+      missed ``PermissionError`` on restricted filesystems (M-1). Added
+      ``timeout=5`` to the ``subprocess.run`` call to prevent indefinite hangs on
+      network/degenerate filesystems, and added ``subprocess.TimeoutExpired`` to the
+      except clause (M-2).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        return Path(result.stdout.strip())
+    except (subprocess.CalledProcessError, OSError, subprocess.TimeoutExpired) as exc:
+        logger.warning(
+            "git rev-parse --show-toplevel failed — falling back to tickets-segment "
+            "canonicalisation for implemented_by path normalisation: %s",
+            exc,
+        )
+        return None
+
+
+def _write_implemented_by(
+    ac_path: Path,
+    ticket_path: str,
+    ac_id: str,
+    worktree: Path | None = None,
+    repo_root: "Path | None" = None,
+) -> None:
     """Append *ticket_path* to the implemented_by list in the source AC YAML.
 
     Uses a targeted field update (not a full yaml.dump round-trip) to minimise
-    diff noise in the AC store, per the risk mitigation note in the ticket.
+    diff noise in the AC store.  Both the incoming path and every existing
+    ``implemented_by`` entry are canonicalised through a shared
+    ``_canonicalise_to_repo_relative`` call before comparison, so legacy
+    absolute entries are recognised as duplicates of canonical repo-relative
+    incoming paths and no duplicate is appended.
 
     The update strategy:
-    1. Read the full file content.
-    2. Parse implemented_by from the YAML.
-    3. If ticket_path is already present, skip (idempotent).
-    4. Rewrite only the implemented_by lines using a targeted string replacement.
+    1. Determine the effective repo root (from *repo_root*, worktree fallback, or
+       ``git rev-parse --show-toplevel``; logs WARNING on git failure).
+    2. Canonicalise *ticket_path* to a clean ``tickets/…`` repo-relative form.
+    3. Read the full file content and parse ``implemented_by`` from the YAML.
+    4. Canonicalise every existing entry through the same canonicaliser.
+    5. If the canonical incoming is already present, skip appending (idempotent).
+    6. Rewrite the ``implemented_by`` block only when the normalised list differs
+       from the original (write-back normalises legacy absolute entries in place).
 
     Args:
         ac_path: Absolute path to the source AC YAML file.
-        ticket_path: Relative path of the generated ticket to record.
+        ticket_path: Path of the generated ticket to record.  May be absolute
+                     or relative; will be normalised to repo-relative form
+                     before writing.
         ac_id: The AC id (for diagnostic messages).
+        worktree: Optional worktree root.  When provided and *ticket_path* is
+                  absolute and *repo_root* is absent, the worktree prefix is
+                  stripped via ``Path.relative_to`` to produce a clean
+                  repo-relative path.
+        repo_root: Optional repository root ``Path``.  When provided, all path
+                   canonicalisation uses ``Path.relative_to(repo_root)``.  Takes
+                   precedence over *worktree*-based relativisation.  When absent
+                   and *ticket_path* is absolute, ``git rev-parse --show-toplevel``
+                   is attempted; on failure a WARNING is logged and the
+                   tickets-segment fallback is used.
 
     Raises:
         OSError: When the file cannot be read or written.
         yaml.YAMLError: When the YAML cannot be parsed.
+
+    DECISION HISTORY:
+    - 2026-07-21 [ACD-1200a-13]: Switched dedup to use ``_canonicalise_to_repo_relative``
+      on BOTH incoming and existing entries so that legacy absolute entries are
+      recognised as duplicates of canonical repo-relative incoming paths.  Existing
+      entries are retroactively normalised on every write-back so no absolute path
+      survives in the stored list.
+    - 2026-07-21 [ACD-1200a-14]: Added *repo_root* parameter; when provided, all
+      canonicalisation uses ``Path.relative_to(repo_root)`` producing identical
+      stored strings regardless of checkout or worktree location.
+    - 2026-07-21 [ACD-1200a-14-i]: When *repo_root* is absent and the path is
+      absolute, git rev-parse is attempted via ``_derive_repo_root_from_git``; on
+      failure a WARNING is logged and the tickets-segment fallback handles the path.
     """
-    content = ac_path.read_text(encoding="utf-8")
-    data = yaml.safe_load(content)
+    # ------------------------------------------------------------------
+    # Step 1: Determine the effective repo root for canonicalisation.
+    # ------------------------------------------------------------------
+    _p = Path(ticket_path)
+    effective_repo_root: "Path | None" = repo_root
+
+    if _p.is_absolute() and effective_repo_root is None:
+        if worktree is not None:
+            try:
+                ticket_path = str(_p.relative_to(worktree))
+                _p = Path(ticket_path)
+                # Successfully relativised against worktree; no git call needed.
+            except ValueError:
+                # Ticket lies outside the worktree — derive root from git.
+                effective_repo_root = _derive_repo_root_from_git()
+        else:
+            effective_repo_root = _derive_repo_root_from_git()
+
+    # ------------------------------------------------------------------
+    # Step 2: Canonicalise the incoming ticket path.
+    # ------------------------------------------------------------------
+    canonical_incoming = _canonicalise_to_repo_relative(str(_p), effective_repo_root)
+
+    # ------------------------------------------------------------------
+    # Step 3: Read the file and parse existing implemented_by entries.
+    # ------------------------------------------------------------------
+    try:
+        content = ac_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Cannot read AC YAML %s: %s", ac_path, exc)
+        raise
+    try:
+        data = yaml.safe_load(content)
+    except yaml.YAMLError as exc:
+        logger.warning("Cannot parse AC YAML %s: %s", ac_path, exc)
+        raise
     implemented_by: list[str] = data.get("implemented_by") or []
 
-    if ticket_path in implemented_by:
-        # Already recorded — idempotent, no write needed
+    # ------------------------------------------------------------------
+    # Step 4: Normalise all existing entries through the shared canonicaliser
+    # and check whether the incoming is already represented.
+    # ------------------------------------------------------------------
+    normalised_list: list[str] = [
+        _canonicalise_to_repo_relative(entry, effective_repo_root)
+        for entry in implemented_by
+    ]
+    already_recorded = canonical_incoming in normalised_list
+    if not already_recorded:
+        normalised_list.append(canonical_incoming)
+
+    # If the normalised list is byte-for-byte identical to what is on disk,
+    # no write is necessary (true no-op; covers the idempotent re-run case).
+    if normalised_list == implemented_by:
         return
 
-    implemented_by.append(ticket_path)
-
-    # Targeted rewrite: replace only the implemented_by block.
-    # Find the existing implemented_by line(s) and replace them.
+    # ------------------------------------------------------------------
+    # Step 5: Targeted rewrite — replace only the implemented_by block.
+    # ------------------------------------------------------------------
     new_value_yaml = yaml.dump(
-        {"implemented_by": implemented_by},
+        {"implemented_by": normalised_list},
         default_flow_style=False,
         allow_unicode=True,
     ).strip()
-    # new_value_yaml is e.g. "implemented_by:\n- path/to/ticket.md"
+    # new_value_yaml is e.g. "implemented_by:\n- tickets/foo/bar.md"
 
-    # Replace the existing implemented_by block in the file content.
-    # Strategy: locate 'implemented_by:' line and replace until the next
-    # non-indented key or end of file.
     lines = content.splitlines(keepends=True)
     result_lines: list[str] = []
     i = 0
@@ -1668,11 +2191,18 @@ def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
     while i < len(lines):
         line = lines[i]
         if not replaced and line.startswith("implemented_by:"):
-            # Skip existing implemented_by block (the key + any indented values)
+            # Emit the new (normalised) block, then skip the old list items.
             result_lines.append(new_value_yaml + "\n")
             i += 1
-            while i < len(lines) and (lines[i].startswith(" ") or lines[i].startswith("\t") or lines[i].strip() == "-" or (lines[i].startswith("- ") and not lines[i - 1].startswith(" "))):
-                # Include only list items that belong to implemented_by
+            while i < len(lines) and (
+                lines[i].startswith(" ")
+                or lines[i].startswith("\t")
+                or lines[i].strip() == "-"
+                or (
+                    lines[i].startswith("- ")
+                    and not lines[i - 1].startswith(" ")
+                )
+            ):
                 if lines[i].startswith("- ") or lines[i].startswith("  - "):
                     i += 1
                 else:
@@ -1683,12 +2213,16 @@ def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
             i += 1
 
     if not replaced:
-        # implemented_by key not present — append it
+        # implemented_by key not present in file — append the new block.
         new_content = content.rstrip("\n") + "\n" + new_value_yaml + "\n"
     else:
         new_content = "".join(result_lines)
 
-    ac_path.write_text(new_content, encoding="utf-8")
+    try:
+        ac_path.write_text(new_content, encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Cannot write AC YAML %s: %s", ac_path, exc)
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -2031,11 +2565,13 @@ def main(argv: list[str] | None = None) -> int:
         assigned_agent = ac.get("assigned_agent", "python-coder")
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
+        declares_side_effect = bool(ac.get("declares_side_effect", False))
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
             risk_surface=risk_surface,
             files_touched=files_touched,
+            declares_side_effect=declares_side_effect,
         )
         frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
         body = _build_ticket_body(ac, ac_id, agents_map=agents)
@@ -2066,11 +2602,13 @@ def main(argv: list[str] | None = None) -> int:
     assigned_agent = ac.get("assigned_agent", "python-coder")
     change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
+    declares_side_effect = bool(ac.get("declares_side_effect", False))
     agents = _build_agents_map(
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
         files_touched=files_touched,
+        declares_side_effect=declares_side_effect,
     )
     frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
     body = _build_ticket_body(ac, ac_id, agents_map=agents)
@@ -2090,7 +2628,7 @@ def main(argv: list[str] | None = None) -> int:
     # Write implemented_by back-reference into source AC
     relative_ticket_path = str(ticket_path.relative_to(worktree)) if ticket_path.is_relative_to(worktree) else str(ticket_path)
     try:
-        _write_implemented_by(ac_path, relative_ticket_path, ac_id)
+        _write_implemented_by(ac_path, relative_ticket_path, ac_id, worktree=worktree)
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"WARNING: ticket written but could not update implemented_by in {ac_path}: {exc}",
@@ -2202,5 +2740,18 @@ DECISION HISTORY
   Modified _build_agent_contracts_section: the "- [ ] AC-1:" line now emits
   "[<genre>] <doc_path> — <constraint>" instead of the AC title verbatim.
   (AC BO-2200c-2) (#EPIC-DocumentationCoverageGuarantee/18)
+- 2026-07-21 [feature/bp-1100f-hardening/BP-1100f-5]: Add declares_side_effect
+  routing (BP-1100f-5). Added declares_side_effect: bool = False parameter to
+  _build_agents_map. When True, user-surface-smoker is added to all_needed so
+  the observable-side-effect smoke check runs automatically and gates the done
+  state. The routing is data-driven: the smoke check fires because the work item
+  DECLARED a durable side-effect, not because of an opt-in flag or hard-coded
+  name. Items without the declaration are exempt (BP-1100f-5-i). Added
+  user-surface-smoker to _CANONICAL_PHASE_ORDER and _FLOW_CHANGE_PHASE_ORDER at
+  position 11.5 (after pr-reviewer, before ac-validator) so the phase is correctly
+  ordered and cannot be silently skipped. _build_frontmatter propagates
+  declares_side_effect from the source AC to the ticket frontmatter so downstream
+  tools can read the declaration directly. Both call sites in main() updated to
+  extract and pass declares_side_effect from the AC record.
 ====================================================================
 """

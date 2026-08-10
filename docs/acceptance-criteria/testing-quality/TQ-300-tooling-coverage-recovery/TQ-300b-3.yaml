@@ -1,0 +1,72 @@
+id: TQ-300b-3
+title: "Agent spawn-graph generation is covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a valid agent registry,
+  When generate_spawn_graph produces the agent map,
+  Then the output contains one node for every agent in the registry and one edge
+    for every declared spawn relationship.
+
+  Given a registry with a spawn relationship between two agents,
+  When the spawn graph is generated,
+  Then the resulting diagram text contains an edge connecting exactly those two
+    agents in the declared direction.
+
+  Given an empty registry with no agents,
+  When generate_spawn_graph runs,
+  Then it produces a well-formed but empty diagram rather than raising an
+    unhandled error.
+depends_on:
+  - TQ-300b
+doc_links:
+  - path: scripts/generate_agent_diagram.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_graph_has_node_per_agent_and_edge_per_spawn
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "The generated spawn-graph text contains one node per agent and one edge per declared spawn relationship."
+  - name: test_spawn_edge_connects_correct_agents_in_direction
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A spawn relationship produces an edge connecting exactly those two agents in the declared direction (parent --> child, ids hyphen-to-underscore normalised)."
+  - name: test_empty_registry_produces_well_formed_empty_diagram
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "generate_spawn_graph([]) returns a well-formed but empty diagram (just the 'graph TD' header) and does not raise."
+it_requirements:
+  - "Author fresh unit tests in tests/test_generate_agent_diagram.py (new file). Write from scratch and verify run-to-green before sign-off."
+  - "API NAME: there is NO function named generate_agent_diagram. The function under test is generate_spawn_graph(agents) in scripts/generate_agent_diagram.py (emits one node line per agent and a 'parent --> child' edge per spawn_allowlist entry, with the __ticket_phase_agents__ macro expanded). Import by bare module name after adding scripts/ to sys.path."
+  - "The 'agents' argument is the parsed list of agent dicts, not a file path — construct it directly in the test; do not depend on the live package registry."
+  - "No production change is expected for this AC — this is coverage recovery over existing behavior."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

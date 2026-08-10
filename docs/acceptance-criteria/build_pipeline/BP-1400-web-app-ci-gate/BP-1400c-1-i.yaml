@@ -1,0 +1,67 @@
+id: BP-1400c-1-i
+components:
+  - build_pipeline
+title: "The /about route is loaded headlessly and a non-200 or render error on it blocks the pull request"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that changes the web app (under leafcutter-web/), and the
+    web app exposes the /about route,
+  When the web-app route-render check runs and headlessly loads /about,
+  Then a /about response with a non-200 HTTP status, or any console error or
+    render error emitted while /about loads, makes the check report a failing
+    result and the pull request is reported as not mergeable,
+  And when /about loads with a 200 status and no console or render error, the
+    check reports /about as passing.
+depends_on:
+  - BP-1400c-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/web-app-ci-gate.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Exercises the per-route pass/fail behavior of the route-smoke harness (BP-1400c-1) on the concrete /about route: the harness must headlessly load /about, and a non-200 status OR any console/render error emitted while /about loads must drive a failing result (non-zero exit), while a clean 200 /about with no console/render error passes."
+  - "/about must be an actual route the harness enumerates — verify it is covered by the route-enumeration source (leafcutter-web/app/about) so it cannot be silently dropped from the swept set."
+  - "Any deliberately-broken /about used to verify the failing direction must be transient/scoped to the verification (throwaway PR or temporary edit removed before merge) so it does not become a standing red; this AC verifies the GATE, it does not ship a broken /about."
+  - "Not-mergeable enforcement assumes the required-status-check wiring in BP-1400a-4."
+test_spec:
+  - name: test_about_route_smoke
+    target_dir: leafcutter-web/tests/
+    framework: playwright
+    type: e2e
+    description: "The route-smoke harness loads /about headlessly: a non-200 or any console/render error fails the run (check reports failing); a 200 /about with no console/render error passes."
+delivers_to: null
+expects_from:
+  ac_id: BP-1400c-1
+  contract: "The blocking web-app route-render check whose per-route pass/fail behavior this case exercises on /about"
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (exercises the route-smoke harness / ci.yml route-render job built in BP-1400c-1). Added it_requirements (per-route pass/fail on /about via headless load: non-200 or console/render error fails, clean 200 passes; verify /about is in the enumerated route set from leafcutter-web/app/about; any broken-/about verification transient; merge-block via BP-1400a-4), the planned web-app-ci-gate.md doc_link, and a Playwright route-smoke test_spec against /about. Criteria, expects_from, readiness, and components unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/10_TICKET-20260721-BP-1400c-1-i.md
+notes: |
+  /about is anchored explicitly (per the authoring brief) as the concrete route
+  the route-render gate must cover — it is a real, always-present page whose
+  render failure would otherwise reach users. Verifies both directions on a
+  single named route: a broken /about blocks the merge; a clean /about passes.
+change_target: pipeline
+risk_surface: safety

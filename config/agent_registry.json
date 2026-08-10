@@ -2504,11 +2504,19 @@
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign when the ticket introduces or modifies a user-facing surface (slash command, pre-commit hook, agent-orchestrated entrypoint, or cron script). Conditional: only emitted in the agents: map when user_facing_surface != null in the ticket frontmatter.",
+                "description": "Assign when the ticket declares a durable observable side-effect OR introduces/modifies a user-facing surface (slash command, pre-commit hook, agent-orchestrated entrypoint, or cron script). Automatic (data-driven) routing: emitted as needed in the agents: map when (1) ticket frontmatter declares_side_effect == true, OR (2) user_facing_surface != null in the ticket frontmatter. The declares_side_effect path is mandatory (BP-1100f-5); the user_facing_surface path is the legacy opt-in trigger. Items with neither field set are exempt (BP-1100f-5-i).",
                 "trigger_conditions": [
                     {
                         "type": "dsl",
-                        "expression": "ticket frontmatter user_facing_surface != null"
+                        "expression": "ticket frontmatter declares_side_effect == true",
+                        "source": "BP-1100f-5",
+                        "routing": "automatic — generator includes user-surface-smoker in agents: map when AC declares_side_effect: true"
+                    },
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter user_facing_surface != null",
+                        "source": "legacy",
+                        "routing": "opt-in — ticket must manually set user_facing_surface and include user-surface-smoker in agents: map"
                     },
                     {
                         "type": "llm",
@@ -2529,7 +2537,8 @@
             "priority": 11.5,
             "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects. See ADR-036.",
             "conditional": true,
-            "conditional_field": "user_facing_surface",
+            "conditional_field": "declares_side_effect",
+            "conditional_field_legacy": "user_facing_surface",
             "requires_ticket_section": false,
             "category": "testing",
             "skills_invoked": [],

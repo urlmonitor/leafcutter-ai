@@ -1,0 +1,82 @@
+id: TQ-300c-1
+title: "Ticket prioritization internals, including parked-ticket handling, are covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a set of tickets with depends_on relationships where some predecessors
+    are not yet done,
+  When the prioritizer builds the ready set,
+  Then only tickets whose dependencies are all satisfied appear in the ready set,
+    and blocked tickets are excluded.
+
+  Given several ready tickets with differing priority values,
+  When the prioritizer ranks them,
+  Then the returned order is sorted with the highest-priority ticket first.
+
+  Given a ticket whose frontmatter status marks it as parked,
+  When the prioritizer builds the ready set,
+  Then the parked ticket is excluded from the ready set even if all of its
+    dependencies are satisfied.
+
+  Given a set of tickets containing a dependency cycle,
+  When the prioritizer processes them,
+  Then it reports the cycle and identifies the tickets involved rather than
+    surfacing an arbitrary ticket as ready.
+depends_on:
+  - TQ-300c
+doc_links:
+  - path: templates/skills/ticket-prioritizer/scripts/prioritize.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+test_required: true
+test_spec:
+  - name: test_blocked_tickets_excluded_from_ready
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "compute_ready returns (ready, blocked) with tickets whose deps are unmet excluded from ready."
+  - name: test_ready_sorted_highest_priority_first
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "ready is sorted highest-priority-first per PRIORITY_ORDER (critical<high<medium<low)."
+  - name: test_parked_ticket_excluded_even_when_unblocked
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A status: parked ticket is excluded from ready even when all its deps are satisfied (requires the production fix in it_requirements)."
+  - name: test_dependency_cycle_is_reported_with_nodes
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "detect_cycle returns the cycle node path (and main() exits non-zero) for a dependency cycle rather than surfacing an arbitrary ticket as ready."
+it_requirements:
+  - "Author fresh unit tests in tests/test_prioritize.py (new file). Write from scratch and verify run-to-green before sign-off. prioritize.py lives under templates/skills/ticket-prioritizer/scripts/ — import it via sys.path.insert of that scripts directory (see tests/test_pick_next_with_acs.py for the sys.path pattern)."
+  - "API MISMATCH: there is NO single function named prioritize. Map 'the prioritizer ranks the tickets' to the pipeline discover_tickets -> build_graph -> detect_cycle -> compute_ready. Assert compute_ready returns (ready, blocked); assert detect_cycle returns the cycle node path."
+  - "PRODUCTION FIX REQUIRED before the parked scenario can go green: parked-ticket handling does NOT exist — _is_done treats only status 'done'/'deferred' as done, so a status: parked ticket is currently surfaced as ready. The coder must add 'parked' exclusion to the ready-set computation so the test can assert the parked ticket is filtered out; coordinate this small production change in the same ticket as the test."
+  - "Use tmp_path ticket .md fixtures carrying real frontmatter (status, priority, depends_on) since discovery is filesystem-driven (discover_tickets rglob's *.md). Do not duplicate tests/test_prioritize_ac_integration.py, which covers only the --include-acs CLI flag."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

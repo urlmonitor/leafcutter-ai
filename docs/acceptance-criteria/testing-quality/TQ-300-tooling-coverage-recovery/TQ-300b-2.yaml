@@ -1,0 +1,84 @@
+id: TQ-300b-2
+title: "Selection-criteria evaluation and its DSL are covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a selection-criteria DSL expression that a candidate ticket-context
+    fully satisfies,
+  When evaluate runs against that context,
+  Then it returns a positive match result.
+
+  Given a selection-criteria DSL expression that a candidate ticket-context does
+    not satisfy,
+  When evaluate runs against that context,
+  Then it returns a negative (non-match) result.
+
+  Given DSL expressions that combine conditions with AND and with OR,
+  When evaluate resolves them,
+  Then the boolean outcome follows the declared logical composition for each
+    combination (AND binds tighter than OR).
+
+  Given a criterion that cannot be resolved deterministically and requires a
+    model judgement,
+  When evaluate encounters it,
+  Then it raises LLMEvaluationRequired rather than silently returning a match or
+    non-match.
+depends_on:
+  - TQ-300b
+doc_links:
+  - path: scripts/selection_criteria_evaluator.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_satisfied_dsl_returns_true
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A DSL condition the ticket_context satisfies makes evaluate return True."
+  - name: test_unsatisfied_dsl_returns_false
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A DSL condition the ticket_context does not satisfy makes evaluate return False."
+  - name: test_and_or_composition_follows_declared_logic
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "AND / OR composition yields the declared boolean outcome (AND binds tighter than OR)."
+  - name: test_llm_condition_raises_llm_evaluation_required
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A condition with type 'llm' makes evaluate raise LLMEvaluationRequired."
+it_requirements:
+  - "Author fresh unit tests in tests/test_selection_criteria_evaluator.py (new file). Write from scratch and verify run-to-green before sign-off."
+  - "This is NOT the affected-agent eval gate (scripts/evals/eval_selector.py) — that is unrelated code. The unit under test is scripts/selection_criteria_evaluator.py, the DSL that decides which agent fits a task; it is currently untested and eval_selector.py does not import it."
+  - "Functions under test (scripts/selection_criteria_evaluator.py): evaluate(trigger_condition, ticket_context) and the LLMEvaluationRequired exception. A condition is a dict {type: 'dsl'|'llm', expression: str}; the 'candidate' is the ticket_context dict (keys: files_touched, title, description, components). Import by bare module name after adding scripts/ to sys.path."
+  - "API GAP — do NOT author the salvage's 'negation of individual criteria' sub-case: the DSL grammar supports only the AND/OR combinators and the operators contains/equals/matches — there is NO negation/NOT operator. Cover AND/OR only. If NOT support is genuinely wanted it is a separate production feature, not part of this coverage-recovery AC; flag it rather than asserting unsupported syntax (which cannot go green)."
+  - "No production change is expected for the four scenarios as written — they cover existing behavior."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

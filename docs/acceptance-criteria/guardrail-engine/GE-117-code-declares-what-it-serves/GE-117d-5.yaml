@@ -1,0 +1,56 @@
+id: GE-117d-5
+readiness: draft
+priority: medium
+title: "Sequence diagram: the commit-time declaration-enforcement interaction"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+criteria: |
+  Given a reader wants to understand how a commit is checked and blocked for
+    missing or invalid declarations
+  When the reader opens the sequence diagram for the declaration guardrail
+  Then the diagram shows the developer initiating a commit and the commit-time
+    guardrail being invoked on the staged diff
+  And the diagram shows the guardrail consulting the component registry and the AC
+    store to resolve declared component and AC references
+  And the diagram shows the two outcomes: a satisfied result that lets the commit
+    proceed, and a missing-or-invalid result that rejects the commit with an
+    actionable report
+  And the diagram shows the developer's route back through fix or opt-out to a
+    passing commit
+depends_on:
+  - GE-117d
+  - GE-117d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author the diagram as a Mermaid sequenceDiagram with check_doc_frontmatter-compliant architecture frontmatter (title, type, status, created, last_updated, components, flight_level; diagram_type: sequence)."
+  - "Depict the two DISTINCT registries the guardrail consults: docs/components.json (module-component validity) and the AC store via _load_ac_by_id (AC-reference validity) — do not conflate them into one 'registry' actor."
+  - "Show both outcomes (satisfied -> proceed; missing/invalid -> reject with actionable report) and the developer's route back via GE-117e fix/opt-out; keep consistent with GE-117d-1 block behavior."
+delivers_to: null
+expects_from:
+  ac_id: GE-117d-1
+  contract: "The commit-time enforcement flow (developer -> guardrail -> registry/store -> block/proceed) the diagram depicts"
+origin_agent: business-analyst
+created: 2026-07-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-117d documentation_triggers [sequence-diagram]. The
+  multi-actor commit-time interaction (developer -> hook -> component registry / AC
+  store -> commit decision -> fix/opt-out loop) the PO flagged. Keep it consistent
+  with the block behavior (GE-117d-1) and the routes out (GE-117e).

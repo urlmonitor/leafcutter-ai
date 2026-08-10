@@ -1,0 +1,99 @@
+id: BP-1100f-5
+components:
+  - build_pipeline
+title: "A work item declaring a durable side-effect is routed through the smoke check automatically"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a work item declares a durable, observable side-effect (an artifact written to disk),
+  And an observable-side-effect smoke check exists in the pipeline,
+  When the pipeline runs the work item's verification phase,
+  Then the smoke check runs automatically for that work item — selected by its declared
+    side-effect rather than by an opt-in flag — and produces a smoke result,
+  And the work item cannot reach a done state with the smoke check left unrun or silently
+    skipped.
+depends_on:
+  - BP-1100f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/build-ticket-workflow-dispatch.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-020-live-surface-tester.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    type:
+      - string
+      - "null"
+    description: "Declared-durable-side-effect selector for the user-surface-smoker trigger. Routing must key off a declared side-effect (data-driven), not an opt-in flag. The exact declared field is pending a user/BA decision (see caveat) — candidates: broaden the existing user_facing_surface selector, or add a declared durable-side-effect axis."
+  reference_file_path: "config/agent_registry.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py"
+  constraints:
+    - "The user-surface-smoker trigger currently fires on `user_facing_surface != null` (an opt-in frontmatter flag). Change routing so the observable-side-effect smoke check is selected by a DECLARED durable observable side-effect (data-driven), not an opt-in flag — new side-effect-declaring items inherit the routing automatically."
+    - "The smoke check must run automatically in the work item's verification phase and produce a smoke result; the work item cannot reach a done state with the smoke check unrun or silently skipped (mandatory, not advisory)."
+    - "Scope-narrowing (BP-1100f-5-i): an item declaring no durable side-effect (for example a docs-only change) is NOT force-routed through the smoke check; the exemption derives from the ABSENCE of a declared side-effect (a data property), never from a hard-coded item name."
+    - "Enforce on every point that actually gates: the agent_registry.json selection_criteria (round-tripped by build.py), the ticket agents-map computed by scripts/ac_store/generate_ticket_from_ac.py, and the drive/verification routing in templates/workflows-js/build-ticket.js must agree on the same selection — do not update one enforcement point and leave the others stale."
+    - "Portable per ADR-001 — a consumer project that runs build.py gets the automatic routing, not only the leafcutter repo; verify via the build.py round-trip."
+test_spec:
+  - name: test_side_effect_item_routes_to_smoker_automatically
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Generate a ticket (via generate_ticket_from_ac) from an AC that declares a durable side-effect; assert the computed agents map emits user-surface-smoker as a needed verification phase, selected by the declared side-effect rather than an opt-in flag."
+  - name: test_smoke_check_cannot_be_silently_skipped_before_done
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "Drive the verification phase for a side-effect-declaring work item; assert it cannot reach a done state with the smoke check unrun or silently skipped."
+delivers_to:
+  agent: user-surface-smoker
+  contract: "A work item declaring a durable, observable side-effect is emitted in the ticket agents map with user-surface-smoker as a needed verification phase, selected by the declared side-effect (data-driven), so the smoke check runs automatically and gates the done state."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-07-21
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    at: 2026-07-21
+    note: "Assigned python-coder (routing config + generator + workflow-js: agent_registry.json selection_criteria, generate_ticket_from_ac.py agents-map, build-ticket.js dispatch). Structured it_requirements (BO-2000d) with real reference_file_path + build.py post_write_command. delivers_to user-surface-smoker (validated against registry). CAVEAT raised at the final gate: the criteria say 'selected by its declared side-effect'; there is no explicit 'durable side-effect' declared field today (the current selector is user_facing_surface). The exact declared field must be decided (broaden user_facing_surface vs add a new axis) before implementation — pinned as data-driven, never by-name."
+superseded_by: null
+covered_by:
+  - BP-1100f-5-i
+implemented_by:
+- tickets/99_done/TICKET-20260721-BP-1100f-5.md
+- scripts/ac_store/generate_ticket_from_ac.py
+- templates/hooks/ticket_frontmatter_guard.py
+notes: |
+  Guard #6 of BP-1100f. Surface for IT-PO to pin: the drive/verification-phase routing
+  that already owns the observable-side-effect smoke check. The check EXISTS today; the
+  gap this AC closes is that it is opt-in and can be silently skipped. This AC makes
+  routing to it automatic and mandatory for any work item that declares a durable
+  side-effect. Portable per ADR-001 — a consumer project that runs build.py must get the
+  automatic routing, not only the leafcutter repo.

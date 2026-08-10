@@ -1,0 +1,66 @@
+id: BO-2400d-3
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "A report compares fast-lane vs heavy-pipeline cost and time per unit of work"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given telemetry records exist tagged for both the fast lane and the heavy pipeline,
+  When the comparison report is generated,
+  Then it emits cost per unit of work and time per unit of work for each lane
+  And the two lanes are presented side by side so the fast lane can be compared
+    against the heavy pipeline.
+depends_on: [BO-2400d]
+doc_links:
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    lane_comparison_report:
+      type: object
+      description: "Report emitting cost-per-unit-of-work and time-per-unit-of-work for the fast lane and the heavy pipeline, presented side by side."
+  reference_file_path: "scripts/agent-health/generate_health_report.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Reuse the existing agent_telemetry.jsonl read/aggregation surface (generate_health_report.py) rather than introducing a second telemetry reader, so the comparison stays consistent with existing reporting."
+    - "The report must emit cost per unit of work and time per unit of work for each lane and present the two lanes side by side."
+    - "Grouping must key on the lane tag (BO-2400d-2); a run with records for only one lane must degrade gracefully (report the available lane, note the missing one) rather than crash."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400d-2
+  contract: "Telemetry records tagged with { lane: fast|heavy, agent } and carrying duration + token counts, grouped by lane for the side-by-side comparison."
+test_spec:
+  - name: test_report_emits_cost_and_time_per_unit_per_lane
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "The report emits cost-per-unit-of-work and time-per-unit-of-work for each lane."
+  - name: test_report_presents_lanes_side_by_side
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "The fast lane and heavy pipeline metrics are presented side by side."
+origin_agent: BrainCandy
+created: 2026-07-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/agent-health/agent_telemetry.py"
+  - "scripts/agent-health/generate_health_report.py"

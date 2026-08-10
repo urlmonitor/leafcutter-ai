@@ -1,0 +1,31 @@
+id: BO-2400f-5
+components:
+  - build_orchestration
+title: "One-argument command surface: /fast-lane-build <AC-id>"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an operator wants to build an AC,
+  When they invoke the fast-lane build command with a single AC-id argument,
+  Then that one argument is the only required input, and it triggers the full arc
+    (resolve connected set -> worktree -> lean loop -> commit -> PR),
+  And the command is a thin shim that dispatches the orchestration workflow with the
+    AC id (mirroring the build-feature command -> workflow pattern),
+  And the workflow is auto-discovered by the build so no manual registry entry is
+    required for it.
+depends_on: [BO-2400f-1, BO-2400f-3, BO-2400f-4]
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-07-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: [templates/commands/fast-lane-build.md]
+change_target: pipeline
+risk_surface: internal

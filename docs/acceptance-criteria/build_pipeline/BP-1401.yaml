@@ -1,0 +1,37 @@
+id: BP-1401
+components:
+  - build_pipeline
+readiness: approved
+priority: medium
+title: "next_diagram_seq.py scans docs/architecture/ recursively so it sees diagrams in the diagrams/ subdirectory"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+origin_agent: BrainCandy
+criteria: |
+  Given the C4 diagram files live in the docs/architecture/diagrams/ subdirectory
+    (e.g. docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md)
+    and no c{level}-NNN-*.md files exist at the top level of docs/architecture/,
+  When next_seq(level, arch_dir) is called with arch_dir = docs/architecture/ for a level
+    that already has diagrams under the diagrams/ subdirectory,
+  Then it discovers those existing diagrams (scanning recursively, not only the top level)
+    and returns max(existing sequence number for that level) + 1
+  And the symptom ("returns 1 for every C4 level regardless of existing diagrams, causing
+    diagram sequence-number collisions") must not occur
+depends_on: []
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_next_diagram_seq.py"
+implemented_by:
+  - scripts/next_diagram_seq.py
+notes: "Authored by /quick-fix. Root cause: next_seq() globs arch_dir with a non-recursive Path.glob('c{level}-*.md') and main() sets arch_dir = docs/architecture/, but every C4 diagram actually lives in the docs/architecture/diagrams/ subdirectory. The top level of docs/architecture/ contains zero c{level}-NNN-*.md files, so the glob matches nothing and next_seq returns 1 for every level regardless of the 9 existing diagrams — guaranteeing sequence-number collisions the tool exists to prevent. Fix makes the scan recursive (Path.rglob) so diagrams are found wherever they live under docs/architecture/, preserving the documented max(existing)+1 allocation semantics."
+change_target: code
+risk_surface: internal

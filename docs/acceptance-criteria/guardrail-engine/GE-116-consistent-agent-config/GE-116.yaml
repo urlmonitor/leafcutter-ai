@@ -1,0 +1,40 @@
+id: GE-116
+components:
+  - commit_guardian
+title: "Self-contradictory settings are caught when you commit, not after they break the build"
+component: guardrail-engine
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  A setting that contradicts itself is blocked at commit — it never reaches main.
+
+  When part of the project's own configuration contradicts itself, that mistake
+  used to slip through review and only surface after merge — breaking the next
+  build for everyone. This goal moves the check to the moment of commit: a
+  self-contradictory definition is caught and stopped before it can be shared,
+  with a message that pinpoints the problem and the fix. A broken setting can no
+  longer travel from one person's commit into everyone's build.
+depends_on: []
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-20
+amended_by:
+  - reason: "Authored from BrainCandy request: move the agent-template requires_verification vs Edit/Write consistency check from build.py's post-merge registry validation to a commit-time guard so the contradiction can never reach main."
+superseded_by: null
+covered_by:
+  - GE-116a
+  - GE-116b
+  - GE-116c
+implemented_by: []
+notes: "User-authored intent: BrainCandy. Framed by product-owner. Adjacent to GE-113 (misplaced artifacts) but a distinct concern: GE-113 is about WHERE an artifact lands; GE-116 is about an artifact being internally CONTRADICTORY."
+change_target: code
+risk_surface: internal

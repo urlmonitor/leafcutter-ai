@@ -1,0 +1,77 @@
+id: FIN-100g-2-i
+readiness: approved
+priority: high
+components:
+  - finalize
+title: "Object argument with a missing or empty target key falls back to CWD detection, not an empty-target collapse"
+level: L3
+component: finalize
+status: active
+parent: FIN-100g-2
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the finalize workflow is invoked with an object argument that carries no
+  target/target_branch key (for example {}), or whose target value is an empty
+  string (for example {target: ""})
+  When the pre-flight normalizes its arguments
+  Then it treats the invocation as "no explicit target supplied" and falls back
+  to the CWD-based branch/worktree detection defined in FIN-100g-1 (backward
+  compatible), rather than silently collapsing the object to an empty target
+  string
+  And it does NOT abort with "must be run from a feature branch, not main" solely
+  because the object argument could not be reduced to a non-empty string
+depends_on:
+  - FIN-100g-2
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  - SURFACE: the same argument-normalization branch in
+    templates/workflows-js/finalize-feature.js touched by FIN-100g-2.
+  - An object with no `target`/`target_branch` key (e.g. {}) OR whose target value
+    is an empty string (e.g. {target: ""}) MUST be treated as "no explicit target
+    supplied" and route to the existing CWD-based branch/worktree detection
+    (FIN-100g-1), NOT collapse to an empty-target value.
+  - The "no-target-supplied" signal produced here MUST be distinguishable from an
+    actually-resolved target, so downstream logic (FIN-100g-3-i) can tell a genuine
+    no-target case apart from a supplied-but-unresolvable target.
+  - The "must be run from a feature branch, not main" abort MUST NOT fire merely
+    because an object argument could not be reduced to a non-empty string.
+  - Backward compatibility: the no-target CWD-detection fallback path must be
+    preserved unchanged for existing in-worktree invocations.
+delivers_to: []
+expects_from:
+  - agent: python-coder
+    contract: "the argument-normalization result from FIN-100g-2 (a resolved target, or the explicit no-target signal that triggers CWD fallback)"
+test_spec:
+  - name: test_empty_object_falls_back_to_cwd_detection
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Invoked with {}, the pre-flight treats it as no-target-supplied and falls back to CWD-based branch/worktree detection (FIN-100g-1), not an empty-target collapse."
+  - name: test_object_empty_target_string_falls_back_to_cwd_detection
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "Invoked with {target: \"\"}, the pre-flight treats it as no-target-supplied and falls back to CWD-based detection rather than collapsing to an empty target."
+  - name: test_missing_target_key_does_not_trigger_main_branch_abort
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "An object argument that cannot be reduced to a non-empty string does NOT abort with \"must be run from a feature branch, not main\" solely on that basis."
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Pre-flight argument normalization — empty/missing object key must route to the CWD-detection fallback, not the empty-target abort"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map pre-flight row — no-target fallback contract"
+  - path: "unit_tests/workflows/test_finalize_feature_preflight.py"
+    relevance: "Regression tests for the empty/missing-key object argument routing to CWD detection and not triggering the main-branch abort"
+origin_agent: business-analyst
+created: 2026-07-21
+superseded_by: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (empty/missing-key object arg routes to the FIN-100g-1 CWD fallback, not an empty-target collapse; the no-target signal must be distinguishable from a resolved target so FIN-100g-3-i can separate genuine-no-target from supplied-but-unresolvable; the main-branch abort must not fire solely because an object could not be reduced to a non-empty string; preserve the CWD fallback path) and test_spec (3 descriptors covering {}, {target:\"\"}, and the no-spurious-abort Then). Added step-map and test-file doc_links. Kept assigned_agent python-coder, estimated_complexity S, delivers_to/expects_from, and criteria unchanged."
+    by: it-po
+covered_by: []
+implemented_by: []
