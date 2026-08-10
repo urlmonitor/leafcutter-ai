@@ -447,8 +447,12 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
         is disjoint from the guard enum.
         """
         data = self._load_yaml()
+        # flow_change_gates, documentation_gates, and surgical_removal_guard are
+        # meta-policy sections, not per-change_target gate maps — exclude them from
+        # the vocab contract.
+        _non_target_sections = {"flow_change_gates", "documentation_gates", "surgical_removal_guard"}
         yaml_change_targets = {
-            k for k in data.keys() if k != "flow_change_gates"
+            k for k in data.keys() if k not in _non_target_sections
         }
         guard_set = set(ALLOWED_CHANGE_TARGETS)
 
@@ -480,7 +484,7 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
         failures: list[str] = []
 
         for change_target, surface_map in data.items():
-            if change_target == "flow_change_gates":
+            if change_target in {"flow_change_gates", "documentation_gates", "surgical_removal_guard"}:
                 continue
             if not isinstance(surface_map, dict):
                 continue

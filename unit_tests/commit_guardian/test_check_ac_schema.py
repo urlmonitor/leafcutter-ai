@@ -2320,10 +2320,21 @@ class TestAcAxesVocabularyContractAc3(unittest.TestCase):
         spec.loader.exec_module(guard_mod)
         guard_ct: set[str] = set(guard_mod.ALLOWED_CHANGE_TARGETS)
 
-        # 3. Load guardrail_gates.yaml top-level keys (excluding flow_change_gates)
+        # 3. Load guardrail_gates.yaml top-level keys, excluding the non-change-target
+        #    policy sections. These are gate-policy blocks that legitimately sit at the
+        #    top level but are NOT change_target vocab entries and must not participate
+        #    in the vocab-parity check:
+        #      - flow_change_gates: flow-change pair gates
+        #      - documentation_gates: doc-coverage triggers (BO-2200a-1)
+        #      - surgical_removal_guard: surgical-removal policy (BO-2200d-1-i)
+        _NON_CHANGE_TARGET_SECTIONS = {
+            "flow_change_gates",
+            "documentation_gates",
+            "surgical_removal_guard",
+        }
         guardrail_path = repo_root / "config" / "guardrail_gates.yaml"
         gates = _yaml.safe_load(guardrail_path.read_text(encoding="utf-8"))
-        yaml_ct: set[str] = {k for k in gates if k != "flow_change_gates"}
+        yaml_ct: set[str] = {k for k in gates if k not in _NON_CHANGE_TARGET_SECTIONS}
 
         self.assertEqual(
             schema_ct_enum,

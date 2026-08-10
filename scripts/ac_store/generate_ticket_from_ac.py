@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
-generate_ticket_from_ac.py — Generate a ticket file from an AC YAML record.
+MODULE: generate_ticket_from_ac
+GOAL: Generate a ticket file from an AC YAML record in the acceptance-criteria store.
+BUSINESS CONTEXT: Ticket generation is the bridge between authored ACs and actionable
+    work items — it converts machine-readable AC YAML into the frontmatter, agent map,
+    test requirements, and sign-off sections that phase agents need.
+ARCHITECTURE: CLI script in scripts/ac_store/; called by the /build-ac workflow and
+    by ticket-supervisors; reads config/guardrail_gates.yaml + config/agent_registry.json
+    to compute the agents map, and writes tickets to tickets/00_inbox/.
 
 Usage:
     python3 scripts/ac_store/generate_ticket_from_ac.py --ac <ac_id> [options]
@@ -146,6 +153,9 @@ _NOT_NEEDED_AGENTS: list[str] = [
 #: so that the observable-side-effect smoke check runs before AC coverage validation and
 #: before commit. A ticket with user-surface-smoker: needed cannot reach done
 #: with the smoke check unrun (BP-1100f-5).
+#: documentation-verifier is placed immediately before commit (BO-2200d-2):
+#: it is the last verification gate before the ticket is committed, so it
+#: must follow pr-reviewer, ac-validator, and ac-fulfillment-gate.
 _CANONICAL_PHASE_ORDER: list[str] = [
     "architect-review",
     "test-writer",
@@ -157,6 +167,7 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
     "ac-validator",
     "ac-fulfillment-gate",
+    "documentation-verifier",
     "commit",
     "pull-request",
 ]
@@ -165,6 +176,8 @@ _CANONICAL_PHASE_ORDER: list[str] = [
 #: any coder (priority 4 → doc planning before implementation).
 #: user-surface-smoker is included at priority 11.5 for consistency with
 #: _CANONICAL_PHASE_ORDER so flow-change tickets also gate correctly.
+#: documentation-verifier is placed immediately before commit (BO-2200d-2),
+#: consistent with _CANONICAL_PHASE_ORDER.
 _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "architect-review",
     "documentation-expert",
@@ -176,6 +189,7 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
     "ac-validator",
     "ac-fulfillment-gate",
+    "documentation-verifier",
     "commit",
     "pull-request",
 ]
@@ -710,11 +724,9 @@ def _build_agents_map(
                 )
 
         # Consume flow_change_gates: for each (change_target, risk_surface) pair
-        # that is listed as a flow-change pair, union mandatory_agents into guardrail_set
-        # and switch to the flow-change phase order so documentation-expert is placed
-        # BEFORE any coder (as required by the phase_constraint in each entry).
+        # that is listed as a flow-change pair, union mandatory_agents into guardrail_set.
+        # Phase ordering is handled by _CANONICAL_PHASE_ORDER for all pairs (BO-2200d-1).
         flow_change_entries = gates.get("flow_change_gates", []) or []
-        is_flow_change_pair = False
         for entry in flow_change_entries:
             if not isinstance(entry, dict):
                 continue
@@ -724,12 +736,96 @@ def _build_agents_map(
             ):
                 mandatory = entry.get("mandatory_agents") or []
                 guardrail_set.update(mandatory)
-                is_flow_change_pair = True
 
-        # For flow-change pairs, documentation-expert must appear before any coder.
-        # _FLOW_CHANGE_PHASE_ORDER encodes this constraint; all other pairs use the
-        # standard _CANONICAL_PHASE_ORDER.
-        phase_order = _FLOW_CHANGE_PHASE_ORDER if is_flow_change_pair else _CANONICAL_PHASE_ORDER
+        # Apply documentation_gates policy — two independent trigger dimensions:
+        #
+        # Dimension 1 (BO-2200a-1): change_target_triggers — documentation-expert
+        # is required when any change_target intersects the trigger list.
+        #
+        # Dimension 2 (BO-2200a-2): risk_surface_triggers — documentation-expert
+        # is required when risk_surface matches any entry in the trigger list,
+        # independently of the change_target dimension (OR semantics).
+        #
+        # Both trigger lists are read from config at call-time — no hard-coded
+        # set exists in the generator — so adding or removing a triggering value
+        # is a configuration edit only.
+        doc_gates_policy = gates.get("documentation_gates") or {}
+        doc_change_triggers: set[str] = set(
+            doc_gates_policy.get("change_target_triggers") or []
+        )
+        if doc_change_triggers and set(change_targets) & doc_change_triggers:
+            guardrail_set.add("documentation-expert")
+
+        # Dimension 2 — risk_surface_triggers (BO-2200a-2): adds
+        # documentation-expert when risk_surface is in the trigger set,
+        # independently of the change_target trigger above.
+        doc_risk_triggers: set[str] = set(
+            doc_gates_policy.get("risk_surface_triggers") or []
+        )
+        if doc_risk_triggers and risk_surface and risk_surface in doc_risk_triggers:
+            guardrail_set.add("documentation-expert")
+
+        # Dimension 3 — non_triggering_classifications (BO-2200a-3): explicit
+        # negative guard that removes documentation-expert when the call's
+        # (change_target, risk_surface) pair matches any entry in the exclusion
+        # list, even if the trigger dimensions above would otherwise add it.
+        # This ensures purely internal refactors never impose a documentation
+        # burden regardless of any future expansion of the trigger lists.
+        #
+        # Union semantics (BO-2200a-4): for list-valued change_targets, a
+        # non_triggering entry for one element must NOT cancel the trigger raised
+        # by a DIFFERENT element.  When Dimension 1 (change_target_triggers) is
+        # the source of the documentation demand, suppression only applies when
+        # EVERY triggering element is covered by a non_triggering entry for the
+        # current risk_surface.
+        non_triggering: list = list(
+            doc_gates_policy.get("non_triggering_classifications") or []
+        )
+        if non_triggering and "documentation-expert" in guardrail_set:
+            # Collect the set of change_target values covered by a non_triggering
+            # entry for the current risk_surface.
+            suppressed_targets: set[str] = {
+                entry.get("change_target")
+                for entry in non_triggering
+                if isinstance(entry, dict)
+                and entry.get("change_target")
+                and entry.get("risk_surface") == risk_surface
+            }
+            triggering_via_change_target: set[str] = (
+                set(change_targets) & doc_change_triggers
+            )
+            if triggering_via_change_target:
+                # documentation-expert was triggered by at least one change_target
+                # element via Dimension 1.  Union semantics (BO-2200a-4): suppress
+                # only when EVERY triggering change_target element is covered by a
+                # non_triggering entry for this risk_surface.  A match on one list
+                # element must NOT cancel the trigger raised by a different element.
+                if not (triggering_via_change_target - suppressed_targets):
+                    guardrail_set.discard("documentation-expert")
+            else:
+                # documentation-expert was triggered by risk_surface_triggers only
+                # (Dimension 2).  Apply the original scalar suppression: if any
+                # change_target for this call has a non_triggering entry for the
+                # current risk_surface, suppress.
+                if any(ct in suppressed_targets for ct in change_targets):
+                    guardrail_set.discard("documentation-expert")
+
+        # BO-2200b-4: when documentation-expert survives all discard passes, also
+        # inject documentation-verifier as its companion verification phase.
+        # Both agents are gated on the same trigger decision — removing
+        # documentation-expert (via non_triggering_classifications) also removes
+        # documentation-verifier because the inject block is only reached when
+        # documentation-expert remains in guardrail_set.
+        if "documentation-expert" in guardrail_set:
+            guardrail_set.add("documentation-verifier")
+
+        # documentation-expert is ordered via _CANONICAL_PHASE_ORDER (post-coder
+        # position) for all pairs, including flow-change pairs.  architect-review
+        # (position 0 in _CANONICAL_PHASE_ORDER) still correctly precedes any coder
+        # for flow-change pairs.  BO-2200d-1: documentation-expert is injected via
+        # documentation_gates (post-coder canonical order), not via the pre-coder
+        # flow-change gate slot.
+        phase_order = _CANONICAL_PHASE_ORDER
 
         # Collect all agent names that should appear in the map
         # Start with guardrails + assigned agent + standard tail agents
@@ -799,11 +895,36 @@ def _build_agents_map(
         # agents can be excluded by not_needed_overrides.
         all_protected: set[str] = tdd_protected | side_effect_protected
 
+        # Determine documentation-mandatory agents that cannot be overridden (BO-2200b-5).
+        # When the documentation trigger fires and injects documentation-expert and
+        # documentation-verifier, those agents cannot be excluded by not_needed_overrides —
+        # the computed documentation chain wins, identical to the TDD-mandatory protection
+        # above.  A not_needed override attempt is silently ignored for either agent when
+        # the trigger fired (computed chain wins).
+        _DOC_MANDATORY: frozenset[str] = frozenset(
+            {"documentation-expert", "documentation-verifier"}
+        )
+        doc_protected: set[str] = all_needed & _DOC_MANDATORY
+
         # Remove any agent that has an explicit not_needed override,
-        # but protect all mandatory agents (computed chain wins).
+        # but protect all mandatory agents — TDD-mandated (BO-550-1-i) and
+        # side-effect-mandated user-surface-smoker (BP-1100f-5) via all_protected,
+        # plus doc-mandatory agents (BO-2200b-5: computed doc chain wins).
+        # BO-2200b-5-i (silent-proof): when a doc-mandatory agent override is
+        # blocked, emit a WARNING so the hand-edit attempt is surfaced rather
+        # than silently overwritten.  The warning names the blocked agent so
+        # operators and CI tooling can detect ticket hand-edit interference.
         for agent in overrides:
-            if agent not in all_protected:
+            if agent not in all_protected and agent not in doc_protected:
                 all_needed.discard(agent)
+            elif agent in doc_protected:
+                logger.warning(
+                    "Doc-mandatory agent %r not_needed override blocked — "
+                    "the documentation trigger fired and the computed chain wins. "
+                    "A hand-edited not_needed for this protected agent is restored "
+                    "to needed at generation time (BO-2200b-5-i).",
+                    agent,
+                )
 
         # Build ordered result according to the chosen phase order.
         # Non-canonical agents (not in phase_order) are inserted in stable
@@ -831,6 +952,9 @@ def _build_agents_map(
                     agents[nc_agent] = "not_needed"
             if phase_agent in all_protected:
                 # Mandatory agents (TDD-mandated or side-effect-mandated) are never overridable.
+                agents[phase_agent] = "needed"
+            elif phase_agent in doc_protected:
+                # Doc-mandatory agents are never overridable (BO-2200b-5).
                 agents[phase_agent] = "needed"
             elif phase_agent in overrides:
                 agents[phase_agent] = "not_needed"
@@ -1159,27 +1283,216 @@ def _as_contract_entries(value: object) -> list[dict]:
     return []
 
 
-def _build_agent_contracts_section(ac: AcRecord) -> str:
-    """Build the ## Agent Contracts section from delivers_to and expects_from.
+def _extract_doc_genre(ac: AcRecord) -> str:
+    """Extract the Diataxis genre from an AC record's documentation_triggers field.
 
-    When both fields are None, returns an empty string so no section is emitted.
-    The section is only rendered when at least one contract field is non-null,
-    ensuring the null-contract path produces no contract heading or content.
+    Returns the first value from ``documentation_triggers`` when the field is
+    present and non-empty.  Falls back to ``"explanation"`` when the field is
+    absent, empty, or contains a non-string first element (BO-2200c-2).
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        A genre string — one of the valid Diataxis genre labels or ``"explanation"``.
+    """
+    triggers = ac.get("documentation_triggers") or []
+    if triggers and isinstance(triggers[0], str) and triggers[0].strip():
+        return triggers[0].strip()
+    return "explanation"
+
+
+def _extract_doc_path(ac: AcRecord, genre: str, ac_id: str) -> str:
+    """Extract a target documentation path from an AC record's doc_links field.
+
+    Scans ``doc_links`` for the first entry whose ``path`` value is a non-empty
+    local string (not an http URL) containing at least one ``/`` separator.
+    When no qualifying link is found, a default path is computed under
+    ``docs/<genre>/<slugified-ac_id>.md`` (BO-2200c-2).
+
+    Args:
+        ac: Parsed AC record dict.
+        genre: Diataxis genre string (used in the computed default path).
+        ac_id: AC identifier string (used in the computed default path).
+
+    Returns:
+        A documentation path string that contains at least one ``/`` separator.
+    """
+    doc_links = ac.get("doc_links") or []
+    for link in doc_links:
+        if not isinstance(link, dict):
+            continue
+        path_val = link.get("path", "")
+        if (
+            isinstance(path_val, str)
+            and path_val
+            and "/" in path_val
+            and not path_val.startswith("http")
+        ):
+            return path_val
+    # Compute a sensible default: docs/<genre>/<ac-id-slug>.md
+    slug = re.sub(r"[^a-z0-9]+", "-", (ac_id or "ac").lower()).strip("-")
+    return f"docs/{genre}/{slug}.md"
+
+
+def _build_doc_links_cross_link_lines(doc_links: list[Any]) -> list[str]:
+    """Render all qualifying doc_links entries as 'existing docs to update / cross-link' bullets.
+
+    Each entry is rendered with its path, relationship, status, and relevance
+    fields visible so the documentation-expert knows how each linked doc relates
+    (BO-2200c-4).  Entries with HTTP URLs and entries missing a path are skipped.
+
+    The metadata fields are rendered inline in the format:
+      ``- <path> (relationship: <val> | status: <val> | relevance: <val>)``
+    Any metadata field that is absent or empty is omitted from the inline list.
+    When no metadata is present for an entry, the path is rendered as a bare bullet.
+
+    Args:
+        doc_links: List of doc_link dicts from an AC record.  Each dict should
+            carry at least a ``path`` key; ``relationship``, ``status``, and
+            ``relevance`` are optional metadata fields.
+
+    Returns:
+        List of formatted bullet strings, one per qualifying doc_links entry.
+        Returns an empty list when *doc_links* is empty or no entry qualifies.
+    """
+    if not doc_links:
+        return []
+    result: list[str] = []
+    for link in doc_links:
+        if not isinstance(link, dict):
+            continue
+        path_val = link.get("path", "")
+        if not isinstance(path_val, str) or not path_val or path_val.startswith("http"):
+            continue
+        relationship = link.get("relationship", "")
+        status = link.get("status", "")
+        relevance = link.get("relevance", "")
+        meta: list[str] = []
+        if relationship:
+            meta.append(f"relationship: {relationship}")
+        if status:
+            meta.append(f"status: {status}")
+        if relevance:
+            meta.append(f"relevance: {relevance}")
+        if meta:
+            result.append(f"- {path_val} ({' | '.join(meta)})")
+        else:
+            result.append(f"- {path_val}")
+    return result
+
+
+def _derive_content_constraint(ac: AcRecord, ac_id: str) -> str:
+    """Derive a content constraint from an AC record's criteria field.
+
+    Extracts the text of the first ``Then`` clause in the Gherkin criteria.
+    Falls back to the first non-empty criteria line when no ``Then`` clause is
+    found.  Returns a generic placeholder when the criteria field is absent or
+    blank (BO-2200c-2).
+
+    Args:
+        ac: Parsed AC record dict.
+        ac_id: AC identifier string (used in the fallback placeholder).
+
+    Returns:
+        A non-empty constraint string derived from the criteria (not the AC title).
+    """
+    criteria_text = str(ac.get("criteria") or "")
+    for line in criteria_text.split("\n"):
+        stripped = line.strip()
+        m = re.match(r"^Then\s+(.*)", stripped, re.IGNORECASE)
+        if m:
+            clause = m.group(1).rstrip(",").strip()
+            if clause:
+                return clause
+    # Fallback: first non-empty criteria line
+    for line in criteria_text.split("\n"):
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return f"cover the behaviour described in {ac_id}"
+
+
+def _build_agent_contracts_section(
+    ac: AcRecord,
+    ac_id: str = "",
+    agents_map: dict[str, str] | None = None,
+) -> str:
+    """Build the ## Agent Contracts section.
+
+    Emits the section when either of the following conditions is met:
+
+    * ``documentation-expert`` appears in *agents_map* with status ``'needed'``
+      (BO-2200c-1): a ``### documentation-expert`` subsection is appended listing
+      one globally-numbered ``- [ ] AC-1:`` checklist item.  Per BO-2200c-2, the
+      checklist item carries three parts: the Diataxis genre (from
+      ``documentation_triggers``), the target doc path (from ``doc_links`` or a
+      computed default), and a content constraint derived from the AC criteria.
+    * The AC record has a non-null ``delivers_to`` or ``expects_from`` field
+      (TKT-500f-10): the contract details are rendered under ``### Delivers To``
+      or ``### Expects From`` subsections.
+
+    Both conditions may fire simultaneously; each contributes its own subsection.
+    Returns ``""`` when neither condition is met.
+
+    The section is placed after ``## Acceptance Criteria`` (and any Test
+    Requirements / Implementation Notes blocks) and before ``## Sign-offs``, as
+    required by BO-2200c-1 n_location_rule='1'.
 
     Args:
         ac: Parsed AC record.
+        ac_id: The AC id (used in the computed default doc path and the
+            content-constraint fallback for the BO-2200c-1/c-2 subsection).
+        agents_map: The computed agents map (agent name → status). When ``None``
+            or when ``documentation-expert`` is absent or not ``'needed'``, the
+            BO-2200c-1 subsection is suppressed.
 
     Returns:
-        Formatted ## Agent Contracts markdown block, or empty string when both
-        delivers_to and expects_from are None.
+        Formatted ``## Agent Contracts`` markdown block, or ``""`` when neither
+        condition fires.
     """
     delivers_to = ac.get("delivers_to") or None
     expects_from = ac.get("expects_from") or None
+    doc_expert_needed = (agents_map or {}).get("documentation-expert") == "needed"
 
-    if delivers_to is None and expects_from is None:
+    if not doc_expert_needed and delivers_to is None and expects_from is None:
         return ""
 
     lines: list[str] = ["## Agent Contracts", ""]
+
+    # BO-2200c-1 / BO-2200c-2: emit the documentation-expert subsection when the
+    # agent is needed.  Per BO-2200c-2 each AC-N line must name three parts:
+    # 1. Diataxis genre from documentation_triggers (default "explanation").
+    # 2. Target doc path from doc_links or a computed default under docs/<genre>/.
+    # 3. Content constraint derived from the AC criteria Then/And clauses.
+    if doc_expert_needed:
+        genre = _extract_doc_genre(ac)
+        doc_path = _extract_doc_path(ac, genre, ac_id)
+        constraint = _derive_content_constraint(ac, ac_id)
+        lines.extend([
+            "### documentation-expert",
+            "",
+        ])
+        # BO-2200c-4: Surface ALL doc_links entries as 'existing docs to update /
+        # cross-link' with relationship, status, and relevance metadata intact so
+        # the documentation-expert knows how each linked doc relates.  The previous
+        # behaviour (_extract_doc_path) reduced doc_links to a single bare path,
+        # discarding all metadata and every entry after the first.
+        cross_link_lines = _build_doc_links_cross_link_lines(ac.get("doc_links") or [])
+        if cross_link_lines:
+            lines.append("Existing docs to update / cross-link:")
+            lines.append("")
+            lines.extend(cross_link_lines)
+            lines.append("")
+        lines.extend([
+            f"- [ ] AC-1: [{genre}] {doc_path} — {constraint}",
+            "",
+        ])
+
+    # TKT-500f-10: emit delivers_to / expects_from contract fields when present.
+    # Both fields may be authored as a bare dict OR as a list of dicts (BA/IT-PO v3
+    # emits list form); normalise to a list so iteration always works and the
+    # single '## Agent Contracts' heading is never emitted more than once.
     if delivers_to is not None:
         lines.append("### Delivers To")
         lines.append("")
@@ -1202,6 +1515,7 @@ def _build_agent_contracts_section(ac: AcRecord) -> str:
             if contract_text:
                 lines.append(f"- **Contract:** {contract_text}")
         lines.append("")
+
     return "\n".join(lines)
 
 
@@ -1396,6 +1710,11 @@ def _build_frontmatter(
     risk_surface = ac.get("risk_surface")
     if risk_surface is not None:
         fm["risk_surface"] = risk_surface
+    # BO-2200b-4: set documentation_required: true when the documentation-verifier
+    # phase is wired as needed — signals to downstream agents that a documentation
+    # review cycle is in flight for this ticket.
+    if agents.get("documentation-verifier") == "needed":
+        fm["documentation_required"] = True
     # Propagate declares_side_effect from the AC to the ticket frontmatter (BP-1100f-5).
     # This field is optional; absent on the AC → absent from the ticket (no default emitted).
     # Emitting it enables downstream tools and ticket-supervisor to read the declaration
@@ -1593,7 +1912,11 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     if impl_notes:
         lines.append(impl_notes)
 
-    agent_contracts = _build_agent_contracts_section(ac)
+    # Emit ## Agent Contracts section: placed after ## Acceptance Criteria (and
+    # Test Requirements / Implementation Notes) and before ## Sign-offs.
+    # Emits when documentation-expert is 'needed' (BO-2200c-1) or when the AC
+    # has delivers_to / expects_from fields (TKT-500f-10).
+    agent_contracts = _build_agent_contracts_section(ac, ac_id, agents)
     if agent_contracts:
         lines.append(agent_contracts)
 
@@ -2072,6 +2395,12 @@ def _build_verification_report(
     has_fail = False
 
     def record(status: str, message: str) -> None:
+        """Append a status-tagged line to *lines* and set has_fail on FAIL.
+
+        Args:
+            status: One of ``"PASS"``, ``"WARN"``, or ``"FAIL"``.
+            message: Human-readable description of the check result.
+        """
         nonlocal has_fail
         if status == "FAIL":
             has_fail = True
@@ -2342,6 +2671,75 @@ DECISION HISTORY
   _build_verification_report() that prints the would-be ticket plus a PASS/WARN/
   FAIL readiness report (exits non-zero on FAIL) so an author can confirm the AC
   gives a coder enough to build and test-writer enough to test. (AC BO-2000e)
+- 2026-07-16 [TICKET-20260715-BO-2200c-1]: Emit ## Agent Contracts section.
+  Added _build_agent_contracts_section() that emits an '## Agent Contracts'
+  heading with a '### documentation-expert' subsection when documentation-expert
+  is in the agents map as 'needed'. The subsection carries one globally-numbered
+  '- [ ] AC-1: <title>' checklist item for the source AC. Section is positioned
+  after ## Acceptance Criteria (and Test Requirements / Implementation Notes)
+  and before ## Sign-offs. Tickets without documentation-expert:needed are
+  unaffected. (AC BO-2200c-1)
+- 2026-07-17 [TICKET-20260715-BO-2200a-1]: Add documentation_gates data-driven trigger.
+  Added a documentation_gates read-path in _build_agents_map: after the
+  flow_change_gates processing, the gates config is checked for a
+  documentation_gates.change_target_triggers list.  When any change_target in
+  the call intersects that list, documentation-expert is added to guardrail_set
+  as 'needed'.  The trigger set is read from config at call-time so that
+  adding/removing a value is purely a config edit (BO-2200a-1).  Also added the
+  documentation_gates section to config/guardrail_gates.yaml with
+  change_target_triggers: [ui, schema, pipeline, docs] and risk_surface_triggers
+  for future use.
+- 2026-07-17 [TICKET-20260715-BO-2200a-2]: Add risk_surface_triggers dimension to
+  documentation_gates policy in _build_agents_map.  Extended the documentation_gates
+  evaluation to read risk_surface_triggers from the gates config.  When risk_surface
+  matches any entry in risk_surface_triggers, documentation-expert is added to
+  guardrail_set as 'needed' independently of the change_target_triggers check (OR
+  semantics: documentation-expert is required if EITHER dimension matches its
+  triggering set).  The trigger set {contract_boundary, safety, auth, privacy} is
+  already present in config/guardrail_gates.yaml — no config change required (BO-2200a-2).
+- 2026-07-20 [TICKET-20260715-BO-2200a-3]: Add non_triggering_classifications guard to
+  documentation_gates policy in _build_agents_map.  After both trigger dimensions have
+  had a chance to add documentation-expert, a third read-path checks
+  documentation_gates.non_triggering_classifications from the gates config.  If any
+  entry's (change_target, risk_surface) pair matches the call's arguments,
+  documentation-expert is discarded from the guardrail set — even if the general trigger
+  lists would otherwise require it (explicit negative rule overrides positive triggers).
+  Added non_triggering_classifications list to config/guardrail_gates.yaml covering the
+  four internal-refactor pairs: code/internal, config/internal, prompt/internal,
+  infrastructure/internal (BO-2200a-3).
+- 2026-07-20 [TICKET-20260715-BO-2200a-4]: Apply union semantics to list-valued
+  change_targets in non_triggering_classifications check (Dimension 3).  Fixed a bug
+  where a non_triggering entry for one element (e.g. config/internal) could suppress
+  documentation-expert even when a different element in the list (e.g. ui) independently
+  triggered it via change_target_triggers.  The fix: instead of discarding
+  documentation-expert whenever any non_triggering entry's change_target is found in the
+  list, collect all triggering elements (change_targets ∩ doc_change_triggers) and only
+  discard when EVERY triggering element is covered by a non_triggering entry for the
+  current risk_surface.  For the Dimension-2-only path (risk_surface_triggers trigger),
+  the original scalar suppression is preserved unchanged.  (AC BO-2200a-4)
+  (#EPIC-DocumentationCoverageGuarantee/05)
+- 2026-07-20 [TICKET-20260715-BO-2200b-4]: Inject documentation-verifier alongside
+  documentation-expert; set documentation_required: true in frontmatter.
+  _build_agents_map: after all non_triggering_classifications discard passes, when
+  documentation-expert remains in guardrail_set, documentation-verifier is also added to
+  guardrail_set.  Both agents are gated on the same trigger decision so removing
+  documentation-expert via the non-triggering guard also removes documentation-verifier.
+  _build_frontmatter: when documentation-verifier appears in the agents map as 'needed',
+  sets documentation_required: True in the frontmatter, signalling to downstream agents
+  that a documentation review cycle is in flight.  When the AC does not trigger a
+  documentation demand, neither documentation-verifier nor documentation_required: true
+  appears.  Added documentation-verifier to _CANONICAL_PHASE_ORDER (after
+  documentation-expert) and _FLOW_CHANGE_PHASE_ORDER (after documentation-expert).
+  (AC BO-2200b-4) (#EPIC-DocumentationCoverageGuarantee/13)
+- 2026-07-21 [TICKET-20260715-BO-2200c-2]: Each documentation-expert contract line
+  carries a Diataxis genre, a target doc path, and a criteria-derived content constraint.
+  Added three helpers: _extract_doc_genre (reads documentation_triggers[0], defaults to
+  "explanation"), _extract_doc_path (scans doc_links for first local path with "/",
+  computes docs/<genre>/<slug>.md default), _derive_content_constraint (extracts first
+  Then clause from Gherkin criteria, falls back to first non-empty criteria line).
+  Modified _build_agent_contracts_section: the "- [ ] AC-1:" line now emits
+  "[<genre>] <doc_path> — <constraint>" instead of the AC title verbatim.
+  (AC BO-2200c-2) (#EPIC-DocumentationCoverageGuarantee/18)
 - 2026-07-21 [feature/bp-1100f-hardening/BP-1100f-5]: Add declares_side_effect
   routing (BP-1100f-5). Added declares_side_effect: bool = False parameter to
   _build_agents_map. When True, user-surface-smoker is added to all_needed so

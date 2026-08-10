@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-08-10 10:42 UTC
+> Generated: 2026-08-10 12:10 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -144,6 +144,7 @@ task, then pull only those files.
 | agent template frontmatter | [docs/reference/agent-template-frontmatter.md](docs/reference/agent-template-frontmatter.md) | Reference: Agent Template Frontmatter Fields |
 | build telemetry | [docs/reference/build-telemetry.md](docs/reference/build-telemetry.md) | Lookup reference for the build telemetry JSONL record schema, the lane comparison aggregate fields, the emitter API, and the fail-loud sink behavior. |
 | claude code hooks | [docs/reference/claude-code-hooks.md](docs/reference/claude-code-hooks.md) | Reference guide for Claude Code PreToolUse and PostToolUse hooks — hook types, registration format, exit-code contract, and the fail-open convention. |
+| documentation coverage guarantee | [docs/reference/documentation-coverage-guarantee.md](docs/reference/documentation-coverage-guarantee.md) | Lookup reference for the documentation-coverage guarantee: the declarative documentation_gates trigger policy, the documentation-verifier enforcement phase, and the Agent Contracts brief that is the single source of truth for what documentation is demanded and verified. |
 | fast lane prompt caching | [docs/reference/fast-lane-prompt-caching.md](docs/reference/fast-lane-prompt-caching.md) | Parameter table, ordering contract, breakpoint marker, and cacheable-prefix guarantee for assemble_context_bundle in scripts/injection_builders.py. |
 | feedback concurrency | [docs/reference/feedback-concurrency.md](docs/reference/feedback-concurrency.md) | Reference: Feedback Client Concurrency Limitation |
 | fixture policy | [docs/reference/fixture-policy.md](docs/reference/fixture-policy.md) | Lookup reference for the fixture authenticity rules: which data kinds must use the real serializer, what fixture forms are rejected, and the round-trip requirement for parser and validator tests. |

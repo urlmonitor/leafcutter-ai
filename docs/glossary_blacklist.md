@@ -74,3 +74,11 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | agentType | JavaScript named parameter in agent() call syntax, not a standalone domain concept | 2026-07-09 |
 | phaseName | JavaScript named parameter placeholder in agent() call syntax, not a standalone domain concept | 2026-07-09 |
 | clean_stale_artifacts | Python function name in build_phases.py (code identifier), not a domain concept | 2026-07-15 |
+| change_target_triggers | YAML config key in documentation_gates section of guardrail_gates.yaml, not a standalone domain concept | 2026-07-21 |
+| risk_surface_triggers | YAML config key in documentation_gates section of guardrail_gates.yaml, not a standalone domain concept | 2026-07-21 |
+| non_triggering_classifications | YAML config key in documentation_gates section of guardrail_gates.yaml, not a standalone domain concept | 2026-07-21 |
+| build_placeholder_detection | Python script filename (scripts/build_placeholder_detection.py), not a standalone domain concept | 2026-07-21 |
+| target_doc_path | Pipe-delimited field name within Agent Contracts block example (code-level field), not a domain concept | 2026-07-21 |
+| flow_change_gates | YAML config section name in guardrail_gates.yaml (code-level identifier), not a standalone domain concept | 2026-07-21 |
+| surgical_removal_guard | YAML config section name in guardrail_gates.yaml (code-level identifier), not a standalone domain concept | 2026-07-21 |
+| DOC_EXPERT_SINGLE_INJECTION | Named invariant ID constant in guardrail_gates.yaml surgical_removal_guard, not a domain concept | 2026-07-21 |

@@ -44,6 +44,7 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - documentation-verifier
       - frontend-coder
       - llm-expert
     default_severity: low
@@ -69,6 +70,7 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - documentation-verifier
       - frontend-coder
       - llm-expert
     default_severity: medium
@@ -103,6 +105,7 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - documentation-verifier
       - epic-supervisor
       - ticket-supervisor
       - frontend-coder
@@ -130,6 +133,7 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - documentation-verifier
       - epic-supervisor
       - ticket-supervisor
       - frontend-coder
@@ -157,6 +161,7 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - documentation-verifier
       - epic-supervisor
       - ticket-supervisor
       - frontend-coder
@@ -194,6 +199,7 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - documentation-verifier
       - frontend-coder
       - llm-expert
     default_severity: low
@@ -246,4 +252,12 @@ categories:
 #   blocker, success-pattern). quality-concern (reviewer-class only), subagent-quality
 #   (supervisor-only), and process-finding (hook-only) remain unchanged.
 #   (#TICKET-20260608-INF-100c-3)
+# - 2026-07-17 [python-coder/TICKET-20260715-BO-2200b-1]: Added documentation-verifier to allowed_writers.
+#   Root cause: AC BO-2200b-1 registers documentation-verifier as a new phase agent (priority 11.9).
+#   Omission from allowed_writers causes submit_feedback.py to exit code 1, the same production
+#   incident that affected user-surface-smoker. Added documentation-verifier to complete,
+#   knowledge-gap, tooling-issue, convention-ambiguity, blocker, and success-pattern categories.
+#   quality-concern (reviewer-class only), subagent-quality (supervisor-only), and
+#   process-finding (hook-only) remain unchanged.
+#   (#TICKET-20260715-BO-2200b-1)
 # ====================================================================

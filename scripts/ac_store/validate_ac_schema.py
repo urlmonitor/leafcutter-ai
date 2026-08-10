@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """
+MODULE: validate_ac_schema
+GOAL: Validate AC YAML files for required schema fields and structural constraints.
+BUSINESS CONTEXT: Ensures AC store entries conform to the expected schema before they
+    are consumed by scanners, test-writers, and other downstream agents; prevents
+    malformed ACs from entering the store.
+ARCHITECTURE: Standalone CLI script and importable module invoked by pre-commit hooks;
+    reads AC YAML files and reports validation errors to stderr with a non-zero exit code.
+
 validate_ac_schema.py — AC YAML schema validation hook.
 
 Usage:
@@ -139,6 +147,15 @@ def _validate_file(path: Path, registry_ids: set[str] | None = None) -> list[str
                     f"{path}: Field 'documentation_triggers' contains invalid values: "
                     f"{invalid}. Valid values: {sorted(_DOC_TRIGGER_VALUES)}."
                 )
+            # L1-only constraint: documentation_triggers is permitted only on L1 ACs.
+            # BO-2200a-5: reject the field on L0, L2, L3 with a message that names
+            # the offending AC id and its level.
+            ac_level = data.get("level")
+            if ac_level != "L1":
+                errors.append(
+                    f"{path}: Field 'documentation_triggers' is permitted only on L1 "
+                    f"ACs. AC {data['id']} has level {ac_level!r}."
+                )
 
     return errors
 
@@ -196,3 +213,12 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-07-17 15:00 [python-coder]: Verified that the enum-value check and the
+#   L1-only level check for documentation_triggers are independent (both run as
+#   separate if-branches with no short-circuit); added MODULE/GOAL/BUSINESS CONTEXT/
+#   ARCHITECTURE docstring fields and this DECISION HISTORY block per doc-enforcer.
+#   (#EPIC-DocumentationCoverageGuarantee/07)

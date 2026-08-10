@@ -268,53 +268,55 @@ flow_change_gates:
     risk_surface: contract_boundary
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - python-coder
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before python-coder (priority 6) and
-      sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before python-coder
+      (priority 6) and sql-coder (priority 7).
+      documentation-expert is added via the per-surface documentation_gates
+      canonical-order path (post-coder) when triggered — not via this gate.
 
   - change_target: code
     risk_surface: safety
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - python-coder
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before python-coder (priority 6) and
-      sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before python-coder
+      (priority 6) and sql-coder (priority 7).
+      documentation-expert is added via the per-surface documentation_gates
+      canonical-order path (post-coder) when triggered — not via this gate.
 
   - change_target: schema
     risk_surface: contract_boundary
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before sql-coder
+      (priority 7).
+      documentation-expert is added via documentation_gates (schema triggers
+      it) via the canonical-order path — after the coder, not via this gate.
 
   - change_target: schema
     risk_surface: safety
     mandatory_agents:
       - architect-review
-      - documentation-expert
       - test-writer
       - test-runner
       - pr-reviewer
     phase_constraint: >
-      architect-review (priority 4) and documentation-expert (priority 10)
-      must be dispatched before sql-coder (priority 7).
+      architect-review (priority 4) must be dispatched before sql-coder
+      (priority 7).
+      documentation-expert is added via documentation_gates (schema triggers
+      it) via the canonical-order path — after the coder, not via this gate.
 
   - change_target: config
     risk_surface: contract_boundary
@@ -324,3 +326,99 @@ flow_change_gates:
     phase_constraint: >
       status-checker must verify boundary impact before
       config changes are merged; pr-reviewer gates the merge.
+
+# ---------------------------------------------------------------------------
+# documentation_gates
+#
+# Declarative policy that controls when documentation-expert is required based
+# on the AC's change_target(s).  Consumed by
+# generate_ticket_from_ac.py::_build_agents_map — the generator reads
+# change_target_triggers at call-time and adds documentation-expert to the
+# agents map as 'needed' when any change_target intersects the trigger list.
+#
+# Adding or removing a value here is a configuration edit only — no generator
+# code change is required (BO-2200a-1).
+#
+# change_target_triggers: ADR-017 change_target values that mandate
+#   documentation-expert regardless of risk_surface.  Each value in this list
+#   independently triggers the requirement.
+#
+# risk_surface_triggers: ADR-017 risk_surface values reserved for future use
+#   (a risk-surface–driven documentation gate layered on top of the
+#   change-target gate; not yet read by the generator).
+# ---------------------------------------------------------------------------
+
+documentation_gates:
+  change_target_triggers:
+    - ui
+    - schema
+    - pipeline
+    - docs
+  risk_surface_triggers:
+    - contract_boundary
+    - safety
+    - auth
+    - privacy
+  # BO-2200a-3: explicit negative guard — purely internal refactors must never
+  # require documentation-expert regardless of change_target or risk_surface
+  # trigger list expansions.  Each entry names a (change_target, risk_surface)
+  # pair whose documentation burden is explicitly zero.
+  non_triggering_classifications:
+    - {change_target: code, risk_surface: internal}
+    - {change_target: code, risk_surface: cost}
+    - {change_target: config, risk_surface: internal}
+    - {change_target: prompt, risk_surface: internal}
+    - {change_target: infrastructure, risk_surface: internal}
+
+# ---------------------------------------------------------------------------
+# surgical_removal_guard
+#
+# Formally encodes the invariants established by the BO-2200d-1 surgical
+# removal of documentation-expert from the four flow-change-gate
+# mandatory_agents lists (code/contract_boundary, code/safety,
+# schema/contract_boundary, schema/safety).
+#
+# This section is the machine-readable declaration consumed by
+# unit_tests/test_bo_2200d_1_i.py to assert the following invariants hold
+# after the removal:
+#
+#   1. architect-review is RETAINED in all four flow_change_gates
+#      mandatory_agents lists (no accidental collateral removal).
+#   2. documentation-expert is ABSENT from all four flow_change_gates
+#      mandatory_agents lists (no double-injection: it is injected once,
+#      post-coder, via documentation_gates — never pre-coder via this gate).
+#   3. documentation-expert appears exactly once in the computed agents map
+#      for any doc-triggering flow-change pair (e.g. schema/contract_boundary).
+#
+# n_location_rule: all — this section must be present in all deployments of
+# guardrail_gates.yaml.
+# ---------------------------------------------------------------------------
+
+surgical_removal_guard:
+  description: >
+    Flow-change lists retain architect-review (and other pre-coder gates)
+    and contain no documentation-expert; documentation-expert appears exactly
+    once in the computed agents map (no double-injection via both
+    flow_change_gates pre-coder and documentation_gates post-coder).
+  n_location_rule: all
+  invariants:
+    - id: ARCHITECT_REVIEW_RETAINED
+      description: >
+        architect-review must be present in all four flow_change_gates
+        mandatory_agents lists (code/contract_boundary, code/safety,
+        schema/contract_boundary, schema/safety) after the surgical removal
+        of documentation-expert.
+      enforced_by: unit_tests/test_bo_2200d_1_i.py::test_architect_review_still_injected_pre_coder
+    - id: DOC_EXPERT_ABSENT_FROM_FLOW_CHANGE_GATES
+      description: >
+        documentation-expert must be absent from all four flow_change_gates
+        mandatory_agents lists so it is never injected twice (once pre-coder
+        and once post-coder) for the same ticket.
+      enforced_by: unit_tests/test_bo_2200d_1_i.py::test_documentation_expert_never_double_injected
+    - id: DOC_EXPERT_SINGLE_INJECTION
+      description: >
+        documentation-expert appears exactly once in the computed agents map
+        for any doc-triggering flow-change pair (schema/contract_boundary is
+        the canonical test pair). It is injected via documentation_gates
+        (post-coder canonical order), never via flow_change_gates.
+      enforced_by: unit_tests/test_bo_2200d_1_i.py::test_documentation_expert_never_double_injected
