@@ -1,0 +1,55 @@
+id: BO-2400f-7-i
+components:
+  - build_orchestration
+title: "Claim change fails to merge: do not build against an unclaimed state"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane run has opened its status-only change to claim the resolved
+    acceptance criteria,
+  And that status-only change cannot be merged onto mainline (it conflicts with a
+    change another run already merged, or its required checks do not pass),
+  When the run detects the status-only change did not merge,
+  Then the run does not begin its test or code work,
+  And it reports a clear error stating the claim could not be recorded and naming the
+    acceptance criteria it tried to claim,
+  And it does not build against an unclaimed or partially-claimed state.
+depends_on: [BO-2400f-7]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_failed_claim_merge_halts_before_build
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "When the status-only claim change does not merge (conflict or failing checks), the run halts before any test or code work begins."
+  - name: test_failed_claim_reports_error_naming_acs
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "A failed claim is reported as a clear error naming the AC ids it tried to claim, and the run does not build against an unclaimed/partially-claimed state."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7
+  contract: "The opened status-only claim PR and its merge result (merged vs conflict/failing-checks)."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

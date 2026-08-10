@@ -1,0 +1,63 @@
+id: BO-2400f-8
+components:
+  - build_orchestration
+title: "Resolver treats an already in_progress AC as claimed: skip or refuse, never rebuild"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run resolves the connected build set for a target AC id,
+  And one or more acceptance criteria in that set already have work_status in_progress
+    (claimed by another in-flight run),
+  When the connected build set is resolved,
+  Then each already-in_progress acceptance criterion is treated as already-claimed and
+    is excluded from the set to be built, rather than rebuilt,
+  And the run reports a clear message naming each excluded already-claimed acceptance
+    criterion,
+  And when the target AC id itself is already in_progress, the run refuses to proceed
+    with a clear message rather than starting a second concurrent build of it.
+depends_on: [BO-2400f, BO-2400f-1]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+estimated_complexity: M
+test_required: true
+test_spec:
+  - name: test_resolver_excludes_already_in_progress_members
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "Members of the resolved set already in_progress are treated as claimed and excluded from the build set, never rebuilt."
+  - name: test_resolver_reports_excluded_claimed_ids
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "The run reports a clear message naming each excluded already-claimed AC id."
+  - name: test_target_ac_in_progress_refuses_to_proceed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "When the target AC id itself is in_progress, the run refuses to proceed with a clear message and a non-success exit instead of starting a concurrent build."
+delivers_to:
+  agent: python-coder
+  contract: "Filtered build set excluding already-in_progress (claimed) ACs, plus a refusal signal when the target AC id is itself in_progress; consumed by the claim step (BO-2400f-7) and the build loop."
+expects_from:
+  ac_id: BO-2400f-1
+  contract: "Resolved connected build set with each member's current work_status."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400f-8-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

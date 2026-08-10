@@ -1,0 +1,56 @@
+id: BO-2400f-9-i
+components:
+  - build_orchestration
+title: "Stale-todo guard: a passing run that leaves any built AC un-flipped is an error"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run passed its green and coverage gates for the built set,
+  When the run performs its finish-time work_status transition,
+  Then if any built acceptance criterion is still work_status todo or in_progress
+    after the transition step, the run reports it as an error naming the un-flipped
+    criteria rather than returning success,
+  And a successful run's reported result asserts that every built acceptance criterion
+    is work_status done.
+depends_on: [BO-2400f-9]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_unflipped_built_ac_reported_as_error
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "If any built AC is still todo/in_progress after the finish transition on a gate-passing run, the run reports an error naming the un-flipped criteria instead of returning success."
+  - name: test_success_result_asserts_all_built_acs_done
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "A successful run's reported result asserts every built AC is work_status done."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-9
+  contract: "The finish-time done transition and the resulting work_status of every built AC."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

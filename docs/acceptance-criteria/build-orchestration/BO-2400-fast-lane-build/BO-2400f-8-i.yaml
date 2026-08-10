@@ -1,0 +1,57 @@
+id: BO-2400f-8-i
+components:
+  - build_orchestration
+title: "Partial-overlap set: build the todo members, skip the claimed ones, clean no-op if empty"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a resolved connected build set contains a mix of acceptance criteria: some
+    with work_status todo and some already with work_status in_progress from another
+    in-flight run,
+  When the run claims and builds the set,
+  Then only the todo acceptance criteria are claimed and built,
+  And the already-in_progress acceptance criteria are excluded and named in the run's
+    message,
+  And the run proceeds with the remaining todo criteria rather than aborting the whole
+    run,
+  And if excluding the already-claimed criteria leaves nothing to build, the run
+    reports "nothing to build" and exits cleanly without opening a build pull request.
+depends_on: [BO-2400f-8]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_partial_overlap_builds_todo_skips_claimed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "A mixed set builds only the todo members and continues, excluding and naming the already-in_progress members, rather than aborting the whole run."
+  - name: test_empty_after_exclusion_is_clean_noop
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "When excluding claimed members leaves nothing to build, the run reports 'nothing to build' and exits cleanly (non-error) without opening a build PR."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-8
+  contract: "The filtered build set (todo members) and the list of excluded already-in_progress AC ids."
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
