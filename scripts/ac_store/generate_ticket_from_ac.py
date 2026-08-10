@@ -113,6 +113,9 @@ _NOT_NEEDED_AGENTS: list[str] = [
 ]
 
 #: Canonical phase order for agent map output.
+#: documentation-verifier is placed immediately before commit (BO-2200d-2):
+#: it is the last verification gate before the ticket is committed, so it
+#: must follow pr-reviewer, ac-validator, and ac-fulfillment-gate.
 _CANONICAL_PHASE_ORDER: list[str] = [
     "architect-review",
     "test-writer",
@@ -120,20 +123,21 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "sql-coder",
     "test-runner",
     "documentation-expert",
-    "documentation-verifier",
     "pr-reviewer",
     "ac-validator",
     "ac-fulfillment-gate",
+    "documentation-verifier",
     "commit",
     "pull-request",
 ]
 
 #: Phase order for flow-change pairs: documentation-expert is placed before
 #: any coder (priority 4 → doc planning before implementation).
+#: documentation-verifier is placed immediately before commit (BO-2200d-2),
+#: consistent with _CANONICAL_PHASE_ORDER.
 _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "architect-review",
     "documentation-expert",
-    "documentation-verifier",
     "test-writer",
     "python-coder",
     "sql-coder",
@@ -141,6 +145,7 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "pr-reviewer",
     "ac-validator",
     "ac-fulfillment-gate",
+    "documentation-verifier",
     "commit",
     "pull-request",
 ]
