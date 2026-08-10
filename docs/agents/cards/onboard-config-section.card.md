@@ -1,13 +1,16 @@
 ---
 agent_id: onboard-config-section
-title: "Agent Card: onboard-config-section"
-description: "Haiku sub-agent spawned in parallel by the onboard wizard. Receives a discovery payload (folder structure, file excerpts, owned keys, confirmed values) and returns a JSON config fragment covering only the keys it owns. One instance is spawned per skills_config.json section (testing, packages, tickets, commands, project)."
+title: 'Agent Card: onboard-config-section'
+description: Haiku sub-agent spawned in parallel by the onboard wizard. Receives a
+  discovery payload (folder structure, file excerpts, owned keys, confirmed values)
+  and returns a JSON config fragment covering only the keys it owns. One instance
+  is spawned per skills_config.json section (testing, packages, tickets, commands,
+  project).
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - onboarding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # onboard-config-section
 

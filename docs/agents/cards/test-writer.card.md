@@ -1,13 +1,21 @@
 ---
 agent_id: test-writer
-title: "Agent Card: test-writer"
-description: "TDD test-first authoring agent. Spawned by ticket-supervisor at priority 5, BEFORE python-coder or sql-coder run. Reads the ## Test Requirements section from the ticket body and writes the specified failing test stubs, runs the suite to confirm all new tests are RED (non-zero exit), captures a structured red_baseline block in its sign-off comment, and hands off to coders whose job is to make the red-baseline green. Classifies test failures before touching production code, enumerates consumers via blast-radius query, and blocks contract-shrinking changes without explicit authorization. Emits a completion report and signs off the ticket phase. Use when: ticket has a non-empty test_requirements.tests array. Skip (sign off immediately, zero file writes) when tests array is empty or block is absent."
+title: 'Agent Card: test-writer'
+description: 'TDD test-first authoring agent. Spawned by ticket-supervisor at priority
+  5, BEFORE python-coder or sql-coder run. Reads the ## Test Requirements section
+  from the ticket body and writes the specified failing test stubs, runs the suite
+  to confirm all new tests are RED (non-zero exit), captures a structured red_baseline
+  block in its sign-off comment, and hands off to coders whose job is to make the
+  red-baseline green. Classifies test failures before touching production code, enumerates
+  consumers via blast-radius query, and blocks contract-shrinking changes without
+  explicit authorization. Emits a completion report and signs off the ticket phase.
+  Use when: ticket has a non-empty test_requirements.tests array. Skip (sign off immediately,
+  zero file writes) when tests array is empty or block is absent.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - testing_quality
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # test-writer
 

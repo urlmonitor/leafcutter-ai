@@ -1,13 +1,20 @@
 ---
 agent_id: ac-triage
-title: "Agent Card: ac-triage"
-description: "Fast triage agent for /plan-feature workflow. Reads the AC store for the relevant component, compares the user's natural-language request against existing L0/L1 criteria text, and classifies the routing path as one of: strategic (new capability, no matching L1 parent), behavioral (adds to existing feature with a matching L1), technical (adds constraints to existing ACs), or covered (request fully covered by existing ACs). Returns a structured JSON decision immediately — no files are written by this agent. Model-pinned to Haiku tier for speed; must complete triage in < 3s for a store of 200 ACs. Use when: /plan-feature workflow Stage 0; before any authoring agent is invoked."
+title: 'Agent Card: ac-triage'
+description: 'Fast triage agent for /plan-feature workflow. Reads the AC store for
+  the relevant component, compares the user''s natural-language request against existing
+  L0/L1 criteria text, and classifies the routing path as one of: strategic (new capability,
+  no matching L1 parent), behavioral (adds to existing feature with a matching L1),
+  technical (adds constraints to existing ACs), or covered (request fully covered
+  by existing ACs). Returns a structured JSON decision immediately — no files are
+  written by this agent. Model-pinned to Haiku tier for speed; must complete triage
+  in < 3s for a store of 200 ACs. Use when: /plan-feature workflow Stage 0; before
+  any authoring agent is invoked.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - ac_store
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # ac-triage
 

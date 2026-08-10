@@ -1,13 +1,16 @@
 ---
 agent_id: knowledge-harvester
-title: "Agent Card: knowledge-harvester"
-description: "Runs the knowledge-emission harvester for a worktree. Reads unprocessed knowledge_captured events from debugging/logs/knowledge_emissions.jsonl (per ADR-011), routes each to the correct knowledge surface via the capture-learning write protocol, marks events as processed, and reports a summary. Invoked by ticket-supervisor or by the user after a batch of phase agents have signed off."
+title: 'Agent Card: knowledge-harvester'
+description: Runs the knowledge-emission harvester for a worktree. Reads unprocessed
+  knowledge_captured events from debugging/logs/knowledge_emissions.jsonl (per ADR-011),
+  routes each to the correct knowledge surface via the capture-learning write protocol,
+  marks events as processed, and reports a summary. Invoked by ticket-supervisor or
+  by the user after a batch of phase agents have signed off.
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - knowledge_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # knowledge-harvester
 

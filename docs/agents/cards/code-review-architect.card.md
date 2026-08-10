@@ -1,13 +1,18 @@
 ---
 agent_id: code-review-architect
-title: "Agent Card: code-review-architect"
-description: "Deep code review agent. Infers requirements and tech stack from the code, runs an 8-axis review (architecture, coupling, cohesion, TypeScript, complexity, framework internals, dead code, defects), and writes a prioritised report to a file. Produces a scorecard and Before/After direction sketches for every finding. Use when: user asks for a deep code review, architectural review, or quality audit of existing code; asks \"review this feature\"; or wants a comprehensive review beyond what pr-reviewer covers."
+title: 'Agent Card: code-review-architect'
+description: 'Deep code review agent. Infers requirements and tech stack from the
+  code, runs an 8-axis review (architecture, coupling, cohesion, TypeScript, complexity,
+  framework internals, dead code, defects), and writes a prioritised report to a file.
+  Produces a scorecard and Before/After direction sketches for every finding. Use
+  when: user asks for a deep code review, architectural review, or quality audit of
+  existing code; asks "review this feature"; or wants a comprehensive review beyond
+  what pr-reviewer covers.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - review_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # code-review-architect
 

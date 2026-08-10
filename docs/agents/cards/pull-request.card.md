@@ -1,13 +1,18 @@
 ---
 agent_id: pull-request
-title: "Agent Card: pull-request"
-description: "Confirmation-gated PR creation agent. Reads recent commits on the current branch, drafts a title (<=70 chars) and body (Summary + Test plan), shows the draft to the user, and waits for an explicit \"yes\" before pushing the branch and running gh pr create. Spawns conflict-resolver on any merge conflict detected before the push, then retries once after resolution. Use when: user types /pull-request; is in the commit->push->PR flow via /commit-push-pr; or asks to \"open a PR\", \"create a pull request\", or \"push and open a PR for this branch\"."
+title: 'Agent Card: pull-request'
+description: 'Confirmation-gated PR creation agent. Reads recent commits on the current
+  branch, drafts a title (<=70 chars) and body (Summary + Test plan), shows the draft
+  to the user, and waits for an explicit "yes" before pushing the branch and running
+  gh pr create. Spawns conflict-resolver on any merge conflict detected before the
+  push, then retries once after resolution. Use when: user types /pull-request; is
+  in the commit->push->PR flow via /commit-push-pr; or asks to "open a PR", "create
+  a pull request", or "push and open a PR for this branch".'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - git_vcs_operations
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # pull-request
 

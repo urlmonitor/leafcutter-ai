@@ -1,13 +1,19 @@
 ---
 agent_id: status-checker
-title: "Agent Card: status-checker"
-description: "Investigates ticket state — answers \"is this done? deployed? what's next?\" Reads the ticket, checks git history for matching commits, calls prod-puller for prod-scope tickets, and (only on explicit user request) closes the ticket by updating frontmatter status and moving the file to a done/ subfolder. Can also make small ticket-only fixes (single-file markdown edits). Code edits are out of scope — defer to python-coder / sql-coder. Use when: user types /status; asks \"is this done?\"; asks \"is this deployed?\"; asks \"what's left on this ticket?\"; asks to close or move a ticket."
+title: 'Agent Card: status-checker'
+description: 'Investigates ticket state — answers "is this done? deployed? what''s
+  next?" Reads the ticket, checks git history for matching commits, calls prod-puller
+  for prod-scope tickets, and (only on explicit user request) closes the ticket by
+  updating frontmatter status and moving the file to a done/ subfolder. Can also make
+  small ticket-only fixes (single-file markdown edits). Code edits are out of scope
+  — defer to python-coder / sql-coder. Use when: user types /status; asks "is this
+  done?"; asks "is this deployed?"; asks "what''s left on this ticket?"; asks to close
+  or move a ticket.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - ticket_lifecycle
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # status-checker
 

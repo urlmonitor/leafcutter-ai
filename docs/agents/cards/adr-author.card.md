@@ -1,13 +1,16 @@
 ---
 agent_id: adr-author
-title: "Agent Card: adr-author"
-description: "Authors a new Architecture Decision Record under docs/architecture/. Loads docs/how-to/documentation/write-adr.md at runtime and lists docs/architecture/ to pick the next free ADR number before writing. Produces a correctly-numbered, correctly-templated ADR with all required sections: Status, Context, Decision, Consequences, Alternatives (internal — invoked by documentation-expert only)."
+title: 'Agent Card: adr-author'
+description: 'Authors a new Architecture Decision Record under docs/architecture/.
+  Loads docs/how-to/documentation/write-adr.md at runtime and lists docs/architecture/
+  to pick the next free ADR number before writing. Produces a correctly-numbered,
+  correctly-templated ADR with all required sections: Status, Context, Decision, Consequences,
+  Alternatives (internal — invoked by documentation-expert only).'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - documentation_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # adr-author
 

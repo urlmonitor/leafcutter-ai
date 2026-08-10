@@ -1,13 +1,15 @@
 ---
 agent_id: sql-procedure-creator
-title: "Agent Card: sql-procedure-creator"
-description: "Specialist that authors new database stored procedures following the project's procedure pattern. Produces the procedure SQL file and the matching rollback-only test file in one pass. Reads PROJECT_CONTEXT.md for project-specific paths and deploy commands. (internal — invoked by parent agents only)"
+title: 'Agent Card: sql-procedure-creator'
+description: Specialist that authors new database stored procedures following the
+  project's procedure pattern. Produces the procedure SQL file and the matching rollback-only
+  test file in one pass. Reads PROJECT_CONTEXT.md for project-specific paths and deploy
+  commands. (internal — invoked by parent agents only)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - sql_coding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # sql-procedure-creator
 

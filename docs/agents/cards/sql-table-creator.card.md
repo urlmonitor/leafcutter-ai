@@ -1,13 +1,15 @@
 ---
 agent_id: sql-table-creator
-title: "Agent Card: sql-table-creator"
-description: "Creates all artifacts required to introduce a new database table: ORM model, migration, model registry, idempotent schema SQL, component registration, and per-table doc. Reads PROJECT_CONTEXT.md for project-specific how-to paths and conventions before writing any file. (internal — invoked by sql-coder only)"
+title: 'Agent Card: sql-table-creator'
+description: 'Creates all artifacts required to introduce a new database table: ORM
+  model, migration, model registry, idempotent schema SQL, component registration,
+  and per-table doc. Reads PROJECT_CONTEXT.md for project-specific how-to paths and
+  conventions before writing any file. (internal — invoked by sql-coder only)'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - sql_coding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # sql-table-creator
 

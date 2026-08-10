@@ -1,13 +1,16 @@
 ---
 agent_id: architecture-diagram-author
-title: "Agent Card: architecture-diagram-author"
-description: "C4 mermaid diagram specialist. Always loads the write-c4-diagram skill before writing. Validates flight_level selection against the doc's actual content, produces the mermaid block + frontmatter + cross-links in one pass, then returns a structured payload with the file path, chosen flight_level, and rationale. (internal — dispatched by documentation-expert only, for \"design — C4 diagram\" intent)"
+title: 'Agent Card: architecture-diagram-author'
+description: C4 mermaid diagram specialist. Always loads the write-c4-diagram skill
+  before writing. Validates flight_level selection against the doc's actual content,
+  produces the mermaid block + frontmatter + cross-links in one pass, then returns
+  a structured payload with the file path, chosen flight_level, and rationale. (internal
+  — dispatched by documentation-expert only, for "design — C4 diagram" intent)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - documentation_system
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # architecture-diagram-author
 
@@ -137,6 +140,8 @@ flowchart TD
 - ACD-100d-1: C4 component diagram written at docs/architecture/diagrams/ac-driven-pipeline.md
 - ACD-1200g-2: Sequence diagram illustrates the goal-to-epic dispatch flow
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
+- BO-1000a-4: Sequence diagram of the start-of-step narration emission path
+- BO-1000c-3: Sequence diagram of live progress delivery from background workflow to the conversation
 - BO-1300a-4: Sequence diagram: on-demand spot-check pass from invocation to tracked tickets
 - BO-1300d-2: Sequence diagram: automatic end-of-build spot-check wiring
 - BO-1400a-3: Sequence diagram documents the pre-PR real-data and deployable-placement verification flow
@@ -146,9 +151,33 @@ flowchart TD
 - BO-1600a-4: Sequence diagram of serialized concurrent commits into the shared worktree
 - BO-1600b-4: State diagram of a commit's lifecycle through interruption and cleanup
 - BO-1600c-4: Sequence diagram of corruption detection halting the drive
+- BO-1700a-11: Sequence diagram: probe check flow A -> B -> C -> D -> verdict
+- BO-1700c-2: Component diagram: worktree, main tree, .leafcutter, and shared git hooks
+- BO-1700c-3: Sequence diagram: commit triggers heal, config resolves, chain fires
+- BO-1700d-4: Sequence diagram: probe checkpoints across the worktree lifecycle
+- BO-1800a-4: Component diagram of the per-drive isolated-clone topology
+- BO-1800a-5: Sequence diagram of the drive create-run-remove lifecycle in an isolated clone
+- BO-1800b-4: Sequence diagram of the gated PR-to-merge-queue landing flow
+- BO-1900a-3: Sequence diagram documents the read -> preflight -> spawn flow
+- BO-1900b-3: Sequence diagram documents the dispatch-time premise re-check
+- BO-2100a-5: Sequence diagram of the live-surface-tester dispatch path
+- BO-2100a-6: Component diagram of the live-surface-testing pieces and their links
+- BO-2100c-4: Sequence diagram of server startup, PID recording, and teardown
+- BO-2200d-3: A sequence diagram shows the doc-required ticket phase flow through writer and verifier to commit
+- BO-2300a-3: State diagram: run pause/resume lifecycle (running / paused-awaiting-input / resumed / cancelled)
+- BO-2300d-2: Sequence diagram: pause -> ask -> answer -> resume interaction
+- BO-2400a-7: Sequence diagram: fast-lane loop from selection to commit staging
+- BO-2400a-8: Component diagram: fast-lane build path and its collaborators
+- BO-2500a-5: Sequence diagram: done-proof evaluation from covers tag to done verdict
+- BO-2500d-4: Component diagram: fast-lane vs heavy-pipeline phase order after review retirement
 - BP-1000a-4: Component diagram of the source-to-shipped parity relationship at the merge gate
 - BP-1000b-4: Sequence diagram of the parity gate firing within the finalize-feature merge flow
+- BP-1100e-3: A sequence diagram shows where the declared-vs-actual reconciliation sits before done
+- BP-1100f-6: Sequence diagram: proving a durable change by its real effect and stated intent
 - BP-1200b-2: Sequence diagram documents the PR-to-test-check signal flow
+- BP-1400a-3: Sequence diagram documents the web-app CI gate flow from pull request to merge decision
+- BP-1400c-2: Sequence diagram documents the web-app route-render check flow
+- BP-300d-5: Sequence diagram: runtime-aware routing of a primary delivery command to workflow vs prose fallback
 - BP-700a-5: Component diagram shows unified agent in the dispatch topology
 - BP-800a-6: Component diagram for the technology detection subsystem
 - BP-800b-6: Sequence diagram for the specialist generation pipeline
@@ -161,11 +190,14 @@ flowchart TD
 - GE-104a-4: A sequence diagram documents the two-layer enforcement flow for new-page documentation
 - GE-111a-4: Sequence diagram: developer to hook to AC store to commit decision
 - GE-111d-5: Sequence diagram: developer reconciles via update or confirm and re-commits
+- GE-117d-5: Sequence diagram: the commit-time declaration-enforcement interaction
+- GE-117e-4: Sequence diagram: the fix-or-opt-out route out of a declaration block
 - KM-KGS-100a-4: Component diagram shows the acceptance-criteria store as a knowledge-map surface
 - KM-KGS-100b-4: Sequence diagram of a requirement-to-code traversal
 - PER-100c-4: Sequence diagram for persona capability query workflow
 - PER-100d-4: Sequence diagram for persona context injection flow
 - PER-100d-5: Component diagram for persona management system
+- TKT-200f-3: Sequence diagram documents clean-tree premise verification before inbox exit
 - TKT-500a-5: Sequence diagram: agent dispatch reads AC at source
 - TKT-500a-6: Component diagram: AC-as-dispatch-artifact architecture
 - TKT-500b-6: Sequence diagram: TDD-first dispatch flow

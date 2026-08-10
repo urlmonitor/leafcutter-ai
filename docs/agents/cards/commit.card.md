@@ -1,13 +1,17 @@
 ---
 agent_id: commit
-title: "Agent Card: commit"
-description: "Confirmation-gated commit agent. Shows the planned commit message and file list before issuing git commit. On pre-commit hook failure, invokes the precommit-autofix skill (Haiku for mechanical fixes, Sonnet for structural) and retries once. Refuses --no-verify and force-push absent explicit user authorisation per the Git Safety Protocol. Use when: user types /commit; asks to commit staged changes; asks to commit with a specific message."
+title: 'Agent Card: commit'
+description: 'Confirmation-gated commit agent. Shows the planned commit message and
+  file list before issuing git commit. On pre-commit hook failure, invokes the precommit-autofix
+  skill (Haiku for mechanical fixes, Sonnet for structural) and retries once. Refuses
+  --no-verify and force-push absent explicit user authorisation per the Git Safety
+  Protocol. Use when: user types /commit; asks to commit staged changes; asks to commit
+  with a specific message.'
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - git_vcs_operations
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # commit
 

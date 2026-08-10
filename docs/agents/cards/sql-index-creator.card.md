@@ -1,13 +1,15 @@
 ---
 agent_id: sql-index-creator
-title: "Agent Card: sql-index-creator"
-description: "Creates file-based database index files following the project's idempotent, non-migration index pattern. Reads PROJECT_CONTEXT.md for project-specific file paths, naming conventions, and reload commands. Returns the correct reload command to sql-coder for deployment. (internal — invoked by parent agents only)"
+title: 'Agent Card: sql-index-creator'
+description: Creates file-based database index files following the project's idempotent,
+  non-migration index pattern. Reads PROJECT_CONTEXT.md for project-specific file
+  paths, naming conventions, and reload commands. Returns the correct reload command
+  to sql-coder for deployment. (internal — invoked by parent agents only)
 type: card
 status: active
-created: 2026-07-01
-card_version: "generated"
-components:
-  - sql_coding
+created: 2026-08-10
+card_version: generated
+last_updated: '2026-08-10'
 ---
 # sql-index-creator
 
