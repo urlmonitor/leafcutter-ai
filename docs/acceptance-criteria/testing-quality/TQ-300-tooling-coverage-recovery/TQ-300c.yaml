@@ -1,0 +1,47 @@
+id: TQ-300c
+title: "Ticket prioritization and secret scanning stay reliable"
+component: testing-quality
+components:
+  - testing_quality
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Tests guard the tools that pick the next ticket to build and scan for leaked
+  secrets against regressions.
+
+  The prioritizer that ranks ready tickets — how it excludes blocked tickets,
+  orders by priority, and reports dependency cycles — and the scanner that flags
+  secrets before they are committed are covered by tests. If a change causes the
+  prioritizer to surface the wrong ticket or the scanner to miss a secret, a
+  test fails instead of the mistake reaching a real drive.
+depends_on:
+  - TQ-300
+doc_links:
+  - path: templates/skills/ticket-prioritizer/scripts/prioritize.py
+    relationship: verifies
+    status: exists
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-300c-1
+  - TQ-300c-2
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test-coverage recovery for existing tooling — no new user-facing command, workflow, or behavior is introduced, so no how-to or diagram adds value."

@@ -1,0 +1,82 @@
+id: TQ-300a-1
+title: "Registry loading and top-level validation are covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a well-formed agent_registry.json on disk,
+  When load_registry reads it,
+  Then it returns the parsed list of agent entries with every agent present.
+
+  Given a registry file path that does not exist or contains malformed JSON,
+  When the registry is loaded and validated,
+  Then validation surfaces an error naming the unreadable or unparseable file
+    rather than silently reporting the registry as valid.
+
+  Given a parsed registry in which every agent entry has the required fields,
+  When validate_agent_registry runs,
+  Then it reports no errors.
+
+  Given a registry entry that is missing a required field (for example an agent
+    with no id or no role) or that declares a duplicate agent id,
+  When validate_agent_registry runs,
+  Then it returns at least one error that names the offending agent and the
+    specific violation, and does not report the registry as valid.
+depends_on:
+  - TQ-300a
+doc_links:
+  - path: scripts/registry_validator.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+test_required: true
+test_spec:
+  - name: test_load_registry_returns_all_agents
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A well-formed on-disk agent_registry.json fixture yields the full parsed agent list (list[dict]) with every entry present."
+  - name: test_missing_or_malformed_file_surfaces_named_error
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A missing/malformed registry file produces an error naming that file via _load_agents / validate_agent_registry (NOT via load_registry, which returns [])."
+  - name: test_valid_registry_reports_no_errors
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A fully-populated valid registry fixture makes validate_agent_registry return an empty error list."
+  - name: test_missing_required_field_or_duplicate_id_is_flagged
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "An entry missing id/role, and a duplicate agent id, each yield an error naming the offending agent and the violation (requires the production gap in it_requirements to be closed first)."
+it_requirements:
+  - "Author fresh unit tests in tests/test_registry_validator.py (new file). Write from scratch and verify run-to-green (python -m pytest tests/test_registry_validator.py) before sign-off — no prior scaffolding exists."
+  - "Functions under test (scripts/registry_validator.py): load_registry(package_root), _load_agents(package_root), validate_agent_registry(package_root). Import by bare module name after adding scripts/ to sys.path (matches the tests/test_verification_block.py convention)."
+  - "API MISMATCH: load_registry does NOT raise on a missing/malformed file — it silently RETURNS [] (empty list). The 'error naming the unreadable/unparseable file' behavior lives in _load_agents (which returns an errors list) and is surfaced by validate_agent_registry. Assert the error-naming behavior against _load_agents / validate_agent_registry, NOT load_registry."
+  - "PRODUCTION FIX REQUIRED before the last scenario can go green: registry_validator has NO check for a missing required field (a missing id currently raises KeyError rather than returning an error) and NO duplicate-agent-id detection. The coder must add missing-field and duplicate-id validation to validate_agent_registry so the test can assert a named error instead of an uncaught KeyError; coordinate the small production change in the same ticket as the test."
+  - "Use a self-contained on-disk fixture package (tmp_path with config/agent_registry.json plus templates/) so the template-path / orphan-template / produces checks inside validate_agent_registry do not fire spuriously; do not assert against the live package registry."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

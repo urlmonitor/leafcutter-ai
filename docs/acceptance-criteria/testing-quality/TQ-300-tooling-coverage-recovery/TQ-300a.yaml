@@ -1,0 +1,50 @@
+id: TQ-300a
+title: "You can trust the registry checks to catch a broken agent registry"
+component: testing-quality
+components:
+  - testing_quality
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Tests prove the registry validator and its injection flow reject bad wiring
+  instead of passing it through.
+
+  The tools that load and validate the agent registry, confirm that spawn
+  relationships point both ways, and inject registry data into agent templates
+  are covered by tests. If a change lets an invalid registry, a one-way spawn
+  link, or a broken injection slip past, a test fails immediately.
+depends_on:
+  - TQ-300
+doc_links:
+  - path: scripts/registry_validator.py
+    relationship: verifies
+    status: exists
+  - path: scripts/injection_builders.py
+    relationship: verifies
+    status: exists
+  - path: scripts/template_compiler.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-300a-1
+  - TQ-300a-2
+  - TQ-300a-3
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test-coverage recovery for existing tooling — no new user-facing command, workflow, or behavior is introduced, so no how-to or diagram adds value."
