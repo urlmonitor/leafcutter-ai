@@ -17,6 +17,7 @@ memory: true
 model: sonnet
 name: documentation-verifier
 tools: Bash, Read, Edit
+requires_verification: true
 portable: true
 signoff: true
 domain: null
