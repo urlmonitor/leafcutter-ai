@@ -1,0 +1,80 @@
+id: TQ-300c-2
+title: "Secret scanning is covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a file containing a high-entropy secret-like string,
+  When the secret scanner scans it,
+  Then it reports a finding that names the file and the offending line.
+
+  Given a file containing only ordinary non-secret text,
+  When the secret scanner scans it,
+  Then it reports no findings.
+
+  Given a secret-like match whose file-and-line is listed in the security
+    allowlist,
+  When the scanner scans that file with the allowlist applied,
+  Then the allowlisted match is suppressed and not reported as a finding.
+
+  Given an allowlist entry that uses a wildcard line marker for a path,
+  When the scanner scans that path,
+  Then every matching line under that path is suppressed rather than only a
+    single fixed line number.
+depends_on:
+  - TQ-300c
+doc_links:
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+test_required: true
+test_spec:
+  - name: test_high_entropy_string_yields_finding_naming_file_and_line
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "scan_file on a file with a high-entropy secret-like token yields a finding (rule_id ENTROPY_HIGH) naming the file and line."
+  - name: test_plain_text_yields_no_findings
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "scan_file on a plain-text file yields no findings."
+  - name: test_allowlisted_line_is_suppressed
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "An allowlist entry matching rule_id:file:line suppresses the finding via scan_files (tmp_path project_root containing a .security-allowlist)."
+  - name: test_wildcard_line_marker_suppresses_all_lines
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A wildcard line marker ('*') for a path suppresses every matching line under that path, not just one fixed line number (_is_suppressed treats lineno '*' as match-all)."
+it_requirements:
+  - "Author fresh unit tests in tests/test_scan_secrets.py (new file). Write from scratch and verify run-to-green before sign-off. scan_secrets.py lives under templates/skills/security-scanner/scripts/ — import it via sys.path.insert of that scripts directory."
+  - "API NAMING: there is NO function named scan_secrets. Use scan_file(path) (raw findings) and scan_files(paths, project_root) (applies the .security-allowlist). Findings are Finding(rule_id, file_path, line_no, excerpt) NamedTuples."
+  - "For the allowlist scenarios, place a .security-allowlist under a tmp_path project_root and pass that root to scan_files; assert both the exact rule_id:file:line suppression and the wildcard ('*') line-marker suppression."
+  - "No production change is expected for this AC — this is coverage recovery over existing behavior."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."

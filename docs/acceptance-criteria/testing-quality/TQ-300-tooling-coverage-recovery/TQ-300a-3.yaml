@@ -1,0 +1,80 @@
+id: TQ-300a-3
+title: "Registry injection into templates is covered by tests"
+component: testing-quality
+components:
+  - testing_quality
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a valid registry and an agent template that declares a
+    registry-injection placeholder (for example a per-agent spawn-table
+    placeholder),
+  When the injection builder produces the injection payload and the template
+    compiler compiles the template,
+  Then the compiled output contains the registry-derived table in place of the
+    placeholder and the placeholder token no longer appears in the output.
+
+  Given an agent template that declares no registry-injection placeholder,
+  When the template compiler compiles it,
+  Then the output is unchanged and no registry content is injected.
+
+  Given a registry-injection placeholder whose spawn table references a registry
+    agent that is absent,
+  When the injection builder runs,
+  Then it fails with an error naming the missing agent rather than emitting an
+    empty or partially rendered injection.
+depends_on:
+  - TQ-300a
+doc_links:
+  - path: scripts/injection_builders.py
+    relationship: verifies
+    status: exists
+  - path: scripts/template_compiler.py
+    relationship: verifies
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+test_required: true
+test_spec:
+  - name: test_spawn_table_placeholder_is_replaced
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A template containing a registry-injection placeholder compiles to output that contains the registry-derived table AND no longer contains the placeholder token."
+  - name: test_template_without_placeholder_is_unchanged
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "A template declaring no registry-injection placeholder compiles unchanged (no registry content injected)."
+  - name: test_missing_agent_in_spawn_table_raises_named_error
+    target_dir: tests/
+    framework: pytest
+    type: unit
+    description: "build_per_agent_spawn_table for an unknown/missing agent id raises ValueError naming the missing agent (surfaced by _apply_registry_injection as a wrapped ValueError)."
+it_requirements:
+  - "Author fresh unit tests in tests/test_registry_injection.py (new file). Write from scratch and verify run-to-green before sign-off."
+  - "SCOPE EXCLUSION: do NOT cover the project_paths placeholder — tests/test_config_driven_build_paths.py already covers build_project_paths_table + compile_agent_template for project_paths. This AC covers the REGISTRY injection path only (spawn table / registry block), which is currently untested."
+  - "Functions under test: injection_builders.build_per_agent_spawn_table / build_registry_block, and template_compiler.compile_agent_template together with its _apply_registry_injection placeholder resolution. Import both by bare module name after adding scripts/ to sys.path."
+  - "API NUANCE for the absent/empty scenario: only SOME injection types raise. build_per_agent_spawn_table raises ValueError on an unknown/missing agent (surfaced as a wrapped ValueError), but build_registry_block and build_per_agent_skills_table RETURN an empty string by design when the registry section is absent/empty rather than raising. Target the ValueError path (spawn table with an unknown agent id) for the 'fails with an error' assertion; do not assert the empty-string degradation cases raise."
+  - "Use tmp_path template files plus an on-disk registry fixture; do not depend on the live package registry."
+  - "No production change is expected for this AC — this is coverage recovery over existing behavior."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-10
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."
