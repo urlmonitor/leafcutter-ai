@@ -484,6 +484,101 @@ def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) 
     return worktree_path
 
 
+def _fastlane_branch(slug: str) -> str:
+    """Return the fast-lane build branch name for *slug*.
+
+    Fast-lane build worktrees use the ``fast-lane/`` prefix so they are visually
+    distinct from ``feature/``, ``ticket/``, and ``ac-authoring/`` branches in
+    ``git worktree list`` output (BO-2400f-3).
+
+    Args:
+        slug: The sanitized session slug (without prefix).
+
+    Returns:
+        The full branch name ``fast-lane/<slug>``.
+    """
+    return f"fast-lane/{slug}"
+
+
+def _create_fastlane_worktree(slug: str, worktrees_dir: Path, repo_root: Path) -> Path:
+    """Create (or reconnect) a fast-lane build worktree from ``origin/main``.
+
+    Analogous to :func:`_create_ac_worktree` but for one-command AC-scoped
+    builds: the new branch is always rooted at ``origin/main`` (never stale
+    local ``main``) and uses the ``fast-lane/`` prefix. When the branch already
+    exists locally (a prior run whose worktree was pruned), the checkout-only
+    ``git worktree add <path> <branch>`` form reuses it instead of failing.
+
+    Args:
+        slug: Short slug for the build session (derived from the AC id).
+        worktrees_dir: Parent directory under which the worktree is created.
+        repo_root: Absolute Path to the main repository root — used as the
+            ``-C`` anchor so the command works regardless of the process CWD.
+
+    Returns:
+        Absolute Path to the newly created (or reconnected) worktree directory.
+
+    Raises:
+        subprocess.SubprocessError: If the ``git worktree add`` call exits
+            non-zero (e.g. ``origin/main`` is not a valid ref, or the worktree
+            directory is already occupied).
+    """
+    worktree_path = worktrees_dir / slug
+    full_branch = _fastlane_branch(slug)
+
+    branch_already_exists = _branch_exists(full_branch, repo_root)
+
+    if branch_already_exists:
+        # Reuse the existing branch — checkout-only, no new branch creation.
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "worktree",
+                    "add",
+                    str(worktree_path),
+                    full_branch,
+                ],
+                check=True,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to add fast-lane git worktree at {worktree_path} "
+                f"reusing existing branch '{full_branch}': {exc}"
+            ) from exc
+        print(
+            f"INFO: Reusing existing branch '{full_branch}' in new worktree "
+            f"at {worktree_path}.",
+            file=sys.stderr,
+        )
+    else:
+        # Fresh path — create a new branch rooted at origin/main.
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "worktree",
+                    "add",
+                    "-b",
+                    full_branch,
+                    str(worktree_path),
+                    "origin/main",
+                ],
+                check=True,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to add fast-lane git worktree at {worktree_path} "
+                f"from origin/main: {exc}"
+            ) from exc
+
+    return worktree_path
+
+
 def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
     """Ensure the worktree has a working pre-commit configuration so hooks run.
 
@@ -1140,6 +1235,69 @@ def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
     print(json.dumps(payload))
 
 
+def cmd_create_fastlane_worktree(args: argparse.Namespace) -> None:
+    """Create (or reuse) a dedicated fast-lane build worktree from ``origin/main``.
+
+    The one-command AC-scoped build (``/fast-lane-build <AC-id>``) points here
+    first: it opens a fresh isolated worktree so the operator never creates one
+    by hand (BO-2400f-3). The branch is ``fast-lane/<slug>``, always cut from
+    the latest ``origin/main`` (never stale local ``main``), and the worktree is
+    bootstrapped so pre-commit hooks run. Re-runs are idempotent: a registered
+    worktree is reused, and a pruned-but-branched prior run is reconnected.
+
+    Prints a single-line JSON payload with ``worktree_path``, ``branch``,
+    ``ac_store_path``, and ``created`` to stdout on success and exits 0. Exits 1
+    on any subprocess failure.
+
+    Args:
+        args: Parsed argparse namespace. Expected attribute: ``slug`` — the
+            short build-session slug (derived from the AC id by the caller).
+    """
+    leafcutter_repo = _git_toplevel()
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
+    os.chdir(main_repo)
+
+    # Fetch origin so origin/main is fresh (best-effort — warning on failure).
+    _fetch_origin(main_repo)
+
+    slug = args.slug
+    worktrees_dir = worktrees_base / "worktrees"
+    worktrees_dir.mkdir(parents=True, exist_ok=True)
+
+    full_branch = _fastlane_branch(slug)
+
+    try:
+        worktree_registered, existing_worktree_path = _worktree_exists(slug)
+    except subprocess.SubprocessError as exc:
+        print(f"ERROR: cannot list worktrees: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if worktree_registered and existing_worktree_path is not None:
+        worktree_path = existing_worktree_path
+        created = False
+    else:
+        try:
+            worktree_path = _create_fastlane_worktree(slug, worktrees_dir, main_repo)
+        except subprocess.SubprocessError as exc:
+            print(f"ERROR: cannot create fast-lane worktree: {exc}", file=sys.stderr)
+            sys.exit(1)
+        _bootstrap(main_repo, worktree_path)
+        created = True
+
+    _install_drift_hook(worktree_path, main_repo)
+    _install_drift_hook(main_repo, main_repo)
+    _install_pre_commit_shims(main_repo)
+
+    ac_store_path = str(worktree_path / "docs" / "acceptance-criteria")
+    payload = {
+        "worktree_path": str(worktree_path),
+        "branch": full_branch,
+        "ac_store_path": ac_store_path,
+        "created": created,
+    }
+    print(json.dumps(payload))
+
+
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
@@ -1205,6 +1363,24 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p_ac.set_defaults(func=cmd_create_ac_worktree)
+
+    # create-fastlane-worktree subcommand
+    p_fl = subparsers.add_parser(
+        "create-fastlane-worktree",
+        help=(
+            "Create a dedicated fast-lane build worktree branched from origin/main "
+            "(AC BO-2400f-3). The new branch is named fast-lane/<slug>. "
+            "Outputs JSON with worktree_path, branch, ac_store_path, and created."
+        ),
+    )
+    p_fl.add_argument(
+        "slug",
+        help=(
+            "Short slug for the fast-lane build session (e.g. 'bo-2400f'). "
+            "Combined with the fast-lane/ prefix to form the branch name."
+        ),
+    )
+    p_fl.set_defaults(func=cmd_create_fastlane_worktree)
 
     return parser
 
