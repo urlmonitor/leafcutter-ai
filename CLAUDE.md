@@ -327,6 +327,34 @@ ticket TDD-compliant. A red baseline captured before the coder runs is the evide
 tests actually constrain the implementation.
 (Source: EPIC-InFlightVisibility retrospective, 2026-07-23.)
 
+### Agent templates — `requires_verification: true` is mandatory when Edit or Write is in tools
+
+Any agent template (`templates/agents/*.md`) that lists `Edit` or `Write` in its `tools:`
+frontmatter field MUST also declare `requires_verification: true`. Omitting it trips
+`registry_validator.py` rule A, which fails `build.py`'s `install_shims` step — and because
+that build runs before pytest in CI, the missing flag blocks the required `Test suite
+(pytest)` gate *before any test executes*, so it surfaces as a build failure rather than a
+template-authoring error. The rule is enforced mechanically (`registry_validator` +
+`unit_tests/commit_guardian/test_agent_verification_consistency.py`); it is documented here
+so the failure is recognised fast.
+
+Verify after authoring any new agent template:
+```bash
+grep -n "requires_verification\|Edit\|Write" templates/agents/<new-agent>.md
+```
+(Source: EPIC-DocumentationCoverageGuarantee FP-2, 2026-08-10.)
+
+### guardrail_gates.yaml — exclude new top-level sections from the vocab-parity test
+
+`unit_tests/commit_guardian/test_check_ac_schema.py` asserts that the non-policy top-level
+keys of `config/guardrail_gates.yaml` exactly equal the `change_target` enum. When a branch
+adds a new **top-level policy section** that is NOT a `change_target` vocab entry (e.g.
+`documentation_gates`, `surgical_removal_guard`), add its name to the
+`_NON_CHANGE_TARGET_SECTIONS` exclusion set in that test (alongside `flow_change_gates`) in
+the same commit. Skipping this produces a failure that is invisible on the branch and only
+surfaces once `origin/main`'s stricter parity test merges in.
+(Source: EPIC-DocumentationCoverageGuarantee FP-3, 2026-08-10.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -592,3 +620,31 @@ ad-hoc commits with no AC traceability, no test-writer, and no ac-validator — 
 two post-merge defects (`BP-600f` missing main-branch guard; `ACS-700` missing
 `origin_agent` in AC scaffolds).
 (Source: EPIC-QuickFixWorkflow retrospective KI-1, 2026-07-10.)
+
+### AC-store reconciliation when pivoting to a direct-commit drive
+
+If you abandon a per-ticket epic drive in favour of direct branch commits, reconcile the AC
+YAML store fields for every affected AC **before opening the PR** — not post-merge:
+
+- `work_status: done` — only with a passing `# covers:`-tagged test; leave genuinely
+  unfinished ACs untouched.
+- `implemented_by` / `covered_by` — the real commit and the test that exercises the AC.
+
+**Why this matters:** BO-2200 shipped its code via direct commits while the per-ticket drive
+was abandoned, so `work_status` was left `todo` on 24 already-done ACs and 0 were linked to
+their tests. Recovery required a post-merge `ac-audit` (four parallel verification agents +
+a full green-test pass) to separate the 24 real dones from 5 genuine gaps. In-line
+reconciliation before the PR avoids that entirely.
+(Source: EPIC-DocumentationCoverageGuarantee FP-1, 2026-08-10.)
+
+### AC-store hygiene — bulk pre-flight before a finalization drive
+
+Before a finalization or sequential commit-batch drive that will fire AC-store hooks,
+validate the whole epic's AC YAML set in bulk so violations surface at once rather than as a
+serial per-commit hook cascade — child-limit caps, missing parent `covered_by` back-links,
+and schema-invalid fields (e.g. a list-valued `test_rationale` that must be a string):
+
+```bash
+python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>/
+```
+(Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10.)
