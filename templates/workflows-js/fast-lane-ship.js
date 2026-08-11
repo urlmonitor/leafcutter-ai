@@ -172,7 +172,15 @@ if (!worktreeResult || !worktreeResult.worktree_path) {
 
 const worktreePath = worktreeResult.worktree_path;
 const branch = worktreeResult.branch || `fast-lane/${slug}`;
-const acStoreRoot = worktreeResult.ac_store_path || `${worktreePath}/${acStoreRel}`;
+// Derive the AC store root deterministically from the worktree path — do NOT
+// trust worktreeResult.ac_store_path. The store lives at a fixed convention
+// (<worktree>/docs/acceptance-criteria) inside every worktree cut from
+// origin/main, but the worktree phase is an LLM agent that has been observed to
+// echo a fabricated path (e.g. <worktree>/tickets/00_inbox) instead of the
+// create-fastlane-worktree command's real JSON output, which then sent the
+// resolver looking in the wrong directory (observed 2026-08-11 on BO-2400f).
+// Deriving it removes the LLM from the trust path for this deterministic value.
+const acStoreRoot = `${worktreePath}/${acStoreRel}`;
 const gateScript = `${worktreePath}/scripts/build_orchestration/fast_lane.py`;
 
 // ---------------------------------------------------------------------------
