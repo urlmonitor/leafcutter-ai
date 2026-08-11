@@ -49,8 +49,8 @@ it_requirements: |
 delivers_to: null
 expects_from: null
 test_required: false
-test_rationale: |
-  Documentation authoring (change_target: docs) — a reference document has no executable
+notes: |
+  Test rationale: Documentation authoring (change_target: docs) — a reference document has no executable
   surface to unit-test. Created to satisfy the S7b documentation gate for the reference-doc
   documentation_trigger on the BO-2200a/b/c parent L1s.
 origin_agent: it-po

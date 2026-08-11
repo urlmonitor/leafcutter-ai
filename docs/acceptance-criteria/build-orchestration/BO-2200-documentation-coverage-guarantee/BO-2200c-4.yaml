@@ -68,6 +68,7 @@ origin_agent: business-analyst
 created: 2026-07-15
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2200c-4-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/21_TICKET-20260715-BO-2200c-4.md

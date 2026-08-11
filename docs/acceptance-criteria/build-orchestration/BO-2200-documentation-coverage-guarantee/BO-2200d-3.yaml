@@ -43,8 +43,8 @@ it_requirements: |
 delivers_to: null
 expects_from: null
 test_required: false
-test_rationale: |
-  Diagram authoring (change_target: docs) — a sequence diagram has no executable surface to
+notes: |
+  Test rationale: Diagram authoring (change_target: docs) — a sequence diagram has no executable surface to
   unit-test. Created to satisfy the S7b documentation gate for the sequence-diagram
   documentation_trigger on the BO-2200b/BO-2200d parent L1s.
 origin_agent: it-po
