@@ -32,6 +32,14 @@ mutates:
 - description: Read-only reviewer — no filesystem mutations
   name: none
   surface: none
+pre_flight_reads:
+- required: true
+  source: the review target (attached files, a path, or a pasted snippet)
+behavioral_patterns:
+- name: Conditional Behavior
+  trigger: the code is clean and no design smell can be anchored to concrete lines
+  behavior: state briefly that the target was scanned against all six design smells and none were found, then return an empty findings set
+  related_agent: null
 
 ---
 
