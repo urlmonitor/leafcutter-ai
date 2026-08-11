@@ -547,5 +547,114 @@ class TestExcludeStructuralParent(unittest.TestCase):
         )
 
 
+    def test_cross_tree_composite_peer_is_expanded_not_skipped(self) -> None:
+        # covers: BO-2600a-1
+        """AC-2/AC-3 discriminating: a cross-tree COMPOSITE dep that is NOT the
+        structural parent must be EXPANDED (not skipped) when exclude_structural_parent=True.
+
+        This test discriminates between the CORRECT implementation and a WRONG
+        alternative — "skip any composite (non-leaf) dep" — that passes every
+        existing single-hop test because in those fixtures every composite dep
+        happens to also be the structural parent.
+
+        Fixture:
+          BO-7777a  (L1) — covered_by: [BO-7777a-1]
+            BO-7777a-1  (L2) — depends_on: ["BO-6666a"]
+                                              ^ COMPOSITE (L1) but derive_parent_id("BO-7777a-1")
+                                                == "BO-7777a" != "BO-6666a" → NOT the structural parent
+
+          BO-6666a  (L1) — covered_by: [BO-6666a-1, BO-6666a-2]
+            BO-6666a-1  (L2) — no deps
+            BO-6666a-2  (L2) — no deps
+
+        Call: resolve_connected_build_set("BO-7777a-1", ..., exclude_structural_parent=True)
+
+        CORRECT impl (skip only dep == derive_parent_id(node)):
+          node = "BO-7777a-1", dep = "BO-6666a"
+          derive_parent_id("BO-7777a-1") = "BO-7777a" ≠ "BO-6666a" → NOT skipped.
+          BO-6666a is composite + not done → expanded via traverse_ac_tree
+          → BO-6666a-1 and BO-6666a-2 enter the build set.
+          BO-6666a-1 IN result ✓   BO-6666a-2 IN result ✓
+
+        BUGGY impl ("skip any composite dep"):
+          node = "BO-7777a-1", dep = "BO-6666a"
+          BO-6666a is composite (L1) → skipped entirely.
+          BO-6666a-1 NOT in result ✗   BO-6666a-2 NOT in result ✗
+          → assertIn BO-6666a-1 FAILS (bug detected).
+        """
+        # Verify structural-parent invariants for the fixture ids.
+        assert derive_parent_id("BO-7777a-1") == "BO-7777a", (
+            "Fixture invariant: BO-7777a-1's structural parent must be BO-7777a."
+        )
+        assert derive_parent_id("BO-7777a-1") != "BO-6666a", (
+            "Fixture invariant: BO-6666a must NOT be the structural parent of "
+            "BO-7777a-1 — it is a cross-tree composite peer dep."
+        )
+
+        _write_ac(
+            self.ac_root,
+            "BO-7777a",
+            level="L1",
+            work_status="todo",
+            covered_by=["BO-7777a-1"],
+        )
+        _write_ac(
+            self.ac_root,
+            "BO-7777a-1",
+            level="L2",
+            work_status="todo",
+            depends_on=["BO-6666a"],    # cross-tree composite peer (NOT the structural parent)
+        )
+        _write_ac(
+            self.ac_root,
+            "BO-6666a",
+            level="L1",
+            work_status="todo",
+            covered_by=["BO-6666a-1", "BO-6666a-2"],
+        )
+        _write_ac(
+            self.ac_root,
+            "BO-6666a-1",
+            level="L2",
+            work_status="todo",
+        )
+        _write_ac(
+            self.ac_root,
+            "BO-6666a-2",
+            level="L2",
+            work_status="todo",
+        )
+
+        result = resolve_connected_build_set(
+            "BO-7777a-1",
+            ac_root=self.ac_root,
+            exclude_structural_parent=True,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertIn(
+            "BO-7777a-1",
+            result,
+            "The root target BO-7777a-1 must be in the result.",
+        )
+        # Discriminating assertions — both fail on the "skip any composite" buggy impl:
+        self.assertIn(
+            "BO-6666a-1",
+            result,
+            "BO-6666a-1 must be in the result. BO-6666a is a cross-tree composite peer "
+            "dep of BO-7777a-1; derive_parent_id('BO-7777a-1')='BO-7777a' != 'BO-6666a' "
+            "so it must NOT be skipped — it must be expanded into its leaves. "
+            "A buggy 'skip any composite dep' impl would omit BO-6666a-1. "
+            "(BO-2600a-1 AC-3: only the structural-parent dep is skipped, not all composites.)",
+        )
+        self.assertIn(
+            "BO-6666a-2",
+            result,
+            "BO-6666a-2 must be in the result. BO-6666a (composite cross-tree peer) must "
+            "be expanded into ALL its not-done leaves including BO-6666a-2. "
+            "(BO-2600a-1: genuine composite peer deps are fully expanded, not skipped.)",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
