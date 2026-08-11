@@ -67,6 +67,7 @@ created: 2026-08-11
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- /home/henzeh/projects/worktrees/bo-2600/tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04_TICKET-20260811-BO-2600a-4.md
 change_target: pipeline
 risk_surface: internal
