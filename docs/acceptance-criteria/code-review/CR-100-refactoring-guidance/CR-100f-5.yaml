@@ -1,0 +1,56 @@
+id: CR-100f-5
+title: "The single-agent find-code-smells is fully retired"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the earlier single-agent reviewer named find-code-smells,
+  When the current agents, commands, and agent registry are inspected,
+  Then there is no find-code-smells agent template,
+  And there is no find-code-smells command,
+  And there is no find-code-smells entry in the agent registry,
+  So the only supported path is the parallel two-reviewer orchestration.
+depends_on:
+  - CR-100f
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Assert find-code-smells is ABSENT from config/agent_registry.json (no agent entry with that id)."
+  - "Assert templates/agents/find-code-smells.md and the find-code-smells command template do not exist on disk — filesystem existence checks, not a grep for surviving references."
+test_required: true
+test_spec:
+  - name: test_find_code_smells_absent_from_registry
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse config/agent_registry.json and assert no agent has id == find-code-smells."
+    covers:
+      - CR-100f-5
+  - name: test_find_code_smells_template_and_command_absent
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "Assert templates/agents/find-code-smells.md and the find-code-smells command template file do not exist on disk (retirement is real, not just dereferenced)."
+    covers:
+      - CR-100f-5
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "config/agent_registry.json"

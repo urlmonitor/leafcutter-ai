@@ -1,0 +1,35 @@
+id: CR-100e
+title: "Review any code you point at"
+component: code-review
+components:
+  - review_system
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Point the review at a file, a folder, or a pasted snippet — your choice.
+
+  You can run the review against a single file, an entire folder, or a snippet you
+  paste in, so the same trustworthy analysis fits whether you are checking one
+  change or auditing a whole area.
+depends_on:
+  - CR-100
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - CR-100e-1
+  - CR-100e-2
+  - CR-100e-3
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram

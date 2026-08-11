@@ -1,0 +1,44 @@
+id: CR-100f-6
+title: "Component diagram: core, buckets, leaf agents, orchestration"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-review capability is documented,
+  When a reader opens the component diagram,
+  Then it shows the shared core review method, the two bucket catalogues, the two
+    tiered leaf reviewers, and the top-level orchestration,
+  And it shows each leaf reviewer depending on the core plus its own bucket,
+  And it shows the orchestration fanning out to both leaf reviewers and merging
+    their findings into one report.
+depends_on:
+  - CR-100f
+  - CR-100f-1
+  - CR-100f-2
+  - CR-100f-3
+doc_links:
+  - path: docs/architecture/components/code-review.md
+    relationship: documents
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "The diagram must show the core review method, the two bucket catalogues, the two tiered leaf agents (structural/Sonnet, design/Opus), and the top-level orchestration, with each leaf depending on core plus its own bucket and the orchestration fanning out and merging — consistent with the deployed skills and agents."
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "docs/architecture/components/code-review.md"

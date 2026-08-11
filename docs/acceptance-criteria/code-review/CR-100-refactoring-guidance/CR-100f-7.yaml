@@ -1,0 +1,43 @@
+id: CR-100f-7
+title: "Sequence diagram: parallel fan-out and merge"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-review capability is documented,
+  When a reader opens the sequence diagram for the fan-out and merge,
+  Then it shows the top-level orchestration dispatching both leaf reviewers in
+    parallel,
+  And it shows both reviewers returning their findings,
+  And it shows the orchestration merging those findings into one severity-ranked
+    report after both have returned.
+depends_on:
+  - CR-100f
+  - CR-100f-3
+  - CR-100d-2
+doc_links:
+  - path: docs/architecture/components/code-review.md
+    relationship: documents
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "The diagram must show the top-level orchestration dispatching both leaf reviewers in parallel, both returning findings, and the merge into one severity-ranked report only after both have returned — consistent with the fan-out (CR-100f-3) and merge (CR-100d-2) behavior."
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "docs/architecture/components/code-review.md"
