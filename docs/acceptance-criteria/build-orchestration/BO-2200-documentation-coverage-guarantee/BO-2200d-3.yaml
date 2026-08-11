@@ -9,7 +9,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200d.yaml"
 criteria: |
   Given the documentation-coverage guarantee changes the phase order for a doc-required

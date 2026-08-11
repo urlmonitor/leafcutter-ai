@@ -58,3 +58,13 @@ was absent. The sequence diagram below places each of the five gates on the time
 relative to dispatch and to the done state:
 
 - [Phantom-Done Prevention — Proving a Durable Change by Real Effect and Intent](../diagrams/c3-003-phantom-done-real-effect-intent-verification.md) — the end-to-end BP-1100f verification flow: pre-dispatch intent-vs-surface consistency (BP-1100f-3), instruction-carrying dispatch review (BP-1100f-1), the harness-level instruction-less-dispatch contract violation (BP-1100f-4), the real-artifact test-evidence requirement (BP-1100f-2), and the automatic observable-side-effect smoke check that gates the done state (BP-1100f-5).
+
+## Documentation Coverage — Runtime Phase Flow
+
+On doc-required (v2) tickets, this component sequences two documentation phases into the
+drive: `documentation-expert` (priority 10) authors the docs after the coder and test
+phases, and `documentation-verifier` (priority 11.9) is the last gate before `commit` — it
+asserts the required docs against the ticket's `## Agent Contracts` → `### documentation-expert`
+brief and fails closed (blocking the commit) when a required doc is missing or placeholder.
+
+- [Documentation Coverage — Runtime Phase Flow Sequence](../diagrams/c3-004-documentation-coverage-phase-flow-sequence.md) — the ordered `coder → test-runner → documentation-expert → documentation-verifier → commit` flow, including the blocker path where the verifier prevents the commit when required docs are absent or placeholder.

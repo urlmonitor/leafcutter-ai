@@ -33,3 +33,13 @@ The Doc Compliance component ensures all documentation in `docs/` meets the proj
 ## Severity
 
 Most doc compliance checks are advisory (exit 0 with warnings). The `check_description_field` check is blocking (exit 1) to prevent knowledge-graph queries from failing on docs without metadata.
+
+## Runtime Coverage Gate
+
+Beyond the commit-time hooks above, documentation coverage is also enforced at ticket
+runtime by the `documentation-verifier` phase agent (priority 11.9), which runs last before
+`commit`. It reads the ticket's `## Agent Contracts` → `### documentation-expert` brief and
+fails closed — emitting `status: blocker` and preventing the commit — when a required doc is
+missing from the git diff or contains only placeholder content.
+
+- [Documentation Coverage — Runtime Phase Flow Sequence](../diagrams/c3-004-documentation-coverage-phase-flow-sequence.md) — the ordered `coder → test-runner → documentation-expert → documentation-verifier → commit` flow, including the verifier's blocker path that skips the commit when required docs are missing or placeholder.
