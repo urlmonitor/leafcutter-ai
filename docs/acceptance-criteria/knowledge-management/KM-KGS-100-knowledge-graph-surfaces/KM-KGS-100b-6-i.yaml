@@ -1,0 +1,47 @@
+id: KM-KGS-100b-6-i
+components:
+  - knowledge_management
+readiness: draft
+priority: medium
+title: "Unchanged HEAD and max-mtime short-circuit the full per-file stat sweep"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read index recorded, at build time, the git HEAD commit sha and the
+    maximum last-modified time observed across each surface's files
+  When an index-backed read runs and the current git HEAD equals the recorded sha and
+    no surface's current maximum last-modified time is later than the recorded maximum
+  Then the read serves the indexed data without performing the full per-file stat
+    sweep of every surface source file
+  And when either the HEAD sha differs or any surface's maximum last-modified time has
+    advanced, the read falls through to the full per-file stat comparison defined in
+    KM-KGS-100b-6
+depends_on:
+  - KM-KGS-100b-6
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-6
+  contract: "The mandatory per-read staleness check, for which this AC adds an O(1)-ish fast path that skips the full stat sweep when nothing has advanced"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Performance refinement only. It must never weaken KM-KGS-100b-6: when the
+  short-circuit condition does not hold, the full stat sweep still runs, so a
+  drifted file is always detected.
+change_target: code
+risk_surface: internal

@@ -1,0 +1,44 @@
+id: KM-KGS-100b-12-iii
+components:
+  - knowledge_management
+readiness: draft
+priority: medium
+title: "A session-start freshness check catches events missed by a branch switch, pull, or fresh worktree"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given a working state that missed a per-commit refresh event — for example after a
+    branch switch, a pull that fast-forwarded past commits, or a freshly created
+    worktree with no index yet
+  When a session starts
+  Then a freshness check runs at session start that detects any surfaces now out of
+    date with the current tree (or the absence of an index)
+  And any drift found is reconciled (the affected surfaces refreshed, or the index
+    built) before the first query of the session
+  And the first index-backed read of the session therefore reflects the current tree
+    without needing its own read-time self-heal
+depends_on:
+  - KM-KGS-100b-12
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-12
+  contract: "The proactive refresh mechanism, for which this AC pins the session-start trigger that recovers from branch-switch / pull / fresh-worktree misses"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

@@ -1,0 +1,47 @@
+id: KM-KGS-100b-11-i
+components:
+  - knowledge_management
+readiness: draft
+priority: high
+title: "Per-worktree isolation: untracked cache dir, never git-tracked, atomic per-surface writes"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the index is written to a cache directory keyed to the current worktree root
+  When the index is created or refreshed
+  Then the cache directory is untracked and gitignored, so the index never appears in
+    git status, a diff, or a merge for any worktree
+  And two different worktrees of the same repository each maintain their own index and
+    do not read or overwrite each other's index
+  And each surface's index is written atomically by writing to a temporary file and
+    renaming it into place, so a concurrent reader always sees either the complete
+    previous index or the complete new one, never a half-written file
+depends_on:
+  - KM-KGS-100b-11
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-11
+  contract: "The project/output-root-anchored index path, which this AC constrains to an untracked, per-worktree cache dir with atomic per-surface writes"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Covers two distinct hazards: git hygiene (the cache must never enter a diff or
+  merge) and read/write concurrency (temp-file + rename gives readers an atomic
+  swap). Both are load-bearing for a per-worktree cache shared across processes.
+change_target: code
+risk_surface: contract_boundary

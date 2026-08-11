@@ -1,0 +1,50 @@
+id: KM-KGS-100b-10
+components:
+  - knowledge_management
+readiness: draft
+priority: high
+title: "With the feature flag off (default), behavior is identical to today's live parse"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read-index feature flag in skills_config.json is disabled, which is its
+    default state
+  When any knowledge query read happens
+  Then the query performs a live full parse of every declared surface exactly as it
+    does today, returning the same nodes and edges
+  And the index is neither read nor written during that query — no index file is
+    consulted and none is created or updated
+  And the observable output and side effects are indistinguishable from the current
+    (pre-index) behavior
+depends_on:
+  - KM-KGS-100b
+  - KM-KGS-100b-5
+doc_links:
+  - path: config/skills_config.default.json
+    relationship: specifies
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100b-10-i
+implemented_by: []
+notes: |
+  Default-off makes the whole capability an opt-in behavioral no-op on install:
+  a project that never enables the flag sees zero change. This is the primary
+  safety envelope for rollout.
+change_target: code
+risk_surface: contract_boundary

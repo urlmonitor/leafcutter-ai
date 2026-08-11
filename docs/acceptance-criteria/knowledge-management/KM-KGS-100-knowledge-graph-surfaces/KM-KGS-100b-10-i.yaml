@@ -1,0 +1,45 @@
+id: KM-KGS-100b-10-i
+components:
+  - knowledge_management
+readiness: draft
+priority: medium
+title: "Reader-first rollout: the reader and staleness guard are safe with the writer disabled"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read side of the index (the reader and its mandatory staleness guard) is
+    present, but the writer that builds and refreshes the index is disabled, so no
+    index file is ever produced
+  When an index-backed read is requested
+  Then the read finds no index, falls back to the live full parse per KM-KGS-100b-9,
+    and returns correct results
+  And enabling only the reader can never surface stale or wrong data, because with no
+    index present every read is a live parse
+depends_on:
+  - KM-KGS-100b-10
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-9
+  contract: "The missing-index live-fallback path, which makes a reader-only (writer-disabled) deployment safe by construction"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Supports a staged rollout where the reader + staleness guard ship first and the
+  writer is enabled later; the intermediate state is always slower-not-wrong.
+change_target: code
+risk_surface: contract_boundary

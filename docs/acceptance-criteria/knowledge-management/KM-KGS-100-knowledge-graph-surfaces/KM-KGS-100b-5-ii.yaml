@@ -1,0 +1,53 @@
+id: KM-KGS-100b-5-ii
+components:
+  - knowledge_management
+readiness: draft
+priority: high
+title: "Cache correctness is proven against a real store in a deployed layout"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read index is exercised against the real on-disk knowledge store as it
+    is actually written on disk, inside a layout produced by a deployed build
+    (build.py --target-dir), rather than against hand-authored synthetic fixtures
+  When the equivalence, staleness, self-heal, and fallback behaviors of the index
+    are verified
+  Then each behavior is asserted by running the real read path in a fresh process
+    against that real deployed store and comparing its output to a live full parse of
+    the same store
+  And a verification that only exercises synthetic in-memory fixtures does not, on its
+    own, satisfy the correctness contract for this capability
+depends_on:
+  - KM-KGS-100b-5
+doc_links:
+  - path: docs/reference/fixture-policy.md
+    relationship: context
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: context
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-5
+  contract: "The index-backed read path whose correctness this AC requires to be proven against a real deployed store, not synthetic fixtures"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Test-contract AC (capability quality gate). Motivated by the repeated
+  phantom-done failure mode where synthetic fixtures reproduced the bug-hiding
+  bias and green sign-offs masked a no-op against the real data format. Downstream
+  test authoring for KM-KGS-100b-5..12 must honor this real-store, deployed-layout
+  requirement.
+change_target: code
+risk_surface: contract_boundary

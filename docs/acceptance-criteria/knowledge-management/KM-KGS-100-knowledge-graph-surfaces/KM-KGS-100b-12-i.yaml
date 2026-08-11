@@ -1,0 +1,42 @@
+id: KM-KGS-100b-12-i
+components:
+  - knowledge_management
+readiness: draft
+priority: medium
+title: "Post-commit refresh rebuilds only the surfaces whose files changed"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given a git commit is made that touches files belonging to exactly one declared
+    surface
+  When the post-commit refresh runs
+  Then it determines the changed paths from the commit via git diff-tree and maps them
+    to their owning surfaces
+  And it rebuilds only the surface whose files changed
+  And the index portions for all other surfaces are left untouched (not rebuilt) by
+    that refresh
+depends_on:
+  - KM-KGS-100b-12
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-12
+  contract: "The proactive refresh mechanism, for which this AC pins the post-commit trigger to a git diff-tree changed-path-to-surface mapping"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
