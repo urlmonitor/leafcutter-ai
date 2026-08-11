@@ -413,6 +413,17 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     )
     sc.add_argument("--ac", required=True, metavar="ID", help="Target AC id to resolve.")
     sc.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+    sc.add_argument(
+        "--exclude-structural-parent",
+        action="store_true",
+        default=False,
+        help=(
+            "When set, skip any depends_on entry that equals the structural parent "
+            "of the node being expanded (i.e. derive_parent_id(node)). "
+            "Genuine (non-structural-parent) dependencies are still walked. "
+            "Defaults to False — omitting the flag preserves existing behaviour."
+        ),
+    )
 
     # --- verify_red_baseline ---
     vrb = subparsers.add_parser(
@@ -475,7 +486,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.subcommand == "select_connected":
         try:
-            result = resolve_connected_build_set(args.ac, ac_root=Path(args.ac_root))
+            result = resolve_connected_build_set(
+                args.ac,
+                ac_root=Path(args.ac_root),
+                exclude_structural_parent=args.exclude_structural_parent,
+            )
         except ValueError as exc:
             print(str(exc), file=sys.stderr)
             return 1
