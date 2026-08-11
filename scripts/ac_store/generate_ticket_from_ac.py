@@ -161,6 +161,7 @@ _CANONICAL_PHASE_ORDER: list[str] = [
     "test-writer",
     "python-coder",
     "sql-coder",
+    "frontend-coder",  # BO-2200d-2-i: must precede documentation-expert
     "test-runner",
     "documentation-expert",
     "pr-reviewer",
@@ -184,6 +185,7 @@ _FLOW_CHANGE_PHASE_ORDER: list[str] = [
     "test-writer",
     "python-coder",
     "sql-coder",
+    "frontend-coder",  # BO-2200d-2-i: consistent with _CANONICAL_PHASE_ORDER
     "test-runner",
     "pr-reviewer",
     "user-surface-smoker",  # priority 11.5 — observable-side-effect gate (BP-1100f-5)
@@ -1302,6 +1304,140 @@ def _extract_doc_genre(ac: AcRecord) -> str:
     return "explanation"
 
 
+def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
+    """Load the parent L1 AC record for *ac_id* from the AC store.
+
+    Derives the parent ID using ``ac_parent_id.derive_parent_id``, then
+    searches *ac_root* for the parent YAML file via :func:`_find_ac_by_id`.
+    Returns ``None`` and logs a WARNING when:
+
+    - The ``ac_parent_id`` module cannot be loaded from the sibling directory.
+    - The parent ID cannot be derived (root AC or malformed ID).
+    - No YAML with the derived parent ID is found under *ac_root*.
+
+    File I/O for YAML reads is handled inside :func:`_find_ac_by_id`; the
+    only new I/O here is the ``importlib.util`` load of the sibling module
+    (wrapped in a specific except clause per Error Handling Policy Rule 1).
+
+    Args:
+        ac_id: Leaf AC identifier (e.g. ``"BO-2200c-3"``).
+        ac_root: Root directory of the AC store.
+
+    Returns:
+        Parsed parent AC record dict, or ``None`` on any failure.
+
+    DECISION HISTORY:
+        BO-2200c-3 (2026-08-11): Introduced to support parent-genre resolution.
+        Uses importlib.util (same pattern as _load_migration_map) for robust
+        sibling-module import regardless of sys.path state.
+    """
+    sibling = Path(__file__).resolve().parent / "ac_parent_id.py"
+    try:
+        spec = importlib.util.spec_from_file_location("ac_parent_id", sibling)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        derive_fn = getattr(mod, "derive_parent_id", None)
+    except (OSError, AttributeError, ImportError, SyntaxError) as exc:
+        logger.warning(
+            "Cannot load ac_parent_id module for parent genre resolution: %s", exc
+        )
+        return None
+
+    if derive_fn is None:
+        logger.warning(
+            "ac_parent_id module has no derive_parent_id function; "
+            "parent genre resolution unavailable"
+        )
+        return None
+
+    parent_id: "str | None" = derive_fn(ac_id)
+    if not parent_id:
+        logger.warning(
+            "Cannot derive parent ID from %r (root AC or malformed ID); "
+            "parent genre resolution unavailable",
+            ac_id,
+        )
+        return None
+
+    result = _find_ac_by_id(ac_root, parent_id)
+    if result is None:
+        logger.warning(
+            "Parent AC %r not found in %s; parent genre resolution unavailable",
+            parent_id,
+            ac_root,
+        )
+        return None
+
+    _, parent_ac = result
+    return parent_ac
+
+
+def _resolve_genres_from_parent(
+    ac_id: str,
+    ac_root: "Path | None",
+    leaf_ac: AcRecord,
+) -> list[str]:
+    """Resolve Diataxis genre strings from the parent L1 AC's documentation_triggers.
+
+    When *ac_root* is ``None`` (backward-compat / legacy path), falls back to
+    reading the leaf AC's own ``documentation_triggers`` via
+    :func:`_extract_doc_genre` — identical to the pre-BO-2200c-3 behaviour.
+
+    When *ac_root* is provided, resolves the parent L1 via
+    :func:`_load_parent_ac` and reads the parent's ``documentation_triggers``
+    list.  Multiple triggers each contribute a genre to the returned list
+    (BO-2200c-3 multi-trigger requirement).
+
+    Returns a non-empty list in all cases:
+
+    - When *ac_root* is ``None``: ``[leaf_genre]`` (backward-compat).
+    - When the parent resolves and has triggers: all genre strings from the
+      parent's ``documentation_triggers``.
+    - When the parent cannot be resolved OR has no triggers: the explicit
+      marker ``["(unspecified genre)"]`` so the omission is visible
+      (BO-2200c-3-i fail-soft).
+
+    Args:
+        ac_id: Leaf AC identifier.
+        ac_root: Root directory of the AC store, or ``None`` for legacy mode.
+        leaf_ac: The parsed leaf AC record.
+
+    Returns:
+        Non-empty list of genre strings.
+
+    DECISION HISTORY:
+        BO-2200c-3 / BO-2200c-3-i (2026-08-11): Introduced as the single
+        entry-point for genre resolution so that _build_agent_contracts_section
+        can be extended cleanly while keeping _extract_doc_genre unchanged for
+        backward compatibility with callers that do not supply ac_root.
+    """
+    if ac_root is None:
+        # Backward-compat: no ac_root provided → use leaf's own triggers.
+        return [_extract_doc_genre(leaf_ac)]
+
+    parent_ac = _load_parent_ac(ac_id, ac_root)
+    if parent_ac is None:
+        # BO-2200c-3-i: parent unresolved — emit explicit marker (not blank).
+        return ["(unspecified genre)"]
+
+    triggers = parent_ac.get("documentation_triggers") or []
+    if not triggers:
+        # BO-2200c-3-i: parent found but has no documentation_triggers.
+        logger.warning(
+            "Parent AC of %r has no documentation_triggers; "
+            "emitting (unspecified genre) marker (BO-2200c-3-i)",
+            ac_id,
+        )
+        return ["(unspecified genre)"]
+
+    genres = [
+        str(t).strip()
+        for t in triggers
+        if isinstance(t, str) and str(t).strip()
+    ]
+    return genres if genres else ["(unspecified genre)"]
+
+
 def _extract_doc_path(ac: AcRecord, genre: str, ac_id: str) -> str:
     """Extract a target documentation path from an AC record's doc_links field.
 
@@ -1360,6 +1496,12 @@ def _build_doc_links_cross_link_lines(doc_links: list[Any]) -> list[str]:
         return []
     result: list[str] = []
     for link in doc_links:
+        # BO-2200c-4-i: bare-string entries are surfaced with just their path.
+        # Previously these hit 'not isinstance(link, dict)' and were silently skipped.
+        if isinstance(link, str):
+            if link and not link.startswith("http"):
+                result.append(f"- {link}")
+            continue
         if not isinstance(link, dict):
             continue
         path_val = link.get("path", "")
@@ -1417,6 +1559,7 @@ def _build_agent_contracts_section(
     ac: AcRecord,
     ac_id: str = "",
     agents_map: dict[str, str] | None = None,
+    ac_root: "Path | None" = None,
 ) -> str:
     """Build the ## Agent Contracts section.
 
@@ -1446,6 +1589,10 @@ def _build_agent_contracts_section(
         agents_map: The computed agents map (agent name → status). When ``None``
             or when ``documentation-expert`` is absent or not ``'needed'``, the
             BO-2200c-1 subsection is suppressed.
+        ac_root: Root directory of the AC store.  When provided, the parent L1
+            AC is loaded and its ``documentation_triggers`` are used as the genre
+            source (BO-2200c-3).  When ``None`` (default / legacy mode), the
+            leaf AC's own ``documentation_triggers`` are used for backward compat.
 
     Returns:
         Formatted ``## Agent Contracts`` markdown block, or ``""`` when neither
@@ -1462,12 +1609,20 @@ def _build_agent_contracts_section(
 
     # BO-2200c-1 / BO-2200c-2: emit the documentation-expert subsection when the
     # agent is needed.  Per BO-2200c-2 each AC-N line must name three parts:
-    # 1. Diataxis genre from documentation_triggers (default "explanation").
+    # 1. Diataxis genre — sourced from the PARENT L1's documentation_triggers when
+    #    ac_root is provided (BO-2200c-3), or from the leaf's own field (legacy).
     # 2. Target doc path from doc_links or a computed default under docs/<genre>/.
     # 3. Content constraint derived from the AC criteria Then/And clauses.
+    #
+    # BO-2200c-3: when ac_root is provided, resolve genres from the parent L1.
+    #   Multiple parent triggers each produce one AC-N line.
+    # BO-2200c-3-i: when the parent cannot be resolved, emit [(unspecified genre)]
+    #   rather than crashing or leaving the genre slot silently blank.
     if doc_expert_needed:
-        genre = _extract_doc_genre(ac)
-        doc_path = _extract_doc_path(ac, genre, ac_id)
+        genres = _resolve_genres_from_parent(ac_id, ac_root, ac)
+        # Use the first genre for doc_path derivation (consistent with single-genre legacy).
+        path_genre = genres[0] if genres else "explanation"
+        doc_path = _extract_doc_path(ac, path_genre, ac_id)
         constraint = _derive_content_constraint(ac, ac_id)
         lines.extend([
             "### documentation-expert",
@@ -1484,10 +1639,12 @@ def _build_agent_contracts_section(
             lines.append("")
             lines.extend(cross_link_lines)
             lines.append("")
-        lines.extend([
-            f"- [ ] AC-1: [{genre}] {doc_path} — {constraint}",
-            "",
-        ])
+        # BO-2200c-3: emit one AC-N line per genre so that multiple parent triggers
+        # are each reflected.  Single-genre (legacy or single trigger) produces one
+        # line — identical output to the pre-BO-2200c-3 behaviour.
+        for i, genre in enumerate(genres, 1):
+            lines.append(f"- [ ] AC-{i}: [{genre}] {doc_path} — {constraint}")
+        lines.append("")
 
     # TKT-500f-10: emit delivers_to / expects_from contract fields when present.
     # Both fields may be authored as a bare dict OR as a list of dicts (BA/IT-PO v3
@@ -1823,7 +1980,12 @@ def _criteria_checkboxes(criteria: str) -> list[str]:
     return [f"- [ ] AC-{i + 1}: {clause}" for i, clause in enumerate(clauses)]
 
 
-def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | None" = None) -> str:
+def _build_ticket_body(
+    ac: AcRecord,
+    ac_id: str,
+    agents_map: "dict[str, str] | None" = None,
+    ac_root: "Path | None" = None,
+) -> str:
     """Build the ticket body (everything after the frontmatter).
 
     Includes: Actor/Goal, Context, Acceptance Criteria (verbatim from AC),
@@ -1842,6 +2004,9 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
         ac_id: The AC id.
         agents_map: Optional pre-computed agents map. When provided, it is used
             instead of recomputing _build_agents_map internally.
+        ac_root: Root directory of the AC store.  Threaded through to
+            :func:`_build_agent_contracts_section` for parent genre resolution
+            (BO-2200c-3).  When ``None``, the legacy leaf-genre behaviour is used.
 
     Returns:
         The ticket body string (not including the frontmatter block).
@@ -1916,7 +2081,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str, agents_map: "dict[str, str] | N
     # Test Requirements / Implementation Notes) and before ## Sign-offs.
     # Emits when documentation-expert is 'needed' (BO-2200c-1) or when the AC
     # has delivers_to / expects_from fields (TKT-500f-10).
-    agent_contracts = _build_agent_contracts_section(ac, ac_id, agents)
+    agent_contracts = _build_agent_contracts_section(ac, ac_id, agents, ac_root=ac_root)
     if agent_contracts:
         lines.append(agent_contracts)
 
@@ -2574,7 +2739,7 @@ def main(argv: list[str] | None = None) -> int:
             declares_side_effect=declares_side_effect,
         )
         frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
-        body = _build_ticket_body(ac, ac_id, agents_map=agents)
+        body = _build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
         print(frontmatter)
         print()
         print(body)
@@ -2611,7 +2776,7 @@ def main(argv: list[str] | None = None) -> int:
         declares_side_effect=declares_side_effect,
     )
     frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
-    body = _build_ticket_body(ac, ac_id, agents_map=agents)
+    body = _build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
     ticket_content = frontmatter + "\n\n" + body
 
     # Write ticket file
