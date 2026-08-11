@@ -51,6 +51,7 @@ from scan_ac_store import (  # noqa: E402
     _walk_ac_yamls,
     traverse_ac_tree,
 )
+from ac_parent_id import derive_parent_id  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +118,12 @@ def select_batch(*, ac_root: Path, limit: int) -> list[str]:
     return [ac.get("id", "") for ac in ready[:limit]]
 
 
-def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
+def resolve_connected_build_set(
+    ac_id: str,
+    *,
+    ac_root: Path,
+    exclude_structural_parent: bool = False,
+) -> list[str]:
     """Resolve the connected build set for *ac_id* in dependency order.
 
     The connected build set is::
@@ -141,6 +147,15 @@ def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
     Args:
         ac_id: The target AC id to resolve the connected set for.
         ac_root: Root directory of the AC YAML store.
+        exclude_structural_parent: When ``True``, any ``depends_on`` entry that
+            equals ``derive_parent_id(node)`` (i.e. the structural parent of the
+            node being expanded) is skipped and NOT added to the build set during
+            the transitive closure walk.  Genuine (non-structural-parent)
+            dependencies are still walked normally.  The subtree union step
+            (``traverse_ac_tree``) is unaffected — the AC's own children always
+            enter the set via the subtree, independent of this flag.  Defaults to
+            ``False``, which preserves the existing behaviour where every
+            ``depends_on`` entry is walked.
 
     Returns:
         Ordered list of not-done leaf AC ids (deps first). ``[]`` when the whole
@@ -179,6 +194,8 @@ def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
         if rec is None:
             continue
         for dep in rec.get("depends_on") or []:
+            if exclude_structural_parent and dep == derive_parent_id(node):
+                continue  # skip structural parent dep — not expanded into build set
             dep_rec = id_index.get(dep)
             if dep_rec is None or dep_rec.get("work_status", "") == "done":
                 continue  # unknown or already-met prerequisite
