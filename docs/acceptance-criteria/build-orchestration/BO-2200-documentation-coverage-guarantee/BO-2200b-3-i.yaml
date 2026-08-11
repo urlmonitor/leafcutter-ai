@@ -36,8 +36,8 @@ expects_from:
   ac_id: BO-2200b-3
   contract: "The placeholder-signature detection this edge case pins to signature-based (not length-based) judgement."
 test_required: false
-test_rationale: |
-  Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
+notes: |
+  Test rationale: Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
   signature-vs-length judgment is exercised behaviorally at drive time, not by pytest; the
   deterministic signature helper (scripts/build_placeholder_detection.py) carries its own
   unit tests.

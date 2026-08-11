@@ -162,6 +162,35 @@ jobs:
       - name: Run proof-of-done check (CI-changed mode)
         run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }}
 
+  changelog-presence:
+    name: "Changelog entry present"
+    runs-on: ubuntu-latest
+    # Blocking release-completeness gate: fails when a PR changes releasable
+    # content (files outside of changelogs/, tickets/, docs/acceptance-criteria/)
+    # but adds no changelogs/*.md entry. Without this gate, releasable work can
+    # merge without triggering the auto-release version bump in compute_next_version.py.
+    # Runs ONLY on pull_request — on direct pushes to main a changelog entry is
+    # already expected to be present (it was required before merge).
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history required so git diff <base>...HEAD is reachable.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # No pip install step: check_changelog_presence.py is stdlib-only.
+
+      - name: Fetch base branch for three-dot diff
+        run: git fetch --no-tags origin "${{ github.base_ref }}"
+
+      - name: Check changelog presence
+        run: python scripts/release/check_changelog_presence.py --base "origin/${{ github.base_ref }}"
+
   typecheck:
     name: Type-check changed files (mypy, informational)
     runs-on: ubuntu-latest

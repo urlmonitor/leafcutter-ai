@@ -11,6 +11,7 @@ parent: agent_delivery_workflows.md
 children:
   - docs/architecture/diagrams/finalize-progress-narration-sequence.md
   - docs/architecture/diagrams/finalize-progress-relay-sequence.md
+  - docs/architecture/diagrams/c3-004-documentation-coverage-phase-flow-sequence.md
 components:
   - ac_store
   - ticket_creation_pipeline

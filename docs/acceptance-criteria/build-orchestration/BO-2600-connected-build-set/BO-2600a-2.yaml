@@ -1,0 +1,69 @@
+id: BO-2600a-2
+components:
+  - build_orchestration
+title: "The select_connected CLI exposes --exclude-structural-parent"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the select_connected subcommand of scripts/build_orchestration/fast_lane.py,
+  And a new --exclude-structural-parent flag on that subcommand,
+  When select_connected is invoked with --exclude-structural-parent --ac <id> --ac-root <root>,
+  Then it calls resolve_connected_build_set with exclude_structural_parent=True and
+    prints the resulting ordered id list as JSON,
+  And when the flag is omitted the subcommand behaves exactly as it does today
+    (exclude_structural_parent defaults to False),
+  And a missing AC id still exits non-zero with the existing ValueError-derived message.
+depends_on: [BO-2600a, BO-2600a-1]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2600a-1
+  contract: "resolve_connected_build_set accepts a keyword-only exclude_structural_parent parameter that, when True, skips depends_on entries equal to derive_parent_id(node)."
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/build_orchestration/fast_lane.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    Add a `--exclude-structural-parent` store_true flag to the `select_connected`
+    argparse subparser in fast_lane.py's CLI. Thread the flag value into
+    `resolve_connected_build_set(..., exclude_structural_parent=args.exclude_structural_parent)`;
+    keep the JSON-list stdout contract and the non-zero exit on ValueError unchanged.
+    Default (flag absent) must be identical to current select_connected output.
+test_spec:
+  - name: test_cli_exclude_structural_parent_flag_propagates
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "select_connected --exclude-structural-parent produces a set with the structural parent excluded (via subprocess CLI)"
+  - name: test_cli_default_matches_existing_behavior
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "select_connected without the flag prints the same JSON id list as before the change"
+  - name: test_cli_missing_ac_exits_nonzero
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "select_connected with an unknown --ac still exits non-zero with the ValueError-derived message"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

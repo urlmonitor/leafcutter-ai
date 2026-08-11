@@ -1,0 +1,42 @@
+id: BO-2600a
+components:
+  - build_orchestration
+title: "build-ac resolves a leaf AC's connected build set and generates the whole set in dependency order"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  As a developer running /build-ac on a single leaf acceptance criterion, I want
+  the coordinator to resolve that AC's connected build set — its still-unbuilt
+  sub-parts plus its genuine (non-structural-parent) prerequisites, in dependency
+  order — and generate tickets for the whole set, so I can build everything the
+  requirement needs without hand-tracing prerequisites. When the resolved set is
+  just the target AC, the output is unchanged from today's single-ticket path.
+depends_on: [BO-2600]
+doc_links:
+  - path: templates/agents/build-ac.md
+    relationship: modifies
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+  - path: scripts/ac_store/goal_to_epic.py
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: [BO-2600a-1, BO-2600a-2, BO-2600a-3, BO-2600a-4]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

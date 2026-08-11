@@ -1,0 +1,43 @@
+id: GE-118
+components:
+  - commit_guardian
+title: "Commit-guardian hooks resolve their dependencies from the deployed layout in git worktrees"
+component: guardrail-engine
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Commit-guardian hooks must run correctly from inside a git worktree, not only the
+  main checkout. A hook that imports a helper from a deployed skills directory must
+  resolve that directory from the layout build.py actually deploys (.leafcutter),
+  not a hardcoded path (.claude), so the hook does not crash with ModuleNotFoundError
+  when a worktree lacks the hardcoded directory.
+
+  Surfaced during the BO-2600 build: committing in a fresh worktree failed because
+  check_secrets.py read security_scanner.scripts_dir = ".claude/skills/..." from
+  commit_guardian.json, while build.py deploys under .leafcutter/, so scan_secrets
+  could not be imported.
+depends_on: []
+doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: [GE-118a]
+implemented_by: []
+change_target: code
+risk_surface: internal

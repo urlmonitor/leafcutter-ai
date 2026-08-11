@@ -292,10 +292,24 @@ DIFF_COVERAGE_COMPARE_BRANCH: str = _get("diff_coverage", "compare_branch", "ori
 DIFF_COVERAGE_MAX_AGE_SECONDS: int = _get("diff_coverage", "max_age_seconds", 3600)
 
 
+# ---------------------------------------------------------------------------
+# check_ticket_ac_status_parity
+# ---------------------------------------------------------------------------
+TICKET_AC_PARITY_ENABLED: bool = _get("ticket_ac_status_parity", "enabled", True)
+TICKET_AC_PARITY_AC_STORE_ROOT: str = _get(
+    "ticket_ac_status_parity", "ac_store_root", "docs/acceptance-criteria"
+)
+
+
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-11 [workflow-architect/KI-1]: Added TICKET_AC_PARITY_ENABLED and
+  TICKET_AC_PARITY_AC_STORE_ROOT constants for check_ticket_ac_status_parity.py
+  (BO-2200 retrospective KI-1). enabled defaults to True; ac_store_root defaults
+  to 'docs/acceptance-criteria'. Tunable via ticket_ac_status_parity section in
+  commit_guardian.json.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100d]: Added DIFF_COVERAGE_* constants for
   check_diff_coverage.py (AC GE-101a / originally GE-100d). enabled and strict both
   default to False; min_coverage_percent=80; coverage_xml_path='coverage.xml';

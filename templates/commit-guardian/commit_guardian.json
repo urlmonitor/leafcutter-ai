@@ -42,6 +42,19 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). Fires when any .claude/ or .agents/ output directory files are staged."
+            },
+            {
+                "id": "check-ticket-ac-status-parity",
+                "tier": "judgment",
+                "name": "Check Ticket AC Status Parity (KI-1)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_ac_status_parity.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "KI-1 (BO-2200 retrospective): Blocks commits when a staged ticket has status:done but its source_ac is not yet work_status:done in the AC store."
             }
         ]
     }

@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
+child_limit_override: 6
 criteria: |
   Every doc request says exactly what to write, where, and what to link.
 
