@@ -298,6 +298,9 @@ line in `leafcutter/templates/scripts/commit_guardian/config.py`.
   `create-ticket`, `create-epic`, `brainstorm-lead`, `brainstorm-worker`, `research-agent`
 - Phase agents: `python-coder`, `pr-reviewer`, `commit`, `pull-request`, `worktree-agent`,
   `status-checker`, `test-runner`, `architect-review`, `conflict-resolver`
+- Review: `code-review-architect` (8-axis architectural review), `find-structural-smells`
+  (Sonnet — 6 mechanical Fowler smells) + `find-design-smells` (Opus — 6 judgment smells),
+  fanned out in parallel and merged by the `code-smell-review` skill (`/code-smell-review`)
 - Utility: `documentation-expert`, `code-refactoring-specialist`
 - Package management: `workflow-architect` (tier: supervisor, role: orchestration)
   — stewards the leafcutter surface: agent registry, hook registry,
@@ -307,7 +310,7 @@ line in `leafcutter/templates/scripts/commit_guardian/config.py`.
 ### Generic-Portable Skills (go into templates/skills/)
 
 - Lifecycle: `signoff`, `build-single-ticket`, `building-epics`, `create-ticket`, `feature`
-- Code quality: `complexity-reduction`, `doc-enforcer`, `code-analysis`, `import-scanner`
+- Code quality: `complexity-reduction`, `doc-enforcer`, `code-analysis`, `import-scanner`, `review-for-code-smells` (core), `review-for-structural-code-smells`, `review-for-design-code-smells`, `code-smell-review` (parallel orchestration)
 - Commit: `precommit-autofix`, `ship`
 
 ### Generic-Portable Commit-Guardian Hooks (go into templates/scripts/commit_guardian/)

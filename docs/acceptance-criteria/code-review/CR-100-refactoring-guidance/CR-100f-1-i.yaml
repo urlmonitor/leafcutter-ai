@@ -1,0 +1,49 @@
+id: CR-100f-1-i
+title: "No smell is duplicated across the two buckets"
+component: code-review
+components:
+  - review_system
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a smell that appears in one bucket (e.g. Duplicated Code in the
+    structural bucket),
+  When the other bucket's smell set is inspected,
+  Then that same smell does not appear there,
+  And this holds for every one of the twelve smells, so no finding can be raised
+    twice under two buckets.
+depends_on:
+  - CR-100f-1
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Assert, from the two parsed bucket catalogues, that no smell name appears in both buckets — the intersection is empty for all twelve, so no finding can be raised under two buckets."
+test_required: true
+test_spec:
+  - name: test_no_smell_appears_in_both_buckets
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse both bucket SKILL.md catalogues and assert the two named-smell sets are pairwise disjoint (intersection empty) across all twelve smells."
+    covers:
+      - CR-100f-1-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "templates/skills/review-for-structural-code-smells/SKILL.md"
+  - "templates/skills/review-for-design-code-smells/SKILL.md"

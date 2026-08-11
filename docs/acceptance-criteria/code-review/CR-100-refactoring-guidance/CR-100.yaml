@@ -1,0 +1,36 @@
+id: CR-100
+title: "Know exactly what to refactor and why — without drowning in noise"
+component: code-review
+components:
+  - review_system
+level: L0
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Prioritised, plain-English refactoring guidance you can act on with confidence.
+
+  When you want to improve code, you get one ranked report that tells you what is
+  wrong, why it matters, and the exact move that fixes it — in plain English.
+  Every finding is named and justified, so you can prioritise the highest-value
+  refactors first instead of guessing or wading through low-signal warnings. You
+  spend your time fixing real problems, not triaging a wall of noise.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - CR-100a
+  - CR-100b
+  - CR-100c
+  - CR-100d
+  - CR-100e
+  - CR-100f
+implemented_by: []

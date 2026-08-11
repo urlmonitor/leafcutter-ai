@@ -1,0 +1,56 @@
+id: CR-100f-3
+title: "Orchestration fans out to both leaf reviewers in parallel"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-smell-review orchestration (skill and /code-smell-review command),
+  When a review is run,
+  Then it dispatches both leaf reviewers, find-structural-smells and
+    find-design-smells, in parallel rather than one after the other,
+  And it waits for both to return before producing the report,
+  So the full catalogue is covered without paying the deep-analysis time on the
+    mechanical smells.
+depends_on:
+  - CR-100f
+  - CR-100f-2
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/code-smell-review/
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Assert from the deployed code-smell-review SKILL.md and /code-smell-review command that the orchestration names BOTH find-structural-smells and find-design-smells and dispatches them as a parallel fan-out that waits for both before producing the report."
+  - "Actual parallel runtime dispatch cannot be exercised under pytest (agents cannot be spawned); the test asserts the prompt-level parallel-fan-out contract, and runtime parallelism is a documented coverage boundary."
+test_required: true
+test_spec:
+  - name: test_orchestration_fans_out_to_both_leaf_reviewers
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse the code-smell-review SKILL.md and command and assert both leaf agents (find-structural-smells, find-design-smells) are named as a parallel dispatch that awaits both before merging. Known coverage boundary: runtime parallelism is not exercisable in pytest."
+    covers:
+      - CR-100f-3
+delivers_to:
+  ac_id: CR-100d-2
+  contract: "Findings from both leaf reviewers, ready to merge into one ranked report"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - CR-100f-3-i
+implemented_by:
+  - "templates/skills/code-smell-review/SKILL.md"

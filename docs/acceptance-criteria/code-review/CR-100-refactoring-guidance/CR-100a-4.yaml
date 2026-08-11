@@ -1,0 +1,50 @@
+id: CR-100a-4
+title: "Reference doc: the code-smell finding anatomy and named catalogue"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-review capability is documented,
+  When a reader opens the finding-anatomy reference documentation,
+  Then it lists all twelve Modern smells grouped into the structural and design
+    buckets, naming each smell,
+  And for each smell it names at least one Fowler refactoring that removes it,
+  And it describes the finding format (named-smell title, what's-wrong,
+    refactoring, file, verbatim Before, direction-only After),
+  So that this single reference satisfies the reference-doc need for the
+    diagnosis (CR-100a), prescription (CR-100b), and before/after (CR-100c)
+    guarantees.
+depends_on:
+  - CR-100a
+  - CR-100a-1
+  - CR-100a-2
+  - CR-100a-3
+  - CR-100b-1
+  - CR-100c-1
+doc_links:
+  - path: docs/reference/code-smell-finding-anatomy.md
+    relationship: documents
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The twelve smells and their named refactorings listed in the doc must match the two deployed bucket SKILL.md catalogues exactly — no drift between the reference and the artifacts it documents."
+  - "The single reference must cover diagnosis (named smell), prescription (named refactoring), and before/after format so it satisfies the reference-doc need of CR-100a, CR-100b, and CR-100c together."
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "docs/reference/code-smell-finding-anatomy.md"
