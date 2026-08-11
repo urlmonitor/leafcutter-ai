@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
+child_limit_override: 6
 criteria: |
   No phantom docs -- the build cannot be marked complete on a promise.
 

@@ -35,8 +35,8 @@ expects_from:
   ac_id: BO-2200b-2
   contract: "The diff-presence assertion this edge case extends to the multi-doc partial-coverage case."
 test_required: false
-test_rationale: |
-  Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
+notes: |
+  Test rationale: Prompt-authoring refinement of the documentation-verifier (a signoff LLM agent). The
   per-doc independence judgment is exercised behaviorally at drive time, not by pytest —
   same trust model as user-surface-smoker. No executable Python surface of its own.
 origin_agent: business-analyst
