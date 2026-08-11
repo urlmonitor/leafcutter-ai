@@ -21,6 +21,8 @@ Usage:
     python3 scripts/goal_to_epic.py --ac <ac_id> [--store-root <path>]
                                     [--inbox-dir <path>] [--dry-run]
                                     [--yes | --approved-only]
+    python3 scripts/goal_to_epic.py --ids <id1,id2,...> [--store-root <path>]
+                                    [--inbox-dir <path>]
 
 Exit codes:
     0  EPIC folder created successfully (or --dry-run printed the plan).
@@ -1909,6 +1911,238 @@ def _replace_implemented_by_entry(
 
 
 # ---------------------------------------------------------------------------
+# Depends-on translation helper (BO-2600a-5)
+# ---------------------------------------------------------------------------
+
+
+def _translate_ticket_depends_on(
+    ticket_file: Path,
+    ac_to_epic_filename: dict[str, str],
+) -> None:
+    """Rewrite ticket depends_on entries from raw AC ids to co-located epic filenames.
+
+    Reads the YAML frontmatter from *ticket_file*, translates every entry in the
+    ``depends_on`` list that matches a key in *ac_to_epic_filename* to the
+    corresponding epic-folder filename, and writes the updated frontmatter back to
+    disk. No-ops when the file has no frontmatter, no depends_on, or when every
+    depends_on entry is already a ticket filename (no matching key in the map).
+
+    This is the generation-time AC-id → ticket-filename translation required by
+    BO-2600a-5 AC-4 so ``ticket_frontmatter_guard`` passes without a downstream
+    hook auto-fix.
+
+    Args:
+        ticket_file: Path to a ticket markdown file inside the assembled epic folder.
+        ac_to_epic_filename: Mapping from AC id (e.g. ``"BO-5C1"``) to the
+            corresponding epic-folder filename (e.g. ``"01_TICKET-BO-5C1.md"``).
+    """
+    import logging  # noqa: PLC0415
+
+    _log = logging.getLogger(__name__)
+
+    try:
+        content = ticket_file.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning("Cannot read %s for depends_on translation: %s", ticket_file, exc)
+        return
+
+    lines = content.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return
+
+    end_idx = None
+    for i, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            end_idx = i
+            break
+    if end_idx is None:
+        return
+
+    yaml_text = "".join(lines[1:end_idx])
+    try:
+        fm = yaml.safe_load(yaml_text)
+    except yaml.YAMLError as exc:
+        _log.warning("YAML parse error in %s: %s", ticket_file, exc)
+        return
+
+    if not isinstance(fm, dict):
+        return
+
+    raw_deps = fm.get("depends_on") or []
+    if not isinstance(raw_deps, list) or not raw_deps:
+        return
+
+    translated = [
+        ac_to_epic_filename.get(str(dep), str(dep))
+        for dep in raw_deps
+    ]
+    if translated == [str(d) for d in raw_deps]:
+        return  # No translation occurred — nothing to write.
+
+    fm["depends_on"] = translated
+    new_fm_yaml = yaml.safe_dump(fm, allow_unicode=True, default_flow_style=False)
+    body = "".join(lines[end_idx + 1:])
+    new_content = f"---\n{new_fm_yaml}---\n{body}"
+
+    try:
+        ticket_file.write_text(new_content, encoding="utf-8")
+    except OSError as exc:
+        _log.warning(
+            "Cannot write translated depends_on to %s: %s", ticket_file, exc
+        )
+
+
+# ---------------------------------------------------------------------------
+# ID-list entrypoint (BO-2600a-5)
+# ---------------------------------------------------------------------------
+
+
+def build_epic_from_ids(
+    ids: list[str],
+    *,
+    store_root: Path,
+    inbox_dir: Path,
+) -> Path:
+    """Assemble a dependency-ordered EPIC folder from EXACTLY the provided leaf AC ids.
+
+    MODULE: goal_to_epic
+    GOAL: Build an epic from an explicit, already-resolved, dependency-ordered list
+          of leaf AC ids without re-walking any AC subtree.
+    BUSINESS CONTEXT: Closes BO-2600a-5. The *ids* parameter is taken as authoritative
+          — no single-AC subtree walk is performed. This preserves cross-tree
+          prerequisites that fast_lane.resolve_connected_build_set() included but that
+          a subtree walk would drop (the exact defect this entrypoint closes).
+    ARCHITECTURE: Reuses resolve_leaf_dependencies (restricted to the given id set via
+          the existing out-of-set edge filter), topological_sort,
+          generate_tickets_for_leaves, assemble_epic_folder, and generate_master_plan.
+          Adds two hygiene fixes over run(): (a) repo-relative implemented_by
+          back-references (never absolute worktree paths — BO-2600a-5 hygiene fix);
+          (b) AC-id to co-located ticket-filename depends_on translation at generation
+          time so ticket_frontmatter_guard passes without a downstream hook auto-fix.
+
+    The id list is the authoritative scope. No single-root subtree walk is done to
+    re-derive or expand it (BO-2600a-5 AC-3).
+
+    Args:
+        ids: Explicit ordered list of leaf AC ids to include in the epic. Taken as
+             authoritative — no subtree re-derivation is performed. Cross-tree ids
+             in the list are preserved.
+        store_root: Root directory of the AC YAML store.
+        inbox_dir: Absolute path to the tickets inbox root (e.g. ``tickets/00_inbox``).
+             Should follow the ``<worktree>/tickets/00_inbox`` convention so the
+             worktree root can be derived by path math for repo-relative path
+             computation (BO-2600a-5 hygiene fix a).
+
+    Returns:
+        Absolute path to the created EPIC folder.
+
+    Raises:
+        CyclicDependencyError: When the dependency graph among the provided ids
+            contains a cycle. Fires before any files are written.
+        ZeroLeafError: When *ids* is empty (propagated from assemble_epic_folder).
+        subprocess.CalledProcessError: When ticket generation fails for an id.
+        OSError: When file I/O fails during epic folder assembly or implemented_by
+            updates.
+    """
+    import logging  # noqa: PLC0415
+
+    _log = logging.getLogger(__name__)
+
+    # Step 1 — Dependency graph (restricted to the given id set).
+    # resolve_leaf_dependencies already drops edges where the target is NOT in
+    # *ids*, so no additional restriction is needed.
+    dep_graph = resolve_leaf_dependencies(ids, store_root)
+
+    # Step 2 — Topological sort: dependees (no unresolved deps) come first.
+    # CyclicDependencyError raised here fires before any file writes.
+    topo_order = topological_sort(dep_graph)
+
+    # Step 3 — Derive epic name from the first id's AC title (store lookup).
+    if ids:
+        first_title = _get_ac_title(ids[0], store_root)
+        epic_name = _derive_epic_name(first_title)
+    else:
+        epic_name = "FromIdsList"
+
+    # Step 4 — Generate one ticket per id in topological order.
+    ticket_paths = generate_tickets_for_leaves(topo_order, store_root, inbox_dir)
+
+    # Step 5 — Build AC id → source-ticket basename mapping.
+    # topo_order[i] and ticket_paths[i] are paired (same sequence from
+    # generate_tickets_for_leaves, which preserves input order).
+    ac_to_source_basename: dict[str, str] = {
+        ac_id: Path(tp).name
+        for ac_id, tp in zip(topo_order, ticket_paths)
+    }
+
+    # Step 6 — Assemble the epic folder (copies loose tickets with numeric prefixes).
+    epic_folder = assemble_epic_folder(ticket_paths, epic_name, inbox_dir)
+
+    # Step 7 — Build AC id → epic-folder filename mapping for depends_on translation.
+    # Prefix assignment mirrors assemble_epic_folder: topo_order[i] → f"{i+1:02d}_<base>".
+    ac_to_epic_filename: dict[str, str] = {
+        ac_id: f"{i:02d}_{ac_to_source_basename[ac_id]}"
+        for i, ac_id in enumerate(topo_order, start=1)
+    }
+
+    # Step 8 — Translate depends_on in each epic-folder ticket from raw AC ids to
+    # co-located ticket filenames (BO-2600a-5 AC-4: generation-time translation).
+    for ticket_file in sorted(epic_folder.iterdir()):
+        if ticket_file.suffix != ".md" or ticket_file.name == "Master_Plan.md":
+            continue
+        _translate_ticket_depends_on(ticket_file, ac_to_epic_filename)
+
+    # Step 9 — Update implemented_by in source AC YAMLs to point at the epic-folder
+    # ticket path, using repo-relative paths in both old and new forms.
+    # Hygiene fix (BO-2600a-5): the existing run() passes absolute epic_path as
+    # new_path to _replace_implemented_by_entry, producing absolute paths in
+    # implemented_by. Here both old and new paths are relativised against the
+    # worktree root so implemented_by values start with "tickets/" (never "/…").
+    worktree_root = _derive_worktree_from_inbox(inbox_dir)
+    loose_to_epic_map = _build_loose_to_epic_map(ticket_paths, epic_folder)
+
+    for loose_abs, epic_abs in loose_to_epic_map.items():
+        old_path = loose_abs
+        new_path = epic_abs
+        if worktree_root is not None:
+            try:
+                old_path = str(Path(loose_abs).relative_to(worktree_root))
+            except ValueError:
+                pass
+            try:
+                new_path = str(Path(epic_abs).relative_to(worktree_root))
+            except ValueError:
+                pass
+        _replace_implemented_by_entry(store_root, old_path, new_path)
+
+    # Step 10 — Remove loose inbox-root ticket copies (single-location write policy).
+    _remove_loose_inbox_tickets(ticket_paths, inbox_dir)
+
+    # Step 11 — Generate Master_Plan.md (non-fatal on OSError; epic folder is done).
+    goal_ac_id = ids[0] if ids else "unknown"
+    goal_summary = (
+        f"This epic assembles {len(topo_order)} ticket(s) from an explicit "
+        f"connected-set id list: {', '.join(ids)}. Generated by build_epic_from_ids "
+        f"— the id set is taken as authoritative (no subtree re-derivation). "
+        f"Cross-tree ids in the list are preserved exactly as supplied."
+    )
+    try:
+        master_plan_path = generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=topo_order,
+            dep_graph=dep_graph,
+            goal_ac_id=goal_ac_id,
+            goal_summary=goal_summary,
+            epic_name=epic_name,
+        )
+        _log.info("Master_Plan.md written: %s", master_plan_path)
+    except OSError as exc:
+        _log.warning("Master_Plan.md generation failed (non-fatal): %s", exc)
+
+    return epic_folder
+
+
+# ---------------------------------------------------------------------------
 # Orchestration entry point
 # ---------------------------------------------------------------------------
 
@@ -2122,21 +2356,42 @@ def run(
 def _build_parser() -> argparse.ArgumentParser:
     """Build and return the CLI argument parser.
 
+    Supports two mutually exclusive modes (exactly one must be supplied):
+
+    - ``--ac <ac_id>``          Tree-traversal mode: walks the AC subtree beneath
+                                *ac_id* and generates one ticket per leaf.
+    - ``--ids <id1,id2,...>``   Explicit id-list mode (BO-2600a-5): takes the
+                                comma-separated id list as authoritative; no subtree
+                                re-derivation; cross-tree prerequisites are preserved.
+
     Returns:
         Configured ArgumentParser instance.
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Walk the AC tree from a goal AC, generate one ticket per leaf AC, "
-            "and assemble the results into a numbered EPIC folder."
+            "Walk the AC tree from a goal AC (--ac), or assemble from an explicit "
+            "leaf AC id list (--ids), generating one ticket per AC and assembling "
+            "the results into a numbered EPIC folder."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument(
         "--ac",
-        required=True,
         dest="ac_id",
-        help="Goal or L1 AC id to start tree traversal from.",
+        default=None,
+        help="Goal or L1 AC id to start tree traversal from (--ac mode).",
+    )
+    mode_group.add_argument(
+        "--ids",
+        dest="ids",
+        default=None,
+        help=(
+            "Comma-separated list of leaf AC ids to include in the epic (--ids mode, "
+            "BO-2600a-5). The id set is taken as authoritative — no subtree traversal "
+            "is performed. Cross-tree ids in the list are preserved. "
+            "Example: --ids ACD-050a-1,ACD-050b-1"
+        ),
     )
     parser.add_argument(
         "--store-root",
@@ -2232,6 +2487,31 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: AC store root not found: {ac_store_root}", file=sys.stderr)
         return 1
 
+    # --- Route to the appropriate mode ---
+
+    if args.ids is not None:
+        # --ids mode (BO-2600a-5): explicit id-list entrypoint.
+        # Parses the comma-separated list, calls build_epic_from_ids(), and prints
+        # the epic folder path on the last stdout line before exiting 0.
+        ids = [i.strip() for i in args.ids.split(",") if i.strip()]
+        if not ids:
+            print("ERROR: --ids requires at least one AC id.", file=sys.stderr)
+            return 1
+        try:
+            epic_folder = build_epic_from_ids(ids, store_root=ac_store_root, inbox_dir=inbox_dir)
+        except (ZeroLeafError, CyclicDependencyError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        except subprocess.CalledProcessError as exc:
+            print(f"ERROR: ticket generation failed: {exc}", file=sys.stderr)
+            return 1
+        except (OSError, RuntimeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(str(epic_folder))
+        return 0
+
+    # --ac mode: existing tree-traversal path (unchanged).
     run(
         ac_id=args.ac_id,
         ac_store_root=ac_store_root,
