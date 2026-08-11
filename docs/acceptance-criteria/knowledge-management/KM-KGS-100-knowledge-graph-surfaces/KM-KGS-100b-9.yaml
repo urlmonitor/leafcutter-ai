@@ -1,8 +1,8 @@
 id: KM-KGS-100b-9
 components:
   - knowledge_management
-readiness: draft
-priority: high
+readiness: approved
+priority: medium
 title: "A missing or unparseable index falls back to the live full parse"
 component: knowledge-management
 level: L2
@@ -27,13 +27,41 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
+estimated_complexity: S
+it_requirements:
+  - "Fail-open: an absent index file, an unreadable one, or one that fails to parse/validate must all route to a live full parse of the declared surfaces (config/paths.json), returning a correct, complete result — never partial, never stale."
+  - "The fallback catches the specific I/O and parse exceptions (missing file, permission, JSON/decode/schema error), logs at WARNING per the project error-handling policy, and returns a success result to the caller — it never re-raises to the caller and never bare-excepts."
+  - "A corrupt index must not be trusted for any surface: the read does not attempt to salvage partial surfaces from an index that failed validation."
+test_spec:
+  - name: test_missing_index_falls_back_to_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With no index file present, the read returns the same nodes/edges a live full parse produces and completes successfully."
+  - name: test_corrupt_index_falls_back_to_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "An unparseable/invalid index file causes a live-parse fallback returning correct results, with no error raised to the caller."
+  - name: test_fallback_logs_warning_and_does_not_raise
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "The missing/corrupt-index fallback logs at WARNING and returns success rather than raising or returning partial/stale data."
+delivers_to:
+  agent: python-coder
+  contract: "A missing/corrupt-index live-full-parse fallback path that always returns a correct, complete {nodes, edges} success result — reused by KM-KGS-100b-10-i to make a reader-only (writer-disabled) deployment safe by construction"
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by: []
 implemented_by: []

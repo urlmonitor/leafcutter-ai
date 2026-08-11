@@ -1,7 +1,7 @@
 id: KM-KGS-100b-12-i
 components:
   - knowledge_management
-readiness: draft
+readiness: approved
 priority: medium
 title: "Post-commit refresh rebuilds only the surfaces whose files changed"
 component: knowledge-management
@@ -26,15 +26,45 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+it_requirements:
+  - "The post-commit trigger is carried by the `.leafcutter/pre-commit-config.yaml` post-commit stage invoking a Python refresh entrypoint; the changed paths come from `git diff-tree` on the just-made commit."
+  - "Changed paths are mapped to their owning surfaces using the config/paths.json surface definitions (path prefixes / edge-field sources); only surfaces with changed files are rebuilt via the KM-KGS-100b-7 primitive, and all other surface index portions are left untouched."
+  - "The hook is non-blocking and non-fatal: a refresh error must not fail or reject the commit (post-commit stage), and it must log at WARNING; the writer flag (default OFF) gates whether it runs at all."
+  - "The refresh must resolve the index path per KM-KGS-100b-11 so it writes the correct per-worktree cache even when invoked from a git hook context."
+test_spec:
+  - name: test_post_commit_maps_changed_paths_to_surfaces
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "Changed paths from git diff-tree are mapped to their owning surfaces via config/paths.json."
+  - name: test_post_commit_rebuilds_only_changed_surface
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A commit touching one surface rebuilds only that surface; other surfaces' index portions are left untouched."
+  - name: test_post_commit_refresh_failure_does_not_fail_commit
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A refresh error in the post-commit stage logs at WARNING and does not fail/reject the commit."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100b-12
   contract: "The proactive refresh mechanism, for which this AC pins the post-commit trigger to a git diff-tree changed-path-to-surface mapping"
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by: []
 implemented_by: []

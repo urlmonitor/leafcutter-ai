@@ -1,8 +1,8 @@
 id: KM-KGS-100b-10
 components:
   - knowledge_management
-readiness: draft
-priority: high
+readiness: approved
+priority: medium
 title: "With the feature flag off (default), behavior is identical to today's live parse"
 component: knowledge-management
 level: L2
@@ -28,16 +28,45 @@ doc_links:
   - path: config/skills_config.default.json
     relationship: specifies
     status: exists
+  - path: config/skills_config.schema.json
+    relationship: specifies
+    status: exists
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+it_requirements:
+  - "The feature flag is a key read from skills_config.json via the existing _get(key, default) lookup, defaulting to OFF; the exact key name (see caveat — proposed `knowledge_index.read_enabled` / `knowledge_index.write_enabled`) must be registered in BOTH config/skills_config.schema.json AND config/skills_config.default.json (default false) in the same change."
+  - "With the flag off, the read path is byte-identical to today's live full parse: the index is neither read nor written, no index file is consulted, created, or updated, and there are no new side effects — the default install is an observable no-op."
+  - "The flag gate wraps the index read/write decision at the single entry the reader uses; when off there is no branch that stats a manifest, resolves an index path, or writes a cache file."
+test_spec:
+  - name: test_flag_off_output_matches_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With the flag defaulted off, the query output equals today's live full parse for the same tree."
+  - name: test_flag_off_never_reads_or_writes_index
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With the flag off, no index file is read, created, or updated and no manifest stat occurs during a query."
+  - name: test_flag_default_is_off_in_config
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "The read-index flag defaults to off in skills_config.default.json and is declared in skills_config.schema.json."
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by:
   - KM-KGS-100b-10-i

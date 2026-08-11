@@ -1,8 +1,8 @@
 id: KM-KGS-100b-5
 components:
   - knowledge_management
-readiness: draft
-priority: high
+readiness: approved
+priority: medium
 title: "Index-backed read returns the same graph as a live full parse"
 component: knowledge-management
 level: L2
@@ -30,15 +30,47 @@ doc_links:
   - path: config/paths.json
     relationship: context
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
+it_requirements:
+  - "The index-backed read path lives in scripts/knowledge_query.py and reuses its existing render_json({nodes, edges}) serializer and on-disk shape — no second serializer, reshape, or transform step is introduced on the indexed path."
+  - "The declared surface set both the reader and writer iterate is config/paths.json (the surfaces block); the equivalence guarantee is over exactly those declared surfaces, never a hard-coded surface list."
+  - "The persisted index stores the graph in the same {nodes, edges} structure render_json consumes, so the indexed and live paths converge on one serializer (pinned to byte-parity by KM-KGS-100b-5-i)."
+  - "The fresh-path equivalence holds only when the mandatory per-read staleness check (KM-KGS-100b-6) reports all surfaces fresh; on the fresh path the read must not walk or re-parse every surface source."
+  - "Any error reading or parsing the on-disk index must degrade to the live full parse per KM-KGS-100b-9 and never surface to the caller, per the project error-handling policy."
+  - "An index-backed read of a fresh store must be materially faster than a live full parse of the same tree — the cache's sole justification — with no full re-parse on the fresh path."
+test_spec:
+  - name: test_index_read_node_set_matches_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With the index fresh, the node set from the index-backed read equals the node set a live full parse produces for the same tree."
+  - name: test_index_read_edge_set_matches_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With the index fresh, the edge set from the index-backed read equals the edge set a live full parse produces for the same tree."
+  - name: test_fresh_read_does_not_reparse_every_surface
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "On a fresh index the read serves from the persisted index and does not walk/parse every surface source from scratch."
 delivers_to:
   agent: python-coder
   contract: "An index-backed read path on the knowledge query that returns the same {nodes, edges} a live full parse would, sourced from the persisted index rather than by re-parsing every surface"
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by:
   - KM-KGS-100b-5-i

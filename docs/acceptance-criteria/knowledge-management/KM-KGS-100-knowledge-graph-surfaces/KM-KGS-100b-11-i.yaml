@@ -1,8 +1,8 @@
 id: KM-KGS-100b-11-i
 components:
   - knowledge_management
-readiness: draft
-priority: high
+readiness: approved
+priority: medium
 title: "Per-worktree isolation: untracked cache dir, never git-tracked, atomic per-surface writes"
 component: knowledge-management
 level: L3
@@ -27,15 +27,42 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+it_requirements:
+  - "The cache directory lives under the worktree's own output_root (`.leafcutter/...`) and is untracked/gitignored — it must never appear in git status, a diff, or a merge; if the output_root is not already ignored, the writer ensures the cache subdir is."
+  - "Two worktrees of the same repo maintain independent indexes under their own roots and never read or overwrite each other's — isolation follows from the KM-KGS-100b-11 per-worktree path resolution."
+  - "Each surface index is written atomically: write to a temp file in the same directory, then os.replace() into place, so a concurrent reader always sees either the complete previous or the complete new file, never a partial write."
+  - "Write failures (disk full, permission) are logged at WARNING and must not corrupt the existing index or raise to the read caller — a failed write leaves the prior complete index in place and the read still degrades to self-heal/live-parse."
+test_spec:
+  - name: test_cache_dir_is_untracked_and_gitignored
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "The index cache dir under output_root does not appear in git status/diff (is gitignored)."
+  - name: test_two_worktrees_have_independent_indexes
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "Two worktrees of the same repo maintain separate indexes and do not read or overwrite each other's."
+  - name: test_surface_index_written_atomically
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A surface index is written via temp file + os.replace so a concurrent reader never observes a half-written file."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100b-11
   contract: "The project/output-root-anchored index path, which this AC constrains to an untracked, per-worktree cache dir with atomic per-surface writes"
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,7 +1,7 @@
 id: KM-KGS-100b-6-i
 components:
   - knowledge_management
-readiness: draft
+readiness: approved
 priority: medium
 title: "Unchanged HEAD and max-mtime short-circuit the full per-file stat sweep"
 component: knowledge-management
@@ -27,15 +27,46 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+  - "The index header records the git HEAD sha at build time and, per surface, the max mtime observed across that surface's files; the short-circuit compares only these two cheap signals before any per-file sweep."
+  - "The short-circuit is an optimization of KM-KGS-100b-6, never a bypass: when HEAD differs OR any surface's current max-mtime has advanced OR HEAD cannot be resolved, the read must fall through to the full per-file stat sweep, so a drifted file is always detected."
+  - "In a layout with no resolvable git HEAD (e.g. an exported/deployed tree without .git), the short-circuit condition must be treated as not-satisfied and the full stat sweep runs."
+test_spec:
+  - name: test_unchanged_head_and_maxmtime_skips_full_sweep
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "When HEAD equals the recorded sha and no surface max-mtime advanced, the read serves indexed data without the full per-file stat sweep."
+  - name: test_head_change_falls_through_to_full_sweep
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A differing HEAD sha forces the full per-file stat comparison of KM-KGS-100b-6."
+  - name: test_advanced_maxmtime_falls_through_to_full_sweep
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "An advanced surface max-mtime (HEAD unchanged) still forces the full per-file stat sweep so the drifted file is detected."
+  - name: test_no_git_head_forces_full_sweep
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "When git HEAD cannot be resolved, the short-circuit is treated as not-satisfied and the full stat sweep runs."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100b-6
   contract: "The mandatory per-read staleness check, for which this AC adds an O(1)-ish fast path that skips the full stat sweep when nothing has advanced"
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by: []
 implemented_by: []

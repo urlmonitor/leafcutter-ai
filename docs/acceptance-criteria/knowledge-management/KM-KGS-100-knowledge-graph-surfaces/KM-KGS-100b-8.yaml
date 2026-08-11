@@ -1,8 +1,8 @@
 id: KM-KGS-100b-8
 components:
   - knowledge_management
-readiness: draft
-priority: high
+readiness: approved
+priority: medium
 title: "A missed refresh event degrades to slower-not-wrong, never to a wrong answer"
 component: knowledge-management
 level: L2
@@ -34,15 +34,36 @@ doc_links:
   - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d.yaml
     relationship: context
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+  - "This is the end-to-end safety scenario proving the cache is never a source of truth: a hand-edit with NO refresh event fired must still be caught by the mandatory per-read check (KM-KGS-100b-6) and healed via the surface-scoped rebuild (KM-KGS-100b-7)."
+  - "Verified with a hand-edited real surface file and no post-commit/build/session refresh in between; the returned graph must equal a live full parse of the current tree (never the pre-edit cached graph)."
+  - "Upholds the KM-KGS-100d always-real invariant: no index-backed read may return a node/edge that contradicts current on-disk sources — the only observable cost of the missed event is extra rebuild latency on that one read."
+test_spec:
+  - name: test_missed_event_edit_is_detected_and_healed
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: behavioral
+    description: "A surface file hand-edited with no refresh event fired is detected on the next read, the surface is rebuilt, and the result reflects the edit."
+  - name: test_missed_event_read_equals_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: behavioral
+    description: "After a missed-event edit, the index-backed read returns nodes/edges equal to a live full parse of the current tree, never the stale pre-edit graph."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100b-7
   contract: "The read-time self-heal that rebuilds a drifted surface, which this AC exercises via the missed-event (no refresh fired) path"
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by: []
 implemented_by: []

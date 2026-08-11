@@ -1,7 +1,7 @@
 id: KM-KGS-100b-10-i
 components:
   - knowledge_management
-readiness: draft
+readiness: approved
 priority: medium
 title: "Reader-first rollout: the reader and staleness guard are safe with the writer disabled"
 component: knowledge-management
@@ -26,15 +26,39 @@ doc_links:
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: config/skills_config.schema.json
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+  - "Reader and writer are independently gated (proposed `knowledge_index.read_enabled` vs `knowledge_index.write_enabled`) so this first slice can ship read_enabled=true with write_enabled=false; with the writer off no index file is ever produced."
+  - "With the reader on and writer off, every read finds no index and takes the KM-KGS-100b-9 live-parse fallback, so a reader-only deployment is slower-not-wrong by construction — it can never surface stale or wrong data."
+  - "This is the intended first-slice rollout state (reader + staleness guard first, writer later); the intermediate state must be verified as always-correct, not merely assumed."
+test_spec:
+  - name: test_reader_on_writer_off_no_index_produced
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With read_enabled on and write_enabled off, no index file is ever created by reads or lifecycle events."
+  - name: test_reader_only_falls_back_to_live_and_is_correct
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A reader-only deployment finds no index, falls back to live parse per KM-KGS-100b-9, and returns correct results — never stale/wrong."
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100b-9
   contract: "The missing-index live-fallback path, which makes a reader-only (writer-disabled) deployment safe by construction"
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by: []
 implemented_by: []

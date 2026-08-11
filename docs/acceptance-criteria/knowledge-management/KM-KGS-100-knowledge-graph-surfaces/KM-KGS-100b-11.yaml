@@ -1,8 +1,8 @@
 id: KM-KGS-100b-11
 components:
   - knowledge_management
-readiness: draft
-priority: high
+readiness: approved
+priority: medium
 title: "The index path resolves from project/output root and works in deployed and worktree layouts"
 component: knowledge-management
 level: L2
@@ -27,16 +27,47 @@ doc_links:
   - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
     relationship: context
     status: exists
+  - path: config/skills_config.default.json
+    relationship: context
+    status: exists
   - path: scripts/knowledge_query.py
     relationship: describes
     status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+it_requirements:
+  - "The index path is derived from project_root / the configured output_root (skills_config output_root, default `.leafcutter`); it is NEVER derived from the git root or the module's own __file__ location (per ADR-001 self-hosting boundary)."
+  - "In a deployed consumer layout built by `build.py --target-dir <root>`, the read path resolves the index under that root's output_root and the index-backed read works — this must be proven in the real deployed layout, not just the source tree (per KM-KGS-100b-5-ii)."
+  - "Inside a git worktree the path resolves under that worktree's own root (not the shared common git dir), so the index used always matches the tree being queried."
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
+estimated_complexity: M
+test_spec:
+  - name: test_index_path_from_output_root_not_git_root_or_file
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "The resolved index path is under project_root/output_root and is not derived from the git root or the module __file__."
+  - name: test_index_path_resolves_in_deployed_target_dir
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "In a build.py --target-dir deployed layout, the index path resolves under that project's output root and the index-backed read works."
+  - name: test_index_path_resolves_under_worktree_root
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "Run inside a git worktree, the index path resolves under that worktree's own root so the index matches the queried tree."
+delivers_to:
+  agent: python-coder
+  contract: "A resolved on-disk index path anchored on project_root/output_root (never git-root or __file__) that is correct in both deployed (build.py --target-dir) and worktree layouts — consumed by KM-KGS-100b-11-i which constrains it to an untracked, per-worktree cache dir with atomic writes"
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
 superseded_by: null
 covered_by:
   - KM-KGS-100b-11-i
