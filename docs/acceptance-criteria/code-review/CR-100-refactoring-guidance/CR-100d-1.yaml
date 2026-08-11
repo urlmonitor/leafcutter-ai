@@ -1,0 +1,71 @@
+id: CR-100d-1
+title: "Core skill is registered, portable, and defines a three-level severity rubric"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the shared core review method (the review-for-code-smells skill),
+  When the skill registry is inspected,
+  Then the core skill is registered as a portable skill with a backing template,
+  And the core method defines a severity rubric with exactly three levels:
+    HIGH, MEDIUM, and LOW,
+  And every finding is assigned one of those three severity levels.
+depends_on:
+  - CR-100d
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: config/skill_registry.json
+    relationship: implements
+    status: exists
+  - path: templates/skills/review-for-code-smells/
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The registration check must parse config/skill_registry.json and assert the review-for-code-smells entry exists, is marked portable, and has a template_path that resolves to a real directory on disk."
+  - "The severity rubric must be parsed from the deployed core SKILL.md and asserted to define exactly three levels — HIGH, MEDIUM, LOW — no fourth level and no missing level."
+  - "Where feasible the wiring module must run `build.py --validate-only` and require exit 0, so the registry additions are checked by the real validator, not only by structural parsing."
+test_required: true
+test_spec:
+  - name: test_core_skill_registered_and_portable
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse config/skill_registry.json and assert the review-for-code-smells entry exists, portable is true, and its template_path resolves on disk."
+    covers:
+      - CR-100d-1
+  - name: test_severity_rubric_has_exactly_three_levels
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "Parse the review-for-code-smells SKILL.md and assert the severity rubric defines exactly {HIGH, MEDIUM, LOW}."
+    covers:
+      - CR-100d-1
+  - name: test_build_validate_only_exits_zero
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "Run build.py --validate-only as a real-validator check and assert exit code 0, confirming the skill/agent registry additions for the code-review capability validate cleanly. Known coverage boundary: this validates registry integrity, not runtime review behavior."
+    covers:
+      - CR-100d-1
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "config/skill_registry.json"
+  - "templates/skills/review-for-code-smells/SKILL.md"

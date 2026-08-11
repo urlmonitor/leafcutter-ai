@@ -1,0 +1,62 @@
+id: KM-KGS-100b-5-i
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "Persisted index reuses the existing render_json output shape (byte-parity)"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the knowledge query renders a graph as JSON from an in-memory {nodes, edges}
+    structure using its existing render_json serializer
+  When the same source tree is served once by a live full parse rendered as JSON and
+    once by the index-backed read rendered as JSON
+  Then the two JSON outputs are byte-for-byte identical for that tree
+  And the on-disk index stores the graph in the same {nodes, edges} shape that
+    render_json consumes, so no separate serializer or reshaping step is introduced
+    on the index-backed path
+depends_on:
+  - KM-KGS-100b-5
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Byte-parity is asserted on the output of the existing render_json serializer in scripts/knowledge_query.py — the same serializer must produce both the live-parse JSON and the index-backed JSON; no alternate encoder, key ordering, or whitespace policy is introduced on the indexed path."
+  - "The on-disk index persists the graph in the {nodes, edges} shape render_json consumes, so deserialize-then-render adds no reshaping step; a divergence in key order or formatting between the two paths is a defect this AC exists to catch."
+test_spec:
+  - name: test_indexed_json_byte_identical_to_live_json
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "render_json output of the index-backed read is byte-for-byte identical to render_json output of a live full parse for the same tree."
+  - name: test_ondisk_index_uses_render_json_shape
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "The persisted index stores the graph in the same {nodes, edges} shape render_json consumes, requiring no reshape on load."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-5
+  contract: "The index-backed read path returning a {nodes, edges} structure equivalent to the live parse, which this AC pins to byte-parity through the shared render_json serializer"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

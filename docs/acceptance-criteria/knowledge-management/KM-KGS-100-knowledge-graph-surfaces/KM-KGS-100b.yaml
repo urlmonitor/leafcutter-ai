@@ -10,6 +10,7 @@ status: active
 req_status: draft
 work_status: todo
 roadmap_phase: phase_1
+child_limit_override: 13
 criteria: |
   Follow a requirement to everything connected to it.
 
@@ -39,6 +40,14 @@ covered_by:
   - KM-KGS-100b-2
   - KM-KGS-100b-3
   - KM-KGS-100b-4
+  - KM-KGS-100b-5
+  - KM-KGS-100b-6
+  - KM-KGS-100b-7
+  - KM-KGS-100b-8
+  - KM-KGS-100b-9
+  - KM-KGS-100b-10
+  - KM-KGS-100b-11
+  - KM-KGS-100b-12
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

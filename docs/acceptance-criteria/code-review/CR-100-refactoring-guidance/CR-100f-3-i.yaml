@@ -1,0 +1,51 @@
+id: CR-100f-3-i
+title: "Fan-out lives at the top level, not inside a sub-agent"
+component: code-review
+components:
+  - review_system
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the depth-1 limit on sub-agents (a sub-agent cannot itself spawn other agents),
+  When the orchestration that dispatches the two leaf reviewers is inspected,
+  Then the fan-out is driven by the code-smell-review skill and /code-smell-review
+    command running in the top-level loop,
+  And there is no intermediate reviewer agent that spawns the two leaf reviewers,
+  So the parallel dispatch of both leaf reviewers is never attempted from inside
+    a sub-agent where it would be impossible.
+depends_on:
+  - CR-100f-3
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Assert the fan-out is driven by the code-smell-review skill/command (a main-loop surface), that no intermediate reviewer agent registered in config/agent_registry.json spawns the two leaf reviewers, and that both leaf agents carry an empty spawn_allowlist — so parallel dispatch never originates inside a depth-1 sub-agent."
+  - "The runtime depth-1 fan-out cannot be exercised in pytest (agents cannot be spawned); the test asserts the prompt-level guarantee, and this is a documented coverage boundary."
+test_required: true
+test_spec:
+  - name: test_fanout_is_top_level_not_nested_agent
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, assert code-smell-review is a skill/command (not an agent), that both leaf agents have an empty spawn_allowlist in agent_registry.json, and that no intermediate spawning reviewer agent is registered. Runtime depth-1 fan-out cannot be exercised in pytest (cannot spawn agents); the test asserts the prompt-level guarantee that the orchestration skill has Agent in its allowed-tools, names both leaf agents, and states the depth-1 constraint. Flagged as a known coverage boundary."
+    covers:
+      - CR-100f-3-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "templates/skills/code-smell-review/SKILL.md"
+  - "config/agent_registry.json"

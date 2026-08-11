@@ -1,0 +1,66 @@
+id: KM-KGS-100b-12-ii
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "A build refreshes the registry-derived surfaces as a final build step"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given a build runs and can regenerate registry-derived sources (for example the
+    surfaces produced or updated during the build)
+  When the build reaches its final step
+  Then a refresh runs that updates the index for the registry-derived surfaces to
+    reflect the just-built sources
+  And after the build completes, an index-backed read of those surfaces finds them
+    fresh (no read-time rebuild needed) and returns data matching the built sources
+depends_on:
+  - KM-KGS-100b-12
+doc_links:
+  - path: scripts/build.py
+    relationship: context
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The build-tail trigger is a final step in scripts/build.py that refreshes the registry-derived surfaces (those build.py regenerates, e.g. agents/skills registries) using the KM-KGS-100b-7 surface-scoped rebuild primitive."
+  - "The refresh runs after the sources it depends on are written, and targets the build's own --target-dir output root (per KM-KGS-100b-11), so a deployed build produces a fresh index in the deployed layout."
+  - "After the build, an index-backed read of the registry-derived surfaces finds them fresh (no read-time self-heal needed) and returns data matching the just-built sources."
+  - "A refresh failure must not fail the build's primary output; it logs at WARNING and correctness still holds via the next read's staleness check. The writer flag (default OFF) gates whether it runs."
+test_spec:
+  - name: test_build_tail_refreshes_registry_derived_surfaces
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "The final build step refreshes the registry-derived surfaces to reflect the just-built sources."
+  - name: test_post_build_read_finds_surfaces_fresh
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "After the build, an index-backed read of the registry-derived surfaces finds them fresh (no read-time rebuild) and matches the built sources."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-12
+  contract: "The proactive refresh mechanism, for which this AC pins the build-tail trigger for registry-derived surfaces"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

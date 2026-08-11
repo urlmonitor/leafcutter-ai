@@ -1,0 +1,34 @@
+id: CR-100d
+title: "One report, ranked by severity"
+component: code-review
+components:
+  - review_system
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  All findings brought together in one severity-ranked list — biggest wins first.
+
+  You get a single, consolidated report where findings are ranked by severity, so
+  the most valuable refactors rise to the top and you are never left scanning a
+  flat, unordered dump.
+depends_on:
+  - CR-100
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - CR-100d-1
+  - CR-100d-2
+  - CR-100d-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc

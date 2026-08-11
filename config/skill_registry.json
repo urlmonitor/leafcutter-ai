@@ -445,6 +445,62 @@
       "components": [
         "skills_system"
       ]
+    },
+    {
+      "id": "review-for-code-smells",
+      "name": "Review For Code Smells",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/review-for-code-smells/",
+      "dependencies": [],
+      "description": "Shared core method for the Fowler code-smell reviewers: how to gather code, infer the stack, classify severity, write findings, and format the report — mapping each finding to Martin Fowler's named refactoring (Refactoring, 2nd ed). The Modern-12 smell catalogue itself lives in two bucket skills (review-for-structural-code-smells, review-for-design-code-smells) that build on this one.",
+      "components": [
+        "skills_system"
+      ]
+    },
+    {
+      "id": "review-for-structural-code-smells",
+      "name": "Review For Structural Code Smells",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/review-for-structural-code-smells/",
+      "dependencies": [
+        "review-for-code-smells"
+      ],
+      "description": "Catalogue for the six local / mechanical Fowler code smells — Mysterious Name, Duplicated Code, Long Function, Long Parameter List, Loops, Repeated Switches — each mapped to its named refactoring. Loaded together with the review-for-code-smells core skill by the find-structural-smells (Sonnet) reviewer.",
+      "components": [
+        "skills_system"
+      ]
+    },
+    {
+      "id": "review-for-design-code-smells",
+      "name": "Review For Design Code Smells",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/review-for-design-code-smells/",
+      "dependencies": [
+        "review-for-code-smells"
+      ],
+      "description": "Catalogue for the six cross-cutting / judgment Fowler code smells — Global Data, Mutable Data, Feature Envy, Data Clumps, Primitive Obsession, Shotgun Surgery — each mapped to its named refactoring. Loaded together with the review-for-code-smells core skill by the find-design-smells (Opus) reviewer.",
+      "components": [
+        "skills_system"
+      ]
+    },
+    {
+      "id": "code-smell-review",
+      "name": "Code Smell Review",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/code-smell-review/",
+      "dependencies": [
+        "review-for-code-smells",
+        "review-for-structural-code-smells",
+        "review-for-design-code-smells"
+      ],
+      "description": "Top-level orchestration: run a full Fowler code-smell review by fanning out in parallel to find-structural-smells (Sonnet) and find-design-smells (Opus), then merging their findings into one prioritised report. Runs in the main loop so the parallel dispatch respects the depth-1 sub-agent limit. Invoked via /code-smell-review.",
+      "components": [
+        "skills_system"
+      ]
     }
   ]
 }

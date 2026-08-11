@@ -1,0 +1,87 @@
+id: KM-KGS-100b-12
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "Refresh events proactively update the index at commit, build, and session boundaries"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read index is enabled
+  When a lifecycle boundary occurs that can change surface sources — a commit is made,
+    a build completes, or a session starts
+  Then a refresh runs at that boundary that updates the index to reflect the current
+    sources, so subsequent reads usually find the index already fresh and do not need
+    read-time self-heal
+  And each refresh event updates the index rather than requiring a full rebuild from
+    scratch except where a surface genuinely requires it
+  And these proactive refreshes never replace the mandatory per-read staleness check of
+    KM-KGS-100b-6 — a missed event still degrades to slower-not-wrong on the next read
+depends_on:
+  - KM-KGS-100b
+  - KM-KGS-100b-6
+  - KM-KGS-100b-7
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: scripts/build.py
+    relationship: context
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "All three refresh triggers (post-commit, build-tail, session-start) reuse the single surface-scoped rebuild primitive delivered by KM-KGS-100b-7 — they update only the surfaces that changed at that boundary, not a full rebuild from scratch except where a surface genuinely requires it."
+  - "Proactive refresh is gated by the writer flag (proposed `knowledge_index.write_enabled`, default OFF) and is a pure optimization: it must NEVER replace or weaken the mandatory per-read staleness check (KM-KGS-100b-6), so a missed event always degrades to slower-not-wrong on the next read."
+  - "Each trigger maps to a specific carrier: post-commit -> the `.leafcutter/pre-commit-config.yaml` post-commit stage (KM-KGS-100b-12-i); build-tail -> scripts/build.py final step (KM-KGS-100b-12-ii); session-start -> the `.claude/settings.json` SessionStart hook (KM-KGS-100b-12-iii)."
+  - "A refresh failure at any boundary must be non-fatal to that boundary's primary operation (a commit, build, or session start must still succeed) and log at WARNING; correctness is still guaranteed by the next read's staleness check."
+test_spec:
+  - name: test_refresh_reuses_surface_scoped_rebuild
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A refresh event updates only changed surfaces via the KM-KGS-100b-7 rebuild primitive, not a full from-scratch rebuild."
+  - name: test_refresh_does_not_replace_per_read_check
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "After a refresh, the mandatory per-read staleness check still runs on the next read (a missed event degrades to slower-not-wrong)."
+  - name: test_refresh_gated_by_writer_flag_off_by_default
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "With the writer flag off (default), no proactive refresh writes an index at any boundary."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-7
+  contract: "The surface-scoped rebuild used on read, which the proactive refresh events reuse to update only the surfaces that changed at each boundary"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
+superseded_by: null
+covered_by:
+  - KM-KGS-100b-12-i
+  - KM-KGS-100b-12-ii
+  - KM-KGS-100b-12-iii
+implemented_by: []
+notes: |
+  Umbrella behavior for the three concrete refresh triggers (post-commit,
+  build-tail, session-start) captured as L3 children. Proactive refresh is an
+  optimization layered on top of the always-safe lazy self-heal, not a
+  replacement for it.
+change_target: code
+risk_surface: internal

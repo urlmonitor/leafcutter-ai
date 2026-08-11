@@ -1,0 +1,89 @@
+id: TKT-600a-1
+components:
+  - ticket_creation_pipeline
+title: "Generated files_touched excludes prose-illustration paths; depends_on is guard-valid"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given generate_ticket_from_ac generating a ticket from an AC,
+  When it builds the ticket frontmatter,
+  Then files_touched contains only real edit-surface paths (the it_requirements
+    reference_file_path and edit-surface doc_links) and NOT illustrative file paths
+    that merely appear inside prose it_requirements bullets (e.g. example paths like
+    src/foo.py / deploy/foo.py used to describe a scenario),
+  And depends_on written to the ticket is guard-valid: an AC dependency that is the
+    AC's structural parent (or any AC id with no corresponding ticket in scope) is
+    dropped or translated to a co-located ticket filename, so the generated ticket
+    passes ticket_frontmatter_guard without manual fixup,
+  And a standalone leaf AC whose only depends_on is its structural parent yields a
+    ticket with depends_on: [] (not a dangling AC-id reference).
+depends_on: [TKT-600a]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: templates/skills/build-ac/SKILL.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    Two independent defects in generate_ticket_from_ac.py, both observed live during
+    the BO-2600 build:
+    (1) files_touched over-extraction: _build_files_touched -> _extract_paths_from_prose
+    pulls any '/'-containing token with a known extension out of list-form
+    it_requirements bullets, so illustrative example paths (e.g. src/foo.py,
+    deploy/foo.py, src/config/foo.py used only to describe an exploit scenario) land in
+    files_touched. Restrict prose extraction (e.g. only accept the structured
+    reference_file_path + edit-surface doc_links; do not harvest arbitrary paths from
+    narrative bullets), or gate on file existence.
+    (2) depends_on passthrough: _build_frontmatter writes `ac.get("depends_on") or []`
+    verbatim (AC ids), which ticket_frontmatter_guard rejects because ticket depends_on
+    must reference co-located ticket files. Drop the structural-parent AC id
+    (derive_parent_id) and translate remaining AC-id deps to their generated ticket
+    filenames when in an epic context, else emit [].
+    Preserve existing behavior for ACs that already produce correct output.
+test_spec:
+  - name: test_files_touched_excludes_prose_illustration_paths
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "An AC whose prose it_requirements mention example paths yields files_touched WITHOUT those illustrative paths"
+  - name: test_files_touched_keeps_real_reference_file_path
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "The structured reference_file_path and edit-surface doc_links still appear in files_touched"
+  - name: test_depends_on_drops_structural_parent
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "A leaf AC whose only depends_on is its structural parent yields ticket depends_on: []"
+  - name: test_depends_on_is_guard_valid
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Generated ticket depends_on never contains a raw AC id that has no co-located ticket (passes ticket_frontmatter_guard)"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
