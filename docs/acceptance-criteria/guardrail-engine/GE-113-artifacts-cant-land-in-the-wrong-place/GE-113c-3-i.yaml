@@ -1,0 +1,67 @@
+id: GE-113c-3-i
+components:
+  - commit_guardian
+title: "A path-qualified allowlist entry does not suppress findings at a different directory with the same basename"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+criteria: |
+  Given the security allowlist contains the entry "ENTROPY_HIGH:src/config/.env:*",
+  And the secrets scanner detects an ENTROPY_HIGH finding in the file "deploy/prod/.env",
+  When the scanner evaluates whether the allowlist entry suppresses the finding,
+  Then the finding at "deploy/prod/.env" is NOT suppressed,
+  Because the allowlist path segments ["src", "config", ".env"] are not a suffix
+    of the finding path segments ["deploy", "prod", ".env"]
+  And basename equality (".env" == ".env") is not sufficient when the allowlist
+    entry is path-qualified.
+
+  Given the security allowlist contains the entry "ENTROPY_HIGH:src/config/.env:*",
+  And the secrets scanner detects an ENTROPY_HIGH finding in the file "src/config/.env",
+  When the scanner evaluates whether the allowlist entry suppresses the finding,
+  Then the finding at "src/config/.env" IS suppressed,
+  Because the allowlist path segments match the finding path segments exactly.
+depends_on:
+  - GE-113c-3
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Covers exploit Path A — basename collision across directories. Test fixture: allowlist entry `ENTROPY_HIGH:src/config/.env:*` vs finding at `deploy/prod/.env`."
+  - "Corresponding test function: `test_basename_collision_not_suppressed` in `unit_tests/commit_guardian/test_scan_secrets_suppression.py`."
+  - "Positive arm: the same allowlist entry DOES suppress `src/config/.env` (exact match)."
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_basename_collision_not_suppressed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path A: path-qualified allowlist entry 'src/config/.env' does not suppress 'deploy/prod/.env' despite basename equality"
+  - name: test_exact_path_match_suppresses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Positive arm: allowlist entry 'src/config/.env' does suppress 'src/config/.env' (exact match)"
+origin_agent: business-analyst-v3
+created: 2026-08-11
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Exploit Path A from the bug report: the current code compares fp_parts against a suffix of itself (not al_parts), causing the guard to always trigger True and fall through to a basename-only fallback. Any file sharing the basename of an allowlisted path-qualified entry is incorrectly suppressed regardless of directory."
+change_target: code
+risk_surface: contract_boundary

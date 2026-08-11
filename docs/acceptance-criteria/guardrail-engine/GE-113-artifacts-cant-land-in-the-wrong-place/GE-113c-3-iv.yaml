@@ -1,0 +1,92 @@
+id: GE-113c-3-iv
+components:
+  - commit_guardian
+title: "Direct unit tests for _is_suppressed cover both exploit paths"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+criteria: |
+  Given the test suite for the secrets scanner,
+  When the tests for _is_suppressed are executed,
+  Then at least the following scenarios have dedicated test cases:
+    - a path-qualified allowlist entry does NOT suppress a finding at a different
+      directory with the same basename (Path A regression),
+    - a longer allowlist path does NOT suppress a shorter finding path
+      (Path B regression),
+    - a bare-filename allowlist entry DOES suppress findings with that basename
+      at any depth,
+    - a path-qualified allowlist entry DOES suppress a finding whose path
+      segments end with the allowlist segments (suffix match),
+    - a path-qualified allowlist entry DOES suppress a finding with an exact
+      path match,
+    - a wildcard "*" allowlist path DOES suppress any finding for that rule,
+  And the tests exercise _is_suppressed directly (not only transitively through
+    higher-level scan functions),
+  And all test cases pass.
+depends_on:
+  - GE-113c-3
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Test module location: `unit_tests/commit_guardian/test_scan_secrets_suppression.py`. Must contain at least 6 test functions calling `_is_suppressed` directly with constructed `Finding` objects and allowlist fixtures."
+  - "Scenarios covered: exact match, segment-suffix match, bare-filename basename match, Path A basename-shadowing negative, Path B length-underflow negative, wildcard `*` entry."
+  - "Tests must be written red-first (failing against the current buggy `_is_suppressed`) so python-coder can make them green."
+delivers_to:
+  agent: python-coder
+  contract: "The red test suite from above; python-coder makes it green by fixing _is_suppressed in the canonical template."
+expects_from: null
+test_spec:
+  - name: test_basename_collision_not_suppressed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path A: path-qualified allowlist entry does not suppress a finding at a different directory with the same basename"
+  - name: test_longer_allowlist_not_shadows_shorter
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path B: longer allowlist path does not suppress a shorter finding path"
+  - name: test_bare_filename_suppresses_any_depth
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Bare-filename allowlist entry suppresses findings with that basename at any depth"
+  - name: test_segment_suffix_match_suppresses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path-qualified allowlist entry suppresses a finding whose path segments end with the allowlist segments"
+  - name: test_exact_path_match_suppresses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path-qualified allowlist entry suppresses a finding with an exact path match"
+  - name: test_wildcard_suppresses_any_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Wildcard '*' allowlist path suppresses any finding for that rule"
+origin_agent: business-analyst-v3
+created: 2026-08-11
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "The existing test_check_secrets.py exercises _is_suppressed only transitively via prose-file exemption cases, which is how the self-comparison bug went undetected. This AC mandates direct unit-level coverage for the function."
+change_target: code
+risk_surface: contract_boundary

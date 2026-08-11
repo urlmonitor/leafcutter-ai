@@ -1,0 +1,46 @@
+id: BO-2600
+components:
+  - build_orchestration
+title: "Building one requirement pulls in everything it still needs, in order"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  When you point the build system at a single requirement, it should set up
+  everything that requirement still needs — not just that one item.
+
+  Today, asking to build one acceptance criterion produces a single ticket and
+  silently ignores the un-finished work it sits on top of. The result looks
+  ready but is not: the prerequisites are missing, so the build stalls or the
+  requirement is built against work that does not exist yet. This goal makes the
+  build path honest about scope — from one requirement it gathers the connected
+  set of still-unfinished work (the requirement's own un-built sub-parts plus the
+  genuine prerequisites it depends on) and lays it out in the right order, so the
+  whole thing can actually be built start to finish. Structural parent links are
+  not mistaken for prerequisites, so the set stays tight and does not balloon to
+  unrelated siblings.
+depends_on: []
+doc_links:
+  - path: templates/agents/build-ac.md
+    relationship: modifies
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: [BO-2600a]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
