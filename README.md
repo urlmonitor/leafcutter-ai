@@ -328,6 +328,7 @@ per consumer project.
 | `check_infra_docs.py` | Enforces inline comments on high-impact infra keywords |
 | `check_agent_diagrams.py` | Validates agent diagrams are up to date |
 | `check_agent_registry.py` | Validates `agent_registry.json` schema compliance |
+| `check_ticket_ac_status_parity.py` | Blocks commits when a staged done-ticket's source_ac is not yet done (KI-1) |
 
 ### Domain-Only Artifacts (stay in Bybit-Trader, NOT in this package)
 

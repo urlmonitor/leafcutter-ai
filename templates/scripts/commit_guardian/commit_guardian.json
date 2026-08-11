@@ -1062,6 +1062,19 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "BO-2500b-1: For each AC YAML staged as work_status:done, requires at least one # covers:<ac_id> tag anywhere under the test tree. STATIC only — no pytest run at pre-commit time. CI-mode (check_done_proof.py --mode ci) is the authoritative backstop that runs verify_done_eligible on all done ACs so --no-verify and hook-config-less worktrees are still caught (BO-2500b-1-i). Bypassable via SKIP=check-done-proof or --no-verify."
+            },
+            {
+                "id": "check-ticket-ac-status-parity",
+                "tier": "judgment",
+                "name": "Check Ticket AC Status Parity (KI-1)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_ac_status_parity.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "KI-1 (BO-2200 retrospective, 2026-08-10): Blocks commits when a staged ticket has status:done but its source_ac is not yet work_status:done in the AC store. Fail-closed only on the specific mismatch; warn-only when the source_ac file is absent (epics/composites have no source_ac and are silently skipped). Scoped to staged tickets only."
             }
         ]
     },
@@ -1147,6 +1160,11 @@
     "done_proof": {
         "_comment": "check_done_proof.py — Mechanical proof-of-done gate (BO-2500b). Pre-commit mode: static covers-tag presence check for staged done ACs (fast, no pytest). CI mode: full verify_done_eligible run over every done AC in the store (authoritative). Hook is bypassable via SKIP=check-done-proof or --no-verify; CI backstop (BO-2500b-1-i) then catches bypassed proofs.",
         "enabled": true
+    },
+    "ticket_ac_status_parity": {
+        "_comment": "check_ticket_ac_status_parity.py — KI-1 guard (BO-2200 retrospective): blocks commits when a staged ticket is status:done but its source_ac is not yet work_status:done in the AC store. Fail-closed only on the specific mismatch; warn-only when the AC file cannot be found.",
+        "enabled": true,
+        "ac_store_root": "docs/acceptance-criteria"
     },
     "hook_parity": {
         "_comment": "check_hook_parity.py — Parity enforcement across runtime dir, canonical template dir, legacy template dir, and deployed output dir. All paths are relative to the project root.",
