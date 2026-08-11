@@ -175,18 +175,18 @@ def _bucket_catalogue(skill_id: str) -> dict[str, str]:
 # ===========================================================================
 
 
-# covers: CR-100a-1
 def test_structural_bucket_names_exactly_its_six_smells() -> None:
+    # covers: CR-100a-1
     assert set(_bucket_catalogue(STRUCTURAL_SKILL)) == STRUCTURAL_SMELLS
 
 
-# covers: CR-100a-2
 def test_design_bucket_names_exactly_its_six_smells() -> None:
+    # covers: CR-100a-2
     assert set(_bucket_catalogue(DESIGN_SKILL)) == DESIGN_SMELLS
 
 
-# covers: CR-100a-3
 def test_core_skill_is_method_only_not_a_catalogue() -> None:
+    # covers: CR-100a-3
     """Core carries the method/format; the 12-smell catalogue lives in the buckets."""
     # The core has no numbered smell-catalogue table; each bucket enumerates its six.
     assert _bucket_catalogue(CORE_SKILL) == {}
@@ -207,8 +207,8 @@ def test_core_skill_is_method_only_not_a_catalogue() -> None:
 # ===========================================================================
 
 
-# covers: CR-100b-1
 def test_every_catalogue_smell_names_a_refactoring() -> None:
+    # covers: CR-100b-1
     catalogue = {**_bucket_catalogue(STRUCTURAL_SKILL), **_bucket_catalogue(DESIGN_SKILL)}
     assert set(catalogue) == MODERN_12
     missing = [smell for smell, refactor in catalogue.items() if not refactor]
@@ -220,8 +220,8 @@ def test_every_catalogue_smell_names_a_refactoring() -> None:
 # ===========================================================================
 
 
-# covers: CR-100c-1
 def test_core_finding_format_requires_before_after_and_location() -> None:
+    # covers: CR-100c-1
     core = _skill_md(CORE_SKILL).lower()
     assert "finding format" in core
     assert "before" in core
@@ -237,8 +237,8 @@ def test_core_finding_format_requires_before_after_and_location() -> None:
 # ===========================================================================
 
 
-# covers: CR-100d-1
 def test_core_skill_registered_portable_and_rubric_present() -> None:
+    # covers: CR-100d-1
     entry = _skill_entry(CORE_SKILL)
     assert entry.get("portable") is True
     # Template path in the registry resolves to a real SKILL.md on disk.
@@ -252,8 +252,8 @@ def test_core_skill_registered_portable_and_rubric_present() -> None:
     assert orphaned_dirs == [] and orphaned_entries == []
 
 
-# covers: CR-100d-2
 def test_orchestration_merges_into_one_ranked_report() -> None:
+    # covers: CR-100d-2
     """Prompt-level guarantee; the runtime merge is a coverage boundary (needs agents)."""
     body = _skill_md(ORCHESTRATION_SKILL).lower()
     assert "merge" in body
@@ -269,16 +269,16 @@ def test_orchestration_merges_into_one_ranked_report() -> None:
 # ===========================================================================
 
 
-# covers: CR-100e-1
 def test_command_documents_file_folder_and_snippet_targets() -> None:
+    # covers: CR-100e-1
     cmd = (_COMMANDS_DIR / "code-smell-review.md").read_text(encoding="utf-8").lower()
     assert "file" in cmd
     assert "folder" in cmd
     assert "pasted" in cmd or "snippet" in cmd
 
 
-# covers: CR-100e-1-i
 def test_pasted_snippet_with_no_path_is_supported() -> None:
+    # covers: CR-100e-1-i
     """The core Gather step accepts pasted code with no file on disk."""
     core = _skill_md(CORE_SKILL).lower()
     # Pasted code is an explicit Gather target (not merely mentioned in passing).
@@ -293,23 +293,23 @@ def test_pasted_snippet_with_no_path_is_supported() -> None:
 # ===========================================================================
 
 
-# covers: CR-100f-1
 def test_two_buckets_are_a_true_partition_of_the_modern_twelve() -> None:
+    # covers: CR-100f-1
     structural = set(_bucket_catalogue(STRUCTURAL_SKILL))
     design = set(_bucket_catalogue(DESIGN_SKILL))
     assert structural | design == MODERN_12       # union covers all 12
     assert structural & design == set()           # intersection empty
 
 
-# covers: CR-100f-1-i
 def test_no_smell_is_duplicated_across_buckets() -> None:
+    # covers: CR-100f-1-i
     structural = set(_bucket_catalogue(STRUCTURAL_SKILL))
     design = set(_bucket_catalogue(DESIGN_SKILL))
     assert structural.isdisjoint(design)
 
 
-# covers: CR-100f-2
 def test_leaf_agents_are_tiered_and_load_core_plus_own_bucket() -> None:
+    # covers: CR-100f-2
     structural = _agent_entry(STRUCTURAL_AGENT)
     design = _agent_entry(DESIGN_AGENT)
     assert structural is not None and design is not None
@@ -319,8 +319,8 @@ def test_leaf_agents_are_tiered_and_load_core_plus_own_bucket() -> None:
     assert set(design.get("skills_invoked", [])) == {CORE_SKILL, DESIGN_SKILL}
 
 
-# covers: CR-100f-3
 def test_orchestration_fans_out_to_both_leaf_agents() -> None:
+    # covers: CR-100f-3
     """Prompt-level guarantee; runtime parallelism is a coverage boundary."""
     body = _skill_md(ORCHESTRATION_SKILL)
     assert STRUCTURAL_AGENT in body
@@ -328,8 +328,8 @@ def test_orchestration_fans_out_to_both_leaf_agents() -> None:
     assert "parallel" in body.lower()
 
 
-# covers: CR-100f-3-i
 def test_fanout_lives_at_top_level_not_in_a_subagent() -> None:
+    # covers: CR-100f-3-i
     """Depth-1: the orchestration is a top-level skill, not an agent that spawns agents.
 
     Runtime depth-1 dispatch cannot be exercised in pytest (no agent spawning), so this
@@ -346,8 +346,8 @@ def test_fanout_lives_at_top_level_not_in_a_subagent() -> None:
     assert "depth-1" in body or "depth 1" in body
 
 
-# covers: CR-100f-4
 def test_leaf_agents_are_readonly_and_return_findings() -> None:
+    # covers: CR-100f-4
     for leaf, bucket in ((STRUCTURAL_AGENT, STRUCTURAL_SKILL), (DESIGN_AGENT, DESIGN_SKILL)):
         fm = _agent_frontmatter(leaf)
         tools = _agent_tools(fm)
@@ -360,8 +360,8 @@ def test_leaf_agents_are_readonly_and_return_findings() -> None:
         assert bucket in set(entry.get("skills_invoked", []))
 
 
-# covers: CR-100f-5
 def test_single_agent_find_code_smells_is_fully_retired() -> None:
+    # covers: CR-100f-5
     # Absent from the parsed registry.
     assert _agent_entry(RETIRED_AGENT) is None
     # No template and no command file on disk.
@@ -387,8 +387,8 @@ def test_agent_registry_validates_with_new_reviewers() -> None:
 # ===========================================================================
 
 
-# covers: CR-100a-4
 def test_finding_anatomy_reference_doc_covers_all_twelve_and_the_format() -> None:
+    # covers: CR-100a-4
     doc = _doc(FINDING_ANATOMY_DOC).lower()
     for smell in MODERN_12:
         assert smell.lower() in doc, f"finding-anatomy doc missing smell: {smell}"
@@ -396,8 +396,8 @@ def test_finding_anatomy_reference_doc_covers_all_twelve_and_the_format() -> Non
     assert "before" in doc and "after" in doc  # the finding format
 
 
-# covers: CR-100d-3
 def test_report_format_reference_doc_defines_rubric_and_ranked_report() -> None:
+    # covers: CR-100d-3
     doc = _doc(REPORT_FORMAT_DOC)
     for tier in ("HIGH", "MEDIUM", "LOW"):
         assert tier in doc
@@ -406,8 +406,8 @@ def test_report_format_reference_doc_defines_rubric_and_ranked_report() -> None:
     assert "rank" in low or "one" in low  # one severity-ranked report
 
 
-# covers: CR-100e-2
 def test_howto_documents_all_three_targets_and_the_report() -> None:
+    # covers: CR-100e-2
     doc = _doc(HOWTO_DOC).lower()
     assert "/code-smell-review" in doc
     assert "file" in doc
@@ -416,8 +416,8 @@ def test_howto_documents_all_three_targets_and_the_report() -> None:
     assert "report" in doc
 
 
-# covers: CR-100e-3
 def test_arch_doc_has_invocation_to_report_sequence() -> None:
+    # covers: CR-100e-3
     doc = _doc(ARCH_DOC)
     assert "sequenceDiagram" in doc
     low = doc.lower()
@@ -425,8 +425,8 @@ def test_arch_doc_has_invocation_to_report_sequence() -> None:
     assert "file" in low and "folder" in low and ("snippet" in low or "pasted" in low)
 
 
-# covers: CR-100f-6
 def test_arch_doc_has_component_diagram_of_the_topology() -> None:
+    # covers: CR-100f-6
     doc = _doc(ARCH_DOC)
     assert "flowchart" in doc or "graph" in doc  # a component/flow diagram
     for name in (CORE_SKILL, STRUCTURAL_SKILL, DESIGN_SKILL, STRUCTURAL_AGENT, DESIGN_AGENT):
@@ -434,8 +434,8 @@ def test_arch_doc_has_component_diagram_of_the_topology() -> None:
     assert "orchestrat" in doc.lower()
 
 
-# covers: CR-100f-7
 def test_arch_doc_has_parallel_fanout_and_merge_sequence() -> None:
+    # covers: CR-100f-7
     doc = _doc(ARCH_DOC)
     low = doc.lower()
     assert "parallel" in low or "par " in low or "par\n" in low
