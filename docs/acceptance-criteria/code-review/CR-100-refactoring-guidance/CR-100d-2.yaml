@@ -1,0 +1,58 @@
+id: CR-100d-2
+title: "Orchestration merges both reviewers into one severity-ranked report"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-smell-review orchestration has received findings from both the
+    structural reviewer and the design reviewer,
+  When it produces the output,
+  Then it emits exactly ONE consolidated report, not one report per reviewer,
+  And the report lists all findings ranked by severity, HIGH first, then MEDIUM,
+    then LOW,
+  And findings from both reviewers are interleaved by severity rather than kept
+    in separate per-reviewer sections.
+depends_on:
+  - CR-100d
+  - CR-100d-1
+  - CR-100f-3
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/code-smell-review/
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The merge contract must be parsed from the deployed code-smell-review orchestration SKILL.md: assert it specifies ONE consolidated report (not one-per-reviewer) with findings interleaved by severity in HIGH then MEDIUM then LOW order."
+  - "The runtime merge cannot be executed under pytest because it requires spawning the two reviewer agents; the test asserts the prompt-level merge/ordering guarantee in the orchestration skill, and the runtime merge is a documented coverage boundary."
+test_required: true
+test_spec:
+  - name: test_orchestration_specifies_single_severity_ranked_report
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse the code-smell-review SKILL.md and assert it mandates one consolidated report with findings interleaved across both reviewers and ordered HIGH -> MEDIUM -> LOW. Known coverage boundary: the actual runtime merge is not executable under pytest (cannot spawn the two reviewer agents), so this asserts the prompt-level guarantee."
+    covers:
+      - CR-100d-2
+delivers_to: null
+expects_from:
+  ac_id: CR-100f-3
+  contract: "Findings returned by both leaf reviewers via the parallel fan-out"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "templates/skills/code-smell-review/SKILL.md"

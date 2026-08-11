@@ -1,0 +1,40 @@
+id: CR-100f
+title: "Full coverage without the wait or the cost"
+component: code-review
+components:
+  - review_system
+level: L1
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every smell is checked — the easy ones fast, the hard ones deeply.
+
+  The review covers the full catalogue of smells, handling the simple, mechanical
+  ones quickly while giving the judgment-heavy design smells the deeper attention
+  they need — so you get complete breadth without paying deep-analysis time or
+  cost on the trivial cases.
+depends_on:
+  - CR-100
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - CR-100f-1
+  - CR-100f-2
+  - CR-100f-3
+  - CR-100f-4
+  - CR-100f-5
+  - CR-100f-6
+  - CR-100f-7
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - sequence-diagram

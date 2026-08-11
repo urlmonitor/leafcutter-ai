@@ -1,0 +1,67 @@
+id: CR-100f-2
+title: "Tiered leaf reviewers: structural on Sonnet, design on Opus"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the two leaf reviewer agents find-structural-smells and find-design-smells,
+  When each agent's configuration is inspected,
+  Then find-structural-smells runs on the Sonnet model (the fast pass for the
+    local, mechanical smells),
+  And find-design-smells runs on the Opus model (the deeper pass for the
+    judgment-heavy design smells),
+  And each agent is configured to invoke exactly two skills: the shared core
+    review method and its own bucket catalogue (structural for the structural
+    agent, design for the design agent).
+depends_on:
+  - CR-100f
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/find-structural-smells.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/find-design-smells.md
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Assert from BOTH the deployed agent-template frontmatter AND config/agent_registry.json that find-structural-smells resolves to model 'sonnet' and find-design-smells to 'opus' — the two sources must agree."
+  - "Assert each leaf agent invokes exactly two skills — the shared core review-for-code-smells plus its own bucket catalogue — parsed from skills_invoked in the registry and consistent with the template; a third skill or a wrong bucket fails."
+test_required: true
+test_spec:
+  - name: test_leaf_agents_model_tiers
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse both agent templates and config/agent_registry.json and assert find-structural-smells model == sonnet and find-design-smells model == opus, with template and registry agreeing."
+    covers:
+      - CR-100f-2
+  - name: test_leaf_agents_invoke_core_plus_own_bucket
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "Parse skills_invoked in agent_registry.json and assert find-structural-smells invokes exactly {review-for-code-smells, review-for-structural-code-smells} and find-design-smells exactly {review-for-code-smells, review-for-design-code-smells} — no third skill."
+    covers:
+      - CR-100f-2
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "config/agent_registry.json"
+  - "templates/agents/find-structural-smells.md"
+  - "templates/agents/find-design-smells.md"
