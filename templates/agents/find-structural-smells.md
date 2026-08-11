@@ -31,6 +31,24 @@ mutates:
 - description: Read-only reviewer — no filesystem mutations
   name: none
   surface: none
+pre_flight_reads:
+- required: true
+  source: review-for-code-smells skill (method, severity rubric, finding/report format)
+- required: true
+  source: review-for-structural-code-smells skill (the six mechanical smells)
+behavioral_patterns:
+- behavior: return only the findings sections (Summary rows, HIGH/MEDIUM/LOW findings, Scorecard rows) for the orchestrator to merge
+  name: Conditional Behavior
+  related_agent: find-design-smells
+  trigger: invoked as part of an orchestrated code-smell-review
+- behavior: emit the full standalone report instead of findings-only sections
+  name: Conditional Behavior
+  related_agent: null
+  trigger: invoked standalone with no orchestrator
+- behavior: note the smell in one line for the design reviewer and do not fully work it up
+  name: Delegation
+  related_agent: find-design-smells
+  trigger: a cross-cutting design smell is spotted while scanning the structural bucket
 
 ---
 
