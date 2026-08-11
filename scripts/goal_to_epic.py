@@ -2670,5 +2670,25 @@ DECISION HISTORY
   now use the same derived name from a single shared code path (n_location_rule: 1).
   Must not regress ACD-1200a-3-ii (apostrophe/quote stripping still applied via
   _strip_quote_chars() in _to_pascal_case()).
+- 2026-08-12 [BO-2600a-5]: Explicit id-list entrypoint and two hygiene fixes.
+  Implements BO-2600a-5: adds build_epic_from_ids(ids, *, store_root, inbox_dir)
+  and a matching --ids CLI mode so fast_lane.resolve_connected_build_set() can
+  pass its full connected-set result (including cross-tree prerequisites) directly
+  to epic assembly without re-walking a single AC's subtree via traverse_ac_tree().
+  Root defect closed: the existing --ac path re-walks the covered_by subtree and
+  drops any leaf that lives outside the first AC's tree but was included by the
+  connected-set resolution. The new path takes the id list as authoritative.
+  Internals reused: resolve_leaf_dependencies (restricted to the given id set via
+  the existing out-of-set edge filter), topological_sort, generate_tickets_for_leaves,
+  assemble_epic_folder, generate_master_plan. --ac mode is preserved unchanged
+  (backward compatible). Two hygiene fixes applied in the same pass:
+  (a) _translate_ticket_depends_on() translates AC ids in ticket depends_on fields
+  to co-located epic-folder filenames at generation time (so ticket_frontmatter_guard
+  passes without a downstream hook auto-fix); (b) implemented_by back-references
+  written into source AC YAMLs are repo-relative (start with "tickets/", never
+  absolute worktree paths). CLI: _build_parser() now uses a mutually exclusive
+  group (required=True) containing --ac and --ids; main() routes on args.ids.
+  Covered by 6 unit tests in unit_tests/build_orchestration/test_bo_2600a_5.py;
+  how-to documentation added in docs/how-to/goal-to-epic.md §5.
 ====================================================================
 """

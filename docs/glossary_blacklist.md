@@ -87,3 +87,5 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | flow_change_gates | YAML config section name in guardrail_gates.yaml (code-level identifier), not a standalone domain concept | 2026-07-21 |
 | surgical_removal_guard | YAML config section name in guardrail_gates.yaml (code-level identifier), not a standalone domain concept | 2026-07-21 |
 | DOC_EXPERT_SINGLE_INJECTION | Named invariant ID constant in guardrail_gates.yaml surgical_removal_guard, not a domain concept | 2026-07-21 |
+| ac_driven_dev | Component slug identifier in frontmatter components list, not a standalone domain concept | 2026-08-12 |
+| build_epic_from_ids | Python function name in scripts/goal_to_epic.py (code identifier), not a standalone domain concept | 2026-08-12 |
