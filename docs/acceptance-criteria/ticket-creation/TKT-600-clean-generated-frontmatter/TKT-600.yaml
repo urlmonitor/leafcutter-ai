@@ -1,0 +1,39 @@
+id: TKT-600
+components:
+  - ticket_creation_pipeline
+title: "Tickets generated from ACs have accurate, guard-valid frontmatter"
+component: ticket-creation
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A ticket generated from an acceptance criterion should carry frontmatter that is
+  both accurate (files_touched names the files the work actually touches) and valid
+  against the ticket frontmatter guard (depends_on references real tickets), so a
+  generated ticket needs no manual fixup before it can be built.
+
+  Surfaced by the BO-2600 three-angle review and repeatedly during that build:
+  generate_ticket_from_ac currently (a) vacuums illustrative file paths out of prose
+  it_requirements into files_touched, and (b) copies the AC's depends_on (AC ids)
+  verbatim into the ticket, which the ticket_frontmatter_guard then rejects.
+depends_on: []
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: [TKT-600a]
+implemented_by: []
+change_target: code
+risk_surface: internal
