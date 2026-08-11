@@ -1,0 +1,60 @@
+id: BO-2600a-3
+components:
+  - build_orchestration
+title: "build-ac leaf path is unchanged when the connected build set is just the target AC"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given /build-ac processing a leaf AC in its single-ticket path (Step 2b),
+  And the coordinator resolves the connected build set via the select_connected
+    CLI with --exclude-structural-parent,
+  When the resolved set is exactly [the target AC] (no un-built children, no
+    un-met genuine prerequisites),
+  Then the coordinator generates exactly one ticket via generate_ticket_from_ac.py
+    and the output is byte-identical to the pre-change single-ticket behavior,
+  And no epic folder is created,
+  And the Step 3 confirmation prompt shown to the user is the existing single-ticket
+    prompt ("Build this ticket now? (yes / review / skip)").
+depends_on: [BO-2600a, BO-2600a-2]
+doc_links:
+  - path: templates/agents/build-ac.md
+    relationship: modifies
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-2600a-2
+  contract: "select_connected --exclude-structural-parent --ac <id> prints the JSON ordered id list of the connected build set."
+it_requirements:
+  - "Edit Step 2b of templates/agents/build-ac.md so the leaf path first resolves the connected build set by calling the select_connected CLI with --exclude-structural-parent, parsing the JSON id list."
+  - "When the parsed set has exactly one member (the target AC), fall through to the existing generate_ticket_from_ac.py single-ticket flow with no behavioral change — this is the critical backward-compat path."
+  - "Because build-ac is an LLM agent template, this AC is verified by asserting the template instructs the single-member fall-through explicitly AND by a behavioral check that a single-member set yields one ticket and no epic folder (do not rely on a grep-only test — see CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+test_spec:
+  - name: test_single_member_set_generates_one_ticket
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "A connected build set of size 1 drives the single-ticket generator and produces exactly one ticket, no epic folder"
+  - name: test_single_member_output_matches_baseline
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "The single-ticket output for a size-1 set is identical to the pre-change generate_ticket_from_ac output"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
