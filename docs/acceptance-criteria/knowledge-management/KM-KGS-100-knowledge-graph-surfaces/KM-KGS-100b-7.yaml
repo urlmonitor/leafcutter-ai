@@ -1,0 +1,80 @@
+id: KM-KGS-100b-7
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "On detected drift, only the affected surface is rebuilt on read, then served"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the freshness check for an index-backed read reports that exactly one surface
+    has a changed, added, or deleted file while all other surfaces are fresh
+  When the read proceeds
+  Then only the drifted surface's portion of the index is rebuilt from its current
+    source files during that read
+  And the surfaces reported fresh are served from the existing index without being
+    rebuilt
+  And the read then returns a result equal to a live full parse of the current tree,
+    reflecting the changed, added, or deleted file
+depends_on:
+  - KM-KGS-100b
+  - KM-KGS-100b-6
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Rebuild granularity is per-surface (the units declared in config/paths.json): only the drifted surface is re-parsed from its current sources; fresh surfaces are served from the existing index and must not be re-parsed."
+  - "The surface-scoped rebuild is the single reusable rebuild primitive — the same function the proactive refresh events (KM-KGS-100b-12) call — so read-time self-heal and event-driven refresh share one code path, not two divergent rebuilders."
+  - "After a self-heal rebuild the read result equals a live full parse of the current tree; the rebuilt surface's manifest entry (mtime, size) and the index header (HEAD, max-mtime) are updated so a subsequent read finds the surface fresh."
+  - "The rebuilt surface index is persisted atomically (temp file + os.replace per KM-KGS-100b-11-i) so a concurrent reader never observes a half-written surface."
+test_spec:
+  - name: test_only_drifted_surface_is_rebuilt
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "When exactly one surface drifted, only that surface is re-parsed; fresh surfaces are served from the existing index without rebuild."
+  - name: test_self_healed_read_equals_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "After rebuilding the drifted surface, the read returns nodes/edges equal to a live full parse reflecting the changed/added/deleted file."
+  - name: test_self_heal_updates_manifest_so_next_read_is_fresh
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "After a self-heal rebuild the surface's manifest entry is updated so the next read finds that surface fresh."
+delivers_to:
+  agent: python-coder
+  contract: "A surface-scoped rebuild primitive that re-parses one drifted surface, persists it atomically, refreshes its manifest entry, and returns a graph equal to a live full parse — reused by KM-KGS-100b-8 (missed-event self-heal) and KM-KGS-100b-12 (proactive refresh)"
+expects_from:
+  ac_id: KM-KGS-100b-6
+  contract: "The per-read freshness verdict naming which surfaces drifted, which this AC consumes to rebuild only those surfaces on read"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the self-heal mechanism: the result is always correct, just slightly
+  slower on the read that healed the drift. It is the read-time counterpart to the
+  proactive refresh events in KM-KGS-100b-12.
+change_target: code
+risk_surface: contract_boundary

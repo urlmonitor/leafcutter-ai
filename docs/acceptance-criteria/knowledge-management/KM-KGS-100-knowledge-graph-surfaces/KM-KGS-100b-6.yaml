@@ -1,0 +1,81 @@
+id: KM-KGS-100b-6
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "Every index-backed read performs a mandatory stat-only staleness check"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read index is enabled and holds a per-file manifest recording, for each
+    surface source file, its last-modified time and size at index-build time
+  When an index-backed read is requested
+  Then before any indexed node or edge is returned, the read performs a freshness
+    check that stats the surface source files and compares each file's current
+    modified time and size against the manifest entry
+  And the check reads only file metadata (stat), not file contents, to decide freshness
+  And no index-backed read returns data without first completing this freshness check —
+    there is no path that trusts the index without the check having run
+depends_on:
+  - KM-KGS-100b
+  - KM-KGS-100b-5
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: config/paths.json
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The per-file manifest records (mtime, size) for every surface source file, keyed by the declared surface set in config/paths.json; a surface's file inventory is derived from paths.json, never a hard-coded path list."
+  - "The freshness check uses stat only (os.stat mtime + size) and never opens or hashes file contents to decide freshness; a file added or deleted under a surface counts as drift for that surface."
+  - "The staleness check is on the single mandatory code path every index-backed read passes through — there is no branch that returns indexed data without the check having completed first (the fast path in KM-KGS-100b-6-i is a short-circuit of the check, not a bypass of it)."
+  - "Stat errors on a surface file (missing/permission) must be treated as drift for that surface and degrade to rebuild/live-parse, never swallowed silently, per the project error-handling policy."
+test_spec:
+  - name: test_read_runs_staleness_check_before_returning
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "No index-backed read returns nodes/edges without first completing the freshness check (asserted via a spy/instrumented stat)."
+  - name: test_staleness_check_uses_stat_not_contents
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "The freshness check reads only file metadata (mtime, size) and does not open surface file contents."
+  - name: test_changed_mtime_or_size_flags_surface_drift
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: unit
+    description: "A surface file whose mtime or size differs from the manifest is reported as drifted; added/deleted files under a surface also count as drift."
+delivers_to:
+  agent: python-coder
+  contract: "A per-read freshness verdict, computed from a stat-only comparison of each surface file against a stored mtime+size manifest, identifying which surfaces (if any) have drifted"
+expects_from:
+  ac_id: KM-KGS-100b-5
+  contract: "The index-backed read path into which the mandatory pre-return staleness check is inserted"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
+superseded_by: null
+covered_by:
+  - KM-KGS-100b-6-i
+implemented_by: []
+notes: |
+  The mandatory-check-on-every-read rule is what keeps the cache safe: a missed
+  refresh event can never surface stale data because the read itself always
+  re-validates against the on-disk sources.
+change_target: code
+risk_surface: contract_boundary

@@ -1,0 +1,86 @@
+id: KM-KGS-100b-5-ii
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "Cache correctness is proven against a real store in a deployed layout"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the read index is exercised against the real on-disk knowledge store as it
+    is actually written on disk, inside a layout produced by a deployed build
+    (build.py --target-dir), rather than against hand-authored synthetic fixtures
+  When the equivalence, staleness, self-heal, and fallback behaviors of the index
+    are verified
+  Then each behavior is asserted by running the real read path in a fresh process
+    against that real deployed store and comparing its output to a live full parse of
+    the same store
+  And a verification that only exercises synthetic in-memory fixtures does not, on its
+    own, satisfy the correctness contract for this capability
+depends_on:
+  - KM-KGS-100b-5
+doc_links:
+  - path: docs/reference/fixture-policy.md
+    relationship: context
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Verification builds a real deployed layout via `python scripts/build.py --target-dir <tmp>` and exercises the read path against the store exactly as written on disk there — never against hand-authored in-memory fixtures (see docs/reference/fixture-policy.md)."
+  - "Each asserted behavior (equivalence, staleness detection, read-time self-heal, missing/corrupt fallback) runs the real scripts/knowledge_query.py read path in a fresh subprocess and compares its output to a live full parse of the same real store."
+  - "Test artifacts must write only to a temp/output directory outside the repo tree, and must not leave the deployed store or index cache behind (cleanup in tearDown)."
+  - "This real-store, deployed-layout requirement is the reference contract downstream test authoring for KM-KGS-100b-5..12 must honor; a green synthetic-only suite does not satisfy it."
+test_spec:
+  - name: test_real_deployed_store_index_equals_live_parse
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "Against a build.py --target-dir deployed store, the index-backed read output equals a live full parse of the same real store, asserted in a fresh subprocess."
+  - name: test_real_deployed_store_staleness_detected_on_edit
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "Editing a real surface file in the deployed store causes the next real-path read to detect drift and reflect the edit."
+  - name: test_real_deployed_store_self_heal_on_read
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "After drift on one surface in the deployed store, the read rebuilds only that surface and returns a result equal to a live full parse."
+  - name: test_real_deployed_store_missing_index_falls_back_to_live
+    target_dir: unit_tests/knowledge_management/
+    framework: unittest
+    type: integration
+    description: "With no index present in the deployed store, the real read path falls back to a live full parse and returns correct results without error."
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-5
+  contract: "The index-backed read path whose correctness this AC requires to be proven against a real deployed store, not synthetic fixtures"
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-11'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Test-contract AC (capability quality gate). Its test_spec is the deployed-layout
+  real-store harness the other KM-KGS-100b-5..12 ACs reuse for verification.
+  Motivated by the repeated phantom-done failure mode where synthetic fixtures
+  reproduced the bug-hiding bias and green sign-offs masked a no-op against the
+  real data format. Downstream test authoring for KM-KGS-100b-5..12 must honor
+  this real-store, deployed-layout requirement.
+change_target: code
+risk_surface: contract_boundary
