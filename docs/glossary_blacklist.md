@@ -77,6 +77,11 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | change_target_triggers | YAML config key in documentation_gates section of guardrail_gates.yaml, not a standalone domain concept | 2026-07-21 |
 | risk_surface_triggers | YAML config key in documentation_gates section of guardrail_gates.yaml, not a standalone domain concept | 2026-07-21 |
 | non_triggering_classifications | YAML config key in documentation_gates section of guardrail_gates.yaml, not a standalone domain concept | 2026-07-21 |
+| exclude_structural_parent | Python keyword-only parameter name in fast_lane.resolve_connected_build_set, not a standalone domain concept | 2026-08-11 |
+| resolve_connected_build_set | Python function name in scripts/build_orchestration/fast_lane.py (code identifier), not a standalone domain concept | 2026-08-11 |
+| derive_parent_id | Python function name in scripts/ac_store/ac_parent_id.py (code identifier), not a standalone domain concept | 2026-08-11 |
+| ac_parent_id | Python module name (script filename), not a standalone domain concept | 2026-08-11 |
+| traverse_ac_tree | Python function name in scan_ac_store (code identifier), not a standalone domain concept | 2026-08-11 |
 | build_placeholder_detection | Python script filename (scripts/build_placeholder_detection.py), not a standalone domain concept | 2026-07-21 |
 | target_doc_path | Pipe-delimited field name within Agent Contracts block example (code-level field), not a domain concept | 2026-07-21 |
 | flow_change_gates | YAML config section name in guardrail_gates.yaml (code-level identifier), not a standalone domain concept | 2026-07-21 |
