@@ -99,6 +99,18 @@ components:
     prefix: ACD
     description: "ACs for the AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog"
     owner: null
+  - id: code-review
+    prefix: CR
+    description: "ACs for the code-review capability: the Fowler code-smell reviewers (review-for-code-smells core method + the structural/design bucket catalogues), the tiered leaf agents (find-structural-smells on Sonnet, find-design-smells on Opus), and the code-smell-review orchestration that fans out to both and merges. Distinct from guardrail-engine, which covers commit-time quality gates rather than review capability."
+    owner: null
+    directory_patterns:
+      - "templates/skills/review-for-code-smells/**"
+      - "templates/skills/review-for-structural-code-smells/**"
+      - "templates/skills/review-for-design-code-smells/**"
+      - "templates/skills/code-smell-review/**"
+      - "templates/agents/find-structural-smells.md"
+      - "templates/agents/find-design-smells.md"
+      - "templates/commands/code-smell-review.md"
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #

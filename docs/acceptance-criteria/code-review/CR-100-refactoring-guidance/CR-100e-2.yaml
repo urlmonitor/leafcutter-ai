@@ -1,0 +1,40 @@
+id: CR-100e-2
+title: "How-to guide: running /code-smell-review on a file, folder, or snippet"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-review capability is documented,
+  When a reader opens the how-to guide for /code-smell-review,
+  Then it shows how to invoke the review against a single file, against a folder,
+    and against a pasted snippet, with a worked example for each,
+  And it explains what the resulting report looks like.
+depends_on:
+  - CR-100e
+  - CR-100e-1
+doc_links:
+  - path: docs/how-to/run-code-smell-review.md
+    relationship: documents
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to must give a worked example for each of the three targets (file, folder, pasted snippet) and describe the resulting report, consistent with the /code-smell-review command surface and the report format doc (CR-100d-3)."
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "docs/how-to/run-code-smell-review.md"

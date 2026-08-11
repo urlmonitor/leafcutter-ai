@@ -1,0 +1,51 @@
+id: CR-100e-1-i
+title: "Pasted snippet with no file path is still reviewed"
+component: code-review
+components:
+  - review_system
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a developer pastes a code snippet that has no associated file path,
+  When /code-smell-review is invoked on that snippet,
+  Then the review still runs and produces a report,
+  And each finding's file field identifies the source as the pasted snippet
+    rather than failing or leaving the field blank.
+depends_on:
+  - CR-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/code-smell-review/
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Assert the deployed code-smell-review SKILL.md and command template specify that a pasted snippet with no file path is still reviewed and each finding's file field labels the source as the pasted snippet — never blank, never a failure."
+  - "This edge case is asserted at the prompt/command level (the runtime review is not exercisable in pytest); the no-path labelling rule is a documented coverage boundary at runtime."
+test_required: true
+test_spec:
+  - name: test_pasted_snippet_without_path_labels_source
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse the code-smell-review SKILL.md/command and assert the no-file-path snippet contract: the review still runs and each finding's file field is labelled as the pasted snippet (not blank, not a failure). Known coverage boundary: runtime execution not exercisable in pytest."
+    covers:
+      - CR-100e-1-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_code_smell_review_wiring.py"
+implemented_by:
+  - "templates/skills/review-for-code-smells/SKILL.md"

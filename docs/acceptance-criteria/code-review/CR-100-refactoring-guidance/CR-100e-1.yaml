@@ -1,0 +1,54 @@
+id: CR-100e-1
+title: "Review target may be a file, a folder, or a pasted snippet"
+component: code-review
+components:
+  - review_system
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a developer invokes the /code-smell-review command (the code-smell-review skill),
+  When the target is a single file path,
+  Then the review runs against that file and produces a report,
+  And when the target is a folder path, the review runs against the code in that
+    folder and produces a report,
+  And when the target is a snippet of code pasted directly into the invocation,
+    the review runs against that snippet and produces a report.
+depends_on:
+  - CR-100e
+doc_links:
+  - path: docs/acceptance-criteria/code-review/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/code-smell-review/
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The three-target support must be parsed from the deployed code-smell-review SKILL.md and the /code-smell-review command template: assert the invocation contract documents file, folder, and pasted-snippet targets, each producing a report."
+  - "Executing an actual review cannot run under pytest (it spawns reviewer agents); the test asserts the prompt/command-level contract for all three target kinds, and runtime execution is a documented coverage boundary."
+test_required: true
+test_spec:
+  - name: test_command_accepts_file_folder_and_snippet_targets
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "In unit_tests/test_code_smell_review_wiring.py, parse the /code-smell-review command template and the code-smell-review SKILL.md and assert all three target modes (file, folder, pasted snippet) are documented as producing a report. Known coverage boundary: runtime review execution is not exercisable in pytest."
+    covers:
+      - CR-100e-1
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - CR-100e-1-i
+implemented_by:
+  - "templates/commands/code-smell-review.md"
+  - "templates/skills/code-smell-review/SKILL.md"

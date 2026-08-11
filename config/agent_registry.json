@@ -1023,6 +1023,96 @@
             ]
         },
         {
+            "id": "find-structural-smells",
+            "name": "Find Structural Smells",
+            "tier": "standalone",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/find-structural-smells.md",
+            "model": "sonnet",
+            "skills_used": [
+                "review-for-code-smells",
+                "review-for-structural-code-smells"
+            ],
+            "requires_ticket_section": false,
+            "requires_verification": false,
+            "category": "supervisor",
+            "skills_invoked": [
+                "review-for-code-smells",
+                "review-for-structural-code-smells"
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "find-design-smells",
+            "name": "Find Design Smells",
+            "tier": "standalone",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/find-design-smells.md",
+            "model": "opus",
+            "skills_used": [
+                "review-for-code-smells",
+                "review-for-design-code-smells"
+            ],
+            "requires_ticket_section": false,
+            "requires_verification": false,
+            "category": "supervisor",
+            "skills_invoked": [
+                "review-for-code-smells",
+                "review-for-design-code-smells"
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
             "id": "commit",
             "name": "Commit",
             "tier": "phase",
