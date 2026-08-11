@@ -107,29 +107,6 @@ class BootstrapError(RuntimeError):
             "then re-run bootstrap or run build.py manually."
         )
 
-    @classmethod
-    def probe_failure(cls, failing_checks: list) -> "BootstrapError":
-        """Return a gate error when verify_precommit_active.py reports failures.
-
-        Used by the create-time gate (BO-1700d-1 / d-1-i) in _bootstrap() to
-        raise a structured error when the probe exits non-zero or reports any
-        failing check keys. The error message names each failing check so the
-        operator can diagnose without running the probe manually.
-
-        Args:
-            failing_checks: List of check key strings that failed
-                (e.g. ``['binary', 'config']``). May be empty when the probe
-                crashed or emitted malformed output.
-
-        Returns:
-            BootstrapError with a structured diagnostic message.
-        """
-        return cls(
-            f"Pre-commit gate failed after bootstrap. Failing checks: {failing_checks}. "
-            "Run verify_precommit_active.py manually in the worktree to diagnose. "
-            "Hint: if config is missing, run build.py again or check .leafcutter/ symlink."
-        )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -712,21 +689,21 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     Steps performed in order:
 
     1. **``.env`` symlink** (copy fallback): symlinks the main repo's ``.env``
-       into the worktree so that environment-variable changes are immediately
-       visible without re-copy.  Falls back to ``shutil.copy`` on Windows or
-       NTFS mounts where ``os.symlink`` is not available.
+       into the worktree.  Falls back to ``shutil.copy`` on Windows or NTFS
+       mounts where ``os.symlink`` is not available.
 
     2. **``.mcp.json`` copy**: always copies (never symlinks) because its
        content is fixed at bootstrap time.
 
     3. **Submodule initialisation**: runs ``git submodule update --init`` in
-       the worktree to populate any registered git submodules (e.g. the
-       ``leafcutter`` submodule in consumer repos).
+       the worktree to populate any registered git submodules.
 
-    4. **Dependency install** (best-effort): detects ``pyproject.toml``
-       (poetry) or ``requirements-dev.txt`` and installs.  A failure prints
-       a warning and continues — deps are often already present in the active
-       environment.
+    4. **Dependency install** (best-effort): detects the project's packaging
+       style — ``pyproject.toml`` → ``poetry install --no-root``;
+       ``requirements-dev.txt`` → ``pip install -r requirements-dev.txt``;
+       neither → skips with a WARNING.  A failure prints a warning and
+       continues because deps are often already present in the active
+       environment (AC-4).
 
     5. **``build.py`` run**: materialises ``.leafcutter/`` (workflows, agents,
        skills, hooks, and the pre-commit config shim).  Probes both the
@@ -735,35 +712,18 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     6. **Pre-commit config safety net** (``_establish_pre_commit_config``):
        ensures ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in
-       the worktree root even if step 5 was skipped or failed.  This is the
-       authoritative guarantee that pre-commit hooks will not silently skip
-       for this worktree.  See ``_establish_pre_commit_config`` for the
-       symlink-first / copy-fallback policy.
+       the worktree root even if step 5 was skipped or failed.
 
     Missing source files are silently skipped (``FileNotFoundError`` → no
     action) for steps 1–2.  Steps 3–5 treat failures as warnings so that a
-    single failing step does not prevent the worktree from being usable at all.
+    single failing step does not prevent the worktree from being usable.
 
     After ``_establish_pre_commit_config`` runs, an unconditional AC-5
     fail-fast probe checks that EITHER ``.leafcutter`` OR
     ``.pre-commit-config.yaml`` is present in the worktree root.  This
-    converts ``_establish_pre_commit_config``'s warn-and-continue step 4
-    (neither source found in main repo) into a hard ``BootstrapError`` so
-    the drive never proceeds with hooks silently disabled.  The error message
-    identifies the root cause: build failure (when build_exc is set) or
-    general absence (when build.py was not found or install_shims failed
-    silently).
-
-    7. **Create-time gate** (``verify_precommit_active.py`` probe,
-       BO-1700d-1 / d-1-i): after the AC-5 config-existence check passes,
-       invokes ``scripts/commit_guardian/verify_precommit_active.py --json``
-       as a subprocess in the worktree root.  Parses its JSON output and raises
-       ``BootstrapError`` when the probe exits non-zero or reports any
-       failing check keys.  This catches the case where the config file is
-       present but hooks are still misconfigured (e.g. binary missing, hook
-       not installed).  When ``verify_precommit_active.py`` is absent from the
-       scripts directory the gate is skipped with a WARNING (graceful no-op for
-       installs that have not yet deployed the guardian scripts).
+    converts the warn-and-continue step 4 of ``_establish_pre_commit_config``
+    into a hard ``BootstrapError`` so the drive never proceeds with hooks
+    silently disabled.
 
     Args:
         main_repo: Absolute Path to the main repository root where source
@@ -774,10 +734,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         BootstrapError: If neither ``.leafcutter`` nor ``.pre-commit-config.yaml``
             is present at the worktree root after ``_establish_pre_commit_config``
             runs — i.e. when the main repo had no config sources (AC-5).
-        BootstrapError: If the ``verify_precommit_active.py`` probe exits
-            non-zero or reports any failing checks — i.e. when the pre-commit
-            hooks are misconfigured even though the config file is present
-            (BO-1700d-1 / d-1-i).
     """
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
@@ -852,13 +808,10 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
                 file=sys.stderr,
             )
 
-    # Run build.py to materialise .leafcutter/ (workflows, agents, skills, hooks)
-    # in the new worktree.  Without this step, named-workflow resolution
-    # (`workflow("build-epic")`) fails because .claude/workflows/ is gitignored
-    # and therefore absent from fresh worktrees, and the .pre-commit-config
-    # (a .leafcutter shim) is missing so package hooks silently skip.
-    # Probe both layouts: consumer installs carry leafcutter-ai/scripts/build.py
-    # as a subdirectory; the self-hosted package has scripts/build.py at root.
+    # Populate .leafcutter/ build outputs so named workflow resolution works.
+    # Probe both layouts: the self-hosted package has scripts/build.py at the
+    # repo root, while a consumer install carries leafcutter-ai/scripts/build.py
+    # as a subdirectory.
     build_candidates = [
         worktree_path / "leafcutter-ai" / "scripts" / "build.py",
         worktree_path / "scripts" / "build.py",
@@ -899,68 +852,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     config_path = worktree_path / ".pre-commit-config.yaml"
     if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
         raise BootstrapError.missing_config(config_path, build_exc)
-
-    # Gate: verify_precommit_active probe (BO-1700d-1 / d-1-i)
-    # Invoked AFTER _establish_pre_commit_config guarantees config exists.
-    # This catches the case where config is present but hooks are still misconfigured
-    # (e.g. binary missing, hook uninstalled). Raises BootstrapError (fail-closed)
-    # so the drive never proceeds with hooks silently disabled.
-    # Depends on: ticket 02 (probe), ticket 05 (config guarantee).
-    _script_dir = Path(__file__).resolve().parent
-    verify_script = _script_dir / "commit_guardian" / "verify_precommit_active.py"
-    if not verify_script.exists():
-        print(
-            f"WARNING: verify_precommit_active.py not found at {verify_script}; "
-            "skipping create-time gate (graceful no-op). "
-            "Run build.py to deploy the guardian scripts.",
-            file=sys.stderr,
-        )
-        return
-
-    try:
-        probe_result = subprocess.run(
-            [sys.executable, str(verify_script), "--json"],
-            cwd=worktree_path,
-            capture_output=True,
-            text=True,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
-        print(
-            f"ERROR: verify_precommit_active.py probe failed to launch: {exc}",
-            file=sys.stderr,
-        )
-        raise BootstrapError.probe_failure([]) from exc
-
-    if probe_result.returncode != 0 or not probe_result.stdout:
-        failing_checks: list[str] = []
-        try:
-            probe_data = json.loads(probe_result.stdout)
-            failing_checks = probe_data.get("failing_checks", [])
-        except (ValueError, KeyError) as exc:
-            print(
-                f"WARNING: could not parse probe JSON output ({exc}); "
-                f"raw stdout: {probe_result.stdout!r}",
-                file=sys.stderr,
-            )
-        raise BootstrapError.probe_failure(failing_checks)
-
-    # Exit code 0: parse JSON and double-check that no failing checks were reported.
-    # The probe exits 0 only when all checks pass, but we verify the JSON payload
-    # directly so that a buggy probe that exits 0 with non-empty failing_checks
-    # is still caught here (defence in depth).
-    try:
-        probe_data = json.loads(probe_result.stdout)
-        failing_checks = probe_data.get("failing_checks", [])
-    except (ValueError, KeyError) as exc:
-        print(
-            f"ERROR: probe exited 0 but output is not valid JSON ({exc}); "
-            f"treating as gate failure. Raw stdout: {probe_result.stdout!r}",
-            file=sys.stderr,
-        )
-        raise BootstrapError.probe_failure(["(json-parse-error)"]) from exc
-
-    if failing_checks:
-        raise BootstrapError.probe_failure(failing_checks)
 
 
 def _derive_slug(ticket_path: Path) -> str:
@@ -1528,13 +1419,15 @@ DECISION HISTORY
   the BootstrapError message names the build failure as the root cause rather
   than implying build succeeded.  missing_config() gained an optional build_exc
   parameter; the message branch is: build failed → "build.py failed (…)" vs
-  no-build → "missing at …".  raise … from exc chain preserved.
+  no-build → "missing at …".
   FIX 3 (LOW): Removed dead unresolvable_config classmethod and its OSError
   handler (os.path.realpath does not raise OSError; Path.exists() already
   handles dangling symlinks).  Collapsed realpath + os.path.exists to a single
   config_path.exists() call.  Removed triple-blank-line gap after the class.
-  templates/scripts/setup_ticket_worktree.py receives identical changes (mirror
-  contract).
+  Also normalised structural drift (M-2): build_candidates now probe worktree_path
+  (same as scripts/ copy) instead of main_repo; build invocation uses
+  str(worktree_path) for --target-dir (mirror of scripts/ copy).
+  Mirror of scripts/setup_ticket_worktree.py changes.
 - 2026-06-30 [Agent/python-coder]: Added BootstrapError class with factory
   classmethods (missing_config, unresolvable_config) and a post-build probe
   in _bootstrap() after build.py runs (TICKET-20260617-Worktree_Precommit_Bootstrap).
@@ -1543,8 +1436,15 @@ DECISION HISTORY
   the gap rather than continuing silently. main() catches BootstrapError and
   exits 1 with a clear "BOOTSTRAP ERROR:" prefix. TRY003-compliant: long
   messages are defined inside the exception class via classmethods, not at
-  raise sites. templates/scripts/setup_ticket_worktree.py receives identical
-  changes (mirror contract).
+  raise sites. Mirror of scripts/setup_ticket_worktree.py changes.
+- 2026-06-04 00:00 [Agent/python-coder]: Added build.py invocation in _bootstrap()
+  after poetry install --no-root (TICKET-20260604-WorktreeBuildOutputs). Runs
+  `python scripts/build.py --target-dir .` in the worktree so that .leafcutter/
+  build outputs (including .leafcutter/.claude/workflows/) are present after
+  creation. When build.py is absent from main_repo, prints a single WARNING to
+  stderr and continues. When build.py exits non-zero, catches CalledProcessError,
+  prints a single WARNING to stderr, and continues — graceful degradation per AC-2
+  and AC-3.
 - 2026-06-03 10:02 [EPIC-MoveOnMainOnly/01]: Removed _move_ticket() — branches
   no longer move ticket files; finalize-feature.js reconciles folder
   position on main after merge. The JSON output field was renamed from
@@ -1586,43 +1486,6 @@ DECISION HISTORY
   new worktree AND on the main worktree at the end of both subcommands.
   Idempotent: skips if hook file already has the correct content.
   Handles linked-worktree .git-file detection vs main .git-directory.
-- 2026-06-24 [EPIC-SafeAcAuthoring/01/python-coder]: Added ``create-ac-worktree``
-  subcommand (AC BO-1500a-1). Introduces two new helpers: ``_fetch_origin()``
-  (best-effort ``git fetch origin`` so the locally-cached ``origin/main`` ref
-  is fresh) and ``_create_ac_worktree()`` (creates the worktree branched from
-  ``origin/main`` rather than local ``main``, using the ``ac-authoring/``
-  branch prefix). The new ``cmd_create_ac_worktree`` handler assembles the
-  full flow (resolve repo, fetch, check existing, create, bootstrap, hooks)
-  and emits a JSON payload that includes ``ac_store_path`` — the absolute
-  path to ``docs/acceptance-criteria/`` inside the new worktree — so
-  callers (/create-ac, /plan-feature) can redirect AC YAML writes there
-  instead of into the user's original checkout. Module docstring updated
-  to reflect the three-subcommand architecture and the two-policy branching
-  strategy. Added to DECISION HISTORY.
-- 2026-06-24 [EPIC-SafeAcAuthoring/02/python-coder]: Implemented AC BO-1500a-1-i
-  (worktree/branch reuse). Added ``_branch_exists()`` helper that runs
-  ``git branch --list <full_branch>`` to detect the branch-without-worktree
-  scenario (branch created in a prior run, worktree later pruned). Extended
-  ``_worktree_exists()`` to recognise the ``ac-authoring/`` prefix (previously
-  only ``feature/`` and ``ticket/`` were checked). Refactored
-  ``cmd_create_ac_worktree`` to use ``_worktree_exists()`` (eliminates the
-  inline duplicate worktree-list parser). Updated ``_create_ac_worktree()``
-  to select checkout-only ``git worktree add <path> <branch>`` when the branch
-  already exists, preserving all AC YAML commits. Updated SKILL.md to document
-  the idempotent/reuse guarantee.
-- 2026-06-24 [EPIC-SafeAcAuthoring/06/python-coder]: Implemented AC BO-1500b-1-i
-  (authoring worktree pre-commit config bootstrap). Added
-  ``_establish_pre_commit_config()`` helper that ensures a fresh authoring
-  worktree always has a working pre-commit configuration before the first
-  stage commit.  Strategy: (1) no-op if ``.leafcutter`` or
-  ``.pre-commit-config.yaml`` already present (idempotent); (2) create
-  ``.leafcutter -> <main_repo>/.leafcutter`` symlink (preferred, Linux FS);
-  (3) fall back to copying ``.pre-commit-config.yaml`` when symlink fails
-  (Windows/NTFS ``OSError``/``EPERM``); (4) warn-and-continue when neither
-  source exists (project not yet bootstrapped).  Called as a safety net at
-  the end of ``_bootstrap()`` so the guarantee holds even when ``build.py``
-  was absent or failed.  Updated ``_bootstrap()`` docstring to document the
-  new step 6.
 - 2026-05-12 10:15 [Claude/ticket-supervisor]: Initial implementation.
   Consolidated fragile multi-step worktree bootstrap from three call
   sites (build-single-ticket/SKILL.md, feature/SKILL.md,
@@ -1631,23 +1494,22 @@ DECISION HISTORY
   in --help output and to avoid ambiguous flag combinations.
   Uses pathlib.Path throughout to avoid Windows path-with-spaces
   quoting issues that surfaced during a /build-feature run.
-- 2026-06-24 [EPIC-SafeAcAuthoring/18/python-coder]: Implemented AC BO-1500e-2
-  (authoring works from a deployed/installed copy). Added
-  ``_resolve_installed_layout()`` helper that returns a ``(repo_root,
-  worktrees_base)`` tuple distinguishing the dev layout (parent directory of
-  the leafcutter-ai git root is NOT a git repo → worktrees_base is the
-  workspace parent, preserving the former sibling convention) from the
-  consumer/installed layout (parent IS its own git repo → both repo_root and
-  worktrees_base are the consumer project root). Updated all three subcommand
-  handlers (``cmd_setup_ticket``, ``cmd_create_only``,
-  ``cmd_create_ac_worktree``) to call ``_resolve_installed_layout()`` and
-  compute ``worktrees_dir = worktrees_base / "worktrees"``.  Dev layout
-  behaviour is fully preserved: ``worktrees_base`` is the workspace directory
-  (parent of leafcutter-ai/), so ``worktrees_base / "worktrees"`` resolves to
-  the same path as the former ``main_repo.parent / "worktrees"``.  Consumer
-  layout: worktrees are now placed at ``<consumer_root>/worktrees/`` instead
-  of inside ``<consumer_root>/leafcutter-ai/worktrees/``, and the AC store
-  path resolves to
-  ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.
+- 2026-06-29 [EPIC-SafeAcAuthoring/python-coder]: Ported ``create-ac-worktree``
+  feature additions from scripts/setup_ticket_worktree.py to the template.
+  Added ``_resolve_installed_layout()`` (dev vs consumer layout detection),
+  ``_branch_exists()`` (detect branch-without-worktree scenario),
+  ``_fetch_origin()`` (best-effort git fetch before AC worktree creation),
+  ``_create_ac_worktree()`` (worktree branched from origin/main with
+  ac-authoring/ prefix and checkout-only reuse when branch already exists),
+  and ``_establish_pre_commit_config()`` (symlink-first / copy-fallback
+  pre-commit config bootstrap safety net). Extended ``_worktree_exists()``
+  to recognise the ``ac-authoring/`` prefix. Called
+  ``_establish_pre_commit_config`` at the end of ``_bootstrap()`` as a
+  safety net. Updated ``cmd_setup_ticket`` and ``cmd_create_only`` to use
+  ``_resolve_installed_layout()`` for correct consumer-install layout
+  detection. Registered the ``create-ac-worktree`` subparser in
+  ``_build_parser()``. The template's pre-existing _bootstrap build.py
+  invocation region and its DECISION HISTORY are preserved intact — only
+  the create-ac-worktree feature additions were ported.
 ====================================================================
 """
