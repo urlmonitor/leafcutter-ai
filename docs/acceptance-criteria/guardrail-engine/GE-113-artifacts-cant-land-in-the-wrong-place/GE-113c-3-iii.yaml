@@ -1,0 +1,75 @@
+id: GE-113c-3-iii
+components:
+  - commit_guardian
+title: "Bare-filename allowlist entries suppress all findings with that basename regardless of directory"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+criteria: |
+  Given the security allowlist contains the entry "ENTROPY_HIGH:.env:*"
+    where the path component ".env" is a bare filename (no path separator),
+  And the secrets scanner detects ENTROPY_HIGH findings in the files:
+    - ".env" (root level)
+    - "src/.env"
+    - "deploy/prod/.env"
+  When the scanner evaluates whether the allowlist entry suppresses each finding,
+  Then ALL three findings are suppressed,
+  Because the allowlist path is a bare filename and a single-segment path is
+    always a suffix of any finding path that shares that basename.
+
+  Given the security allowlist contains the entry "ENTROPY_HIGH:config/.env:*"
+    where the path component "config/.env" is path-qualified (contains a separator),
+  And the secrets scanner detects ENTROPY_HIGH findings in the files:
+    - "config/.env"
+    - "src/config/.env"
+    - "deploy/.env"
+  When the scanner evaluates whether the allowlist entry suppresses each finding,
+  Then the findings at "config/.env" and "src/config/.env" ARE suppressed,
+  And the finding at "deploy/.env" is NOT suppressed,
+  Because "config/.env" is a segment-by-segment suffix of "config/.env" (exact)
+    and "src/config/.env" (suffix match), but NOT of "deploy/.env".
+depends_on:
+  - GE-113c-3
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Covers the bare-filename suppression contract. Test fixture: allowlist entry `ENTROPY_HIGH:.env:*` vs findings at root `.env`, `src/.env`, `deploy/prod/.env` — all three must be suppressed."
+  - "Corresponding test function: `test_bare_filename_suppresses_any_depth` in `unit_tests/commit_guardian/test_scan_secrets_suppression.py`."
+  - "Contrast case: path-qualified `config/.env` must NOT suppress `deploy/.env` — validates that path-qualified entries still require segment-suffix match."
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_bare_filename_suppresses_any_depth
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Bare-filename allowlist entry '.env' suppresses findings at root, src/.env, and deploy/prod/.env"
+  - name: test_path_qualified_does_not_degrade_to_basename
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path-qualified 'config/.env' does not suppress 'deploy/.env' — no degradation to basename match"
+origin_agent: business-analyst-v3
+created: 2026-08-11
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Clarifies the distinction between bare-filename and path-qualified allowlist entries per the scan_secrets.py docstring contract ('may be a bare filename, a relative path, or an absolute path'). Bare-filename matching is the INTENDED behavior — the bug is that path-qualified entries ALSO degrade to basename matching due to the self-comparison defect."
+change_target: code
+risk_surface: contract_boundary

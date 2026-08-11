@@ -1,0 +1,66 @@
+id: GE-113c-3-ii
+components:
+  - commit_guardian
+title: "A longer allowlist path does not shadow a shorter finding path"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+criteria: |
+  Given the security allowlist contains the entry "ENTROPY_HIGH:src/config/foo.py:*",
+  And the secrets scanner detects an ENTROPY_HIGH finding in the root-level file "foo.py",
+  When the scanner evaluates whether the allowlist entry suppresses the finding,
+  Then the finding at "foo.py" is NOT suppressed,
+  Because the allowlist path has 3 segments ["src", "config", "foo.py"] and the
+    finding path has 1 segment ["foo.py"] — a 3-segment allowlist path cannot be
+    a suffix of a 1-segment finding path.
+
+  Given the security allowlist contains the entry "ENTROPY_HIGH:src/config/foo.py:*",
+  And the secrets scanner detects an ENTROPY_HIGH finding in the file "src/config/foo.py",
+  When the scanner evaluates whether the allowlist entry suppresses the finding,
+  Then the finding at "src/config/foo.py" IS suppressed,
+  Because the path segments match exactly.
+depends_on:
+  - GE-113c-3
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Covers exploit Path B — longer allowlist path shadowing shorter finding path. Test fixture: allowlist entry `ENTROPY_HIGH:src/config/foo.py:*` vs finding at root-level `foo.py`."
+  - "Corresponding test function: `test_longer_allowlist_not_shadows_shorter` in `unit_tests/commit_guardian/test_scan_secrets_suppression.py`."
+  - "The length guard `len(fp_parts) >= len(al_parts)` must reject this case before any segment comparison occurs."
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_longer_allowlist_not_shadows_shorter
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Path B: allowlist entry 'src/config/foo.py' (3 segments) does not suppress root-level 'foo.py' (1 segment)"
+  - name: test_exact_path_match_suppresses_ii
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Positive arm: allowlist entry 'src/config/foo.py' does suppress 'src/config/foo.py' (exact match)"
+origin_agent: business-analyst-v3
+created: 2026-08-11
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Exploit Path B from the bug report: when len(finding_path.parts) < len(allowlist_path.parts), the current code collapses the right side to fp_parts itself, making the comparison fp_parts != fp_parts → always False, which skips the guard entirely and falls through to suppress the finding. Root-level files containing real credentials can be silently ignored."
+change_target: code
+risk_surface: contract_boundary
