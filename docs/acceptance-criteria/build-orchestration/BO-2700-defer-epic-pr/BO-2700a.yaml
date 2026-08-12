@@ -1,0 +1,34 @@
+id: BO-2700a
+components:
+  - build_orchestration
+title: "build-feature's per-ticket driver defers the pull-request phase for epic-member tickets"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  As the build system, when driveTicketPhases runs for a ticket that is part of an
+  epic drive, I want it to exclude the pull-request phase from the dispatched
+  phases (so no PR is opened per ticket), while leaving standalone single-ticket
+  behavior unchanged — so an epic produces exactly one PR, opened by finalize.
+depends_on: [BO-2700]
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-2700a-1]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

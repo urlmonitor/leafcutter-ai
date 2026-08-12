@@ -1,0 +1,39 @@
+id: BO-2700
+components:
+  - build_orchestration
+title: "An epic build opens exactly one PR — at finalize, not per ticket mid-drive"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  When /build-feature drives an epic, it must build and commit each ticket on the
+  feature branch and stop there — it must NOT open a pull request mid-drive. The
+  single epic-level PR is opened once, by finalize-feature, after the epic is built.
+
+  Surfaced during the BO-2600 drive: the per-ticket phase driver ran the
+  pull-request phase for an epic-member ticket and opened PR #409 to main in the
+  middle of the build (and self-signed tickets), duplicating finalize's job. This
+  regressed from the pre-ADR-006 ticket-supervisor close-out, which signed off the
+  pull-request phase for epic members without running it ("one PR per epic").
+depends_on: []
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-2700a]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

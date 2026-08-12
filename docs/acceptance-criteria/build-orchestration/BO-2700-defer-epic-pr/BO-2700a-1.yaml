@@ -1,0 +1,81 @@
+id: BO-2700a-1
+components:
+  - build_orchestration
+title: "driveTicketPhases takes isEpicMember and drops pull-request from dispatch when true; epic call site passes true"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given driveTicketPhases in templates/workflows-js/build-feature.js,
+  And a new second parameter isEpicMember defaulting to false,
+  When driveTicketPhases runs with isEpicMember=true,
+  Then the pull-request phase is removed from the needed phases it dispatches
+    (no PR is opened for that ticket), while the commit phase is retained,
+  And the epic batch call site invokes driveTicketPhases(worktreeTicketPath, true),
+  And the standalone single-ticket call site invokes driveTicketPhases with the
+    default (isEpicMember=false), so single-ticket behavior — pull-request still
+    runs — is unchanged.
+depends_on: [BO-2700a]
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    build-feature.js is a Workflow-engine script (uses injected globals agent()/parallel());
+    it is NOT importable as a plain module, so the unit layer cannot execute driveTicketPhases
+    behaviorally. Coverage is therefore a STRUCTURAL test (the same pattern as
+    unit_tests/workflows/test_fast_lane_ship_structure.py) that parses the JS source and asserts:
+    (a) driveTicketPhases's signature includes the isEpicMember parameter; (b) the epic batch
+    call site passes true (driveTicketPhases(worktreeTicketPath, true)); (c) a guard filters
+    p.agent !== "pull-request" under isEpicMember; (d) the single-ticket call site does NOT pass
+    true. This structural coverage is paired with an independent Fable-5 runtime-path review and
+    `node --check` rather than a behavioral harness, per the CLAUDE.md workflow-AC caveat.
+    The twin build-ticket.js (single-ticket driver) is intentionally out of scope — whether a
+    standalone /build-ticket should also defer its PR to finalize is a separate decision.
+test_spec:
+  - name: test_drive_ticket_phases_has_is_epic_member_param
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    description: "driveTicketPhases signature includes the isEpicMember parameter"
+  - name: test_epic_call_site_passes_is_epic_member_true
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    description: "The epic batch call site invokes driveTicketPhases(worktreeTicketPath, true)"
+  - name: test_epic_member_filters_pull_request
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    description: "An isEpicMember guard removes the pull-request phase from the dispatched needed phases"
+  - name: test_single_ticket_call_site_does_not_defer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    description: "The standalone single-ticket call site does not pass isEpicMember=true (single-ticket PR behavior unchanged)"
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_bo_2700_defer_epic_pr.py
+implemented_by:
+- templates/workflows-js/build-feature.js
+change_target: pipeline
+risk_surface: internal

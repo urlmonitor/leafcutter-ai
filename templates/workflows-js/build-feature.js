@@ -393,7 +393,7 @@ function toWorktreePath(resolvedPath, worktreePath) {
 // @returns {object} — { status, ticket_path, title, completed_phases, skipped_phases, message }
 // ---------------------------------------------------------------------------
 
-async function driveTicketPhases(worktreeTicketPath) {
+async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   // -------------------------------------------------------------------------
   // Step 1 — Planner: read ticket frontmatter → ordered_phases JSON
   // -------------------------------------------------------------------------
@@ -421,9 +421,19 @@ async function driveTicketPhases(worktreeTicketPath) {
   // -------------------------------------------------------------------------
   // Step 2 — Filter and sort needed phases
   // -------------------------------------------------------------------------
-  const neededPhases = sortByCanonicalPriority(
+  let neededPhases = sortByCanonicalPriority(
     orderedPhases.filter((p) => p.status === "needed")
   );
+
+  // One PR per epic (building-epics SKILL §1.5): for an epic-member ticket the
+  // single epic-level PR is opened by finalize-feature, NOT per ticket. Drop the
+  // pull-request phase from this ticket's dispatch so the build never opens a PR
+  // mid-drive. The `commit` phase intentionally stays (its pre-commit hooks must
+  // fire per ticket). For a standalone ticket (isEpicMember=false) behavior is
+  // unchanged — pull-request still runs.
+  if (isEpicMember) {
+    neededPhases = neededPhases.filter((p) => p.agent !== "pull-request");
+  }
 
   if (neededPhases.length === 0) {
     return {
@@ -675,7 +685,9 @@ if (target_type === "epic") {
           // Drive each ticket through its needed phases using the flattened
           // per-phase driver (driveTicketPhases) so each phase runs under its
           // own agent template. No ticket-supervisor is dispatched here.
-          const result = await driveTicketPhases(worktreeTicketPath);
+          // isEpicMember=true → the per-ticket pull-request phase is deferred;
+          // finalize-feature opens the single epic-level PR.
+          const result = await driveTicketPhases(worktreeTicketPath, true);
           return {
             ticket_path: ticket.path,
             status: result && result.status ? result.status : "ok",
