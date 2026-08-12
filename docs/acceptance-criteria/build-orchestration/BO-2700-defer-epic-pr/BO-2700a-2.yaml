@@ -1,0 +1,62 @@
+id: BO-2700a-2
+components:
+  - build_orchestration
+title: "selectDispatchPhases retains the commit phase and every non-PR phase when isEpicMember is true"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the pure helper selectDispatchPhases(orderedPhases, isEpicMember) exported
+    from templates/workflows-js/build-feature.js,
+  And orderedPhases is the list of per-ticket phase objects
+    [{agent: "test-writer"}, {agent: "python-coder"}, {agent: "commit"}, {agent: "pull-request"}],
+  When selectDispatchPhases(orderedPhases, true) is executed,
+  Then the returned list contains the phase whose agent equals "commit",
+  And every phase in orderedPhases whose agent is not "pull-request" is present in
+    the returned list, in the same relative order as in orderedPhases.
+notes: |
+  This is the retention counterpart to BO-2700a-1: deferring the epic PR must NOT
+  suppress the per-ticket commit phase, because the commit is what fires the
+  pre-commit hooks for that ticket. A regression that dropped more than the
+  pull-request phase (e.g. also removed commit) would pass BO-2700a-1 but fail
+  this AC, so the two are specified as distinct behaviors.
+  Testability: behavioral, not grep-only — a test EXECUTES selectDispatchPhases
+  (e.g. via `node`) with the concrete orderedPhases above and asserts commit and
+  the other non-PR phases survive in order. (build-feature.js is a Workflow-engine
+  script and is not importable, but selectDispatchPhases is a pure data->data
+  helper and is directly executable.)
+depends_on: [BO-2700a]
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    Retention counterpart to BO-2700a-1: selectDispatchPhases must not drop the
+    commit phase or any non-PR phase when isEpicMember=true. Execute via `node`
+    eval harness; assert commit phase present and element count equals input minus one.
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_bo_2700_defer_epic_pr.py
+implemented_by:
+- templates/workflows-js/build-feature.js
+change_target: pipeline
+risk_surface: internal

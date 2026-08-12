@@ -1,7 +1,7 @@
 id: BO-2700a-1
 components:
   - build_orchestration
-title: "driveTicketPhases takes isEpicMember and drops pull-request from dispatch when true; epic call site passes true"
+title: "selectDispatchPhases removes the pull-request phase when isEpicMember is true"
 component: build-orchestration
 level: L2
 status: active
@@ -11,15 +11,24 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given driveTicketPhases in templates/workflows-js/build-feature.js,
-  And a new second parameter isEpicMember defaulting to false,
-  When driveTicketPhases runs with isEpicMember=true,
-  Then the pull-request phase is removed from the needed phases it dispatches
-    (no PR is opened for that ticket), while the commit phase is retained,
-  And the epic batch call site invokes driveTicketPhases(worktreeTicketPath, true),
-  And the standalone single-ticket call site invokes driveTicketPhases with the
-    default (isEpicMember=false), so single-ticket behavior — pull-request still
-    runs — is unchanged.
+  Given the pure helper selectDispatchPhases(orderedPhases, isEpicMember) exported
+    from templates/workflows-js/build-feature.js,
+  And orderedPhases is the list of per-ticket phase objects
+    [{agent: "test-writer"}, {agent: "python-coder"}, {agent: "commit"}, {agent: "pull-request"}],
+  When selectDispatchPhases(orderedPhases, true) is executed,
+  Then the returned list contains no phase whose agent equals "pull-request",
+  And the returned list has exactly one fewer element than orderedPhases (the
+    pull-request phase is the only phase removed).
+notes: |
+  Testability: build-feature.js is a Workflow-engine script that uses injected
+  globals (agent()/parallel()) and is not importable as a plain module, so the
+  per-ticket driver itself cannot be executed in a unit test. The filtering
+  decision, however, is extracted into the PURE helper selectDispatchPhases,
+  which takes plain data (orderedPhases, isEpicMember) and returns plain data.
+  This AC is behavioral, not grep-only: a test EXECUTES selectDispatchPhases
+  (e.g. via `node`) with the concrete orderedPhases above and asserts the
+  returned list. The pre-commit hooks that run during the commit phase are the
+  reason pull-request — not commit — is the phase deferred for epic members.
 depends_on: [BO-2700a]
 doc_links:
   - path: templates/workflows-js/build-feature.js
@@ -37,43 +46,18 @@ it_requirements:
     - python-coder
   post_write_commands: []
   notes: |
-    build-feature.js is a Workflow-engine script (uses injected globals agent()/parallel());
-    it is NOT importable as a plain module, so the unit layer cannot execute driveTicketPhases
-    behaviorally. Coverage is therefore a STRUCTURAL test (the same pattern as
-    unit_tests/workflows/test_fast_lane_ship_structure.py) that parses the JS source and asserts:
-    (a) driveTicketPhases's signature includes the isEpicMember parameter; (b) the epic batch
-    call site passes true (driveTicketPhases(worktreeTicketPath, true)); (c) a guard filters
-    p.agent !== "pull-request" under isEpicMember; (d) the single-ticket call site does NOT pass
-    true. This structural coverage is paired with an independent Fable-5 runtime-path review and
-    `node --check` rather than a behavioral harness, per the CLAUDE.md workflow-AC caveat.
-    The twin build-ticket.js (single-ticket driver) is intentionally out of scope — whether a
-    standalone /build-ticket should also defer its PR to finalize is a separate decision.
-test_spec:
-  - name: test_drive_ticket_phases_has_is_epic_member_param
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: unit
-    description: "driveTicketPhases signature includes the isEpicMember parameter"
-  - name: test_epic_call_site_passes_is_epic_member_true
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: unit
-    description: "The epic batch call site invokes driveTicketPhases(worktreeTicketPath, true)"
-  - name: test_epic_member_filters_pull_request
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: unit
-    description: "An isEpicMember guard removes the pull-request phase from the dispatched needed phases"
-  - name: test_single_ticket_call_site_does_not_defer
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: unit
-    description: "The standalone single-ticket call site does not pass isEpicMember=true (single-ticket PR behavior unchanged)"
-origin_agent: BrainCandy
+    The pure helper selectDispatchPhases(orderedPhases, isEpicMember) is extracted
+    from driveTicketPhases in build-feature.js. Because build-feature.js uses injected
+    globals (agent()/parallel()), it cannot be imported as a plain module; however,
+    selectDispatchPhases is a pure data->data function and can be invoked directly via
+    `node` with a thin eval harness. Behavioral coverage: execute
+    selectDispatchPhases(orderedPhases, true) and assert the pull-request phase is absent.
+origin_agent: business-analyst-v3
 created: 2026-08-12
-amended_by: []
+amended_by: [business-analyst-v3]
 superseded_by: null
 covered_by:
+- BO-2700a-1-i
 - unit_tests/workflows/test_bo_2700_defer_epic_pr.py
 implemented_by:
 - templates/workflows-js/build-feature.js

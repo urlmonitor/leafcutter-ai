@@ -1,0 +1,62 @@
+id: BO-2700a-3
+components:
+  - build_orchestration
+title: "selectDispatchPhases preserves all phases including pull-request when isEpicMember is false (single-ticket backward compatible)"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the pure helper selectDispatchPhases(orderedPhases, isEpicMember) exported
+    from templates/workflows-js/build-feature.js,
+  And orderedPhases is the list of per-ticket phase objects
+    [{agent: "test-writer"}, {agent: "python-coder"}, {agent: "commit"}, {agent: "pull-request"}],
+  When selectDispatchPhases(orderedPhases, false) is executed,
+  Then the returned list contains the phase whose agent equals "pull-request",
+  And the returned list has the same phases in the same order as orderedPhases
+    (no phase is removed and the element count is unchanged),
+  And executing selectDispatchPhases(orderedPhases) with the second argument
+    omitted returns the same list as selectDispatchPhases(orderedPhases, false)
+    (isEpicMember defaults to false).
+notes: |
+  This is the backward-compatibility guarantee: a standalone single-ticket build
+  is not an epic member, so its dispatch set is unchanged and it still opens its
+  own pull request. Testability: behavioral, not grep-only — a test EXECUTES
+  selectDispatchPhases (e.g. via `node`) with the concrete orderedPhases above,
+  once passing false and once omitting the argument, and asserts pull-request
+  survives in both and the returned lists match.
+depends_on: [BO-2700a]
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    Backward-compatibility guarantee: selectDispatchPhases(orderedPhases, false)
+    and selectDispatchPhases(orderedPhases) (no second argument) must both return
+    orderedPhases unchanged including the pull-request phase. Execute both calls
+    via `node` eval harness; assert pull-request survives and returned lists match.
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_bo_2700_defer_epic_pr.py
+implemented_by:
+- templates/workflows-js/build-feature.js
+change_target: pipeline
+risk_surface: internal

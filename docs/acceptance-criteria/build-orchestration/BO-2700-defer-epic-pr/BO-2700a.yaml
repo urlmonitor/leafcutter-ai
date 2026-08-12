@@ -28,7 +28,7 @@ origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []
 superseded_by: null
-covered_by: [BO-2700a-1]
+covered_by: [BO-2700a-1, BO-2700a-2, BO-2700a-3, BO-2700a-4]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
