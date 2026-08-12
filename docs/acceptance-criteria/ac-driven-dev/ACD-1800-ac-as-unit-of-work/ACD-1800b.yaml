@@ -34,9 +34,11 @@ covered_by:
   - ACD-1800b-2
   - ACD-1800b-3
   - ACD-1800b-4
+  - ACD-1800b-5
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+child_limit_override: 6
 documentation_triggers:
   - reference-doc
   - sequence-diagram
@@ -52,3 +54,7 @@ notes: |
   IT-PO enrichment (2026-08-12): ACD-1800b-1 was split into ACD-1800b-1a (python-coder,
   AC-store record side) + ACD-1800b-1b (llm-expert, signoff-skill produce side);
   covered_by updated to record both children (ACD-1800b-1 retained as superseded).
+
+  child_limit_override: 6 -- temporary waiver: ACD-1800b-1 is superseded (excluded from the
+  cap count), so active L2 children were 5; review gap ACD-1800b-5 (done-eligibility accepts
+  AC-side sign-offs, GAP 2b) takes the active count to 6 (default cap 5); remove after v2 lands.

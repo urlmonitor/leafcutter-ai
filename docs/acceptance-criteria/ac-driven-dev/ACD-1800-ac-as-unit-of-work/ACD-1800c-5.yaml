@@ -1,0 +1,63 @@
+id: ACD-1800c-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The sign-off parity gate accepts AC-side sign-offs and requires no body Sign-offs section on a thin ticket"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a thin (v2) grouping ticket that carries no "## Sign-offs" section in its
+    body but whose grouped AC records carry AC-side per-deliverable sign-offs,
+  When the ticket sign-off parity validator runs,
+  Then the validator does NOT require a body "## Sign-offs" section for that ticket,
+  And it accepts the AC-side per-deliverable sign-offs as the sign-off record,
+  And the ticket passes the parity check;
+  And given a legacy fat ticket that carries a body "## Sign-offs" section listing the
+    needed agents as signed off,
+  When the same validator runs,
+  Then that fat ticket still passes, its body sign-offs honoured during the
+    dual-record window.
+depends_on:
+  - ACD-1800c
+  - ACD-1800c-1
+  - ACD-1800b-1a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+it_requirements: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 2(a) from the independent v2 review. Canonical surface: the parity validator
+  templates/scripts/commit_guardian/check_ticket_signoff_parity.py (and its helper
+  _signoff_parity_checks.py). Placed under ACD-1800c because 1800c-1's it_requirements
+  already flag this exact gate parity concern ("the ticket sign-off parity gate must not
+  REQUIRE a ## Sign-offs section on a grouping ticket") and 1800c is "ticket carries no
+  sign-offs of its own". ACD-1800b moves per-deliverable sign-offs ONTO the AC (schema in
+  ACD-1800b-1a, hence depends_on) but nothing yet teaches the parity gate to accept AC-side
+  sign-offs during the dual-record window -- this closes that gap so a thin ticket is not
+  blocked for lacking a body ## Sign-offs section, while a legacy fat ticket's body sign-offs
+  are still honoured.
+  Per CLAUDE.md (gate/workflow ACs verify BEHAVIORALLY): the covering check MUST EXECUTE the
+  parity gate against a real thin ticket (AC-side sign-offs, no body ## Sign-offs) and a real
+  legacy fat ticket and assert both pass -- never grep-only. IT-PO to add it_requirements +
+  surface wiring.

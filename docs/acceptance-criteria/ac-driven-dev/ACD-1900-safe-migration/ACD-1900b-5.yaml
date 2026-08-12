@@ -1,0 +1,63 @@
+id: ACD-1900b-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The fulfillment gate resolves coverage by dual-read, so a thin ticket is always verified"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a thin ticket whose frontmatter carries no ac_traceability key but whose
+    source_ac resolves to a store AC whose deliverable checklist has at least one
+    unmet (unsigned) deliverable,
+  When the ac-fulfillment-gate runs its coverage-resolution step,
+  Then the gate does NOT take the "ac_traceability absent -> ok" skip path,
+  And the gate resolves the ticket's AC coverage from source_ac (and the resolved
+    AC's deliverable checklist / store fields) instead,
+  And the gate verifies the resolved AC and returns a blocker naming the unmet
+    deliverable,
+  And the gate never returns ok for that thin ticket while a resolved deliverable
+    is unmet;
+  And given the same thin ticket whose resolved AC deliverables are all signed off,
+  When the gate runs,
+  Then the gate returns ok.
+depends_on:
+  - ACD-1900b
+  - ACD-1900b-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+it_requirements: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  GAP 1(a) from the independent v2 review. Canonical surface: the agent-template prose
+  templates/agents/ac-fulfillment-gate.md, Step 1 ("ac_traceability absent -> sign off
+  status: ok immediately"). Today that skip path returns ok whenever ac_traceability is
+  absent; a thin ticket carries source_ac (not necessarily ac_traceability), so the gate
+  hits the skip path and verifies NOTHING = phantom-green. This AC makes Step 1 DUAL-READ:
+  accept ac_traceability OR resolve source_ac / the resolved AC's deliverable checklist,
+  so a thin ticket is actually verified. It reuses the shared dual-read spec resolver from
+  ACD-1900b-1 (hence depends_on). Read-side foundation only (phase_acbuild_1_foundation);
+  the eventual "absent -> blocker" enforce-time flip is the separate ACD-1900c-6 (GAP 1b).
+  Per CLAUDE.md (gate/workflow ACs verify BEHAVIORALLY): the covering check MUST run the gate
+  against a real thin ticket whose resolved AC criteria are unmet and assert it BLOCKS (not
+  ok) -- never grep-only. IT-PO to add it_requirements + surface wiring.

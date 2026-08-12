@@ -17,7 +17,7 @@ criteria: |
   And the ticket body does NOT restate the delivers_to or expects_from contract values,
   And the ticket carries only a lightweight workflow checklist plus the source_ac reference,
   And no spec field (criteria, it_requirements, contracts) appears in both the ticket and the store.
-depends_on: [ACD-1600a]
+depends_on: [ACD-1600a, ACD-1900b-5]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -59,3 +59,9 @@ test_spec:
     framework: unittest
     type: unit
     description: "The ticket carries the source_ac pointer plus a workflow checklist and no copied spec field (single-source invariant holds)."
+notes: |
+  Ordering dependency added (2026-08-12, review GAP 1): depends_on ACD-1900b-5 so the
+  fulfillment-gate dual-read (accepts source_ac coverage, not just ac_traceability) is in place
+  BEFORE this AC drops the ac_traceability-bearing spec copy from the generated ticket. Without
+  that ordering, thinning the ticket first would send a thin ticket carrying only source_ac into
+  a gate that still skips ("absent ac_traceability -> ok") and verifies nothing = phantom-green.

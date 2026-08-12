@@ -33,6 +33,7 @@ covered_by:
   - ACD-1800c-2
   - ACD-1800c-3
   - ACD-1800c-4
+  - ACD-1800c-5
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
@@ -49,3 +50,6 @@ notes: |
   the amend/supersede step. Complements ACD-1600a (thin ticket references its AC):
   ACD-1600a says the ticket does not COPY the spec; this L1 says the ticket is not
   the UNIT OF WORK at all -- it is only a grouping of valuable features.
+  Review gap (2026-08-12): added ACD-1800c-5 (the sign-off parity gate accepts AC-side
+  sign-offs and requires no body ## Sign-offs section on a thin grouping ticket, GAP 2a) --
+  the exact gate-parity concern already flagged in ACD-1800c-1's it_requirements.
