@@ -94,19 +94,22 @@ trap cleanup EXIT
 # Pattern: assign inside an `if` condition so that curl's non-zero exit (7 =
 # connection refused) does NOT trigger `set -e`, yet the stdout (always "000"
 # on failure, a real HTTP code on success) still lands in HTTP_STATUS.
+# Give the server a moment to bind before probing.
+sleep 5
+
+# Probe the light home route until it returns 200 (a true readiness signal,
+# distinct from the toggle assertions below). Requiring 200 avoids false-positive
+# readiness from a spurious/partial response during startup.
+READY_URL="http://localhost:${PORT}/"
 echo "Waiting for server to be ready (timeout: ${TIMEOUT}s)..."
 ELAPSED=0
 READY=false
-HTTP_STATUS="000"
 while [ "${ELAPSED}" -lt "${TIMEOUT}" ]; do
-  if HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-      "${ENDPOINT}?mock=1" 2>/dev/null); then
-    # curl exited 0 — an HTTP response was received (any status code).
+  READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${READY_URL}" 2>/dev/null || echo "000")
+  if [ "${READY_STATUS}" = "200" ]; then
     READY=true
     break
   fi
-  # curl exited non-zero (connection refused, etc.) — not ready yet.
-  HTTP_STATUS="000"
   sleep 2
   ELAPSED=$(( ELAPSED + 2 ))
 done

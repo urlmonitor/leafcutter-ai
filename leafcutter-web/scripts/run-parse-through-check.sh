@@ -46,13 +46,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Wait for the server to be ready (retry every 2 seconds, up to $TIMEOUT seconds).
+# Give the server a moment to bind before probing.
+sleep 5
+
+# Wait for the server to be ready — probe the light home route until it returns
+# 200 (a readiness signal distinct from the drift-guard assertion below). A
+# spurious/partial response is not 200, so this avoids false-positive readiness.
+READY_URL="http://localhost:${PORT}/"
 echo "Waiting for server to be ready (timeout: ${TIMEOUT}s)..."
 ELAPSED=0
 READY=false
 while [ "${ELAPSED}" -lt "${TIMEOUT}" ]; do
-  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${ENDPOINT}" 2>/dev/null || echo "000")
-  if [ "${HTTP_STATUS}" != "000" ]; then
+  READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${READY_URL}" 2>/dev/null || echo "000")
+  if [ "${READY_STATUS}" = "200" ]; then
     READY=true
     break
   fi
@@ -72,13 +78,9 @@ echo "Server ready after ~${ELAPSED}s."
 echo ""
 
 # Call the drift-guard endpoint and capture the response body + HTTP status.
-HTTP_CODE=$(curl -s -o /tmp/drift-guard-response.json -w "%{http_code}" "${ENDPOINT}" 2>/dev/null)
-CURL_EXIT=$?
-
-if [ "${CURL_EXIT}" -ne 0 ]; then
-  echo "ERROR: curl failed (exit ${CURL_EXIT})"
-  exit 1
-fi
+# Guard against set -e: on a connection failure curl exits non-zero, so fall
+# back to "000" and let the HTTP-code check below report it (never abort here).
+HTTP_CODE=$(curl -s -o /tmp/drift-guard-response.json -w "%{http_code}" "${ENDPOINT}" 2>/dev/null || echo "000")
 
 echo "HTTP ${HTTP_CODE} — response:"
 # Pretty-print if python3 is available; fall back to raw.
