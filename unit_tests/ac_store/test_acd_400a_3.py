@@ -388,3 +388,223 @@ def test_genuine_non_ancestor_dep_still_blocks(
     assert "X-100a" not in blockers, (
         f"The excluded ancestor X-100a must NOT be named as a blocker. blocked_by={blockers!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# ACD-400a-3-i — no transitive ancestor at ANY depth gates a leaf's readiness
+# ---------------------------------------------------------------------------
+
+
+def _make_three_level_fixture(ac_root: Path) -> None:
+    """Write an L1 -> L2 -> L3 lineage where only the L3 is a leaf.
+
+    Y-200a   (L1 composite, not done) -> Y-200a-1 (L2 composite, not done,
+    depends_on [Y-200a]) -> Y-200a-1-i (L3 leaf, approved/active/todo,
+    depends_on [Y-200a-1]). Neither the parent L2 nor the grandparent L1 must
+    gate the L3 leaf.
+    """
+    _write_ac(
+        ac_root, "Y-200a", level="L1", work_status="todo", status="active",
+        readiness="reviewed", covered_by=["Y-200a-1"], depends_on=[],
+    )
+    _write_ac(
+        ac_root, "Y-200a-1", level="L2", work_status="todo", status="active",
+        readiness="approved", covered_by=["Y-200a-1-i"], depends_on=["Y-200a"],
+    )
+    _write_ac(
+        ac_root, "Y-200a-1-i", level="L3", work_status="todo", status="active",
+        readiness="approved", depends_on=["Y-200a-1"],
+    )
+
+
+def _scan_json(
+    ac_root: Path, capsys: pytest.CaptureFixture[str]
+) -> dict[str, Any]:
+    """Run the scanner (leaf+todo, json) over *ac_root* and return parsed output."""
+    exit_code = scan_main(
+        ["--ac-root", str(ac_root), "--json", "--level", "leaf", "--work-status", "todo"]
+    )
+    assert exit_code == 0, f"scan_main exited with non-zero code: {exit_code}"
+    return json.loads(capsys.readouterr().out)
+
+
+def test_grandparent_ancestor_does_not_block_leaf(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-3-i
+    """An L3 leaf whose ancestors (parent L2, grandparent L1) are all not-done is ready."""
+    _make_three_level_fixture(tmp_path)
+    output = _scan_json(tmp_path, capsys)
+    ready_ids = [e["ac_id"] for e in output.get("ready", [])]
+    blocked_ids = [e["ac_id"] for e in output.get("blocked", [])]
+    assert "Y-200a-1-i" in ready_ids, (
+        "L3 leaf must be ready — no ancestor at any depth may gate it. "
+        f"ready={ready_ids!r}, blocked={blocked_ids!r}"
+    )
+    assert "Y-200a-1-i" not in blocked_ids, (
+        f"L3 leaf must NOT be blocked. blocked={blocked_ids!r}"
+    )
+
+
+def test_no_transitive_ancestor_named_as_blocker(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-3-i
+    """Neither the parent L2 nor the grandparent L1 may be named as a blocker."""
+    _make_three_level_fixture(tmp_path)
+    output = _scan_json(tmp_path, capsys)
+    blocked_by = {
+        e["ac_id"]: e.get("blocked_by", []) for e in output.get("blocked", [])
+    }.get("Y-200a-1-i", [])
+    assert "Y-200a-1" not in blocked_by, (
+        f"Parent L2 must not be a blocker of the L3 leaf. blocked_by={blocked_by!r}"
+    )
+    assert "Y-200a" not in blocked_by, (
+        f"Grandparent L1 must not be a blocker of the L3 leaf. blocked_by={blocked_by!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# ACD-400a-3-ii — a genuine non-ancestor dep still gates readiness on done
+# ---------------------------------------------------------------------------
+
+
+def _make_mixed_dep_fixture(ac_root: Path, *, cross_feature_done: bool) -> None:
+    """Z-300a-1 depends on its own parent (ancestor) + a cross-feature L2.
+
+    Z-300a  (L1 composite, not done) — ancestor of Z-300a-1.
+    W-400b-2 (L2, different feature) — work_status done|todo per *cross_feature_done*.
+    Z-300a-1 (L2 leaf, approved/active/todo) depends_on [Z-300a, W-400b-2].
+    """
+    _write_ac(
+        ac_root, "Z-300a", level="L1", work_status="todo", status="active",
+        readiness="reviewed", covered_by=["Z-300a-1"], depends_on=[],
+    )
+    _write_ac(
+        ac_root, "W-400b-2", level="L2",
+        work_status="done" if cross_feature_done else "todo",
+        status="active", readiness="approved", depends_on=[],
+    )
+    _write_ac(
+        ac_root, "Z-300a-1", level="L2", work_status="todo", status="active",
+        readiness="approved", depends_on=["Z-300a", "W-400b-2"],
+    )
+
+
+def test_satisfied_non_ancestor_dep_clears_to_ready(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-3-ii
+    """Ancestor excluded + satisfied (done) cross-feature dep -> leaf is ready."""
+    _make_mixed_dep_fixture(tmp_path, cross_feature_done=True)
+    output = _scan_json(tmp_path, capsys)
+    ready_ids = [e["ac_id"] for e in output.get("ready", [])]
+    blocked_ids = [e["ac_id"] for e in output.get("blocked", [])]
+    assert "Z-300a-1" in ready_ids, (
+        "Ancestor excluded and cross-feature dep done -> leaf must be ready. "
+        f"ready={ready_ids!r}, blocked={blocked_ids!r}"
+    )
+    assert "Z-300a-1" not in blocked_ids, f"blocked={blocked_ids!r}"
+
+
+def test_unsatisfied_non_ancestor_dep_blocks_naming_real_blocker(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-3-ii
+    """Unsatisfied (todo) cross-feature dep gates; blocker named is the real dep, not the ancestor."""
+    _make_mixed_dep_fixture(tmp_path, cross_feature_done=False)
+    output = _scan_json(tmp_path, capsys)
+    ready_ids = [e["ac_id"] for e in output.get("ready", [])]
+    blocked_by = {
+        e["ac_id"]: e.get("blocked_by", []) for e in output.get("blocked", [])
+    }
+    assert "Z-300a-1" not in ready_ids, f"ready={ready_ids!r}"
+    assert "Z-300a-1" in blocked_by, f"blocked={list(blocked_by)!r}"
+    blockers = blocked_by["Z-300a-1"]
+    assert "W-400b-2" in blockers, f"real blocker must be named: {blockers!r}"
+    assert "Z-300a" not in blockers, f"ancestor must NOT be named: {blockers!r}"
+
+
+def test_done_to_ready_todo_to_blocked_transition(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-3-ii
+    """Flipping the cross-feature dep done<->todo flips leaf ready<->blocked; ancestor never blocks."""
+    # Run 1 — cross-feature dep done -> ready.
+    _make_mixed_dep_fixture(tmp_path, cross_feature_done=True)
+    out_done = _scan_json(tmp_path, capsys)
+    ready_done = [e["ac_id"] for e in out_done.get("ready", [])]
+    blocked_by_done = {
+        e["ac_id"]: e.get("blocked_by", []) for e in out_done.get("blocked", [])
+    }
+    assert "Z-300a-1" in ready_done, f"done-run ready={ready_done!r}"
+    assert "Z-300a" not in blocked_by_done.get("Z-300a-1", []), "ancestor blocked in done-run"
+
+    # Run 2 — same store, cross-feature dep now todo -> blocked.
+    _make_mixed_dep_fixture(tmp_path, cross_feature_done=False)
+    out_todo = _scan_json(tmp_path, capsys)
+    ready_todo = [e["ac_id"] for e in out_todo.get("ready", [])]
+    blocked_by_todo = {
+        e["ac_id"]: e.get("blocked_by", []) for e in out_todo.get("blocked", [])
+    }
+    assert "Z-300a-1" not in ready_todo, f"todo-run ready={ready_todo!r}"
+    assert "W-400b-2" in blocked_by_todo.get("Z-300a-1", []), "real blocker missing in todo-run"
+    assert "Z-300a" not in blocked_by_todo.get("Z-300a-1", []), "ancestor blocked in todo-run"
+
+
+# ---------------------------------------------------------------------------
+# ACD-400a-4 — a freshly-authored approved tree yields a non-empty ready list
+# ---------------------------------------------------------------------------
+
+
+def _make_fresh_tree_fixture(ac_root: Path) -> list[str]:
+    """L1 composite + three approved/active/todo leaves each depending only on their parent.
+
+    Returns the list of the three leaf ids.
+    """
+    _write_ac(
+        ac_root, "P-500a", level="L1", work_status="todo", status="active",
+        readiness="reviewed", covered_by=["P-500a-1", "P-500a-2", "P-500a-3"],
+        depends_on=[],
+    )
+    leaves = ["P-500a-1", "P-500a-2", "P-500a-3"]
+    for leaf in leaves:
+        _write_ac(
+            ac_root, leaf, level="L2", work_status="todo", status="active",
+            readiness="approved", depends_on=["P-500a"],
+        )
+    return leaves
+
+
+def test_freshly_authored_tree_yields_non_empty_ready_list(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-4
+    """A normally-authored backlog (parent-only hierarchy links) produces ready work."""
+    leaves = _make_fresh_tree_fixture(tmp_path)
+    output = _scan_json(tmp_path, capsys)
+    ready_ids = [e["ac_id"] for e in output.get("ready", [])]
+    assert ready_ids, "ready list must be non-empty for a freshly-authored approved tree"
+    for leaf in leaves:
+        assert leaf in ready_ids, f"{leaf} must be ready. ready={ready_ids!r}"
+
+
+def test_freshly_authored_tree_no_leaf_self_blocked(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # covers: ACD-400a-4
+    """No leaf in a freshly-authored tree is self-blocked by its parent hierarchy link."""
+    leaves = _make_fresh_tree_fixture(tmp_path)
+    output = _scan_json(tmp_path, capsys)
+    blocked_ids = [e["ac_id"] for e in output.get("blocked", [])]
+    for leaf in leaves:
+        assert leaf not in blocked_ids, (
+            f"{leaf} must NOT be self-blocked. blocked={blocked_ids!r}"
+        )
