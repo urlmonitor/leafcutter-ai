@@ -1,0 +1,41 @@
+id: ACD-400a-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A freshly-authored tree of approved todo leaves yields a non-empty ready list end to end"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a freshly-authored AC tree exactly as the authoring agents emit it:
+    an L1 parent (composite, work_status not done) and three approved, active,
+    todo leaf ACs (L2/L3) that each carry only their immediate parent's id in
+    their depends_on list (the hierarchy-linking convention) and reference no
+    non-ancestor dependency,
+  When that tree is fed to the scanner with leaf and todo filters,
+  Then the ready list is non-empty and contains all three leaf ACs,
+  And the blocked list contains none of the three leaf ACs
+    (parent-only hierarchy links never self-block a freshly-authored backlog).
+depends_on: [ACD-400a, ACD-400a-3]
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "End-to-end guarantee that a normally-authored backlog produces buildable ready work"
+expects_from:
+  ac_id: ACD-400a-3
+  contract: "Ancestor-aware classification that excludes hierarchy links from readiness gating"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

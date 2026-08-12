@@ -1,0 +1,40 @@
+id: ACD-400a-3-ii
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A genuine non-ancestor dependency still gates readiness on work_status done"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains an approved, active, todo L2 "Z-300a-1"
+    with depends_on: [Z-300a, W-400b-2], where "Z-300a" is its own parent L1
+    (a composite) and "W-400b-2" is an L2 belonging to a DIFFERENT feature
+    (not an ancestor of "Z-300a-1"),
+  When the scanner is invoked with leaf and todo filters and "W-400b-2"
+    has work_status: done,
+  Then "Z-300a-1" appears in the ready list and not in the blocked list
+    (the ancestor is ignored and the satisfied cross-feature dependency clears),
+  And given instead "W-400b-2" has work_status: todo,
+  When the scanner is invoked with the same filters,
+  Then "Z-300a-1" appears in the blocked list and not in the ready list,
+  And the blocked entry for "Z-300a-1" names "W-400b-2" as its blocker
+    and does NOT name the ancestor "Z-300a".
+depends_on: [ACD-400a-3]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

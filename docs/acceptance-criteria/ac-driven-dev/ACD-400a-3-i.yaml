@@ -1,0 +1,37 @@
+id: ACD-400a-3-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "No transitive ancestor at any depth gates a leaf AC's readiness"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains a three-level lineage:
+    - L1 "Y-200a" (composite, work_status not done),
+    - L2 "Y-200a-1" with depends_on: [Y-200a] (work_status: todo),
+    - L3 "Y-200a-1-i" with depends_on: [Y-200a-1] (approved, active, todo),
+  When the scanner is invoked with leaf and todo filters,
+  Then "Y-200a-1-i" appears in the ready list,
+  And "Y-200a-1-i" does NOT appear in the blocked list,
+  And no blocked entry names either "Y-200a-1" or "Y-200a" as a blocker of
+    "Y-200a-1-i" (neither the parent L2 nor the grandparent L1 gates the leaf,
+    at any ancestor depth).
+depends_on: [ACD-400a-3]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

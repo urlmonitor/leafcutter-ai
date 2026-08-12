@@ -1,0 +1,39 @@
+id: ACD-400a-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Scanner does not treat an AC's own ancestor as a build-order blocker"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains an approved, active, todo L2 AC "X-100a-1"
+    whose only depends_on entry is its own parent L1 "X-100a",
+  And "X-100a" is an L1 composite whose work_status is not done
+    (an L0/L1 parent is never built as a leaf, so it never reaches done),
+  When the scanner is invoked with leaf and todo filters,
+  Then "X-100a-1" appears in the ready list,
+  And "X-100a-1" does NOT appear in the blocked list,
+  And no blocked entry names "X-100a" as a blocker of "X-100a-1"
+    (an AC's own ancestor is excluded from the dependencies that gate readiness).
+depends_on: [ACD-400a]
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-400a-1
+  contract: "The leaf filtering and blocked-classification logic this behavior refines"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400a-3-i, ACD-400a-3-ii]
+implemented_by: []
+change_target: code
+risk_surface: internal
