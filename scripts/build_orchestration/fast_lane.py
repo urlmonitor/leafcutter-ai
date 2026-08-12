@@ -1,27 +1,34 @@
 """
 MODULE: scripts/build_orchestration/fast_lane.py
-GOAL: Batch selection and test-gate functions for the fast-lane build pipeline.
-BUSINESS CONTEXT: BO-2400a series — the fast-lane build loop selects a cohesive
+GOAL: Batch selection, test-gate, and AC lifecycle functions for the fast-lane
+    build pipeline.
+BUSINESS CONTEXT: BO-2400a/f series — the fast-lane build loop selects a cohesive
     batch of ready leaf ACs, verifies that their tests are red before the coder
-    runs, and verifies that all tests are green and fully covered before commit
-    staging.  Three deterministic, idempotent gate functions with no LLM calls
-    in the critical path.
+    runs, verifies that all tests are green and fully covered before commit
+    staging, and manages the AC work_status lifecycle: claim (todo->in_progress),
+    release (in_progress->todo on failure), and mark-done (in_progress->done on
+    success). Three deterministic, idempotent gate functions and five lifecycle
+    functions with no LLM calls in the critical path.
 ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
     semantics track the scanner exactly.  verify_red_baseline and
     verify_green_and_coverage reuse done_proof helpers and verify_done_eligible
-    to keep coverage semantics in sync with the done-proof gate.  All subprocess
-    and file I/O is wrapped inside the delegated helpers per the Error Handling
-    Policy (Rule 1).  The public functions themselves are pure orchestration with
-    no direct I/O — they carry no try/except (Rule 4).  A CLI entry point
-    (main()) wraps each function for subprocess-based pipeline invocation.
+    to keep coverage semantics in sync with the done-proof gate.  claim_build_set,
+    release_claim, filter_already_claimed, mark_done_built_acs, and
+    check_no_stale_todo perform status-only YAML mutations (work_status field only)
+    via _update_ac_work_status; all file I/O is wrapped per the Error Handling
+    Policy (Rule 1).  A CLI entry point (main()) wraps each function for
+    subprocess-based pipeline invocation.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
+
+import yaml
 
 # ---------------------------------------------------------------------------
 # Path wiring — make ac_store helpers importable without package install
@@ -51,6 +58,377 @@ from scan_ac_store import (  # noqa: E402
     _walk_ac_yamls,
     traverse_ac_tree,
 )
+from ac_parent_id import derive_parent_id  # noqa: E402
+
+_LOG = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle helpers (BO-2400f-7 through BO-2400f-10)
+# ---------------------------------------------------------------------------
+
+
+def _build_ac_id_to_path_index(ac_root: Path) -> dict[str, Path]:
+    """Scan *ac_root* once and return a mapping from AC id to YAML file path.
+
+    A single-pass scan so callers that process multiple ACs avoid repeated full
+    store walks.  Uses _load_ac for YAML parsing and error reporting; the
+    ``_path`` metadata injected by _load_ac is used to resolve the file path
+    rather than being forwarded to any re-dump.
+
+    Args:
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict mapping AC id strings to their on-disk :class:`pathlib.Path`
+        objects.  Returns ``{}`` when *ac_root* does not exist.
+    """
+    if not ac_root.exists():
+        return {}
+    index: dict[str, Path] = {}
+    for yaml_path in _walk_ac_yamls(ac_root):
+        record = _load_ac(yaml_path)
+        if record is not None:
+            ac_id = record.get("id")
+            if ac_id:
+                index[str(ac_id)] = yaml_path
+    return index
+
+
+def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
+    """Overwrite only the *work_status* field of an AC YAML file on disk.
+
+    Status-only change: reads the full YAML (via yaml.safe_load so no extra
+    metadata is injected), sets work_status to *new_status*, and writes back
+    with yaml.safe_dump so every other field is preserved unchanged.
+
+    Args:
+        yaml_path: Absolute path to the AC YAML file.
+        new_status: Target work_status value — ``"in_progress"``, ``"todo"``,
+            or ``"done"``.
+
+    Raises:
+        OSError: When the file cannot be read or written.
+    """
+    try:
+        with yaml_path.open(encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except OSError as exc:
+        _LOG.warning("_update_ac_work_status: cannot read %s: %s", yaml_path, exc)
+        raise
+    data["work_status"] = new_status
+    try:
+        with yaml_path.open("w", encoding="utf-8") as fh:
+            yaml.safe_dump(data, fh, allow_unicode=True)
+    except OSError as exc:
+        _LOG.warning("_update_ac_work_status: cannot write %s: %s", yaml_path, exc)
+        raise
+
+
+def claim_build_set(
+    ac_ids: list[str],
+    *,
+    ac_root: Path,
+) -> dict:
+    """Flip every AC in *ac_ids* whose work_status is todo to in_progress.
+
+    Status-only change — only the work_status field is modified in the AC YAML
+    store.  ACs already in_progress are reported via ``error`` but are not
+    double-counted.  Any I/O failure returns ``success=False`` so the caller
+    can halt before dispatching test-writer or coder (BO-2400f-7-i).
+
+    Args:
+        ac_ids: Ordered list of AC ids whose work_status to flip todo →
+            in_progress.
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict with keys:
+
+        ``claimed`` (list[str])
+            AC ids actually flipped todo → in_progress.
+
+        ``success`` (bool)
+            True when every target todo AC was claimed without error.
+
+        ``error`` (str | None)
+            Human-readable error when success is False; None on success.
+
+        ``named_acs`` (list[str])
+            All AC ids the call attempted to claim (always equals *ac_ids*).
+    """
+    id_to_path = _build_ac_id_to_path_index(ac_root)
+    claimed: list[str] = []
+    named_acs: list[str] = list(ac_ids)
+    error: str | None = None
+
+    for ac_id in ac_ids:
+        yaml_path = id_to_path.get(ac_id)
+        if yaml_path is None:
+            error = (
+                f"AC {ac_id!r} not found in store at {ac_root}; "
+                f"named_acs: {named_acs}"
+            )
+            return {
+                "claimed": claimed,
+                "success": False,
+                "error": error,
+                "named_acs": named_acs,
+            }
+
+        try:
+            with yaml_path.open(encoding="utf-8") as fh:
+                record = yaml.safe_load(fh)
+        except OSError as exc:
+            _LOG.warning("claim_build_set: cannot read %s: %s", yaml_path, exc)
+            error = f"Cannot read {ac_id!r} from {yaml_path}: {exc}"
+            return {
+                "claimed": claimed,
+                "success": False,
+                "error": error,
+                "named_acs": named_acs,
+            }
+
+        current_status = record.get("work_status", "")
+        if current_status == "in_progress":
+            # Already claimed by another run — note but do not double-flip.
+            if error is None:
+                error = (
+                    f"AC {ac_id!r} is already in_progress (claimed by "
+                    f"another run); named_acs: {named_acs}"
+                )
+            continue
+
+        try:
+            _update_ac_work_status(yaml_path, "in_progress")
+        except OSError as exc:
+            error = f"Failed to claim {ac_id!r}: {exc}; named_acs: {named_acs}"
+            return {
+                "claimed": claimed,
+                "success": False,
+                "error": error,
+                "named_acs": named_acs,
+            }
+
+        claimed.append(ac_id)
+
+    success = error is None
+    return {
+        "claimed": claimed,
+        "success": success,
+        "error": error,
+        "named_acs": named_acs,
+    }
+
+
+def release_claim(
+    claimed_ids: list[str],
+    done_ids: list[str],
+    *,
+    ac_root: Path,
+) -> dict:
+    """Release claimed-but-not-done ACs back to work_status: todo.
+
+    Called on a non-success run exit so no AC is permanently stuck in
+    in_progress blocking future runs (BO-2400f-10).  Status-only change —
+    only work_status is modified.
+
+    Args:
+        claimed_ids: IDs this run flipped to in_progress at start.
+        done_ids: IDs that were successfully transitioned to done.
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict with key:
+
+        ``released`` (list[str])
+            AC ids that were released back to todo.
+    """
+    done_set = set(done_ids)
+    id_to_path = _build_ac_id_to_path_index(ac_root)
+    released: list[str] = []
+
+    for ac_id in claimed_ids:
+        if ac_id in done_set:
+            continue  # Already done — do not regress its status.
+
+        yaml_path = id_to_path.get(ac_id)
+        if yaml_path is None:
+            _LOG.warning("release_claim: AC %r not found in store at %s", ac_id, ac_root)
+            continue
+
+        try:
+            _update_ac_work_status(yaml_path, "todo")
+        except OSError as exc:
+            _LOG.warning("release_claim: failed to release %s: %s", ac_id, exc)
+            continue
+
+        released.append(ac_id)
+
+    return {"released": released}
+
+
+def filter_already_claimed(
+    build_set: list[str],
+    *,
+    ac_root: Path,
+) -> dict:
+    """Partition *build_set* into ACs free to build and those already claimed.
+
+    Reads each AC's current work_status from disk.  ACs with work_status todo
+    are free to build.  ACs with work_status in_progress are treated as claimed
+    by another in-flight run and must never be rebuilt (BO-2400f-8).
+
+    Args:
+        build_set: Resolved connected build set as a list of AC ids.
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict with keys:
+
+        ``to_build`` (list[str])
+            ACs with work_status todo — free to claim and build.
+
+        ``excluded_claimed`` (list[str])
+            ACs with work_status in_progress — already claimed by another run.
+
+        ``target_refused`` (bool)
+            True when *to_build* is empty and at least one AC was excluded —
+            i.e. every member of *build_set* is already claimed so the run
+            must refuse to proceed.
+    """
+    id_to_path = _build_ac_id_to_path_index(ac_root)
+    to_build: list[str] = []
+    excluded_claimed: list[str] = []
+
+    for ac_id in build_set:
+        yaml_path = id_to_path.get(ac_id)
+        if yaml_path is None:
+            # Unknown AC — treat as buildable (conservative; caller resolves).
+            to_build.append(ac_id)
+            continue
+
+        try:
+            with yaml_path.open(encoding="utf-8") as fh:
+                record = yaml.safe_load(fh)
+        except OSError as exc:
+            _LOG.warning("filter_already_claimed: cannot read %s: %s", yaml_path, exc)
+            to_build.append(ac_id)
+            continue
+
+        if record.get("work_status") == "in_progress":
+            excluded_claimed.append(ac_id)
+        else:
+            to_build.append(ac_id)
+
+    target_refused = len(to_build) == 0 and len(excluded_claimed) > 0
+    return {
+        "to_build": to_build,
+        "excluded_claimed": excluded_claimed,
+        "target_refused": target_refused,
+    }
+
+
+def mark_done_built_acs(
+    built_ac_ids: list[str],
+    covered_ac_ids: list[str],
+    *,
+    ac_root: Path,
+) -> dict:
+    """Flip each built AC whose coverage gate passed to work_status done.
+
+    ACs in *built_ac_ids* but absent from *covered_ac_ids* are NOT flipped —
+    their coverage gate did not pass (BO-2400f-9).  Status-only change.
+
+    Args:
+        built_ac_ids: All AC ids that were built in this run.
+        covered_ac_ids: AC ids whose coverage gate passed (have a covering
+            test that is green).
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict with keys:
+
+        ``marked_done`` (list[str])
+            AC ids that were flipped to work_status done.
+
+        ``skipped_uncovered`` (list[str])
+            AC ids in *built_ac_ids* that were NOT flipped because they were
+            absent from *covered_ac_ids* or could not be written.
+    """
+    covered_set = set(covered_ac_ids)
+    id_to_path = _build_ac_id_to_path_index(ac_root)
+    marked_done: list[str] = []
+    skipped_uncovered: list[str] = []
+
+    for ac_id in built_ac_ids:
+        if ac_id not in covered_set:
+            skipped_uncovered.append(ac_id)
+            continue
+
+        yaml_path = id_to_path.get(ac_id)
+        if yaml_path is None:
+            _LOG.warning("mark_done_built_acs: AC %r not found in store at %s", ac_id, ac_root)
+            skipped_uncovered.append(ac_id)
+            continue
+
+        try:
+            _update_ac_work_status(yaml_path, "done")
+        except OSError as exc:
+            _LOG.warning("mark_done_built_acs: failed to mark %s done: %s", ac_id, exc)
+            skipped_uncovered.append(ac_id)
+            continue
+
+        marked_done.append(ac_id)
+
+    return {"marked_done": marked_done, "skipped_uncovered": skipped_uncovered}
+
+
+def check_no_stale_todo(
+    built_ac_ids: list[str],
+    *,
+    ac_root: Path,
+) -> dict:
+    """Verify that every AC in *built_ac_ids* has work_status done on disk.
+
+    The stale-todo guard (BO-2400f-9-i): a passing run MUST leave every built
+    AC as done.  Any AC still todo or in_progress after the finish-time
+    transition is a stale-todo error that blocks the success result.
+
+    Args:
+        built_ac_ids: All AC ids that were built (and should now be done).
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict with keys:
+
+        ``all_done`` (bool)
+            True iff every AC in *built_ac_ids* has work_status done on disk.
+
+        ``stale`` (list[str])
+            AC ids still todo or in_progress after the finish transition.
+    """
+    id_to_path = _build_ac_id_to_path_index(ac_root)
+    stale: list[str] = []
+
+    for ac_id in built_ac_ids:
+        yaml_path = id_to_path.get(ac_id)
+        if yaml_path is None:
+            stale.append(ac_id)
+            continue
+
+        try:
+            with yaml_path.open(encoding="utf-8") as fh:
+                record = yaml.safe_load(fh)
+        except OSError as exc:
+            _LOG.warning("check_no_stale_todo: cannot read %s: %s", yaml_path, exc)
+            stale.append(ac_id)
+            continue
+
+        if record.get("work_status") != "done":
+            stale.append(ac_id)
+
+    return {"all_done": len(stale) == 0, "stale": stale}
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +495,12 @@ def select_batch(*, ac_root: Path, limit: int) -> list[str]:
     return [ac.get("id", "") for ac in ready[:limit]]
 
 
-def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
+def resolve_connected_build_set(
+    ac_id: str,
+    *,
+    ac_root: Path,
+    exclude_structural_parent: bool = False,
+) -> list[str]:
     """Resolve the connected build set for *ac_id* in dependency order.
 
     The connected build set is::
@@ -141,6 +524,15 @@ def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
     Args:
         ac_id: The target AC id to resolve the connected set for.
         ac_root: Root directory of the AC YAML store.
+        exclude_structural_parent: When ``True``, any ``depends_on`` entry that
+            equals ``derive_parent_id(node)`` (i.e. the structural parent of the
+            node being expanded) is skipped and NOT added to the build set during
+            the transitive closure walk.  Genuine (non-structural-parent)
+            dependencies are still walked normally.  The subtree union step
+            (``traverse_ac_tree``) is unaffected — the AC's own children always
+            enter the set via the subtree, independent of this flag.  Defaults to
+            ``False``, which preserves the existing behaviour where every
+            ``depends_on`` entry is walked.
 
     Returns:
         Ordered list of not-done leaf AC ids (deps first). ``[]`` when the whole
@@ -179,6 +571,8 @@ def resolve_connected_build_set(ac_id: str, *, ac_root: Path) -> list[str]:
         if rec is None:
             continue
         for dep in rec.get("depends_on") or []:
+            if exclude_structural_parent and dep == derive_parent_id(node):
+                continue  # skip structural parent dep — not expanded into build set
             dep_rec = id_index.get(dep)
             if dep_rec is None or dep_rec.get("work_status", "") == "done":
                 continue  # unknown or already-met prerequisite
@@ -396,6 +790,17 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     )
     sc.add_argument("--ac", required=True, metavar="ID", help="Target AC id to resolve.")
     sc.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+    sc.add_argument(
+        "--exclude-structural-parent",
+        action="store_true",
+        default=False,
+        help=(
+            "When set, skip any depends_on entry that equals the structural parent "
+            "of the node being expanded (i.e. derive_parent_id(node)). "
+            "Genuine (non-structural-parent) dependencies are still walked. "
+            "Defaults to False — omitting the flag preserves existing behaviour."
+        ),
+    )
 
     # --- verify_red_baseline ---
     vrb = subparsers.add_parser(
@@ -458,7 +863,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.subcommand == "select_connected":
         try:
-            result = resolve_connected_build_set(args.ac, ac_root=Path(args.ac_root))
+            result = resolve_connected_build_set(
+                args.ac,
+                ac_root=Path(args.ac_root),
+                exclude_structural_parent=args.exclude_structural_parent,
+            )
         except ValueError as exc:
             print(str(exc), file=sys.stderr)
             return 1

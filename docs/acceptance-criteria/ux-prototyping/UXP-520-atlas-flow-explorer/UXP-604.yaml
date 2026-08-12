@@ -1,0 +1,68 @@
+id: UXP-604
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A feature-level deduped 'N/M ACs done' rollup is shown for the whole flow"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given a selected flow whose steps and branches collectively reference a set of acceptance criteria,
+  When the /flows view renders the flow,
+  Then a single feature-level "N/M ACs done" rollup is shown for the whole flow,
+  where M is the count of DISTINCT acceptance criteria across the flow and N is how many of those distinct ACs are done,
+  And this rollup is computed from the flow's acceptance criteria, not reused from the per-step status summary that badges the flow.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "deriveImplSummary in leafcutter-web/lib/data/flows.ts must compute acTotal (M) and acDone (N) as DISTINCT-AC counts over all steps+branches, kept separate from implSummary.done, which counts STEPS by status."
+  - "FlowImplSummary in leafcutter-web/lib/data/types.ts must carry acDone and acTotal, and ExplorerInner in leafcutter-web/components/flows/flow-explorer.tsx must render the feature rollup from implSummary.acDone/acTotal (guarded by acTotal > 0), never from the per-step status summary."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-604a
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::derive_impl_summary_counts_distinct_acs"
+implemented_by:
+  - leafcutter-web/lib/data/flows.ts
+  - leafcutter-web/lib/data/types.ts
+  - leafcutter-web/components/flows/flow-explorer.tsx
+test_spec:
+  - name: derive_impl_summary_counts_distinct_acs
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "deriveImplSummary returns acTotal = number of distinct ACs across steps+branches and acDone = distinct ACs with work_status done, independent of the step-count implSummary.done."
+  - name: flow_explorer_renders_feature_ac_rollup
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "The legend shows an 'N/M ACs done' feature rollup sourced from implSummary.acDone/acTotal when acTotal > 0."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped behavior. Distinct from UXP-412's step-count implSummary rollup: this
+  rollup counts distinct ACs, not steps. The dedup guarantee is captured in child UXP-604a.
+  IT-PO enrichment (2026-08-11): implemented_by verified (deduped acDone/acTotal in
+  deriveImplSummary; FlowImplSummary.acDone/acTotal in types.ts; feature rollup render in
+  flow-explorer.tsx).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by the
+  passing vitest test tagged `// covers: UXP-604` (derive_impl_summary_counts_distinct_acs in
+  graph.decisions.test.ts), appended to covered_by alongside the existing child edge-case
+  UXP-604a; code is shipped. Suite green (41/41).

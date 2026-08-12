@@ -1,0 +1,107 @@
+id: BO-2600a-5
+components:
+  - build_orchestration
+title: "goal_to_epic can build an epic from an explicit connected-set id list, not just a single AC's subtree"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given goal_to_epic (scripts/goal_to_epic.py),
+  And a new entrypoint that accepts an explicit, already-resolved, dependency-ordered
+    list of leaf AC ids (e.g. a `--ids` CLI mode / a build_epic_from_ids() function),
+  When it is given that id list,
+  Then it builds the epic folder from EXACTLY those ids — one ticket per id — using the
+    existing assembly path (resolve_leaf_dependencies restricted to the given id set +
+    topological_sort + per-leaf ticket generation + epic-folder assembly + Master_Plan),
+  And it does NOT re-derive the set by walking a single AC's covered_by subtree
+    (traverse_ac_tree) — so ids that live OUTSIDE the target's subtree (genuine
+    cross-tree prerequisites) are included rather than dropped,
+  And each generated ticket's depends_on references co-located ticket files (AC-id ->
+    ticket-file translation) so ticket_frontmatter_guard passes,
+  And the existing single-AC `--ac` mode is preserved unchanged (backward compatible).
+depends_on: [BO-2600a]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  ac_id: BO-2600a-4
+  contract: "goal_to_epic exposes an id-list entrypoint (e.g. `--ids id1,id2,...` / build_epic_from_ids) that assembles a dependency-ordered epic from exactly the provided connected-set ids, so build-ac can pass the select_connected result as epic CONTENT rather than re-walking a subtree."
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/goal_to_epic.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    Add an explicit id-list entrypoint to goal_to_epic (scripts/goal_to_epic.py) — a
+    `--ids` CLI mode and/or a build_epic_from_ids(ids, *, store_root, inbox_dir)
+    function — that assembles the epic from EXACTLY the provided dependency-ordered leaf
+    ids. Reuse the existing internals: resolve_leaf_dependencies (restricted to the given
+    id set so out-of-set edges are dropped), topological_sort, the per-leaf
+    generate_ticket path, and the epic-folder + Master_Plan assembly. Do NOT call
+    traverse_ac_tree to re-derive the set from a single AC's subtree — that is the exact
+    defect this AC closes: the current `--ac` path re-walks the subtree and would drop
+    cross-tree genuine prerequisites that fast_lane.resolve_connected_build_set had
+    already included. Preserve the existing single-AC `--ac` mode unchanged (backward
+    compat). Translate each ticket's depends_on from AC ids to co-located ticket
+    filenames so ticket_frontmatter_guard passes. NOTE the deployed/source path: in this
+    repo goal_to_epic.py lives at scripts/goal_to_epic.py (not scripts/ac_store/).
+    Also fix two goal_to_epic hygiene defects surfaced in the BO-2600 three-angle
+    review, in the same pass: (a) implemented_by back-references written into the source
+    AC YAMLs must be REPO-RELATIVE (e.g. tickets/00_inbox/epics/.../NN_TICKET-....md),
+    not absolute worktree paths (observed: goal_to_epic wrote a full
+    /home/.../worktrees/... path into BO-2600a-4.implemented_by); (b) the AC-id ->
+    ticket-file depends_on translation must apply on the id-list path too (it currently
+    relies on a downstream check-doc-frontmatter hook auto-fix rather than being correct
+    at generation time).
+test_spec:
+  - name: test_build_epic_from_ids_uses_exact_set
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "The id-list entrypoint builds tickets for exactly the provided ids, including ids outside the first id's subtree (cross-tree prerequisites are NOT dropped)"
+  - name: test_build_epic_from_ids_dependency_ordered_and_wired
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "Generated tickets are prerequisites-first and depends_on references co-located ticket files so ticket_frontmatter_guard passes"
+  - name: test_ac_mode_preserved_backward_compatible
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "The existing single-AC --ac mode produces the same epic as before the id-list mode was added"
+  - name: test_implemented_by_written_repo_relative
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "implemented_by back-references written into source ACs are repo-relative (tickets/...), never absolute worktree paths"
+  - name: test_generated_ticket_depends_on_are_ticket_files
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "Generated ticket depends_on reference co-located ticket filenames (AC-id -> ticket-file translated at generation time), not raw AC ids"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by:
+  - reason: "Added 2026-08-11 to close a design gap found in three-angle review: BO-2600a-4 as originally written reused goal_to_epic --ac, which re-walks the target's subtree and drops cross-tree genuine prerequisites; the resolved connected-set list was consumed only as a size gate. This AC gives goal_to_epic an id-list entrypoint so the resolved set becomes the epic content."
+superseded_by: null
+covered_by:
+- unit_tests/build_orchestration/test_bo_2600a_5.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/05_TICKET-20260811-BO-2600a-5.md
+- scripts/goal_to_epic.py
+change_target: code
+risk_surface: contract_boundary

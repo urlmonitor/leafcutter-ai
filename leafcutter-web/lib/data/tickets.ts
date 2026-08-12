@@ -1,7 +1,7 @@
 import "server-only";
 import path from "node:path";
 import matter from "gray-matter";
-import { repoPath, walk, readFileSafe, rel } from "./repo";
+import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import type { Priority, Ticket } from "./types";
 
 const TICKETS_DIR = "tickets";
@@ -51,11 +51,14 @@ function normTraceability(v: unknown): Ticket["acTraceability"] {
   };
 }
 
-let _ticketCache: Ticket[] | null = null;
+// Keyed by repoRoot() so mock and real roots are cached separately.
+const _ticketCache = new Map<string, Ticket[]>();
 
 /** Load every ticket markdown file (frontmatter only; body is not retained). */
 export function loadTickets(): Ticket[] {
-  if (_ticketCache) return _ticketCache;
+  const root = repoRoot();
+  const hit = _ticketCache.get(root);
+  if (hit) return hit;
   const dir = repoPath(TICKETS_DIR);
   const files = walk(dir, ".md").filter(
     (f) => path.basename(f).toUpperCase() !== "README.MD",
@@ -94,7 +97,7 @@ export function loadTickets(): Ticket[] {
     });
   }
   tickets.sort((a, b) => (b.created ?? "").localeCompare(a.created ?? ""));
-  _ticketCache = tickets;
+  _ticketCache.set(root, tickets);
   return tickets;
 }
 

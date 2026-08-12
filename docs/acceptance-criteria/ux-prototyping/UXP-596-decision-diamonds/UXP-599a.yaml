@@ -1,0 +1,61 @@
+id: UXP-599a
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Known limitation: a branch off the LAST step does not synthesize a diamond"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: not_started
+criteria: |
+  Given a flow whose conditional branch forks off the LAST ordered step
+  (there is no subsequent step for the "else"/happy path to fall through to),
+  When the graph for that flow is drawn,
+  Then the current build does NOT synthesize a decision diamond for that trailing fork,
+  And a fork with no happy-path successor step is therefore not drawn as a diamond.
+depends_on:
+  - UXP-599
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "This documents the current behavior of buildFlowGraph in leafcutter-web/lib/data/graph.ts: the diamond-synthesis loop iterates i in [0, steps.length - 1), so branches whose from-step is the LAST ordered step are never processed into a diamond and fall through to the plain branch-card path."
+  - "A test must PIN this current behavior (no diamond for a trailing fork) so the known limitation is verifiable against the live /flows view; it must NOT assert the desired future behavior."
+  - "Lifting the limitation is out of scope here — it is a forward dependency on the ADR-025 decisions[] model (an explicit terminal outcome would give a trailing fork a home). Do not implement it under this AC."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_omits_diamond_for_branch_off_last_step"
+implemented_by:
+  - leafcutter-web/lib/data/graph.ts
+test_spec:
+  - name: buildFlowGraph_omits_diamond_for_branch_off_last_step
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "A flow whose only branch forks off the last ordered step produces no meta.variant === 'decision' node; the branch renders as a plain branch card (pins the known limitation, not the desired future behavior)."
+change_target: code
+risk_surface: internal
+notes: |
+  Honest capture of a KNOWN LIMITATION of the branch-derived diamond rendering. The criteria
+  describes what the shipped build actually does today (omits the diamond) so it is verifiable
+  against the real /flows view; work_status is not_started because rendering a diamond for a
+  trailing fork is a DESIRED capability that is NOT yet delivered. Revisit when the ADR-025
+  decisions[] model lands (an explicit terminal outcome would give the trailing fork a home).
+  IT-PO enrichment (2026-08-11): implemented_by points at graph.ts, where the loop bound
+  (i < steps.length - 1) realizes the omission the pinning test asserts.
+  RECONCILIATION (2026-08-11): covered_by set to the passing pinning test tagged
+  `// covers: UXP-599a` (buildFlowGraph_omits_diamond_for_branch_off_last_step). The test PINS
+  the current omission and passes, but work_status is intentionally KEPT not_started: this AC
+  documents an intentionally un-handled case, not delivered work. Do NOT flip to done — the
+  diamond-for-trailing-fork capability is a forward dependency on the ADR-025 decisions[] model.

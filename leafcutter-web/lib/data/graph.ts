@@ -60,15 +60,24 @@ export function buildAcGraph(acs: AC[]): Graph {
 
 /**
  * Build a product-truth flow graph.
- *   - one "phase" node per step (col by order) and per branch (col of its `from`),
- *     coloured by the step's LIVE derived implStatus.
+ *   - one "phase" node per step (col by order) and per branch (col of its decision
+ *     diamond), coloured by the step's LIVE derived implStatus.
+ *   - one "phase" node (variant "decision") per branch, synthesized between the
+ *     branching step and the next step. Multiple branches off the same step produce
+ *     a CHAIN of diamonds: step → ◇ → ◇ → next step, one diamond per branch.
+ *     Each diamond's "yes" handle points to its branch outcome; the "no" handle
+ *     passes to the next diamond (or to the happy-path next step for the last one).
  *   - one "ac" node per referenced acceptance criterion, coloured by live workStatus.
- *   - "flow" edges chain consecutive steps and link branch.from -> branch.
+ *   - "flow" edges chain consecutive steps and link decision outcomes.
  *   - "implements" edges link each step/branch to its AC node(s).
  * The AC status is carried on both the AC node and the step node data so the
  * step colour always reflects live AC state.
+ *
+ * ADR-025 chaining semantics (derived from branch data — no schema change):
+ *   For each step S with branches [B0, B1, …, BN-1] and a next step T:
+ *     S → D0 → (yes) B0 ; D0 → (no) D1 → (yes) B1 ; … ; DN-1 → (no) T
  */
-export function buildFlowGraph(flow: Flow): Graph {
+export function buildFlowGraph(flow: Flow, showAcNodes = false): Graph {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const seenAc = new Set<string>();
@@ -91,10 +100,40 @@ export function buildFlowGraph(flow: Flow): Graph {
   };
 
   const steps = [...flow.steps].sort((a, b) => a.order - b.order);
-  const colOf = new Map<string, number>();
-  steps.forEach((s, i) => colOf.set(s.id, i));
 
-  steps.forEach((s, i) => {
+  // ------------------------------------------------------------------
+  // Column assignment: each step occupies 1 column; each branch off that
+  // step reserves an additional column for its decision diamond.
+  // Example: step A (2 branches) → step B gives cols: A=0, D0=1, D1=2, B=3.
+  // ------------------------------------------------------------------
+  const stepColMap = new Map<string, number>(); // stepId → col
+  // Group branches by the step they fork from (preserving declaration order).
+  const stepBranchesMap = new Map<string, (typeof flow.branches[number])[]>();
+  for (const b of flow.branches) {
+    const arr = stepBranchesMap.get(b.from) ?? [];
+    arr.push(b);
+    stepBranchesMap.set(b.from, arr);
+  }
+
+  let nextCol = 0;
+  for (const s of steps) {
+    stepColMap.set(s.id, nextCol);
+    nextCol++;
+    const stepBranches = stepBranchesMap.get(s.id);
+    if (stepBranches && stepBranches.length > 0) {
+      nextCol += stepBranches.length; // reserve N cols for N decision diamonds
+    }
+  }
+
+  // branchDecisionCol: branchId → the col of the diamond that routes to it.
+  // Populated in the flow-edge loop; consumed in the branch-node loop.
+  const branchDecisionCol = new Map<string, number>();
+
+  // ------------------------------------------------------------------
+  // Step nodes
+  // ------------------------------------------------------------------
+  for (const s of steps) {
+    const col = stepColMap.get(s.id) ?? 0;
     nodes.push({
       id: `step:${s.id}`,
       kind: "phase",
@@ -103,37 +142,130 @@ export function buildFlowGraph(flow: Flow): Graph {
       status: s.implStatus,
       meta: {
         variant: "step",
-        col: i,
+        col,
         order: s.order,
         screen: s.screen,
         human: s.human,
         reads: s.reads,
         writes: s.writes,
         acIds: s.implements,
+        acDone: s.acs.filter((a) => a.workStatus === "done").length,
         expandsTo: s.expandsTo,
       },
     });
-    addAcNodes(s.acs);
-    for (const a of s.acs) {
-      edges.push({
-        id: `implements:step:${s.id}->${a.id}`,
-        source: `step:${s.id}`,
-        target: `ac:${a.id}`,
-        kind: "implements",
-      });
+    if (showAcNodes) {
+      addAcNodes(s.acs);
+      for (const a of s.acs) {
+        edges.push({
+          id: `implements:step:${s.id}->${a.id}`,
+          source: `step:${s.id}`,
+          target: `ac:${a.id}`,
+          kind: "implements",
+        });
+      }
     }
-  });
-
-  for (let i = 0; i < steps.length - 1; i++) {
-    edges.push({
-      id: `flow:${steps[i].id}->${steps[i + 1].id}`,
-      source: `step:${steps[i].id}`,
-      target: `step:${steps[i + 1].id}`,
-      kind: "flow",
-    });
   }
 
+  // ------------------------------------------------------------------
+  // Flow edges: direct for steps without branches; diamond chain otherwise.
+  // ------------------------------------------------------------------
+  for (let i = 0; i < steps.length - 1; i++) {
+    const curr = steps[i];
+    const next = steps[i + 1];
+    const branches = stepBranchesMap.get(curr.id);
+
+    if (!branches || branches.length === 0) {
+      // Simple happy-path edge: step → next step.
+      edges.push({
+        id: `flow:${curr.id}->${next.id}`,
+        source: `step:${curr.id}`,
+        target: `step:${next.id}`,
+        kind: "flow",
+      });
+      continue;
+    }
+
+    // Synthesize a chain of decision diamonds.
+    const currCol = stepColMap.get(curr.id) ?? 0;
+
+    for (let j = 0; j < branches.length; j++) {
+      const branch = branches[j];
+      const dCol = currCol + 1 + j;
+      const dId = `decision:${curr.id}:${j}`;
+
+      // Remember which col this branch's diamond lands on (for branch positioning).
+      branchDecisionCol.set(branch.id, dCol);
+
+      // Decision diamond node (variant "decision", kind "phase" for layout compat).
+      // status is derived from the branch this diamond gates (UXP-601).
+      nodes.push({
+        id: dId,
+        kind: "phase",
+        label: branch.condition,
+        group: flow.component,
+        status: branch.implStatus,
+        meta: {
+          variant: "decision",
+          col: dCol,
+          condition: branch.condition,
+          yesLabel: branch.label,
+          noLabel: j < branches.length - 1 ? "else" : "continue",
+        },
+      });
+
+      // Wire the INCOMING edge to this diamond.
+      if (j === 0) {
+        // First diamond: previous node is the step itself.
+        edges.push({
+          id: `flow:step:${curr.id}->${dId}`,
+          source: `step:${curr.id}`,
+          target: dId,
+          kind: "flow",
+        });
+      } else {
+        // Subsequent diamonds: previous node is the prior diamond's "no" handle.
+        const prevDId = `decision:${curr.id}:${j - 1}`;
+        edges.push({
+          id: `flow:${prevDId}->${dId}`,
+          source: prevDId,
+          target: dId,
+          kind: "flow",
+          label: "else",
+          sourceHandle: "no",
+        });
+      }
+
+      // Yes edge: diamond → branch outcome (sourceHandle "yes", goes downward).
+      edges.push({
+        id: `flow:${dId}->step:${branch.id}`,
+        source: dId,
+        target: `step:${branch.id}`,
+        kind: "flow",
+        label: branch.label,
+        sourceHandle: "yes",
+      });
+
+      // For the LAST diamond: no edge → next step (happy path).
+      if (j === branches.length - 1) {
+        edges.push({
+          id: `flow:${dId}->step:${next.id}`,
+          source: dId,
+          target: `step:${next.id}`,
+          kind: "flow",
+          label: "continue",
+          sourceHandle: "no",
+        });
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Branch nodes (positioned at their decision diamond's col).
+  // NOTE: the flow edge from step → branch is now handled by the decision
+  // diamond's yes-edge; do NOT re-add the old direct edge here.
+  // ------------------------------------------------------------------
   for (const b of flow.branches) {
+    const bCol = branchDecisionCol.get(b.id) ?? (stepColMap.get(b.from) ?? 0);
     nodes.push({
       id: `step:${b.id}`,
       kind: "phase",
@@ -142,7 +274,7 @@ export function buildFlowGraph(flow: Flow): Graph {
       status: b.implStatus,
       meta: {
         variant: "branch",
-        col: colOf.get(b.from) ?? 0,
+        col: bCol,
         from: b.from,
         condition: b.condition,
         screen: b.screen,
@@ -150,25 +282,20 @@ export function buildFlowGraph(flow: Flow): Graph {
         reads: b.reads,
         writes: b.writes,
         acIds: b.implements,
+        acDone: b.acs.filter((a) => a.workStatus === "done").length,
         expandsTo: b.expandsTo,
       },
     });
-    addAcNodes(b.acs);
-    if (colOf.has(b.from)) {
-      edges.push({
-        id: `flow:${b.from}->${b.id}`,
-        source: `step:${b.from}`,
-        target: `step:${b.id}`,
-        kind: "flow",
-      });
-    }
-    for (const a of b.acs) {
-      edges.push({
-        id: `implements:step:${b.id}->${a.id}`,
-        source: `step:${b.id}`,
-        target: `ac:${a.id}`,
-        kind: "implements",
-      });
+    if (showAcNodes) {
+      addAcNodes(b.acs);
+      for (const a of b.acs) {
+        edges.push({
+          id: `implements:step:${b.id}->${a.id}`,
+          source: `step:${b.id}`,
+          target: `ac:${a.id}`,
+          kind: "implements",
+        });
+      }
     }
   }
 

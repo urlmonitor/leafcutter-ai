@@ -5,7 +5,7 @@ type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-07-23
+last_updated: 2026-08-11
 components:
   - build_orchestration
 related_docs:
@@ -145,6 +145,48 @@ connected set:
 
 Most users should prefer the one-command form above; the inner primitive does not
 create a worktree, commit, or open a PR.
+
+### Programmatic API — exclude_structural_parent
+
+When calling `resolve_connected_build_set` from Python (rather than through the
+`select_connected` CLI subcommand), one keyword-only argument is available that
+the CLI does not expose:
+
+```python
+from pathlib import Path
+from scripts.build_orchestration.fast_lane import resolve_connected_build_set
+
+ids = resolve_connected_build_set(
+    "BO-2600a-1",
+    ac_root=Path("docs/acceptance-criteria"),
+    exclude_structural_parent=True,
+)
+```
+
+**`exclude_structural_parent`** (`bool`, default `False`) — when `True`, the
+transitive `depends_on` closure walk skips any dependency that is the structural
+parent of the node currently being expanded. The structural parent is computed
+by `derive_parent_id(node)` from `scripts/ac_store/ac_parent_id.py`. Use this
+flag when a node lists its own L1 or L2 composite parent as a `depends_on`
+entry and you do not want that parent's subtree pulled into the build set via
+the closure walk.
+
+Behaviour summary:
+
+| `exclude_structural_parent` | A structural-parent dep in `depends_on` | Result |
+|---|---|---|
+| `False` (default) | Walked normally | Parent composite expands into the build set |
+| `True` | Skipped during closure walk | Parent composite is NOT added to the build set |
+
+Genuine (non-structural-parent) `depends_on` entries are always walked
+regardless of this flag. The subtree union (via `traverse_ac_tree`) is
+**unaffected** — the AC's own children enter the set through the subtree step,
+not through the closure walk, so excluding the structural parent never drops the
+AC's real children.
+
+Callers that do not pass this argument get the default `False` behaviour, which
+is byte-identical to the pre-BO-2600 traversal. All existing callers remain
+compatible without change.
 
 ---
 

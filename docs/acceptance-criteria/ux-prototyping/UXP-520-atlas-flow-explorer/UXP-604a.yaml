@@ -1,0 +1,60 @@
+id: UXP-604a
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "An AC referenced by multiple nodes is counted once in the feature rollup"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given an acceptance criterion referenced by two or more steps or branches in the same flow,
+  When the feature-level "N/M ACs done" rollup is computed,
+  Then that criterion is counted exactly once in both N and M,
+  And the rollup total M is strictly the number of distinct ACs in the flow, never the sum of per-node AC counts.
+depends_on:
+  - UXP-604
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "deriveImplSummary in leafcutter-web/lib/data/flows.ts must dedupe AC ids across all steps+branches with a seen-set (each AC id counted once in acTotal and acDone), mirroring the seenAc dedup in buildFlowGraph; M must equal the count of distinct AC ids, never the sum of per-node AC counts."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::derive_impl_summary_dedupes_ac_across_nodes"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::shared_done_ac_counted_once_in_acDone"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::multi_ac_dedup_with_branch_sharing"
+implemented_by:
+  - leafcutter-web/lib/data/flows.ts
+test_spec:
+  - name: derive_impl_summary_dedupes_ac_across_nodes
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "An AC id referenced by two steps is counted once in acTotal and once (if done) in acDone; acTotal equals the distinct-AC count, not the summed per-node counts."
+change_target: code
+risk_surface: internal
+notes: |
+  Edge case of UXP-604 — the dedup that makes the rollup a distinct-AC count rather than a
+  step-count. Backfill of shipped behavior.
+  IT-PO enrichment (2026-08-11): implemented_by verified (seenAcId dedup set in
+  deriveImplSummary).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by three
+  passing vitest tests tagged `// covers: UXP-604a` in graph.decisions.test.ts
+  (derive_impl_summary_dedupes_ac_across_nodes, shared_done_ac_counted_once_in_acDone,
+  multi_ac_dedup_with_branch_sharing), recorded in covered_by; code is shipped. Suite green
+  (41/41).

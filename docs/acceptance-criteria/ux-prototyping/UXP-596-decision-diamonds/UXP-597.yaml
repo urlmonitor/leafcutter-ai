@@ -1,0 +1,75 @@
+id: UXP-597
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A conditional fork renders as a decision diamond showing its condition, distinct from a step card"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given a rendered flow whose steps carry one or more conditional branches,
+  When the Atlas /flows graph for that flow is drawn,
+  Then each conditional fork is drawn as a diamond-shaped decision node rather than a rounded step card,
+  And the diamond displays the fork's condition/question text,
+  And the diamond is visually distinguishable at a glance from an ordinary step card.
+depends_on:
+  - UXP-596
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "buildFlowGraph in leafcutter-web/lib/data/graph.ts must emit each conditional fork as a node with meta.variant === 'decision' carrying the fork's condition text; ExplorerInner in leafcutter-web/components/flows/flow-explorer.tsx must map meta.variant === 'decision' to the 'flowDecisionNode' React Flow node type."
+  - "The diamond is rendered by FlowDecisionNode in leafcutter-web/components/flows/flow-nodes.tsx (registered in flowNodeTypes as flowDecisionNode) as a rotated-square diamond, visually distinct from the rounded FlowStepNode card."
+  - "The fork's condition/question text must be shown inside the diamond shape."
+  - "Diamond synthesis must not require any new field in the stored flow JSON (derived from existing branch data — see UXP-600)."
+  - "Rendering must stay within the existing React Flow render budget for typical flows (< ~50 nodes); no per-node network or blocking work."
+delivers_to: null
+expects_from:
+  UXP-600: "decision nodes are synthesized from existing branch data (from/condition/label/target) by buildFlowGraph in lib/data/graph.ts"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_emits_decision_variant_node_for_a_branch"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::decision_node_carries_the_branch_condition_text"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::decision_nodes_are_distinct_from_step_nodes"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::flow_with_no_branches_produces_no_decision_nodes"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::flow_decision_node_displays_condition_text_inside_diamond"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::flow_decision_node_renders_diamond_distinct_from_step_card"
+implemented_by:
+  - leafcutter-web/lib/data/graph.ts
+  - leafcutter-web/components/flows/flow-nodes.tsx
+  - leafcutter-web/components/flows/flow-explorer.tsx
+test_spec:
+  - name: buildFlowGraph_emits_decision_variant_node_for_a_branch
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "A flow step carrying a branch produces a graph node with meta.variant === 'decision' and meta.condition equal to the branch condition."
+  - name: flow_decision_node_renders_diamond_distinct_from_step_card
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "FlowDecisionNode renders the rotated diamond containing the condition text; FlowStepNode renders the rounded card — the two are structurally distinguishable in the DOM."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped Atlas Flows-view behavior.
+  IT-PO enrichment (2026-08-11): implemented_by verified against the shipped source
+  (FlowDecisionNode + flowNodeTypes in flow-nodes.tsx; meta.variant "decision" emission in
+  graph.ts; variant->flowDecisionNode mapping in flow-explorer.tsx).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Now test-backed by
+  six passing vitest tests tagged `// covers: UXP-597` across graph.decisions.test.ts and
+  flow-nodes.decisions.test.tsx (recorded in covered_by as <path>::<test> refs); code is
+  shipped (implemented_by present). Suite verified green (41/41).

@@ -363,7 +363,7 @@ export function FlowDrawer({
               {step.acs.length > 0 && (
                 <Section
                   icon={<ShieldCheck className="h-3 w-3" />}
-                  title="Implements (live AC status)"
+                  title={`Acceptance criteria — ${step.acs.filter((a) => a.workStatus === "done").length}/${step.acs.length} done`}
                 >
                   <div className="flex flex-wrap gap-1.5">
                     {step.acs.map((ac) => (

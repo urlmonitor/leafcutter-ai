@@ -26,6 +26,7 @@ import {
 import "reactflow/dist/style.css";
 import { buildFlowGraph } from "@/lib/data/graph";
 import { WORK_STATUS_TONE } from "@/lib/status";
+import { cn } from "@/lib/utils";
 import type { Flow, MockData, WorkStatus } from "@/lib/data/types";
 
 interface XY {
@@ -46,7 +47,8 @@ const BRANCH_DROP = 430;
 const BRANCH_LANE = AC_DROP + 180;
 
 const STATUS_LEGEND: WorkStatus[] = ["done", "in_progress", "not_started"];
-const EDGE_LEGEND = ["flow", "implements"] as const;
+const EDGE_LEGEND_ALL = ["flow", "implements"] as const;
+type EdgeLegendKind = (typeof EDGE_LEGEND_ALL)[number];
 
 function ExplorerInner({
   flow,
@@ -63,7 +65,20 @@ function ExplorerInner({
 }) {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
-  const graph = React.useMemo(() => buildFlowGraph(flow), [flow]);
+  // "Show ACs in graph" toggle — default OFF; persisted as a simple view preference.
+  const [showAcNodes, setShowAcNodes] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("flows:showAcNodes") === "1"; } catch { return false; }
+  });
+  const handleToggleShowAcNodes = React.useCallback(() => {
+    setShowAcNodes((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("flows:showAcNodes", next ? "1" : "0"); } catch {}
+      return next;
+    });
+  }, []);
+
+  const graph = React.useMemo(() => buildFlowGraph(flow, showAcNodes), [flow, showAcNodes]);
 
   const nameFor = React.useCallback(
     (id: string | null) => (id ? flowNames[id] ?? null : null),
@@ -178,7 +193,24 @@ function ExplorerInner({
             draggable: false,
           };
         }
+        // Decision diamond nodes (ADR-025 synthesized from branch data)
+        if (n.meta?.variant === "decision") {
+          return {
+            id: n.id,
+            type: "flowDecisionNode",
+            position: p,
+            data: {
+              condition: (n.meta?.condition as string) ?? n.label,
+              yesLabel: (n.meta?.yesLabel as string) ?? "yes",
+              noLabel: (n.meta?.noLabel as string) ?? "no",
+              // UXP-601: pass derived status so the diamond tints by impl_status
+              status: (n.status as WorkStatus) ?? "unknown",
+            },
+            draggable: false,
+          };
+        }
         const acIds = (n.meta?.acIds as string[]) ?? [];
+        const acDone = (n.meta?.acDone as number) ?? 0;
         const expandsTo = (n.meta?.expandsTo as string | null) ?? null;
         const screen = (n.meta?.screen as string | null) ?? null;
         return {
@@ -194,6 +226,7 @@ function ExplorerInner({
             status: (n.status as WorkStatus) ?? "unknown",
             variant: (n.meta?.variant as "step" | "branch") ?? "step",
             acCount: acIds.length,
+            acDone,
             drillable: Boolean(expandsTo && flowNames[expandsTo]),
             selected: n.id === selectedId,
           },
@@ -208,7 +241,7 @@ function ExplorerInner({
       graph.edges.map((e) => {
         const spec = edgeStyle(e.kind);
         const isFlow = e.kind === "flow";
-        return {
+        const base: Edge = {
           id: e.id,
           source: e.source,
           target: e.target,
@@ -226,6 +259,23 @@ function ExplorerInner({
             strokeDasharray: spec.dashed ? "5 4" : undefined,
           },
         };
+        // Decision edge label (yes / no / else / continue)
+        if (e.label) {
+          base.label = e.label;
+          base.labelStyle = {
+            fill: "hsl(155 7% 78%)",
+            fontSize: 10,
+            fontWeight: 600,
+          };
+          base.labelBgStyle = {
+            fill: "hsl(158 12% 11%)",
+            fillOpacity: 0.88,
+          };
+          base.labelBgPadding = [3, 5] as [number, number];
+        }
+        // Source handle routing for decision diamond edges ("yes" | "no")
+        if (e.sourceHandle) base.sourceHandle = e.sourceHandle;
+        return base;
       }),
     [graph],
   );
@@ -318,8 +368,8 @@ function ExplorerInner({
           <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
             Edge type
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-            {EDGE_LEGEND.map((kind) => {
+          <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
+            {(showAcNodes ? EDGE_LEGEND_ALL : (["flow"] as EdgeLegendKind[])).map((kind) => {
               const spec = edgeStyle(kind);
               return (
                 <span
@@ -341,6 +391,45 @@ function ExplorerInner({
                 </span>
               );
             })}
+          </div>
+          {/* Feature-level AC rollup + "Show ACs in graph" toggle */}
+          <div className="border-t border-border/50 pt-2.5">
+            {flow.implSummary.acTotal > 0 && (
+              <div className="mb-2 text-[11px] text-muted-foreground">
+                Feature:{" "}
+                <span
+                  className="font-mono font-semibold tabular-nums"
+                  style={{ color: `hsl(${WORK_STATUS_TONE.done.hsl})` }}
+                >
+                  {flow.implSummary.acDone}
+                </span>
+                <span className="font-mono tabular-nums">
+                  /{flow.implSummary.acTotal}
+                </span>{" "}
+                ACs done
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleToggleShowAcNodes}
+              className={cn(
+                "inline-flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-[11px] transition-colors",
+                showAcNodes
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+              )}
+              title={showAcNodes ? "Hide AC nodes from graph" : "Show AC nodes in graph"}
+            >
+              <span>Show ACs in graph</span>
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full border transition-colors",
+                  showAcNodes
+                    ? "border-primary/60 bg-primary"
+                    : "border-muted-foreground/40 bg-transparent",
+                )}
+              />
+            </button>
           </div>
         </div>
       </div>

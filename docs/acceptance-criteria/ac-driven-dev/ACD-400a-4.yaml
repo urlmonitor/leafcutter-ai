@@ -1,0 +1,61 @@
+id: ACD-400a-4
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A freshly-authored tree of approved todo leaves yields a non-empty ready list end to end"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a freshly-authored AC tree exactly as the authoring agents emit it:
+    an L1 parent (composite, work_status not done) and three approved, active,
+    todo leaf ACs (L2/L3) that each carry only their immediate parent's id in
+    their depends_on list (the hierarchy-linking convention) and reference no
+    non-ancestor dependency,
+  When that tree is fed to the scanner with leaf and todo filters,
+  Then the ready list is non-empty and contains all three leaf ACs,
+  And the blocked list contains none of the three leaf ACs
+    (parent-only hierarchy links never self-block a freshly-authored backlog).
+depends_on: [ACD-400a, ACD-400a-3]
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+  - docs/architecture/components/ac-driven-dev.md
+  - scripts/ac_store/scan_ac_store.py
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The round-trip test must invoke the real scan_ac_store.py entrypoint end to end against an on-disk fixture tree written as the authoring agents emit it (parent-only depends_on links), not a hand-stubbed classification call."
+  - "For a normally-authored backlog (all leaves approved/active/todo with only parent-hierarchy links) the ready list must be non-empty; this is the end-to-end regression guard against the ~56% self-blocking defect."
+  - "The scanner must remain read-only over the fixture, run in O(n), and be idempotent across repeated invocations."
+  - "Behaviour must be consistent with ac_prioritizer.py over the same tree (no divergent readiness result between the two entrypoints)."
+delivers_to:
+  agent: python-coder
+  contract: "End-to-end guarantee that a normally-authored backlog produces buildable ready work (non-empty ready list, zero self-blocked leaves)"
+expects_from:
+  ac_id: ACD-400a-3
+  contract: "Ancestor-aware classification that excludes hierarchy links from readiness gating"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_freshly_authored_tree_yields_non_empty_ready_list
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    covers: [ACD-400a-4]
+    description: "Writes an on-disk fixture tree (L1 composite not done + three approved/active/todo L2/L3 leaves whose only depends_on is their immediate parent) and runs scan_ac_store.py end to end with leaf+todo filters; asserts the ready list is non-empty and contains all three leaves."
+  - name: test_freshly_authored_tree_no_leaf_self_blocked
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    covers: [ACD-400a-4]
+    description: "Runs the scanner over the same freshly-authored fixture and asserts the blocked list contains none of the three leaf ACs (parent-only hierarchy links never self-block)."
+change_target: code
+risk_surface: contract_boundary

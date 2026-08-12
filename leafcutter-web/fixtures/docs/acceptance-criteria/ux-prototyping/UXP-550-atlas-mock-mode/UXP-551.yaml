@@ -1,0 +1,39 @@
+id: UXP-551
+readiness: approved
+priority: high
+title: "A bundled fixture repo mirrors each loader input's native format so all Atlas views render populated"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: reviewed
+work_status: in_progress
+criteria: |
+  Given the bundled fixture repo at leafcutter-web/fixtures/,
+  When the Atlas runs in mock mode and each of the 8 views is opened,
+  Then every view renders non-empty, populated content (each view shows records rather
+  than an empty state) because the fixture tree contains a curated snapshot for every
+  loader input,
+  And each fixture input mirrors its real artifact's NATIVE on-disk format so the same
+  loaders parse it unchanged.
+depends_on:
+  - UXP-550
+doc_links: []
+assigned_agent: frontend-coder
+estimated_complexity: L
+it_requirements: |
+  Author leafcutter-web/fixtures/ as a canned repo root whose subtree mirrors the paths
+  every loader reads via repoPath(), each in the real artifact's NATIVE on-disk format.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-551-1
+implemented_by:
+  - leafcutter-web/fixtures/
+change_target: code
+risk_surface: internal

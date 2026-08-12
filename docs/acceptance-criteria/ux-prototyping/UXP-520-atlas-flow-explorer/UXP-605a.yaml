@@ -1,0 +1,69 @@
+id: UXP-605a
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "The 'Show ACs in graph' preference persists across reload and navigation"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given the person has set the "Show ACs in graph" toggle on (or off),
+  When they reload the /flows view or navigate away and back,
+  Then the toggle returns to its last-set state from the persisted view preference,
+  And the preference is applied without any sign-in, role, or identity check.
+depends_on:
+  - UXP-605
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "ExplorerInner in leafcutter-web/components/flows/flow-explorer.tsx must initialize showAcNodes from localStorage key 'flows:showAcNodes' (=== '1') on mount, so the last-set state is restored across reload and navigation."
+  - "The localStorage read must be SSR-safe (guarded for typeof window === 'undefined') and wrapped so a storage exception falls back to off without breaking the view; restoration must apply with no sign-in/role/identity check."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::show_acs_preference_restored_from_localstorage"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::show_acs_preference_off_when_localstorage_absent"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::show_acs_preference_off_when_localstorage_set_to_zero"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::show_acs_init_is_ssr_safe"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::toggle_state_persisted_to_localstorage_on_change"
+implemented_by:
+  - leafcutter-web/components/flows/flow-explorer.tsx
+test_spec:
+  - name: show_acs_preference_restored_from_localstorage
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "With localStorage 'flows:showAcNodes' set to '1', a fresh mount of ExplorerInner initializes showAcNodes true (preference restored across reload); with '0' or absent it initializes false."
+  - name: show_acs_init_is_ssr_safe
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: unit
+    description: "The initializer returns false when window is undefined and does not throw when localStorage access fails."
+change_target: code
+risk_surface: internal
+notes: |
+  Edge case of UXP-605 confirming the persistence is durable and identity-free. Backfill of
+  shipped behavior.
+  IT-PO enrichment (2026-08-11): implemented_by verified (localStorage-backed showAcNodes init
+  in ExplorerInner, SSR-guarded and try/catch-wrapped).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by five
+  passing vitest tests tagged `// covers: UXP-605a` in flow-nodes.decisions.test.tsx
+  (show_acs_preference_restored_from_localstorage, show_acs_preference_off_when_localstorage_absent,
+  show_acs_preference_off_when_localstorage_set_to_zero, show_acs_init_is_ssr_safe,
+  toggle_state_persisted_to_localstorage_on_change), recorded in covered_by; code is shipped.
+  Suite green (41/41).

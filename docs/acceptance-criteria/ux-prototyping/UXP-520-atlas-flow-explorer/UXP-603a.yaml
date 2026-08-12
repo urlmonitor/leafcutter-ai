@@ -1,0 +1,55 @@
+id: UXP-603a
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A node with zero acceptance criteria shows no progress pill"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given a flow node (a step or a branch) that references zero acceptance criteria,
+  When the graph is drawn,
+  Then no progress pill is shown on that node,
+  And the pill is omitted entirely rather than shown as "0/0".
+depends_on:
+  - UXP-603
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "FlowStepNode in leafcutter-web/components/flows/flow-nodes.tsx must gate the progress pill behind acCount > 0, so a node referencing zero ACs renders no pill (never '0/0')."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::flow_step_node_omits_pill_when_zero_acs"
+implemented_by:
+  - leafcutter-web/components/flows/flow-nodes.tsx
+test_spec:
+  - name: flow_step_node_omits_pill_when_zero_acs
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "A node with acCount 0 renders no progress pill element and never shows '0/0'."
+change_target: code
+risk_surface: internal
+notes: |
+  Edge case of UXP-603. Backfill of shipped behavior.
+  IT-PO enrichment (2026-08-11): implemented_by verified (acCount > 0 pill gate in
+  FlowStepNode).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by the
+  passing vitest test tagged `// covers: UXP-603a` (flow_step_node_omits_pill_when_zero_acs),
+  recorded in covered_by; code is shipped. Suite green (41/41).

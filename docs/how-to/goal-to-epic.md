@@ -27,12 +27,13 @@ traverses the AC tree, presents a readiness gate, generates tickets for
 all approved leaf ACs, resolves inter-ticket dependencies, and assembles
 everything into a numbered EPIC folder.
 
-This guide covers four tasks:
+This guide covers five tasks:
 
 1. [Invoking /build-ac with a goal AC ID](#1-invoking-build-ac-with-a-goal-ac-id)
 2. [Understanding the output — what gets created](#2-understanding-the-output)
 3. [Using the generated EPIC folder with /build-feature](#3-using-the-generated-epic-folder)
 4. [Troubleshooting: L1 with no children](#4-troubleshooting-l1-with-no-children)
+5. [Using --ids mode for explicit connected-set builds](#5-using---ids-mode-for-explicit-connected-set-builds)
 
 **Prerequisites:**
 
@@ -46,7 +47,8 @@ This guide covers four tasks:
 
 **Related AC IDs:** ACD-1200a-4 (this guide), ACD-1200a (pipeline),
 ACD-1200b (readiness gate), ACD-1200c (dependency wiring),
-ACD-1200d (target_epic stamping), ACD-1200e (unified entry point).
+ACD-1200d (target_epic stamping), ACD-1200e (unified entry point),
+BO-2600a-5 (explicit connected-set `--ids` entrypoint).
 
 ---
 
@@ -196,6 +198,91 @@ ones you want built, and then re-invoke `/build-ac --ac ACD-050`.
 
 ---
 
+## 5. Using --ids mode for explicit connected-set builds
+
+The `--ids` CLI mode (`BO-2600a-5`) lets you assemble an EPIC from an
+explicit, already-resolved list of leaf AC ids — without re-walking any AC
+subtree. This is the entrypoint that the fast-lane build path uses when
+`fast_lane.resolve_connected_build_set()` has already computed the full
+connected set (including cross-tree prerequisites that would be dropped by
+a single-root subtree walk).
+
+### When to use --ids instead of --ac
+
+| Situation | Use |
+|-----------|-----|
+| You have a goal-level AC and want the system to derive which leaves to build. | `--ac <ac_id>` |
+| You have a pre-computed list of leaf ids (e.g. from `fast_lane.resolve_connected_build_set`) that includes cross-tree prerequisites. | `--ids <id1,id2,...>` |
+
+Use `--ids` whenever the connected build set was produced by
+`resolve_connected_build_set` in `scripts/build_orchestration/fast_lane.py`,
+because that function adds cross-tree prerequisite leaves that a single-root
+subtree walk (`traverse_ac_tree`) would drop.
+
+### Step 1: Obtain the connected-set id list
+
+If you are calling `build_epic_from_ids` programmatically (e.g. from
+`build-ac` or a pipeline script), use `resolve_connected_build_set` to
+compute the list first:
+
+```python
+from scripts.build_orchestration.fast_lane import resolve_connected_build_set
+from pathlib import Path
+
+ids = resolve_connected_build_set(
+    "BO-2600a",
+    ac_root=Path("docs/acceptance-criteria"),
+)
+# ids = ["BO-2600a-1", "BO-2600a-3", "BO-2600a-5", ...]
+```
+
+### Step 2: Pass the list to --ids
+
+```bash
+python scripts/goal_to_epic.py \
+  --ids BO-2600a-1,BO-2600a-3,BO-2600a-5 \
+  --store-root docs/acceptance-criteria \
+  --inbox-dir tickets/00_inbox
+```
+
+Or from Python:
+
+```python
+from scripts.goal_to_epic import build_epic_from_ids
+from pathlib import Path
+
+epic_folder = build_epic_from_ids(
+    ids=["BO-2600a-1", "BO-2600a-3", "BO-2600a-5"],
+    store_root=Path("docs/acceptance-criteria"),
+    inbox_dir=Path("tickets/00_inbox"),
+)
+print(f"EPIC folder created: {epic_folder}")
+```
+
+### What --ids guarantees
+
+- **Exact scope**: Exactly the provided ids become tickets — one ticket per id.
+  No subtree re-derivation is performed. Cross-tree ids in the list are preserved.
+- **Dependency order**: The tickets are numbered in topological build order
+  (prerequisites first).
+- **depends_on translated at generation time**: Each ticket's `depends_on`
+  frontmatter references co-located ticket filenames (not raw AC ids), so
+  `ticket_frontmatter_guard` passes without a downstream hook fix.
+- **Repo-relative implemented_by**: Back-references written into source AC YAMLs
+  start with `tickets/` (never absolute worktree paths).
+- **No readiness gate**: The `--ids` path does not check `readiness` or prompt
+  interactively — the caller is responsible for selecting only approved ids.
+
+### Cross-reference: fast-lane integration
+
+See [Fast-lane build guide](fast-lane-build.md) for how `resolve_connected_build_set`
+computes the set that you pass to `--ids`. The fast-lane guide explains the
+subtree-union plus transitive-closure algorithm, and describes how `--ids` closes
+the defect where a single-root subtree walk would drop genuine cross-tree
+prerequisites.
+
+---
+
 ## Diagram Reference
 
 For the full end-to-end sequence of the goal-to-epic pipeline, see:
@@ -212,3 +299,5 @@ For the full end-to-end sequence of the goal-to-epic pipeline, see:
   auto-detects leaf vs goal mode.
 - [How to use the AC-driven development system](ac-driven-development.md) —
   authoring, approving, and building individual ACs.
+- [Fast-lane build guide](fast-lane-build.md) — how `resolve_connected_build_set`
+  computes the connected set fed to `--ids` mode.

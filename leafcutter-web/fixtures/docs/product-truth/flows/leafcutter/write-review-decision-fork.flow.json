@@ -1,0 +1,90 @@
+{
+  "id": "leafcutter/write-review-decision-fork",
+  "component": "ux-prototyping",
+  "product": "Fern & Fig",
+  "name": "Write a plant review — decision fork demo",
+  "level": "journey",
+  "summary": "A customer reviews a delivered plant. After viewing their order, the system chains two decision branches before reaching the review form: first it checks whether the item has already been reviewed, then whether it has been delivered. Only when both checks pass does the customer land on the write-review screen. FIXTURE — demo of ADR-025 decision-diamond rendering in the Leafcutter Atlas flows view.",
+  "kind": "user",
+  "source": "mock",
+  "realization": "mock",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "tags": ["demo", "decision-diamonds", "ux-prototyping"],
+  "entities": [],
+  "steps": [
+    {
+      "id": "view-order",
+      "label": "View Order",
+      "human": "The customer opens their order detail page to see the plant they received.",
+      "order": 1,
+      "impl_status": "not_started"
+    },
+    {
+      "id": "write-review",
+      "label": "Write Review",
+      "human": "The customer composes a star rating and written review for the plant.",
+      "order": 2,
+      "impl_status": "not_started"
+    },
+    {
+      "id": "submit-review",
+      "label": "Submit Review",
+      "human": "The review is submitted and appears on the plant detail page.",
+      "order": 3,
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "already-reviewed",
+      "from": "write-review",
+      "condition": "Customer has already reviewed this order item",
+      "label": "Already Reviewed",
+      "human": "The customer has already left a review for this plant from this order; the system shows the existing review instead.",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "not-delivered",
+      "from": "write-review",
+      "condition": "Order item not yet delivered",
+      "label": "Not Delivered",
+      "human": "The order has not been marked delivered yet; the system blocks the review form and prompts the customer to wait.",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "view-order",
+      "given": "a customer who has received a plant order",
+      "when": "the customer opens their order detail page",
+      "then": "they see the plant name, delivery status, and a Leave a review prompt"
+    },
+    {
+      "for": "write-review",
+      "given": "the customer taps Leave a review and passes both decision checks",
+      "when": "the review form opens",
+      "then": "they can enter a star rating and free-text review"
+    },
+    {
+      "for": "submit-review",
+      "given": "the customer submits their review",
+      "when": "the form is submitted",
+      "then": "the review appears on the plant detail page and the order detail shows Reviewed"
+    },
+    {
+      "for": "already-reviewed",
+      "given": "the customer tries to review a plant they already reviewed from this order",
+      "when": "they navigate to the review form",
+      "then": "the system redirects them to their existing review"
+    },
+    {
+      "for": "not-delivered",
+      "given": "the customer tries to review an undelivered order item",
+      "when": "they tap Leave a review",
+      "then": "the system shows a message: you can review this plant after it is delivered"
+    }
+  ]
+}

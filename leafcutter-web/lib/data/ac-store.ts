@@ -1,7 +1,7 @@
 import "server-only";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { repoPath, walk, readFileSafe, rel } from "./repo";
+import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import type {
   AC,
   AcComponent,
@@ -92,11 +92,15 @@ export function loadAcComponents(): AcComponent[] {
   }
 }
 
-let _acCache: AC[] | null = null;
+// Keyed by repoRoot() so mock and real roots are cached separately.
+// A single-value cache would serve stale data after a mock-mode toggle.
+const _acCache = new Map<string, AC[]>();
 
-/** Load every AC YAML file under the store, normalized. Cached per-process. */
+/** Load every AC YAML file under the store, normalized. Cached per-repo-root. */
 export function loadAcs(): AC[] {
-  if (_acCache) return _acCache;
+  const root = repoRoot();
+  const hit = _acCache.get(root);
+  if (hit) return hit;
   const dir = repoPath(AC_DIR);
   const files = walk(dir, ".yaml").filter(
     (f) => path.basename(f) !== "index.yaml",
@@ -145,7 +149,7 @@ export function loadAcs(): AC[] {
     });
   }
   acs.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
-  _acCache = acs;
+  _acCache.set(root, acs);
   return acs;
 }
 
