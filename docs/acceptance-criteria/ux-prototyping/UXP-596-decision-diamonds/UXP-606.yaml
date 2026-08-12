@@ -1,0 +1,56 @@
+id: UXP-606
+components:
+  - ux_prototyping
+readiness: reviewed
+priority: medium
+title: "How-to: read decision diamonds in the Atlas Flows view"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a reviewer opening a flow in the Atlas /flows view,
+  When they consult the how-to guide for decision diamonds,
+  Then the guide explains how to read a decision diamond (the question at a fork),
+  how to read its labelled yes/no/else edges (branch outcome on "yes", fall-through to the
+  next step on "no"/else), and how a multi-branch fork reads as a chain of diamonds,
+  And it notes that diamonds are derived automatically from the flow's fork data (nothing
+  extra to author to make them appear).
+depends_on:
+  - UXP-596
+  - UXP-597
+  - UXP-598
+  - UXP-599
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/read-decision-diamonds-in-atlas.md
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to must be reader-facing (how to READ diamonds), not an authoring guide, so it stays valid across the ADR-025 branches[] -> decisions[] migration."
+  - "It must describe the yes/no/else edge labelling and the diamond-chain reading of a multi-branch fork, consistent with the shipped rendering (UXP-597/598/599)."
+  - "It must state that diamonds are derived automatically from existing fork data — a reviewer needs to do nothing to make them appear."
+delivers_to: null
+expects_from: {}
+origin_agent: it-po
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_required: false
+test_rationale: "Documentation deliverable (change_target: docs) — a how-to guide with no executable behavior. Coverage is a documentation-verifier/doc gate concern, not a unit test."
+change_target: docs
+risk_surface: internal
+notes: |
+  Authored by IT-PO (2026-08-11) to satisfy the documentation_triggers: [how-to] declared on
+  parent L1 UXP-596 (S7b documentation gate). work_status is todo because the how-to guide does
+  NOT yet exist — this AC honestly flags the doc gap for documentation-expert to fill. Scoped to
+  READING diamonds (stable) rather than AUTHORING forks (about to change under ADR-025's
+  decisions[] schema), so the guide will not be immediately obsoleted by the migration.
+  Not a shipped/backfill AC — a genuine open documentation task. Not flipped to done.

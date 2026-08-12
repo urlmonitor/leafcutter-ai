@@ -1,0 +1,75 @@
+id: UXP-599
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A multi-branch fork chains into diamonds (diamond -> diamond -> happy path), not one N-way node"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given a single step that has N conditional branches (N >= 2),
+  When the graph for that flow is drawn,
+  Then the fork is rendered as a chain of N diamonds (diamond -> diamond -> ... -> happy path),
+  one diamond per branch, each diamond testing exactly one branch's condition,
+  And the "else" edge of each diamond descends to the next diamond in the chain,
+  And the final "else" edge continues to the happy-path next step,
+  And the fork is NOT drawn as a single node with N outgoing edges.
+depends_on:
+  - UXP-596
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "buildFlowGraph in leafcutter-web/lib/data/graph.ts must group branches by their shared from-step and synthesize one decision node per branch (id decision:<stepId>:<j>), chaining them: step -> D0, each Dj 'no' handle -> D(j+1), and the last Dj 'no' handle -> the next ordered step."
+  - "Each diamond's 'yes' handle must point to exactly one branch outcome; the fork must never be emitted as a single node with N outgoing edges."
+  - "Column layout must reserve one column per diamond (stepColMap / branchDecisionCol in graph.ts) so the chain lays out left-to-right without overlap; sibling branch lanes are positioned by ExplorerInner in flow-explorer.tsx (BRANCH_LANE)."
+  - "Chaining must be count-agnostic — it must handle arbitrary N >= 2 with no hard-coded branch count."
+delivers_to: null
+expects_from:
+  UXP-600: "the grouped branch data (branches sharing a from-step) that buildFlowGraph chains into one diamond per branch"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-599a
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_chains_n_branches_into_n_diamonds"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::last_diamond_no_edge_goes_to_next_ordered_step"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::each_diamond_has_exactly_one_yes_edge"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_diamond_chain_is_count_agnostic_n2_and_n4"
+implemented_by:
+  - leafcutter-web/lib/data/graph.ts
+  - leafcutter-web/components/flows/flow-explorer.tsx
+test_spec:
+  - name: buildFlowGraph_chains_n_branches_into_n_diamonds
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "A step with N=3 branches yields 3 decision nodes chained via 'no' handles (step->D0, D0->D1, D1->D2), each diamond's 'yes' edge to its branch outcome, and the last diamond's 'no' edge to the next ordered step; no single node has N outgoing branch edges."
+  - name: buildFlowGraph_diamond_chain_is_count_agnostic
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "The chain length equals the branch count for N=2 and N=4 with no hard-coded cap."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped behavior. Chaining matches ADR-025 Decision rule 3 (one diamond per
+  branch outcome; the unstated happy-path fall-through is the terminal else).
+  IT-PO enrichment (2026-08-11): implemented_by verified against shipped source (per-branch
+  decision node synthesis + step->D0->...->next-step chaining and column reservation in
+  buildFlowGraph; sibling-lane layout in flow-explorer.tsx).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by four
+  passing vitest tests tagged `// covers: UXP-599` in graph.decisions.test.ts (appended to
+  covered_by alongside the existing child edge-case UXP-599a); code is shipped. Suite green
+  (41/41). Note: child UXP-599a is a KNOWN-LIMITATION marker and stays not_started.

@@ -1,0 +1,70 @@
+id: UXP-605
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A 'Show ACs in graph' toggle (default off, persisted) restores the fully-wired AC-node view"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given the /flows view with a "Show ACs in graph" toggle,
+  When the person turns the toggle on,
+  Then the graph restores the fully-wired AC-node view, drawing individual acceptance-criterion nodes wired to their steps and branches,
+  And the toggle defaults to off,
+  And the toggle state is persisted as a view preference that is not tied to any user role or identity,
+  And there is no role or identity system governing who may enable it.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "ExplorerInner in leafcutter-web/components/flows/flow-explorer.tsx must render a 'Show ACs in graph' toggle whose handler (handleToggleShowAcNodes) flips showAcNodes and passes it to buildFlowGraph(flow, showAcNodes); when on, the AC nodes and their 'implements' edges are drawn (via the showAcNodes gate in leafcutter-web/lib/data/graph.ts)."
+  - "The toggle must default to off and persist as a plain client view preference in localStorage under key 'flows:showAcNodes'."
+  - "SECURITY/POLICY: persistence must NOT be tied to any user role, identity, or sign-in — there is no role/identity gate governing who may enable it; localStorage reads/writes must be wrapped so a storage exception cannot break the view."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-605a
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::show_acs_toggle_defaults_off"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::show_acs_toggle_on_renders_wired_ac_nodes"
+implemented_by:
+  - leafcutter-web/components/flows/flow-explorer.tsx
+  - leafcutter-web/lib/data/graph.ts
+test_spec:
+  - name: show_acs_toggle_defaults_off
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "With no persisted preference the toggle is off and no AC nodes render."
+  - name: show_acs_toggle_on_renders_wired_ac_nodes
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "Turning the toggle on renders AC nodes wired to their steps/branches by 'implements' edges, with no role/identity check."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped behavior. Complements UXP-602 (nodes off by default): this is the opt-in
+  that turns them back on. The "no role/identity system" clause is deliberate — persistence is a
+  plain client view preference. Persistence across reload is captured in child UXP-605a.
+  IT-PO enrichment (2026-08-11): implemented_by verified (toggle + handleToggleShowAcNodes +
+  localStorage 'flows:showAcNodes' in ExplorerInner; showAcNodes gate in buildFlowGraph).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by two
+  passing vitest tests tagged `// covers: UXP-605` (show_acs_toggle_defaults_off,
+  show_acs_toggle_on_renders_wired_ac_nodes in flow-nodes.decisions.test.tsx), appended to
+  covered_by alongside the existing child edge-case UXP-605a; code is shipped. Suite green (41/41).

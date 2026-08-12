@@ -24,12 +24,13 @@ export interface FlowStepNodeData {
   status: WorkStatus;
   variant: "step" | "branch";
   acCount: number;
+  acDone: number;        // count of ACs with workStatus === "done" for this step
   drillable?: boolean;   // step has a resolvable expands_to child flow
   selected?: boolean;
 }
 
 function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
-  const { label, order, screen, screenTitle, realization, status, variant, acCount, drillable, selected } = data;
+  const { label, order, screen, screenTitle, realization, status, variant, acCount, acDone, drillable, selected } = data;
   const st = WORK_STATUS_TONE[status] ?? WORK_STATUS_TONE.unknown;
   const isBranch = variant === "branch";
   return (
@@ -113,8 +114,23 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
           </span>
         )}
         {acCount > 0 && (
-          <span className="font-mono">
-            {acCount} AC{acCount === 1 ? "" : "s"}
+          <span className="inline-flex flex-col gap-0.5">
+            <span
+              className="rounded px-1.5 py-0.5 font-mono text-[9px] font-semibold tabular-nums"
+              style={{ color: `hsl(${st.hsl})`, background: `hsl(${st.hsl} / 0.14)` }}
+            >
+              {acDone}/{acCount} ACs
+            </span>
+            <span className="h-0.5 w-full overflow-hidden rounded-full bg-muted/30">
+              <span
+                className="block h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${acCount > 0 ? Math.round((acDone / acCount) * 100) : 0}%`,
+                  background: `hsl(${st.hsl})`,
+                  opacity: 0.75,
+                }}
+              />
+            </span>
           </span>
         )}
         {drillable && (
@@ -134,7 +150,119 @@ function FlowStepNodeImpl({ data }: NodeProps<FlowStepNodeData>) {
 
 export const FlowStepNode = React.memo(FlowStepNodeImpl);
 
+// ---------------------------------------------------------------------------
+// Decision diamond node (ADR-025 chaining semantics)
+//
+// Visually: a rotated square — the classic flowchart decision symbol.
+// Colour: --warning (amber, 38 94% 60%) — signals a conditional fork, distinct
+// from rectangular step cards which tint by implStatus.
+// Layout: 130 × 130px outer container; 90 × 90px inner square rotated 45°.
+// The corners of the 90px diamond align with the 130px box edges, so
+// Position.Left/Right/Bottom handles land exactly at the diamond's vertices.
+// ---------------------------------------------------------------------------
+export interface FlowDecisionNodeData {
+  condition: string;     // question text rendered inside the diamond
+  yesLabel?: string;     // label on the downward "yes" edge
+  noLabel?: string;      // label on the rightward "no/else" edge
+  status?: WorkStatus;   // derived impl_status for tinting (UXP-601)
+}
+
+function FlowDecisionNodeImpl({ data }: NodeProps<FlowDecisionNodeData>) {
+  const { condition, status } = data;
+  // Tint the diamond by derived impl_status (UXP-601).
+  // Falls back to in_progress (amber) when status is absent — preserves the
+  // previous amber appearance for nodes without a status field.
+  const st = WORK_STATUS_TONE[status ?? "in_progress"] ?? WORK_STATUS_TONE.unknown;
+  return (
+    <div
+      style={{ width: 130, height: 130, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      {/* Target: left vertex — incoming edge from step or previous diamond */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!h-1.5 !w-1.5 !border-0"
+        style={{ background: `hsl(${st.hsl})`, top: "50%" }}
+        isConnectable={false}
+      />
+      {/* Source id="no": right vertex — no/else edge to next diamond or next step */}
+      <Handle
+        type="source"
+        id="no"
+        position={Position.Right}
+        className="!h-1.5 !w-1.5 !border-0"
+        style={{ background: `hsl(${st.hsl})`, top: "50%" }}
+        isConnectable={false}
+      />
+      {/* Source id="yes": bottom vertex — yes edge to the branch outcome */}
+      <Handle
+        type="source"
+        id="yes"
+        position={Position.Bottom}
+        className="!h-1.5 !w-1.5 !border-0"
+        style={{ background: `hsl(${st.hsl})`, left: "50%" }}
+        isConnectable={false}
+      />
+
+      {/* Diamond shape: 90×90 square rotated 45°; tint follows derived impl_status */}
+      <div
+        style={{
+          width: 90,
+          height: 90,
+          flexShrink: 0,
+          transform: "rotate(45deg)",
+          background: `hsl(${st.hsl} / 0.1)`,
+          border: `1.5px solid hsl(${st.hsl} / 0.72)`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "box-shadow 150ms ease-out",
+        }}
+      >
+        {/* Counter-rotate content so text stays upright */}
+        <div
+          style={{
+            transform: "rotate(-45deg)",
+            textAlign: "center",
+            width: 90,
+            padding: "0 6px",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: `hsl(${st.hsl})`,
+              letterSpacing: "0.06em",
+              marginBottom: 2,
+            }}
+          >
+            ?
+          </div>
+          <div
+            style={{
+              fontSize: 9,
+              color: "hsl(155 7% 75%)",
+              lineHeight: 1.3,
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            {condition}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const FlowDecisionNode = React.memo(FlowDecisionNodeImpl);
+
 export const flowNodeTypes = {
   flowStepNode: FlowStepNode,
   acNode: AcNode,
+  flowDecisionNode: FlowDecisionNode,
 } as const;

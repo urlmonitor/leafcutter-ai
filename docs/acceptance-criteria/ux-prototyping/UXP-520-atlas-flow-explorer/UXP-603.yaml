@@ -1,0 +1,71 @@
+id: UXP-603
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Each step/branch shows a compact, status-tinted done/total ACs progress pill"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given a flow node (a step or a branch) that references one or more acceptance criteria,
+  When the graph is drawn,
+  Then that node shows a compact "done/total ACs" progress pill (for example "2/3"),
+  And the pill is tinted by aggregate status: green when all referenced ACs are done,
+  amber when some but not all are done, and grey when none are done.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "FlowStepNode in leafcutter-web/components/flows/flow-nodes.tsx must render a compact '{acDone}/{acCount} ACs' pill tinted by WORK_STATUS_TONE of the node's derived status."
+  - "The node's derived status must roll up from AC work_status via rollupStatus in leafcutter-web/lib/data/flows.ts (all done -> done/green; some done -> in_progress/amber; none done -> not_started/grey), and acDone must be computed in buildFlowGraph (leafcutter-web/lib/data/graph.ts) as the count of referenced ACs with work_status done."
+  - "The pill tint must follow the derived aggregate status, never a hand-set colour."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-603a
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::step_nodes_carry_acDone_in_meta"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::done_step_with_implements_has_nonzero_acDone"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::flow_step_node_renders_done_total_ac_pill"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::ac_pill_tints_by_aggregate_status_green_when_all_done"
+  - "leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx::ac_pill_tints_by_aggregate_status_partial"
+implemented_by:
+  - leafcutter-web/components/flows/flow-nodes.tsx
+  - leafcutter-web/lib/data/graph.ts
+  - leafcutter-web/lib/data/flows.ts
+test_spec:
+  - name: flow_step_node_renders_done_total_ac_pill
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "A node with 3 ACs, 2 done, renders a '2/3 ACs' pill."
+  - name: ac_pill_tints_by_aggregate_status
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "Pill tone is green when all ACs done, amber when some done, grey when none done — following the derived rollup status."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped behavior. The 0-AC empty state (no pill) is captured in child UXP-603a.
+  IT-PO enrichment (2026-08-11): implemented_by verified (pill markup + WORK_STATUS_TONE tint
+  in FlowStepNode; acDone meta in graph.ts; rollupStatus in flows.ts).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by five
+  passing vitest tests tagged `// covers: UXP-603` (graph.decisions.test.ts +
+  flow-nodes.decisions.test.tsx), appended to covered_by alongside the existing child edge-case
+  UXP-603a; code is shipped. Suite green (41/41).
