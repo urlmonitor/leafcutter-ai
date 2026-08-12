@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -64,6 +64,7 @@ covered_by:
   - BP-1400a-1-i
 implemented_by:
 - /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/01_TICKET-20260721-BP-1400a-1.md
+- leafcutter-web/package-lock.json
 notes: |
   Mirrors the Python test-gate check BP-1200b-1: a NEW blocking check added to
   the pull-request CI flow, distinct from any existing informational job — a

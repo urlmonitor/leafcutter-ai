@@ -225,3 +225,31 @@ jobs:
           # --explicit-package-bases avoids "source file found twice" errors from
           # the flat sys.path-based layout (scripts/ is not an installed package).
           mypy --ignore-missing-imports --explicit-package-bases --no-error-summary $CHANGED
+
+  web-app-build:
+    name: Web app build and type-check (blocking)
+    runs-on: ubuntu-latest
+    # Blocking gate (BP-1400a-1): 'next build' runs the TypeScript compiler (tsc),
+    # so any build failure or type error exits non-zero, failing this check.
+    # There is NO continue-on-error — this is a hard, blocking check (contrast
+    # the existing informational 'typecheck' job which uses continue-on-error: true).
+    # The job name "Web app build and type-check (blocking)" is the stable cross-AC
+    # contract referenced by branch-protection required-status-checks (BP-1400a-4)
+    # — do NOT rename it.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install web-app dependencies
+        working-directory: leafcutter-web
+        run: npm ci
+
+      - name: Build web app and run type-check (next build runs tsc)
+        working-directory: leafcutter-web
+        run: npx next build
