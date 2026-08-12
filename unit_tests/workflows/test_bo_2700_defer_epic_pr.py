@@ -51,6 +51,9 @@ def _extract_function(source: str, name: str) -> str:
 class TestSelectDispatchPhasesBehavior(unittest.TestCase):
     """Behavioral tests: execute the real selectDispatchPhases via node."""
 
+    source: str
+    func_src: str
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = _WORKFLOW_PATH.read_text(encoding="utf-8")
@@ -119,6 +122,8 @@ class TestSelectDispatchPhasesBehavior(unittest.TestCase):
 
 class TestDispatchCallSites(unittest.TestCase):
     """Structural coverage of the call-site wiring (cannot run the full driver)."""
+
+    source: str
 
     @classmethod
     def setUpClass(cls) -> None:
