@@ -38,7 +38,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [ACD-400a-1, ACD-400a-2, ACD-400a-3, ACD-400a-4]
+covered_by: [ACD-400a-1, ACD-400a-2]
 implemented_by:
 - scripts/ac_store/scan_ac_store.py
 - scripts/ac_store/ac_prioritizer.py
