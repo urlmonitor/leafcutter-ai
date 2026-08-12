@@ -33,6 +33,7 @@ it_requirements:
   - "The pointer-quality check must flag a file target that is a deployed/build-output copy of a templates/ source (for example scripts/workflows/*.js or a .claude/ path) and require the AC to name the canonical hand-edited templates/ source instead."
   - "The flag must name BOTH the deployed path and its expected canonical templates/ counterpart."
   - "The deployed<->canonical mapping must be resolved from the build deploy map in scripts/build_phases.py (counterpart-driven), not a hard-coded list nor the scripts/ prefix alone — a scripts/ path with no templates/ counterpart must NOT be flagged (ties to ACD-1600d-1-i)."
+  - "Ship advisory before required and diff-scope the check so it grandfathers pre-existing (schema_version < 2) ACs (ADR-026 rules 3-4): existing consumer stores are full of build-output pointers (legacy ACD-400b itself has implemented_by: scripts/...), so a required, non-diff-scoped gate would retroactively flag a whole legacy store on upgrade."
 delivers_to:
   agent: python-coder
   contract: "The pointer-quality check: given an AC file target, resolve whether it is a deployed copy of a templates/ source and, if so, flag it with the expected canonical path; consumed by the false-positive edge case ACD-1600d-1-i."

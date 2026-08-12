@@ -33,6 +33,7 @@ expects_from:
   contract: "The shared spec-resolution API returning the resolved-spec dict (store-first) that the gate consumes in its control flow to compute its verdict."
 it_requirements:
   - "Canonical source: the gate script under scripts/commit_guardian/ (or scripts/ac_store/) plus the shared resolver in scripts/ac_store/generate_ticket_from_ac.py. The gate's verdict MUST be computed from the resolved spec in its control flow -- the resolved criteria must be a data input to the pass/block decision, not decorative."
+  - "Scope includes gate-bearing AGENT TEMPLATES, not only scripts: templates/agents/ac-fulfillment-gate.md and templates/agents/ac-validator.md exhibit the fixed-pass/skip risk (ac-fulfillment-gate returns ok when ac_traceability is absent). Their verdict must likewise track the resolved spec; a literal implementer must harden these template surfaces too, not just the .py gate. (See the dedicated fulfillment-gate migration AC for the absent-ac_traceability -> dual-read/blocker fix.)"
   - "This is a gate/workflow AC: the test MUST execute the gate twice against the SAME resolved spec -- once with work that violates the resolved criteria (expect blocking verdict) and once with work that satisfies them (expect ok) -- proving the verdict tracks the resolved spec and is not a fixed pass. Grep-only tests are explicitly disallowed (they pass on dead code)."
   - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
 test_spec:

@@ -33,6 +33,7 @@ it_requirements:
   - "The authoring-quality check must flag criteria whose Given embeds a planning/authoring-pipeline precondition (authoring roles like 'IT PO v3', readiness-state transitions, enrichment steps) rather than the behaviour to build, and quote the offending clause."
   - "A flagged AC is held for correction until the offending clause is removed."
   - "The distinction must key on planning-pipeline markers, not the mere presence of a Given clause — a legitimate runtime/domain precondition must NOT be flagged (ties to ACD-1600e-1-i)."
+  - "Ship advisory before required and diff-scope the check so it grandfathers pre-existing (schema_version < 2) ACs (ADR-026 rules 3-4): older stores contain many ACs with authoring-framed criteria (the empirical motivation for this gate), so a required, non-diff-scoped check would retroactively hold a whole legacy store on upgrade."
 delivers_to:
   agent: python-coder
   contract: "The authoring-quality check: given an AC's criteria, decide whether it embeds an authoring-pipeline precondition and quote the offending clause; consumed by the false-positive edge case ACD-1600e-1-i."
