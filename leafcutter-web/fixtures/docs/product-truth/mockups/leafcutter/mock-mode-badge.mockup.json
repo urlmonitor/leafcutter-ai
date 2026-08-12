@@ -1,0 +1,24 @@
+{
+  "id": "leafcutter/mock-mode-badge",
+  "component": "ux-prototyping",
+  "screen": "mock-mode-badge",
+  "title": "Mock mode badge in Atlas sidebar",
+  "summary": "An amber warning badge appears at the bottom of the Atlas sidebar when NEXT_PUBLIC_LEAFCUTTER_MOCK=1. It shows 'Mock mode' in uppercase tracking text with a pulsing amber dot. The footer status line switches from 'Live · reads the repo on each request' to 'Fixtures · bundled mock data'.",
+  "entities": [],
+  "source": "mock",
+  "realization": "built",
+  "renders": null,
+  "status": "active",
+  "readiness": "approved",
+  "version": 1,
+  "mock_data_ref": "leafcutter/build-pipeline",
+  "tags": ["mock-mode", "ux-prototyping", "atlas", "badge"],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "frontend-coder",
+      "date": "2026-08-11",
+      "note": "Initial fixture for UXP-552 mock-mode badge drift guard"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import "server-only";
-import { repoPath, walk, readFileSafe, rel } from "./repo";
+import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import { isLeafAc } from "./backlog";
 import type { AC, TraceabilityHealth, Ticket } from "./types";
 
@@ -170,10 +170,13 @@ function scanScope(
   };
 }
 
-let _cache: TraceabilityHealth | null = null;
+// Keyed by repoRoot() so mock and real roots don't share traceability health data.
+const _traceabilityByRoot = new Map<string, TraceabilityHealth>();
 
 export function computeTraceability(acs: AC[], tickets: Ticket[]): TraceabilityHealth {
-  if (_cache) return _cache;
+  const root = repoRoot();
+  const hit = _traceabilityByRoot.get(root);
+  if (hit) return hit;
   const real = realIdSet(acs);
 
   // AC-linked source paths (exact files + directory entries ending in "/")
@@ -207,12 +210,13 @@ export function computeTraceability(acs: AC[], tickets: Ticket[]): TraceabilityH
     ],
   };
 
-  _cache = {
+  const result: TraceabilityHealth = {
     doneGuard: doneGuard(acs),
     orphanTests: orphanTests(real),
     untracedCode,
     ticketsWithTraceability: ticketsWithTrace,
     ticketsTotal: tickets.length,
   };
-  return _cache;
+  _traceabilityByRoot.set(root, result);
+  return result;
 }

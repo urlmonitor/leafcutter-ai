@@ -1,5 +1,5 @@
 import "server-only";
-import { repoPath, walk, readFileSafe, rel } from "./repo";
+import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import { loadAcs } from "./ac-store";
 
 /**
@@ -34,10 +34,15 @@ function isChildRef(entry: string): boolean {
   return /^[A-Z]{2,4}-\d/.test(entry) && !entry.includes("/") && !entry.endsWith(".py");
 }
 
-let _cache: Map<string, AcCoverage> | null = null;
+// Outer key = repoRoot(), inner key = AC id.
+// Per-root keying prevents a mock-mode toggle from serving stale coverage data.
+const _coverageByRoot = new Map<string, Map<string, AcCoverage>>();
+const _testFileCountByRoot = new Map<string, number>();
 
 export function loadCoverage(): Map<string, AcCoverage> {
-  if (_cache) return _cache;
+  const root = repoRoot();
+  const hit = _coverageByRoot.get(root);
+  if (hit) return hit;
 
   const acs = loadAcs();
   const validIds = new Set(acs.map((a) => a.id));
@@ -112,14 +117,13 @@ export function loadCoverage(): Map<string, AcCoverage> {
     });
   }
 
-  // stash the test-file count on a symbol-free side channel
-  _testFileCount = testFileCount;
-  _cache = out;
+  // Stash the test-file count alongside the coverage map, keyed by root.
+  _testFileCountByRoot.set(root, testFileCount);
+  _coverageByRoot.set(root, out);
   return out;
 }
 
-let _testFileCount = 0;
 export function totalTestFiles(): number {
-  loadCoverage();
-  return _testFileCount;
+  loadCoverage(); // ensures _testFileCountByRoot is populated for the current root
+  return _testFileCountByRoot.get(repoRoot()) ?? 0;
 }

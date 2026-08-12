@@ -1,0 +1,23 @@
+# FIXTURE — curated AC component registry for Leafcutter Atlas mock mode (UXP-551).
+# Mirrors the real docs/acceptance-criteria/index.yaml format exactly.
+
+components:
+  - id: build-pipeline
+    prefix: BP
+    description: "ACs for the build system: phase orchestration, artifact wiring, drift detection, and config-driven path resolution"
+    owner: build_pipeline
+    directory_patterns:
+      - "scripts/build*.py"
+
+  - id: ux-prototyping
+    prefix: UXP
+    description: "ACs for the UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff"
+    owner: null
+
+  - id: ac-store
+    prefix: ACS
+    description: "ACs for the acceptance-criteria store: schema governance, ID format, bidirectional traceability, pattern reuse, and component registry integrity"
+    owner: null
+    directory_patterns:
+      - "docs/acceptance-criteria/**/*.yaml"
+      - "scripts/ac_store/*.py"

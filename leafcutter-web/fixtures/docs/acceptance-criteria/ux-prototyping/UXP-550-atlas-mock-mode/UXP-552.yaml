@@ -1,0 +1,38 @@
+id: UXP-552
+readiness: approved
+priority: medium
+title: "A visible mock-mode badge tells the reviewer the Atlas is showing fixtures"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: reviewed
+work_status: done
+criteria: |
+  Given the Atlas is running in mock mode,
+  When any view is displayed,
+  Then a clearly visible "mock mode" badge appears in the app chrome,
+  And the badge is driven by a NEXT_PUBLIC_ mock flag so it is available to the client render,
+  And the badge is presentation-only and is never the authority for whether mock data is served,
+  And when mock mode is off the badge is absent from every view.
+depends_on:
+  - UXP-550
+doc_links: []
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  A NEXT_PUBLIC_LEAFCUTTER_MOCK flag drives a badge in the sidebar chrome.
+  The badge reads the env var directly — presentation only, never the authority
+  for what data is served.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - leafcutter-web/components/shell/sidebar.tsx
+change_target: code
+risk_surface: internal

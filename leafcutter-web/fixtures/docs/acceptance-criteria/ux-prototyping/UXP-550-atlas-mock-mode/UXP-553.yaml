@@ -1,0 +1,39 @@
+id: UXP-553
+readiness: approved
+priority: medium
+title: "LEAFCUTTER_MOCK env sets the default mock state; a runtime override takes precedence"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: reviewed
+work_status: done
+criteria: |
+  Given the Atlas is deployed,
+  When the server resolves whether to serve mock data for a request,
+  Then the LEAFCUTTER_MOCK server env variable sets the DEFAULT mock state
+  (LEAFCUTTER_MOCK=1 defaults to mock on; unset or 0 defaults to real),
+  And the app CAN override that default at runtime via an in-app control (cookie or
+  ?mock query-param),
+  And when a runtime override is present it takes PRECEDENCE over the env default.
+depends_on: []
+doc_links: []
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements: |
+  The mock-mode decision in leafcutter-web/lib/data/mock.ts reads LEAFCUTTER_MOCK as
+  the DEFAULT, then applies any runtime override (cookie "mock") which takes precedence.
+  Resolution order: production lock > runtime override > LEAFCUTTER_MOCK env default.
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-07-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-553-1
+implemented_by:
+  - leafcutter-web/lib/data/mock.ts
+change_target: code
+risk_surface: contract_boundary
