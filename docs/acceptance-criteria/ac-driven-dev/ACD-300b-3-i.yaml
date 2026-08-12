@@ -1,0 +1,59 @@
+id: ACD-300b-3-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: low
+title: "Invoking /plan-feature follows exactly one documented execution path"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a user invokes /plan-feature,
+  When the entry point resolves what to run,
+  Then it follows the single canonical execution path documented by the command
+    (the Workflow tool path),
+  And it does not surface a skill runbook that hand-drives the authoring agents
+    as a competing manual path,
+  And the surfaced instructions contain no manual agent-dispatch steps that
+    contradict the command's "use the Workflow tool" directive.
+depends_on: [ACD-300b-3]
+doc_links:
+  - path: templates/commands/plan-feature.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Spec surface of record: templates/skills/plan-feature/SKILL.md — after reconciliation it must surface the single Workflow-tool execution path and contain no manual agent-dispatch steps that compete with the command."
+  - "The instructions a reader encounters when invoking /plan-feature must point to exactly one documented path (the Workflow tool path) with no competing manual runbook."
+  - "Prompt/spec consistency change owned by llm-expert; do not add runtime logic to plan-feature.js. If a .js edit is unavoidable, split that portion to a JS-capable implementer rather than editing it here."
+  - "Keep the reconciliation consistent with the parent ACD-300b-3 single-execution-model outcome — do not reintroduce a manual path this edge case would contradict."
+test_required: false
+notes: |
+  Verification method (spec-only, no executable behaviour): test_required is
+  false. Verify by re-reading templates/skills/plan-feature/SKILL.md (and the
+  command it must agree with, templates/commands/plan-feature.md) and confirming
+  the surfaced /plan-feature instructions describe exactly one execution path —
+  the Workflow tool path — with zero manual agent-dispatch steps contradicting
+  the command. Per the v3 convention for spec-only ACs, test-writer records this
+  reason and skips test authoring.
+delivers_to: null
+expects_from:
+  ac_id: ACD-300b-3
+  contract: "A reconciled command/skill/workflow set with one canonical execution path"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

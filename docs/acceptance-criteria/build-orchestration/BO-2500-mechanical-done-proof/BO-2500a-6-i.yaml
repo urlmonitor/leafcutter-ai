@@ -1,0 +1,55 @@
+id: BO-2500a-6-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Editing only a non-coverage field of a done composite does not trip the proof-of-done check"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a work_status: done composite AC whose children are each covered by a
+    passing "# covers:" test,
+  When only a non-coverage field of that composite is changed (for example a new
+    child identifier is appended to its covered_by) and the change is submitted,
+  Then the proof-of-done coverage check does not fail the merge with a
+    "no linked test found" result for the composite,
+  And the check reports the composite as satisfied via its children,
+  And the change is not hard-blocked by the required proof-of-done check.
+depends_on: [BO-2500a-6]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File of record: scripts/ac_store/done_proof.py — a CI-changed-mode run triggered by editing a non-coverage field (e.g. appending a child id to covered_by) of a done composite must resolve the composite as satisfied-via-children, not emit a 'no linked test found' failure."
+  - "The child-derived satisfaction path must apply even when the only changed field is covered_by itself (the append that added the child), so the edit that records a child does not paradoxically fail the gate."
+  - "Must not hard-block the merge on the required proof-of-done gate for this case; the composite exemption from BO-2500a-6 must hold under CI-changed scope."
+  - "Must follow the repo error-handling policy: specific-exception try/except around file/YAML I/O and any pytest subprocess call, log at WARNING or higher (or re-raise); no bare or silent excepts."
+  - "Verify behaviorally — EXECUTE the checker over a fixture store where a done composite's covered_by is edited, and assert the verdict is satisfied (not 'no linked test found'); do not grep the source."
+test_spec:
+  - name: test_noncoverage_edit_of_done_composite_does_not_trip_check
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Appending a child id to a done composite's covered_by and running the check in CI-changed mode yields a satisfied-via-children verdict, not a 'no linked test found' failure, and does not block the merge."
+    covers: [BO-2500a-6-i]
+delivers_to: null
+expects_from:
+  ac_id: BO-2500a-6
+  contract: "Composite proof-of-done verdict derived from children"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
