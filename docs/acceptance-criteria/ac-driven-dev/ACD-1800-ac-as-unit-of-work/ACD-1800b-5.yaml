@@ -1,7 +1,7 @@
 id: ACD-1800b-5
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Done-eligibility accepts AC-side sign-offs, not only ticket-body status"
 component: ac-driven-dev
@@ -35,10 +35,18 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: llm-expert
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
-expects_from: null
-it_requirements: null
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "The AC-side per-deliverable sign-off record on the requirement: deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?}. Done-eligibility reads these records to judge a thin ticket done-eligible when all deliverables are signed_off/not_applicable."
+it_requirements:
+  - "Canonical surfaces (prose): the building-epics runbook templates/skills/building-epics/SKILL.md and the supervisor template templates/agents/ticket-supervisor.md, in the done-eligibility / mark-done step (the deployed .claude/ copies are build output per ADR-001; never hand-edit them)."
+  - "Teach done-eligibility to DUAL-READ: judge a thin ticket done-eligible from the AC-side per-deliverable sign-offs (the deliverables[].signoff records defined in ACD-1800b-1a) when the ticket body carries no \"## Comments\" phase-status; continue to honour ticket-body \"## Comments\" status for legacy fat tickets during the dual-record window (dual-read, not replace)."
+  - "A ticket with ANY AC-side deliverable still unsigned MUST NOT be judged done-eligible -- all-signed (each slot signed_off or not_applicable) is the done condition, derived data-driven from the deliverable set, never a hard-coded craft/phase list."
+  - "Author the done-eligibility rule UNIFORMLY across BOTH the runbook (building-epics/SKILL.md) and the supervisor template (ticket-supervisor.md) so no reader is exempt (read-side-first invariant, ADR-026)."
+  - "No executable pytest surface is authored here (prose change) -- see test_required. Per CLAUDE.md 'Gate/Workflow ACs verify behaviorally', behavioral correctness is proven by the AC-side sign-off record tests (ACD-1800b-1a), the ticket-done computation tests (ACD-1800b-2-i), and an ADR-026 rule-7 spot-check asserting the AC-side sign-offs are CONSUMED in the mark-done control flow (thin -> done-eligible; unsigned deliverable -> not) -- never grep-only."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []
@@ -62,3 +70,8 @@ notes: |
   done-eligibility decision against a thin ticket with AC-side sign-offs and a legacy fat ticket
   with body status and assert the result is CONSUMED in the mark-done control flow -- never
   grep-only. IT-PO to add it_requirements + surface wiring.
+
+  IT-PO enrichment (2026-08-12): prose surfaces (ADR-001 canonical templates/; .claude/ is build
+  output). test_required: false per the change_target: prompt precedent (ACD-1800b-1b /
+  ACD-1600b-1-i). Behavioral proof = ACD-1800b-1a + ACD-1800b-2-i tests + ADR-026 rule-7
+  mark-done control-flow spot-check.
