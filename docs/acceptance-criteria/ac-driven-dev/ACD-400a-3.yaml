@@ -1,8 +1,8 @@
 id: ACD-400a-3
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Scanner does not treat an AC's own ancestor as a build-order blocker"
 component: ac-driven-dev
 level: L2
@@ -23,9 +23,22 @@ depends_on: [ACD-400a]
 doc_links:
   - docs/acceptance-criteria/index.yaml
   - docs/reference/ac-schema.md
+  - docs/architecture/components/ac-driven-dev.md
+  - scripts/ac_store/scan_ac_store.py
+  - scripts/ac_store/ac_prioritizer.py
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "The fix must live in the scanner's classification path (_classify_ac / the dependency-blocking logic); do not add a second, parallel blocking codepath."
+  - "Ancestor detection must reuse the existing derive_parent_id() helper applied transitively (walk parent -> grandparent -> ... to the root); do not re-implement parent-id parsing."
+  - "An AC's own ancestor at ANY depth must be excluded from the blocking set, not merely its immediate parent."
+  - "Only genuine non-ancestor depends_on entries may gate readiness; a leaf whose only depends_on entries are its own ancestors must classify as ready, never blocked."
+  - "scripts/ac_store/ac_prioritizer.py must produce results consistent with the scanner's classification (share or mirror the same ancestor-exclusion logic; no divergent blocking rules between the two)."
+  - "The scanner must remain read-only (never mutate any AC YAML), run in O(n) over the store, and be idempotent (repeated invocations on an unchanged store yield identical ready/blocked lists)."
+  - "Must handle malformed or missing depends_on / parent-id derivation gracefully per the project error handling policy (no bare except; log or raise typed)."
+delivers_to:
+  agent: python-coder
+  contract: "Ancestor-aware classification: a leaf AC whose only depends_on entries are its own transitive ancestors is classified ready (never blocked), and the ancestor is never named as a blocker; consumed by ACD-400a-3-i, ACD-400a-3-ii, and ACD-400a-4"
 expects_from:
   ac_id: ACD-400a-1
   contract: "The leaf filtering and blocked-classification logic this behavior refines"
@@ -35,5 +48,24 @@ amended_by: []
 superseded_by: null
 covered_by: [ACD-400a-3-i, ACD-400a-3-ii]
 implemented_by: []
+test_spec:
+  - name: test_leaf_with_only_parent_dep_is_ready_not_blocked
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3]
+    description: "Builds a fixture tree with L1 composite 'X-100a' (work_status not done) and leaf L2 'X-100a-1' whose only depends_on is [X-100a]; runs the scanner with leaf+todo filters and asserts 'X-100a-1' is in the ready list and NOT in the blocked list."
+  - name: test_ancestor_never_named_as_blocker
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3]
+    description: "Runs the scanner over the same fixture tree and asserts no blocked entry lists 'X-100a' as a blocker of 'X-100a-1' (ancestor excluded from the gating dependency set)."
+  - name: test_prioritizer_consistent_with_scanner_on_ancestor_dep
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3]
+    description: "Runs ac_prioritizer over the same ancestor-only-dependency fixture and asserts its ready/blocked classification matches the scanner's (no divergent blocking logic)."
 change_target: code
 risk_surface: internal

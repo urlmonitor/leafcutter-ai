@@ -1,8 +1,8 @@
 id: ACD-400a-3-i
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "No transitive ancestor at any depth gates a leaf AC's readiness"
 component: ac-driven-dev
 level: L3
@@ -23,15 +23,36 @@ criteria: |
 depends_on: [ACD-400a-3]
 doc_links:
   - docs/reference/ac-schema.md
+  - docs/architecture/components/ac-driven-dev.md
+  - scripts/ac_store/scan_ac_store.py
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Ancestor exclusion must walk the full transitive parent chain via derive_parent_id() (parent AND grandparent AND beyond), not stop at the immediate parent."
+  - "A leaf whose only depends_on entries resolve to transitive ancestors at any depth must classify as ready; the grandparent L1 must not appear as a blocker any more than the parent L2 does."
+  - "Must remain read-only, O(n), and idempotent; classification must be consistent with ac_prioritizer.py."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-400a-3
+  contract: "Ancestor-aware classification that excludes an AC's own transitive ancestors from the readiness-gating dependency set"
 origin_agent: business-analyst-v3
 created: 2026-08-12
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_grandparent_ancestor_does_not_block_leaf
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3-i]
+    description: "Builds a three-level fixture (L1 'Y-200a' -> L2 'Y-200a-1' -> L3 'Y-200a-1-i', both composites not done); runs the scanner with leaf+todo filters and asserts 'Y-200a-1-i' is in the ready list and NOT in the blocked list."
+  - name: test_no_transitive_ancestor_named_as_blocker
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3-i]
+    description: "Runs the scanner over the three-level fixture and asserts no blocked entry names either 'Y-200a-1' (parent) or 'Y-200a' (grandparent) as a blocker of the L3 leaf."
 change_target: code
 risk_surface: internal

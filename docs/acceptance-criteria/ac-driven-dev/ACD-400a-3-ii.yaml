@@ -1,8 +1,8 @@
 id: ACD-400a-3-ii
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A genuine non-ancestor dependency still gates readiness on work_status done"
 component: ac-driven-dev
 level: L3
@@ -26,15 +26,43 @@ criteria: |
 depends_on: [ACD-400a-3]
 doc_links:
   - docs/reference/ac-schema.md
+  - docs/architecture/components/ac-driven-dev.md
+  - scripts/ac_store/scan_ac_store.py
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Ancestor exclusion must be surgical: only an AC's own transitive ancestors are dropped from the gating set; genuine non-ancestor depends_on entries must still gate readiness exactly as before (positive control against over-exclusion)."
+  - "A non-ancestor dependency gates only while its work_status != done; when it reaches done the leaf must clear to ready (done->ready transition), and while todo the leaf must be blocked (todo->blocked transition)."
+  - "A blocked entry must name the real non-ancestor blocker (e.g. W-400b-2) and must NOT name the excluded ancestor (e.g. Z-300a)."
+  - "Must remain read-only, O(n), and idempotent; classification must be consistent with ac_prioritizer.py."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-400a-3
+  contract: "Ancestor-aware classification that excludes ancestors but preserves gating on genuine non-ancestor dependencies"
 origin_agent: business-analyst-v3
 created: 2026-08-12
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_satisfied_non_ancestor_dep_clears_to_ready
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3-ii]
+    description: "Builds a fixture where 'Z-300a-1' depends_on [Z-300a (own parent L1), W-400b-2 (cross-feature L2, work_status done)]; runs the scanner with leaf+todo filters and asserts 'Z-300a-1' is in ready and NOT in blocked."
+  - name: test_unsatisfied_non_ancestor_dep_blocks_naming_real_blocker
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3-ii]
+    description: "Same fixture but 'W-400b-2' has work_status todo; runs the scanner and asserts 'Z-300a-1' is in blocked and NOT in ready, and its blocked_by names 'W-400b-2' but does NOT name the ancestor 'Z-300a'."
+  - name: test_done_to_ready_todo_to_blocked_transition
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    covers: [ACD-400a-3-ii]
+    description: "Runs the scanner twice over the fixture (W-400b-2 done, then todo) and asserts the observable ready<->blocked membership of 'Z-300a-1' flips accordingly while the ancestor 'Z-300a' is never a blocker in either run."
 change_target: code
 risk_surface: internal
