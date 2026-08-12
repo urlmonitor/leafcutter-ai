@@ -1,0 +1,35 @@
+id: ACD-1900d-4
+components:
+  - ac_driven_dev
+title: "A new done-accounting gate judges only what a change touches"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a new done-accounting gate and a store in which pre-existing ACs lack the new
+    fields,
+  When the gate runs on a change that touches only one AC,
+  Then it evaluates only the diff-touched AC(s),
+  And every pre-existing untouched AC is neither evaluated nor failed by that run.
+depends_on:
+  - ACD-1900d
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

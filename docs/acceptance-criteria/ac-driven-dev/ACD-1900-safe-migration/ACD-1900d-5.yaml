@@ -1,0 +1,38 @@
+id: ACD-1900d-5
+components:
+  - ac_driven_dev
+title: "How-to guide covers the advisory-to-required gate rollout"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the advisory-before-required, deploy-manifest-first, and diff-scoped rollout
+    rules for a new gate,
+  When the how-to guide for rolling out a gate is published,
+  Then it documents the advisory (strict: false) start, the 10-green-merge promotion
+    threshold, the deploy-manifest prerequisite, and diff-scoping for done-accounting
+    gates,
+  And a reader following it can take a new gate from advisory to required without
+    retroactively failing pre-existing ACs.
+depends_on:
+  - ACD-1900d
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

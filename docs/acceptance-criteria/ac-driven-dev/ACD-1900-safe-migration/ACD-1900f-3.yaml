@@ -1,0 +1,36 @@
+id: ACD-1900f-3
+components:
+  - ac_driven_dev
+title: "Dual-readers are retained through the window; legacy removal gated on its end"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given the compatibility window is open (at least one in-flight fat ticket remains),
+  When the build runs,
+  Then both the old and new AC shapes remain readable and the legacy-derive path is
+    NOT removed;
+  And when the window has elapsed AND zero in-flight fat tickets remain, removal of the
+    legacy path is permitted.
+depends_on:
+  - ACD-1900f
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

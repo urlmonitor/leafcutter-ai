@@ -1,0 +1,36 @@
+id: ACD-1900g-2-i
+components:
+  - ac_driven_dev
+title: "Edge: any single no-go signal blocks the cutover"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given every go criterion otherwise passes but exactly one no-go signal is present --
+    a required gate is red, OR a deployed-hook import error occurs, OR a shadow check
+    shows a gate that verified zero ACs,
+  When the cutover is evaluated,
+  Then the cutover is blocked and the specific no-go signal is named in the refusal;
+  And this holds independently for each of the three no-go signals.
+depends_on:
+  - ACD-1900g-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

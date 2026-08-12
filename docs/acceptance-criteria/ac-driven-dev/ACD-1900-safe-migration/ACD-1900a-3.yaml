@@ -1,0 +1,39 @@
+id: ACD-1900a-3
+components:
+  - ac_driven_dev
+title: "The rules stay permissive while any old-shape requirement remains"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC store that still contains at least one record with schema_version < 2,
+  When the store-wide schema validation runs,
+  Then additionalProperties is NOT tightened -- records carrying either the legacy
+    or the new shape validate,
+  And zero records in the store are rejected by that run.
+depends_on:
+  - ACD-1900a
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1900a-3-i
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

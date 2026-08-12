@@ -1,0 +1,35 @@
+id: ACD-1900c-3
+components:
+  - ac_driven_dev
+title: "enforce can only be turned on once no old-shape requirements remain"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the store still contains at least one schema_version < 2 record,
+  When ac_unit_of_work.enforce is set to true,
+  Then the flip is refused with an error naming the remaining v1 records;
+  And when zero schema_version < 2 records remain, setting enforce = true is accepted.
+depends_on:
+  - ACD-1900c
+  - ACD-1900c-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: contract_boundary

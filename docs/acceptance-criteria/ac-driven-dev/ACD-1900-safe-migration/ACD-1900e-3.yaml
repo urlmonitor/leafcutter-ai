@@ -1,0 +1,35 @@
+id: ACD-1900e-3
+components:
+  - ac_driven_dev
+title: "Backfill preserves authored notes and never reverts finished work"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a store whose ACs contain human-authored notes blocks and some records with
+    work_status: done,
+  When the backfill runs,
+  Then every notes block is preserved verbatim,
+  And no record with work_status: done is reverted to an earlier work_status.
+depends_on:
+  - ACD-1900e
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

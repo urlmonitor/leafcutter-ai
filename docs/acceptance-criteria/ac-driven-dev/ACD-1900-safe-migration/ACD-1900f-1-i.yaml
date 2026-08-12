@@ -1,0 +1,35 @@
+id: ACD-1900f-1-i
+components:
+  - ac_driven_dev
+title: "Edge: a consumer that upgraded but never backfilled still builds, with a warning"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a consumer that upgraded the package but has NOT run the backfill (its store is
+    still v1),
+  When build.py runs,
+  Then the build succeeds using the dual-read path,
+  And it emits a warning advising the operator to run the opt-in backfill.
+depends_on:
+  - ACD-1900f-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

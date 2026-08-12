@@ -1,0 +1,37 @@
+id: ACD-1900f-2
+components:
+  - ac_driven_dev
+title: "The build warns or safely refuses on schema_version skew"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a store whose schema_version is outside the range the installed package
+    supports,
+  When build.py runs,
+  Then it emits a schema_version-skew warning naming the store version and the
+    package's supported range for a tolerable skew,
+  And it safely refuses (non-zero exit with a clear message) for an incompatible skew
+    rather than proceeding.
+depends_on:
+  - ACD-1900f
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

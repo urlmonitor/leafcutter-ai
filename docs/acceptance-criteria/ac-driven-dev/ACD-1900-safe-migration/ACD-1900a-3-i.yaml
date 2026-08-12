@@ -1,0 +1,36 @@
+id: ACD-1900a-3-i
+components:
+  - ac_driven_dev
+title: "Edge: strict enforcement is prevented while any v1 record remains"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC store that still contains at least one schema_version < 2 record,
+  When a change attempts to enable strict additionalProperties:false enforcement,
+  Then the change is refused with an error naming the count of remaining v1 records,
+  And when the same enforcement is attempted against a store where every record is
+    schema_version 2, the enforcement is accepted,
+  And in neither case is any already-valid record rejected mid-migration.
+depends_on:
+  - ACD-1900a-3
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

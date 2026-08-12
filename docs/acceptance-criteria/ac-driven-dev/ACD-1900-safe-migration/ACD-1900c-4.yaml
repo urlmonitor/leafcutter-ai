@@ -1,0 +1,36 @@
+id: ACD-1900c-4
+components:
+  - ac_driven_dev
+title: "How-to guide covers operating the flag and its kill-switches"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the two-stage ac_unit_of_work flag and its two kill-switches,
+  When the how-to guide for operating the control is published,
+  Then it documents how to set emit and enforce, the precondition for enabling
+    enforce, and the one-commit rollback for each kill-switch,
+  And a reader following the guide can flip enforce = false and observe a previously
+    failing gate return to green with no code change.
+depends_on:
+  - ACD-1900c
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

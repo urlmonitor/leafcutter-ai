@@ -1,0 +1,36 @@
+id: ACD-1900f-4
+components:
+  - ac_driven_dev
+title: "How-to guide covers upgrade and the compatibility-window lifecycle"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given the consumer-upgrade flow and the compatibility-window lifecycle,
+  When the how-to guide is published,
+  Then it documents upgrading and rebuilding, interpreting a schema_version-skew
+    warning, the dual-read window, draining in-flight fat tickets, and the post-window
+    legacy removal with a rehearsed rollback,
+  And a reader following it can upgrade a sample consumer without breaking its build.
+depends_on:
+  - ACD-1900f
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
