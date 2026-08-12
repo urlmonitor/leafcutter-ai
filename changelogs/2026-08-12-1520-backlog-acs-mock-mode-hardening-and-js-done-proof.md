@@ -22,7 +22,7 @@ description: >
   shared extract_covers_tag seam and runs vitest fail-closed, so JS-covered ACs
   become mechanically markable done — unblocking the 12 UXP-596/UXP-591 ACs
   currently held at in_progress.
-pr: 415
+pr: 419
 breaking: false
 commits:
   - dfb8250ed
