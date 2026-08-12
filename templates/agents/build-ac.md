@@ -317,6 +317,47 @@ Do NOT generate any ticket. Do NOT create any epic folder. Exit cleanly.
 
 ### Step 2b — Single-Ticket Path (leaf ACs only)
 
+#### Step 2b.1 — Resolve the Connected Build Set
+
+Before generating any ticket, call the `select_connected` CLI to determine
+the connected build set for this leaf AC:
+
+```bash
+python3 {{config.output_root}}/scripts/build_orchestration/fast_lane.py select_connected --exclude-structural-parent --ac <TOP_AC.id> --ac-root {{config.output_root}}/docs/acceptance-criteria 2>/tmp/build_ac_select_connected_err.txt
+```
+
+Parse the JSON output — an ordered list of AC ids representing the connected
+build set. Example outputs:
+
+Single-member set (just the target AC):
+```json
+["<TOP_AC.id>"]
+```
+
+Multi-member set (target AC plus un-built co-dependent ACs):
+```json
+["<TOP_AC.id>", "<dep-1.id>", "<dep-2.id>"]
+```
+
+**If `select_connected` exits non-zero:** surface the error verbatim and stop.
+Do not proceed to Step 2b.2 or Step 3.
+
+**Single-member set (exactly one AC in the list):**
+
+The connected build set is just the target AC itself — no un-built children or
+genuine prerequisites exist outside this AC. Fall through to Step 2b.2 with no
+behavioral change. This path is byte-identical to the pre-change single-ticket
+behavior: exactly one ticket is generated via `generate_ticket_from_ac.py`, no
+epic folder is created, and the Step 3 confirmation prompt is the existing
+single-ticket prompt ("Build this ticket now? (yes / review / skip)").
+
+**Multi-member set (more than one AC in the list):**
+
+The AC has un-met genuine prerequisites that must be built together as a
+connected set. Do NOT proceed to Step 2b.2. Route instead to Step 2b.3.
+
+#### Step 2b.2 — Generate Single Ticket (single-member set only)
+
 Call `generate_ticket_from_ac.py` with the selected AC id:
 
 ```bash
@@ -340,6 +381,27 @@ Build the existing ticket instead? (yes / no)
 - `yes`: set `TICKET_PATH = <existing_path>` and skip to Step 3.
 - `no`: mark this AC as skipped (Step 4 skip path) and re-run Step 1 to
   propose the next candidate.
+
+#### Step 2b.3 — Multi-Member Connected Set (BO-2600a-4)
+
+When the connected build set contains more than one member, the coordinator
+must emit a dependency-ordered epic folder rather than a single ticket. The
+full multi-member routing is specified in BO-2600a-4. Until that ticket lands,
+surface the resolved set to the user and stop:
+
+```
+AC <TOP_AC.id> resolves to a connected build set of <N> ACs:
+  - <id-1>
+  - <id-2>
+  ...
+
+Building this AC requires its connected set to be built together as an ordered
+epic. This path is not yet available. Build each AC individually in dependency
+order using /build-ac --ac <id>.
+```
+
+Exit cleanly. Do not generate any ticket or epic folder. Do not proceed to
+Step 3.
 
 ---
 
@@ -499,3 +561,5 @@ DECISION HISTORY
 - 2026-06-05 14:10 [llm-expert]: Authored build-ac agent template; encoded depth-cap design decision (no inline /build-feature call), skip uses session-local note not work_status mutation, --dry-run flag added per workflow spec. (#EPIC-ACDrivenDevelopment/04)
 - 2026-06-05 [llm-expert]: Added Step 1b — Readiness Gate for goal-level ACs (ACD-1200b-2). Implements three-choice routing (yes / review-all / cancel) with all-approved fast-path, IT PO v3 dispatch via dispatch_it_po_v3, re-read from disk after review-all, single re-presentation if IT PO v3 does not promote all ACs. Cancel path guarantees zero writes. (#EPIC-GoalToEpic/02)
 - 2026-06-05 12:30 [llm-expert]: Extended Step 2 with three-way mode detection branch (leaf → single-ticket, goal → epic-generation, L1-no-children → error). Wires build_ac_mode_detection.py and goal_to_epic.py into the agent template. Preserves full backward compatibility with the leaf path (ACD-1200e-1). (#EPIC-GoalToEpic/05)
+- 2026-08-12 14:00 [llm-expert]: Introduced Step 2b.1 (select_connected resolution) and Step 2b.2/2b.3 sub-steps in Step 2b. Single-member set falls through to the existing generate_ticket_from_ac.py flow unchanged (byte-identical backward-compat path, AC BO-2600a-3). Multi-member set stub added as Step 2b.3 placeholder for BO-2600a-4. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/03)
+- 2026-08-12 17:00 [commit]: Fixed Step 2b.1 bash command — wrong script path corrected to scripts/build_orchestration/fast_lane.py select_connected; added required --ac-root argument. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/03)
