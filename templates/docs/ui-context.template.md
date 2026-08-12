@@ -41,6 +41,49 @@ design_principles:
 # a token source. Delete this key if you have none.
 brand_links:
   - TODO
+# ── Data layer & mock mode (ADR-022) ─────────────────────────────────────────
+# APP-SPECIFIC bindings a frontend agent needs to build/extend "mock mode" — the
+# real app running against bundled fixtures instead of live data. The mock-mode
+# CONCEPT is universal (env default -> runtime override -> optional prod lock; ONE
+# data-access seam swaps real->fixtures; a visible badge; a CI drift guard) and
+# lives in the frontend-coder agent template. Only the bindings below are per-app.
+# Unlike the design pointers above, these are FACTS/bindings (a seam file+function,
+# a fixtures dir, exact env/flag names) — they ARE the contract the agent codes
+# against, so NAME them here; do not point at token files for these.
+#
+# GRACEFUL ABSENCE: if these fields are left empty/TODO, an agent asked to build
+# mock mode MUST say the bindings are missing and ask for them — it must NEVER
+# guess a seam, invent a fixtures dir, or make up toggle names.
+data_layer:
+  # TODO: the SINGLE file+function where real-vs-mock data resolution happens.
+  # One seam should swap the whole app; avoid per-page/per-loader mock branches.
+  #   - Next.js/TS: e.g. lib/data/repo.ts -> repoRoot()/repoPath()
+  #   - Flask:      e.g. app/data/source.py -> get_data_root()
+  data_access_seam: TODO
+  # TODO: how loaders resolve paths — state the convention that lets ONE seam swap
+  # everything (e.g. "all loaders read through repoPath()"). If loaders each build
+  # their own paths, say so: mock mode will need the seam pushed down first.
+  loaders_convention: TODO
+  # TODO: where the bundled mock fixture repo/dir lives, and the NATIVE on-disk
+  # formats it must mirror so the SAME loaders parse it unchanged (do not invent a
+  # bespoke mock format — mirror what the real loaders already read).
+  fixtures_dir: TODO   # e.g. fixtures/ or tests/fixtures/mock-repo/
+  fixtures_formats:
+    - TODO   # e.g. "YAML — <which inputs>", "JSON — <which inputs>", "markdown — <which inputs>"
+  # TODO: the mock toggle. Resolution order is FIXED and universal:
+  #   production_lock > runtime_override > env_default.
+  # Fill your app's concrete names/mechanisms for each rung (leave a rung blank
+  # only if your app genuinely omits it — e.g. no production lock).
+  mock_toggle:
+    env_default: TODO       # server env var that sets the DEFAULT (e.g. APP_MOCK; =1 on, unset/0 off)
+    badge_flag: TODO        # client-readable flag driving the visible badge ONLY (e.g. NEXT_PUBLIC_APP_MOCK). Never the authority.
+    runtime_override: TODO  # per-session override mechanism (e.g. "cookie or ?mock query-param")
+    production_lock: TODO    # opt-in lock that forbids overrides (e.g. APP_MOCK_LOCK=real)
+    resolution_order: "production_lock > runtime_override > env_default"   # keep as-is; universal
+  # TODO: the CI drift guard — how fixtures are kept shape-identical to real data
+  # (validate against the real schemas + parse through the same native-format
+  # loaders). Describe your app's check, or leave TODO if not yet built.
+  drift_guard: TODO
 ---
 
 # UI Context — <YOUR APP NAME> (SCAFFOLD — not yet filled)
@@ -78,6 +121,42 @@ variables". **Never copy the literal values** (no hex, no HSL channels, no font
 names, no radius numbers) — the agents open the pointer targets and read them live.
 See the filled example that ships with the leafcutter-web Atlas at
 `docs/ui-context.md` in the leafcutter-ai repository for the target shape.
+
+## Data layer & mock mode (fill if you will build mock mode)
+
+This section carries the **app-specific bindings** a frontend agent needs to build
+or extend **mock mode** — per ADR-022, a mockup is the **real app running in mock
+mode** (rendering from bundled fixtures instead of live data), not standalone HTML.
+The mock-mode *concept* is universal and lives in the `frontend-coder` agent
+template; only the bindings in the `data_layer:` frontmatter block above are
+specific to your app. Fill them so the same agent that builds mock mode for the
+leafcutter Atlas today builds it correctly for your app tomorrow — the agent must
+NOT be hand-fed these details in its prompt.
+
+Fill each `data_layer:` field with your app's real binding:
+
+1. **`data_access_seam`** — the single file+function where real-vs-mock resolution
+   happens. Aim for one seam that swaps the whole app; do not scatter mock branches
+   across pages or loaders.
+2. **`loaders_convention`** — how loaders resolve paths, so one seam swaps
+   everything (e.g. "all loaders read through `repoPath()`"). If they don't, that is
+   the first thing to fix before mock mode.
+3. **`fixtures_dir` + `fixtures_formats`** — where the bundled fixture repo lives
+   and the **native on-disk formats** it mirrors, so the same loaders parse it
+   unchanged (mirror the real formats; do not invent a bespoke mock format).
+4. **`mock_toggle`** — your concrete env default, badge flag, runtime override, and
+   optional production lock. The **resolution order is fixed and universal**:
+   `production_lock > runtime_override > env_default`. The badge flag is
+   presentation-only — it reflects the resolved decision, it never decides it.
+
+Then describe the same bindings in prose here, mirroring the filled example that
+ships with the leafcutter-web Atlas at `docs/ui-context.md` in the leafcutter-ai
+repository (its "Data layer & mock mode" section).
+
+> **Graceful absence.** If the `data_layer:` fields are left empty/TODO, an agent
+> asked to build mock mode will **stop and ask** for these bindings — it will not
+> guess a seam, invent a fixtures dir, or make up toggle names. Leave them TODO
+> until you are ready to build mock mode; fill them before you ask an agent to.
 
 ## Update protocol
 

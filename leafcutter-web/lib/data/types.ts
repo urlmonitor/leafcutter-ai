@@ -182,6 +182,8 @@ export interface GraphEdge {
   target: string;
   kind: GraphEdgeKind;
   weight?: number;            // used by rollup graphs (cross-component dep count)
+  label?: string;             // visible label on the edge (yes/no for decision diamonds)
+  sourceHandle?: string;      // React Flow source handle id ("yes" | "no" for decision nodes)
 }
 
 export interface Graph {
@@ -228,6 +230,10 @@ export interface FlowImplSummary {
   not_started: number;
   total: number;
   asof: string | null;
+  /** Deduped count of DONE ACs across all steps + branches (AC-level, not step-level). */
+  acDone: number;
+  /** Deduped total ACs across all steps + branches (AC-level, not step-level). */
+  acTotal: number;
 }
 
 /** One acceptance scenario attached to a flow step (Gherkin-ish). */

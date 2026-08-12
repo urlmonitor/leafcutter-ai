@@ -1,11 +1,15 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
+import { isMockActive, FIXTURE_ROOT } from "./mock";
 
 /**
  * Resolve the leafcutter-ai repo root whose data the Atlas renders.
  *
  * Priority:
+ *   0. MOCK MODE (UXP-550) — when isMockActive() is true, return the bundled
+ *      fixture repo root immediately, bypassing all live-repo probing. One seam
+ *      swaps the whole app at once; no loader carries its own mock branch.
  *   1. LEAFCUTTER_REPO_ROOT env var (absolute path) — for pointing at any repo,
  *      the seam that lets this site host OTHER projects later.
  *   2. The parent of the Next.js app dir (process.cwd()/..) — the default when
@@ -14,6 +18,9 @@ import path from "node:path";
  * Verified by probing for docs/roadmap.json.
  */
 export function repoRoot(): string {
+  // 0. Mock mode seam — highest priority when active.
+  if (isMockActive()) return FIXTURE_ROOT;
+
   const env = process.env.LEAFCUTTER_REPO_ROOT;
   if (env && fs.existsSync(path.join(env, "docs", "roadmap.json"))) {
     return env;

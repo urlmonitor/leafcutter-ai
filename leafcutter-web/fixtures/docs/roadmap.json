@@ -1,0 +1,49 @@
+{
+  "_comment": "FIXTURE — curated mock data for Leafcutter Atlas mock mode (UXP-551).",
+  "current_phase": "phase_1",
+  "current_outcome": "Stable MVP that installs into any project and helps the user build good software — portable, self-onboarding, and reliable enough to use across multiple repos.",
+  "phases": [
+    {
+      "id": "phase_1",
+      "title": "Stable Portable MVP",
+      "status": "active",
+      "description": "A reliable package that installs into any project via build.py, self-onboards the user via interactive config, and produces correct agents/skills/hooks without manual fixup.",
+      "exit_criteria": [
+        "Clean install succeeds on a blank project with only skills_config.json present",
+        "build.py --validate-only returns 0 with no template injection errors",
+        "Consecutive builds produce zero git diff (idempotent)",
+        "Self-hosting parity: leafcutter development uses its own compiled agents",
+        "Atlas mock mode renders all 8 views from bundled fixtures"
+      ],
+      "tickets_advancing_outcome": [
+        "TICKET-20260715-UXP-550",
+        "TICKET-20260715-UXP-551",
+        "TICKET-20260715-UXP-552"
+      ]
+    },
+    {
+      "id": "phase_2",
+      "title": "Ecosystem Hardening",
+      "status": "planned",
+      "description": "Handle version upgrades gracefully with template migrations and config schema evolution. Support multiple concurrent consumer projects.",
+      "exit_criteria": [
+        "Version upgrade path tested end-to-end",
+        "Documented contribution workflow for adding agents and skills",
+        "Config schema validation rejects unknown keys with actionable error messages"
+      ],
+      "tickets_advancing_outcome": []
+    },
+    {
+      "id": "phase_3",
+      "title": "Distribution and Community",
+      "status": "planned",
+      "description": "Installable via a standard package manager with versioned releases, changelogs, and a documented extension mechanism.",
+      "exit_criteria": [
+        "Package installable via pip or npm",
+        "Versioned releases with auto-generated changelogs",
+        "Extension mechanism documented and tested with at least one community-contributed agent"
+      ],
+      "tickets_advancing_outcome": []
+    }
+  ]
+}

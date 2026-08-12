@@ -1,0 +1,67 @@
+{
+  "_comment": "FIXTURE — curated component registry for Leafcutter Atlas mock mode (UXP-551).",
+  "components": {
+    "build_pipeline": {
+      "id": "build_pipeline",
+      "name": "Build Pipeline",
+      "type": "orchestration",
+      "description": "Phase-agent orchestration: ticket-supervisor drives a single ticket through test-writer, python-coder, pr-reviewer, commit, and pull-request phases.",
+      "detail_ref": "docs/architecture/components/build-pipeline.md",
+      "status": "active",
+      "primary_code": [
+        "templates/workflows-js/build-epic.js",
+        "templates/agents/ticket-supervisor.md"
+      ]
+    },
+    "ac_store": {
+      "id": "ac_store",
+      "name": "AC Store",
+      "type": "analysis",
+      "description": "Acceptance criteria traceability store persisting ACs as YAML files with bidirectional links to tests and implementations.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/",
+        "scripts/ac_store/",
+        "config/ac_store_schema.json"
+      ]
+    },
+    "agent_registry": {
+      "id": "agent_registry",
+      "name": "Agent Registry",
+      "type": "infrastructure",
+      "description": "Central registry of all phase agents with is_ticket_phase flags and produces traits.",
+      "detail_ref": "docs/architecture/components/agent-registry.md",
+      "status": "active",
+      "primary_code": [
+        "config/agent_registry.json",
+        "scripts/registry_validator.py"
+      ]
+    },
+    "ux_prototyping": {
+      "id": "ux_prototyping",
+      "name": "UX Prototyping",
+      "type": "analysis",
+      "description": "Product-truth authoring pipeline: mock data, mockups, and flows that let a reviewer see the real Atlas running against curated fixtures.",
+      "detail_ref": "docs/architecture/components/ux-prototyping.md",
+      "status": "active",
+      "primary_code": [
+        "docs/product-truth/",
+        "leafcutter-web/fixtures/",
+        "leafcutter-web/lib/data/mock.ts"
+      ]
+    },
+    "knowledge_system": {
+      "id": "knowledge_system",
+      "name": "Knowledge System",
+      "type": "analysis",
+      "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, and query layer.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "scripts/knowledge_query.py",
+        "config/paths.json"
+      ]
+    }
+  }
+}

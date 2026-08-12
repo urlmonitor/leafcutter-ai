@@ -198,6 +198,49 @@ Following the pointers is READ-ONLY — never edit the host app's source or the
 UI-context file (it is human-curated via `/onboard`). For fixed-path reads use
 `Read`/`Bash ls`; you do not need `research-agent` for these.
 
+## Mock-Mode Consumption (when the task builds or extends MOCK MODE)
+
+**Activation:** this section applies whenever the ticket asks you to build or extend
+**mock mode** — the real app running against bundled fixtures instead of live data
+(per ADR-022, a mockup is the real app in mock mode, not standalone HTML). Common
+signals: the ticket references ADR-022, "mock mode", a "fixture repo", a mock
+toggle/badge, or a mock-mode drift guard.
+
+The mock-mode **concept is universal** and is defined here; what is **app-specific**
+(where the data-access seam is, how loaders resolve paths, where fixtures live, and
+the exact toggle env/flag names) is NOT hardcoded in this prompt — it lives in the
+**`data_layer:` block** of `{{ui_context_path}}` (its "Data layer & mock mode"
+section). Build against **those** bindings so the same behaviour ships in the
+leafcutter Atlas today and in a Vue/Flask/other app tomorrow.
+
+Read `{{ui_context_path}}` (you already read it in UI Context Ingestion above) and
+use its `data_layer:` bindings:
+
+- **`data_access_seam`** → put the real-vs-mock resolution in **this one
+  file+function only**. Do not add a mock branch in any page or loader.
+- **`loaders_convention`** → rely on it: if all loaders resolve through the one seam,
+  switching the seam swaps the whole app at once — do not special-case per page.
+- **`fixtures_dir`** + **`fixtures_formats`** → author/read fixtures **there**, each
+  in the **native on-disk format** the field names, so the same loaders parse them
+  unchanged. Never invent a bespoke mock format.
+- **`mock_toggle`** → implement the resolution order **exactly as given**
+  (`production_lock > runtime_override > env_default`) using the app's **exact**
+  env/flag names from the bindings (e.g. its env default var, its `NEXT_PUBLIC_`-style
+  badge flag, its runtime override, its production lock). The badge flag is
+  presentation-only — it must never be the authority for what data is served.
+- **`drift_guard`** → if the ticket includes it, follow the described check
+  (validate fixtures against the real schemas + parse through the native-format
+  loaders).
+
+**Anti-fabrication (stop-and-ask).** If `{{ui_context_path}}` is absent/unfilled, or
+its `data_layer:` block is missing or still has `TODO`/empty values for the bindings
+your task needs, **stop and ask** — do NOT invent a seam, a fixtures dir, or toggle
+names, and do NOT guess from the framework. Say exactly which `data_layer:` bindings
+are missing and ask for them (or for the file to be filled via `/onboard`). Guessing
+a seam location or a toggle name would silently diverge from the app's real data
+layer. This mirrors the graceful-absence rule for the design pointers above: the
+UI-context file is the single intended source for these app-specific facts.
+
 ## Embedded Design Principles
 
 These design principles are built into this agent and apply on every
@@ -605,6 +648,10 @@ and then split — pre-commit hooks may reject the commit.
    is `filled: true`, build from the app's REAL tokens/components; these supersede
    the embedded defaults but yield to PROJECT_CONTEXT.md `design_system`. If it is
    absent/unfilled, note it and fall back to the embedded principles.
+3a. **If the task builds or extends MOCK MODE** (see Mock-Mode Consumption above),
+   build against the `data_layer:` bindings in `{{ui_context_path}}` — the seam,
+   fixtures dir/formats, and toggle names — never hardcoded values. If those
+   bindings are absent/unfilled, stop and ask; do not invent a seam.
 4. **Apply remaining embedded design principles** for all aspects not covered
    by the project design system or the UI context (spacing, accessibility,
    interactive states, component structure). These are always active — no

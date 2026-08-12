@@ -1,12 +1,12 @@
 import "server-only";
-import { repoPath, walk, readFileSafe, rel } from "./repo";
+import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import { acById } from "./ac-store";
+import { deriveImplSummary } from "./flow-impl-summary";
 import type {
   AcRef,
   Flow,
   FlowAppearance,
   FlowBranch,
-  FlowImplSummary,
   FlowKind,
   FlowLevel,
   FlowRealization,
@@ -162,25 +162,6 @@ function parseScenarios(v: unknown): FlowScenario[] {
   });
 }
 
-/** Derive the impl summary from the LIVE per-step/branch status. */
-function deriveImplSummary(
-  steps: FlowStep[],
-  branches: FlowBranch[],
-  asof: string | null,
-): FlowImplSummary {
-  const all: WorkStatus[] = [
-    ...steps.map((s) => s.implStatus),
-    ...branches.map((b) => b.implStatus),
-  ];
-  return {
-    done: all.filter((s) => s === "done").length,
-    in_progress: all.filter((s) => s === "in_progress").length,
-    not_started: all.filter((s) => s !== "done" && s !== "in_progress").length,
-    total: all.length,
-    asof,
-  };
-}
-
 function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
   if (!raw || typeof raw !== "object" || !raw.id) return null;
   const steps = (Array.isArray(raw.steps) ? raw.steps : [])
@@ -208,7 +189,7 @@ function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
     steps,
     branches,
     scenarios: parseScenarios(raw.acceptance_scenarios),
-    implSummary: deriveImplSummary(steps, branches, asof),
+    implSummary: deriveImplSummary({ steps, branches }, asof),
     filePath: rel(file),
   };
 }
@@ -239,12 +220,16 @@ function parseMock(raw: Record<string, unknown>, file: string): MockData | null 
   };
 }
 
-let _flowCache: Flow[] | null = null;
-let _mockCache: MockData[] | null = null;
+// All three caches keyed by repoRoot() so mock and real roots cache independently.
+// A single-value cache serves stale data after a mock-mode toggle in the same process.
+const _flowCache = new Map<string, Flow[]>();
+const _mockCache = new Map<string, MockData[]>();
 
-/** Load every *.flow.json under the product-truth store, normalized. Cached. */
+/** Load every *.flow.json under the product-truth store, normalized. Cached per-root. */
 export function getFlows(): Flow[] {
-  if (_flowCache) return _flowCache;
+  const root = repoRoot();
+  const hit = _flowCache.get(root);
+  if (hit) return hit;
   const flows: Flow[] = [];
   for (const file of walk(repoPath(FLOWS_DIR), ".flow.json")) {
     const rawStr = readFileSafe(file);
@@ -259,13 +244,15 @@ export function getFlows(): Flow[] {
     if (flow) flows.push(flow);
   }
   flows.sort((a, b) => a.id.localeCompare(b.id));
-  _flowCache = flows;
+  _flowCache.set(root, flows);
   return flows;
 }
 
-/** Load every *.mock.json under the product-truth store, normalized. Cached. */
+/** Load every *.mock.json under the product-truth store, normalized. Cached per-root. */
 export function getMockData(): MockData[] {
-  if (_mockCache) return _mockCache;
+  const root = repoRoot();
+  const hit = _mockCache.get(root);
+  if (hit) return hit;
   const mocks: MockData[] = [];
   for (const file of walk(repoPath(MOCK_DIR), ".mock.json")) {
     const rawStr = readFileSafe(file);
@@ -279,7 +266,7 @@ export function getMockData(): MockData[] {
     const mock = parseMock(doc, file);
     if (mock) mocks.push(mock);
   }
-  _mockCache = mocks;
+  _mockCache.set(root, mocks);
   return mocks;
 }
 
@@ -323,17 +310,20 @@ export function flowAppearancesByAc(): Record<string, FlowAppearance[]> {
   return index;
 }
 
-let _screenTitleCache: Record<string, string> | null = null;
+const _screenTitleCache = new Map<string, Record<string, string>>();
 
 /**
  * Map a flow step's raw `screen` slug (e.g. "plant-detail") to the human mockup
  * title (e.g. "Plant detail"), read from docs/product-truth/mockups/**.mockup.json.
  * Lets the Flows view show a reviewer the screen NAME instead of a raw slug while
  * keeping the slug available as the engineer affordance. Keyed on the bare screen
- * slug; a later product with the same slug wins (acceptable for display). Cached.
+ * slug; a later product with the same slug wins (acceptable for display).
+ * Cached per-root so mock and real roots don't share screen-title mappings.
  */
 export function getScreenTitles(): Record<string, string> {
-  if (_screenTitleCache) return _screenTitleCache;
+  const root = repoRoot();
+  const hit = _screenTitleCache.get(root);
+  if (hit) return hit;
   const map: Record<string, string> = {};
   for (const file of walk(repoPath(MOCKUP_DIR), ".mockup.json")) {
     const rawStr = readFileSafe(file);
@@ -348,7 +338,7 @@ export function getScreenTitles(): Record<string, string> {
     const title = doc.title ? String(doc.title) : "";
     if (screen && title) map[screen] = title;
   }
-  _screenTitleCache = map;
+  _screenTitleCache.set(root, map);
   return map;
 }
 

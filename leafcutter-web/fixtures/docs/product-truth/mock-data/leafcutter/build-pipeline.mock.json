@@ -1,0 +1,118 @@
+{
+  "id": "leafcutter/build-pipeline",
+  "component": "ux-prototyping",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "reusable": true,
+  "tags": ["build-pipeline", "agents", "phases"],
+  "invariants": [
+    "Ticket.status is one of: todo | in_progress | done | blocked",
+    "Agent.phase_order uniquely positions the agent in the ticket-supervisor dispatch chain",
+    "Phase.agents references Agent.id entries in this dataset",
+    "A ticket in status=done has all phase_agents signed_off"
+  ],
+  "entities": {
+    "Agent": {
+      "fields": {
+        "id": "string — kebab-case unique id",
+        "name": "string — display name",
+        "category": "enum: implementation | planning | testing | research | supervisor",
+        "is_ticket_phase": "boolean — true if dispatched by ticket-supervisor",
+        "phase_order": "number | null — dispatch order within ticket-supervisor (null if not a phase)",
+        "description": "string"
+      },
+      "records": [
+        {
+          "id": "test-writer",
+          "name": "Test Writer",
+          "category": "testing",
+          "is_ticket_phase": true,
+          "phase_order": 5,
+          "description": "TDD test-first authoring agent. Writes failing test stubs before any coder runs."
+        },
+        {
+          "id": "python-coder",
+          "name": "Python Coder",
+          "category": "implementation",
+          "is_ticket_phase": true,
+          "phase_order": 7,
+          "description": "Standards-enforcing Python implementation agent."
+        },
+        {
+          "id": "frontend-coder",
+          "name": "Frontend Coder",
+          "category": "implementation",
+          "is_ticket_phase": true,
+          "phase_order": 7,
+          "description": "Standards-enforcing frontend/UI implementation agent."
+        },
+        {
+          "id": "pr-reviewer",
+          "name": "PR Reviewer",
+          "category": "planning",
+          "is_ticket_phase": true,
+          "phase_order": 11,
+          "description": "Pre-PR self-review against the working diff."
+        },
+        {
+          "id": "commit",
+          "name": "Commit",
+          "category": "supervisor",
+          "is_ticket_phase": true,
+          "phase_order": 12,
+          "description": "Confirmation-gated commit agent."
+        },
+        {
+          "id": "ticket-supervisor",
+          "name": "Ticket Supervisor",
+          "category": "supervisor",
+          "is_ticket_phase": false,
+          "phase_order": null,
+          "description": "Depth-0 ticket orchestrator — dispatches phase agents in sequence."
+        },
+        {
+          "id": "research-agent",
+          "name": "Research Agent",
+          "category": "research",
+          "is_ticket_phase": false,
+          "phase_order": null,
+          "description": "Central context-gathering hub. Accepts cross-file lookup requests from parent agents."
+        }
+      ]
+    },
+    "Ticket": {
+      "fields": {
+        "slug": "string — filename without .md",
+        "title": "string",
+        "status": "enum: todo | in_progress | done | blocked",
+        "priority": "enum: critical | high | medium | low",
+        "components": "string[] — component ids"
+      },
+      "records": [
+        {
+          "slug": "TICKET-20260801-UXP-550",
+          "title": "Mock mode seam: repoRoot() returns fixture root when LEAFCUTTER_MOCK=1",
+          "status": "done",
+          "priority": "high",
+          "components": ["ux_prototyping"]
+        },
+        {
+          "slug": "TICKET-20260801-UXP-551",
+          "title": "Author bundled fixture tree for all 8 Atlas views",
+          "status": "done",
+          "priority": "high",
+          "components": ["ux_prototyping"]
+        },
+        {
+          "slug": "TICKET-20260801-UXP-553",
+          "title": "Mock decision: production lock > runtime override > env default",
+          "status": "in_progress",
+          "priority": "medium",
+          "components": ["ux_prototyping"]
+        }
+      ]
+    }
+  }
+}

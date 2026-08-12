@@ -1,0 +1,55 @@
+{
+  "id": "leafcutter/mock-mode-toggle",
+  "component": "ux-prototyping",
+  "product": "Leafcutter",
+  "name": "Toggle mock mode in the Atlas",
+  "level": "journey",
+  "summary": "A reviewer switches the Atlas between live-repo and fixture data using the ?mock query-param or by setting LEAFCUTTER_MOCK=1, observes the mock-mode badge appear, and confirms all 8 views render from the bundled fixture repo. FIXTURE — bundled mock data for Atlas mock mode.",
+  "kind": "user",
+  "source": "mock",
+  "realization": "built",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 1,
+  "tags": ["mock-mode", "ux-prototyping", "atlas"],
+  "entities": [],
+  "steps": [
+    {
+      "id": "set-env",
+      "label": "Set LEAFCUTTER_MOCK=1",
+      "human": "The reviewer starts the dev server with LEAFCUTTER_MOCK=1 NEXT_PUBLIC_LEAFCUTTER_MOCK=1.",
+      "order": 1,
+      "implements": ["UXP-553"],
+      "impl_status": "done",
+      "impl_asof": "2026-08-01"
+    },
+    {
+      "id": "observe-badge",
+      "label": "Observe mock-mode badge",
+      "human": "The reviewer opens the Atlas and sees the amber 'Mock mode' badge in the sidebar chrome.",
+      "order": 2,
+      "implements": ["UXP-552"],
+      "impl_status": "done",
+      "impl_asof": "2026-08-01"
+    },
+    {
+      "id": "verify-fixtures",
+      "label": "Verify all views render from fixtures",
+      "human": "The reviewer opens /roadmap, /flows, /atlas, etc. and sees curated fixture data, not the live repo.",
+      "order": 3,
+      "implements": ["UXP-550", "UXP-551"],
+      "impl_status": "done",
+      "impl_asof": "2026-08-01"
+    }
+  ],
+  "branches": [],
+  "acceptance_scenarios": [
+    {
+      "for": "reviewer",
+      "given": "the Atlas is started with LEAFCUTTER_MOCK=1",
+      "when": "the reviewer opens any view",
+      "then": "the mock-mode badge is visible and all data comes from the bundled fixtures"
+    }
+  ]
+}

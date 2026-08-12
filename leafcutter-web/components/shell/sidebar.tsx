@@ -75,10 +75,30 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Mock-mode badge — UXP-552. Driven by NEXT_PUBLIC_LEAFCUTTER_MOCK.
+          Presentation-only: never the authority for what data is served. */}
+      {process.env.NEXT_PUBLIC_LEAFCUTTER_MOCK === "1" && (
+        <div className="mx-3 mb-3 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-warning animate-pulse" />
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-warning">
+            Mock mode
+          </span>
+        </div>
+      )}
+
       <div className="border-t border-border/70 px-5 py-4">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-          Live · reads the repo on each request
+          {process.env.NEXT_PUBLIC_LEAFCUTTER_MOCK === "1" ? (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+              Fixtures · bundled mock data
+            </>
+          ) : (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              Live · reads the repo on each request
+            </>
+          )}
         </div>
       </div>
     </aside>
@@ -90,10 +110,16 @@ export function MobileNav() {
   const pathname = usePathname();
   return (
     <div className="sticky top-0 z-30 flex items-center gap-1 overflow-x-auto border-b border-border/70 bg-card/70 px-3 py-2 backdrop-blur lg:hidden">
-      <Link href="/" className="mr-2 flex items-center gap-2">
+      <Link href="/" className="mr-2 flex shrink-0 items-center gap-2">
         <LeafMark className="h-6 w-6" />
         <span className="text-sm font-semibold">Atlas</span>
       </Link>
+      {/* Mock-mode badge — UXP-552 */}
+      {process.env.NEXT_PUBLIC_LEAFCUTTER_MOCK === "1" && (
+        <span className="mr-2 shrink-0 rounded border border-warning/40 bg-warning/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-warning">
+          Mock
+        </span>
+      )}
       {NAV.map((item) => {
         const active =
           item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

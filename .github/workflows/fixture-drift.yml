@@ -1,0 +1,131 @@
+# Fixture drift guard — UXP-554.
+#
+# Runs on every push to main and every PR targeting main.
+# Fails the build when any fixture artifact drifts from the real data shape.
+#
+# Two jobs — both must pass:
+#
+#   fixture-schema      (BLOCKING)
+#   Validates every fixture artifact against the SAME validators and schemas
+#   that govern real data:
+#     - validate_ac_schema.py for docs/acceptance-criteria/** (AC YAML files)
+#     - docs/product-truth/schemas/ for flows/mock-data/mockups (JSON schema)
+#     - shape checks for docs/roadmap.json, docs/components.json,
+#       config/agent_registry.json
+#
+#   fixture-parse-through  (BLOCKING)
+#   Builds the Next.js app with LEAFCUTTER_MOCK=1, starts the server, and
+#   calls /api/drift-guard — which invokes the real loaders (getAtlas,
+#   getFlows, getMockData, getScreenTitles) against leafcutter-web/fixtures/.
+#   Asserts each loader returns populated (non-empty) results, proving the
+#   fixtures parse through the same repoPath() seam the app uses.
+
+name: Fixture Drift Guard
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - "leafcutter-web/fixtures/**"
+      - "leafcutter-web/lib/data/**"
+      - "leafcutter-web/middleware.ts"
+      - "scripts/check_fixture_schema.py"
+      - "leafcutter-web/scripts/run-parse-through-check.sh"
+      - "leafcutter-web/scripts/run-mock-toggle-check.sh"
+      - "leafcutter-web/app/api/drift-guard/**"
+      - "leafcutter-web/app/api/mock-toggle-check/**"
+      - ".github/workflows/fixture-drift.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "leafcutter-web/fixtures/**"
+      - "leafcutter-web/lib/data/**"
+      - "leafcutter-web/middleware.ts"
+      - "scripts/check_fixture_schema.py"
+      - "leafcutter-web/scripts/run-parse-through-check.sh"
+      - "leafcutter-web/scripts/run-mock-toggle-check.sh"
+      - "leafcutter-web/app/api/drift-guard/**"
+      - "leafcutter-web/app/api/mock-toggle-check/**"
+      - ".github/workflows/fixture-drift.yml"
+  # Allow manual trigger for diagnostics.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Part 1: schema validation (Python, no Node server required) ──────────────
+  fixture-schema:
+    name: Fixture schema validation (UXP-554 Part 1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run fixture schema validation
+        run: python scripts/check_fixture_schema.py
+
+  # ── Part 2: parse-through via real loaders (requires Next.js build + server) ──
+  fixture-parse-through:
+    name: Fixture parse-through (real loaders, UXP-554 Part 2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: leafcutter-web
+        run: npm ci --prefer-offline
+
+      - name: Build Next.js app with LEAFCUTTER_MOCK=1
+        working-directory: leafcutter-web
+        env:
+          LEAFCUTTER_MOCK: "1"
+          NEXT_PUBLIC_LEAFCUTTER_MOCK: "1"
+          # Disable telemetry in CI.
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Run fixture parse-through check
+        working-directory: leafcutter-web
+        env:
+          # Server reads from fixtures — must match what the build used.
+          LEAFCUTTER_MOCK: "1"
+          FIXTURE_CHECK_PORT: "3001"
+          FIXTURE_CHECK_TIMEOUT: "90"
+        run: bash scripts/run-parse-through-check.sh
+
+      # UXP-553 regression guard — mock-mode runtime toggle.
+      #
+      # Starts a second server instance (port 3002, LEAFCUTTER_MOCK=1 env) and
+      # exercises three assertions:
+      #   1. ?mock=1  → fixture-only flow "leafcutter/mock-mode-toggle" IS present
+      #   2. ?mock=0  → that same flow is ABSENT (guards cache-by-root Map fix)
+      #   3. no ?mock, but sticky cookie "mock"="0" from assertion 2 replayed
+      #              → flow is ABSENT (guards middleware cookie-persistence fix)
+      #
+      # The previous parse-through server (port 3001) was shut down by its trap;
+      # port 3002 is free for this step.
+      - name: Run mock-mode toggle regression check (UXP-553)
+        working-directory: leafcutter-web
+        env:
+          # LEAFCUTTER_MOCK=1 makes the env default mock-on, so assertion 3 is
+          # meaningful: a deleted cookie would let the env default reactivate
+          # fixture mode — detectable as an HTTP 500 from the route.
+          LEAFCUTTER_MOCK: "1"
+          MOCK_TOGGLE_CHECK_PORT: "3002"
+          MOCK_TOGGLE_CHECK_TIMEOUT: "90"
+        run: bash scripts/run-mock-toggle-check.sh

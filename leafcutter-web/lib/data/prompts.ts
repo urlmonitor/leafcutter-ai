@@ -1,6 +1,6 @@
 import "server-only";
 import matter from "gray-matter";
-import { repoPath, readFileSafe } from "./repo";
+import { repoRoot, repoPath, readFileSafe } from "./repo";
 import { loadAcs } from "./ac-store";
 import { loadTickets } from "./tickets";
 import { computeNextUp } from "./backlog";
@@ -111,6 +111,8 @@ function parseConfigKeys(v: unknown): PromptConfigKey[] {
   });
 }
 
+// Composite key = `${repoRoot()}::${id}` so templates cached from the fixture root
+// don't collide with real-repo templates on a mock-mode toggle.
 const _templateCache = new Map<string, AgentTemplate | null>();
 
 /**
@@ -119,17 +121,18 @@ const _templateCache = new Map<string, AgentTemplate | null>();
  * the file is absent (e.g. worktree-agent has no template) — never throws.
  */
 export function loadAgentTemplate(id: string): AgentTemplate | null {
-  if (_templateCache.has(id)) return _templateCache.get(id) ?? null;
+  const cacheKey = `${repoRoot()}::${id}`;
+  if (_templateCache.has(cacheKey)) return _templateCache.get(cacheKey) ?? null;
   const raw = readFileSafe(repoPath(AGENTS_DIR, `${id}.md`));
   if (!raw) {
-    _templateCache.set(id, null);
+    _templateCache.set(cacheKey, null);
     return null;
   }
   let parsed: matter.GrayMatterFile<string>;
   try {
     parsed = matter(raw);
   } catch {
-    _templateCache.set(id, null);
+    _templateCache.set(cacheKey, null);
     return null;
   }
   const fm = parsed.data as Record<string, unknown>;
@@ -147,7 +150,7 @@ export function loadAgentTemplate(id: string): AgentTemplate | null {
     configKeys: parseConfigKeys(fm.config_keys),
     skills: parseSkills(raw, fm),
   };
-  _templateCache.set(id, tpl);
+  _templateCache.set(cacheKey, tpl);
   return tpl;
 }
 
@@ -240,14 +243,17 @@ function parseBundle(v: unknown, fallbackLabel: string): PromptExampleBundle {
   };
 }
 
-let _mockCache: PromptExample | null = null;
+// Keyed by repoRoot() so fixture-root and real-root prompt examples don't collide.
+const _promptExampleCache = new Map<string, PromptExample>();
 
 /**
  * The hand-authored mock example. Editing the .prompt.json artifact retunes how
  * every agent's Mock prompt renders. Degrades to an empty example if absent.
  */
 export function getPromptExample(): PromptExample {
-  if (_mockCache) return _mockCache;
+  const root = repoRoot();
+  const hit = _promptExampleCache.get(`mock::${root}`);
+  if (hit) return hit;
   const raw = readFileSafe(repoPath(MOCK_EXAMPLE));
   let doc: Record<string, unknown> = {};
   if (raw) {
@@ -270,11 +276,9 @@ export function getPromptExample(): PromptExample {
     shared: parseBundle(doc.shared, "Mock example"),
     perAgent,
   };
-  _mockCache = example;
+  _promptExampleCache.set(`mock::${root}`, example);
   return example;
 }
-
-let _realCache: PromptExample | null = null;
 
 /**
  * A representative REAL example, assembled live from the store: a genuinely
@@ -283,7 +287,9 @@ let _realCache: PromptExample | null = null;
  * from skills_config.json if present. Never throws.
  */
 export function buildRealExample(): PromptExample {
-  if (_realCache) return _realCache;
+  const root = repoRoot();
+  const hit = _promptExampleCache.get(`real::${root}`);
+  if (hit) return hit;
   const acs = loadAcs();
   const tickets = loadTickets();
 
@@ -324,7 +330,7 @@ export function buildRealExample(): PromptExample {
     shared,
     perAgent: {},
   };
-  _realCache = example;
+  _promptExampleCache.set(`real::${root}`, example);
   return example;
 }
 
