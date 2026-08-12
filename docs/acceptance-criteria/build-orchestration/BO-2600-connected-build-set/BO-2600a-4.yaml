@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -16,35 +16,43 @@ criteria: |
     CLI with --exclude-structural-parent,
   When the resolved set contains more than one AC,
   Then the coordinator emits a dependency-ordered epic folder (not a single ticket)
-    by reusing the goal_to_epic machinery — one ticket per AC in the set, ordered
-    prerequisites-first, with each ticket's depends_on wired to the co-located
-    prerequisite tickets (via resolve_leaf_dependencies + topological_sort) so the
+    by passing the EXACT resolved id list to goal_to_epic's id-list entrypoint
+    (BO-2600a-5) — one ticket per id in the set, ordered prerequisites-first, with each
+    ticket's depends_on wired to the co-located prerequisite tickets so the
     ticket_frontmatter_guard passes,
-  And every member of the resolved set (the target AC and its baked-in prerequisites
-    and un-built children) appears as a ticket in the epic folder,
+  And the epic CONTENT is the resolved connected set itself (NOT a re-walk of the
+    target AC's covered_by subtree) — so cross-tree genuine prerequisites that live
+    outside the target's subtree are included, not dropped,
+  And every member of the resolved set (the target AC, its baked-in cross-tree
+    prerequisites, and its un-built children) appears as a ticket in the epic folder,
   And the Step 3 confirmation prompt adapts to the epic form
     ("Build this epic now? (yes / review / skip)"),
-  And dependency cycles are handled by the existing drain-cycles-with-warning
-    behavior rather than aborting.
-depends_on: [BO-2600a, BO-2600a-2]
+  And dependency cycles are already drained (with a warning) UPSTREAM during
+    connected-set resolution (fast_lane.resolve_connected_build_set via
+    scan_ac_store._drain_cycles), so the id list handed to goal_to_epic is acyclic;
+    goal_to_epic's CyclicDependencyError is only a defensive backstop, and if it
+    does fire the coordinator surfaces that non-zero exit as an error rather than
+    silently proceeding.
+depends_on: [BO-2600a, BO-2600a-2, BO-2600a-5]
 doc_links:
   - path: templates/agents/build-ac.md
     relationship: modifies
     status: exists
-  - path: scripts/ac_store/goal_to_epic.py
+  - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to: null
 expects_from:
-  ac_id: BO-2600a-2
-  contract: "select_connected --exclude-structural-parent --ac <id> prints the JSON ordered id list of the connected build set."
+  ac_id: BO-2600a-5
+  contract: "goal_to_epic exposes an id-list entrypoint (e.g. `--ids`) that assembles a dependency-ordered epic from EXACTLY the provided connected-set ids, so build-ac can pass the select_connected result as epic content rather than re-walking a subtree."
 it_requirements:
-  - "Edit Step 2b of templates/agents/build-ac.md so that when the resolved connected build set has more than one member, the coordinator routes to epic generation (reuse the goal_to_epic path already wired for goal-mode) instead of the single-ticket generator."
-  - "Epic tickets must be dependency-ordered and cross-wired: reuse goal_to_epic's resolve_leaf_dependencies + topological_sort so each generated ticket's depends_on references co-located ticket files, satisfying ticket_frontmatter_guard (which requires depends_on to reference existing tickets in the same epic folder)."
+  - "Edit Step 2b of templates/agents/build-ac.md so that when the resolved connected build set (from select_connected --exclude-structural-parent) has more than one member, the coordinator routes to epic generation instead of the single-ticket generator."
+  - "The coordinator MUST pass the EXACT resolved id list to goal_to_epic's id-list entrypoint (BO-2600a-5, e.g. `goal_to_epic.py --ids <resolved list>`). It MUST NOT call `goal_to_epic.py --ac <id>` for this path — that re-walks the target's subtree and would drop cross-tree prerequisites the resolver already included. The select_connected result is the epic CONTENT, not merely a size gate."
+  - "Epic tickets must be dependency-ordered and cross-wired so each generated ticket's depends_on references co-located ticket files, satisfying ticket_frontmatter_guard (which requires depends_on to reference existing tickets in the same epic folder)."
   - "Do NOT emit flat cross-referencing tickets in tickets/00_inbox — the epic folder is the output shape."
-  - "Verify behaviorally: a multi-member set must actually produce an epic folder whose tickets pass ticket_frontmatter_guard, and whose depends_on edges match the resolved dependency order — not a grep-only assertion (CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+  - "Verify behaviorally: a multi-member set (including one with a cross-tree prerequisite outside the target's subtree) must actually produce an epic folder that CONTAINS that prerequisite as a ticket, whose tickets pass ticket_frontmatter_guard, and whose depends_on edges match the resolved dependency order — not a grep-only assertion (CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'). A test whose only fixture is GE-113c-3 is INSUFFICIENT because there the connected set equals the subtree and would pass even against the buggy --ac re-walk; include a fixture with a genuine out-of-subtree prerequisite."
   - "Real validating case: GE-113c-3 resolves to {GE-113c-3, GE-113c-3-i, GE-113c-3-ii, GE-113c-3-iii, GE-113c-3-iv} (structural parent GE-113c excluded), so /build-ac must emit an epic of those five, not a single ticket."
 test_spec:
   - name: test_multi_member_set_generates_epic_folder
@@ -62,11 +70,23 @@ test_spec:
     framework: unittest
     type: unit
     description: "GE-113c-3 (structural parent excluded) yields the target plus its four L3 children as an epic"
+  - name: test_cross_tree_prerequisite_included_in_epic
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    description: "A leaf with a genuine out-of-subtree prerequisite produces an epic that CONTAINS that prerequisite as a ticket (guards against the goal_to_epic --ac subtree re-walk that would drop it)"
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - reason: "Revised 2026-08-11 after three-angle review found a design gap: the original mechanism ('reuse goal_to_epic --ac') re-walks the target's subtree and drops cross-tree prerequisites, using the resolved set only as a size gate. Now depends on BO-2600a-5 (goal_to_epic id-list entrypoint) and requires the resolved connected set to be the epic CONTENT; added a cross-tree-prerequisite test that GE-113c-3 alone cannot cover."
+  - agent: BrainCandy
+    date: "2026-08-12"
+    reason: "AC-6 amended to reflect upstream cycle draining: cycles are drained by fast_lane.resolve_connected_build_set (scan_ac_store._drain_cycles) before the id list reaches goal_to_epic; goal_to_epic CyclicDependencyError is now documented as a defensive backstop surfaced as an error, not silent proceed. --dry-run honoured on epic path."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/agents/test_bo_2600a_4.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04_TICKET-20260811-BO-2600a-4.md
+- templates/agents/build-ac.md
 change_target: pipeline
 risk_surface: internal
