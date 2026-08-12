@@ -1,0 +1,51 @@
+id: ACD-1800d-2
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Reference doc describes per-deliverable traceability back-references"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the per-deliverable traceability model of ACD-1800d is implemented,
+  When the AC reference documentation is read,
+  Then it describes that a requirement records, per deliverable, the artifact that
+    delivered it,
+  And it explains that each reference points at the canonical hand-edited source, not
+    a generated or deployed copy,
+  And it explains how to navigate from a requirement to its delivering artifacts and
+    back again.
+depends_on: [ACD-1800d, ACD-1800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Document in docs/reference/ac-schema.md: per-deliverable back-references (implemented_by at deliverable grain), that each reference points at canonical hand-edited source under templates/ or scripts/ (ADR-026 / ACD-1600d) and never a generated/deployed copy, and how to navigate requirement -> delivering artifact and back."
+  - "Cross-reference ACD-1600d (canonical-source rule) so the source-vs-build-output convention is documented in one place."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800d-1
+  contract: "The implemented per-deliverable back-reference behaviour (canonical-source resolution, bidirectional navigation) to document."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Documentation AC produced for the reference-doc trigger on ACD-1800d.
+
+  IT-PO enrichment (2026-08-12): test_required: false (docs surface).

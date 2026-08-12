@@ -1,0 +1,65 @@
+id: ACD-1700b-2
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "An assigned_agent that matches the deliverable surface passes the check"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC whose assigned_agent matches its deliverable surface --
+    prose / skill body / agent template -> llm-expert,
+    documentation -> documentation-expert,
+    C4 / sequence / state diagram -> architecture-diagram-author,
+    Python source -> python-coder,
+  When the assignment-quality check evaluates the AC,
+  Then it passes with no mismatch flag,
+  And the AC is eligible for dispatch to its assigned specialist.
+depends_on: [ACD-1700b, ACD-1700b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An assigned_agent that matches the craft the map (config/surface_craft_map.yaml) resolves for its deliverable surface passes with no mismatch flag, and the AC becomes eligible for dispatch."
+  - "The positive (pass) path must read the SAME config/surface_craft_map.yaml source as the mismatch path (no second inlined mapping) so pass and flag verdicts cannot diverge."
+  - "Pass verdicts must be exercised for each craft class present in the map (llm-expert prose/skill/template, documentation-expert docs, architecture-diagram-author diagrams, python-coder .py) so a legitimate specialist is never falsely flagged."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1700b-1
+  contract: "The assignment-quality verdict machinery + config/surface_craft_map.yaml; this AC verifies the positive (match) path across all craft classes."
+test_spec:
+  - name: test_llm_expert_template_prose_passes
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "An agent-template/skill-body/prose deliverable assigned to llm-expert passes with no flag."
+  - name: test_documentation_expert_docs_passes
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A docs deliverable assigned to documentation-expert passes with no flag."
+  - name: test_diagram_author_diagram_passes
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A C4/sequence/state diagram deliverable assigned to architecture-diagram-author passes with no flag."
+  - name: test_python_coder_py_passes
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A .py deliverable assigned to python-coder passes with no flag."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

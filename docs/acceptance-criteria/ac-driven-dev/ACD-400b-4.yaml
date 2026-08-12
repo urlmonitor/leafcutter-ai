@@ -35,3 +35,11 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+notes: |
+  PARTIAL SUPERSESSION — thin-ticket pivot (2026-08-11, origin_agent: BrainCandy).
+  The "## Sign-offs section contains exactly the needed agents" clause is superseded:
+  under the AC-as-mini-ticket model, phase sign-offs move onto the AC (each AC carries
+  its own deliverable checklist + per-deliverable sign-offs, ACD-1800b), not the ticket
+  body. The "generated ticket passes its frontmatter guard / has valid structure" idea
+  survives but will be re-scoped against the thin-ticket structure once the new model is
+  built. Left `active` pending that re-scope.

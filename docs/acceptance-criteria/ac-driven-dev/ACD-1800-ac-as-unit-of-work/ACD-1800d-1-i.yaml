@@ -1,0 +1,72 @@
+id: ACD-1800d-1-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "A per-deliverable back-reference resolves to the hand-edited canonical file, never a generated or deployed copy"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement whose code deliverable is implemented in a source file that is
+    later copied into a generated or deployed location,
+  When the per-deliverable back-reference for that deliverable is recorded on the
+    requirement,
+  Then the reference resolves to the hand-edited canonical file,
+  And it does not resolve to the generated or deployed copy,
+  And a builder following the reference lands on the exact file to edit.
+depends_on: [ACD-1800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A per-deliverable back-reference (implemented_by at deliverable grain) MUST resolve to the canonical hand-edited source under templates/ or scripts/ (ADR-026 canonical-source rule / ACD-1600d) -- never a build-output copy under .claude/ or the workspace-parent scripts/ mirror."
+  - "Reuse the ACD-1600d canonical-source resolver as the single source of the source-vs-build-output rule; do NOT inline a second copy (drift risk). One shared pure helper across the write path and any verify/validate path."
+  - "A back-reference that points at a build-output copy is worse than none (it sends a builder to a file that gets overwritten): treat it as a hard validation failure once ADR-026 `enforce` is on; advisory (warn) before then (ADR-026 rule 3)."
+  - "Canonical source: scripts/ac_store/ (the writer in generate_ticket_from_ac.py plus the resolver/validator)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800d-1
+  contract: "Per-deliverable back-reference (implemented_by at deliverable grain) that this edge case constrains to resolve to canonical hand-edited source, not a generated/deployed copy."
+test_spec:
+  - name: test_backref_resolves_to_canonical_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A per-deliverable back-reference resolves to the hand-edited canonical file under templates/ or scripts/."
+  - name: test_backref_rejects_deployed_or_generated_copy
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A back-reference pointing at a .claude/ or build-output copy is rejected (fails validation)."
+  - name: test_backref_points_at_editable_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Following the recorded reference lands on the exact file a builder must edit."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Edge case of ACD-1800d-1 enforcing the ACD-1600d canonical-source rule at the
+  deliverable back-reference level: traceability that points at a build-output copy
+  is worse than none, because it sends a builder to a file that gets overwritten.
+
+  IT-PO enrichment (2026-08-12): reuses the ACD-1600d canonical-source resolver
+  (cross-tree dependency, carried via depends_on/it_requirements -- no files created
+  outside this folder). Added ac_store to graph components.

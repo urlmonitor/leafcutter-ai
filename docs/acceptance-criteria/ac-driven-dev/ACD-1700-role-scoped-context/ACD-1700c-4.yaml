@@ -1,0 +1,63 @@
+id: ACD-1700c-4
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Cross-agent AC content is shown as a pointer, not inlined as a full spec"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the target AC has a contract with another agent's AC (a delivers_to or expects_from link),
+  When the tool renders the task context,
+  Then the cross-agent AC is shown as a pointer (its id and a link to its store record),
+  And the other agent's full spec is NOT inlined into this agent's brief,
+  And the brief remains scoped to the target agent's own requirement.
+depends_on: [ACD-1700c, ACD-1700c-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A cross-agent AC linked via delivers_to or expects_from must be rendered as a pointer (its id plus a link to its store record); the collaborator's full spec must NOT be inlined."
+  - "The brief must remain scoped to the target agent's own requirement (reference-not-copy, mirroring ADR-1600b at the brief level)."
+  - "Pointer rendering must apply to BOTH delivers_to and expects_from links."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1700c-1
+  contract: "The task-context section of the assembled brief; this AC constrains how a cross-agent (delivers_to/expects_from) AC is rendered within it -- pointer, not inlined spec."
+test_spec:
+  - name: test_cross_agent_ac_rendered_as_pointer
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A cross-agent AC is rendered as a pointer with its id and a link to its store record."
+  - name: test_collaborator_full_spec_not_inlined
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "The collaborator AC's full spec (criteria/it_requirements) is not inlined into the target agent's brief."
+  - name: test_both_delivers_to_and_expects_from_rendered_as_pointer
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Both delivers_to and expects_from cross-agent links are rendered as pointers."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  This mirrors the reference-not-copy principle of ACD-1600b at the brief level: a builder
+  sees a pointer to a collaborator's AC, not that collaborator's full spec.

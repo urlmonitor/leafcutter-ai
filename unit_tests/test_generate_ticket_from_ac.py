@@ -69,6 +69,7 @@ class TestComputeAgentsMapBasic:
 
     def test_compute_agents_map_basic(self) -> None:
         # covers: BO-560, BO-560-1
+        # covers: ACD-400b
         """A single (change_target='code', risk_surface='production') pair must return
         the guardrail agents listed in guardrail_gates.yaml under code.production
         (architect-review, test-writer, test-runner, pr-reviewer) plus the work agent

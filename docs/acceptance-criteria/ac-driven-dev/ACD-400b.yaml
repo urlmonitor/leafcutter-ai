@@ -6,7 +6,7 @@ priority: medium
 title: "Generator produces a valid, wired ticket from any ready AC with bidirectional traceability"
 component: ac-driven-dev
 level: L1
-status: active
+status: superseded_by
 req_status: active
 work_status: done
 criteria: |
@@ -38,12 +38,26 @@ expects_from:
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
-superseded_by: null
+superseded_by:
+  - ACD-1600a
+  - ACD-1800c
 covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4, ACD-400b-5]
 implemented_by:
 - scripts/ac_store/generate_ticket_from_ac.py
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  PARTIAL SUPERSESSION — thin-ticket pivot (2026-08-11, origin_agent: BrainCandy).
+  This L1's premise — "the generator produces a fully WIRED ticket" (verbatim criteria
+  body + per-ticket agents map + Agent Contracts + sign-offs) — is replaced by the
+  single-source model (L0 ACD-1600, esp. ACD-1600a thin ticket) and the AC-as-mini-ticket
+  model (ACD-1800c: the ticket is a grouping container, not the unit of work). Already
+  superseded children: ACD-400b-1 (verbatim body + agents map -> ACD-1600a-1) and
+  ACD-400b-5 (Agent Contracts in ticket body -> ACD-1600a-2). ACD-400b-4's
+  sign-offs-in-ticket clause is superseded (sign-offs move onto the AC, ACD-1800b).
+  Carry-forwards remain ACTIVE and now attach at AC level: ACD-400b-2 (implemented_by
+  traceability -> reframed by ACD-1800d) and ACD-400b-3 (idempotency / no duplicates ->
+  reframed by ACD-1800e).
 product_truth:
   - flow: leafcutter/ac-lifecycle
     node: generate

@@ -1,0 +1,58 @@
+id: ACD-1600c-1-i
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Real ACs lacking file targets (ACD-300c-3, TQ-200a-1) are held back, not dispatched"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the store contains ACD-300c-3 and TQ-200a-1, each lacking concrete file targets,
+  When the implementation-readiness gate evaluates them,
+  Then each is flagged NOT implementation-ready with the reason "missing file targets",
+  And neither is dispatched to a coder,
+  And each is held back for enrichment.
+depends_on: [ACD-1600c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/scan_ac_store.py (the leaf-readiness/completeness gate; source-only Python, no templates/ counterpart)."
+  - "Fixtures for these two real ACs must be exercised via a temp store copy — the gate must flag each with the reason \"missing file targets\" and exclude it from the ready/dispatch set."
+  - "The held-back decision must be data-driven (absence of file targets in it_requirements), not keyed on the specific AC ids."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-1
+  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready and names which of {file targets, test contract} is missing."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+test_spec:
+  - name: test_acd300c3_and_tq200a1_flagged_missing_file_targets
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "ACs lacking file targets are each flagged NOT implementation-ready with reason 'missing file targets'."
+  - name: test_missing_file_target_acs_not_in_dispatch_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Neither flagged AC appears in the ready/dispatch set; both are held back for enrichment."
+notes: |
+  ACD-300c-3 and TQ-200a-1 are the empirically observed ACs where the coder had no
+  file targets and had to guess -- which the coder's own rules forbid.

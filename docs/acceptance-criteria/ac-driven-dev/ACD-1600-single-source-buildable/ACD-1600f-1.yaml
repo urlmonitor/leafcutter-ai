@@ -1,0 +1,70 @@
+id: ACD-1600f-1
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "A referenced supporting artifact is checked for schema consistency with the AC"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC that references a supporting artifact (an eval fixture or example dataset)
+    and specifies the field names that artifact is expected to use,
+  When the consistency check runs before the work is dispatched,
+  Then it verifies the artifact's field names and schema match what the AC specifies,
+  And a mismatch is flagged and blocks dispatch,
+  And the flag names the mismatching field on each side (AC-specified vs artifact-actual).
+depends_on: [ACD-1600f]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/validate_ac.py (AC authoring-time validation; source-only Python)."
+  - "Before dispatch, the consistency check must compare the field names an AC specifies for a referenced supporting artifact (eval fixture / example dataset) against the artifact's actual schema."
+  - "A mismatch must be flagged and block dispatch; the flag must name the mismatching field on each side (AC-specified vs artifact-actual)."
+  - "COMPONENT-HOME CAVEAT (from BA notes): the validation-gate mechanism may fit guardrail-engine or ac-store better than ac-driven-dev; re-home deferred, authored here to keep the ACD-1600 goal cohesive."
+delivers_to:
+  agent: python-coder
+  contract: "The AC-vs-artifact consistency check: given an AC's specified field names and a referenced artifact, return the set of mismatching (ac-specified, artifact-actual) field pairs and block dispatch on any mismatch; consumed by the request/input edge case ACD-1600f-1-i."
+expects_from: null
+test_spec:
+  - name: test_matching_artifact_schema_passes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An AC whose specified field names match the referenced artifact's schema passes the consistency check."
+  - name: test_field_name_mismatch_flagged_blocks_dispatch
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A field-name/schema mismatch between the AC and its referenced artifact is flagged and blocks dispatch."
+  - name: test_flag_names_both_sides_of_mismatch
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The flag names the mismatching field on each side (AC-specified vs artifact-actual)."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1600f-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Component-home caveat (flag for the user): the validation-gate mechanism may fit
+  guardrail-engine or ac-store better than ac-driven-dev. Authored here to keep the
+  ACD-1600 goal cohesive; the IT-PO / user may re-home at enrichment.
+
+  IT-PO enrichment (2026-08-12): canonical source scripts/ac_store/validate_ac.py, aligned
+  with edge child ACD-1600f-1-i; component-home re-homing deferred (caveat carried forward).

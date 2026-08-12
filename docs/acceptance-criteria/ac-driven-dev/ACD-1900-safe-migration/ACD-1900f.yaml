@@ -1,0 +1,48 @@
+id: ACD-1900f
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Upgrade the package and keep working -- old and new coexist during the switch"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Upgrade safely: version skew is caught, in-flight work drains, the old path is removed only after.
+
+  A project that upgrades the package and rebuilds keeps working; the build warns -- or safely
+  refuses -- when the store's version doesn't match what the package expects; the ability to
+  read both old and new shapes is kept for a defined window while any in-flight old-style work
+  finishes; and the old path is removed only after that window and a rehearsed rollback.
+depends_on: [ACD-1900]
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1900f-1
+  - ACD-1900f-2
+  - ACD-1900f-3
+  - ACD-1900f-4
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  ADR-026 phase_acbuild_3_migration ("Consumer Migration & Legacy Removal"). build.py deploys
+  the new artefacts (all hook deps in the deploy-manifest) and warns/refuses on schema_version
+  skew; dual-readers (ACD-1900b) are retained >=2 minor releases while in-flight fat tickets
+  drain; only then are fat-ticket generation and the legacy-derive path removed, in a dedicated
+  release with one full green cycle. Depends on the compatibility bridge (ACD-1900b) and the
+  kill-switch/flag (ACD-1900c). References but does NOT supersede the ACD-400b fat-ticket family
+  -- governance handles supersession per ACD-1800 notes. RE-HOME CANDIDATE: build-pipeline
+  (build.py deploy + skew detection); kept in ac-driven-dev for cohesion.

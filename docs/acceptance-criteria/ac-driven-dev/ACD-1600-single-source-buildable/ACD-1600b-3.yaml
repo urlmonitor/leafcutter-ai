@@ -1,0 +1,43 @@
+id: ACD-1600b-3
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Sequence diagram of an agent resolving its spec from the store"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the store-authoritative resolution behaviour (agent follows source_ac; store wins on conflict),
+  When the sequence diagram for this flow is authored,
+  Then it shows a phase agent reading source_ac from the ticket and fetching the AC record from the store,
+  And it shows the store record being used as the authoritative spec when it disagrees with the ticket body,
+  And it is committed under docs/architecture/ and linked from the ACD-1600b feature.
+depends_on: [ACD-1600b, ACD-1600b-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Deliverable is a sequence diagram committed under docs/architecture/ (canonical doc surface), linked from the ACD-1600b feature."
+  - "The diagram must show the phase agent reading source_ac from the ticket, fetching the store record, and using the store record as authoritative when it disagrees with the ticket body (store-wins)."
+  - "Must be consistent with the dual-read / store-wins behaviour in ACD-1600b-1 / ACD-1600b-2 and the ADR-026 read-side-first invariant."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false

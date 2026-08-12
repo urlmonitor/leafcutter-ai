@@ -1,0 +1,61 @@
+id: ACD-1900a-3-i
+components:
+  - ac_driven_dev
+title: "Edge: strict enforcement is prevented while any v1 record remains"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC store that still contains at least one schema_version < 2 record,
+  When a change attempts to enable strict additionalProperties:false enforcement,
+  Then the change is refused with an error naming the count of remaining v1 records,
+  And when the same enforcement is attempted against a store where every record is
+    schema_version 2, the enforcement is accepted,
+  And in neither case is any already-valid record rejected mid-migration.
+depends_on:
+  - ACD-1900a-3
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900a-2
+  contract: "schema_version field on each record so the strict-enforcement guard can count remaining schema_version < 2 records."
+it_requirements:
+  - "Canonical source: config/ac_store_schema.json and scripts/ac_store/validate_ac_schema.py. Enabling strict additionalProperties:false MUST be refused while any schema_version < 2 record remains; the refusal error must name the count of remaining v1 records."
+  - "When zero schema_version < 2 records remain, enabling strict enforcement is accepted."
+  - "The guard must NOT reject any already-valid record while it refuses/accepts the enforcement change (no mid-migration mass-rejection)."
+  - "Test must EXECUTE the enforcement-enable path against both a mixed store and an all-v2 store and assert on the refusal/acceptance outcome -- never assert only on source-string presence."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_enable_strict_refused_names_v1_count
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Attempting to enable strict additionalProperties:false while >=1 v1 record remains is refused with an error naming the count of remaining v1 records."
+  - name: test_enable_strict_accepted_when_all_v2
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Enabling strict enforcement against an all-schema_version-2 store is accepted."
+  - name: test_no_valid_record_rejected_during_enforcement_attempt
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Neither the refusal nor the acceptance path rejects any already-valid record mid-migration."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

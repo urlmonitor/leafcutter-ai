@@ -1,0 +1,55 @@
+id: ACD-1800c
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A ticket groups requirements into a whole feature, not a unit of work"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Tickets exist only to bundle requirements into one valuable feature.
+
+  A ticket is a grouping container -- it exists only to bundle a coherent set of
+  requirements into one whole, valuable feature, so we build complete features
+  rather than random isolated pieces. A ticket carries no sign-offs of its own and
+  is never the thing an agent completes; it is simply done when all the
+  requirements it groups are done.
+depends_on: [ACD-1800]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1800c-1
+  - ACD-1800c-2
+  - ACD-1800c-3
+  - ACD-1800c-4
+  - ACD-1800c-5
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+  - sequence-diagram
+notes: |
+  CONCEPT B. The ticket is demoted from unit-of-work to grouping/scoping container.
+  SUPERSESSION INTENT: this directly replaces the PREMISE of ACD-400b ("the
+  generator produces a fully WIRED ticket -- per-ticket agents map + Agent Contracts
+  + sign-offs -- that an agent completes"). Under this model an agent completes ACs,
+  not tickets; a ticket is done when its grouped ACs are done. Do NOT edit ACD-400b
+  here -- ACD-400b already carries a partial-supersession note and governance handles
+  the amend/supersede step. Complements ACD-1600a (thin ticket references its AC):
+  ACD-1600a says the ticket does not COPY the spec; this L1 says the ticket is not
+  the UNIT OF WORK at all -- it is only a grouping of valuable features.
+  Review gap (2026-08-12): added ACD-1800c-5 (the sign-off parity gate accepts AC-side
+  sign-offs and requires no body ## Sign-offs section on a thin grouping ticket, GAP 2a) --
+  the exact gate-parity concern already flagged in ACD-1800c-1's it_requirements.

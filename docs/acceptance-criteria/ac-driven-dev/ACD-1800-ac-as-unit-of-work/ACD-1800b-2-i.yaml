@@ -1,0 +1,79 @@
+id: ACD-1800b-2-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "A deliverable that does not apply is recorded as not-applicable, never silently skipped"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement whose deliverable checklist includes a diagram item that the
+    responsible craft judges unnecessary,
+  When that diagram item is resolved,
+  Then it is recorded on the requirement as explicitly not-applicable, capturing
+    who marked it and why,
+  And it is never removed from or silently dropped out of the checklist,
+  And the requirement is reported as done only when every checklist item is either
+    signed off or explicitly marked not-applicable,
+  And a checklist item left in neither state keeps the requirement not done.
+depends_on: [ACD-1800b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Done-state is COMPUTED solely from the per-deliverable resolutions on the AC (each slot is signed_off or not_applicable); implement the computation in scripts/ac_store/ (alongside mark_ac_done.py / done_proof.py) as the single computed source of AC-level done."
+  - "not_applicable is an explicit attributed state {by, reason}; it MUST remain in the checklist (never removed/dropped). An absent or missing slot is NOT not_applicable and MUST keep the requirement not-done (anti-phantom-done)."
+  - "This AC owns the COMPUTATION + schema validation of the accounted state only; the craft-facing ACT of marking not-applicable (who/why) is authored in the signoff skill (ACD-1800b-1b). Keep the two in spec-parity via docs/reference/ac-schema.md."
+  - "Grandfather ACs with no checklist (schema_version < 2): legacy done-derivation; never mass-revert already-done ACs (ADR-026 rule 4)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "Per-deliverable sign-off record schema (deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?}) that this done-computation reads to decide requirement-level done."
+test_spec:
+  - name: test_not_applicable_recorded_with_who_and_why
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Resolving a diagram item as not-applicable stores an attributed {by, reason} record on the AC."
+  - name: test_not_applicable_item_retained_in_checklist
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A not-applicable item stays in the checklist and is not removed/dropped."
+  - name: test_done_requires_every_item_signed_or_not_applicable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The requirement is done only when every item is signed_off or not_applicable."
+  - name: test_unresolved_item_keeps_requirement_not_done
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An item in neither state (needed) keeps the requirement not done."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Edge case of ACD-1800b-2: "done means every item accounted for". A not-applicable
+  deliverable must be an explicit, attributed state -- not an absence -- so that
+  "done" still proves nothing was quietly missing.
+
+  IT-PO enrichment (2026-08-12): done-computation + schema surface in scripts/ac_store/;
+  the marking action is the signoff-skill split (ACD-1800b-1b). Added ac_store to graph
+  components.

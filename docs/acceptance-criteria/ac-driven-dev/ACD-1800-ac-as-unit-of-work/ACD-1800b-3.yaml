@@ -1,0 +1,54 @@
+id: ACD-1800b-3
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Reference doc describes per-deliverable sign-off and requirement-level done"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the per-deliverable sign-off model of ACD-1800b is implemented,
+  When the AC reference documentation is read,
+  Then it describes that each deliverable is signed off on the requirement itself,
+    capturing who signed and when,
+  And it explains that a requirement is done only when every deliverable is signed
+    off or explicitly marked not-applicable,
+  And it states that sign-offs no longer live in the ticket body,
+  And it records the supersession of the prior sign-offs-in-ticket clause.
+depends_on: [ACD-1800b, ACD-1800b-1, ACD-1800b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Document in docs/reference/ac-schema.md: the per-deliverable sign-off record on the AC (who/when), that done = every deliverable signed_off or explicitly not-applicable, that sign-offs no longer live in the ticket body, and the recorded supersession of the ACD-400b-4 sign-offs-in-ticket clause."
+  - "This section is the normative definition that BOTH the AC-store schema (ACD-1800b-1a / ACD-1800b-2-i) and the signoff skill (ACD-1800b-1b) mirror (spec-parity, no code-import across the .py/.md boundary)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "The implemented per-deliverable sign-off record schema and done-computation behaviour to document."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Documentation AC produced for the reference-doc trigger on ACD-1800b. Documents the
+  behaviour authored in ACD-1800b-1 / ACD-1800b-2 and the ACD-400b-4 supersession.
+
+  IT-PO enrichment (2026-08-12): depends_on retains ACD-1800b-1 (now superseded by
+  the ACD-1800b-1a/-1b split); the doc must reflect both the record side (b-1a) and
+  the produce side (b-1b). test_required: false (docs surface).

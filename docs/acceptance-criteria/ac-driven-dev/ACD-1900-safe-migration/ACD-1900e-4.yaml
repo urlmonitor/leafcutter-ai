@@ -1,0 +1,53 @@
+id: ACD-1900e-4
+components:
+  - ac_driven_dev
+title: "Backfill never runs automatically inside a build"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a store missing the new fields,
+  When build.py runs end-to-end,
+  Then the backfill is never invoked automatically and the store is left byte-identical
+    by the build;
+  And the store is only mutated when a user runs the backfill explicitly.
+depends_on:
+  - ACD-1900e
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The opt-in backfill CLI (scripts/ac_store/backfill_schema_version.py) whose invocation this AC constrains: never from build.py, only explicit user runs."
+it_requirements:
+  - "Canonical source: scripts/build.py / scripts/build_phases.py (must NOT invoke the backfill) and scripts/ac_store/backfill_schema_version.py (opt-in only). An end-to-end build.py run MUST leave the store byte-identical; the store is mutated only when a user runs the backfill explicitly (ADR-026: the store is the user's authored data)."
+  - "Test must EXECUTE build.py end-to-end against a store missing new fields and assert the store dir is byte-identical after the build -- never grep-only (grepping for the absence of a call passes on dead code)."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_build_py_does_not_invoke_backfill
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Running build.py end-to-end against a store missing new fields does not invoke the backfill."
+  - name: test_store_byte_identical_after_build
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The store dir is byte-identical before and after an end-to-end build.py run."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
