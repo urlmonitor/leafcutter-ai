@@ -1,0 +1,75 @@
+id: UXP-600
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Diamonds and their edges are derived from the existing flow branch data"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given flows in the product-truth store that model forks using the existing branch data
+  (each branch carrying a from-step, a condition, and a target),
+  When the graph for a flow is built,
+  Then the decision diamonds and their labelled edges are derived from that existing branch data,
+  And no separate first-class decision definition is required in the flow for a diamond to appear,
+  And a flow that carries branches renders diamonds without any change to the flow's stored shape.
+depends_on:
+  - UXP-596
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "buildFlowGraph in leafcutter-web/lib/data/graph.ts must synthesize decision nodes and their labelled edges purely from flow.branches (each branch's from / condition / label / target), read from the FlowBranch model parsed by parseBranch in leafcutter-web/lib/data/flows.ts."
+  - "No decisions[] array (the ADR-025 future schema) may be required for a diamond to appear — a flow carrying only branches[] must render diamonds with no change to its stored JSON shape."
+  - "Derivation must be a pure function (no fs / no network) so it is safe to run in the client graph build and unit-testable in isolation."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-600a
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_derives_diamonds_from_branch_data_only"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_derivation_is_pure"
+implemented_by:
+  - leafcutter-web/lib/data/graph.ts
+  - leafcutter-web/lib/data/flows.ts
+test_spec:
+  - name: buildFlowGraph_derives_diamonds_from_branch_data_only
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "A flow whose forks are modelled purely with branches[] (from/condition/label/target) and NO decisions[] array still produces decision nodes and labelled edges; the flow JSON shape is unchanged."
+  - name: buildFlowGraph_derivation_is_pure
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "buildFlowGraph does not mutate its input Flow and returns a deterministic node/edge set for identical input (safe for client-side use)."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped behavior: diamonds are synthesized at render time from the current
+  branch data. The ADR-025 first-class decisions[] schema is deliberately NOT relied on here;
+  the forward-dependency boundary is captured in child UXP-600a.
+  IT-PO enrichment (2026-08-11): this is the derivation that UXP-597/598/599 render from
+  (see their expects_from: UXP-600). delivers_to left null because the Atlas ac-store parser
+  reads delivers_to as a SINGLE downstream AC-id string and this fan-out feeds three
+  consumers; the dependency is therefore recorded on each consumer's expects_from instead.
+  implemented_by verified (branch-driven synthesis in buildFlowGraph; FlowBranch parsing in
+  flows.ts).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by two
+  passing vitest tests tagged `// covers: UXP-600` in graph.decisions.test.ts (appended to
+  covered_by alongside the forward-boundary child UXP-600a); code is shipped. Suite green
+  (41/41). Note: child UXP-600a (the first-class decisions[] schema) stays not_started —
+  that forward work is undelivered.

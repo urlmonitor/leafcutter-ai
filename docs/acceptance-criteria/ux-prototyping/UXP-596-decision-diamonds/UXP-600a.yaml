@@ -1,0 +1,55 @@
+id: UXP-600a
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Forward-dependency boundary: the first-class decisions[] schema is out of scope for this backfill"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: not_started
+criteria: |
+  Given ADR-025 specifies a future first-class decisions[] flow schema
+  (an authored question and explicit outcomes per fork, replacing branches[]),
+  When the current /flows build renders diamonds,
+  Then the diamonds are derived only from the existing branch data and do NOT depend on a decisions[] array,
+  And no flow in the store is required to carry a decisions[] array for this backfill to render diamonds,
+  And the first-class decisions[] schema, its validator invariants, and the retirement of branches[]
+  remain out of scope and undelivered here.
+depends_on:
+  - UXP-600
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: L
+it_requirements:
+  - "SCOPE-BOUNDARY marker, not deliverable code. It records what is intentionally NOT shipped: the ADR-025 decisions[] schema in docs/product-truth/schemas/flow.schema.json, its validator invariants in docs/product-truth/scripts/validate_product_truth.py, and the retirement of branches[]."
+  - "The positive, testable half (diamonds render from branches[] with NO decisions[] array required) is owned and tested by UXP-600 — do not duplicate that assertion here."
+  - "When this forward work is eventually picked up, the assigned_agent MUST be re-evaluated: the surface is a JSON Schema plus a Python validator (validate_product_truth.py), which is NOT frontend-coder's technology. See caveat BP-1100f-3 in the enrichment summary."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_required: false
+test_rationale: "Scope-boundary marker with no executable behavior of its own. Its positive clause (diamonds derive from branches[] without a decisions[] array) is covered by UXP-600's test_spec; the remaining clauses describe undelivered, out-of-scope future work."
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  This AC is a SCOPE-BOUNDARY marker, not a claim of delivered work. work_status is
+  not_started because the ADR-025 decisions[] schema (and branches[] retirement) is future
+  work, tracked separately. It exists so the backfill honestly records what was NOT shipped:
+  the diamonds are branch-derived today, and the first-class decisions[] model is a forward
+  dependency. Do NOT flip to done until the schema, validator, and migration actually land.
+  IT-PO enrichment (2026-08-11): implemented_by kept EMPTY (nothing implements the future
+  schema); work_status kept not_started; test_required set false (behavior covered by
+  UXP-600). assigned_agent set frontend-coder per the batch directive, but flagged: the real
+  forward surface is JSON Schema + validate_product_truth.py (Python), not a frontend surface.
+  Not flipped to done.

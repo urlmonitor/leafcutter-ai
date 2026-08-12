@@ -1,4 +1,6 @@
 id: UXP-490
+components:
+  - ux_prototyping
 readiness: reviewed
 priority: medium
 title: "A product owner can review flows, mock data, and mockups and see which steps are built"
@@ -38,6 +40,7 @@ covered_by:
   - UXP-491
   - UXP-492
   - UXP-493
+  - UXP-596
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

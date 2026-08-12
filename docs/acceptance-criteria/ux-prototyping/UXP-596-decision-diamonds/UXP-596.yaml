@@ -1,0 +1,53 @@
+id: UXP-596
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "A reviewer sees where a flow forks and on what condition, as decision diamonds"
+component: ux-prototyping
+level: L1
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  As a person reviewing a flow in the Atlas /flows view, I see each conditional fork
+  drawn as a decision diamond in standard flowchart form — the question at the fork with
+  labelled yes/no/else edges leading to each outcome (the branch outcome on "yes", continue
+  to the next step on "no") — so I can tell at a glance where the journey branches and on
+  what condition, instead of a decision looking like just another ordinary step. When a fork
+  has several outcomes it reads as a chain of simple diamonds (diamond -> diamond -> happy
+  path) rather than one tangled node, so even a many-way fork stays readable.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+documentation_triggers:
+  - how-to
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-597
+  - UXP-598
+  - UXP-599
+  - UXP-600
+  - UXP-601
+  - UXP-606
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Backfill AC — this capability was built in the Atlas Flows view before it had ACs; authored
+  now so the work is traceable and testable. Today the diamonds are DERIVED from the existing
+  flow branch data; the ADR-025 first-class decisions[] schema (authored question + explicit
+  outcomes) is the future state and is NOT yet built. Readiness is draft pending human review
+  of this backfilled criterion even though the work_status reflects the shipped implementation.

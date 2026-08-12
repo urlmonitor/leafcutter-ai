@@ -1,0 +1,73 @@
+id: UXP-598
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Decision edges are labelled: the branch outcome rides the 'yes' edge, 'no'/else continues to the next step"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+criteria: |
+  Given a decision diamond drawn for a conditional fork,
+  When the graph renders the edges leaving that diamond,
+  Then the edge leading to the branch's outcome is labelled with the branch outcome (the "yes" edge),
+  And the fall-through edge that continues to the next ordered step is labelled "no"/else,
+  And every edge leaving the diamond carries a visible label, with no unlabelled decision edges.
+depends_on:
+  - UXP-596
+doc_links:
+  - path: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "buildFlowGraph in leafcutter-web/lib/data/graph.ts must emit each edge leaving a decision diamond with a non-empty GraphEdge.label (branch label on the 'yes' edge; 'else'/'continue' on the fall-through) and the correct GraphEdge.sourceHandle ('yes' | 'no')."
+  - "GraphEdge.label and GraphEdge.sourceHandle must be defined on the GraphEdge type in leafcutter-web/lib/data/types.ts and consumed by the edge mapper in leafcutter-web/components/flows/flow-explorer.tsx (label -> React Flow edge label; sourceHandle -> React Flow sourceHandle)."
+  - "FlowDecisionNode in leafcutter-web/components/flows/flow-nodes.tsx must expose the 'yes' (bottom) and 'no' (right) source handle ids so labelled edges attach to the correct vertices."
+  - "No edge leaving a diamond may render without a visible label."
+delivers_to: null
+expects_from:
+  UXP-600: "labelled decision edges (GraphEdge.label + sourceHandle 'yes'/'no') are emitted from existing branch data by buildFlowGraph in lib/data/graph.ts"
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::buildFlowGraph_labels_every_decision_edge_with_handle"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::yes_edge_carries_branch_outcome_label"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::no_edge_is_the_fallthrough_from_every_diamond"
+  - "leafcutter-web/lib/data/__tests__/graph.decisions.test.ts::no_unlabelled_edges_leave_a_decision_node"
+implemented_by:
+  - leafcutter-web/lib/data/graph.ts
+  - leafcutter-web/lib/data/types.ts
+  - leafcutter-web/components/flows/flow-nodes.tsx
+  - leafcutter-web/components/flows/flow-explorer.tsx
+test_spec:
+  - name: buildFlowGraph_labels_every_decision_edge_with_handle
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "Every edge leaving a synthesized decision node has a non-empty label and a sourceHandle of 'yes' or 'no'; the branch-outcome edge carries the branch label on sourceHandle 'yes' and the fall-through edge carries 'else'/'continue' on sourceHandle 'no'."
+  - name: flow_explorer_maps_edge_label_and_source_handle
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    description: "The edge mapper in flow-explorer.tsx passes GraphEdge.label to the React Flow edge label and GraphEdge.sourceHandle to the edge sourceHandle."
+change_target: code
+risk_surface: internal
+notes: |
+  Backfill of shipped behavior.
+  IT-PO enrichment (2026-08-11): implemented_by verified against shipped source (label +
+  sourceHandle 'yes'/'no' emission in buildFlowGraph; GraphEdge.label/sourceHandle on the
+  types.ts GraphEdge interface; 'yes'/'no' handle ids on FlowDecisionNode; edge.label +
+  sourceHandle mapping in flow-explorer.tsx).
+  RECONCILIATION (2026-08-11): work_status flipped in_progress -> done. Test-backed by four
+  passing vitest tests tagged `// covers: UXP-598` in graph.decisions.test.ts (recorded in
+  covered_by); code is shipped. Suite verified green (41/41).
