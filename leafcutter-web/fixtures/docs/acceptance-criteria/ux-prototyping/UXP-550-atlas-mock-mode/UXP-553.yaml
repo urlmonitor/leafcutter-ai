@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: reviewed
-work_status: done
+work_status: in_progress
 criteria: |
   Given the Atlas is deployed,
   When the server resolves whether to serve mock data for a request,

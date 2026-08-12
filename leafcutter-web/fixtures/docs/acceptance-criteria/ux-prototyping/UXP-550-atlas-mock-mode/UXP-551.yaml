@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: reviewed
-work_status: done
+work_status: in_progress
 criteria: |
   Given the bundled fixture repo at leafcutter-web/fixtures/,
   When the Atlas runs in mock mode and each of the 8 views is opened,

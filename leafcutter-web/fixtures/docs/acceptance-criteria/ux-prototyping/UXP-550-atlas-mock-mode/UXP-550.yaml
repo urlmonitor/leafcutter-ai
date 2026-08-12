@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: reviewed
-work_status: done
+work_status: in_progress
 criteria: |
   Given every Atlas loader resolves the paths it reads through repoRoot() (via repoPath()),
   When mock mode is active,
