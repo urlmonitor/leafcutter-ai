@@ -153,6 +153,25 @@ def _collect_all_covered_ids(test_root: Path) -> set[str]:
     return covered
 
 
+def _is_gated_ac_yaml(rel: Path) -> bool:
+    """True when a repo-relative path is a real AC YAML the done-proof gate
+    should evaluate.
+
+    Excludes non-YAML files, paths outside an ``acceptance-criteria`` tree, and
+    bundled fixture/demo copies (e.g. under
+    ``leafcutter-web/fixtures/docs/acceptance-criteria/**``) — those are canned
+    data for the Atlas to render in mock mode, not real store entries, so the
+    gate must never evaluate them.
+    """
+    if rel.suffix != ".yaml":
+        return False
+    if "acceptance-criteria" not in rel.parts:
+        return False
+    if "fixtures" in rel.parts:
+        return False
+    return True
+
+
 def _get_staged_ac_yaml_paths(project_root: Path) -> list[Path]:
     """Return absolute paths of staged AC YAML files via ``git diff --cached``.
 
@@ -182,9 +201,7 @@ def _get_staged_ac_yaml_paths(project_root: Path) -> list[Path]:
     result: list[Path] = []
     for line in proc.stdout.splitlines():
         rel = Path(line.strip())
-        if rel.suffix != ".yaml":
-            continue
-        if "acceptance-criteria" not in rel.parts:
+        if not _is_gated_ac_yaml(rel):
             continue
         abs_path = project_root / rel
         if abs_path.exists():
@@ -223,9 +240,7 @@ def _get_changed_ac_yaml_paths(base_ref: str, project_root: Path) -> list[Path]:
     result: list[Path] = []
     for line in proc.stdout.splitlines():
         rel = Path(line.strip())
-        if rel.suffix != ".yaml":
-            continue
-        if "acceptance-criteria" not in rel.parts:
+        if not _is_gated_ac_yaml(rel):
             continue
         abs_path = project_root / rel
         if abs_path.exists():
