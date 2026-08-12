@@ -1,0 +1,49 @@
+id: UXP-607-1
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "On a mock-default deployment, an override back to live shows the real badge"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a deployment whose LEAFCUTTER_MOCK env sets mock as the DEFAULT data source,
+  When a request arrives carrying a runtime override to live (e.g. ?mock=0) and the seam
+    resolves the effective source to the real repo,
+  Then the mock/live badge reads "live"/real (not "mock"),
+  And every view on that page is served from the real repo,
+  So a mock-default deployment still tells the truth when a visitor overrides back to live.
+depends_on:
+  - UXP-607
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "The override-to-live path (?mock=0) must flip the resolved decision to live in leafcutter-web/lib/data/mock.ts even when LEAFCUTTER_MOCK defaults to mock, and both badge and view data must follow that same resolved decision (no divergence)."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: ui
+risk_surface: internal
+test_spec:
+  - name: mock_default_override_to_live_shows_live_badge
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "With LEAFCUTTER_MOCK defaulting to mock, a request carrying ?mock=0 resolves to live, the badge reads 'live'/real, and views are served from the real repo."
+notes: |
+  L3 edge case for UXP-607 (badge = resolved runtime decision). Guards the non-obvious
+  direction: mock-default deployment + override-to-live must show the REAL badge. IT-PO to
+  add assigned_agent, it_requirements, and test_spec.

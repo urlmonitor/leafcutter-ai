@@ -1,0 +1,51 @@
+id: UXP-609-1
+components:
+  - ux_prototyping
+  - testing_quality
+readiness: reviewed
+priority: medium
+title: "A mis-set environment makes the drift-guard fail loudly, never false-green"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the CI drift-guard runs in an environment where mock mode is NOT genuinely active
+    (isMockActive() is false — the app would read the live repo, not the fixtures),
+  When the drift-guard evaluates,
+  Then it exits with a failure and names the reason (mock mode not active) instead of reporting
+    a clean result,
+  So a mis-configured environment can never produce a false "all clear" by silently checking the
+    wrong data source.
+depends_on:
+  - UXP-609
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "When isMockActive() from leafcutter-web/lib/data/mock.ts is false, the drift-guard route (leafcutter-web/app/api/drift-guard/route.ts) must exit non-clean with a failure that names 'mock mode not active' as the reason, and must not proceed to evaluate or report drift."
+delivers_to: null
+expects_from:
+  ac_id: UXP-609
+  contract: "The mock-active assertion that gates drift evaluation; this edge case constrains its false-branch (mock not active => named failure, never clean)."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+test_spec:
+  - name: mis_set_env_fails_with_named_reason
+    target_dir: leafcutter-web/app/api/drift-guard/__tests__/
+    framework: vitest
+    type: integration
+    description: "With mock mode not active (isMockActive() false), the drift-guard exits with a failure naming 'mock mode not active' and never reports clean."
+notes: |
+  L3 edge case for UXP-609 — the core false-green prevention: mock-not-active must fail loudly with
+  a named reason. IT-PO to enrich.

@@ -1,0 +1,71 @@
+id: UXP-607
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "The mock-mode badge always tells the truth about what you are looking at"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the Atlas has resolved, at request time, which data source is in effect — the runtime
+    mock decision produced by the data-layer seam (resolution order: production lock > runtime
+    override > LEAFCUTTER_MOCK env default),
+  When a page renders the mock/live badge,
+  Then the badge is derived from that resolved runtime decision, not from the build-time
+    NEXT_PUBLIC_ mock flag,
+  And when the resolved decision is "mock" the badge reads "mock" and every view on the page is
+    served from bundled fixtures,
+  And when the resolved decision is "live" the badge reads "live"/real and every view is served
+    from the real repo,
+  So the badge and the data actually served can never disagree.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "The badge value must be derived from the single resolved runtime mock decision returned by the data-layer seam in leafcutter-web/lib/data/mock.ts (resolution order production lock > runtime override > LEAFCUTTER_MOCK env default), never from the build-time NEXT_PUBLIC_ mock flag."
+  - "The badge component in leafcutter-web/components/shell/sidebar.tsx and the view data must both read from that one resolved decision so they are computed from a single source and cannot diverge."
+  - "Resolution must be evaluated per request on the server so a runtime override is reflected in the same response that serves the overridden data (no stale build-time value)."
+  - "No fallback code path may re-read the NEXT_PUBLIC_ build-time flag for the badge; the build-time flag must not be able to re-introduce badge/data divergence."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-607-1
+  - UXP-607-2
+implemented_by: []
+change_target: ui
+risk_surface: internal
+test_spec:
+  - name: badge_reflects_resolved_mock_decision
+    target_dir: leafcutter-web/components/shell/__tests__/
+    framework: vitest
+    type: unit
+    description: "When the seam resolves the decision to 'mock', the sidebar badge renders 'mock' and views are served from fixtures."
+  - name: badge_reflects_resolved_live_decision
+    target_dir: leafcutter-web/components/shell/__tests__/
+    framework: vitest
+    type: unit
+    description: "When the seam resolves the decision to 'live', the sidebar badge renders 'live'/real and views are served from the real repo."
+  - name: badge_ignores_build_time_next_public_flag
+    target_dir: leafcutter-web/components/shell/__tests__/
+    framework: vitest
+    type: unit
+    description: "With the NEXT_PUBLIC_ build-time flag set opposite to the resolved runtime decision, the badge follows the resolved decision, not the build flag."
+notes: |
+  Mock-mode hardening follow-up (independent code review finding H-2). The shipped badge reads
+  a build-time NEXT_PUBLIC_ flag, so it does not change when a runtime ?mock override flips the
+  data — the badge can "lie". This AC states the customer-value outcome (badge = resolved runtime
+  decision). Criteria sharpened to Gherkin by BA; L3 edge cases UXP-607-1/-2 cover both override
+  directions. IT-PO to enrich.

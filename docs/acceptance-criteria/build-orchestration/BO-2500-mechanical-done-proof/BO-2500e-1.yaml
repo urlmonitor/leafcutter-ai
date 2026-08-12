@@ -1,0 +1,78 @@
+id: BO-2500e-1
+components:
+  - build_orchestration
+  - testing_quality
+title: "The oracle discovers // covers:<id> tags in front-end tests through the shared seam"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a front-end test file (.ts or .tsx) containing a "// covers:<id>" tag for an active AC id
+    (e.g. // covers:UXP-596-1),
+  When the done-proof oracle extracts covers-tag linkage from the test tree,
+  Then the "// covers:<id>" tag is discovered and linked to that AC,
+  And the extraction uses the SAME single tag-extraction routine that discovers Python
+    "# covers:<id>" tags — one shared seam, not a second parser,
+  So JS and Python covers-linkage semantics cannot drift apart.
+depends_on:
+  - BO-2500e
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    done_proof_js_covers_linkage:
+      type: object
+      description: "Covers-tag linkage that discovers '// covers:<id>' tags in .ts/.tsx front-end tests and links each to its active AC id, produced by the SAME shared extract_covers_tag routine that discovers Python '# covers:<id>' tags (one seam, not a second parser)."
+  reference_file_path: "scripts/ac_store/test_enforcement.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Extend the SAME single tag-extraction routine (extract_covers_tag in scripts/ac_store/test_enforcement.py) that discovers Python '# covers:<id>' tags to also match '// covers:<id>' in .ts/.tsx files — do NOT add a second parser, so JS and Python covers-linkage semantics cannot drift apart."
+    - "The '// covers:<id>' tag must be discovered from .ts and .tsx front-end test files and linked to the referenced AC id, mirroring the Python '# covers:' linkage of BO-2500a-1."
+    - "Extraction must be idempotent for a given test tree and must not alter the existing Python '# covers:' extraction behavior."
+    - "Must complete within the fast-lane latency budget (well under 2s for a typical batch of ACs)."
+delivers_to:
+  agent: python-coder
+  contract: "JS covers-tag linkage { ac_id: [test_location, ...] } produced by the shared extract_covers_tag seam extended for '// covers:' in .ts/.tsx; consumed by the JS eligibility verdict (BO-2500e-2), the fail-closed verdict (BO-2500e-3), and end-to-end mark-done (BO-2500e-4)."
+expects_from: null
+test_spec:
+  - name: test_js_covers_tag_discovered_and_linked
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A '// covers:<id>' tag in a .ts/.tsx test for an active AC id is discovered and linked to that AC."
+  - name: test_js_and_python_covers_use_same_seam
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "JS '// covers:' and Python '# covers:' linkage are produced by the same extract_covers_tag routine (one shared seam, not a second parser)."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500e-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L2 under BO-2500e. Mirrors the covers-linkage discovery of BO-2500a-1 but for TS/TSX
+  "// covers:" tags. The single shared seam is the existing extract_covers_tag routine used by the
+  Python "# covers:" path — IT-PO to confirm the exact seam and add it_requirements/test_spec.
