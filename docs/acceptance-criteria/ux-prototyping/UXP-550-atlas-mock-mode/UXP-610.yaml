@@ -1,0 +1,54 @@
+id: UXP-610
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "The internal test-support endpoints never ship to production"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a production build of the Atlas,
+  When the build is produced and served,
+  Then the CI-only helper endpoints /api/drift-guard and /api/mock-toggle-check are not compiled
+    into the production build,
+  And a request to either path on a production deployment returns a not-found response,
+  So a public deployment cannot be probed through them.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "The /api/drift-guard and /api/mock-toggle-check route handlers under leafcutter-web/app/api/ must be excluded from the production build via build-time gating (e.g. leafcutter-web/next.config.mjs route gating / conditional compilation), not merely returned early at runtime, so the handler code is not compiled into the production bundle."
+  - "On a production deployment a request to either path must return a plain not-found response and disclose no filesystem paths, stack traces, or internal detail (see UXP-610-1)."
+  - "The gating must key off the same single production-detection signal used elsewhere in mock mode (UXP-608-3), so production presence/absence of the endpoints is consistent and testable."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-610-1
+  - UXP-610-2
+implemented_by: []
+change_target: config
+risk_surface: privacy
+test_spec:
+  - name: prod_build_excludes_ci_endpoints
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    description: "In a production build, /api/drift-guard and /api/mock-toggle-check are not compiled in and requests to either path return not-found."
+notes: |
+  Mock-mode hardening follow-up (independent code review finding M-2). The CI-support API routes
+  (/api/drift-guard, /api/mock-toggle-check) currently ship in the production build and can leak
+  filesystem paths; they must be gated out of a production build. Criteria sharpened to Gherkin by
+  BA; L3 edge cases cover no-leakage-on-probe and CI-build presence. IT-PO to enrich.

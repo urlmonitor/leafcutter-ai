@@ -1,0 +1,68 @@
+id: BO-2500e-6
+components:
+  - build_orchestration
+  - commit_guardian
+title: "The required CI done-proof gate covers JS-covered ACs"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request is opened or updated,
+  When the required CI proof-of-done gate runs against a fresh clean checkout of the branch,
+  Then its verdict includes JS-covered ACs — it runs the JS test runner and applies the same
+    done-proof engine used for Python-covered ACs,
+  And the gate's pass/fail is derived from committed branch state only and reflects both JS- and
+    Python-covered ACs,
+  So the required final gate cannot pass a branch whose front-end proof-of-done is failing.
+depends_on:
+  - BO-2500e
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The required CI proof-of-done gate in .github/workflows/ci.yml must invoke the JS test runner (vitest) and apply the SAME done-proof engine (scripts/ac_store/done_proof.py) used for Python-covered ACs, so its fresh-checkout verdict includes JS-covered ACs."
+  - "Deploy-manifest rule (mandatory): any module the required CI gate imports (done_proof.py and any new JS-runner helper module) MUST be added to the build deploy map (build_ac_store deploy_map in scripts/build_phases.py) so the gate does not crash with ModuleNotFoundError once it is a required check; verify by running the deployed gate (build.py then the gate), not only source-tree unit tests."
+  - "The gate's pass/fail must derive from committed branch state only, evaluated on a fresh clean checkout, and must fail closed when front-end proof-of-done is failing."
+  - "The gate must remain a required status check and behave identically for Python-covered ACs (no regression); the CI job must ensure Node/vitest is available in the runner environment so JS-covered ACs are evaluated rather than skipped."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500e-2
+  contract: "The JS-inclusive done-proof engine verdict { ac_id, can_be_done, reason } that the CI gate runs on a fresh checkout and derives its required pass/fail from."
+test_spec:
+  - name: test_ci_gate_verdict_includes_js_covered_acs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    description: "Running the done-proof gate engine over a fresh checkout with JS-covered ACs produces a verdict that includes those ACs and fails closed when a JS covers test fails."
+  - name: test_ci_gate_derives_from_committed_state_only
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    description: "The gate verdict is derived from committed branch state only and reflects both JS- and Python-covered ACs."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L2 under BO-2500e — extends the required CI done-proof gate (BO-2500b-2) so its fresh-checkout
+  verdict includes JS-covered ACs. Split from BO-2500e-5 because the CI surface is a distinct
+  artifact (and, per the siblings, likely a distinct implementing agent) from the pre-commit hook.
+  IT-PO to enrich (ci.yml wiring, deploy-manifest dependency for any new module, assigned_agent).

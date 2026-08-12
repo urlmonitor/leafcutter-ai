@@ -1,0 +1,49 @@
+id: UXP-607-2
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "On an unlocked live-default deployment, an override to mock shows the mock badge"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an UNLOCKED deployment whose LEAFCUTTER_MOCK env sets live as the DEFAULT data source
+    and whose runtime overrides are honored (no production lock, overrides allowed),
+  When a request arrives carrying a runtime override to mock (e.g. ?mock=1) and the seam
+    resolves the effective source to bundled fixtures,
+  Then the mock/live badge reads "mock" (not "live"),
+  And every view on that page is served from the bundled fixtures,
+  So the badge follows the override in both directions and never lags the resolved decision.
+depends_on:
+  - UXP-607
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "The override-to-mock path (?mock=1) on an unlocked live-default deployment must flip the resolved decision to mock in leafcutter-web/lib/data/mock.ts, and both badge and view data must follow that same resolved decision so the badge never lags the override."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: ui
+risk_surface: internal
+test_spec:
+  - name: live_default_override_to_mock_shows_mock_badge
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "With LEAFCUTTER_MOCK defaulting to live and overrides allowed (unlocked), a request carrying ?mock=1 resolves to mock, the badge reads 'mock', and views are served from bundled fixtures."
+notes: |
+  L3 edge case for UXP-607 — the opposite-direction flip from UXP-607-1. Confirms a live-default
+  deployment shows the MOCK badge once an override resolves to fixtures. IT-PO to enrich.

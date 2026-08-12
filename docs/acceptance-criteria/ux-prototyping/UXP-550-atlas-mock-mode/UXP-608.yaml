@@ -1,0 +1,63 @@
+id: UXP-608
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A real deployment cannot be flipped to fake data by a visitor"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a production deployment that has NOT explicitly opted in to allowing runtime mock
+    overrides (default-deny is the safe default, independent of the production lock),
+  When an anonymous visitor sends a request carrying a runtime override such as ?mock=1
+    (or a leftover mock cookie),
+  Then the override is ignored and the deployment serves real data with the live badge,
+  So a production Atlas meant to show real data keeps showing real data no matter what an
+    untrusted visitor tries.
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "In production, the override allow/deny decision must default to DENY: unless an explicit opt-in flag is set, the request-time override in leafcutter-web/middleware.ts and the seam in leafcutter-web/lib/data/mock.ts must ignore ?mock=1 and any mock cookie and resolve to live."
+  - "Default-deny must hold for untrusted input: a query param or cookie supplied by an anonymous visitor must not be able to flip a production deployment to fixtures (treat override input as untrusted, fail safe to real data)."
+  - "The resolved decision under default-deny must be 'live' and drive the live badge, so the badge and served data stay consistent (per UXP-607)."
+  - "The default-deny gate must be enforced on the request-handling seam that actually resolves the data source (middleware.ts / mock.ts), not only in UI presentation, so no view can be served fixtures while the badge reads live."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-608-1
+  - UXP-608-2
+  - UXP-608-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: production_default_deny_ignores_mock_query_param
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: unit
+    description: "In production with no explicit opt-in, a request carrying ?mock=1 is ignored and the deployment resolves to live with the live badge."
+  - name: production_default_deny_ignores_mock_cookie
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: unit
+    description: "In production with no explicit opt-in, a leftover mock cookie is ignored and the deployment resolves to live."
+notes: |
+  Mock-mode hardening follow-up (independent code review finding H-3). The runtime override must
+  be default-deny in production: the allow/deny defaults to the safe state so an untrusted visitor
+  cannot flip a live deployment to fixtures via ?mock=1. Complements the production LOCK work in
+  UXP-553-1 (see UXP-608-2 for the lock>allow precedence). Criteria sharpened to Gherkin by BA;
+  L3 edge cases cover opt-in-honored, lock-precedence, and the dev/preview boundary. IT-PO to enrich.

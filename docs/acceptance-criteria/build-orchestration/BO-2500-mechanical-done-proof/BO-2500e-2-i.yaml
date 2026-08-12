@@ -1,0 +1,76 @@
+id: BO-2500e-2-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "An AC covered in both Python and JS is eligible only when every linked test passes"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC that has BOTH a Python "# covers:<id>" test and a JS "// covers:<id>" test,
+  When the done-status of that AC is evaluated,
+  Then the AC is eligible to be marked done only when every covers-linked test in both languages
+    passes,
+  And if either the Python test or the JS test fails, the AC cannot be marked done and the failing
+    test is named,
+  So cross-language coverage requires all linked tests to pass, not just one language's.
+depends_on:
+  - BO-2500e-2
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    done_proof_cross_language_all_pass:
+      type: object
+      description: "Eligibility verdict for an AC covered by BOTH Python '# covers:' and JS '// covers:' tests that is true only when EVERY covers-linked test in both languages passes; if any linked test in either language fails, the AC is ineligible and the failing test is named."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "For a mixed-coverage AC, eligibility requires ALL covers-linked tests across both languages to pass (logical AND over pytest and vitest results), extending the 'every covers test passes' rule of BO-2500a-3 across languages."
+    - "If either the Python or the JS linked test fails, the AC must be ineligible and the verdict must name the specific failing test and the AC id, per the error handling policy."
+    - "The combined verdict must be idempotent for a given store + test tree."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500e-2
+  contract: "The JS eligibility verdict this edge case extends to the mixed Python+JS coverage case."
+test_spec:
+  - name: test_mixed_coverage_eligible_only_when_all_pass
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An AC with both a passing Python and a passing JS covers test is eligible; the verdict requires all linked tests in both languages to pass."
+  - name: test_mixed_coverage_blocked_when_either_fails
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "If either the Python or the JS covers test fails, the AC is ineligible and the failing test is named."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L3 edge case for BO-2500e-2 — non-obvious cross-language rule: mixed coverage requires ALL linked
+  tests (Python and JS) to pass. Extends the "every covers test passes" rule of BO-2500a-3 across
+  languages. IT-PO to enrich.

@@ -1,0 +1,50 @@
+id: BO-2500e
+components:
+  - build_orchestration
+  - testing_quality
+title: "Front-end work can be proven done by its own tests"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  JavaScript/TypeScript tests count as real proof-of-done, exactly like Python tests do.
+
+  A requirement whose only tests are written in JavaScript or TypeScript can be mechanically
+  proven done, the same way a Python-covered requirement is. The proof-of-done check recognises
+  a requirement's front-end tests, runs them, and treats a genuine pass as proof — so front-end
+  features backed by real, passing tests are no longer stuck "in progress" just because their
+  tests are not Python. The trust guarantee of BO-2500 now covers the whole codebase, not only
+  its Python half.
+depends_on:
+  - BO-2500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500e-1
+  - BO-2500e-2
+  - BO-2500e-3
+  - BO-2500e-4
+  - BO-2500e-5
+  - BO-2500e-6
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Follow-up from shipping the Atlas flows-view (PRs #410/#412/#413). Today the done-proof oracle
+  (done_proof.py) scans only Python tests for '# covers:' tags and runs pytest, so ACs covered
+  only by real, passing vitest tests (e.g. the 12 UXP-596/UXP-591 ACs) can never be marked done
+  and sit at in_progress. The capability: the oracle also discovers '// covers:' tags in TS/TSX
+  tests and runs the JS test runner, making JS-covered ACs provable. Distinct tooling capability,
+  hence a new L1 under the existing BO-2500 goal. Decomposed by BA into L2 BO-2500e-1..e-6 plus
+  L3 edge cases BO-2500e-1-i..e-4-i.
