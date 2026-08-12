@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -27,8 +27,12 @@ criteria: |
     prerequisites, and its un-built children) appears as a ticket in the epic folder,
   And the Step 3 confirmation prompt adapts to the epic form
     ("Build this epic now? (yes / review / skip)"),
-  And dependency cycles are handled by the existing drain-cycles-with-warning
-    behavior rather than aborting.
+  And dependency cycles are already drained (with a warning) UPSTREAM during
+    connected-set resolution (fast_lane.resolve_connected_build_set via
+    scan_ac_store._drain_cycles), so the id list handed to goal_to_epic is acyclic;
+    goal_to_epic's CyclicDependencyError is only a defensive backstop, and if it
+    does fire the coordinator surfaces that non-zero exit as an error rather than
+    silently proceeding.
 depends_on: [BO-2600a, BO-2600a-2, BO-2600a-5]
 doc_links:
   - path: templates/agents/build-ac.md
@@ -75,9 +79,14 @@ origin_agent: BrainCandy
 created: 2026-08-11
 amended_by:
   - reason: "Revised 2026-08-11 after three-angle review found a design gap: the original mechanism ('reuse goal_to_epic --ac') re-walks the target's subtree and drops cross-tree prerequisites, using the resolved set only as a size gate. Now depends on BO-2600a-5 (goal_to_epic id-list entrypoint) and requires the resolved connected set to be the epic CONTENT; added a cross-tree-prerequisite test that GE-113c-3 alone cannot cover."
+  - agent: BrainCandy
+    date: "2026-08-12"
+    reason: "AC-6 amended to reflect upstream cycle draining: cycles are drained by fast_lane.resolve_connected_build_set (scan_ac_store._drain_cycles) before the id list reaches goal_to_epic; goal_to_epic CyclicDependencyError is now documented as a defensive backstop surfaced as an error, not silent proceed. --dry-run honoured on epic path."
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/agents/test_bo_2600a_4.py
 implemented_by:
-- /home/henzeh/projects/worktrees/bo-2600/tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04_TICKET-20260811-BO-2600a-4.md
+- tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04_TICKET-20260811-BO-2600a-4.md
+- templates/agents/build-ac.md
 change_target: pipeline
 risk_surface: internal

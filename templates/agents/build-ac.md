@@ -34,6 +34,9 @@ pre_flight_reads:
   - source: "{{config.output_root}}/scripts/ac_store/build_ac_mode_detection.py"
     required: true
     condition: "verify script exists before invoking Step 2a mode detection"
+  - source: "{{config.output_root}}/scripts/build_orchestration/fast_lane.py"
+    required: true
+    condition: "verify script exists before invoking Step 2b.1 select_connected"
 inputs:
   - name: arguments
     type: string
@@ -45,7 +48,7 @@ outputs:
     description: "Path to the generated ticket file (single-ticket path); absent on epic-generation path"
   - name: epic_path
     type: file_path
-    description: "Path to the generated epic folder (goal-AC path); absent on single-ticket path"
+    description: "Path to the generated epic folder (goal-AC path or multi-member connected-set path via Step 2b.3); absent on single-ticket path"
   - name: user_prompt
     type: structured_response
     description: "Confirmation prompt shown to the user: AC id, title, priority, and build instruction"
@@ -70,6 +73,10 @@ behavioral_patterns:
   - name: Goal-AC Epic Path
     trigger: "detect_ac_mode returns mode: goal (covered_by non-empty, level L0/L1)"
     behavior: "Switches to epic-generation path via goal_to_epic.py; does not call generate_ticket_from_ac.py"
+    related_agent: null
+  - name: Multi-Member Connected Set Epic Path
+    trigger: "Step 2b.1 select_connected returns more than one AC id for a leaf AC"
+    behavior: "Routes to dependency-ordered epic-generation path via goal_to_epic.py --ids (comma-separated id string, single argument) rather than generating a single ticket; every member of the connected set appears as a ticket in the epic folder; dependency cycles are drained upstream by fast_lane.resolve_connected_build_set before the ids reach goal_to_epic (CyclicDependencyError from goal_to_epic is a defensive backstop surfaced as a Stop-and-Ask error); --dry-run is honored by skipping the goal_to_epic --ids call and printing a summary (--ids mode does not implement dry-run); Step 3 prompt adapts to epic form"
     related_agent: null
 ---
 
@@ -382,26 +389,84 @@ Build the existing ticket instead? (yes / no)
 - `no`: mark this AC as skipped (Step 4 skip path) and re-run Step 1 to
   propose the next candidate.
 
-#### Step 2b.3 — Multi-Member Connected Set (BO-2600a-4)
+#### Step 2b.3 — Multi-Member Connected Set: Epic-Generation Path (BO-2600a-4)
 
-When the connected build set contains more than one member, the coordinator
-must emit a dependency-ordered epic folder rather than a single ticket. The
-full multi-member routing is specified in BO-2600a-4. Until that ticket lands,
-surface the resolved set to the user and stop:
+When the connected build set contains more than one member, emit a
+dependency-ordered epic folder (one ticket per AC in the set) rather than a
+single ticket, by routing through `goal_to_epic.py` with the explicit
+connected-set ID list.
+
+Call `goal_to_epic.py`, passing the AC IDs returned by `select_connected`
+as a single comma-joined string via `--ids`:
+
+```bash
+python3 {{config.output_root}}/scripts/ac_store/goal_to_epic.py --ids <id-1>,<id-2>,... 2>/tmp/build_ac_connected_epic_err.txt
+```
+
+Where `<id-1>,<id-2>,...` is the `select_connected` JSON id list joined into a
+single comma-separated string — the target AC plus all un-built co-dependents,
+with the structural parent already excluded by `--exclude-structural-parent`.
+Join the list with commas and pass as one argument to `--ids`; `goal_to_epic.py`
+does not accept space-separated tokens for this flag (it splits on commas: line
+2496 of goal_to_epic.py).
+
+**Dependency ordering and ticket cross-wiring (handled internally by `goal_to_epic.py`):**
+
+`goal_to_epic.py` reuses its existing `resolve_leaf_dependencies` +
+`topological_sort` machinery. ACs are ordered prerequisites-first, and each
+generated ticket's `depends_on` field references co-located prerequisite
+ticket files so that `ticket_frontmatter_guard` passes for every ticket in
+the epic folder.
+
+**Cycle handling:**
+
+Dependency cycles are already drained (with a warning) UPSTREAM during
+connected-set resolution: `fast_lane.resolve_connected_build_set` calls
+`_drain_cycles` internally before assembling the build set, so the id list
+passed to `goal_to_epic.py --ids` is already acyclic. The `CyclicDependencyError`
+raised by `topological_sort` inside `goal_to_epic.py` is only a defensive
+backstop — if `goal_to_epic.py` exits non-zero for any reason (including this
+backstop), surface the exit code and stderr verbatim to the user (Stop-and-Ask)
+and do NOT proceed to Step 3.
+
+**Epic folder shape:**
+
+Every member of the resolved connected set — the target AC, its baked-in
+prerequisites, and its un-built children — appears as exactly one ticket in
+the epic folder. No tickets are written to `tickets/00_inbox` outside the
+epic folder; the epic folder is the only output artifact.
+
+**If `goal_to_epic.py` exits non-zero:** surface the error verbatim and stop.
+Do not proceed to Step 3.
+
+**If `--dry-run` was given:** do NOT call `goal_to_epic.py --ids` — the `--ids`
+mode does not implement dry-run (the `--dry-run` flag is parsed but not checked
+in the `--ids` branch of `main()`; files would be written regardless). Instead,
+print a dry-run summary directly from the connected-set id list already returned
+by `select_connected` and exit without writing any files:
 
 ```
-AC <TOP_AC.id> resolves to a connected build set of <N> ACs:
-  - <id-1>
-  - <id-2>
+[dry-run] Would emit a <N>-member connected-set epic:
+  <id-1>
+  <id-2>
   ...
-
-Building this AC requires its connected set to be built together as an ordered
-epic. This path is not yet available. Build each AC individually in dependency
-order using /build-ac --ac <id>.
+[dry-run] No files written.
 ```
 
-Exit cleanly. Do not generate any ticket or epic folder. Do not proceed to
-Step 3.
+Do NOT ask the confirmation prompt.
+
+After `goal_to_epic.py` completes successfully, capture the epic folder path
+from stdout (last line). Set `EPIC_PATH = <captured path>`. Then proceed to
+Step 3 with `EPIC_PATH` instead of `TICKET_PATH`. The Step 3 user prompt
+adapts:
+
+```
+Found AC: <TOP_AC.id> — <TOP_AC.title>
+Priority: <TOP_AC.priority>
+Epic path: <EPIC_PATH>
+
+Build this epic now? (yes / review / skip)
+```
 
 ---
 
@@ -563,3 +628,5 @@ DECISION HISTORY
 - 2026-06-05 12:30 [llm-expert]: Extended Step 2 with three-way mode detection branch (leaf → single-ticket, goal → epic-generation, L1-no-children → error). Wires build_ac_mode_detection.py and goal_to_epic.py into the agent template. Preserves full backward compatibility with the leaf path (ACD-1200e-1). (#EPIC-GoalToEpic/05)
 - 2026-08-12 14:00 [llm-expert]: Introduced Step 2b.1 (select_connected resolution) and Step 2b.2/2b.3 sub-steps in Step 2b. Single-member set falls through to the existing generate_ticket_from_ac.py flow unchanged (byte-identical backward-compat path, AC BO-2600a-3). Multi-member set stub added as Step 2b.3 placeholder for BO-2600a-4. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/03)
 - 2026-08-12 17:00 [commit]: Fixed Step 2b.1 bash command — wrong script path corrected to scripts/build_orchestration/fast_lane.py select_connected; added required --ac-root argument. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/03)
+- 2026-08-12 18:00 [llm-expert]: Implemented Step 2b.3 multi-member connected-set epic-generation path (BO-2600a-4). Replaced placeholder stub with full goal_to_epic.py routing via --ac-ids, dependency ordering via resolve_leaf_dependencies + topological_sort, cycle-drain-with-warning behavior, epic folder as the only output artifact, and epic-form Step 3 prompt. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04)
+- 2026-08-12 [llm-expert]: Fixed Step 2b.3 per pr-reviewer findings (BO-2600a-4 rework). H-1: flag corrected from --ac-ids to --ids (the registered argparse flag in goal_to_epic.py). H-2: argument format corrected from space-separated tokens to a single comma-joined string (goal_to_epic.py parses via .split(',')). H-3: cycle-handling prose corrected — cycles are drained upstream by fast_lane.resolve_connected_build_set._drain_cycles before ids reach goal_to_epic; CyclicDependencyError is a defensive backstop that triggers Stop-and-Ask (not silent proceed). H-4: dry-run handling corrected — --ids mode does not implement dry-run so the coordinator must NOT call goal_to_epic --ids; instead print a summary from the already-resolved connected-set ids. Frontmatter behavioral_patterns entry updated to match. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04)
