@@ -1,7 +1,8 @@
 id: ACD-1800e-1
 components:
   - ac_driven_dev
-readiness: draft
+  - ac_store
+readiness: reviewed
 priority: medium
 title: "Re-deriving work from a requirement produces no duplicate deliverables, tickets, or sign-off slots"
 component: ac-driven-dev
@@ -24,10 +25,44 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+it_requirements:
+  - "Re-deriving buildable work from a requirement must be idempotent: no duplicate deliverable checklist item, no duplicate grouping ticket, and no duplicate sign-off slot is created; the second derivation resolves to the existing work."
+  - "Reuse the generator's existing idempotency guard in scripts/ac_store/generate_ticket_from_ac.py (carry-forward of ACD-400b-3) rather than a parallel one; ACD-400b-3 stays active."
+  - "Re-derivation must infer-then-validate before write, insert ONLY missing items (never rewrite the whole checklist/file), and be byte-stable on an already-complete AC (run-twice-and-diff yields no change) -- the standard backfill idempotency contract."
+  - "Existing per-deliverable sign-offs must be preserved exactly across a re-derivation (resume, not clobber)."
+  - "Canonical source only: scripts/ac_store/generate_ticket_from_ac.py; never a deployed copy."
+delivers_to:
+  agent: python-coder
+  contract: "Idempotent work-derivation from a requirement (no duplicate deliverable items, grouping tickets, or sign-off slots; resolves to existing work); constrained by the partial-re-derivation edge case ACD-1800e-1-i."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "deliverables[] checklist items whose partial-vs-complete set this re-derivation reconciles idempotently, preserving existing items and their sign-offs."
+test_spec:
+  - name: test_rederivation_creates_no_duplicate_checklist_item
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Re-deriving from a requirement whose checklist already exists creates no duplicate deliverable checklist item."
+  - name: test_rederivation_creates_no_duplicate_grouping_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Re-derivation creates no duplicate grouping ticket."
+  - name: test_rederivation_creates_no_duplicate_signoff_slot
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Re-derivation creates no duplicate sign-off slot."
+  - name: test_rederivation_resolves_to_existing_work
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The second derivation resolves to the existing work rather than creating a second copy of it (byte-stable on an already-complete AC)."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -42,3 +77,7 @@ notes: |
   ticket). ACD-400b-3 stays ACTIVE and is not superseded. This L2 reframes the
   idempotency guarantee to AC-level work derivation: re-deriving the deliverable
   checklist / grouping never creates duplicate items, tickets, or sign-off slots.
+
+  IT-PO enrichment (2026-08-12): generator idempotency surface
+  (scripts/ac_store/generate_ticket_from_ac.py); aligned with edge child ACD-1800e-1-i;
+  added ac_store to graph components.

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -23,8 +23,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-delivers_to: null
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The ac_unit_of_work.emit flag definition (its config home and default false) plus the generator branch in scripts/ac_store/generate_ticket_from_ac.py that reads it. Consumed by ACD-1900f-3 (in-flight fat-ticket drain) and the enforce-side ACD-1900c-2."
 expects_from: null
+it_requirements:
+  - "Canonical source: scripts/ac_store/generate_ticket_from_ac.py (generation branch) and the flag's config home (config/guardrail_gates.yaml or the store-policy config). With ac_unit_of_work.emit = false the generated ticket is fat (embeds the full spec copied from the AC); with emit = true the ticket is thin (references source_ac, no copied spec body)."
+  - "emit must default to false (fat tickets) so introducing the flag changes no behaviour until deliberately flipped (ADR-026: generator rollback via emit:false returns fat tickets)."
+  - "Test must EXECUTE the generator with emit=false and emit=true against the same AC and assert the ticket shape differs accordingly -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_emit_false_generates_fat_ticket_with_copied_spec
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Generating a ticket with ac_unit_of_work.emit = false produces a fat ticket that embeds the full spec copied from the AC."
+  - name: test_emit_true_generates_thin_ticket_referencing_source_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Generating the same AC with ac_unit_of_work.emit = true produces a thin ticket that references source_ac and contains no copied spec body."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

@@ -1,7 +1,7 @@
 id: ACD-1600d-3
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Reference doc for the canonical-source pointer rule"
 component: ac-driven-dev
@@ -22,8 +22,15 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Deliverable is reference documentation under docs/reference/ (canonical doc surface)."
+  - "Must document that it_requirements targets, implemented_by, and doc_links name the canonical templates/ source, not a deployed/.claude/ or build-output copy, with a worked templates/ -> .claude/ (or scripts/) mapping example."
+  - "Must document the source-only exception (a scripts/ path with no templates/ counterpart is canonical), consistent with the counterpart-driven rule in ACD-1600d-1-i."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -34,3 +41,4 @@ covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
+test_required: false

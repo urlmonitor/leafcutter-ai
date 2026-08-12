@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_3_migration
 criteria: |
@@ -25,8 +25,15 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: documentation-expert
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The implemented backfill CLI, its flags (--dry-run, --ac-store-dir), idempotency, notes-preservation, and grandfathering behaviours to document accurately."
+it_requirements:
+  - "Canonical source: a how-to under docs/how-to/. Must document previewing with --dry-run, targeting a store with --ac-store-dir, re-running safely (idempotent), and that finished work (done records, authored notes) is preserved."
+  - "Must give a reproducible procedure by which a reader migrates a sample store and re-runs the backfill with no further changes; flags and script path cited must match scripts/ac_store/backfill_schema_version.py exactly."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

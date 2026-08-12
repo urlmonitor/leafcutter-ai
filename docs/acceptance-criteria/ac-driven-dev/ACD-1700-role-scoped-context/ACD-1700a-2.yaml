@@ -1,7 +1,7 @@
 id: ACD-1700a-2
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Each role still receives its own role-appropriate context"
 component: ac-driven-dev
@@ -23,8 +23,30 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Role-scoping must be additive-safe: it removes only cross-role classes and never a class the role legitimately owns; the retained set per role is derived from the SAME single declared source used to compute exclusions (no second divergent list)."
+  - "An authoring agent (e.g. it-po) must still receive its authoring memory and role instructions, and a builder must still receive its build-oriented context; each is verified per role, not assumed from the exclusion test."
+  - "Must be verifiable via the effective-prompt render tool for at least one authoring role and one builder role."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1700a-1
+  contract: "Role-scoped context assembly that excludes cross-role content for a builder; this AC verifies the complementary guarantee that scoping does not strip a role's OWN role-appropriate context."
+test_spec:
+  - name: test_authoring_agent_retains_authoring_context
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Rendered context for it-po still contains its authoring memory and role instructions after scoping."
+  - name: test_builder_retains_build_context
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Rendered context for python-coder still contains the build-oriented role template and AC-graph task context after scoping."
+  - name: test_scoping_does_not_strip_own_role_content
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "For each role, the retained content classes are a superset of the classes that role owns."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

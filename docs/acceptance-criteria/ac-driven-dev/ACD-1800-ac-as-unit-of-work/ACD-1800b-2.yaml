@@ -1,7 +1,8 @@
 id: ACD-1800b-2
 components:
   - ac_driven_dev
-readiness: draft
+  - ac_store
+readiness: reviewed
 priority: medium
 title: "A requirement is done only when every deliverable is signed off"
 component: ac-driven-dev
@@ -24,10 +25,39 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+it_requirements:
+  - "Done-state is COMPUTED solely from the per-deliverable sign-offs recorded on the AC; implement the computation in scripts/ac_store/ (alongside mark_ac_done.py / done_proof.py) as the single computed source of AC-level done."
+  - "A requirement with any unsigned deliverable is reported not done; it becomes done only when every deliverable is signed off (anti-phantom-done)."
+  - "No independent AC-level 'done' flag may be set directly by an agent; done is always derived from the per-deliverable sign-offs."
+  - "Grandfather ACs with no checklist (schema_version < 2): legacy done-derivation; never mass-revert already-done ACs (ADR-026 rule 4). Ship advisory before required (ADR-026 rule 3)."
+  - "Canonical source only: scripts/ac_store/*.py; never a deployed .claude/ copy or build-output mirror."
+delivers_to:
+  agent: python-coder
+  contract: "Computed AC-level done verdict derived solely from the per-deliverable sign-offs; consumed by the ticket-level done rollup (ACD-1800c-2) and by the not-applicable edge case ACD-1800b-2-i."
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "Per-deliverable sign-off record schema (deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?}) that this done-computation reads to decide requirement-level done."
+test_spec:
+  - name: test_requirement_not_done_with_unsigned_deliverable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A requirement with two of three deliverables signed off and one unsigned is reported not done."
+  - name: test_requirement_done_when_all_deliverables_signed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Once the remaining deliverable is signed off, the requirement is reported done."
+  - name: test_done_computed_solely_from_per_deliverable_signoffs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The requirement's done state is computed only from the per-deliverable sign-offs, with no independently settable done flag."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -41,3 +71,7 @@ notes: |
   CONCEPT A (part 2). AC-level "done" is COMPUTED from per-deliverable sign-offs, so
   "done" can never be claimed while a needed deliverable is unsigned. This is the
   anti-phantom-done mechanism at AC grain.
+
+  IT-PO enrichment (2026-08-12): done-computation surface in scripts/ac_store/ (alongside
+  mark_ac_done.py / done_proof.py); reads the per-deliverable sign-off schema from
+  ACD-1800b-1a; aligned with edge child ACD-1800b-2-i; added ac_store to graph components.

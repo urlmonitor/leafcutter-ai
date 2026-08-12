@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_2_cutover
 criteria: |
@@ -24,8 +24,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-delivers_to: null
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The dogfood-precondition signal (a recorded full self-host epic driven end-to-end thin + AC-side sign-off) that the go/no-go evaluator ACD-1900g-2 consumes as one criterion."
 expects_from: null
+it_requirements:
+  - "Canonical source: the cutover-readiness check under scripts/ac_store/ (or scripts/). A consumer cutover MUST be blocked until a completed full self-host epic (driven end-to-end thin + AC-side sign-off) is on record; once recorded, the dogfood precondition is satisfied."
+  - "The precondition must be evaluated from a real recorded signal (e.g. an epic completion record), not a hard-coded boolean."
+  - "Test must EXECUTE the cutover-readiness check with no self-host-epic record (expect blocked) and with one recorded (expect satisfied) -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_cutover_blocked_without_selfhost_epic_record
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A consumer cutover attempted with no recorded full self-host epic is blocked."
+  - name: test_dogfood_precondition_satisfied_with_recorded_epic
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Once a completed self-host epic is on record, the dogfood precondition for consumer cutover is satisfied."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

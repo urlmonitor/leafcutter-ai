@@ -1,7 +1,7 @@
 id: ACD-1600a-3
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Sequence diagram of the thin-ticket reference-and-resolve flow"
 component: ac-driven-dev
@@ -21,8 +21,18 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "Deliverable is a sequence diagram committed under docs/architecture/ (canonical doc surface), linked from the ACD-1600a feature."
+  - "The diagram must depict both actors: the generator writing source_ac + checklist (no criteria copy) and a phase agent following source_ac to the store record."
+  - "Must be consistent with the thin-ticket behaviour specified in ACD-1600a-1 / ACD-1600a-2 and the ADR-026 read-side-first invariant."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -33,3 +43,4 @@ covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
+test_required: false

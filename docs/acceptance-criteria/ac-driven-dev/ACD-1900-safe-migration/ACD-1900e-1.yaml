@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_3_migration
 criteria: |
@@ -24,8 +24,29 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-delivers_to: null
-expects_from: null
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A new opt-in backfill CLI at scripts/ac_store/backfill_schema_version.py exposing --ac-store-dir and --dry-run. Adds missing new fields (schema_version, deliverable_checklist, per-deliverable sign-offs) with defaults. Consumed by ACD-1900e-2/3/4 (dry-run, notes/done preservation, never-auto) and referenced by ACD-1900f-1-i's backfill warning."
+expects_from:
+  ac_id: ACD-1900a-2
+  contract: "The finalized schema_version field and the optional new field definitions in config/ac_store_schema.json so the backfill writes exactly the fields the schema expects with correct defaults."
+it_requirements:
+  - "Canonical source: a NEW opt-in script scripts/ac_store/backfill_schema_version.py. Accept --ac-store-dir <path> to target an arbitrary store; add each missing new field to each record with its default value (schema_version default 1 unless a new-shape field is present)."
+  - "HARD idempotency: a second run on the now-migrated store MUST leave every file byte-identical (verify by run-twice-and-diff). Infer-then-validate before any write; insert only the target field(s), never rewrite the whole file; any value that cannot be inferred goes to a review report, never a guessed value."
+  - "Test must EXECUTE the backfill against a real on-disk store fixture (YAML written the way the store writes it) and assert added fields + byte-identical second run -- never grep-only, and never a hand-indented literal fixture."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_backfill_adds_missing_fields_with_defaults
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Running the backfill against a --ac-store-dir store missing new fields adds each missing field with its default value."
+  - name: test_second_run_is_byte_identical_noop
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A second backfill run on the now-migrated store leaves every file byte-identical (idempotent no-op)."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_2_cutover
 criteria: |
@@ -24,8 +24,15 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: documentation-expert
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900g-2
+  contract: "The implemented go/no-go evaluator and dogfood done-check whose criteria and procedure the guide must document accurately."
+it_requirements:
+  - "Canonical source: a how-to under docs/how-to/. Must document running the full self-host epic the new way, the real-ticket fresh-process spot-check, the consecutive-green-merge requirement, and the complete go/no-go checklist."
+  - "Must give a reproducible procedure by which a reader evaluates cutover readiness against every criterion; the criteria listed must match the go/no-go evaluator (ACD-1900g-2) and ADR-026's Go/No-Go section exactly."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

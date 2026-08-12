@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -24,8 +24,15 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: documentation-expert
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900c-2
+  contract: "The implemented emit/enforce flags, their config home, the enforce precondition, and the kill-switch behaviour to document accurately."
+it_requirements:
+  - "Canonical source: a how-to under docs/how-to/ (or docs/reference/). Must document how to set emit and enforce, the precondition for enabling enforce (zero schema_version < 2 records remaining), and the one-commit rollback for each kill-switch (enforce=false -> dual-read/advisory; emit=false -> fat tickets)."
+  - "Must give a reproducible procedure by which a reader flips enforce = false and observes a previously failing gate return to green with no code change; the config path and flag names must match config/guardrail_gates.yaml exactly."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

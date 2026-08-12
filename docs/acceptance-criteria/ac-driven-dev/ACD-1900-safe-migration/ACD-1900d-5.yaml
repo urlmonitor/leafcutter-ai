@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -26,8 +26,15 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: documentation-expert
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900d-2
+  contract: "The implemented advisory-start, 10-green promotion threshold, deploy-manifest prerequisite, and diff-scoping behaviours to document accurately."
+it_requirements:
+  - "Canonical source: a how-to under docs/how-to/. Must document the advisory (strict: false) start, the 10-consecutive-green-self-host-merge promotion threshold, the deploy-manifest prerequisite (scripts/build_phases.py deploy_map), and diff-scoping for done-accounting gates."
+  - "Must give a reproducible procedure that takes a new gate from advisory to required without retroactively failing pre-existing ACs; config keys and thresholds cited must match config/guardrail_gates.yaml and scripts/build_phases.py."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

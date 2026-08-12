@@ -1,7 +1,8 @@
 id: ACD-1800a-2-i
 components:
   - ac_driven_dev
-readiness: draft
+  - ac_store
+readiness: reviewed
 priority: medium
 title: "A requirement that needs docs or a diagram but omits them from its checklist is flagged incomplete, naming each missing kind"
 component: ac-driven-dev
@@ -23,10 +24,42 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+it_requirements:
+  - "Change-surface derivation maps an AC's declared surface (change_target / risk_surface + behavioural signals such as documentation_triggers) to the SET of required deliverable kinds; the completeness report must name EACH missing kind individually (e.g. 'documentation', 'diagram'), never a generic 'incomplete'."
+  - "Exclusion of a required kind must be an explicit, attributed record on the AC (ties to the not-applicable rule in ACD-1800b-2-i); silence/absence is NEVER treated as exclusion."
+  - "Enforcement-point parity: implement the completeness check in scripts/ac_store/validate_ac_schema.py AND the commit gate scripts/commit_guardian/check_ac_schema.py (+ the _ac_schema_validators.py fallback). Ship advisory (warn tier) before required (ADR-026 rule 3)."
+  - "Diff-scoped / grandfathered: the new completeness check must NOT retroactively fail pre-existing ACs (schema_version < 2) (ADR-026 rules 3-4)."
+  - "Must complete within the commit-hook latency budget for a full staged AC set."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "deliverables[] checklist field ({kind, craft}) whose kinds this validator compares against the change-surface-implied required-kind set."
+test_spec:
+  - name: test_missing_docs_and_diagram_flagged_incomplete
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A behaviour+flow requirement whose checklist lists only code and tests is reported incomplete."
+  - name: test_flag_names_each_missing_kind
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The incompleteness report names both missing kinds: documentation and diagram."
+  - name: test_explicit_exclusion_satisfies_completeness
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An explicitly-excluded (attributed not-applicable) kind is not reported as missing."
+  - name: test_silent_omission_is_not_treated_as_exclusion
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A missing kind with no explicit exclusion keeps the requirement not-fully-specified."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -40,3 +73,6 @@ notes: |
   MORE than the code-omits-tests case -- a behaviour change that omits docs or a
   diagram is equally incomplete. Excluding a kind must be explicit (ties to the
   not-applicable rule in ACD-1800b-2-i).
+
+  IT-PO enrichment (2026-08-12): AC-store validator surface (scripts/ac_store/ +
+  scripts/commit_guardian/); added ac_store to the graph components list.

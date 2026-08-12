@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -24,8 +24,25 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: M
 delivers_to: null
 expects_from: null
+it_requirements:
+  - "Canonical source: the gate-promotion check under scripts/commit_guardian/ (or scripts/) and its threshold config in config/guardrail_gates.yaml. Promotion of a gate to a required check MUST be refused while its recorded history has fewer than 10 consecutive green self-host merges, and permitted once it reaches 10 (ADR-026 non-negotiable rule 3)."
+  - "The 10-green threshold must be read from config (not a magic literal) and the green-merge count must derive from a real recorded history source, not a hard-coded value."
+  - "Test must EXECUTE the promotion check at counts 9 (refused) and 10 (permitted) and assert the outcome -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_promotion_refused_below_10_green
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Promotion of a gate with fewer than 10 consecutive green self-host merges is refused."
+  - name: test_promotion_permitted_at_10_green
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Promotion is permitted once the recorded history reaches 10 consecutive green self-host merges."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

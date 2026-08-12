@@ -1,7 +1,7 @@
 id: ACD-1600c-3
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Reference doc for the implementation-readiness completeness gate"
 component: ac-driven-dev
@@ -21,8 +21,15 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Deliverable is reference documentation under docs/reference/ (canonical doc surface)."
+  - "Must define buildable = concrete file targets (it_requirements) + a test contract (test_spec or test_required: false), and that an AC missing either is held back for enrichment rather than dispatched."
+  - "Must clearly distinguish this enrichment-completeness gate from the approval-readiness gate (draft -> reviewed -> approved) described in ac-schema.md."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -33,3 +40,4 @@ covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
+test_required: false

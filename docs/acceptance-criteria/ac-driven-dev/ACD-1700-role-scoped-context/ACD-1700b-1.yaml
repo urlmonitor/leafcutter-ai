@@ -1,7 +1,7 @@
 id: ACD-1700b-1
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "An assigned_agent that mismatches the deliverable surface is flagged"
 component: ac-driven-dev
@@ -32,8 +32,43 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "CONFIG HOME (IT-PO decision, 2026-08-12): the surface->craft map lives in a dedicated ordered config file, config/surface_craft_map.yaml, as a path-aware, FIRST-MATCH-WINS list of {glob -> craft} entries. It is NOT expressed as per-agent surface globs on config/agent_registry.json, because per-agent extension lists cannot encode first-match path precedence (e.g. templates/workflows-js/**/*.js -> python-coder must override a generic web *.js -> frontend-coder)."
+  - "config/surface_craft_map.yaml is the SINGLE source of truth read by the check AND by any generator/assignment tooling; the check must not inline or duplicate any glob->craft rule, and a duplicated rule is a defect to delete."
+  - "A mismatch is flagged ONLY when assigned_agent differs from the craft the map resolves for the deliverable surface; the flag payload names the deliverable surface, the resolved craft, and the mismatched agent."
+  - "config/surface_craft_map.yaml must be added to the build deploy manifest (deploy_map in scripts/build_phases.py) so the check reads it from the DEPLOYED layout, not only the source tree (done_proof.py ModuleNotFoundError precedent)."
+  - "A deliverable surface that matches no glob must produce an explicit unresolved/advisory outcome, never a silent pass and never a false mismatch."
+  - "Holding for reassignment is advisory-then-blocking per ADR-026 warn-before-required rollout: ship enabled/non-strict, promote to blocking only after the green self-host window."
+delivers_to:
+  agent: python-coder
+  contract: "Per-AC assignment-quality verdict {ac_id, surface, resolved_craft, assigned_agent, verdict: match|mismatch|unresolved}, computed from config/surface_craft_map.yaml; consumed by the split-detection edge case ACD-1700b-1-i and the pass case ACD-1700b-2."
 expects_from: null
+test_spec:
+  - name: test_js_workflow_body_python_coder_passes
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A templates/workflows-js/**/*.js deliverable assigned to python-coder resolves to match (not flagged)."
+  - name: test_frontend_deliverable_python_coder_flagged
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A .jsx/.tsx/.vue/.svelte deliverable assigned to python-coder is flagged as a mismatch."
+  - name: test_sql_deliverable_python_coder_flagged
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A .sql deliverable assigned to python-coder is flagged as a mismatch."
+  - name: test_mismatch_flag_names_surface_craft_and_agent
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A mismatch flag payload contains the deliverable surface, the map-resolved craft, and the mismatched agent."
+  - name: test_map_first_match_wins_path_aware
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A web *.js under a web-app path resolves to frontend-coder while templates/workflows-js/**/*.js resolves to python-coder (path-aware first-match precedence)."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -60,3 +95,7 @@ notes: |
   enrichment: a dedicated config (e.g. config/surface_craft_map.yaml) or surface globs on
   each agent in config/agent_registry.json, so the check and any generator/assignment
   tooling read one source. This is the ACD-1700b resolution of the "just-a-.js" tension.
+
+  IT-PO enrichment (2026-08-12): CONFIG HOME PINNED to config/surface_craft_map.yaml (dedicated
+  ordered file, first-match-wins), NOT surface globs on agent_registry.json — see it_requirements
+  for the rationale (per-agent extension lists cannot express first-match path precedence).

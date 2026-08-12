@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -24,8 +24,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900d-3
+  contract: "The deploy-manifest promotion guard that this edge extends by verifying from the DEPLOYED layout (not the source tree)."
+it_requirements:
+  - "Canonical source: scripts/build_phases.py (deploy_map) plus the promotion/config-validation check. When a required gate's backing script is absent from the deploy-manifest, the missing dependency MUST be detected and blocked BEFORE the gate runs against real merges."
+  - "Verification must be from the DEPLOYED layout, not the source tree (the source tree masks the gap because it imports directly); the failure must be reported as a configuration error naming the un-deployed script, never surfacing as a ModuleNotFoundError that silently blocks every merge once required."
+  - "This is a gate/workflow edge AC: the test MUST exercise the gate from a deployed-layout fixture (e.g. run build then the hook, or simulate the deploy_map missing the script) and assert a config error naming the script -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/import/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_deployed_layout_missing_dep_detected_as_config_error
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Exercising a required gate whose script is absent from the deploy-manifest, from the deployed layout, detects the missing dependency and blocks it as a configuration error."
+  - name: test_reported_as_config_error_not_import_error
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The failure names the un-deployed script as a configuration error rather than surfacing as an import error that silently blocks every merge."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

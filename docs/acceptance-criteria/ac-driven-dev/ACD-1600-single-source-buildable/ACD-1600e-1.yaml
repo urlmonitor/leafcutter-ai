@@ -1,7 +1,7 @@
 id: ACD-1600e-1
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Criteria embedding an authoring-pipeline precondition is flagged"
 component: ac-driven-dev
@@ -23,10 +23,36 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/validate_ac.py (AC authoring-time validation; source-only Python)."
+  - "The authoring-quality check must flag criteria whose Given embeds a planning/authoring-pipeline precondition (authoring roles like 'IT PO v3', readiness-state transitions, enrichment steps) rather than the behaviour to build, and quote the offending clause."
+  - "A flagged AC is held for correction until the offending clause is removed."
+  - "The distinction must key on planning-pipeline markers, not the mere presence of a Given clause — a legitimate runtime/domain precondition must NOT be flagged (ties to ACD-1600e-1-i)."
+delivers_to:
+  agent: python-coder
+  contract: "The authoring-quality check: given an AC's criteria, decide whether it embeds an authoring-pipeline precondition and quote the offending clause; consumed by the false-positive edge case ACD-1600e-1-i."
 expects_from: null
+test_spec:
+  - name: test_authoring_precondition_criteria_flagged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Criteria whose Given embeds an authoring-pipeline precondition (e.g. 'IT PO v3 has enriched the batch') is flagged."
+  - name: test_flag_quotes_offending_clause
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The flag quotes the offending authoring-pipeline clause verbatim."
+  - name: test_flagged_ac_held_for_correction
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A flagged AC is held for correction until the offending clause is removed."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -36,3 +62,7 @@ covered_by:
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+notes: |
+  IT-PO enrichment (2026-08-12): canonical source scripts/ac_store/validate_ac.py, aligned
+  with edge child ACD-1600e-1-i; the check keys on planning-pipeline markers so legitimate
+  runtime/domain preconditions are not false-flagged.

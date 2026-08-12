@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_2_cutover
 criteria: |
@@ -25,8 +25,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-delivers_to: null
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The dogfood-done signal (green sign-offs AND a recorded fresh-process real-ticket spot-check) consumed by the go/no-go evaluator ACD-1900g-2 as its spot-check criterion."
 expects_from: null
+it_requirements:
+  - "Canonical source: the dogfood done-check under scripts/ac_store/ (or scripts/). All-green per-phase sign-offs alone MUST report the dogfood as NOT done; the check passes only when a fresh-process spot-check against a real on-disk ticket is additionally recorded (ADR-026 non-negotiable rule 7)."
+  - "The spot-check signal must be a recorded real-ticket, fresh-process artifact, not inferable from sign-off status; the done-check must require it as a distinct input."
+  - "Test must EXECUTE the done-check with green sign-offs but no spot-check (expect NOT done) and with the spot-check recorded (expect done) -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_dogfood_not_done_without_fresh_process_spotcheck
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With all per-phase sign-offs green but no recorded fresh-process real-ticket spot-check, the dogfood done-check reports NOT done."
+  - name: test_dogfood_done_when_spotcheck_recorded
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Adding a recorded fresh-process spot-check against a real on-disk ticket makes the dogfood done-check pass."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

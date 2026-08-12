@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -24,8 +24,32 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The shared spec-resolution API whose store-first / body-fallback branches this AC extends with a halt-on-unresolvable branch."
+it_requirements:
+  - "Canonical source: scripts/ac_store/generate_ticket_from_ac.py (spec resolution). When neither the store (unresolvable source_ac) nor the ticket body yields a spec, the resolver MUST halt with a non-zero, blocking error naming the unresolvable ticket."
+  - "The resolver must never return an empty spec, and no downstream gate may report ok for an unresolvable ticket (no silent green / no-op) -- this is the phantom-green guard ADR-026 exists to prevent."
+  - "Test must EXECUTE the resolver against an unresolvable ticket and assert the halt/non-zero outcome AND that a downstream gate does not report ok -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): raise a typed, blocking error; no bare except; no silent swallow."
+test_spec:
+  - name: test_unresolvable_ticket_halts_nonzero
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A ticket with an unresolvable source_ac and no body spec causes the resolver to halt with a non-zero blocking error naming the ticket."
+  - name: test_resolver_never_returns_empty_spec
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "The resolver never returns an empty spec for an unresolvable ticket."
+  - name: test_no_downstream_gate_reports_ok_for_unresolvable
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "No downstream gate reports ok for an unresolvable ticket (no silent green or no-op)."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

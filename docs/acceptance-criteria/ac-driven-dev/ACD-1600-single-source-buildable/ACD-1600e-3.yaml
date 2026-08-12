@@ -1,7 +1,7 @@
 id: ACD-1600e-3
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Reference doc for the behaviour-only criteria rule"
 component: ac-driven-dev
@@ -21,8 +21,15 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Deliverable is reference documentation under docs/reference/ (canonical doc surface)."
+  - "Must state that implementation-AC criteria must not embed authoring-pipeline preconditions and give a before/after example (an authoring-precondition Given rewritten as behaviour)."
+  - "Must explain that process/readiness framing belongs to readiness state, not to the criteria a coder implements, consistent with the check in ACD-1600e-1 / ACD-1600e-1-i."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -33,3 +40,4 @@ covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
+test_required: false

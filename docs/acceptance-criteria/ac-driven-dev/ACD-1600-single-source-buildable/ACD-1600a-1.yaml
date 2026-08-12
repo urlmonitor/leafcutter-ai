@@ -1,7 +1,7 @@
 id: ACD-1600a-1
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Generated ticket references its AC by id instead of copying the criteria"
 component: ac-driven-dev
@@ -24,10 +24,43 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/generate_ticket_from_ac.py (source-only Python; no templates/ counterpart)."
+  - "The generator must write source_ac: <id> into the ticket frontmatter as the sole reference to the requirement."
+  - "The ticket body must NOT reproduce the AC's Gherkin criteria text verbatim; the store record remains the single copy of that criteria."
+  - "The ticket must direct a reader to the store record path docs/acceptance-criteria/{component}/<feature-folder>/{id}.yaml for the authoritative criteria."
+  - "Single-source invariant: after generation the criteria text exists in exactly one place (the store), never duplicated in the ticket body."
+  - "GOVERNANCE CAVEAT: reverses ADR-400b / ADR-400b-1 (verbatim criteria in ticket body); gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2_cutover, and the flag-off path must still produce a valid ticket."
+delivers_to:
+  agent: python-coder
+  contract: "Thin generated ticket carrying source_ac frontmatter pointer to the store record and NO verbatim criteria copy; consumed by the phase-agent spec resolver (ACD-1600b-1) and constrained by the unresolvable-source edge case (ACD-1600a-1-i)."
 expects_from: null
+test_spec:
+  - name: test_ticket_frontmatter_carries_source_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Running the generator for a stored leaf AC produces a ticket whose frontmatter carries source_ac: <id>."
+  - name: test_ticket_body_omits_verbatim_criteria
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The generated ticket body does not contain the AC's Gherkin criteria text reproduced verbatim."
+  - name: test_reader_directed_to_store_record_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The ticket body directs a reader to the store record path docs/acceptance-criteria/{component}/<feature-folder>/{id}.yaml."
+  - name: test_store_remains_single_copy_of_criteria
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After generation the criteria text is present only in the store record, not duplicated in the ticket (single-source invariant)."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -43,3 +76,7 @@ notes: |
   criteria field verbatim"). If ACD-1600 is approved, ACD-400b and ACD-400b-1 must
   be amended or superseded by governance so the two rules do not conflict. Flagged
   by the PO in ACD-1600 notes; surfaced here for the IT-PO / user.
+
+  IT-PO enrichment (2026-08-12): canonical generator surface
+  (scripts/ac_store/generate_ticket_from_ac.py), aligned with sibling ACD-1600a-2 and
+  edge child ACD-1600a-1-i; gated behind ac_unit_of_work.emit per ADR-026.

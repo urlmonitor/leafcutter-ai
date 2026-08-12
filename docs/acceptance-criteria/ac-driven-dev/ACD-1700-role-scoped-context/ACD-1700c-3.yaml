@@ -1,7 +1,7 @@
 id: ACD-1700c-3
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Non-reproducible channels are explicitly marked in the rendered brief"
 component: ac-driven-dev
@@ -23,8 +23,30 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Any non-reproducible harness channel must be explicitly labelled non-reproducible and rendered visually distinct from reproducible channels, never silently interleaved."
+  - "The reproducible/non-reproducible classification must derive from the channel taxonomy in docs/architecture/agent_knowledge_plane.md (single source), not a channel list duplicated inside the tool."
+  - "A reader must be able to tell which parts of the brief will vary run to run."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1700c-1
+  contract: "The assembled brief containing the reproducible shared-channels section; this AC constrains how non-reproducible channels are marked within it."
+test_spec:
+  - name: test_non_reproducible_channel_labelled
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A non-reproducible channel is rendered with an explicit non-reproducible label."
+  - name: test_non_reproducible_visually_distinct
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Non-reproducible channels are visually distinct from reproducible channels, not silently interleaved."
+  - name: test_reproducible_channels_not_mislabelled
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Reproducible channels are not labelled non-reproducible."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

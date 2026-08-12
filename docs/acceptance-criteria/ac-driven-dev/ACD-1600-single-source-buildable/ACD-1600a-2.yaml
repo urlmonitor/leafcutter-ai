@@ -1,7 +1,7 @@
 id: ACD-1600a-2
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Generated ticket omits requirement and contract copies, keeping only the checklist"
 component: ac-driven-dev
@@ -22,8 +22,17 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/generate_ticket_from_ac.py (source-only Python; no templates/ counterpart)."
+  - "The generator must stop emitting the ## Implementation Notes block built from it_requirements (currently _build_implementation_notes_section) and must not restate delivers_to / expects_from contract values in the ticket body."
+  - "The emitted ticket must carry the source_ac frontmatter pointer plus a lightweight workflow checklist and no copied spec field."
+  - "Single-source invariant: after generation, no spec field (criteria, it_requirements, contracts) is present in BOTH the ticket body and the store record."
+  - "GOVERNANCE CAVEAT: this reverses ADR-400b / ADR-400b-1 (verbatim spec in ticket body) and is gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2_cutover; the flag-off path must still produce a valid ticket."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -34,3 +43,19 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+test_spec:
+  - name: test_ticket_body_omits_it_requirements
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A generated ticket for an AC carrying it_requirements contains no ## Implementation Notes / it_requirements values in its body."
+  - name: test_ticket_body_omits_delivers_and_expects_contracts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The ticket body does not restate delivers_to or expects_from contract values."
+  - name: test_ticket_carries_source_ac_and_checklist_only
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The ticket carries the source_ac pointer plus a workflow checklist and no copied spec field (single-source invariant holds)."

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -27,8 +27,28 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-delivers_to: null
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A single shared spec-resolution API (store-first via source_ac, ticket-body fallback) in scripts/ac_store/generate_ticket_from_ac.py (or a sibling resolver module under scripts/ac_store/). Returns a resolved-spec dict with the AC's criteria and contract fields. Consumed by ACD-1900b-2 (fallback), ACD-1900b-3 (gate verdict), and ACD-1900b-1-i (halt edge)."
 expects_from: null
+it_requirements:
+  - "Canonical source: scripts/ac_store/generate_ticket_from_ac.py (spec resolution). The resolver must read store-first: given a thinned ticket whose source_ac resolves to a store AC, the resolved spec is read from the store AC, not the ticket body."
+  - "The same resolver must be the single one that phase agents AND gates call (one source of truth for spec resolution), so the store-first / body-fallback / halt behaviour is identical everywhere."
+  - "Resolved content must equal the store AC's content in the fields the consumer reads (criteria and contract)."
+  - "Test must EXECUTE the resolver against a real thinned ticket + store AC and assert the returned spec equals the store AC -- never assert only on source-string presence (grep-only)."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_thin_ticket_spec_resolved_from_store_ac
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A thinned ticket with no body spec but a resolvable source_ac resolves its spec from the store AC."
+  - name: test_resolved_content_equals_store_ac_consumed_fields
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "The resolved spec equals the store AC's content in the criteria and contract fields the consumer reads."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

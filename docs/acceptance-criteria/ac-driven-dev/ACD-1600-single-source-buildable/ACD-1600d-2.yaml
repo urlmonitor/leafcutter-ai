@@ -1,7 +1,7 @@
 id: ACD-1600d-2
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The canonical-source check applies to implemented_by and doc_links, not just file targets"
 component: ac-driven-dev
@@ -22,10 +22,19 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/validate_ac.py (AC authoring-time validation; source-only Python)."
+  - "The pointer-quality check must scan all three pointer fields uniformly: it_requirements targets, implemented_by, and doc_links; no pointer field is exempt."
+  - "Each entry pointing at a deployed/build-output copy with a templates/ counterpart is flagged identically, naming both the deployed path and the expected canonical source."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1600d-1
+  contract: "The pointer-quality check core: resolve a path to (is-deployed-copy, expected-canonical-path)."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -34,3 +43,19 @@ covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+test_spec:
+  - name: test_implemented_by_deployed_copy_flagged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An implemented_by entry pointing at a deployed copy of a template is flagged."
+  - name: test_doc_links_deployed_copy_flagged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A doc_links entry pointing at a deployed copy of a template is flagged."
+  - name: test_no_pointer_field_exempt_from_canonical_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The check applies uniformly across it_requirements targets, implemented_by, and doc_links."

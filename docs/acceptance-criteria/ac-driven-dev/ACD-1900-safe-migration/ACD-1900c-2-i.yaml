@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -24,8 +24,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900c-2
+  contract: "The enforce flag and the gate branch that reads it, so a config-only flip is sufficient to change the verdict."
+it_requirements:
+  - "Canonical source: the enforce flag's config home (config/guardrail_gates.yaml) and the migration-gate script that reads it. Flipping enforce from true to false in a single config commit (no code revert) must make the next gate run return ok (dual-read/advisory)."
+  - "The kill-switch must be config-only: the sole difference between the red run and the green run is the enforce flag value -- no source change is required to roll back (ADR-026 one-commit rollback)."
+  - "Test must EXECUTE the gate before and after a config-only flip and assert red-then-green, asserting the flag value is the only changed input -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_flip_enforce_false_gate_returns_ok
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A gate red under enforce=true returns ok on the next run after enforce is flipped to false via config only."
+  - name: test_only_change_between_red_and_green_is_enforce_flag
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "The enforce flag value is the only input that differs between the red run and the green run (no code revert)."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

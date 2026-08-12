@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -23,8 +23,29 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The ac_unit_of_work.enforce flag (config home + default false) and the migration-gate branch that reads it to switch between dual-read/advisory and required-new-shape. Consumed by ACD-1900c-2-i (rollback), ACD-1900c-3 (precondition), and the gate rollout ACD-1900d family."
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The dual-read resolver so that enforce=false can fall back to dual-read/advisory safely."
+it_requirements:
+  - "Canonical source: the migration-gate script under scripts/commit_guardian/ and the enforce flag's config home (config/guardrail_gates.yaml). With ac_unit_of_work.enforce = false the gate runs dual-read/advisory and does not block a ticket lacking the new shape; with enforce = true the same gate requires the new shape and blocks it."
+  - "enforce must default to false so the flag is inert until deliberately flipped; the gate's block/allow decision must read the flag value in its control flow (not a compile-time constant)."
+  - "Test must EXECUTE the gate under both flag values against a ticket lacking the new shape and assert the differing block/advisory outcome -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_enforce_false_gate_advisory_does_not_block
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With ac_unit_of_work.enforce = false, the migration gate runs advisory/dual-read against a ticket lacking the new shape and does not block."
+  - name: test_enforce_true_gate_requires_new_shape_blocks
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With ac_unit_of_work.enforce = true, the same gate requires the new shape and blocks the ticket."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

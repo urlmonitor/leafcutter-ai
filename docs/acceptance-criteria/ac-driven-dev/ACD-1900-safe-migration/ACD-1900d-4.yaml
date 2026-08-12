@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -23,8 +23,25 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: M
 delivers_to: null
 expects_from: null
+it_requirements:
+  - "Canonical source: the done-accounting gate under scripts/commit_guardian/ (diff-scoping like BO-2500b). The gate MUST evaluate only diff-touched AC(s); every pre-existing untouched AC must be neither evaluated nor failed, so pre-existing ACs are never retroactively failed (ADR-026 non-negotiable rule 3)."
+  - "The set of evaluated ACs must derive from the actual change diff, not a full-store scan; the diff-scope must be the load-bearing input to the gate's control flow."
+  - "Test must EXECUTE the gate on a change touching exactly one AC in a store where pre-existing ACs lack the new fields, and assert only the touched AC is evaluated and no untouched AC is failed -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_gate_evaluates_only_diff_touched_ac
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Running the done-accounting gate on a change touching one AC evaluates only that diff-touched AC."
+  - name: test_untouched_preexisting_acs_not_evaluated_or_failed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Pre-existing untouched ACs lacking the new fields are neither evaluated nor failed by the run."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

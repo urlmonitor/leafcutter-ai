@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -24,8 +24,15 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: architecture-diagram-author
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900c-3
+  contract: "The implemented {emit, enforce} state machine and the guard on the transition into enforce=true (zero v1 records) so the diagram's states, transitions, and guard match the code."
+it_requirements:
+  - "Canonical source: a state diagram under docs/architecture/ (Mermaid stateDiagram). Must show all four {emit, enforce} states, the legal transitions, the guard on the transition into enforce=true (zero schema_version < 2 records remaining), and the rollback transitions (enforce->false, emit->false)."
+  - "Every transition drawn must correspond to a reproducible flag change; the diagram must not depict a transition the enforce-precondition (ACD-1900c-3) forbids."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

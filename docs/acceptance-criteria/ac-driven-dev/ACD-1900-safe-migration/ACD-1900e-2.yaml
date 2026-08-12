@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_3_migration
 criteria: |
@@ -23,8 +23,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The backfill CLI (scripts/ac_store/backfill_schema_version.py) whose --dry-run flag this AC specifies."
+it_requirements:
+  - "Canonical source: scripts/ac_store/backfill_schema_version.py. With --dry-run, the backfill reports the changes it would make and writes NOTHING -- the store is byte-identical before and after (verify by diffing the whole store dir)."
+  - "The dry-run preview must be computed from the same infer-then-validate path that the real run uses, so the preview accurately reflects what a real run would write."
+  - "Test must EXECUTE the backfill with --dry-run against a real on-disk store fixture and assert non-empty preview + byte-identical store -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_dry_run_reports_changes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Running the backfill with --dry-run on a store missing new fields reports the changes it would make."
+  - name: test_dry_run_writes_nothing_store_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A --dry-run leaves every file under the store byte-identical before and after."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

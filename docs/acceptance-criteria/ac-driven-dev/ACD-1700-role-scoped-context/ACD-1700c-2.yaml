@@ -1,7 +1,7 @@
 id: ACD-1700c-2
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Dependencies are shown together with what they already shipped"
 component: ac-driven-dev
@@ -23,8 +23,29 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Each dependency must be shown together with what it already shipped: its implemented_by source and its covered_by tests, read from the dependency's OWN store record."
+  - "A reader must be able to distinguish a delivered dependency (has implemented_by/covered_by) from a not-yet-built one (empty) via an explicit rendered marker, not by inference."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1700c-1
+  contract: "The dependencies section of the assembled brief; this AC enriches each dependency entry with its shipped state (implemented_by + covered_by)."
+test_spec:
+  - name: test_dependency_shows_implemented_by_and_covered_by
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A rendered dependency shows its implemented_by source and covered_by tests."
+  - name: test_delivered_vs_unbuilt_dependency_distinct
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A delivered dependency is rendered with a marker distinct from a not-yet-built one."
+  - name: test_dependency_with_no_shipped_artifacts_marked_not_built
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "A dependency with empty implemented_by and covered_by is explicitly marked not built."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

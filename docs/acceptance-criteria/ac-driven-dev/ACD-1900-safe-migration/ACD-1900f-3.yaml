@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_3_migration
 criteria: |
@@ -24,8 +24,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The dual-read resolver (store + ticket-body) that must remain readable while the compatibility window is open."
+it_requirements:
+  - "Canonical source: scripts/build.py / scripts/build_phases.py and the dual-read resolver in scripts/ac_store/generate_ticket_from_ac.py. While the compatibility window is open (>=1 in-flight fat ticket remains) both old and new AC shapes MUST remain readable and the legacy-derive path MUST NOT be removed."
+  - "Removal of the legacy path is permitted ONLY when the window has elapsed AND zero in-flight fat tickets remain; the in-flight count must be derived from actual store/ticket state, not a hard-coded flag."
+  - "Test must EXECUTE the window/removal gate with in-flight fat tickets present (expect dual-read retained, removal blocked) and with the window elapsed + zero in-flight (expect removal permitted) -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_window_open_both_shapes_readable_legacy_not_removed
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With the compatibility window open (>=1 in-flight fat ticket), both AC shapes remain readable and the legacy-derive path is not removed."
+  - name: test_window_elapsed_zero_inflight_removal_permitted
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "When the window has elapsed and zero in-flight fat tickets remain, removal of the legacy path is permitted."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

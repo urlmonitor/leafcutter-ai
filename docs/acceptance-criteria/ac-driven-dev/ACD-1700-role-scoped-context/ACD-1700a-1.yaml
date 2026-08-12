@@ -1,7 +1,7 @@
 id: ACD-1700a-1
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A coder's spawn context excludes cross-role authoring content"
 component: ac-driven-dev
@@ -23,8 +23,32 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: L
-delivers_to: null
+it_requirements:
+  - "The role-scope filter must be data-driven from the agent's role/craft, not a hard-coded per-agent allow/deny list, so a new agent inherits scoping without a code edit."
+  - "The content classes excluded for a builder must at minimum be requirement-authoring memory (BA/PO/IT-PO), the supervisor and finalize Pre-Drive Checklist, and authoring-pipeline instructions, enumerated from a single declared role-to-content-class source rather than restated per call site."
+  - "Exclusion must be verifiable statically via the effective-prompt render tool so a reviewer can confirm it before a build runs, with no live spawn required."
+  - "Must degrade safely: an unknown or unclassified content class defaults to excluded-for-builder rather than leaking, and the tool must not error on an unrecognised channel."
+  - "Must not strip channels that carry the builder's own spec (the AC-graph task context, the role template, and the reproducible shared context)."
+delivers_to:
+  agent: python-coder
+  contract: "Role-scoped effective-context assembly (in scripts/render_effective_prompt.py) that, for a builder role, omits authoring memory, the Pre-Drive Checklist, and authoring-pipeline instructions; consumed by ACD-1700a-2's own-context-preserved check and by the ACD-1700a-3/-4 diagram and reference-doc ACs."
 expects_from: null
+test_spec:
+  - name: test_coder_context_excludes_authoring_memory
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Rendered effective context for python-coder contains no BA/PO/IT-PO requirement-authoring memory content."
+  - name: test_coder_context_excludes_pre_drive_checklist
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Rendered effective context for python-coder excludes the supervisor and finalize Pre-Drive Checklist."
+  - name: test_coder_context_excludes_authoring_pipeline_instructions
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Rendered effective context for python-coder excludes authoring-pipeline instructions meant for other roles."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -38,3 +62,10 @@ notes: |
   authoring memory, the Pre-Drive Checklist, and authoring-pipeline instructions. Concerns
   the harness injection channels (agent knowledge plane); may alternatively belong to the
   infrastructure component -- flagged for the user.
+
+  IT-PO enrichment note (2026-08-12): the in-repo, verifiable surface for "effective context
+  assembled at spawn" is scripts/render_effective_prompt.py -- the tool that reproduces the
+  deterministic subset of the 11 injection channels per role. Role-scoping is implemented and
+  verified there. The PRODUCTION spawn-time injection filter (what the live Claude Code harness
+  actually assembles, esp. auto-memory channel 9) may be a harness/infrastructure concern beyond
+  this file; see caveat raised at the IT-PO gate.

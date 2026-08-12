@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_3_migration
 criteria: |
@@ -23,8 +23,27 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The opt-in backfill CLI name/invocation (scripts/ac_store/backfill_schema_version.py) that the build's warning message must advise the operator to run."
+it_requirements:
+  - "Canonical source: scripts/build.py / scripts/build_phases.py. When a consumer upgraded but has not run the backfill (store still v1), build.py MUST succeed via the dual-read path AND emit a warning advising the operator to run the opt-in backfill (naming the actual command)."
+  - "The warning must be emitted at WARNING severity through the project logger; the build must not fail on this condition."
+  - "Test must EXECUTE build.py against an all-v1 consumer-sim store and assert build success + the presence of the backfill-advisory warning -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_v1_store_build_succeeds_via_dual_read
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A consumer that upgraded but never backfilled (store still v1) has build.py succeed via the dual-read path."
+  - name: test_build_emits_backfill_advisory_warning
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "build.py emits a warning advising the operator to run the opt-in backfill."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

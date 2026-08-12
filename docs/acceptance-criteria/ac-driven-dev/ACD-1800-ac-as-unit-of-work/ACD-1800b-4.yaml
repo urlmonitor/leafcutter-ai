@@ -1,7 +1,7 @@
 id: ACD-1800b-4
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Sequence diagram shows the deliverable sign-off flow onto the requirement"
 component: ac-driven-dev
@@ -23,10 +23,19 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid sequenceDiagram showing: a responsible craft produces a deliverable, then records its sign-off ON the requirement; the requirement's done-state computed from the SET of per-deliverable sign-offs; and NO step writing to the grouping ticket."
+  - "Home the diagram in a canonical docs surface (embed in docs/reference/ac-schema.md or a docs/architecture/ diagram doc); never point at a build-output copy. Keep the actors/steps in spec-parity with the record side (ACD-1800b-1a) and produce side (ACD-1800b-1b)."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "The implemented per-deliverable sign-off record + done-computation whose flow the diagram depicts."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -37,3 +46,5 @@ change_target: docs
 risk_surface: internal
 notes: |
   Documentation AC produced for the sequence-diagram trigger on ACD-1800b.
+
+  IT-PO enrichment (2026-08-12): test_required: false (diagram/docs surface).

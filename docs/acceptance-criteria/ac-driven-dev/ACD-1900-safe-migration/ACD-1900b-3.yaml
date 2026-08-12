@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
@@ -26,8 +26,26 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The shared spec-resolution API returning the resolved-spec dict (store-first) that the gate consumes in its control flow to compute its verdict."
+it_requirements:
+  - "Canonical source: the gate script under scripts/commit_guardian/ (or scripts/ac_store/) plus the shared resolver in scripts/ac_store/generate_ticket_from_ac.py. The gate's verdict MUST be computed from the resolved spec in its control flow -- the resolved criteria must be a data input to the pass/block decision, not decorative."
+  - "This is a gate/workflow AC: the test MUST execute the gate twice against the SAME resolved spec -- once with work that violates the resolved criteria (expect blocking verdict) and once with work that satisfies them (expect ok) -- proving the verdict tracks the resolved spec and is not a fixed pass. Grep-only tests are explicitly disallowed (they pass on dead code)."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_gate_blocks_when_resolved_criteria_unmet
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Executing the gate against work that violates the resolved store-AC criteria returns a blocking verdict."
+  - name: test_gate_ok_when_work_satisfies_resolved_criteria
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Executing the gate against work that satisfies the same resolved criteria returns ok, proving the verdict tracks the resolved spec (not a fixed pass)."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

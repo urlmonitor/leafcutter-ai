@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_2_cutover
 criteria: |
@@ -24,8 +24,32 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900g-2
+  contract: "The go/no-go evaluator whose refusal path this edge exercises for each of the three no-go signals independently."
+it_requirements:
+  - "Canonical source: the go/no-go cutover evaluator under scripts/ac_store/ (or scripts/). With every go criterion otherwise passing, ANY single no-go signal MUST block the cutover and the refusal MUST name the specific signal; this holds independently for each of the three signals (required gate red; deployed-hook import error; shadow check showing a gate that verified zero ACs)."
+  - "The zero-ACs shadow check is the phantom-green guard: it must detect a gate that ran but verified zero ACs and treat it as a no-go, never as a pass."
+  - "Test must EXECUTE the evaluator three times, injecting exactly one no-go signal each time, and assert the block + the named signal -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_red_required_gate_blocks_named
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With all go criteria met but a required gate red, the cutover is blocked and the red-gate signal is named."
+  - name: test_deployed_hook_import_error_blocks_named
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With all go criteria met but a deployed-hook import error present, the cutover is blocked and the import-error signal is named."
+  - name: test_shadow_zero_ac_gate_blocks_named
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With all go criteria met but a shadow check showing a gate that verified zero ACs, the cutover is blocked and the zero-ACs signal is named."
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

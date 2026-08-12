@@ -1,7 +1,7 @@
 id: ACD-1600b-2
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "When the ticket body and the store disagree, the store wins"
 component: ac-driven-dev
@@ -24,8 +24,15 @@ doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Canonical surfaces to change: templates/agents/test-writer.md, templates/agents/python-coder.md, templates/agents/ac-validator.md (agent prompt bodies; never the deployed .claude/agents/ copies)."
+  - "The prompt must direct the agent to treat the store record as authoritative and take its values when the ticket body disagrees (store-wins dual-read, ADR-026)."
+  - "The prompt must require the agent to surface/report the discrepancy rather than silently resolving in favour of the ticket copy."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -36,3 +43,4 @@ covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
+test_required: false

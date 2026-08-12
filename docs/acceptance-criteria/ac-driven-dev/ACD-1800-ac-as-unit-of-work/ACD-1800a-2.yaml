@@ -1,7 +1,8 @@
 id: ACD-1800a-2
 components:
   - ac_driven_dev
-readiness: draft
+  - ac_store
+readiness: reviewed
 priority: medium
 title: "The deliverable checklist is validated against the requirement's change surface"
 component: ac-driven-dev
@@ -24,10 +25,44 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+it_requirements:
+  - "Derive the required deliverable-kind SET from the AC's declared change surface (change_target / risk_surface + behavioural signals such as documentation_triggers); a checklist listing a code item but no tests item is reported incomplete, naming the missing kind (tests)."
+  - "A checklist that includes every deliverable kind implied by the change surface is reported complete; the report must name EACH missing kind individually, never a generic 'incomplete'."
+  - "Enforcement-point parity: implement the completeness check in scripts/ac_store/validate_ac_schema.py AND the commit gate scripts/commit_guardian/check_ac_schema.py (+ the _ac_schema_validators.py fallback, the load-bearing gate when jsonschema is absent). A rule added only to the JSON schema is a no-op gate."
+  - "Diff-scoped / grandfathered: the completeness check must NOT retroactively fail pre-existing ACs (schema_version < 2); ship advisory (warn) before required (ADR-026 rules 3-4)."
+  - "Canonical source only: scripts/ac_store/*.py + scripts/commit_guardian/*.py; never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001 / ADR-026)."
+delivers_to:
+  agent: python-coder
+  contract: "Checklist-vs-change-surface completeness verdict that names each missing deliverable kind (and reports complete when every implied kind is present); consumed by the docs/diagram edge case ACD-1800a-2-i."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "deliverables[] checklist field ({kind, craft}) whose kinds this validator compares against the change-surface-implied required-kind set."
+test_spec:
+  - name: test_code_surface_without_tests_item_reported_incomplete
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A code change-surface requirement whose checklist lists a code item but no tests item is reported incomplete."
+  - name: test_incomplete_report_names_missing_tests_kind
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The incompleteness report names the missing deliverable kind (tests)."
+  - name: test_checklist_with_all_implied_kinds_reported_complete
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A checklist that includes every deliverable kind implied by the change surface is reported complete."
+  - name: test_grandfathered_legacy_ac_not_retroactively_failed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A pre-existing schema_version < 2 AC is not retroactively failed by the completeness check."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -42,3 +77,7 @@ notes: |
   derived/validated against what the requirement actually changes, so a code
   requirement that omits its tests is caught. "Change surface" = the set of
   artifact kinds the requirement will change.
+
+  IT-PO enrichment (2026-08-12): AC-store validator surface (scripts/ac_store/ +
+  scripts/commit_guardian/) with enforcement-point parity; aligned with sibling
+  ACD-1800a-1 and edge child ACD-1800a-2-i; added ac_store to the graph components list.

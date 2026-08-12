@@ -1,0 +1,84 @@
+id: ACD-1800b-1a
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "A per-deliverable sign-off record is stored on the requirement itself, in independent slots"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement whose deliverable checklist lists a code item, a tests item,
+    and a documentation item,
+  When a sign-off for the code deliverable is recorded,
+  Then a sign-off record for the code deliverable is stored on the requirement
+    itself,
+  And the record identifies who signed it and when,
+  And the record is stored on the requirement, not in the body of the grouping
+    ticket,
+  And each of the other two deliverables retains its own independent, still-unsigned
+    slot.
+depends_on: [ACD-1800b, ACD-1800a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Per-deliverable sign-off records are a NEW additive AC-schema structure (e.g. deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?}). Declare optional/additive in config/ac_store_schema.json; do not tighten additionalProperties pre-backfill (ADR-026 rule 1)."
+  - "Slots are independent: recording a sign-off on one deliverable MUST NOT mutate, clear, or re-order any sibling slot."
+  - "`by` resolves to an agent_registry id or a human author; `at` is a timestamp in the signoff-skill convention (local YYYY-MM-DD HH:MM). Store on the AC record, never in the grouping ticket body."
+  - "Dual-record during the cutover: readers dual-read ticket-body OR AC sign-offs until the single atomic move off the ticket (ADR-026 load-bearing invariant + phase_acbuild_2)."
+  - "Canonical source: scripts/ac_store/ + config/ac_store_schema.json only (never a deployed .claude/ copy)."
+  - "The stored record shape MUST match what the signoff skill (ACD-1800b-1b) writes -- keep the two in spec-parity via the normative definition in docs/reference/ac-schema.md; do not rely on a code import bridging the .py/.md boundary."
+delivers_to:
+  agent: llm-expert
+  contract: "Per-deliverable sign-off record schema on the AC: deliverables[].signoff = {status: needed|signed_off|not_applicable, by: <agent_registry id|human>, at: <YYYY-MM-DD HH:MM>, reason?: <str for not_applicable>}. The signoff skill (ACD-1800b-1b) writes this exact shape onto the AC instead of the ticket body."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "deliverables[] checklist field ({kind, craft}) onto which each per-deliverable sign-off slot attaches."
+test_spec:
+  - name: test_signoff_record_stored_on_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Recording a code-deliverable sign-off stores a record on the AC record itself."
+  - name: test_signoff_record_captures_who_and_when
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The stored sign-off record carries `by` and `at`."
+  - name: test_signoff_not_written_to_ticket_body
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Recording a sign-off does not write to the grouping ticket body."
+  - name: test_sibling_deliverable_slots_remain_independent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After signing the code deliverable, the tests and docs slots remain present and unsigned."
+origin_agent: it-po
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  IT-PO split child of ACD-1800b-1 (2026-08-12). RECORD side: the AC-store schema +
+  write path that STORES a per-deliverable sign-off on the requirement (who/when,
+  independent slots). Paired with ACD-1800b-1b (signoff skill PRODUCE side, llm-expert).
+  Criteria are the storage/data half of the original ACD-1800b-1; the ACT of a craft
+  signing off is in ACD-1800b-1b. SUPERSESSION INTENT carried from the parent:
+  replaces the sign-offs-in-ticket clause of ACD-400b-4 (do NOT edit ACD-400b-4 here;
+  governance records the supersession separately).

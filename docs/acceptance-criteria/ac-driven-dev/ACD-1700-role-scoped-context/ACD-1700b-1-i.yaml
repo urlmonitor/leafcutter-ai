@@ -1,7 +1,7 @@
 id: ACD-1700b-1-i
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A deliverable spanning two surfaces is flagged for a split, not a single agent"
 component: ac-driven-dev
@@ -23,8 +23,30 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Split detection derives from the set of DISTINCT crafts the map (config/surface_craft_map.yaml) resolves across the AC's declared surfaces (data-driven), not from a hard-coded surface-pair list; two surfaces resolving to two different crafts trigger a split flag."
+  - "A single assigned_agent must NOT be accepted as covering two distinct-craft surfaces (e.g. a .py helper AND templates/agents/*.md prose)."
+  - "The split flag must enumerate each surface and its resolved craft so the recommended split is actionable."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1700b-1
+  contract: "The surface-resolution + assignment-quality verdict machinery reading config/surface_craft_map.yaml; this edge case extends it to detect multiple distinct resolved crafts for one AC."
+test_spec:
+  - name: test_two_surface_deliverable_flagged_for_split
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "An AC whose surfaces resolve to two crafts (py helper + agent-template prose) is flagged for a per-surface split."
+  - name: test_split_flag_enumerates_each_surface_and_craft
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "The split flag payload lists each deliverable surface with its resolved craft."
+  - name: test_single_surface_not_flagged_for_split
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "An AC whose surfaces all resolve to one craft is not flagged for a split."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

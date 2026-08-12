@@ -1,7 +1,7 @@
 id: ACD-1600a-1-i
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Unresolvable source AC aborts generation rather than embedding a partial copy"
 component: ac-driven-dev
@@ -21,8 +21,16 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/generate_ticket_from_ac.py (source-only Python; no templates/ counterpart)."
+  - "On an unresolvable source AC id the generator must abort per the project error-handling policy; the error must name the unresolved AC id."
+  - "The abort path must NOT fall back to embedding any partial criteria (or any spec field) into a ticket body."
+  - "The operation must be atomic on failure: no ticket file (and no partial ticket file) is left on disk when generation aborts."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -33,3 +41,19 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+test_spec:
+  - name: test_unresolvable_source_ac_aborts_naming_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Invoking the generator for an AC id absent from the store aborts with an error that names the unresolved id."
+  - name: test_no_partial_criteria_embedded_on_abort
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The abort path never writes a ticket body containing any copied criteria text."
+  - name: test_no_ticket_file_written_on_abort
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "No ticket file (and no partial file) exists on disk after an aborted generation."

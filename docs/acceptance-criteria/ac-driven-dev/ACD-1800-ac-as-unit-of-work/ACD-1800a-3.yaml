@@ -1,7 +1,7 @@
 id: ACD-1800a-3
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Reference doc describes the requirement deliverable checklist"
 component: ac-driven-dev
@@ -24,10 +24,19 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+  - "Document in docs/reference/ac-schema.md (the canonical AC-schema reference): the deliverable-checklist field, the allowed kinds {code, tests, docs, diagram, config}, the responsible-craft attribute, how the checklist is validated against the change surface, and a worked complete-checklist example."
+  - "This reference section is the SINGLE NORMATIVE definition that both the AC-store schema (ACD-1800a-1 / ACD-1800a-2-i) and the signoff skill mirror (spec-parity, since a Python validator and a markdown skill cannot share a code import)."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "The implemented deliverable-checklist field, kind enum, and responsible-craft attribute to document."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -39,3 +48,6 @@ risk_surface: internal
 notes: |
   Documentation AC produced for the reference-doc trigger on ACD-1800a. Documents the
   behaviour authored in ACD-1800a-1 / ACD-1800a-2.
+
+  IT-PO enrichment (2026-08-12): test_required: false (docs surface, no executable
+  behaviour); serves as the normative spec-parity source for the schema + skill.

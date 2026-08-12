@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_acbuild_3_migration
 criteria: |
@@ -24,8 +24,15 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: documentation-expert
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-1900f-2
+  contract: "The implemented upgrade flow, schema_version-skew warning/refusal, dual-read window, and legacy-removal gating to document accurately."
+it_requirements:
+  - "Canonical source: a how-to under docs/how-to/. Must document upgrading and rebuilding, interpreting a schema_version-skew warning, the dual-read compatibility window, draining in-flight fat tickets, and the post-window legacy removal with a rehearsed rollback."
+  - "Must give a reproducible procedure by which a reader upgrades a sample consumer without breaking its build; commands and behaviours cited must match scripts/build.py and the backfill CLI."
+test_required: false
 origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []

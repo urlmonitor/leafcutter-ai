@@ -1,7 +1,8 @@
 id: ACD-1800c-2
 components:
   - ac_driven_dev
-readiness: draft
+  - ac_store
+readiness: reviewed
 priority: medium
 title: "A ticket is done exactly when all its grouped requirements are done"
 component: ac-driven-dev
@@ -23,10 +24,39 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+it_requirements:
+  - "Ticket done-state is DERIVED from the done-state of its grouped requirements: a ticket with any not-done member is reported not done; it becomes done only when every grouped requirement is done. Implement the rollup in scripts/ac_store/ alongside the AC-level done computation (ACD-1800b-2)."
+  - "There is no independent ticket-level completion an agent can set directly; an agent advances the feature only by completing individual requirements."
+  - "Ticket membership is by AC id reference only (ties to ACD-1800c-2-i / ACD-1600a thin-ticket single-source); the rollup reads member ids resolved via scripts/ac_store/generate_ticket_from_ac.py grouping, never a copied member state."
+  - "Grandfather legacy tickets/ACs (schema_version < 2); ship advisory before required (ADR-026 rules 3-4)."
+  - "Canonical source only: scripts/ac_store/*.py; never a deployed .claude/ copy or build-output mirror."
+delivers_to:
+  agent: python-coder
+  contract: "Computed ticket-level done verdict derived from the grouped requirements' done-state; consumed by the group-membership edge case ACD-1800c-2-i."
+expects_from:
+  ac_id: ACD-1800c-1
+  contract: "Thin grouping ticket that enumerates member AC ids by reference; this rollup aggregates each member's computed done-state to decide ticket done."
+test_spec:
+  - name: test_ticket_not_done_with_unfinished_member
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A ticket grouping three requirements with one not done is reported not done."
+  - name: test_ticket_done_when_all_members_done
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Once the remaining requirement becomes done, the ticket is reported done."
+  - name: test_no_direct_ticket_completion_only_via_requirements
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "There is no independently settable ticket-done; the feature advances only by completing individual requirements."
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []
@@ -39,3 +69,8 @@ risk_surface: contract_boundary
 notes: |
   CONCEPT B. Ticket "done" is DERIVED from the done-state of its grouped
   requirements; there is no independent ticket-level completion an agent can set.
+
+  IT-PO enrichment (2026-08-12): ticket-done rollup surface in scripts/ac_store/ (alongside
+  the AC-level done computation of ACD-1800b-2); membership by id reference resolved via
+  generate_ticket_from_ac.py grouping; aligned with edge child ACD-1800c-2-i; added ac_store
+  to graph components.
