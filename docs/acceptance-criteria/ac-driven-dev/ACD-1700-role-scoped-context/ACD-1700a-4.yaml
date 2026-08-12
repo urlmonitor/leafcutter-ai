@@ -1,0 +1,36 @@
+id: ACD-1700a-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Reference doc for role-scoped context delivery"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the role-scoped context delivery rule,
+  When the reference documentation is authored,
+  Then it documents which content classes each role does and does not receive at spawn,
+  And it records that a coder does not receive authoring memory, the pre-drive checklist,
+    or authoring-pipeline instructions,
+  And it documents how a new content class is assigned to the roles that should receive it.
+depends_on: [ACD-1700a, ACD-1700a-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

@@ -1,0 +1,35 @@
+id: ACD-1600a-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Unresolvable source AC aborts generation rather than embedding a partial copy"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the ticket generator is invoked for an AC id that cannot be resolved to a store file,
+  When it runs,
+  Then it aborts with an error naming the unresolved AC id,
+  And it does NOT fall back to embedding a copy of any partial criteria into the ticket body,
+  And no ticket file is written.
+depends_on: [ACD-1600a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

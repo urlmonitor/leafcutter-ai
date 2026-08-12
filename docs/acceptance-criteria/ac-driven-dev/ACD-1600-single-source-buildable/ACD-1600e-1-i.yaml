@@ -1,0 +1,35 @@
+id: ACD-1600e-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A legitimate runtime or domain precondition is not mistaken for authoring framing"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC whose Given references product or runtime state, for example "Given a ticket carries source_ac",
+  When the authoring-quality check evaluates it,
+  Then it is NOT flagged as an authoring-pipeline precondition,
+  And the check distinguishes planning-pipeline framing (authoring roles, readiness state, enrichment steps)
+    from legitimate runtime or domain preconditions.
+depends_on: [ACD-1600e-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

@@ -1,0 +1,43 @@
+id: ACD-1800b-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement is done only when every deliverable is signed off"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement with three deliverables of which two are signed off and one
+    is still unsigned,
+  When the requirement's completion state is evaluated,
+  Then the requirement is reported as not done,
+  And when the remaining deliverable is subsequently signed off,
+  Then the requirement is reported as done,
+  And the requirement's done state is computed solely from the per-deliverable
+    sign-offs recorded on the requirement.
+depends_on: [ACD-1800b, ACD-1800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1800b-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  CONCEPT A (part 2). AC-level "done" is COMPUTED from per-deliverable sign-offs, so
+  "done" can never be claimed while a needed deliverable is unsigned. This is the
+  anti-phantom-done mechanism at AC grain.

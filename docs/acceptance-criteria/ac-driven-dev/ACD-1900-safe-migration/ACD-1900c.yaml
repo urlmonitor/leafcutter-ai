@@ -1,0 +1,46 @@
+id: ACD-1900c
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "One switch turns the new model on -- and one commit turns it back off"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  A single two-stage control with an instant, one-commit rollback.
+
+  One control governs the rollout in two safe stages -- first the new tickets and sign-offs are
+  produced, then the checks begin to require them -- and the stricter stage can only be switched
+  on once no old-style requirements remain. If anything goes wrong, flipping the control back
+  restores the previous behaviour in a single commit, with no code to unwind.
+depends_on: [ACD-1900]
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+  - state-diagram
+notes: |
+  ADR-026 "Control surface": a single two-stage flag ac_unit_of_work {emit, enforce}. emit =
+  generator produces thin tickets + AC-side sign-offs; enforce = gates REQUIRE the new shape
+  (else dual-read/advisory). enforce may turn on ONLY once zero schema_version<2 (v1/legacy) ACs
+  remain. Two kill-switches: enforce=false -> gates fall back to dual-read/advisory (one commit,
+  no code revert); emit=false -> fat tickets return (safe because gates dual-read per ACD-1900b).
+  state-diagram trigger covers the {emit,enforce} state machine and its legal transitions;
+  how-to covers operating the kill-switch. Depends on ACD-1900b being in place first (the kill
+  -switch is only safe because dual-read exists). RE-HOME/OWNERSHIP: the flag is store policy;
+  schema_version is the per-AC data signal (ACD-1900a) -- keep the two distinct.

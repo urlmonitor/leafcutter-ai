@@ -1,0 +1,41 @@
+id: ACD-1800d-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A per-deliverable back-reference resolves to the hand-edited canonical file, never a generated or deployed copy"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement whose code deliverable is implemented in a source file that is
+    later copied into a generated or deployed location,
+  When the per-deliverable back-reference for that deliverable is recorded on the
+    requirement,
+  Then the reference resolves to the hand-edited canonical file,
+  And it does not resolve to the generated or deployed copy,
+  And a builder following the reference lands on the exact file to edit.
+depends_on: [ACD-1800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Edge case of ACD-1800d-1 enforcing the ACD-1600d canonical-source rule at the
+  deliverable back-reference level: traceability that points at a build-output copy
+  is worse than none, because it sends a builder to a file that gets overwritten.

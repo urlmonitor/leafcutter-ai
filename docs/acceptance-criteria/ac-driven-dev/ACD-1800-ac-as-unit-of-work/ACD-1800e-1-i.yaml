@@ -1,0 +1,41 @@
+id: ACD-1800e-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Re-deriving after a partial derivation fills only the missing items and leaves existing ones untouched"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement whose earlier derivation created two of its three deliverable
+    items,
+  When work is derived from the requirement again,
+  Then only the missing third deliverable item is created,
+  And the two pre-existing items are left unchanged, including any sign-offs already
+    recorded on them,
+  And no duplicate of the two existing items appears.
+depends_on: [ACD-1800e-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Edge case of ACD-1800e-1: idempotency must be robust to a partial prior derivation
+  (a resume), not only to an exact-duplicate re-run -- fill the gap without
+  clobbering existing items or their sign-offs.

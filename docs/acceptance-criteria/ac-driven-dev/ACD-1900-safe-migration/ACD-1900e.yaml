@@ -1,0 +1,43 @@
+id: ACD-1900e
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Bring an existing project up to date safely, whenever you choose"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Opt-in backfill: preview it first, safe to re-run, and it never reverts finished work.
+
+  An optional migration fills in the new fields on an existing store on demand -- you can
+  preview it before it changes anything, point it at whichever store you choose, run it more
+  than once safely, and it preserves the notes people have written and leaves already-finished
+  requirements finished. It never runs on its own during a build, because the store is your
+  authored data.
+depends_on: [ACD-1900]
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  ADR-026 phase_acbuild_3_migration + non-negotiable rule 4 (grandfathering). A consumer-safe
+  backfill: idempotent, dry-run, targets an arbitrary store dir (--ac-store-dir), preserves
+  human-authored notes blocks, and GRANDFATHERS already-done ACs so migration never mass-reverts
+  them. MUST be opt-in: never runs automatically inside build.py -- the store is the user's
+  authored data. RE-HOME CANDIDATE: touches ac-store / build-pipeline; kept in ac-driven-dev for
+  cohesion. risk_surface=contract_boundary because it mutates the consumer's authored store.

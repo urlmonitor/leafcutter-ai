@@ -1,0 +1,36 @@
+id: ACD-1700c-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "How-to guide for previewing an agent's brief before a build"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the effective-prompt preview capability,
+  When the how-to guide is authored,
+  Then it walks a reader through assembling and reading the full brief an agent will receive for an AC,
+  And it explains how to confirm the brief is complete and appropriate for the agent's role before the build runs,
+  And it shows how to read the parent chain, dependencies (with what already shipped), dependents,
+    siblings, and linked docs in the output.
+depends_on: [ACD-1700c, ACD-1700c-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

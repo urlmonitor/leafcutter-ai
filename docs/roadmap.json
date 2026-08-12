@@ -2,6 +2,7 @@
   "_comment": "Machine-readable project delivery plan. Edit current_phase, current_outcome, and phases to match your project. See docs/architecture/adrs/ for the decision rationale.",
   "current_phase": "phase_1",
   "current_outcome": "Stable MVP that installs into any project and helps the user build good software — portable, self-onboarding, and reliable enough to use across multiple repos.",
+  "last_updated": "2026-08-12",
   "phases": [
     {
       "id": "phase_1",
@@ -17,6 +18,57 @@
       "tickets_advancing_outcome": [],
       "components": [
         "roadmap"
+      ]
+    },
+    {
+      "id": "phase_acbuild_1_foundation",
+      "title": "AC-Driven Build v2 — Foundation & Read-Side",
+      "status": "planned",
+      "description": "Make the AC store the single source of truth WITHOUT changing behaviour. Additive-only: optional deliverable-checklist and per-deliverable sign-off fields plus a per-AC schema_version in ac_store_schema.json; a productionised effective-prompt render tool; canonical-source path resolution; and universal agent/gate dual-read (store-or-ticket-body). All new gates run advisory/warn-mode behind a two-stage ac_unit_of_work flag ({emit:false, enforce:false}). Read-side lands before any write-side change so the build can never go green while verifying nothing.",
+      "exit_criteria": [
+        "New AC fields are OPTIONAL in ac_store_schema.json; schema_version present (default 1); whole-store validation passes on both legacy and new shapes",
+        "render_effective_prompt.py productionised and in the build deploy-manifest; a fresh agent rendered purely from the store passes the comprehension test",
+        "All phase agents and gates dual-read spec from the store with ticket-body fallback; enrichment / canonical-path / surface-to-craft / consistency gates run in warn mode",
+        "No required CI gate references a new field; ac_unit_of_work flag introduced with a documented one-commit kill-switch"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "ac_driven_dev"
+      ]
+    },
+    {
+      "id": "phase_acbuild_2_cutover",
+      "title": "AC-Driven Build v2 — Thin Tickets & AC-as-Unit-of-Work (dogfooded)",
+      "status": "planned",
+      "description": "Flip the model on leafcutter itself FIRST (dogfood). The generator emits thin tickets that reference their AC; each AC carries a deliverable checklist with per-deliverable sign-offs recorded ON THE AC; the ticket becomes a grouping container. Sign-offs move off the ticket body in the single atomic cutover, gated behind ac_unit_of_work.emit; the store is backfilled; new gates are promoted to required only after a green self-host window.",
+      "exit_criteria": [
+        "Generator emits thin tickets behind ac_unit_of_work.emit; sign-offs dual-recorded (AC + ticket) then moved to AC-only",
+        "A full self-host epic built end-to-end thin + AC-sign-off, behaviorally spot-checked on a real on-disk ticket in a fresh process",
+        "Store backfilled to 100% (strict schema validation = 0 errors); already-done ACs grandfathered, not regressed",
+        "ac-fulfillment-gate flips 'absent ac_traceability -> blocker' and any new done-accounting gate is promoted to required (diff-scoped) only after >=10 consecutive green self-host merges; ACD-400b family superseded via governance"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "ac_driven_dev"
+      ]
+    },
+    {
+      "id": "phase_acbuild_3_migration",
+      "title": "AC-Driven Build v2 — Consumer Migration & Legacy Removal",
+      "status": "planned",
+      "description": "Bring existing consumers across safely, then retire the old path. build.py deploys the new artifacts (all hook deps in the deploy-manifest) and warns/refuses on schema_version skew; consumers run an opt-in, idempotent backfill; dual-readers remain for >=2 minor releases while in-flight fat tickets drain; only then are fat-ticket generation and the legacy-derive path removed.",
+      "exit_criteria": [
+        "build.py deploys new hooks with all deps in the deploy-manifest and warns/refuses on schema_version skew",
+        "Opt-in idempotent backfill ships (dry-run, --ac-store-dir, preserves notes blocks); >=1 consumer (or consumer-sim) migrated green",
+        "Dual-readers retained >=2 minor releases; in-flight fat tickets allowed to drain; legacy fat-ticket generation and dual-read/derive removed in a dedicated release with one full green cycle",
+        "Rollback rehearsed: ac_unit_of_work.enforce=false restores green within one commit"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "ac_driven_dev"
       ]
     },
     {

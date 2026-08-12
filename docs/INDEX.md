@@ -2,8 +2,8 @@
 title: "Documentation Index"
 type: reference
 status: active
-created: 2026-06-30
-last_updated: 2026-06-30
+created: 2026-08-11
+last_updated: 2026-08-11
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-08-11 15:48 UTC
+> Generated: 2026-08-12 10:37 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -96,6 +96,7 @@ task, then pull only those files.
 | ADR 023 product truth flow first upstream layer | [docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md](docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md) | Records the decision to introduce a second structured store — the product-truth store (flows, mockups, mock data) — as the flow-first upstream authoring surface that GENERATES acceptance criteria, while the AC store remains the single authoritative backlog. Reconciles ADR-010 by scoping the AC store's authority to the backlog and positioning flows as the upstream product-intent surface. Covers flow-first authoring, ACs derived from flow steps, derived impl_status rolled up from work_status, and the Leafcutter Atlas as the read surface. |
 | ADR 024 interactive pause resume | [docs/architecture/adrs/ADR-024-interactive-pause-resume.md](docs/architecture/adrs/ADR-024-interactive-pause-resume.md) | Records the decision to replace the cancel-on-headless behaviour of interactive workflow gates with a pause-and-persist substrate. When no human is reachable, a gate terminates the run cleanly, writes a durable pending-question record keyed by run id under .leafcutter/paused_runs/, and returns a distinct paused_awaiting_input status instead of silently resolving to a safe default and exiting with status ok. Resume re-invokes the same workflow with the human's answer available and resumeFromRunId set so the harness replays committed agent() calls, execution deterministically reaches the same gate, and resolveGate() consults the record's answer before making the gate's agent() call. Covers the shared substrate helper imported by plan-feature.js, build-feature.js, and finalize-feature.js, the answer-application-by-type contract, question-type validation, durability and idempotency, and the E2/ADR-017 body constraints. |
 | ADR 025 tiered parallel code smell review | [docs/architecture/adrs/ADR-025-tiered-parallel-code-smell-review.md](docs/architecture/adrs/ADR-025-tiered-parallel-code-smell-review.md) | Records the decision to replace the single all-12 Opus code-smell reviewer (find-code-smells) with a tiered pipeline: the Modern-12 Fowler smells are partitioned into a structural (mechanical) bucket and a design (judgment) bucket over a shared core method skill; two read-only leaf reviewer agents run the buckets on Sonnet and Opus respectively and RETURN their findings; a top-level code-smell-review skill (and /code-smell-review command) fans out to both leaves in parallel and merges into one severity-ranked report, with merge-time re-verification of high-impact findings. Orchestration is a top-level skill rather than an agent to stay within Claude Code's depth-1 sub-agent limit (ADR-006). |
+| ADR 026 ac driven build v2 phased migration | [docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md](docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md) | Decision to roll out the single-source / AC-as-unit-of-work / thin-ticket redesign as a read-side-first phased migration behind a two-stage flag, dogfooded on self-host before any consumer cutover, rather than a big-bang. |
 
 ## How-To Guides
 

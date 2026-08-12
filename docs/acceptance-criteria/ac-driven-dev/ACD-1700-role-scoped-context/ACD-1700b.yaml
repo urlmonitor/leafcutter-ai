@@ -1,0 +1,42 @@
+id: ACD-1700b
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The right specialist is matched to each deliverable"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  The craft assigned matches the thing being built.
+
+  A requirement's assigned specialist matches the actual surface and language of
+  what it delivers -- work whose deliverable is one kind of artifact is not handed
+  to a specialist in a different one. The right craft is on the job from the start.
+depends_on: [ACD-1700]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1700b-1
+  - ACD-1700b-2
+  - ACD-1700b-3
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  Recurring documented failure (memory/feedback_itpo_agent_assignment_by_surface):
+  the BA tends to stamp python-coder uniformly; a JavaScript workflow deliverable
+  must not be assigned to python-coder, prompt/skill/template-prose work belongs to
+  llm-expert, docs to documentation-expert, diagrams to architecture-diagram-author.

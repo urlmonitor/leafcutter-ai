@@ -1,0 +1,42 @@
+id: ACD-1800c-1
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A ticket enumerates its grouped requirements and carries no sign-offs of its own"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a ticket that groups three requirements into one feature,
+  When the ticket is inspected,
+  Then the ticket enumerates exactly the set of requirements it groups,
+  And the ticket carries no per-phase or per-deliverable sign-offs of its own,
+  And every sign-off relevant to the feature is found on one of the grouped
+    requirements rather than on the ticket.
+depends_on: [ACD-1800c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  CONCEPT B. The ticket is a grouping/scoping container. SUPERSESSION INTENT
+  (recorded, not applied here): replaces the premise of ACD-400b (generator produces
+  a fully WIRED ticket with a per-ticket agents map + sign-offs). Complements
+  ACD-1600a (thin ticket references its AC) -- ACD-1600a says the ticket does not
+  COPY the spec; this says the ticket is not the UNIT OF WORK at all.

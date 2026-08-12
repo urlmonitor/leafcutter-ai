@@ -1,0 +1,41 @@
+id: ACD-1800e
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Deriving work from a requirement never creates duplicates"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  The same requirement never spawns duplicate work.
+
+  Deriving buildable work from a requirement is safe to repeat: the same
+  requirement never produces duplicate work. Re-deriving finds the existing work
+  rather than creating a second copy of it.
+depends_on: [ACD-1800]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1800e-1
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+documentation_triggers: []
+documentation_rationale: "Carry-forward of an existing internal correctness guarantee (idempotency / no duplicates, ACD-400b-3); no new user-facing behaviour is introduced."
+notes: |
+  CARRY-FORWARD of the still-valid ACD-400b-3 ("generator is idempotent -- re-run
+  does not duplicate"). ACD-400b-3 remains ACTIVE and is NOT superseded; this L1
+  reframes the same idempotency guarantee so it attaches to AC-level work derivation
+  rather than to ticket generation. Keep ACD-400b-3 as the concrete L2 behaviour;
+  this L1 records its home under the AC-as-unit-of-work model.

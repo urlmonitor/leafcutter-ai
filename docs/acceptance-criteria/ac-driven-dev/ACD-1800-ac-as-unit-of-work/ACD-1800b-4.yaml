@@ -1,0 +1,39 @@
+id: ACD-1800b-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Sequence diagram shows the deliverable sign-off flow onto the requirement"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the per-deliverable sign-off flow of ACD-1800b is implemented,
+  When the sequence diagram for requirement completion is read,
+  Then it shows a responsible craft producing a deliverable and recording its
+    sign-off on the requirement,
+  And it shows the requirement's done-state being computed from the set of
+    per-deliverable sign-offs,
+  And it shows that no sign-off step writes to the grouping ticket.
+depends_on: [ACD-1800b, ACD-1800b-1, ACD-1800b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Documentation AC produced for the sequence-diagram trigger on ACD-1800b.

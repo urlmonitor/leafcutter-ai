@@ -1,0 +1,89 @@
+id: ACD-1900
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Move to the new build model without breaking anyone -- and roll back in one step"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Adopt the new build model safely -- nothing breaks, and undo it in one step.
+
+  The move to the new way of building requirements arrives as a series of safe,
+  reversible steps rather than one risky switch. At every stage the build keeps
+  working, existing requirements and already-finished work are preserved untouched,
+  and any change can be undone in a single step. New capabilities are proven on our
+  own project first, before any other project is ever asked to adopt them, and each
+  project only ever moves at its own pace. The result: you gain the new model's
+  benefits without downtime, broken builds, or lost work.
+depends_on: []
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+  - docs/roadmap.json
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1900a
+  - ACD-1900b
+  - ACD-1900c
+  - ACD-1900d
+  - ACD-1900e
+  - ACD-1900f
+  - ACD-1900g
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Operationalises ADR-026 (AC-Driven Build v2 -- Phased, Dogfooded, Backward-Compatible
+  Migration). This L0 is the HOW-TO-MIGRATE-SAFELY layer that complements the TARGET-MODEL
+  L0s ACD-1600 (single source, buildable), ACD-1700 (role-scoped, verifiable) and ACD-1800
+  (AC as unit of work). Those three capture the END STATE (the WHAT/WHY); ACD-1900 captures
+  the safe-transition mechanisms that let the end state be reached without breaking existing
+  builds, consumers, or finished work.
+
+  WHY A NEW L0 (not more children under 1600/1700/1800): distinct theme. 1600/1700/1800 each
+  answer "what do you get from the new model" within a single phase; ACD-1900 answers "how do
+  we get there without breaking anyone", is cross-cutting, and spans all three roadmap phases
+  (foundation -> cutover -> migration). Each existing L0 already carries 6/3/5 L1s; adding
+  transition-safety mechanisms there would blur single-source/unit-of-work with rollout safety
+  and overcrowd them. Anchored to phase_acbuild_1_foundation because the load-bearing safety
+  guarantees (additive schema, universal dual-read, the flag+kill-switch, advisory gates) are
+  established in the foundation phase; individual L1s carry their own phase.
+
+  RELATIONSHIP / TENSION with the target-model ACs and ADR-026:
+    - ACD-1900b (universal dual-read) is the load-bearing invariant of ADR-026 ("read-side
+      before write-side"). It is the transitional-safety twin of ACD-1600b (agents pull spec
+      from the store): 1600b is the store-only END STATE; 1900b is the store-OR-ticket-body
+      compatibility bridge that MUST ship before ACD-1600a (thin tickets) lands, or the build
+      goes green while verifying nothing. Complementary, not duplicative.
+    - ACD-1900a (additive schema + versioning) makes the very fields ACD-1800 introduces
+      (deliverable checklist, per-deliverable sign-offs) OPTIONAL and version-stamped during
+      migration; it guards the "additionalProperties:false dormant tripwire" the deliberation
+      found. Complementary to ACD-1800 (which defines the fields).
+    - ACD-1900c (two-stage flag + kill-switch) and ACD-1900f (compatibility window) reference
+      the ACD-400b fat-ticket family that ACD-1800 supersedes: emit=false returns fat tickets;
+      in-flight fat tickets drain before the legacy path is removed. NO new supersession is
+      authored here -- governance handles the ACD-400b amend/supersede step (per ACD-1800
+      notes and prior PO/BA memory). Flagged only.
+    - ACD-1900d (advisory-before-required + deploy-manifest-first + diff-scoped) applies the
+      staged-gate-rollout pattern already used by guardrail-engine / testing-quality (e.g.
+      BO-2500b diff-scoping, done_proof deploy-manifest precedent) specifically to the v2
+      migration gates. Re-home candidate to guardrail-engine; kept in ac-driven-dev for goal
+      cohesion.
+
+  COMPONENT-HOME CAVEATS (flagged for IT-PO / user; kept in ac-driven-dev for cohesion):
+    - ACD-1900a touches ac-store schema (config/ac_store_schema.json); re-home candidate ac-store.
+    - ACD-1900d touches guardrail-engine (gate promotion / diff-scoping).
+    - ACD-1900e (backfill) and ACD-1900f (build.py deploy + skew warning) touch build-pipeline
+      and ac-store.

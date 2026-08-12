@@ -1,0 +1,46 @@
+id: ACD-1900d
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "New quality checks warn first and never block a build they aren't ready to run"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Every new check starts advisory, ships fully installed, and never fails work written before it.
+
+  A new check runs in warn-only mode first and only becomes a build-blocking gate after a
+  sustained clean run; it is never made mandatory until it is fully installed and proven from
+  the real deployed setup; and new completeness checks judge only what a change actually
+  touches, so requirements written before the check existed are never retroactively failed.
+depends_on: [ACD-1900]
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  ADR-026 non-negotiable rules 2 + 3. "Advisory before required": new gates ship
+  enabled:true, strict:false and are promoted to required only after >=10 consecutive green
+  self-host merges. "Deploy-manifest-first": no hook/gate script is made a required CI check
+  until it is in the correct build_phases.py deploy_map and verified from the DEPLOYED layout
+  (the done_proof.py ModuleNotFoundError precedent -- an un-deployed dependency blocks EVERY
+  merge once the gate is required). New done-accounting gates are diff-scoped (like BO-2500b)
+  so pre-existing ACs never retroactively fail.
+  RE-HOME CANDIDATE: this staged-gate-rollout pattern also lives in guardrail-engine /
+  testing-quality; kept in ac-driven-dev for goal cohesion, flagged for IT-PO. Combines three
+  ADR rules into one operator-value feature to avoid over-fragmenting the L0.

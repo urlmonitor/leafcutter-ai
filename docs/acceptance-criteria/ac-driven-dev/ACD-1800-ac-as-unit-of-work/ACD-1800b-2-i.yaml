@@ -1,0 +1,43 @@
+id: ACD-1800b-2-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A deliverable that does not apply is recorded as not-applicable, never silently skipped"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement whose deliverable checklist includes a diagram item that the
+    responsible craft judges unnecessary,
+  When that diagram item is resolved,
+  Then it is recorded on the requirement as explicitly not-applicable, capturing
+    who marked it and why,
+  And it is never removed from or silently dropped out of the checklist,
+  And the requirement is reported as done only when every checklist item is either
+    signed off or explicitly marked not-applicable,
+  And a checklist item left in neither state keeps the requirement not done.
+depends_on: [ACD-1800b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Edge case of ACD-1800b-2: "done means every item accounted for". A not-applicable
+  deliverable must be an explicit, attributed state -- not an absence -- so that
+  "done" still proves nothing was quietly missing.

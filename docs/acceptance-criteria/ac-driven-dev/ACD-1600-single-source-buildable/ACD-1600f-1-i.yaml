@@ -1,0 +1,37 @@
+id: ACD-1600f-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A fixture using `request` where the AC specifies `input` is flagged"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC specifies the input field name as `input`,
+  And its referenced eval fixture uses the field name `request` for the same field,
+  When the consistency check runs,
+  Then the pair is flagged as a contradiction and blocks dispatch,
+  And the message names `input` (AC-specified) versus `request` (fixture-actual).
+depends_on: [ACD-1600f-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the empirically observed contradiction that motivated ACD-1600f.

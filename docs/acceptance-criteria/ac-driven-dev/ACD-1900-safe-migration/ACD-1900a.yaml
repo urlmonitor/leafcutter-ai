@@ -1,0 +1,44 @@
+id: ACD-1900a
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "New requirement fields are optional, so today's requirements keep working"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Add the new fields when you're ready -- old and new requirements both stay valid.
+
+  The store accepts both the old shape and the new shape of a requirement, every
+  requirement carries a version marker, and the rules are never tightened until every
+  requirement has moved across -- so nothing in the store is ever rejected mid-migration.
+depends_on: [ACD-1900]
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+  - docs/reference/ac-schema.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  ADR-026 non-negotiable rule 1 ("Additive schema first"). The new AC fields (deliverable
+  checklist, per-deliverable sign-offs -- defined by ACD-1800) land OPTIONAL, in lockstep
+  with the code that reads them; every AC carries schema_version (1=legacy, 2=new); the whole
+  store validates on BOTH shapes; additionalProperties is never tightened until the store is
+  100% backfilled. Guards the dormant "additionalProperties:false" tripwire the deliberation
+  found (config/ac_store_schema.json declares it but nothing enforces it today, and the
+  validator docstring is wrong -- fixing that is part of this L1's scope).
+  RE-HOME CANDIDATE: touches ac-store schema governance; kept in ac-driven-dev for cohesion.

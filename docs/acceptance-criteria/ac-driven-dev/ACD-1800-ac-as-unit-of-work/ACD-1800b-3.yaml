@@ -1,0 +1,41 @@
+id: ACD-1800b-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Reference doc describes per-deliverable sign-off and requirement-level done"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the per-deliverable sign-off model of ACD-1800b is implemented,
+  When the AC reference documentation is read,
+  Then it describes that each deliverable is signed off on the requirement itself,
+    capturing who signed and when,
+  And it explains that a requirement is done only when every deliverable is signed
+    off or explicitly marked not-applicable,
+  And it states that sign-offs no longer live in the ticket body,
+  And it records the supersession of the prior sign-offs-in-ticket clause.
+depends_on: [ACD-1800b, ACD-1800b-1, ACD-1800b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Documentation AC produced for the reference-doc trigger on ACD-1800b. Documents the
+  behaviour authored in ACD-1800b-1 / ACD-1800b-2 and the ACD-400b-4 supersession.

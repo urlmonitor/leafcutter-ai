@@ -6,7 +6,7 @@ priority: medium
 title: "Generator produces a valid ticket file with correct frontmatter, agents map, and criteria body"
 component: ac-driven-dev
 level: L2
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
@@ -36,8 +36,18 @@ expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
-superseded_by: null
+superseded_by:
+  - ACD-1600a-1
 covered_by: [ACD-400b-1-i]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  SUPERSEDED by ACD-1600a-1 (thin-ticket pivot, 2026-08-11, origin_agent: BrainCandy).
+  This AC required the generated ticket body to contain the AC's Gherkin criteria
+  verbatim plus a per-ticket agents map. Under the new single-source model the ticket
+  REFERENCES its AC by id and does NOT copy the criteria; agents pull the spec from the
+  store (ACD-1600b) and phase sign-offs move onto the AC itself (AC-as-mini-ticket).
+  The still-valid generation requirements are NOT superseded and carry forward:
+  ACD-400b-2 (implemented_by back-reference) and ACD-400b-3 (idempotency / no
+  duplicates).

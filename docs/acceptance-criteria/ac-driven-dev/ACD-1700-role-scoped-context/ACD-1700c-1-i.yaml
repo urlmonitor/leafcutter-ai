@@ -1,0 +1,35 @@
+id: ACD-1700c-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "An AC with no relationships renders empty sections rather than omitting or erroring"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a target AC that has no dependencies, no dependents, and no siblings,
+  When the tool renders the AC-graph task context,
+  Then each of those sections is rendered as explicitly empty (for example "none"),
+  And the tool does not omit the section,
+  And the tool does not error.
+depends_on: [ACD-1700c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

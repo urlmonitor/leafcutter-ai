@@ -1,0 +1,38 @@
+id: ACD-1600c-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Real ACs lacking file targets (ACD-300c-3, TQ-200a-1) are held back, not dispatched"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the store contains ACD-300c-3 and TQ-200a-1, each lacking concrete file targets,
+  When the implementation-readiness gate evaluates them,
+  Then each is flagged NOT implementation-ready with the reason "missing file targets",
+  And neither is dispatched to a coder,
+  And each is held back for enrichment.
+depends_on: [ACD-1600c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ACD-300c-3 and TQ-200a-1 are the empirically observed ACs where the coder had no
+  file targets and had to guess -- which the coder's own rules forbid.

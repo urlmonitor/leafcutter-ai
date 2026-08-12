@@ -1,0 +1,42 @@
+id: ACD-1800a-2-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement that needs docs or a diagram but omits them from its checklist is flagged incomplete, naming each missing kind"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement that clearly produces user-facing behaviour and a
+    diagram-worthy flow, but whose deliverable checklist lists only code and tests,
+  When the checklist is validated against the requirement's change surface,
+  Then the requirement is flagged incomplete,
+  And the flag names each missing deliverable kind (documentation and diagram),
+  And the requirement is not treated as fully specified until each missing kind is
+    either added to the checklist or explicitly excluded.
+depends_on: [ACD-1800a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Edge case of ACD-1800a-2: the checklist-vs-change-surface validation must catch
+  MORE than the code-omits-tests case -- a behaviour change that omits docs or a
+  diagram is equally incomplete. Excluding a kind must be explicit (ties to the
+  not-applicable rule in ACD-1800b-2-i).

@@ -1,0 +1,35 @@
+id: ACD-1700c-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Non-reproducible channels are explicitly marked in the rendered brief"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the effective prompt includes both reproducible and non-reproducible harness channels,
+  When the tool renders the brief,
+  Then any non-reproducible channel is explicitly labelled as non-reproducible,
+  And it is visually distinct from the reproducible channels rather than silently interleaved,
+  And a reader can tell which parts of the brief will vary run to run.
+depends_on: [ACD-1700c, ACD-1700c-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

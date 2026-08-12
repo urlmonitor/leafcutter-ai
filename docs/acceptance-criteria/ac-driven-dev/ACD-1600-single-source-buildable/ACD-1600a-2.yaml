@@ -1,0 +1,36 @@
+id: ACD-1600a-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Generated ticket omits requirement and contract copies, keeping only the checklist"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given an AC ACS-100a-1 that carries it_requirements and delivers_to / expects_from contracts,
+  When the ticket generator produces the ticket for ACS-100a-1,
+  Then the ticket body does NOT restate the it_requirements values,
+  And the ticket body does NOT restate the delivers_to or expects_from contract values,
+  And the ticket carries only a lightweight workflow checklist plus the source_ac reference,
+  And no spec field (criteria, it_requirements, contracts) appears in both the ticket and the store.
+depends_on: [ACD-1600a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

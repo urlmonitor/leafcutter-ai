@@ -1,0 +1,50 @@
+id: ACD-1700
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Every agent gets the right brief for its job -- and you can see it before the build runs"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Right context, right specialist, no cross-role noise -- verifiable up front.
+
+  When work is dispatched, each agent receives exactly the context its role needs
+  and none that belongs to someone else -- a builder is not buried in planning
+  memory, review checklists, or authoring instructions meant for other roles. Each
+  requirement is routed to the specialist whose craft actually matches the thing
+  being built. And before a rebuild lands, a person or an agent can assemble and
+  read the complete brief any agent will receive, and confirm it is both complete
+  and appropriate. The result is less noise, fewer mis-assignments, and confidence
+  that every agent has what it needs before it starts.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_knowledge_plane.md
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1700a
+  - ACD-1700b
+  - ACD-1700c
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Discovered by rendering the actual effective prompt for python-coder against real
+  ACs and asking fresh agents whether they could act. They could not: the coder
+  received cross-role authoring memory (BA/PO/IT-PO), the supervisor Pre-Drive
+  Checklist, and authoring-pipeline instructions. Component note: role-scoping and
+  the effective-prompt review surface also touch `infrastructure` (agent context
+  injection / agent knowledge plane) -- flagged for the user in case a different
+  component home is preferred.
