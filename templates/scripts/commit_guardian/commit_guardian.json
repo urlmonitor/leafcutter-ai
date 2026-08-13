@@ -1054,14 +1054,14 @@
                 "id": "check-done-proof",
                 "tier": "judgment",
                 "name": "Check Done Proof (BO-2500b — covers-tag presence gate)",
-                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_done_proof.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_done_proof.py --test-root .",
                 "language": "system",
                 "files": "^docs/acceptance-criteria/.*\\.yaml$",
                 "stages": [
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "BO-2500b-1: For each AC YAML staged as work_status:done, requires at least one # covers:<ac_id> tag anywhere under the test tree. STATIC only — no pytest run at pre-commit time. CI-mode (check_done_proof.py --mode ci) is the authoritative backstop that runs verify_done_eligible on all done ACs so --no-verify and hook-config-less worktrees are still caught (BO-2500b-1-i). Bypassable via SKIP=check-done-proof or --no-verify."
+                "_comment": "BO-2500b-1: For each AC YAML staged as work_status:done, requires at least one # covers:<ac_id> (Python) or // covers:<ac_id> (JS/TS) tag anywhere under the test tree. Runs with --test-root . so the scan covers the WHOLE project, not just a Python test directory — the script's built-in default (unit_tests) contains no .ts files, so JS-covered ACs would be reported as unproven (BO-2500e-5); this also makes the hook correct in consumer projects whose tests do not live under unit_tests/. node_modules/, .next/ and dist/ are excluded by the scanner. STATIC only — no pytest run at pre-commit time. CI-mode (check_done_proof.py --mode ci) is the authoritative backstop that runs verify_done_eligible on all done ACs so --no-verify and hook-config-less worktrees are still caught (BO-2500b-1-i). Bypassable via SKIP=check-done-proof or --no-verify."
             },
             {
                 "id": "check-ticket-ac-status-parity",

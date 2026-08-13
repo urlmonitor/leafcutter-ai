@@ -27,6 +27,14 @@ ARCHITECTURE: This module is the pure-logic layer called by conftest.py.
         informational partition produced by repeated calls to ``build_ac_work_status_cache``
         on the same unchanged store is guaranteed to be identical across runs —
         determinism is a property of the pure functions here, not of any cache state.
+
+    Shared covers-tag seam (BO-2500e-1):
+        ``COVERS_TAG_RE`` is the single canonical regex for both Python
+        (``# covers: <id>``) and JavaScript/TypeScript (``// covers: <id>``)
+        covers-tag comment syntax.  It is imported by ``done_proof.py`` and
+        ``check_done_proof.py`` so that all three modules use one seam — not
+        a duplicated parser.  ``extract_covers_id(line)`` is a thin helper
+        over this regex for single-line callers.
 """
 
 from __future__ import annotations
@@ -42,8 +50,11 @@ import yaml
 # Constants
 # ---------------------------------------------------------------------------
 
-# Matches "# covers: AC-ID" anywhere in a line, capturing the AC ID.
-_COVERS_TAG_RE = re.compile(r"#\s*covers:\s*(\S+)")
+# Shared covers-tag regex: matches BOTH Python "# covers: AC-ID" and
+# JavaScript/TypeScript "// covers: AC-ID" anywhere in a line, capturing the
+# AC ID.  This is the single canonical seam (BO-2500e-1) — do NOT define a
+# second parser in done_proof.py or check_done_proof.py.
+COVERS_TAG_RE = re.compile(r"(?:#|//)\s*covers:\s*(\S+)")
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +177,23 @@ def collect_unresolved_tags(ac_ids: list[str], cache: dict[str, str]) -> list[st
     return unresolved
 
 
+def extract_covers_id(line: str) -> str | None:
+    """Extract an AC ID from a single ``# covers:`` or ``// covers:`` comment line.
+
+    Convenience wrapper over :data:`COVERS_TAG_RE` for single-line callers.
+    Returns the first match on the line, or ``None`` when absent.
+
+    Args:
+        line: A single source-code line (Python or TypeScript/JavaScript).
+
+    Returns:
+        The AC ID string (e.g. ``"BO-2500e-1"``), or ``None`` when the line
+        contains no ``covers:`` tag.
+    """
+    match = COVERS_TAG_RE.search(line)
+    return match.group(1) if match else None
+
+
 def extract_covers_tag(item: object) -> str | None:
     """Extract the AC ID from a ``# covers: <AC-ID>`` comment in *item*'s source.
 
@@ -174,11 +202,12 @@ def extract_covers_tag(item: object) -> str | None:
     is unavailable.
 
     The tag is matched on any line of the function's source that contains the
-    pattern ``# covers: <AC-ID>``.  Only the first match is returned.
+    pattern ``# covers: <AC-ID>`` or ``// covers: <AC-ID>``.  Only the first
+    match is returned.  Uses the shared :data:`COVERS_TAG_RE` seam (BO-2500e-1).
 
     Args:
         item: A pytest test item or any callable whose source code contains
-            a ``# covers:`` comment.
+            a ``covers:`` comment.
 
     Returns:
         The AC ID string (e.g. ``"TQ-100b-1"``), or ``None`` when no tag
@@ -191,7 +220,7 @@ def extract_covers_tag(item: object) -> str | None:
         return None
 
     for line in source.splitlines():
-        match = _COVERS_TAG_RE.search(line)
+        match = COVERS_TAG_RE.search(line)
         if match:
             return match.group(1)
 

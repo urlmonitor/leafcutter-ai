@@ -25,15 +25,25 @@
  *   (B) every loader caches by repoRoot() (Map<string,T>) so toggling the override
  *       within a single process does not serve stale data from the previous root.
  *
+ * UXP-610: this endpoint is CI-only and must not exist in a production
+ * deployment (it discloses which flow ids are fixture-only, and toggles data
+ * sources on request — not something to expose to real visitors). It uses
+ * isProductionRuntime() (lib/data/runtime.ts) — the SAME server-side NODE_ENV
+ * signal the mock-mode data seam itself gates on for the production
+ * default-deny — so "present in CI" and "absent in production" are two
+ * sides of the one decision and cannot drift apart. In production the
+ * handler returns a bare not-found before running any of its real logic —
+ * including before the loader modules are even imported.
+ *
  * Returns:
+ *   404                     — production; endpoint does not exist
  *   200 { ok: true,  ... }  — mode and flow-presence match expectations
- *   500 { ok: false, ... }  — mismatch; toggle or cache-by-root has regressed
+ *   500 { ok: false, ... }  — mismatch, or a loader threw; toggle/cache-by-root regressed
  */
 
 import { NextResponse } from "next/server";
-import { getFlows } from "@/lib/data/flows";
 import { isMockActive, FIXTURE_ROOT } from "@/lib/data/mock";
-import { repoRoot } from "@/lib/data/repo";
+import { isProductionRuntime } from "@/lib/data/runtime";
 
 /**
  * Flow id that exists ONLY in the fixture store (leafcutter-web/fixtures/).
@@ -42,10 +52,35 @@ import { repoRoot } from "@/lib/data/repo";
  */
 const FIXTURE_ONLY_FLOW_ID = "leafcutter/mock-mode-toggle";
 
+// Declared with NO parameter: Next.js validates the route-handler signature at
+// build time and rejects an optional first argument ("NextRequest | undefined"
+// is not assignable to "NextRequest | Request"), which fails `next build`. This
+// route needs no field off the request — isMockActive() reads next/headers()
+// directly — and a zero-arg handler is valid for both Next.js and the tests.
 export async function GET(): Promise<NextResponse> {
+  // UXP-610: CI-only endpoint — genuinely absent in production. Short-circuit
+  // before any real logic runs, and before the loader modules below are even
+  // imported (they are loaded lazily, on demand, past this point).
+  if (isProductionRuntime()) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const mockActive = isMockActive();
-  const rootUsed = repoRoot();
-  const flows = getFlows();
+
+  let rootUsed: string;
+  let flows: { id: string }[];
+  try {
+    const { repoRoot } = await import("@/lib/data/repo");
+    const { getFlows } = await import("@/lib/data/flows");
+    rootUsed = repoRoot();
+    flows = getFlows();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { ok: false, mockActive, error: `loader threw: ${msg}` },
+      { status: 500 },
+    );
+  }
   const fixtureFlowPresent = flows.some((f) => f.id === FIXTURE_ONLY_FLOW_ID);
 
   // Expected: the fixture-only sentinel is present iff mock is active.
