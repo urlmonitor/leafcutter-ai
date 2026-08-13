@@ -425,9 +425,11 @@ def _disambiguate(s: Scan, root: Path, spec: dict, dry_run: bool) -> int:
                 except OSError as exc:
                     print(f"WARN [adr_refs] unreadable {p}: {exc}", file=sys.stderr)
                     continue
-                new_text, n = pat.subn(
-                    lambda m, nn=new_n: f"ADR{m.group(1)}{nn:03d}", text
-                )
+                def _renumber(m: re.Match[str], nn: int = new_n) -> str:
+                    """Rewrite one bare citation, preserving its separator."""
+                    return f"ADR{m.group(1)}{nn:03d}"
+
+                new_text, n = pat.subn(_renumber, text)
                 if not n:
                     continue
                 total += n
@@ -540,7 +542,12 @@ def _apply(s: Scan, root: Path, plan: dict[str, str], dry_run: bool) -> int:
             continue
         original = text
         for pat, new_num in patterns:
-            text, n = pat.subn(lambda m, nn=new_num: f"ADR{m.group(1)}{nn:03d}{m.group(2)}", text)
+
+            def _renumber(m: re.Match[str], nn: int = new_num) -> str:
+                """Rewrite one slug-qualified citation, keeping separator and slug."""
+                return f"ADR{m.group(1)}{nn:03d}{m.group(2)}"
+
+            text, n = pat.subn(_renumber, text)
             if n:
                 edits[p.relative_to(root)] += n
         if text != original and not dry_run:
