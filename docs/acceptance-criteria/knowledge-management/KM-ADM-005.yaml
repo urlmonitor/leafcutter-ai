@@ -1,0 +1,44 @@
+id: KM-ADM-005
+readiness: reviewed
+priority: high
+components:
+  - knowledge_management
+status: active
+component: knowledge-management
+level: L2
+title: "The test-covers edge states its diff scope, and the untagged-done backlog cannot grow"
+origin_agent: BrainCandy
+criteria: |
+  Given the artifact data map rates test-covers (Test -> AC via "# covers: <AC-ID>") as
+    enforcement "enforced" on the strength of check-done-proof running as a pre-commit
+    hook and a required CI gate
+  When a reader inverts that edge to ask the question the graph exists to answer —
+    "which test proves this AC is really implemented?"
+  Then the edge's note states that check-done-proof is DIFF-SCOPED: it evaluates only
+    ACs changed in the current commit or PR, and never re-evaluates a done AC that
+    predates the gate
+  And the note reports that a substantial share of already-done ACs carry no covering
+    test tag at all, so "enforced" describes new work only and the edge must not be read
+    as store-wide coverage
+  And the untagged-done backlog is ratcheted: a test measures how many work_status done
+    ACs have no test tagging them and fails if that count rises above the recorded
+    high-water mark, so marking further ACs done without a covering test is blocked
+  And the bug symptom ("test-covers reads as a store-wide guarantee, so an auditor
+    concludes every done AC is test-proven when roughly forty percent are not") must
+    not occur
+notes: |
+  Authored by /quick-fix. Root cause: the enforcement axis records WHETHER a hook blocks,
+  not WHAT it blocks over. check-done-proof genuinely blocks, so "enforced" is the correct
+  rating and the KM-ADM-001 registry test agrees — but the scope of that enforcement is
+  invisible on the map, and scope is exactly what a reader needs before trusting an
+  inverted traversal.
+  Measured on this branch (607 work_status done ACs across the store): 363 are tagged by
+  at least one `# covers:` reference in unit_tests/, tests/ or leafcutter-web/, and 244
+  are not. The BO-2500b-3 design makes this explicit — its own test module states
+  "Pre-existing done ACs NOT in changed_yaml_paths are never evaluated, even if they are
+  done and lack coverage."
+  The ratchet is deliberately a floor, not a fix: it stops the backlog growing while
+  leaving the 244 to be retired separately. It also gives the store the first mechanical
+  answer to the user's original question, "is the implementation covered".
+change_target: docs
+risk_surface: internal
