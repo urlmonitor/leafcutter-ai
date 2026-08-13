@@ -7,7 +7,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -31,11 +31,21 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "File of record: scripts/ac_store/done_proof.py — a CI-changed-mode run triggered by editing a non-coverage field (e.g. appending a child id to covered_by) of a done composite must resolve the composite as satisfied-via-children, not emit a 'no linked test found' failure."
-  - "The child-derived satisfaction path must apply even when the only changed field is covered_by itself (the append that added the child), so the edit that records a child does not paradoxically fail the gate."
-  - "Must not hard-block the merge on the required proof-of-done gate for this case; the composite exemption from BO-2500a-6 must hold under CI-changed scope."
-  - "Must follow the repo error-handling policy: specific-exception try/except around file/YAML I/O and any pytest subprocess call, log at WARNING or higher (or re-raise); no bare or silent excepts."
-  - "Verify behaviorally — EXECUTE the checker over a fixture store where a done composite's covered_by is edited, and assert the verdict is satisfied (not 'no linked test found'); do not grep the source."
+  config_schema_fragment:
+    done_proof_noncoverage_edit_gate:
+      type: object
+      description: "Verdict for a CI-changed-mode run triggered by editing a non-coverage field (such as appending a child id to covered_by) of a done composite: the composite resolves as satisfied-via-children rather than emitting a 'no linked test found' failure."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "File of record: scripts/ac_store/done_proof.py — a CI-changed-mode run triggered by editing a non-coverage field (e.g. appending a child id to covered_by) of a done composite must resolve the composite as satisfied-via-children, not emit a 'no linked test found' failure."
+    - "The child-derived satisfaction path must apply even when the only changed field is covered_by itself (the append that added the child), so the edit that records a child does not paradoxically fail the gate."
+    - "Must not hard-block the merge on the required proof-of-done gate for this case; the composite exemption from BO-2500a-6 must hold under CI-changed scope."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file/YAML I/O and any pytest subprocess call, log at WARNING or higher (or re-raise); no bare or silent excepts."
+    - "Verify behaviorally — EXECUTE the checker over a fixture store where a done composite's covered_by is edited, and assert the verdict is satisfied (not 'no linked test found'); do not grep the source."
 test_spec:
   - name: test_noncoverage_edit_of_done_composite_does_not_trip_check
     target_dir: unit_tests/ac_store/
