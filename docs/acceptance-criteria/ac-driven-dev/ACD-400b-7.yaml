@@ -1,0 +1,59 @@
+id: ACD-400b-7
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Generated standalone ticket's depends_on never leaks AC-level dependencies and passes the frontmatter guard"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC whose depends_on lists other AC identifiers (such as its own
+    parent AC),
+  When the generator produces a standalone ticket from that AC,
+  Then the generated ticket's depends_on does not contain any of the AC's
+    depends_on identifiers,
+  And the generated ticket's depends_on is either empty or contains only
+    references to other tickets that exist in the same location,
+  And running the ticket_frontmatter_guard against the generated ticket exits
+    with code 0 (no depends_on validation error).
+depends_on: [ACD-400b]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File of record: scripts/ac_store/generate_ticket_from_ac.py currently copies the AC's depends_on verbatim into ticket frontmatter (the `depends_on: ac.get('depends_on') or []` path around line 1847); the ticket's depends_on must be ticket-scoped, not AC-scoped."
+  - "The generated ticket's depends_on must not contain any AC identifier; it must be empty or contain only ticket references that resolve in the same location."
+  - "The output must satisfy templates/hooks/ticket_frontmatter_guard.py — the guard is the load-bearing enforcement point that rejects AC ids in ticket depends_on; assert its exit code, not just a string diff."
+  - "Must follow the repo error-handling policy: specific-exception try/except around any file/YAML I/O, log at WARNING or higher (or re-raise); no bare or silent excepts."
+  - "Verify behaviorally — generate a ticket from a crafted AC with AC-id depends_on, then run the frontmatter guard against the generated ticket file and assert exit 0; do not grep the generator source."
+test_spec:
+  - name: test_generated_ticket_depends_on_excludes_ac_ids
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "A ticket generated from an AC whose depends_on lists AC ids has a depends_on that contains none of those AC ids (empty or ticket-only)."
+    covers: [ACD-400b-7]
+  - name: test_generated_ticket_passes_frontmatter_guard
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Running templates/hooks/ticket_frontmatter_guard.py against the generated ticket exits with code 0 (no depends_on validation error)."
+    covers: [ACD-400b-7]
+delivers_to:
+  agent: python-coder
+  contract: "A standalone ticket that the frontmatter guard accepts without manual editing of depends_on"
+expects_from:
+  ac_id: ACD-400b-1
+  contract: "Ticket generation logic that populates ticket frontmatter from the source AC"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400b-7-i]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

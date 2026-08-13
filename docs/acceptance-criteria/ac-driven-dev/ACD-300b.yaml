@@ -29,7 +29,7 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [ACD-300b-1, ACD-300b-2]
+covered_by: [ACD-300b-1, ACD-300b-2, ACD-300b-3]
 implemented_by:
 - scripts/workflows/plan-feature.js
 change_target: pipeline

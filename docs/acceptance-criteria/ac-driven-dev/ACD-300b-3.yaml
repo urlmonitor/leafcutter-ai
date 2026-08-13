@@ -1,0 +1,64 @@
+id: ACD-300b-3
+components:
+  - ac_driven_dev
+readiness: approved
+priority: low
+title: "The /plan-feature command, skill, and workflow present one consistent execution model"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the /plan-feature command states that authoring must run via the
+    Workflow tool and explicitly forbids an LLM-mediated manual alternative,
+  When the command, its skill, and its workflow are read together,
+  Then the skill body does not instruct the LLM to manually dispatch the
+    authoring agents (triage, PO, BA, IT PO) or run the confirmation gates
+    itself in contradiction of the command,
+  And the command, skill, and workflow describe exactly one canonical execution
+    path — the skill either defers to the workflow or the command's prohibition
+    is reconciled so no contradiction remains,
+  And no reader can find two mutually exclusive instructions for how
+    /plan-feature runs.
+depends_on: [ACD-300b]
+doc_links:
+  - path: templates/commands/plan-feature.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Spec surfaces of record: templates/commands/plan-feature.md (mandates the Workflow tool, forbids an LLM-mediated manual alternative), templates/skills/plan-feature/SKILL.md (currently a prose runbook that tells the LLM to hand-drive the authoring agents), and templates/workflows-js/plan-feature.js (the canonical workflow)."
+  - "Reconcile to a single canonical execution model: the SKILL.md must not instruct the LLM to manually dispatch triage/PO/BA/IT-PO or run the confirmation gates itself in contradiction of the command — it should defer to the Workflow tool path."
+  - "After reconciliation, no reader can find two mutually exclusive instructions for how /plan-feature runs across the three artifacts."
+  - "This is a prompt/spec consistency change owned by llm-expert; do not add behavioral runtime logic to the .js workflow. If reconciliation turns out to require editing plan-feature.js control flow (a .js surface llm-expert does not own), that portion must be split to a JS-capable implementer — flag rather than silently edit."
+  - "Preserve portability of the affected templates (front-matter, trigger phrases) so build.py deploys them unchanged in shape."
+test_required: false
+notes: |
+  Verification method (spec-only, no executable behaviour): this AC is a
+  documentation/consistency reconciliation, so test_required is false. Verify by
+  a cross-artifact consistency check over the three surfaces — read
+  templates/commands/plan-feature.md, templates/skills/plan-feature/SKILL.md, and
+  templates/workflows-js/plan-feature.js together and confirm (a) the SKILL.md
+  contains no manual agent-dispatch or self-run-gate instructions that contradict
+  the command's "use the Workflow tool" directive, and (b) all three describe
+  exactly one canonical execution path. This is the v3 convention for spec-only
+  ACs (test-writer skips with this recorded reason rather than misclassifying it
+  as docs-only).
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300b-3-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

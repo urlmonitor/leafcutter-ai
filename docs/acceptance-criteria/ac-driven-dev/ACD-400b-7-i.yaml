@@ -1,0 +1,49 @@
+id: ACD-400b-7-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A ticket generated from an AC that depends on its parent AC commits without a frontmatter-guard block"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC whose depends_on contains the AC identifier of its parent,
+  When the generator produces the standalone ticket and that ticket is staged
+    for commit,
+  Then the ticket_frontmatter_guard does not reject the ticket for referencing
+    an AC identifier in depends_on,
+  And the generated ticket's depends_on contains no AC identifiers,
+  And the commit is not hard-blocked by the guard on account of depends_on.
+depends_on: [ACD-400b-7]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File of record: scripts/ac_store/generate_ticket_from_ac.py — the parent-AC id that the source AC lists in its own depends_on must be excluded from the generated ticket's depends_on."
+  - "The specific parent-id case must be covered: an AC whose depends_on is exactly [<parent-AC-id>] must yield a ticket whose depends_on contains no AC identifier."
+  - "The generated ticket must pass templates/hooks/ticket_frontmatter_guard.py (exit 0) so the guard does not hard-block the commit; assert the guard's exit code."
+  - "Must follow the repo error-handling policy: specific-exception try/except around any file/YAML I/O, log at WARNING or higher (or re-raise); no bare or silent excepts."
+  - "Verify behaviorally — generate the ticket from a crafted parent-depending AC, run the guard against it, and assert exit 0; do not grep the source."
+test_spec:
+  - name: test_ticket_from_parent_depending_ac_not_blocked_by_guard
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "A ticket generated from an AC whose depends_on is [parent_ac_id] has no AC id in its depends_on and passes the frontmatter guard with exit 0."
+    covers: [ACD-400b-7-i]
+delivers_to: null
+expects_from:
+  ac_id: ACD-400b-7
+  contract: "Ticket depends_on that excludes AC-level dependencies"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
