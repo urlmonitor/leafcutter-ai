@@ -7,14 +7,32 @@ BUSINESS CONTEXT: Projects using this workflow may store sensitive credentials
     line of defense before secrets reach git history.
 ARCHITECTURE: Thin wrapper around the security-scanner skill's scan_secrets.py.
     Reads staged files from git, delegates to scan_files(), exits 1 on findings.
-    Fast by design: regex + entropy only, no network calls. The path to
-    scan_secrets.py is read from commit_guardian.json → security_scanner.scripts_dir
-    so that consumer projects can point to their own copy of the scanner without
-    editing this file. ENTROPY_HIGH findings are post-filtered via _is_prose_exempt()
-    to suppress false positives for TICKET-* and EPIC-* identifiers without requiring
-    per-line .security-allowlist entries.
+    Fast by design: regex + entropy only, no network calls. The scanner scripts
+    directory is resolved layout-aware (see _resolve_scanner_dir()): first as
+    the sibling directory of this file's own deployed location
+    (<output_root>/skills/security-scanner/scripts, since build.py always
+    deploys check_secrets.py and scan_secrets.py together), then falling back
+    to commit_guardian.json → security_scanner.scripts_dir resolved against
+    project_root, for consumer projects that point to a non-standard copy of
+    the scanner. The __file__-relative candidate is tried first because it
+    works in every deployment shape (templates/ source checkout, the
+    .claude-shimmed main checkout, and a git worktree that has .leafcutter but
+    no .claude) without depending on the worktree also having a project-root
+    symlink established. ENTROPY_HIGH findings are post-filtered via
+    _is_prose_exempt() to suppress false positives for TICKET-* and EPIC-*
+    identifiers without requiring per-line .security-allowlist entries.
 
 # DECISION HISTORY
+# - 2026-08-13 12:00 [python-coder]: Made scanner-directory resolution
+#   layout-aware via _resolve_scanner_dir(): try the __file__-relative
+#   deployed-sibling directory first, then the configured
+#   security_scanner.scripts_dir as fallback. A git worktree has the deployed
+#   layout only under .leafcutter/ (no .claude/), so the old
+#   project_root/SECURITY_SCANNER_SCRIPTS_DIR-only resolution raised
+#   ModuleNotFoundError and blocked every commit made from a worktree.
+#   Genuinely-missing scanner now raises a RuntimeError naming every path
+#   tried instead of a raw ModuleNotFoundError traceback (fail closed, but
+#   legibly). (#GE-118a-1)
 # - 2026-05-14 09:00 [TICKET-20260514-Fix_Tooling_Gaps]: Added _is_prose_exempt()
 #   helper and ENTROPY_HIGH post-filter to eliminate accreting .security-allowlist
 #   entries caused by ticket IDs and EPIC names in audit/retrospective documents.
@@ -40,7 +58,55 @@ project_root = find_project_root()
 
 from config import SECURITY_SCANNER_SCRIPTS_DIR  # noqa: E402
 
-_SKILL_SCRIPTS = project_root / SECURITY_SCANNER_SCRIPTS_DIR
+# ---------------------------------------------------------------------------
+# Scanner directory resolution (layout-aware — GE-118a-1)
+# ---------------------------------------------------------------------------
+# build.py always deploys check_secrets.py and scan_secrets.py as siblings:
+# <output_root>/scripts/commit_guardian/check_secrets.py and
+# <output_root>/skills/security-scanner/scripts/scan_secrets.py. Resolving
+# relative to THIS file's own resolved location works regardless of how many
+# symlink hops (e.g. .claude -> .leafcutter, or a worktree's own .leafcutter)
+# got us here, because Path.resolve() follows them all to the real on-disk
+# output_root. Try that first; fall back to the configured
+# security_scanner.scripts_dir (relative to project_root) for consumers who
+# deploy the scanner somewhere non-standard.
+_DEPLOYED_SIBLING_SCANNER_DIR = (
+    Path(__file__).resolve().parent.parent.parent / "skills" / "security-scanner" / "scripts"
+)
+_CONFIGURED_SCANNER_DIR = project_root / SECURITY_SCANNER_SCRIPTS_DIR
+
+
+def _resolve_scanner_dir(candidates: list[Path]) -> Path:
+    """Return the first candidate directory that actually contains scan_secrets.py.
+
+    Args:
+        candidates: Ordered list of directories to probe, highest-priority first.
+
+    Returns:
+        The first candidate whose scan_secrets.py exists.
+
+    Raises:
+        RuntimeError: When none of the candidates contain scan_secrets.py. The
+            secrets scan cannot run, so the commit is blocked (fail closed) —
+            but with a clear, actionable message naming every path tried,
+            instead of the raw ModuleNotFoundError the subsequent
+            `from scan_secrets import scan_files` would otherwise raise.
+    """
+    for candidate in candidates:
+        if (candidate / "scan_secrets.py").is_file():
+            return candidate
+    tried = "\n".join(f"  - {c}" for c in candidates)
+    raise RuntimeError(
+        "[check_secrets] Could not locate scan_secrets.py in any known "
+        "location — the secrets scan cannot run, so the commit is blocked.\n"
+        f"Tried:\n{tried}\n"
+        "FIX: run build.py to (re)deploy the security-scanner skill, or set "
+        "security_scanner.scripts_dir in commit_guardian.json to the correct "
+        "location relative to the project root."
+    )
+
+
+_SKILL_SCRIPTS = _resolve_scanner_dir([_DEPLOYED_SIBLING_SCANNER_DIR, _CONFIGURED_SCANNER_DIR])
 
 sys.path.insert(0, str(_SKILL_SCRIPTS))
 
@@ -164,11 +230,19 @@ def _get_staged_files() -> list[Path]:
     Returns:
         List of Path objects for currently staged files.
     """
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRT"],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRT"],
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(
+            f"[check_secrets] WARNING: could not list staged files via git ({exc}); "
+            "treating the staged set as empty.",
+            file=sys.stderr,
+        )
+        return []
     if result.returncode != 0:
         return []
     return [

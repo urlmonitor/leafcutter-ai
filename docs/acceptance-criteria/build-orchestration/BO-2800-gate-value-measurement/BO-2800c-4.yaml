@@ -1,0 +1,86 @@
+id: BO-2800c-4
+components:
+  - build_orchestration
+  - review_system
+title: "How-to guide for recording an override and reading a check's override rate, with the record's fields"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the override record and the per-gate override report,
+  When the how-to guide for them is published,
+  Then it walks an operator through proceeding past a blocking finding so that the override
+    is recorded, showing the reason and the defect identifier being supplied,
+  And it lists every field of an override record — the overruled gate, the defect
+    identifier, the instance identifier, the piece of work, the time, the authoriser, the
+    stated reason, how the override arose, and the unattributed flag — stating for each
+    whether the operator supplies it or the system fills it in,
+  And it states that the defect identifier names a problem KIND while the instance
+    identifier names one firing of it, so a reader understands why the same rule firing
+    twice on one piece of work produces two records,
+  And it explains that overrides are also recorded without an operator doing anything —
+    naming the automated cross-agent phase skip and the absent-manifest assumed pass — so
+    a reader does not conclude that the count only reflects overrides someone declared.
+
+  Given the override report,
+  When the how-to guide is published,
+  Then it walks a reader through producing the report for a chosen window and reading a
+    single gate's override rate, its per-problem-kind breakdown, its breakdown by how each
+    override arose, and its unattributed exclusions,
+  And it defines each reported figure precisely, stating the numerator and the denominator
+    of the override rate, the meaning of the per-problem-kind breakdown, and the meaning of
+    the subsequent-defect indicator,
+  And it states which override records are excluded from per-problem-kind rates and why,
+    and that assumed passes are excluded from every override-rate numerator,
+  And it states that recording an override adds no approval step and that a failure to
+    record never blocks the work,
+  And it states that these figures are inputs to a decision that is not yet specified
+    anywhere, and takes no position on any threshold or any action, so a reader cannot
+    mistake the guide for a retirement policy or go looking for one that does not exist.
+depends_on:
+  - BO-2800c
+  - BO-2800c-1
+  - BO-2800c-2
+  - BO-2800c-3
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "House style exemplar for the field-by-field table this guide must carry."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: absorbed the override-record field table and figure definitions from the deleted BO-2800c-5; replaced the pointer to non-existent retirement rules with an explicit statement that no decision rule is specified anywhere yet."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in BO-2800c's documentation_triggers, and absorbs what was
+  BO-2800c-5's reference material. The two were separated as how-to and reference, but the
+  how-to already had to walk a reader through reading the rate, the per-problem-kind
+  breakdown and the unattributed exclusions — so the reference document would have
+  restated the same figures a second time, in a second file, for one small record. One
+  document with a field table is the cheaper and less divergent shape here.
+
+  Suggested assignee at enrichment time: documentation-expert.
+
+  THE GUIDE MUST NOT POINT AT RETIREMENT RULES. An earlier revision required it to "point
+  the reader to the retirement rules that consume these numbers". Those rules do not
+  exist — see the BO-2800 L0 notes for the verification. A guide that points a reader at
+  BO-2500d for them sends them to a completed fast-lane / heavy-lane agent split that says
+  nothing about thresholds. The corrected clause requires the guide to say plainly that the
+  decision half is unwritten.

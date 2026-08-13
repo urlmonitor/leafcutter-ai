@@ -1,0 +1,88 @@
+id: BO-2900a-4
+components:
+  - build_orchestration
+  - testing_quality
+title: "How-to: prove a criterion done through the real way in, and what to do when the guard refuses"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the entry-point condition on done eligibility is in place,
+  When an author whose criterion has just been refused consults the project's
+    task-oriented documentation,
+  Then a how-to guide shows how to convert a proof that imports the code under proof
+    directly into one that drives the same behaviour through the unit's way in,
+    And it states the two distinct refusals an author can receive — the proof did not
+      go in the real way, and nothing reaches the code at all — and which action
+      clears each,
+    And it states that adding another passing test clears neither,
+    And it names the recorded exemption as the route for a unit that legitimately has
+      no way in, and points at the exemption's own documentation rather than
+      restating it,
+    And it warns that a proof written to name the way in without invoking it does not
+      satisfy the condition, because the judgement comes from the run.
+depends_on:
+  - BO-2900a
+  - BO-2900a-1
+  - BO-2900a-2
+  - BO-2900a-3
+doc_links:
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: "The incumbent how-to for the done-proof gate — extend this rather than starting a competing guide."
+  - path: docs/how-to/prove-ac-done.md
+    relationship: related
+    status: exists
+    relevance: "The author-facing walkthrough for proving a criterion done; the new refusal reasons must be reachable from here."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The exemption how-to this guide links to instead of restating."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Extend docs/how-to/done-proof-enforcement.md — do not create a third done-proof how-to. The BA's placement decision is binding; if the writer disagrees the burden is to consolidate the existing two, not to add a third."
+  - "Document the two refusal causes by the identifiers the gate actually emits ('proof_not_through_entry_point', 'no_entry_point_reaches_code') as well as in prose, so a reader can match the text in their terminal to the section."
+  - "Show a concrete before/after conversion pair using a real repository surface (scripts/build_orchestration/fast_lane.py and its registered actions), not a placeholder — the guide must survive the real-artifact spot-check convention in CLAUDE.md."
+  - "Add a cross-link from docs/how-to/prove-ac-done.md to the new section so the refusal is reachable from the author's normal starting point; a section nobody can navigate to is not documentation coverage."
+  - "Link, do not restate: the exemption procedure lives in the BO-2900d-4 guide and the refusal-to-action index lives in the BO-2900e-4 table. Duplicating either creates the stale copy this tree is trying to avoid."
+  - "Must pass the repository doc gates: check-doc-frontmatter, check-doc-length and check-doc-index. Register the new section in docs/INDEX.md if the guide's index entry changes."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900e-1
+  contract: "The four refusal message texts and their clearing actions, as emitted by the guard, so the guide quotes the real output rather than an invented paraphrase."
+test_required: false
+test_rationale: "This AC's whole artifact is prose in docs/how-to/done-proof-enforcement.md; it adds no executable surface, so there is nothing a test could drive. Coverage of the behaviours it describes lives on BO-2900a-1, BO-2900a-2 and BO-2900a-3, each of which specifies an executing test. Recording the intent explicitly rather than leaving the contract absent so test-writer skips with an accurate reason instead of the silent auto-skip documented in CLAUDE.md."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies one of the parent L1's two `documentation_triggers` (`how-to`).
+
+  Intended agent is `documentation-expert` — left as `assigned_agent: null` per this
+  authoring run's instruction that the IT PO sets assignment. Recorded here so the
+  enrichment pass does not have to re-derive it.
+
+  PLACEMENT DECISION: extend `docs/how-to/done-proof-enforcement.md` rather than
+  create a new guide. There are already two done-proof how-tos; a third would split
+  the audience and the refusals would be documented away from the gate that emits
+  them. If the writer disagrees, the burden is to consolidate, not to add.
+
+  SCOPE FENCE: this is the AUTHOR's guide (my criterion was refused, what do I do).
+  It is not the operator's guide to the capability-vs-caller checks — that is
+  BO-2900b-4 — and it is not the exemption reference, which is BO-2900d-5. The
+  cross-links exist so the three do not each grow a copy of the others.
+
+  2026-08-13 (IT PO enrichment). Assignment confirmed as documentation-expert per the
+  BA's recorded intent and the S7b documentation-gate mapping for the `how-to` trigger.

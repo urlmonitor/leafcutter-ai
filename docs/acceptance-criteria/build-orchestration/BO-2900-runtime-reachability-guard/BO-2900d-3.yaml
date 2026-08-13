@@ -1,0 +1,149 @@
+id: BO-2900d-3
+components:
+  - build_orchestration
+  - testing_quality
+title: "An exemption covers only the item it names, and one whose item is gone is reported as stale"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an exemption is recorded for one unit that has no runtime way in,
+    And a second unit with no runtime way in sits alongside it, sharing its folder and
+      its purpose, with no exemption of its own,
+  When the reachability guard runs,
+  Then the first unit is not reported and the second unit is reported,
+    And no exemption is applied to any unit other than the one it names.
+
+  Given an exemption whose named unit no longer exists,
+  When the guard runs,
+  Then the exemption is reported as stale, naming it,
+    And it is not counted among the exemptions in force,
+    And a later unit that happens to take the same name is not exempted by it.
+depends_on:
+  - BO-2900d
+  - BO-2900d-1
+  - BO-2900d-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The inventory this AC keeps accurate — a stale entry inflates the count and hides behind it."
+  - path: docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+    relationship: related
+    status: exists
+    relevance: "The project's fail-closed convention, consulted when deciding whether a stale entry should refuse; this AC deliberately does not follow it — see the IT PO decision in notes."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    stale_exemption_entry:
+      type: object
+      description: "{ item: str, reason: str, recorded: str, state: 'stale' } — a registry entry whose named item cannot be resolved in the tree at check time. Reported in its own section of the exemption inventory, excluded from total_in_force, and NON-REFUSING on its own (see the IT PO decision in notes)."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BREADTH: matching stays exact-item equality. No folder scope, no glob, no prefix, no 'and its siblings'. A folder-shaped exemption is an unbounded promise about code that does not exist yet — every future file dropped there becomes exempt with no reason recorded for it."
+    - "TIME: an entry whose named item cannot be resolved in the tree at check time is classified `stale`, reported by name in its own section of the exemption inventory, and EXCLUDED from total_in_force (BO-2900d-2)."
+    - "WHETHER A STALE EXEMPTION REFUSES (IT PO decision, see notes): it REPORTS ONLY. A stale entry must not, on its own, cause a non-zero exit. It grants nothing (it matches no item), so the safety property is already carried by the not-counted rule; refusing would block an author who is unrelated to the dead entry, which is the documented way guards get switched off."
+    - "NAME REUSE MUST NOT SILENTLY RE-ARM AN ENTRY. Resolution is against the item as it exists NOW, so a new unit reusing a deleted unit's path is exempted only if the check would also exempt it as a fresh entry — which, for identical paths, it would. Therefore the registry record MUST carry `recorded` (date) and `recorded_by`, and a stale entry that later resolves again must be reported in the inventory as re-armed, so the reuse is visible to review rather than silent. This is the criteria's name-reuse clause implemented as visibility, not as a hash of the file's contents."
+    - "Resolution must distinguish 'item does not exist' from 'the tree could not be read'. An I/O failure while resolving must fail closed with a named cause per the error-handling policy, never be reported as a batch of stale entries."
+delivers_to:
+  agent: python-coder
+  contract: "The `stale` section of the exemption_inventory_report ({ item, reason, recorded, state: 'stale' }[]) and the guarantee that total_in_force excludes it. Consumed by BO-2900d-2's inventory output and documented as contract by BO-2900d-5."
+expects_from:
+  ac_id: BO-2900d-2
+  contract: "exemption_inventory_report, emitted on every run, with its in_force list, total_in_force count and stale section — this AC owns what goes in the stale section and what is excluded from the total."
+test_spec:
+  - name: test_exemption_does_not_cover_a_sibling_in_the_same_folder
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real guard over a fixture tree with two no-way-in units in one folder, one exempted; asserts the exempted unit is not reported and the sibling is, in the same run."
+  - name: test_exemption_naming_a_deleted_unit_is_reported_stale_and_excluded_from_the_total
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With a registry entry naming a unit that no longer exists, asserts the emitted inventory names it in the stale section and that total_in_force excludes it."
+  - name: test_stale_exemption_alone_does_not_refuse_the_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A change with no findings and one stale entry exits zero; asserts the report-only decision holds and an unrelated author is not blocked by somebody else's dead entry."
+  - name: test_a_new_unit_reusing_a_deleted_units_path_is_reported_as_re_armed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Recreates a unit at the stale entry's path and asserts the inventory reports the entry as re-armed with its recorded date, so the reuse is visible rather than a silent inheritance of somebody else's decision."
+test_rationale: "Both halves of this AC are properties of the whole run: which units the guard reported, what the inventory section contained, and what exit code the run produced. A direct-import test of a matcher would prove exact-string equality and say nothing about the sibling being reported in the same run, about the stale section existing at all, or about the exit code — and the exit-code assertion is the entire content of the report-only decision. The fourth test exercises the name-reuse clause as an observable output rather than as an internal flag, because a re-armed entry with no visible trace is indistinguishable from a fresh, deliberate one."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Two ways an exemption silently grows beyond what anyone approved. Both are about
+  scope, so they share one AC; neither is an edge case of the other.
+
+  - BREADTH. The pressure to widen an exemption is constant and reasonable-sounding:
+    the second helper is just like the first, so cover the folder. A folder-shaped
+    exemption is an unbounded promise about code that does not exist yet — every future
+    file dropped there is exempt by default, and nobody records a reason for it. The
+    sibling scenario makes narrowness testable, and it is the exact fixture a
+    convention-based implementation of BO-2900d-1 also fails.
+
+  - TIME. A stale exemption is worse than a broad one because it is invisible: it sits
+    in the list, inflates the count that BO-2900d-2 reports, and gives a reviewer the
+    impression the set is under control. The name-reuse clause is the sharp end of it —
+    an exemption written for a helper that was deleted two years ago silently exempts a
+    brand-new unit that happens to reuse the name, and no human decision was ever made
+    about that unit. Reporting stale entries turns exemption cleanup into ordinary
+    maintenance rather than an archaeology project.
+
+  DELIBERATELY NOT SPECIFIED: whether a stale exemption refuses the change or only
+  reports. Both readings are defensible — refusing keeps the list clean, reporting
+  avoids blocking an unrelated author for someone else's dead entry — and the choice
+  belongs with the IT PO alongside the enforcement surface. What this AC does fix is
+  that it must be SAID and must not be counted as in force, so it cannot rot unseen
+  either way.
+
+  Verification must EXECUTE the guard over both fixture pairs (exempted unit beside a
+  non-exempted sibling; an exemption naming a unit that has been removed).
+
+  2026-08-13 — IT PO DECISION 2 OF 2: DOES A STALE EXEMPTION REFUSE OR ONLY REPORT?
+
+  DECISION: REPORT ONLY. A stale entry never causes a non-zero exit on its own.
+
+  Rationale:
+    1. A stale entry is already FAIL-SAFE, not fail-open. Because it matches no item it
+       grants nothing, and because BO-2900d-2 excludes it from total_in_force it cannot
+       inflate the reviewable count. The security property the criteria care about is
+       carried entirely by the not-counted rule; refusing adds no protection.
+    2. It would block the WRONG PERSON. A stale entry is created by the author who
+       deleted the unit and encountered by whoever commits next. Blocking an unrelated
+       change for somebody else's dead record is the documented mechanism by which
+       guards get switched off — the same adoption risk BO-2900b-1-i exists to prevent,
+       and the dominant risk in this tree.
+    3. It is a DIFFERENT CONDITION from BO-2900c-4's fail-closed case, and the contrast
+       is deliberate: there the guard cannot establish its own preconditions, so silence
+       would be a false pass. Here the guard's verdict is fully established and correct;
+       only a bookkeeping record is dead. Fail-closed applies to unknowable state, not
+       to untidy state.
+    4. Visibility is preserved without refusal: the stale section appears on EVERY run
+       via BO-2900d-2's always-on inventory, so cleanup is ordinary maintenance rather
+       than an archaeology project — which is exactly what this AC's own notes ask for.
+
+  RATCHET LEFT OPEN: once the stale backlog is at zero, a follow-up AC may promote
+  stale-report to stale-refuse, or refuse only when the change under check TOUCHES the
+  registry file. Both are cheap on top of this implementation; neither is in scope here.

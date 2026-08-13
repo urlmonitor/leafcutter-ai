@@ -1,0 +1,113 @@
+id: ACS-1100c-1-i
+components:
+  - ac_store
+title: "A failure inside the coverage machinery degrades with a warning, is capped in size, and is never reported as a clean answer"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100c-1.yaml
+criteria: |
+  Given a record under the store root that cannot be read or cannot be parsed while
+    the total is being established,
+  When the coverage machinery encounters that failure,
+  Then the failure is reported as an internal error with a warning naming the
+    unreadable record and the run continues, per the project error-handling policy,
+  And the unreadable record is counted neither as in scope nor as a declared
+    exclusion, and is instead reported in a third category of records the measurement
+    could not classify,
+  And the count of records in that third category is stated in the answer as its own
+    figure alongside the total, the covered count and the declared exclusion total —
+    an answer that carries could-not-classify records without naming how many does not
+    satisfy this criterion,
+  And the presence of even one could-not-classify record forbids an unqualified
+    all-clear in any verdict that consumes the answer, under ACS-1100d-2, so a partly
+    failed measurement can never be laundered into a clean bill of health downstream,
+  And a measurement whose entire result is a failed read — a whole measurement
+    returning nothing because its source could not be opened — is reported as every
+    record in that source being could-not-classify, never as a legitimate empty answer,
+  And "could not classify" means UNREADABLE OR UNPARSEABLE ONLY and never means
+    schema-invalid: a record that is read and parsed but fails validation is a fully
+    classified in-scope record carrying a validation result, so the store's standing
+    schema-validation backlog — 277 of 2,784 records failing validation when measured
+    on 2026-08-13 — stays inside the in-scope count and does not label every answer a
+    broken measurement,
+  And the answer's outcome is labelled distinctly from both a reconciled clean answer
+    and a shortfall halt, so a reader can tell a broken measurement from a complete
+    one,
+  And this graceful degradation applies only to failures of the measurement itself: a
+    reconciled shortfall with readable records still halts under ACS-1100c-1 and is
+    never downgraded to a warning.
+depends_on:
+  - ACS-1100c-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100c.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L1 notes state the halt-versus-fail-open orthogonality this edge case pins down."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "BINDING in-component grounding: its AC loader returns nothing on a parse failure, so an unparseable record silently vanishes from the population instead of landing in a counted third category."
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: related
+    status: exists
+    relevance: "NON-BINDING illustration, out of this AC's component. Swallows an OSError and returns an empty mapping — an ENTIRE failed measurement presenting as a legitimate empty answer, which is the whole-source case this AC's cap addresses."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The one genuine edge case in this L1, and the one most likely to be mis-implemented:
+  the store's standard convention is fail-open-on-INTERNAL-ERROR (crash, unreadable
+  file, parse failure => exit 0 with a stderr warning), and it is orthogonal to the
+  always-block-on-a-REAL-violation posture of ACS-1100c-1. Collapsing the two would
+  turn every real gap into a warning and reinstate the defect.
+
+  The third category matters: silently folding an unreadable record into either the
+  in-scope count or the declared exclusions would make the arithmetic reconcile and
+  produce a clean answer over a measurement that partly failed.
+
+  ==========================================================================
+  THE BUCKET IS NOW CAPPED AND ITS BOUNDARY IS NOW EXPLICIT (2026-08-13, expert review).
+  ==========================================================================
+  As first written the third category had no cap and no interaction with ACS-1100d-2,
+  so an answer could route an unbounded number of records into it and still reach a
+  downstream all-clear. Two clauses close that: the count must be named, and any
+  non-zero count forbids an unqualified all-clear downstream.
+
+  THE SCHEMA-INVALID EXCLUSION IS LOAD-BEARING. A large standing backlog of records
+  fails schema validation today. Routing schema-invalid records into the
+  could-not-classify bucket would permanently label EVERY answer about the store a
+  broken measurement and make an unqualified all-clear structurally unreachable for as
+  long as the backlog exists — the cap would go from a signal to constant noise, and
+  would be switched off. Unreadable and unparseable only. A record that parses is
+  classified, whatever its validation result.
+
+  MEASUREMENT NOTE — the review that prompted this clause cited 641 failing files. That
+  figure could NOT be reproduced. Running validate_ac_schema.py over every YAML file
+  under docs/acceptance-criteria on 2026-08-13 reported 277 failing files out of 2,784
+  (overwhelmingly `it_requirements` given as a list of strings where the strict schema
+  wants an object). The criteria carry the measured figure, not the cited one. The
+  reviewer's ARGUMENT is unaffected and correct — 277 is still ~10% of the store, more
+  than enough to poison every answer permanently — but the number was wrong and should
+  not be propagated.
+
+  The whole-source clause exists because the worst real instance is not a single bad
+  record but a measurement that fails entirely and returns an empty mapping, which today
+  is indistinguishable from a legitimate "nothing found".

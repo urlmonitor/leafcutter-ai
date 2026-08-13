@@ -354,8 +354,8 @@
         ]
     },
     "security_scanner": {
-        "_comment": "check_secrets.py — Path to the security-scanner skill's scripts directory, relative to the project root. Override if the skill lives at a different location in your project.",
-        "scripts_dir": ".claude/skills/security-scanner/scripts"
+        "_comment": "check_secrets.py — Fallback path to the security-scanner skill's scripts directory, relative to the project root, used only when the __file__-relative deployed-sibling directory (<output_root>/skills/security-scanner/scripts) does not exist. Override if the skill lives at a different location in your project.",
+        "scripts_dir": ".leafcutter/skills/security-scanner/scripts"
     },
     "commit_scope": {
         "_comment": "check_commit_scope.py — Warn-only guard that diffs staged files against the active ticket's files_touched frontmatter. Option (c) hybrid: always exits 0. Upgrade path to blocking (option b): change exit code in check_commit_scope.py.",

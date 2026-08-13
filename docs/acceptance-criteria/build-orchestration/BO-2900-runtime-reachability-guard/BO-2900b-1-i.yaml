@@ -1,0 +1,103 @@
+id: BO-2900b-1-i
+components:
+  - build_orchestration
+  - build_pipeline
+title: "A capability introduced together with its caller passes; one introduced alone is refused with both ways forward named"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a change that registers a new capability `verify` on the command surface and,
+    in the same change, adds an automation invocation of `verify`,
+  When the connection from registered capabilities to the automation that runs them
+    is checked,
+  Then `verify` is not reported and the change is not refused.
+
+  Given a change that registers `verify` and adds no automation invocation of it,
+  When the same check runs,
+  Then `verify` is reported and the change is refused,
+    And the report names both ways forward — adding the automation invocation in this
+      change, or recording an exemption for `verify` with a stated reason —
+    And the report does not suggest disabling the check.
+depends_on:
+  - BO-2900b-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml
+    relationship: related
+    status: exists
+    relevance: "The exemption route the refusal must name as the second way forward."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
+    relationship: related
+    status: exists
+    relevance: "Governs message quality generally; this AC constrains only WHICH two options the forward refusal must offer."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    ways_forward:
+      type: array
+      description: "Exactly two entries on an uncalled_capability_finding: 'add the automation invocation in this change' and 'record an exemption for <capability> with a stated reason'. No third entry, and no mention of a skip or bypass flag."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "The same-change adoption path must genuinely pass. The check evaluates the WORKING-TREE state of both sides (built parser plus collected invocations), not the committed state, so a capability and its caller landing in one change produce no finding. An implementation that compares the new capability against the previous commit's callers fails this AC and makes the guard unusable."
+    - "The refusal must enumerate exactly the two ways forward from config_schema_fragment, and must not name a skip flag, --no-verify, or an environment variable. Printing the bypass at the moment of maximum frustration converts a blocking gate into an advisory one."
+    - "Reuse BO-2900b-1's finding record and message path — this AC adds no new refusal cause and no second code path; it constrains the content of the existing one and asserts the passing case."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900b-1
+  contract: "The uncalled_capability_finding record and the forward check's exit-code contract; this AC constrains the ways_forward content of that record and the passing outcome of the same-change adoption case."
+test_spec:
+  - name: test_capability_and_caller_added_in_the_same_change_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs check_reachability.main() over a fixture tree where `verify` is registered on the surface and invoked by an automation script in the same working-tree state; asserts a zero exit code and no findings. Written and asserted FIRST so a refuse-everything implementation cannot pass the set."
+  - name: test_capability_added_alone_is_refused_and_names_both_ways_forward
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Same fixture with the invocation removed; asserts a non-zero exit code and that the emitted text names both wiring the invocation in this change and recording an exemption for `verify`."
+  - name: test_refusal_text_never_offers_disabling_the_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the refusing run's output contains no 'SKIP=', no '--no-verify' and no environment-variable bypass name."
+test_rationale: "The adoption trap is a property of WHICH tree state the check reads, and no direct-import unit test can see that: a helper handed two sets returns the right answer whether the sets came from the working tree or from HEAD. Only running the real entry point over a fixture tree in the same-change state distinguishes a survivable guard from one that makes the natural workflow impossible. The positive case is executed first and asserted in the same suite as the refusal so a refuse-everything implementation — which satisfies a negative-only test — is excluded."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Isolated as an L3 because it is the case that decides whether the guard is
+  survivable in daily use, and it is invisible from BO-2900b-1's own scenario.
+
+  THE ADOPTION TRAP. A forward check that refuses any registered-but-uncalled
+  capability makes the natural two-step workflow — land the capability, then wire the
+  automation — impossible. A team that hits that wall on a Friday afternoon does not
+  file a ticket; it switches the check off, and the guarantee is gone. Two things
+  make it survivable, and both are asserted here: the same-change path must genuinely
+  pass (the positive scenario is as load-bearing as the negative one), and the refusal
+  must hand the author a reasoned exemption instead of leaving "disable it" as the
+  only visible exit.
+
+  WHY THE POSITIVE SCENARIO IS FIRST. An implementation that refuses both cases still
+  satisfies a negative-only test. Ordering the passing case first makes the fixture
+  pair explicit and stops the check from being validated against refusals alone.
+
+  The "does not suggest disabling the check" clause is deliberate and testable: it
+  refuses the common convenience of printing the skip flag in the failure output,
+  which quietly converts a blocking gate into an advisory one.

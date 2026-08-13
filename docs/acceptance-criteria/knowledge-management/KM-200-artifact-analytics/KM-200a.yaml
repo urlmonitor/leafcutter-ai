@@ -1,0 +1,41 @@
+id: KM-200a
+title: "Nothing the project produces is left out of the count"
+component: knowledge-management
+components:
+  - knowledge_management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  One inventory covering everything the project produces, not just code.
+
+  Requirements, tickets, epics, tests, code, decision records, diagrams and the
+  rest of the written material, changelogs, agents, skills, hooks, components and
+  retrospectives are all counted in the same place, under one shared idea of what
+  counts as arriving and what counts as being worked off. A kind of thing that did
+  not exist last month can join the count without the count being rebuilt.
+depends_on:
+  - KM-200
+doc_links: []
+documentation_triggers:
+  - reference-doc
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Idea stub — covered_by deliberately empty (see KM-200 notes). The artifact list
+  in the criteria is the user's own list plus "etc"; it is illustrative, not
+  closed, which is why extensibility is part of the benefit rather than a separate
+  child. The reference-doc trigger exists because "what counts as created" and
+  "what counts as consumed" must be written down once per artifact kind, or every
+  figure downstream becomes arguable.

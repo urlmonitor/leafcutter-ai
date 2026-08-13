@@ -250,7 +250,7 @@ STRUCTURAL_BYPASS_TOKEN: str = _get("structural_change", "bypass_token", "[NO-AR
 SECURITY_SCANNER_SCRIPTS_DIR: str = _get(
     "security_scanner",
     "scripts_dir",
-    ".claude/skills/security-scanner/scripts",
+    ".leafcutter/skills/security-scanner/scripts",
 )
 
 # ---------------------------------------------------------------------------
@@ -305,6 +305,13 @@ TICKET_AC_PARITY_AC_STORE_ROOT: str = _get(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-13 12:00 [python-coder]: Changed SECURITY_SCANNER_SCRIPTS_DIR default
+  from '.claude/skills/security-scanner/scripts' to
+  '.leafcutter/skills/security-scanner/scripts' — a git worktree has the
+  deployed layout only under .leafcutter/ (no .claude/), so the old default
+  pointed check_secrets.py at a directory that does not exist there. This
+  value is now consulted as a fallback after check_secrets.py's
+  __file__-relative deployed-sibling resolution. (#GE-118a-1)
 - 2026-08-11 [workflow-architect/KI-1]: Added TICKET_AC_PARITY_ENABLED and
   TICKET_AC_PARITY_AC_STORE_ROOT constants for check_ticket_ac_status_parity.py
   (BO-2200 retrospective KI-1). enabled defaults to True; ac_store_root defaults

@@ -24,16 +24,25 @@ OPERATIONAL NOTE — first-time enablement in an existing codebase:
     drift; the supervisor had to promote the output back to template mid-
     flight to clear it.
     See retro: docs/retrospectives/EPIC-EmbeddedArchDiagramsHardening.md.
-ARCHITECTURE: Reads the ``output_mappings`` section of
-    leafcutter/.build_manifest.json written by build.py after each
-    successful build run. For each staged output file listed in output_mappings,
-    computes the SHA-256 of the current on-disk content and compares it against
-    the ``expected_output_hash`` recorded at last build time. If a mismatch is
-    found the hook exits 1 and names both the offending output file and the
-    template the developer should have edited instead. Absent manifest, absent
-    output_mappings section, or unknown output files all produce a warning (not
-    a block) to avoid false positives on fresh clones or intentional one-off
-    outputs.
+ARCHITECTURE: Reads the ``output_mappings`` section of the
+    ``.build_manifest.json`` written by build.py (build_helpers.
+    write_build_manifest) at ``package_root / ".build_manifest.json"`` after
+    each successful build run. For each staged output file listed in
+    output_mappings, computes the SHA-256 of the current on-disk content and
+    compares it against the ``expected_output_hash`` recorded at last build
+    time. If a mismatch is found the hook exits 1 and names both the
+    offending output file and the template the developer should have edited
+    instead. Absent manifest, absent output_mappings section, or unknown
+    output files all produce a warning (not a block) to avoid false
+    positives on fresh clones or intentional one-off outputs.
+
+    MANIFEST RESOLUTION (GE-118b): package_root's directory name is not
+    knowable in advance (this repo's own checkout is "leafcutter-ai"; a
+    consumer install may name it anything), so the manifest path is never
+    built from a hardcoded package-directory segment. See
+    ``_candidate_manifest_roots`` below for the layout-independent search
+    order (git toplevel, then the structurally-derived workspace root, then
+    that root's immediate subdirectories).
 """
 
 from __future__ import annotations
@@ -45,6 +54,8 @@ from pathlib import Path
 
 import logging
 
+from _resolve_root import find_project_root
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
@@ -52,19 +63,113 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 # Constants
 # ---------------------------------------------------------------------------
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_HOOK_FILE = Path(__file__).resolve()
 
-_MANIFEST_PATH = _REPO_ROOT / "leafcutter" / ".build_manifest.json"
 
-# Output directories managed by build.py (used to identify candidate files).
-_OUTPUT_DIRS = [
-    _REPO_ROOT / ".claude" / "agents",
-    _REPO_ROOT / ".claude" / "skills",
-    _REPO_ROOT / ".claude" / "commands",
-    _REPO_ROOT / ".claude" / "hooks",
-    _REPO_ROOT / ".claude" / "workflows",
-    _REPO_ROOT / ".agents" / "rules",
-]
+# ---------------------------------------------------------------------------
+# Manifest resolution (GE-118b)
+# ---------------------------------------------------------------------------
+
+
+def _candidate_manifest_roots(hook_file: Path) -> list[Path]:
+    """Build the ordered list of plausible roots for .build_manifest.json.
+
+    build_helpers.write_build_manifest() always writes to
+    ``package_root / ".build_manifest.json"``, but package_root's directory
+    name is NOT knowable in advance: this repo's own checkout is named
+    "leafcutter-ai", while a consumer install may name it anything at all.
+    Roots are tried in priority order, never by matching a hardcoded name:
+
+    1. The git repository/worktree toplevel containing the current process
+       (via the sibling ``_resolve_root.find_project_root()``, already used
+       by the other hooks in this directory). pre-commit always invokes
+       hooks with cwd == the repo root, so for a package checkout or a
+       worktree of it this directly resolves to package_root.
+    2. The "workspace root" derived structurally from this hook's own
+       deployed location: two directories up from
+       ``scripts/commit_guardian/<hook>.py`` is the deploy root (e.g.
+       ``.leafcutter`` when deployed, ``templates`` when run from the
+       source tree); one more level up is the workspace root that holds
+       package_root as a sibling. Checked directly, for layouts where
+       package_root IS the workspace root.
+    3. Every immediate subdirectory of that workspace root (sorted for
+       deterministic output) — covers the deployed-consumer-install layout,
+       where package_root is a named sibling of the deploy root (this
+       repo's real production layout: ``.leafcutter/`` and ``leafcutter-ai/``
+       are siblings under the workspace root).
+
+    Args:
+        hook_file: Absolute, resolved path to this hook module
+            (``Path(__file__).resolve()``).
+
+    Returns:
+        Ordered list of candidate root directories. May include directories
+        that do not exist or do not contain the manifest — callers check
+        each with ``.exists()``.
+    """
+    roots: list[Path] = [find_project_root().resolve()]
+
+    deploy_root = hook_file.parents[2]
+    workspace_root = deploy_root.parent
+    roots.append(workspace_root)
+
+    try:
+        roots.extend(
+            sorted(
+                d.resolve()
+                for d in workspace_root.iterdir()
+                if d.is_dir() and not d.name.startswith(".")
+            )
+        )
+    except OSError as exc:
+        logger.warning(
+            "cannot list workspace root %s while searching for the build "
+            "manifest: %s",
+            workspace_root,
+            exc,
+        )
+
+    return roots
+
+
+def _resolve_manifest_path(hook_file: Path) -> tuple[Path | None, list[Path]]:
+    """Locate the real .build_manifest.json, searching plausible roots.
+
+    Args:
+        hook_file: Absolute, resolved path to this hook module.
+
+    Returns:
+        Tuple of (manifest_path, tried_paths). ``manifest_path`` is None
+        when no candidate exists on disk; ``tried_paths`` lists every
+        absolute path checked, in search order, for use in a diagnostic
+        message when the manifest genuinely cannot be found.
+    """
+    tried: list[Path] = []
+    seen_roots: set[Path] = set()
+    for root in _candidate_manifest_roots(hook_file):
+        if root in seen_roots:
+            continue
+        seen_roots.add(root)
+        candidate = root / ".build_manifest.json"
+        tried.append(candidate)
+        if candidate.exists():
+            return candidate, tried
+    return None, tried
+
+
+def _warn_manifest_not_found(tried: list[Path]) -> None:
+    """Print a visible, path-naming warning when no manifest was found.
+
+    Args:
+        tried: Every absolute candidate path that was checked.
+    """
+    tried_str = "\n  ".join(str(p) for p in tried)
+    print(
+        "check-output-drift: WARNING — .build_manifest.json not found. "
+        f"Tried:\n  {tried_str}\n"
+        "Run build.py to generate it. Skipping output drift check.",
+        file=sys.stderr,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -267,13 +372,32 @@ def check_output_drift(
 def main() -> int:
     """Entry point for the pre-commit hook.
 
+    Resolves the manifest via ``_resolve_manifest_path`` (layout-independent
+    — see GE-118b docstring note above) before deriving the output
+    directories to scan, since both are relative to the same package root.
+
     Returns:
         0 if no drift is detected (or manifest / output_mappings absent); 1 on drift.
     """
+    manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
+    if manifest_path is None:
+        _warn_manifest_not_found(tried)
+        return 0
+
+    repo_root = manifest_path.parent.parent
+    output_dirs = [
+        repo_root / ".claude" / "agents",
+        repo_root / ".claude" / "skills",
+        repo_root / ".claude" / "commands",
+        repo_root / ".claude" / "hooks",
+        repo_root / ".claude" / "workflows",
+        repo_root / ".agents" / "rules",
+    ]
+
     return check_output_drift(
-        output_dirs=_OUTPUT_DIRS,
-        manifest_path=_MANIFEST_PATH,
-        repo_root=_REPO_ROOT,
+        output_dirs=output_dirs,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
     )
 
 
@@ -288,6 +412,21 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-13 [python-coder/GE-118b]: Fixed manifest resolution. _REPO_ROOT /
+#   _MANIFEST_PATH / _OUTPUT_DIRS were computed from
+#   Path(__file__).resolve().parents[2] / "leafcutter" / ".build_manifest.json"
+#   — a hardcoded package-directory segment. Deployed under
+#   .leafcutter/scripts/commit_guardian/, .resolve() follows the symlink so
+#   parents[2] lands on the workspace root, and "leafcutter" never matches the
+#   real package directory (this repo's is "leafcutter-ai"), so the computed
+#   path never existed and the gate silently no-op'd (main checkout AND
+#   worktrees). Fix: _resolve_manifest_path() searches git toplevel (via the
+#   sibling _resolve_root.find_project_root(), reused rather than duplicated
+#   as a fresh subprocess call), the structurally-derived workspace root, and
+#   that root's immediate subdirectories — never a hardcoded name. A missing
+#   manifest now prints every absolute path tried. check_build_drift.py
+#   received the identical fix (the AC calls out that both hooks share the
+#   bug and must share the fix).
 # - 2026-05-18 18:55 [commit/EPIC-GlossaryAutomation]: Fixed _sha256_of_file to
 #   normalise CRLF -> LF before hashing. On Windows, git may write CRLF to
 #   disk while the manifest stores an LF-based hash (computed by build.py

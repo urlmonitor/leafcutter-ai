@@ -1,0 +1,92 @@
+id: BO-2800b-1
+components:
+  - build_orchestration
+  - review_system
+title: "Every gate whose prompt this project owns declares a closed vocabulary of problem kinds"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a gate whose prompt template is owned and editable in this project — for example
+    the documentation-verification gate or the acceptance-criteria validation gate,
+  When its declared vocabulary of problem kinds is read,
+  Then the vocabulary is a closed, enumerated list of rule identifiers scoped to that gate,
+    each written as the gate name followed by a rule name, for example
+    "documentation-verifier/how-to-missing-for-trigger",
+  And every finding that gate emits carries exactly one rule identifier drawn from that
+    list, alongside its free-text detail describing the specific instance,
+  And a finding whose rule identifier is not in the emitting gate's declared vocabulary is
+    recorded under that gate's unclassified namespace rather than being accepted with an
+    invented category,
+  And an owned gate that reports findings without declaring any vocabulary is reported by
+    name as missing one.
+
+  Given the pull-request review gate, whose findings originate in the external
+    `pr-review-toolkit:review-pr` skill that its own agent template forbids this project
+    from modifying,
+  When the set of gates required to declare a vocabulary is determined,
+  Then the pull-request review gate is listed as an explicitly exempt relaying gate, named
+    together with the reason it cannot declare one,
+  And it is not reported as an owned gate missing a vocabulary,
+  And its findings are still recorded and still counted, taking their identity from the
+    unclassified-namespace path rather than being dropped or left unlabelled,
+  And a report that presents per-gate vocabulary coverage states how many of the recorded
+    findings came from exempt relaying gates, so a reader cannot mistake the covered
+    fraction for the whole population.
+depends_on:
+  - BO-2800b
+  - BO-2800a-1
+doc_links:
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "Its Constraints section states 'Do not modify the pr-review-toolkit:review-pr skill or any of its sub-skills' — the reason the pull-request review gate cannot declare a closed vocabulary and is exempt here."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Findings are emitted through the sign-off comment surface; the finding record extends the manifest record shape established in BO-2800a."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Defines how a gate's blocker comment is parsed and routed — the point at which a labelled finding is read."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: scoped the vocabulary requirement to gates this project owns and added the explicit pr-reviewer relaying-gate exemption, after a census found pr-reviewer produced 46 of 71 recorded blockers and its template forbids editing the skill its findings come from."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: internal
+notes: |
+  DECIDED DESIGN POINT, carried verbatim from the L1 notes: the category is
+  GATE-DECLARED, never inferred from prose after the fact. A text-similarity
+  clusterer as the primary dedup mechanism is explicitly rejected — it would leave
+  the count as untrustworthy as the prose it replaced.
+
+  WHY THE SCOPE NARROWED. The original AC required EVERY gate to declare a closed
+  vocabulary, using pr-reviewer as its worked example. pr-reviewer cannot comply: it
+  relays findings produced by the external `pr-review-toolkit:review-pr` skill, and its
+  own template's Constraints section forbids modifying that skill or any sub-skill. As
+  originally written the AC was unimplementable for the single largest source of signal —
+  a census of recorded blockers attributed 46 of 71 to pr-reviewer, about 65% — and the
+  downstream ACs quietly routed all of it into the discountable bucket. The requirement
+  is now scoped to gates whose prompt templates this project owns, with the relaying gate
+  named as an exemption rather than silently failing the rule.
+
+  THE EXEMPTION IS NOT A DISCOUNT. Exempt-gate findings are counted on equal terms via
+  BO-2800b-4's unclassified namespace, and BO-2800b-3 reserves the "heuristic" discount
+  for prose-only historical records, not for live findings from an exempt gate. If a
+  future version of the review toolkit exposes a stable finding identifier, that gate
+  moves off the exemption list and its identifiers become declared.

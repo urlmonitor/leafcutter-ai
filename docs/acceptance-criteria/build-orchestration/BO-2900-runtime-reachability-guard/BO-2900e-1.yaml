@@ -1,0 +1,153 @@
+id: BO-2900e-1
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Every refusal names the stranded thing, which side of the connection is missing, and the one action that clears it"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a proof of completion that reached its code by direct import while the code has
+    a runtime way in,
+  When the guard refuses,
+  Then the refusal names the code under proof and the way in that was not entered,
+    states that the proof side of the connection is the one missing, and gives driving
+    the same behaviour through the way in as the action that clears it.
+
+  Given code that no way of running the product reaches,
+  When the guard refuses,
+  Then the refusal names the unit, states that the code has no way in at all, and gives
+    giving it a way in, or recording an exemption, as the actions that clear it.
+
+  Given a registered capability that no automation runs,
+  When the guard refuses,
+  Then the refusal names the capability, states that the caller side is missing, and
+    gives adding the automation invocation as the action that clears it.
+
+  Given an automation invocation naming a capability that is not registered,
+  When the guard refuses,
+  Then the refusal names the automation script, the invocation, and the capability name
+    that does not exist, states that the capability side is missing, and gives
+    correcting the invocation as the action that clears it.
+
+  And in each of the four refusals the named action is one the reader can carry out on
+  the code, and disabling or skipping the guard is not offered as an action.
+depends_on:
+  - BO-2900e
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the first refusal cause."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the second refusal cause — the only one with two clearing actions."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the third refusal cause."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the fourth refusal cause."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns the guard's operator-facing output."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    refusal_message:
+      type: object
+      description: "Every refusal the guard emits is built from one record: { cause: 'proof_not_through_entry_point'|'no_entry_point_reaches_code'|'uncalled_capability'|'stale_invocation', item: str, missing_side: 'proof'|'entry_point'|'caller'|'capability', clearing_actions: [str] }. clearing_actions has exactly one entry for every cause except 'no_entry_point_reaches_code', which has exactly two."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "FOUR CAUSES, FOUR MESSAGES. Build each message from the record above so the item, the missing side and the clearing action are separate fields rather than free text. A single generic sentence with the item interpolated satisfies a rule-shaped requirement and leaves the reader working out which of four things went wrong — that is why the criteria enumerate."
+    - "Two of the four causes are produced in the done-proof path (scripts/ac_store/done_proof.py) and two in the reachability hook (scripts/commit_guardian/check_reachability.py). The message-composition function must be SHARED by both so a fifth cause cannot be added on one side with a bespoke message on the other; place it in the shared seam module and import it from both."
+    - "ONLY 'no_entry_point_reaches_code' MAY OFFER AN EXEMPTION. Offering one on the other three converts a five-minute fix into a permanent hole; the composer must enforce the one-versus-two clearing-actions cardinality structurally, not by convention."
+    - "NO BYPASS IN THE OUTPUT. The emitted text of every refusal must contain no skip flag, no --no-verify, and no environment-variable name that disables the guard. A blocking gate that documents its own off switch at the moment of maximum frustration is an advisory gate."
+    - "Every clearing action must be phrased as something the reader does to the CODE (drive the behaviour through the way in; give the unit a way in; add the automation invocation; correct the invocation), never as something they do to the guard or to the AC record."
+    - "Emit a link to the BO-2900e-4 refusal-to-action table with every refusal, so the destination is reachable from the output as that AC requires."
+delivers_to:
+  agent: documentation-expert
+  contract: "The four emitted refusal texts and their { cause, item, missing_side, clearing_actions } records — quoted verbatim by the BO-2900a-4, BO-2900b-4 and BO-2900d-4 guides and indexed by the BO-2900e-4 table, so the documentation paraphrases nothing."
+expects_from:
+  ac_id: BO-2900c-1
+  contract: "The four finding records the causes are derived from: BO-2900a-1's and BO-2900a-3's eligibility verdicts, BO-2900b-1's uncalled_capability_finding and BO-2900c-1's stale_invocation_finding, each already carrying the item, the surface/unit and the site."
+test_spec:
+  - name: test_direct_import_refusal_names_item_missing_side_and_single_action
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Drives the real guard into the direct-import refusal over a fixture and asserts against the TEXT IT EMITTED that it names the code under proof, the un-entered way in, the proof side as missing, and exactly one clearing action."
+  - name: test_no_way_in_refusal_is_the_only_one_offering_two_actions
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Drives the guard into all four refusals in turn and asserts the emitted text offers two clearing actions for the no-way-in cause and exactly one for each of the other three — the asymmetry asserted as a set, not per message."
+  - name: test_uncalled_capability_and_stale_invocation_refusals_name_the_opposite_missing_sides
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the third refusal names the capability and the caller side, and the fourth names the script, the invocation site, the unregistered capability name and the capability side — the two are not interchangeable."
+  - name: test_no_refusal_text_names_a_skip_flag_or_bypass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Across all four emitted refusals asserts the absence of 'SKIP=', '--no-verify' and any disabling environment-variable name."
+test_rationale: "Asserting that a message template exists in the source proves nothing about which template a run reaches — a cause wired to the wrong template, or to none, passes a template inventory and fails a real user. That is the identical failure this whole tree derives from, so putting a structural test on the remedy would be self-defeating. Every test therefore drives the real guard into the specific refusal over a real fixture and asserts against the text the run actually emitted. The second test is deliberately a whole-set assertion: the one-versus-two clearing-action asymmetry is the substance of the AC, and it is only visible when all four messages are compared in the same run."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The parent L1 asks for three things in every refusal — what is unreachable, which
+  side is missing, and the one action. This AC enumerates the four causes the tree can
+  actually produce and fixes all three for each, because "the message is clear" is not
+  testable and "these four messages say these things" is.
+
+  WHY ENUMERATE RATHER THAN STATE A RULE. A single rule ("every refusal names the item,
+  the side and the action") is satisfiable by one generic message with the item
+  interpolated, which is what a hurried implementation produces: four causes, one
+  sentence, and the reader still has to work out which of four different things went
+  wrong. Enumerating forces the four to differ where they genuinely differ.
+
+  THE SECOND CAUSE IS THE ONLY ONE WITH TWO ACTIONS, and that is deliberate rather than
+  sloppy. Code with no way in genuinely has two legitimate resolutions — give it one, or
+  exempt it — and hiding the second produces authors who cannot proceed and reach for
+  the skip flag. The other three have exactly one correct action, and offering an
+  exemption there would be actively harmful: it converts a five-minute fix into a
+  permanent hole. This asymmetry is the substance of the AC.
+
+  THE FINAL CLAUSE closes the most common convenience: printing the bypass flag in the
+  failure output. A blocking guard that documents its own off switch at the moment of
+  maximum frustration is an advisory guard. BO-2900b-1-i asserts this for the forward
+  refusal specifically; this AC generalises it to all four so a later cause does not
+  arrive without it.
+
+  Verification must EXECUTE the guard once per cause and assert against the text it
+  actually emitted. Asserting that a message template exists in the source proves
+  nothing about which template is reached — the failure mode this whole tree is derived
+  from.
+
+  2026-08-13 (IT PO enrichment). The four causes are produced on TWO different surfaces
+  (two in done_proof.py, two in the new check_reachability.py hook). The message
+  composer is therefore required to be a single shared function imported by both — this
+  is what makes BO-2900e-3's standing meta-check enforceable, since a fifth cause added
+  on either side must go through the same composer to be emitted at all.

@@ -1,0 +1,91 @@
+id: ACS-1100c-1
+components:
+  - ac_store
+title: "An unreconciled shortfall withholds the answer and names how many records are unaccounted for"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100c.yaml
+criteria: |
+  Given an answer measured against a total of 31 records that covered 0 of them and
+    declares no exclusion,
+  When the answer is about to be returned to its caller,
+  Then the result is withheld and a halt is reported that names the shortfall as 31
+    records unaccounted for, alongside the total of 31, the covered count of 0, and
+    the declared exclusion total of 0,
+  And the withheld result is not returned in any reduced, partial, or best-effort
+    form, so no caller can act on it,
+  And the same halt is raised for a partial shortfall: 148 covered plus 24 declared
+    exclusions against a total of 180 halts naming 8 records unaccounted for,
+  And an answer a caller deliberately narrowed does NOT halt, because its
+    out-of-scope records are a declared exclusion under a legitimate ground: a run over
+    3 staged records in a store of 2,784 reconciles as 3 covered plus 2,781 excluded
+    as outside the requested scope, is returned, and reports both the scope total and
+    the store total,
+  And a narrowed answer that reports only its scope total, without naming the scope
+    and without the store total alongside it, halts rather than passing, so scope
+    cannot be used to hide a denominator,
+  And a halt that asserts a shortfall exists without naming how many records are
+    unaccounted for does not satisfy this criterion,
+  And emitting a warning while still returning the result does not satisfy this
+    criterion.
+depends_on:
+  - ACS-1100c
+  - ACS-1100a-1
+  - ACS-1100b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: .pre-commit-config.yaml
+    relationship: related
+    status: exists
+    relevance: "BINDING scope evidence. All eight AC hooks resolve their work set from git diff --cached. Verified 2026-08-13: without the outside-the-requested-scope ground this halt fires on every commit against roughly 2,783 of 2,784 store records."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "BINDING in-component grounding failure. Given a DIRECTORY it prints 'No YAML files to validate.' and exits 0 — a zero-covered answer with no declared exclusion and no total, which is exactly the shortfall this halt must catch."
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: related
+    status: exists
+    relevance: "NON-BINDING illustration, out of this AC's component. Returns an empty event map for every epic, permanently and silently. Zero covered against a total of 31 with no declared exclusion is the same shape; fixing it is not a completion condition for this AC."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100c-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  HALT, not warn. A warning on an unreconciled gap is functionally identical to today's
+  behaviour, because the partial answer still flows downstream and the next verifier
+  still confirms it. Same product posture recorded for ACS-900 in the ac-store
+  PROJECT_CONTEXT: always block on a REAL violation.
+
+  The named count is the second load-bearing half. A halt that says only "coverage gap
+  detected" is as opaque as the silent pass it replaces.
+
+  SCOPE IS NOT A SHORTFALL (2026-08-13, expert review). As first written this halt
+  would have fired on EVERY commit: all eight AC pre-commit hooks scope to staged files
+  and "staged scope" was not on ACS-1100b's list of legitimate exclusion grounds, so a
+  three-file commit would have halted reporting ~2,781 records unaccounted for. Two
+  changes fix it without weakening the halt — "outside the requested scope" is now a
+  declared ground, and a scoped answer must report BOTH the scope total and the store
+  total. The defect this halt was written to catch survives intact: audit_ac_area.py
+  reporting "20 of 20" over a store of 2,784 still halts, because it declares no scope
+  and reports no store total.
+
+  Reconciliation arithmetic comes from ACS-1100b-1: covered + declared exclusions must
+  equal the total; the residue is the shortfall. The legitimate no-halt cases are in
+  ACS-1100c-2; failures inside the coverage machinery itself are in ACS-1100c-1-i.

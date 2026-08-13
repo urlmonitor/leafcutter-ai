@@ -25,6 +25,9 @@ covered_by:
   - BP-100b-5
   - BP-100b-6
   - BP-100b-7
+  - BP-100k-1
+  - BP-100k-2
+  - BP-100k-3
 implemented_by:
   - templates/scripts/commit_guardian/check_output_drift.py
   - templates/commit-guardian/commit_guardian.json

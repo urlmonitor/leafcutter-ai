@@ -1,0 +1,157 @@
+id: INF-500d-4
+components:
+  - infrastructure
+  - feedback_collector
+title: "A report written inside a temporary workspace is still readable after that workspace is gone"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a drive is running inside a temporary per-drive workspace that will be
+    deleted when the drive finishes,
+  When an agent in that drive files a report and the write succeeds,
+  And the temporary workspace is subsequently removed,
+  Then the report is still readable afterwards from the durable location that
+    outlives the workspace,
+  And the record identifier cited in the drive's ticket resolves to that stored
+    record.
+
+  Given reports are filed from two different temporary workspaces belonging to two
+    different drives of the same project,
+  When both workspaces have been removed,
+  Then both sets of reports are readable from the one durable location, without the
+    later drive having overwritten or displaced the earlier drive's records.
+
+  Given the same drive also reads its own configuration and also runs commit-time
+    guards,
+  When the durable report location is determined,
+  Then the configuration still resolves to the workspace the drive is actually
+    running under, and the commit-time guards still resolve to the tree they are
+    judging,
+  And the durable report location is determined independently of both, resolving to
+    the enduring project location rather than to the workspace root.
+
+  Given the operational log directory also holds the agent-telemetry log and the
+    knowledge-emission log, which are written by the same drives with the same
+    workspace-relative lifetime and are destroyed the same way,
+  When the durable location is adopted for the report sink,
+  Then the same durable location is adopted for every log in that directory, so the
+    directory is not split across a disposable root and an enduring one,
+  And a reader looking for any of those logs after the workspace is gone finds them
+    all in one place.
+depends_on:
+  - INF-500d
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Rule (a). Approved and correct: CONFIG must resolve to the worktree's OWN .leafcutter/. Unchanged by this AC and must not be folded into the sink resolver."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Rule (b). Approved and correct FOR GUARDS: one shared resolver based on the worktree toplevel, scoped to the commit_guardian guard set. Adopting it for the record sink would preserve this very defect — the worktree toplevel is the directory that gets deleted."
+  - path: docs/acceptance-criteria/build-orchestration/BO-100-smart-sequencing/BO-100d-1a.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTION RISK for the fourth scenario. Approved (work_status: todo) and it pins the telemetry sink by the relative path string debugging/logs/agent_telemetry.jsonl in its criteria and again in its it_requirements, as do its siblings BO-100d-1b and BO-100d-2a. Relocating the directory changes what that relative path resolves to. Reconcile with their owner before implementing; do NOT silently re-point their probe."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-500d-4-i
+implemented_by: []
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary
+notes: |
+  ==========================================================================
+  LOAD-BEARING CONSTRAINT — this AC is its single home. The parent L1
+  (INF-500d) carries a one-line pointer here rather than a second copy.
+  IT PO: copy this block into this AC's it_requirements when enriching. A BA
+  or IT PO who "unifies the resolvers" here will faithfully re-create the
+  defect.
+  ==========================================================================
+  The sink resolves into the per-drive worktree, which is deleted at the end
+  of the drive, so the records go with it.
+
+  THREE resolution rules coexist DELIBERATELY. They are not duplication:
+
+    (a) CONFIG  -> the worktree's OWN .leafcutter/ directory.
+        Required by INF-100c-1-i (approved). Correct, and unchanged. A drive
+        must read the configuration it is actually running under.
+
+    (b) COMMIT GUARDS -> the worktree root, via `git rev-parse --show-toplevel`.
+        Required by GE-113c-1-iv (approved). Correct for guards, which must
+        judge the tree they are committing.
+
+    (c) DURABLE RECORD SINK -> the MAIN CLONE, i.e. the shared git directory
+        that survives worktree removal (`git rev-parse --git-common-dir`),
+        NOT the worktree toplevel.
+
+  Rule (b) returns the worktree root — the exact directory that gets deleted.
+  Adopting the shared guard resolver for the sink therefore PRESERVES this
+  bug rather than fixing it. Any L2 that collapses (a), (b) and (c) into one
+  resolver is a REGRESSION dressed as a cleanup and must be rejected in
+  review. State the required behaviour as a testable invariant: a record
+  written from inside a worktree is still readable after that worktree has
+  been removed.
+  ==========================================================================
+
+  MEASUREMENT — approximate, re-measure before quoting. Counted in this workspace
+  on 2026-08-13: about 2,290 distinct record identifiers are cited across the ticket
+  store; 131 of them are present in the main clone's record sink, and about 297 are
+  present if every sink discoverable on disk (main clone, deployed tree, and two
+  surviving worktrees) is searched together. That is roughly 87-94% of cited records
+  unresolvable, depending on how hard the reader is willing to look — and the reader
+  should not have to look in four places at all, which is the second scenario. These
+  figures are deliberately in the notes and not in the criteria: they move every
+  drive, and a criterion that quotes a live count fails for reasons unrelated to the
+  behaviour under test.
+
+  SCOPE — THE DIRECTORY, NOT THE ONE FILE (fourth scenario). The report sink shares
+  its directory with the agent-telemetry log and the knowledge-emission log. All
+  three are written by the same drives, resolve the same workspace-relative way, and
+  are destroyed by the same workspace removal. Fixing only the report sink would
+  split one directory across two roots and leave two of the three logs still being
+  lost — and would guarantee a second, near-identical AC later. The scenario is
+  therefore written for the directory.
+
+  This is the one place where this AC can contradict already-approved work, so state
+  it plainly rather than discovering it in review: BO-100d-1a, BO-100d-1b and
+  BO-100d-2a (all readiness: approved, work_status: todo) name the telemetry sink by
+  the relative path string debugging/logs/agent_telemetry.jsonl in their criteria and
+  it_requirements, and their pre-drive probe appends to it from the worktree. Moving
+  the directory changes what that string resolves to. Two consequences for whoever
+  enriches this: (1) the durable location must still be probe-able before a drive
+  starts, or BO-100d's pre-drive gate becomes meaningless; (2) if their owner
+  declines the directory-wide move, narrow the fourth scenario to the report sink and
+  record the split explicitly — do not leave it ambiguous. BO-2400d-1 imposes no path
+  constraint of its own and is not an obstacle.
+
+  Reviewer note: GE-113c-1-iv's mandate is scoped to the commit_guardian guard
+  set. The record sink is not a guard and is therefore outside that mandate —
+  but the sink's resolver must not be presented as a fourth divergent copy of
+  the guard resolver either. It is a different rule serving a different
+  lifetime, and the third scenario above exists so that a reviewer can prove
+  all three rules still hold simultaneously.
+
+  Durability here means durability of LOCATION, not of version control: the
+  sink path is git-ignored, so the records are never carried to safety by a
+  commit. Where they are written is the only thing that keeps them.

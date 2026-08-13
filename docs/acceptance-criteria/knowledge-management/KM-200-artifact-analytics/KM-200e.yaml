@@ -1,0 +1,47 @@
+id: KM-200e
+title: "The numbers are already there, not written up by hand once a week"
+component: knowledge-management
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  Open the project's own web view and the current figures are waiting for you.
+
+  Answering "are we keeping up?" takes opening a page, not assembling a report.
+  The figures sit alongside the project's other views and move with the project
+  itself, and each one says which period it covers and when it was taken, so
+  nobody has to guess how fresh a number is.
+depends_on:
+  - KM-200
+doc_links:
+  - path: leafcutter-web/app
+    relationship: related
+    status: exists
+    relevance: "The existing web views (about, architecture, atlas, coverage, flows, now, pipeline, roadmap) this joins rather than replaces."
+documentation_triggers:
+  - how-to
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: ui
+risk_surface: internal
+notes: |
+  Idea stub — covered_by deliberately empty (see KM-200 notes). Scope guard for
+  whoever picks this up: loaders for the requirements store, tickets, tests,
+  components, agents, activity, coverage, the graph, the roadmap, traceability,
+  flows, prompts and the repo ALREADY exist under leafcutter-web/lib/data/. This
+  child is about surfacing and freshness, not about re-reading the repository —
+  an L2 that re-implements repository access here should be rejected. An open
+  question left for decomposition: whether this is a new view or an extension of
+  the existing "now" view.

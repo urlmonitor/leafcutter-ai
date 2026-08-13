@@ -12,8 +12,6 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
->
-> Generated: 2026-08-13 21:48 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -34,6 +32,7 @@ task, then pull only those files.
 | code review | [docs/architecture/components/code-review.md](docs/architecture/components/code-review.md) | Architecture of the Fowler code-smell review capability: the developer-facing /code-smell-review flow, the shared core review method plus the two bucket catalogues, the two cost-tiered leaf reviewers (Sonnet + Opus), and the top-level orchestration that fans them out in parallel and merges their findings into one severity-ranked report. |
 | commit guardian | [docs/architecture/components/commit-guardian.md](docs/architecture/components/commit-guardian.md) | Pre-commit hook orchestration system that enforces code quality, ADR coverage, component integrity, and structural rules before every commit lands. |
 | doc compliance | [docs/architecture/components/doc-compliance.md](docs/architecture/components/doc-compliance.md) | Documentation compliance verification system that enforces frontmatter presence, description fields, doc-length limits, and coverage requirements across all project documentation. |
+| epic retrospective | [docs/architecture/components/epic-retrospective.md](docs/architecture/components/epic-retrospective.md) | Post-epic fact extraction subsystem. Reads a completed epic's ticket frontmatter, git history, and comment stream to produce a structured, machine-readable facts blob that grounds the retrospective-agent's narrative in measured evidence rather than recollection. |
 | feedback collector | [docs/architecture/components/feedback-collector.md](docs/architecture/components/feedback-collector.md) | Structured feedback collection system that aggregates agent quality signals into JSONL logs for retrospective analysis and continuous improvement. |
 | finalize | [docs/architecture/components/finalize.md](docs/architecture/components/finalize.md) | The finalize-feature workflow: pre-merge test baseline capture, PR merge gating, push-before-merge sync, main sync, and ticket/epic closure. |
 | glossary | [docs/architecture/components/glossary.md](docs/architecture/components/glossary.md) | Project terminology registry with automated coverage checks that ensure novel jargon is triaged and documented consistently across all project artifacts. |
@@ -149,6 +148,7 @@ task, then pull only those files.
 | ac schema | [docs/reference/ac-schema.md](docs/reference/ac-schema.md) | Field-by-field reference for AC YAML files, the hierarchical ID format and parent derivation algorithm, status lifecycle, and pre-commit hooks that enforce the AC store at commit time. |
 | agent teams constraints | [docs/reference/agent-teams-constraints.md](docs/reference/agent-teams-constraints.md) | Reference: Claude Code Agent Teams Constraints |
 | agent template frontmatter | [docs/reference/agent-template-frontmatter.md](docs/reference/agent-template-frontmatter.md) | Overview of Reference: Agent Template Frontmatter Fields. |
+| artifact knowledge graph data map | [docs/reference/artifact-knowledge-graph-data-map.md](docs/reference/artifact-knowledge-graph-data-map.md) | Node table, edge table, trust ratings, gaps, and graph-build guidance for the leafcutter-ai artifact knowledge graph. Foundation for queries on AC implementation status, test coverage, and product-truth linkage. |
 | build telemetry | [docs/reference/build-telemetry.md](docs/reference/build-telemetry.md) | Lookup reference for the build telemetry JSONL record schema, the lane comparison aggregate fields, the emitter API, and the fail-loud sink behavior. |
 | claude code hooks | [docs/reference/claude-code-hooks.md](docs/reference/claude-code-hooks.md) | Reference guide for Claude Code PreToolUse and PostToolUse hooks — hook types, registration format, exit-code contract, and the fail-open convention. |
 | code smell finding anatomy | [docs/reference/code-smell-finding-anatomy.md](docs/reference/code-smell-finding-anatomy.md) | All twelve Modern-12 Fowler code smells with their bucket grouping, primary refactorings, and the exact finding format produced by the review-for-code-smells skill family. |

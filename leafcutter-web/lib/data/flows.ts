@@ -4,6 +4,8 @@ import { acById } from "./ac-store";
 import { deriveImplSummary } from "./flow-impl-summary";
 import type {
   AcRef,
+  ArtifactGraphEdge,
+  ArtifactGraphNode,
   Flow,
   FlowAppearance,
   FlowBranch,
@@ -23,6 +25,7 @@ const PT_DIR = "docs/product-truth";
 const FLOWS_DIR = "docs/product-truth/flows";
 const MOCK_DIR = "docs/product-truth/mock-data";
 const MOCKUP_DIR = "docs/product-truth/mockups";
+const ARTIFACT_GRAPH_FILE = "docs/reference/artifact-knowledge-graph.graph.json";
 
 function asArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
@@ -244,6 +247,51 @@ export function getFlows(): Flow[] {
     if (flow) flows.push(flow);
   }
   flows.sort((a, b) => a.id.localeCompare(b.id));
+
+  // Load the authored artifact knowledge-graph as a synthetic architecture-kind Flow.
+  // Lives under docs/reference/ (NOT docs/product-truth/flows/) because it uses
+  // a nodes/edges schema that the flow.schema.json validator would reject.
+  const artifactRaw = readFileSafe(repoPath(ARTIFACT_GRAPH_FILE));
+  if (artifactRaw) {
+    try {
+      const adoc = JSON.parse(artifactRaw) as Record<string, unknown>;
+      if (adoc.id && adoc.kind === "architecture") {
+        const artifactFlow: Flow = {
+          id: String(adoc.id),
+          component: "artifact-knowledge-graph",
+          product: null,
+          name: String(adoc.title ?? adoc.id),
+          summary: String(adoc.summary ?? ""),
+          kind: "architecture" as FlowKind,
+          source: "real" as FlowSource,
+          level: "journey" as FlowLevel,
+          // "built": this map describes the LIVE repo's artifact schema. It was
+          // previously "spec", which triggered a "the system it maps does not
+          // exist yet" banner — false for every clause.
+          realization: "built" as FlowRealization,
+          status: "active",
+          readiness: "approved",
+          entities: [],
+          mockDataRef: null,
+          steps: [],
+          branches: [],
+          scenarios: [],
+          implSummary: deriveImplSummary({ steps: [], branches: [] }, null),
+          filePath: ARTIFACT_GRAPH_FILE,
+          graphNodes: Array.isArray(adoc.nodes)
+            ? (adoc.nodes as ArtifactGraphNode[])
+            : [],
+          graphEdges: Array.isArray(adoc.edges)
+            ? (adoc.edges as ArtifactGraphEdge[])
+            : [],
+        };
+        flows.push(artifactFlow);
+      }
+    } catch {
+      console.warn("[flows] Failed to parse artifact-knowledge-graph.graph.json");
+    }
+  }
+
   _flowCache.set(root, flows);
   return flows;
 }

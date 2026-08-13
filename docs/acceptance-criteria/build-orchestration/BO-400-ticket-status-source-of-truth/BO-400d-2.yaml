@@ -1,0 +1,167 @@
+id: BO-400d-2
+components:
+  - build_orchestration
+  - ticket_lifecycle
+title: "Each failure appends an immutable entry to the ticket's failure history, and that history survives a supervisor restart"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose frontmatter `agents:` map records `pr-reviewer: needed`
+    and which carries no `prior_failures:` field at all,
+  When pr-reviewer returns a blocker and the ticket is written with
+    `pr-reviewer: failed` at 2026-08-12 09:15,
+  Then a `prior_failures:` list is created holding one entry carrying the agent
+    name `pr-reviewer`, the timestamp `2026-08-12 09:15` in the same
+    `YYYY-MM-DD HH:MM` form the `## Sign-offs` checklist already uses, and a
+    `rule_id` naming what was caught,
+  And when pr-reviewer is re-dispatched and signs off, the frontmatter terminal
+    state becomes `pr-reviewer: signed_off` while that entry is still present
+    with all three of its values unchanged,
+  And when pr-reviewer fails a second time on the same ticket at 2026-08-12
+    11:40, a second entry is appended rather than the first being replaced, so
+    the list holds 2 entries in failure order,
+  And after every one of those writes the entries recorded earlier are still
+    present, in their original order, with their original agent, timestamp, and
+    rule_id values.
+
+  Given the supervisor process that wrote pr-reviewer's 2026-08-12 09:15 entry
+    exits before the ticket reaches its terminal state,
+  When a second, freshly spawned supervisor reads the same ticket from disk,
+    re-dispatches pr-reviewer, and that attempt passes,
+  Then the entry written by the first supervisor is still in the ticket's
+    `prior_failures:` list, read from the ticket file and not from any counter
+    held in the second supervisor's memory,
+  And the number of attempts pr-reviewer took on the ticket is reported as 2,
+    computed as the count of its `prior_failures:` entries plus one when its
+    terminal state is `signed_off`,
+  And no separate attempt-count field is written to the ticket, so the ticket
+    holds no second figure that can disagree with the list,
+  And a third process reading the same ticket computes the same figure of 2.
+
+  Given a failure for which no rule_id is available — either because no rule_id
+    in the vocabulary BO-2800b defines applies to the gate finding, or because
+    the failure produced no gate finding at all, as when a coder's tests stayed
+    red,
+  When the entry is appended,
+  Then its rule_id is written in the unclassified namespace as the word
+    "unclassified" followed by the name of the emitting gate, and, for a
+    failure with no emitting gate, followed by the name of the failing phase
+    agent instead,
+  And the entry is appended rather than omitted, whatever its rule_id reads.
+
+  Given a ticket that carries no `prior_failures:` field,
+  When a reader asks how many attempts each of its agents took,
+  Then every agent on that ticket reports 0 failures and an empty failure
+    history,
+  And the ticket is accepted as valid rather than reported as malformed for
+    lacking the field.
+depends_on:
+  - BO-400d
+doc_links:
+  - path: docs/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "§4 Failed Path writes the `failed` terminal state; the append rule has to be stated in the same file, since that skill is what every phase agent reads."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "States that today's retry counter is per-supervisor-invocation and is NOT persisted — the transient counter this AC replaces."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2800-gate-value-measurement/BO-2800b-4.yaml
+    relationship: describes
+    status: exists
+    relevance: "Defines the unclassified namespace spelling this AC consumes: \"unclassified\" followed by the emitting gate name."
+  - path: docs/product-truth/flows/leafcutter/how-acs-are-built.flow.json
+    relationship: implements
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: absorbed BO-400d-1 (crash-and-resume persistence); dropped the separate attempts field; pinned the unclassified/<gate> spelling; stated the non-gate and absent-field cases."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: internal
+notes: |
+  Honours the parent's USER-CONFIRMED product decision: `failed -> signed_off`
+  STAYS LEGAL. This AC's second clause is that exact transition, and it must
+  keep working — the entry survives it, the transition does not. Do not "fix"
+  this by making the transition illegal: agents that cannot progress past a
+  `failed` value stop writing `failed` at all, which destroys the only failure
+  signal that survives today. Overwriting, not the transition, is the defect.
+
+  ABSORBED BO-400d-1 (2026-08-13). BO-400d-1 specified the persisted attempt
+  count as a separate AC. It was folded in here and its file deleted, for two
+  reasons:
+    - SAME TWO FILES. Both landed in `templates/skills/signoff/SKILL.md` and the
+      ticket frontmatter schema. As separate ACs they collided on
+      `files_touched` and forced serialisation for no analytical gain.
+    - NO SEPARATE `attempts:` FIELD. The count is derivable —
+      `len(prior_failures[agent]) + (1 if terminal == signed_off else 0)` — and
+      writing it as its own field creates two figures that must agree, i.e. a
+      NEW parity surface, in a tree whose entire defect is surfaces disagreeing.
+      The criteria therefore forbid the second field explicitly.
+  What was kept verbatim is the crash-and-resume scenario, and it is the
+  load-bearing part: `templates/skills/building-epics/SKILL.md` states outright
+  that today's retry counter "is per-supervisor-invocation; it is NOT
+  persisted... If a supervisor crashes, the counters reset." A scenario driven
+  entirely inside ONE supervisor process would pass against that in-memory
+  counter and prove nothing. Two invocations with a crash between them is what
+  makes the AC discriminate between a persisted history and today's transient
+  one. Any future edit that collapses it to a single invocation guts the AC.
+
+  SCOPE BOUNDARY on rule_id — the rule_id VOCABULARY IS NOT DEFINED HERE. It is
+  owned by BO-2800b, which requires each gate to declare the problem kinds it
+  can report. This AC only CONSUMES that vocabulary.
+
+  UNCLASSIFIED SPELLING IS SETTLED, do not re-open: BO-2800b-4 already defines
+  the sentinel as the word "unclassified" followed by the emitting gate name
+  (`unclassified/<gate>`). This AC adopts that spelling rather than a bare
+  `unclassified`. An earlier draft of this AC hedged with "if BO-2800b later
+  defines its own sentinel, this AC adopts it" — that hedge is removed, because
+  b-4 defines it now.
+
+  NON-GATE FAILURES — ANALYST CALL, flagged for the IT PO. BO-2800b-4 is scoped
+  to findings emitted by a GATE. A coder whose tests stayed red emits no gate
+  finding at all, so `<gate>` has no value to take. The criteria fill that
+  position with the failing phase agent's name (`unclassified/python-coder`).
+  This keeps one sentinel shape across both cases; if BO-2800's owner prefers a
+  distinct namespace for agent-originated failures, this is the clause to amend
+  — but the record must never be dropped for want of a rule_id, which would
+  recreate the defect this L1 exists to fix one level down.
+
+  ABSENT FIELD IS BENIGN, verified 2026-08-13: `ticket_frontmatter_guard.py`
+  validates against a REQUIRED_FIELDS allowlist and does not reject unknown or
+  missing optional keys, so adding `prior_failures:` does not invalidate the
+  ~1,169 tickets that lack it. The last scenario pins that down as a
+  requirement rather than an accident: absent means zero attempts and an empty
+  history, not an error.
+
+  BOUNDARY: append-only history sits ALONGSIDE the terminal state. Current state
+  still lives in frontmatter (BO-400 unchanged), and no folder-move semantics
+  are introduced.
+
+  ENFORCEMENT: this AC states the write rule. BO-400d-3 makes it enforceable at
+  commit time rather than advisory.
+
+  OPEN — WRITE SURFACE NOT YET CHOSEN BY THE USER. These criteria place
+  `prior_failures:` in git-tracked ticket frontmatter, matching where the
+  terminal state already lives. The user has not yet decided whether attempt
+  records belong on the git-tracked ticket or in a durable JSONL sink. If the
+  sink is chosen, the shape of an entry (agent, timestamp, rule_id), the
+  append-only rule, the derived-count rule and the absent-means-zero rule all
+  carry over unchanged — only the location does not. Do not implement the
+  location before that decision lands.

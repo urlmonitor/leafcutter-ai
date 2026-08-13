@@ -1,0 +1,70 @@
+id: BO-2800b
+components:
+  - build_orchestration
+  - review_system
+title: "Every problem a check catches is counted, not just described"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Caught problems become countable instead of disappearing into prose.
+
+  When a check catches something, it is recorded as an identifiable, categorised
+  problem rather than a paragraph of English — so the same problem recurring
+  across different pieces of work is recognisable as one recurring problem, and
+  you can finally see what each check actually finds and how often.
+depends_on:
+  - BO-2800
+  - BO-2800a
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2800b-1
+  - BO-2800b-2
+  - BO-2800b-3
+  - BO-2800b-4
+  - BO-2800b-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target:
+  - pipeline
+  - prompt
+risk_surface: internal
+notes: |
+  THE DEFECT: a defect caught by a check exists only as English prose. No
+  identifier, no category, no cross-ticket count. Evidence supplied by the user:
+  the same defect fired four times within a single epic and was counted zero
+  times.
+
+  THE DEDUP KEY IS THE HARD PART, and it must be GATE-DECLARED. Each check
+  declares the vocabulary of problem kinds it is capable of reporting, and every
+  finding it emits is labelled from that vocabulary. Do not attempt to infer
+  categories from the prose after the fact — a text-similarity clusterer is a
+  different (and much weaker) feature, and would leave the count as untrustworthy
+  as the prose it replaced. If an L2 proposes free-text clustering as the dedup
+  mechanism, reject it.
+
+  Because each check declares its own vocabulary, this L1 has a PROMPT surface as
+  well as a code surface: the gate agents' templates must state their vocabulary.
+  Expect a mixed python-coder / llm-expert split at L2 — see the IT-PO
+  "agent assignment by technical surface" convention.
+
+  DEPENDS ON BO-2800a for the record schema: a's mining pass establishes what a
+  recorded finding looks like, and b extends it with identity and category rather
+  than inventing a parallel format.

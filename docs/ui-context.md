@@ -1,4 +1,7 @@
 ---
+title: UI Context — pointers to the app's real design system
+components:
+- frontend_coding
 filled: true
 stack:
   framework: next
@@ -35,6 +38,7 @@ created: '2026-08-12'
 last_updated: '2026-08-12'
 type: tutorial
 status: active
+description: Overview of UI Context — pointers to the app's real design system.
 ---
 # UI Context — Leafcutter Atlas
 

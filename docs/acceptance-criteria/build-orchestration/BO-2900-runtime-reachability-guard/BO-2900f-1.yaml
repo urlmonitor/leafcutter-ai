@@ -1,0 +1,97 @@
+id: BO-2900f-1
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A requested gate that did not run still records a skipped outcome naming the reason"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a work item requests three quality gates — gate A, gate B and gate C —
+    And gate B is not executed because a project-level setting that governs it is
+      switched off,
+    And gate C is not executed because a precondition it needs is absent,
+    And gate D exists in the project but this work item did not request it,
+  When the work item's gate results are recorded,
+  Then the recorded results contain an entry for gate B whose outcome is `skipped`
+    and whose reason names the setting that switched it off and where that setting
+    is read from,
+    And an entry for gate C whose outcome is `skipped` and whose reason names the
+      absent precondition,
+    And an entry for gate A carrying the outcome gate A actually produced,
+    And NO entry for gate D, because a gate the work item never requested is not a
+      gate that failed to run.
+depends_on:
+  - BO-2900f
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Where a ticket's requested gates are read and phases are dispatched — the producer of the record."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The per-phase outcome surface a gate result is written to. Note its status enum is {not_needed, needed, signed_off, failed} — `skipped` is a RECORD outcome introduced here, not a member of that enum."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The workflow-step analogue (done). Reuse its record shape — one outcome per item, reason carried with the skip — do not fold the two together."
+assigned_agent: null
+estimated_complexity: null
+it_requirements: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: added the `skipped` term-collision note (BO-2100b-2 uses the word behaviourally, this tree uses it as a record outcome)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The core positive behaviour of BO-2900f. Two analytical decisions the BA made
+  here that the IT PO and implementer must preserve:
+
+  - THE REQUESTED SET IS THE DENOMINATOR. The record is derived from the gates the
+    work item ASKED FOR, not from the gates that were dispatched. Today the two
+    are conflated: a gate that config removes from the dispatch set disappears
+    from the record entirely, which is exactly the defect. The requested set must
+    therefore be captured BEFORE the enablement decision filters it.
+  - GATES NOBODY REQUESTED PRODUCE NO ENTRY (the gate D clause). Without this
+    negative clause the rule degenerates into recording every gate in the project
+    on every work item, which buries the signal it is meant to raise. "Skipped"
+    means "you asked and it did not happen", not "it did not happen".
+
+  TERM COLLISION — `skipped` NOW MEANS TWO DIFFERENT THINGS. Read this before
+  implementing or writing tests:
+    - BEHAVIOURAL sense (pre-existing, approved): BO-2100b-2 says that when a
+      ticket does not opt in, "the live-app check is skipped for that ticket".
+      There, "skipped" describes the ABSENCE of an action.
+    - RECORD sense (introduced by this tree): an entry whose outcome VALUE is
+      `skipped`, meaning "you requested this gate and it did not run, here is
+      why".
+  The two are not the same and the gate D clause depends on keeping them apart:
+  the behavioural state BO-2100b-2 describes — a gate the work item never
+  requested — must produce NO record at all, precisely NOT a record whose outcome
+  reads `skipped`. An implementer who reads the two senses as one will emit a
+  `skipped` entry for every unrequested gate on every work item and will believe
+  BO-2100b-2 required it.
+
+  Boundary: BO-2900e governs the QUALITY of a failure message that IS emitted;
+  this AC governs the EXISTENCE of a record where today there is none. The reason
+  string here only has to name the disabling condition and its source — do not
+  re-specify message quality at this level.
+
+  OPEN — RECORD SURFACE NOT YET CHOSEN BY THE USER. These criteria say "the
+  recorded results" without naming where they live; the user has not decided
+  between the git-tracked ticket (`## Comments` / the phase-outcome surface) and
+  a durable JSONL sink. Every clause above — the denominator rule, the reason
+  content, the gate D negative — holds either way. Do not implement the surface
+  before that decision lands.

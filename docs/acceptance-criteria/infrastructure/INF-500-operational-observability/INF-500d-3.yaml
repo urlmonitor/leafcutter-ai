@@ -1,0 +1,131 @@
+id: INF-500d-3
+components:
+  - infrastructure
+  - feedback_collector
+title: "A report that could not be written says which report failed and why"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent files a report and the caller cannot confirm the report landed,
+  When the caller records the failure marker for that submission,
+  Then the marker names the reason, drawn from a closed set that distinguishes at
+    minimum these five cases:
+      - the submitter was not permitted to write the category;
+      - the submission was refused as malformed before anything was written (an
+        unrecognised category, a badly shaped tag, or a badly shaped reference list);
+      - the submission facility itself was unavailable (its entry point is missing, or
+        a library it depends on is not installed);
+      - the destination could not be written;
+      - the report WAS written successfully but the caller did not capture the record
+        identifier,
+  And the marker also names the category the failed report was destined for,
+  And the agent's verdict is still delivered — the failed write never aborts or
+    downgrades the sign-off it accompanied.
+
+  Given a marker whose recorded reason is "the report was written but the identifier
+    was not captured",
+  When anything that retries, holds, or re-files failed reports processes that marker,
+  Then the report is NOT held and NOT re-filed, because a stored record for it already
+    exists,
+  And the marker instead reports that the record exists but is uncited,
+  So that the one failure mode in which nothing was actually lost cannot be turned
+    into a duplicated record.
+
+  Given five failures occur in one run, one of each reason in the closed set,
+  When an operator reads the accumulated markers afterwards,
+  Then the five are distinguishable from one another by reason without inspecting any
+    other artefact.
+depends_on:
+  - INF-500d
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Consumes this reason set. The second scenario here is the contract INF-500d-5's hold queue depends on: only reasons that mean 'nothing was written' may enter the queue, or the flush produces duplicates and breaks INF-500d-5's exactly-once guarantee."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "BOUNDARY. Approved and done. It requires the sign-off to continue after a failed submit and to record a marker; it is silent on the marker's content. This AC adds the reason to that marker and does not weaken the continue-anyway guarantee."
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Covers ONE submit-side message (config not found). This AC requires the caller-visible marker to name the cause in every case. Complementary, not duplicative."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400d-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "BOUNDARY. Done. Requires a WARNING plus a failed-write count for the TELEMETRY sink, a different sink from the report sink this AC governs."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  FAIL-OPEN IS CORRECT AND MUST BE PRESERVED. A report write must never block or
+  change a verdict; the sign-off protocol's "do not abort sign-off" rule stands
+  unchanged. This AC narrows the posture from fail-open-and-silent to
+  fail-open-and-legible: same non-blocking behaviour, but the marker carries a
+  reason. Any implementation that satisfies this AC by making a failed write fatal
+  is a regression and must be rejected in review.
+
+  THE FIFTH REASON IS THE DOMINANT ONE AND WAS MISSING FROM THE FIRST DRAFT. An
+  earlier draft closed the set at three reasons: not-an-allowed-writer, facility
+  missing, destination unwritable. The submission script's own DECISION HISTORY
+  entry of 2026-05-30 records that the observed failure markers were caused by
+  something else entirely — an EMPTY STDOUT CAPTURE ON A WRITE THAT SUCCEEDED. That
+  is precisely why the sidecar identifier file exists as a fallback. A three-reason
+  set has nowhere to put the most common real case, and — worse — feeding it into
+  INF-500d-5 would classify an already-written record as failed, hold it, flush it,
+  and produce a duplicate, contradicting that AC's exactly-once guarantee. Hence
+  both the fifth reason and the second scenario, which forbids it entering the hold
+  queue.
+
+  THE SECOND REASON IS ALSO NEW, AND IS NOT COSMETIC. Measured on 2026-08-13, the
+  submission path exits with a failure status from at least four distinct
+  input-validation paths (unrecognised category, malformed tags, malformed reference
+  list) and from a missing YAML library, none of which fit "not permitted",
+  "facility unavailable", or "destination unwritable". Any of them would have to be
+  mis-filed under one of the other reasons, which is how a closed set stops being
+  informative. The reason names above are stated behaviourally on purpose; the exact
+  identifiers are for technical enrichment to fix.
+
+  MEASUREMENT (moved out of the criteria on 2026-08-13 — a criterion containing a
+  live count is untestable by construction, because the count changes every drive).
+  As measured in this workspace on 2026-08-13: approximately 780 accumulated failure
+  markers across the ticket store, none carrying a reason and therefore mutually
+  indistinguishable. Treat the figure as an order-of-magnitude motivation, not as an
+  assertion; re-measure before quoting it anywhere that matters.
+
+  BOUNDARY — DO NOT AMEND, FLAGGED FOR SOMEONE ELSE. BO-2000a-3 (approved, done)
+  specifies an undifferentiated marker BY DESIGN and BO-2400d-1-i (done) covers the
+  telemetry sink, not this one. Neither is re-opened here. If the reviewer decides
+  BO-2000a-3's marker wording should be tightened to reference the reason code,
+  that is a separate amendment for its owner to make; this AC is written so that no
+  such amendment is required for it to be implementable.
+
+  Detection of an accumulating failure RATE is deliberately not in this AC — see
+  INF-500d-5, which places that gate at the workspace-removal boundary rather than
+  adding a per-ticket blocker.

@@ -1,0 +1,111 @@
+id: ACS-1100d-2
+components:
+  - ac_store
+  - testing_quality
+title: "A verdict cannot claim more than the weakest coverage it consumed"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100d.yaml
+criteria: |
+  Given a verifier that consumed one answer covering 40 records of 180 and one
+    covering 180 of 180, and that found no violation in what it examined,
+  When it reports its verdict,
+  Then the verdict is stated as clear for 40 of 180 — the weakest coverage figure
+    among its inputs — and not as an unqualified all-clear,
+  And an unqualified all-clear, meaning a pass verdict that carries no coverage figure
+    at all, is available only when EVERY consumed answer reported its covered count
+    equal to its total with no declared exclusions, no records the measurement could
+    not classify, and no shortfall,
+  And an answer that reconciled by DECLARING exclusions does not unlock an unqualified
+    all-clear, even though it passed ACS-1100c-2 without a halt: the answer of 148
+    covered plus 24 plus 8 declared exclusions against 180 reconciles and is returned,
+    and a verdict over it is stated as clear for 148 of 180 carrying those exclusion
+    grounds — reconciling and being all-clear-eligible are different things,
+  And the same holds at the limit case ACS-1100c-2 admits: an answer of 0 covered with
+    all 180 declared excluded with grounds passes reconciliation and does not halt, yet
+    a verdict over it is stated as clear for 0 of 180 and can never be an unqualified
+    all-clear, because the verifier examined nothing,
+  And where any consumed answer reported one or more records the measurement could not
+    classify under ACS-1100c-1-i, no unqualified all-clear is available whatever the
+    counts reconcile to, and the verdict names that count alongside its coverage figure,
+  And where any consumed answer halted under ACS-1100c-1 or under the dropped-coverage
+    halt of ACS-1100d-1, the verifier emits no pass verdict at all rather than a pass
+    qualified by a coverage figure,
+  And a verifier that reports an unqualified all-clear over a consumed answer covering
+    40 of 180 does not satisfy this criterion, whatever its own examination found.
+depends_on:
+  - ACS-1100d
+  - ACS-1100d-1
+  - ACS-1100c-1-i
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "BINDING in-component grounding failure: a directory argument yields 'No YAML files to validate.' and exit 0 — an unqualified all-clear over a covered count of zero, which this cap forbids."
+  - path: scripts/agent-health/generate_health_report.py
+    relationship: related
+    status: exists
+    relevance: "NON-BINDING illustration, out of this AC's component (reads agent_telemetry.jsonl, owned by agent_telemetry). A summary reporting a 100% success rate over a population that omits nine agents entirely is the unqualified all-clear this cap forbids; fixing it is not a completion condition for this AC and needs its own AC in its owning component."
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Adjacent but distinct — TQ-100c-2-i flags one done AC with zero covering tests (per-AC integrity); this AC caps what a verdict may claim about the population it examined (per-query coverage)."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The coverage analogue of the phantom-done family (BO-2500, BP-1100): a green verdict
+  over a partial scan is a phantom all-clear. Cited as a parallel only — those trees
+  govern proof that WORK is done, this governs proof that a QUERY was complete. Do not
+  fold this AC into them.
+
+  TQ-100c-2-i is the nearest neighbour and is deliberately not duplicated: it asks
+  "does this one done AC have a test?", this asks "how much of the population did your
+  verdict actually see?".
+
+  ==========================================================================
+  THE SELF-CONTRADICTION IS RESOLVED (2026-08-13, expert review).
+  ==========================================================================
+  The original clause read: "an unqualified all-clear is available only when every
+  consumed answer covered its full total with all remaining records declared as
+  exclusions with grounds". That is incoherent — covering the FULL total leaves no
+  remaining records to declare, so the two halves of the condition cannot both hold.
+
+  The reading now adopted, stated unambiguously in the criteria: an unqualified
+  all-clear requires covered == total, with NO declared exclusions and NO
+  could-not-classify records. Any declared exclusion, however legitimate, produces a
+  QUALIFIED verdict carrying the covered count and the exclusion grounds. The rejected
+  alternative reading — that a reconciled answer with declared exclusions unlocks an
+  unqualified all-clear — was rejected because it would let a verdict over "0 covered,
+  180 declared excluded" print an unqualified all-clear, which is the exact defect this
+  L1 exists to stop.
+
+  CONSISTENCY WITH ACS-1100c-2 (checked explicitly). ACS-1100c-2 PASSES the "0 covered,
+  all declared excluded" case, and that stays true — the two ACs govern different
+  things. ACS-1100c-2 governs whether the ANSWER halts (it does not: the arithmetic
+  reconciles). This AC governs what a VERDICT built on that answer may CLAIM (clear for
+  0 of 180, never an unqualified all-clear). Reconciling is not the same as being
+  all-clear-eligible, and the criteria now say so in a clause of their own so no
+  implementer has to infer it.
+
+  The halted-input clause closes the obvious loophole: if a halt could be downgraded to
+  "pass, coverage 0 of 31", the halt of ACS-1100c-1 would buy nothing downstream. It now
+  covers the ACS-1100d-1 dropped-coverage halt too.

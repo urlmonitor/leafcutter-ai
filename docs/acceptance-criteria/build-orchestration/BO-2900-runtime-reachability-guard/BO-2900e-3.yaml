@@ -1,0 +1,135 @@
+id: BO-2900e-3
+components:
+  - build_orchestration
+  - commit_guardian
+title: "A refusal cause with no exercised message cannot be added — message quality is proven by running the guard"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the guard can refuse for four causes, and each cause has a check that runs the
+    guard on a change exhibiting that cause and reads the text the guard emitted,
+  When a fifth refusal cause is added to the guard with no such check,
+  Then the omission is reported and the change is refused, naming the cause that has no
+    exercised message.
+
+  Given a change that alters the text emitted for an existing cause so that it no longer
+    names the stranded item,
+  When the checks run,
+  Then the change is reported as failing, because the check reads the emitted text.
+
+  Given a change that alters only the wording around the stranded item, the missing side
+    and the clearing action, leaving all three present,
+  When the checks run,
+  Then no failure is reported, so the message can be improved without the checks
+    objecting to its prose.
+depends_on:
+  - BO-2900e
+  - BO-2900e-1
+  - BO-2900e-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Enumerates the four causes this AC keeps exercised as the set grows."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "States why an assertion over source text is not evidence that the code runs — the principle this AC applies to the guard's own messages."
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+    relevance: "The standing rule that the executing test is the evidence of record; this AC makes the guard's own messages subject to it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    refusal_cause_registry:
+      type: object
+      description: "The guard's refusal causes, enumerated from the BUILT message composer (its cause enum / dispatch table as constructed at import time), not from source text. Shape: { causes: [str] }. The meta-check compares this set against the set of causes exercised by the message tests."
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "ENUMERATE THE CAUSES FROM THE BUILT COMPOSER, not from a source scan — the same rule BO-2900b-1 applies to the capability inventory, and for the same reason. Read the cause enum or dispatch table off the imported shared message composer required by BO-2900e-1."
+    - "The exercised set is established by RUNNING the message tests and recording which causes were actually emitted during that run (the message tests already drive the guard per cause under BO-2900e-1). Do not infer coverage from test names, file contents, or a hand-maintained list — a name-based mapping is the same source-text mistake one level up."
+    - "The meta-check is itself a check that must run: wire it as a step in the existing CI job set in .github/workflows/ci.yml and, if it is cheap enough, as part of the reachability hook's own test suite. A meta-check that exists and is never invoked reproduces the tree's founding defect on the tree's own remedy."
+    - "THE THIRD SCENARIO IS A DELIBERATE LOOSENING AND MUST BE IMPLEMENTED AS ONE: assert only that the emitted text contains the item, the missing side and the clearing action, and assert NOTHING about the surrounding prose, ordering, punctuation or exact sentence. Pinning exact strings makes every wording improvement a test failure, and the checks then get weakened to restore movement."
+    - "The failure message of the meta-check must name the cause that has no exercised message, so the fix is obvious to whoever added the fifth cause."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900e-1
+  contract: "The shared message composer and its cause enum ({ cause, item, missing_side, clearing_actions }), which is both the source of the refusal_cause_registry and the single funnel every emitted refusal must pass through."
+test_spec:
+  - name: test_adding_a_fifth_cause_without_an_exercised_message_is_reported_and_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Registers a fifth cause on the composer in a fixture, runs the real meta-check and asserts a non-zero result naming that cause as having no exercised message."
+  - name: test_message_that_stops_naming_the_stranded_item_is_reported_as_failing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Alters an existing cause's emitted text so it omits the item, drives the guard into that refusal and asserts the per-cause message check fails on the text that was actually emitted."
+  - name: test_rewording_around_the_three_required_elements_does_not_fail
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Rewrites the prose of a refusal while keeping the item, the missing side and the clearing action present; asserts the checks still pass, so messages stay editable."
+  - name: test_cause_registry_is_read_from_the_built_composer_not_the_source
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A fixture composer whose source text mentions a cause name that is never registered, and which registers one cause through a loop, is enumerated correctly: the mentioned-only name is absent and the loop-registered cause is present."
+test_rationale: "This AC's subject is the guard's own message quality, and inspecting message TEMPLATES proves nothing about which template a run reaches — a cause wired to the wrong template, or to none, passes a template inventory and fails a real user. Putting a structural test on the remedy for structural-test blindness would be a particularly poor joke, and the criteria say so. Every test here therefore drives a real refusal and reads the emitted text, and the meta-check itself is exercised by adding a real fifth cause to a fixture composer rather than by asserting that the meta-check's code exists. The fourth test is the same built-versus-source-derived property BO-2900b-1 requires of the capability inventory, applied to the cause registry."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This AC turns BO-2900e from a one-off text edit into a standing property. Without it,
+  the four messages are written once, verified once, and the fifth cause — added a year
+  later by someone who has not read this tree — arrives as a bare refusal with no item,
+  no side and no action. That is how message quality actually degrades: not by anyone
+  rewriting a good message badly, but by new causes bypassing the requirement entirely.
+
+  WHY THE GUARD MUST BE RUN TO CHECK ITS OWN MESSAGES. The obvious implementation
+  inspects the guard's message templates. Templates prove nothing about which template
+  a run reaches — a cause wired to the wrong template, or to none, passes a template
+  inventory and fails a real user. This tree exists because a structural test passed on
+  code that never executed; putting a structural test on the remedy would be a
+  particularly poor joke. The checks read what a real run emitted.
+
+  THE THIRD SCENARIO IS A DELIBERATE LOOSENING and it is as important as the other two.
+  A check that pins exact message strings makes every wording improvement a test
+  failure, so the messages freeze at their first draft and the checks get weakened to
+  restore movement. Asserting the three required elements — item, side, action — and
+  nothing about the prose keeps the messages editable and the requirement intact. State
+  the elements; never the sentence.
+
+  BOUNDARY: BO-2900e-1 says what each message must contain and BO-2900e-2 says the run
+  must be complete. This AC says the requirement survives the addition of new causes and
+  is established by execution. It is not a duplicate of either; it is what stops both
+  from decaying.
+
+  Note for the IT PO: the first scenario needs a way to enumerate the guard's refusal
+  causes at check time. If that enumeration is derived from source text it inherits every
+  weakness described above — prefer deriving it the same way BO-2900b-1 derives the
+  capability inventory, from the built object rather than from its source.
+
+  2026-08-13 (IT PO enrichment). The BA's note is adopted verbatim as a constraint: the
+  cause registry is read off the BUILT shared message composer that BO-2900e-1 requires,
+  which is also why that composer had to be made a single shared function — a per-surface
+  composer would give the meta-check two registries to reconcile and a seam to miss a
+  cause through.

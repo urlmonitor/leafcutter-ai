@@ -1,0 +1,89 @@
+id: BO-2900b-4
+components:
+  - build_orchestration
+  - build_pipeline
+title: "How-to: keep capabilities and their automation connected in both directions"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the capability-to-automation connection checks are in place,
+  When an author who is adding, renaming or removing an operator-facing capability
+    consults the project's task-oriented documentation,
+  Then a single how-to guide covers both directions of the connection,
+    And it states the workflow for adding a capability — register it and wire its
+      automation invocation in the same change — and shows the refusal that appears
+      when only one of the two is done,
+    And it states what counts as an automation invocation, and warns that naming a
+      capability in a comment or an operator-facing message does not connect it,
+    And it names the recorded exemption as the route for a capability that is
+      deliberately not driven by automation, and links to the exemption's own
+      documentation instead of restating it,
+    And it is reachable from the documentation that describes the command surface it
+      governs.
+depends_on:
+  - BO-2900b
+  - BO-2900b-1
+  - BO-2900b-2
+  - BO-2900b-3
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: related
+    status: exists
+    relevance: "The operator-facing guide for the command surface this check is calibrated against — the new guide must be reachable from it."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: related
+    status: exists
+    relevance: "The authoring contract for the automation side; cross-link rather than duplicate its invocation rules."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the reverse-direction content of the SAME guide. Both ACs are satisfied by one document; neither may spawn a second."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "Create ONE new how-to at docs/how-to/capability-automation-connection.md. This AC owns the guide's existence, placement and forward-direction content; BO-2900c-3 owns the reverse-direction content inside the same file. Two guides is an explicit failure of BO-2900c-3's final clause."
+  - "Show the real refusal text the check emits for a registered-but-uncalled capability, quoted from a real run rather than paraphrased, and name the two ways forward exactly as BO-2900b-1-i specifies them."
+  - "State the invocation rule from BO-2900b-3 in author-facing terms: the connection is the argument the automation passes when it runs the surface as a program, so a capability named in a comment, an operator message or a variable is not connected. Give the concrete shape used in this repository (`python3 <surface> <capability> --flag value` inside the script's executed command)."
+  - "Link to the exemption how-to (BO-2900d-4) for the deliberately-undriven case rather than restating the procedure, and link to the refusal-to-action table (BO-2900e-4) rather than reproducing it."
+  - "Add a cross-link from docs/how-to/fast-lane-build.md so the guide is reachable from the surface it governs; unreachable documentation does not satisfy the reachability clause."
+  - "Register the new page in docs/INDEX.md and satisfy check-doc-frontmatter, check-doc-length and check-doc-index."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900e-1
+  contract: "The refusal texts for the uncalled-capability and stale-invocation causes and their clearing actions, as emitted by the guard, so the guide quotes real output."
+test_required: false
+test_rationale: "The artifact is a single prose how-to page; it adds no executable surface, so no test can drive it. The behaviours it documents are covered by executing tests on BO-2900b-1, BO-2900b-1-i and BO-2900b-3. Recorded explicitly rather than left absent so test-writer skips with an accurate reason rather than silently, per the CLAUDE.md note on the absent-block auto-skip."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies one of the parent L1's two `documentation_triggers` (`how-to`).
+
+  Intended agent is `documentation-expert` — left null per this run's instruction.
+
+  ONE GUIDE, BOTH DIRECTIONS — DELIBERATE. BO-2900c also carries a `how-to` trigger,
+  and its documentation AC (BO-2900c-3) requires the reverse-direction content to land
+  in THIS SAME guide rather than in a second one. Two guides would split a single
+  workflow — an author renaming a capability trips both checks in one change and needs
+  one page, not two — and would guarantee that one of them goes stale. BO-2900c-3
+  states the reverse-direction requirements; the writer must satisfy both ACs in one
+  document.
+
+  SCOPE FENCE: this is the CAPABILITY AUTHOR's guide. The criterion author's guide
+  ("my done claim was refused") is BO-2900a-4, and the exemption reference is
+  BO-2900d-5. Cross-link; do not absorb.
+
+  2026-08-13 (IT PO enrichment). Destination fixed as
+  docs/how-to/capability-automation-connection.md so BO-2900c-3 has a named file to
+  land in; leaving it open would have produced the two-guide outcome both ACs forbid.
