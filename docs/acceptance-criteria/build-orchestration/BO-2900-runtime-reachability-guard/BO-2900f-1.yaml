@@ -1,4 +1,4 @@
-id: BO-2700f-1
+id: BO-2900f-1
 components:
   - build_orchestration
   - supervisor_system
@@ -27,7 +27,7 @@ criteria: |
     And NO entry for gate D, because a gate the work item never requested is not a
       gate that failed to run.
 depends_on:
-  - BO-2700f
+  - BO-2900f
 doc_links:
   - path: templates/skills/building-epics/SKILL.md
     relationship: describes
@@ -56,7 +56,7 @@ implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
-  The core positive behaviour of BO-2700f. Two analytical decisions the BA made
+  The core positive behaviour of BO-2900f. Two analytical decisions the BA made
   here that the IT PO and implementer must preserve:
 
   - THE REQUESTED SET IS THE DENOMINATOR. The record is derived from the gates the
@@ -84,7 +84,7 @@ notes: |
   `skipped` entry for every unrequested gate on every work item and will believe
   BO-2100b-2 required it.
 
-  Boundary: BO-2700e governs the QUALITY of a failure message that IS emitted;
+  Boundary: BO-2900e governs the QUALITY of a failure message that IS emitted;
   this AC governs the EXISTENCE of a record where today there is none. The reason
   string here only has to name the disabling condition and its source — do not
   re-specify message quality at this level.

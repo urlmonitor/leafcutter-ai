@@ -442,6 +442,17 @@
                 }
             ]
         },
+        "test_rationale": {
+            "description": "Prose justification for the test contract in test_spec: why this shape of coverage is the right one, and why a weaker shape (typically a direct-import unit test) would be insufficient for this AC. Must be a string, never a list. Absent or null when no rationale has been authored.",
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "doc_links": {
             "type": "array",
             "description": "Documentation links related to this AC. Each item is either a plain file-path string or an object with path, relationship, status, and optional relevance fields.",

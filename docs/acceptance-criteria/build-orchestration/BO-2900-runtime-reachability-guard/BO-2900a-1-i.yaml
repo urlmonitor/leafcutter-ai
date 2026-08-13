@@ -1,0 +1,101 @@
+id: BO-2900a-1-i
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "Entering the way in without reaching the code under proof does not make a criterion done"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion whose implementing code is the handler for the action
+    named `mark-done` on a unit's command surface,
+    And the criterion's proof-of-done test invokes that command surface and passes,
+    And the action the test invokes is `report`, whose handler never calls the
+      `mark-done` handler,
+  When the criterion is evaluated for eligibility to be marked done,
+  Then the criterion is rejected as not eligible,
+    And the rejection states that the way in was entered but the code under proof was
+      not reached during the run,
+    And a proof test that invokes the same command surface with the `mark-done`
+      action makes the criterion eligible.
+depends_on:
+  - BO-2900a-1
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The gate whose verdict this edge case constrains."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Supplies the run-observation that makes 'was the code under proof reached' answerable at all; this AC is unimplementable without it."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    reached_through_predicate:
+      type: object
+      description: "The single fact the verdict turns on: { reached_through: bool } — true only when the code under proof was entered while a frame of the unit's entry point was an ancestor on the SAME call stack. Never a conjunction of two independently-recorded booleans."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "REACHED-THROUGH, NOT ENTERED. The eligibility condition must read the single reached_through flag from the BO-2900a-2 observation record. Implementing it as `entered_entry_point and target_was_called` reproduces the exact trap this AC isolates: any proof can then be made eligible by adding one unrelated invocation of the command surface (a --help call, a status call, a different action)."
+    - "The refusal for this case must be distinguishable in the emitted text from the BO-2900a-1 direct-import refusal: 'the way in was entered but the code under proof was not reached on that run'. Same refusal_cause family ('proof_not_through_entry_point'), different reason string; do not add a fifth refusal cause (BO-2900e-1 enumerates exactly four)."
+    - "Do not special-case action names. The rule is derived from the observed call stack, so a surface with N actions needs no per-action wiring and a new action inherits the rule automatically."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900a-2
+  contract: "The reached_through boolean of the observation record, computed as 'the target callable was entered while an entry-point frame was an ancestor on the same call stack during that test's execution' — supplied as one fact, not two."
+test_spec:
+  - name: test_entering_a_different_action_does_not_make_the_criterion_eligible
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs verify_done_eligible over a fixture surface with `report` and `mark-done` actions where the proof invokes main(['report']); asserts eligible is False and the reason states the way in was entered but the code under proof was not reached."
+  - name: test_invoking_the_action_under_proof_makes_the_criterion_eligible
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Same fixture with the proof invoking main(['mark-done', ...]); asserts eligible is True, proving the refusal above is about the path taken and not about the surface being entered."
+  - name: test_unrelated_extra_invocation_does_not_launder_a_direct_import_proof
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A direct-import proof to which a bare main(['--help']) call is added stays ineligible — the ritual-invocation workaround is closed."
+test_rationale: "This AC exists solely to distinguish two implementations that are indistinguishable by inspection and by any unit test of a predicate: 'entry point entered AND target called' versus 'target reached through the entry point'. Only running a real proof whose two facts are true independently — a surface invocation of `report` plus a direct call into the `mark-done` handler — separates them, and only the executing call stack carries the ancestry the distinction needs. A direct-import unit test of the predicate would be handed pre-computed booleans and would pass on the trapped implementation."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Isolated as an L3 because it is the single most likely wrong implementation of
+  BO-2900a-1, and it is wrong in a way that leaves the gate green.
+
+  THE TRAP. The cheap reading of BO-2900a-1 is "did the run enter the unit's way in".
+  Under that reading, any proof test can be made to pass the gate by adding one
+  unrelated invocation of the command surface — a help call, a status call, a call to
+  a different action entirely. The gate would then be satisfied by a ritual, and the
+  fast-lane regression would still ship: the functions would remain unreached while
+  the criterion turned green. The condition is REACHED-THROUGH, not ENTERED.
+
+  Consequence for implementation: the evaluation needs the path taken during the run
+  (way in entered AND code under proof entered on the same run), not two independent
+  facts. Two separate booleans ANDed together reproduce the trap whenever the test
+  does both things in separate, unconnected steps.
+
+  Kept as an L3 rather than a fourth L2 because it does not add a new guarantee — it
+  fixes the interpretation of an existing one, and it shares BO-2900a-1's fixtures.

@@ -1,4 +1,4 @@
-id: BO-2700
+id: BO-2900
 components:
   - build_orchestration
   - testing_quality
@@ -38,12 +38,12 @@ created: 2026-08-13
 amended_by: []
 superseded_by: null
 covered_by:
-  - BO-2700a
-  - BO-2700b
-  - BO-2700c
-  - BO-2700d
-  - BO-2700e
-  - BO-2700f
+  - BO-2900a
+  - BO-2900b
+  - BO-2900c
+  - BO-2900d
+  - BO-2900e
+  - BO-2900f
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
@@ -58,19 +58,19 @@ notes: |
     drive-time gate concern belongs in build-orchestration.
   - Distinct from BP-1100 (build-pipeline): BP-1100 prevents phantom-done at the
     TICKET and EPIC level (files_touched naming an executable surface, outside-in
-    angle testing at finalize). BO-2700 is the mechanical AC-level gate. Do not
+    angle testing at finalize). BO-2900 is the mechanical AC-level gate. Do not
     fold either into the other.
   - Distinct from BP-1000e (source <-> shipped workflow-script byte parity) and
     INF-600g (agent registry spawned_by reciprocity). Those are file-copy parity and
-    agent-registry reciprocity; BO-2700b/c is command-surface <-> automation-caller
+    agent-registry reciprocity; BO-2900b/c is command-surface <-> automation-caller
     reciprocity. Same instinct, different registries.
   - The user described only the two enforcement layers. Two supporting guarantees
-    were added because the guard is unusable without them: BO-2700d (an honest,
+    were added because the guard is unusable without them: BO-2900d (an honest,
     reviewable exemption for code that legitimately has no runtime entry point —
     without it the guard blocks every helper module and gets switched off) and
-    BO-2700e (a failure message that names what is unreachable).
+    BO-2900e (a failure message that names what is unreachable).
   - "This would have failed the instant PR 411 landed" is regression EVIDENCE, not a
-    separate benefit — decompose it as a replay/regression scenario under BO-2700b.
+    separate benefit — decompose it as a replay/regression scenario under BO-2900b.
 
   Explicitly OUT OF SCOPE for this tree (tracked as separate follow-ups by the user):
   the AC-schema ownership-checklist change, the inline pr-reviewer gate in the fast

@@ -1,4 +1,4 @@
-id: BO-2700f-3
+id: BO-2900f-3
 components:
   - build_orchestration
   - supervisor_system
@@ -31,8 +31,8 @@ criteria: |
       from the summary alone, from a work item on which every requested gate ran and
       passed.
 depends_on:
-  - BO-2700f
-  - BO-2700f-1
+  - BO-2900f
+  - BO-2900f-1
 doc_links:
   - path: templates/skills/signoff/SKILL.md
     relationship: describes
@@ -60,7 +60,7 @@ notes: |
   Emitting the record is necessary but not sufficient. A `skipped` entry that any
   downstream roll-up folds into "all gates green" reproduces the original defect one
   layer up — the artifact exists but still reads as a pass. This AC is the consumer
-  side of BO-2700f-1's producer side, and it is the clause that makes the L1 title
+  side of BO-2900f-1's producer side, and it is the clause that makes the L1 title
   literally true.
 
   Testable discriminator for the implementer: two runs whose only difference is that

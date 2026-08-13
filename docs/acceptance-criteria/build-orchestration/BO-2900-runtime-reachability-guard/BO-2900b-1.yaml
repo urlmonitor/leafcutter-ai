@@ -1,0 +1,166 @@
+id: BO-2900b-1
+components:
+  - build_orchestration
+  - build_pipeline
+title: "A registered capability that no automation runs is reported and refuses the change"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the product's operator-facing command surface registers four actions —
+    `claim`, `release`, `mark-done` and `report`,
+    And the automation that drives builds invokes `claim`, `release` and `mark-done`,
+    And no automation invokes `report`,
+  When the connection from registered capabilities to the automation that runs them
+    is checked,
+  Then `report` is reported as a registered capability that nothing runs, naming the
+    capability and the command surface it is registered on,
+    And `claim`, `release` and `mark-done` are not reported,
+    And the change is refused rather than passing with an advisory note,
+    And the set of capabilities checked is the set the command surface actually
+      registers when it is built — obtained by asking the built surface what it
+      accepts — so a capability that appears in the source but is never registered is
+      not checked, and a capability registered only under a condition that is false
+      when the surface is built is not checked.
+depends_on:
+  - BO-2900b
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The concrete command surface this check is calibrated against — its registered actions are the forward inventory."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The concrete automation expected to invoke those actions — the caller side of the connection."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: related
+    status: exists
+    relevance: "The existing contract for what an automation script may do; the caller side of this check must be consistent with it."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns the command surface and the automation that drives it; the new gate belongs in its picture."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Governs the scripts/ <-> templates/scripts/ parity this hook registration must respect on both sides."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    uncalled_capability_finding:
+      type: object
+      description: "{ kind: 'uncalled_capability', capability: str, surface: '<module path>', ways_forward: ['add the automation invocation in this change', 'record an exemption for the capability with a stated reason'] }. Emitted by the forward direction of the reachability check; grouped separately from stale-caller findings per BO-2900c-2."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "ENFORCEMENT SURFACE: a new commit-guardian hook `check-reachability`, implemented as scripts/commit_guardian/check_reachability.py with two modes (`--mode precommit`, `--mode ci`), registered in the hooks_manifest of scripts/commit_guardian/commit_guardian.json AND its template twin templates/scripts/commit_guardian/commit_guardian.json (n_location_rule 'all' — the check-hook-parity hook enforces this), plus a CI job in .github/workflows/ci.yml running `--mode ci`. This mirrors the proven check_done_proof.py two-layer precedent; do not invent a third gate convention."
+    - "Create the shared seam scripts/commit_guardian/_reachability_inventory.py exposing registered_capabilities(surface_module) -> set[str] and collected_invocations(script_paths) -> list[Invocation]. BO-2900c consumes the SAME module for the reverse direction — one seam, two verdicts. Do not fork it."
+    - "registered_capabilities MUST be obtained from the BUILT surface: import the surface module, call its own parser builder (fast_lane._build_cli_parser(), scripts/build_orchestration/fast_lane.py:775) and read the argparse _SubParsersAction choices keys. Never regex `add_parser(` out of the source, and never top up the built inventory with source-scanned extras — that reintroduces exactly the false alarms the conditional-registration clause forbids."
+    - "REFUSES, NOT WARNS: a finding must produce a non-zero exit from the hook and the CI job. Do not add a global advisory/downgrade flag. The only sanctioned relief is a recorded exemption per BO-2900d-1. The failure output must not print SKIP=check-reachability or --no-verify (BO-2900e-1 final clause, BO-2900b-1-i)."
+    - "Every new module (check_reachability.py, _reachability_inventory.py) and config/reachability_exemptions.yaml MUST be added to the build deploy manifest in scripts/build_phases.py in the same change. The hook runs from the DEPLOYED layout; an undeployed dependency crashes with ModuleNotFoundError once the gate is required — see CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'."
+    - "The set of surfaces to inventory is derived, not hardcoded (see BO-2900c-4); at minimum it must include scripts/build_orchestration/fast_lane.py. Importing a surface module must not execute its main() — build the parser only."
+delivers_to:
+  agent: python-coder
+  contract: "registered_capabilities(surface) -> set[str] taken from the built argparse subparser choices, plus list[uncalled_capability_finding] as specified in config_schema_fragment. The capability inventory is consumed by BO-2900c-1 and BO-2900c-2 for the reverse comparison; the findings are consumed by BO-2900e-1 (message) and BO-2900e-2 (single-run completeness)."
+expects_from:
+  ac_id: BO-2900b-3
+  contract: "collected_invocations(script_paths) -> list[{ script: str, line: int, surface: str, capability: str }], collected from executed invocations only. A registered capability is 'run by automation' iff its name appears as the capability of at least one collected Invocation."
+test_spec:
+  - name: test_uncalled_registered_capability_is_reported_and_the_check_exits_nonzero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Invokes check_reachability.main(['--mode','precommit',...]) as the real entry point over a fixture surface registering claim/release/mark-done/report with automation invoking only the first three; asserts a non-zero return code and that the emitted output names `report` and the surface it is registered on."
+  - name: test_called_capabilities_are_not_reported_in_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Same run as above: asserts claim, release and mark-done appear nowhere in the findings, so a report-everything implementation fails alongside the positive assertion."
+  - name: test_inventory_comes_from_the_built_parser_not_the_source_text
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A fixture surface whose source mentions an `add_parser('ghost')` call inside a branch that is false at build time, and which registers a capability through a loop over a table, is inventoried by running the check: `ghost` is absent from the findings and the loop-registered capability is present."
+  - name: test_failure_output_does_not_name_a_skip_or_bypass_flag
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the text emitted on the refusing run contains neither 'SKIP=' nor '--no-verify', so the blocking gate never documents its own off switch."
+test_rationale: "This AC is a gate, and the defect it exists to prevent is a gate that is defined but never reached — fast_lane.py's own structural tests were green while its gates never executed. A direct-import unit test of an inventory helper would prove set arithmetic and nothing about whether the hook runs, exits non-zero, or ever consults the built parser. Every test therefore invokes check_reachability.main() as a process-level entry point over a fixture surface and asserts the exit code and the emitted text. The third test is the decisive one: it can only pass on an implementation that genuinely builds the parser, because a source-scanning implementation gets both the ghost capability and the loop-registered capability wrong in opposite directions."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900b-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The forward half of the bijection. Analytical decisions recorded for the IT PO and
+  the implementer:
+
+  - THE INVENTORY MUST COME FROM THE BUILT SURFACE, NOT FROM THE SOURCE TEXT. This is
+    the whole reason the AC's last clause is longer than the rest of it. A check that
+    derives the capability list by pattern-matching registration calls in the source
+    is a source scan wearing a different hat: it will list capabilities that a
+    refactor left declared-but-unregistered (false alarms that train people to
+    disable the check) and it will silently miss capabilities registered through a
+    loop, a table, or a helper (the exact ones most likely to go uncalled). Asking the
+    built surface what it accepts is both simpler and honest.
+
+  - THE CONDITIONAL-REGISTRATION CLAUSE IS NOT HYPOTHETICAL PEDANTRY. Once the
+    inventory comes from the built surface, "what the surface registers" depends on
+    the conditions under which it was built. Stating that a capability not registered
+    under those conditions is not checked prevents an implementer from splitting the
+    difference — building the surface AND then adding source-scanned extras to the
+    list, which reintroduces the false alarms.
+
+  - REFUSES, NOT WARNS. A capability-with-no-caller that only produces a warning is a
+    capability-with-no-caller that ships; the regression this tree exists to prevent
+    passed through several reviews. If the incumbent backlog makes an immediate hard
+    refusal unmergeable, the correct instrument is the recorded exemption of BO-2900d
+    (countable, reviewable, individually justified), not a global downgrade to
+    advisory.
+
+  BOUNDARY: what counts as an automation invoking a capability is defined once in
+  BO-2900b-3 and consumed here — do not re-derive it. The wording of the refusal is
+  BO-2900e. The reverse direction (an invocation naming a capability that does not
+  exist) is BO-2900c.
+
+  Verification must EXECUTE the check against a fixture pair — a surface with an
+  uncalled capability and the same surface once it is called — and compare the two
+  outcomes. A test that greps the checker for the capability's name passes on a
+  checker that never runs, which is the defect this AC is derived from.
+
+  2026-08-13 (IT PO enrichment) — ENFORCEMENT SURFACE DECISION for the whole
+  BO-2900b/BO-2900c pair, recorded once here:
+
+  A new pre-commit hook (`check-reachability`) WITH a CI backstop mode, rather than a
+  check inside the done-proof path or a CI-only gate. Reasons:
+    - The criteria say "the change is refused". That is a change-scoped verdict.
+      verify_done_eligible is criterion-scoped and runs per AC id; it has no notion of
+      a change and would have to be given one, which is a worse fit than a hook that
+      already receives the staged set.
+    - BO-2900c-1 requires the verdict "without executing the automation". A static
+      comparison of the built parser against collected invocations is exactly what a
+      pre-commit hook can do in under a second; a runtime gate cannot.
+    - The two-mode shape is already proven in this repository by check_done_proof.py
+      (fast static pre-commit + authoritative `--mode ci` backstop that survives
+      --no-verify and hook-config-less worktrees). Reusing it means the known traps —
+      deploy-manifest registration, source/template parity, run_hook.py wrapping — are
+      already documented rather than rediscovered.
+  The BO-2900a family deliberately does NOT move to this hook: those are per-criterion
+  eligibility rules and belong in verify_done_eligible, which the same hook and the
+  required CI job already consume.

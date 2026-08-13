@@ -1,0 +1,138 @@
+id: BO-2900a-3
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "Code that no way of running the product can reach cannot be marked done, however many tests pass"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion whose implementing code lives in a unit that exposes
+    no runtime way in of its own,
+    And no unit that does expose a runtime way in reaches that code,
+    And no automation runs that unit as a program,
+    And the criterion's proof-of-done test is present, executes the code, and passes,
+  When the criterion is evaluated for eligibility to be marked done,
+  Then the criterion is rejected as not eligible,
+    And the rejection states that no way of running the product reaches the code, and
+      names the unit,
+    And adding a further passing test over the same code leaves the verdict unchanged,
+    And the verdict changes only when the code is given a way in, or when an exemption
+      for that unit is recorded.
+depends_on:
+  - BO-2900a
+  - BO-2900a-1
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The eligibility gate that must gain this second refusal reason."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7.yaml
+    relationship: related
+    status: exists
+    relevance: "One of the criteria that was marked done over unreachable code — the regression this AC is calibrated against. Do not amend it here."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml
+    relationship: related
+    status: exists
+    relevance: "The only legitimate way past this refusal: an explicit, reasoned, reviewable exemption. This AC hands off to it rather than deciding the helper-module case itself."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that must carry the second refusal cause alongside the existing done-proof conditions."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    no_way_in_verdict:
+      type: object
+      description: "Second refusal cause on the eligibility verdict: { eligible: false, refusal_cause: 'no_entry_point_reaches_code', unit: '<module path>', clearing_actions: ['give the unit an entry point', 'record an exemption'] }. Emitted only when the BO-2900a-1 scope fence excludes the unit."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "Evaluate exactly the three enumerated conditions and no vaguer predicate: (1) the unit's module defines no module-level main(argv); (2) no module that DOES define one reaches the code — established from the import graph built by importing candidate modules, never from a text scan of import statements; (3) no automation script runs the unit as a program — established from the BO-2900b-3 invocation collection over the derived automation-script set. All three must hold for the refusal."
+    - "THE ANTI-RITUAL CLAUSE IS STRUCTURAL: no term in the condition set may reference test count, test presence, test outcome, or coverage. Adding another passing test must be incapable of changing the verdict, because the predicate never reads those facts."
+    - "Exactly two state changes flip the verdict: an entry point appears (condition 1 or 2 becomes false), or a recorded exemption for that unit exists per BO-2900d-1. The exemption check happens here, in the done-proof path, so the released criterion genuinely becomes eligible (BO-2900d-1 scenario two asserts that end to end)."
+    - "This refusal and the BO-2900a-1 refusal are mutually exclusive by construction — BO-2900a-1 applies only when an entry point resolves, this one only when none does. An implementation that can emit both for one criterion has merged the scope fence and must be corrected, not reconciled downstream."
+    - "This is the clause that catches the ACTUAL PR-411 regression state (no registered capability, no caller, passing tests). The BO-2900b forward check passes vacuously there; do not widen either rule to compensate."
+    - "Condition (3) crosses into the commit-guardian package. Import the shared invocation-collection seam rather than duplicating it, and add whatever new module done_proof.py gains to build_ac_store's deploy_map (scripts/build_phases.py:794) in the same change."
+delivers_to:
+  agent: python-coder
+  contract: "Verdict { eligible: false, refusal_cause: 'no_entry_point_reaches_code', unit: str, clearing_actions: [str] } consumed by check_done_proof.py (all modes) and by BO-2900e-1's second message, and released by a recorded exemption from BO-2900d-1."
+expects_from:
+  ac_id: BO-2900b-3
+  contract: "collected_invocations(script_paths) -> list[{ script: str, line: int, surface: str, capability: str }] over the derived automation-script set, used to answer condition (3) 'no automation runs that unit as a program'. Collected from executed invocations only, never from a text match."
+test_spec:
+  - name: test_unit_with_no_way_in_is_refused_despite_a_passing_proof
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs verify_done_eligible over a fixture unit with no main(), no importing module that has one and no automation invocation, whose covers-tagged proof passes; asserts eligible False, refusal_cause 'no_entry_point_reaches_code' and that the message names the unit."
+  - name: test_adding_another_passing_test_leaves_the_verdict_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Adds a second passing covers-tagged test over the same fixture code and re-runs the real evaluation; asserts a byte-identical refusal verdict, proving the predicate reads no test-derived term."
+  - name: test_verdict_flips_only_when_an_entry_point_is_added_or_an_exemption_is_recorded
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Two follow-up runs over the same fixture — one after adding a main() that reaches the code, one after recording an exemption — each assert eligible True, and both are asserted alongside the untouched refusal so a pass-everything implementation cannot satisfy the set."
+test_rationale: "The whole content of this AC is a three-condition predicate over the real repository state plus a negative invariant ('more tests change nothing'). A direct-import unit test would hand the predicate pre-computed condition values and would therefore pass on an implementation that never runs the import-graph or invocation-collection steps at all — the same shape of failure that let the fast-lane functions through. Each test drives the real verify_done_eligible() over a fixture tree, and the anti-ritual invariant is asserted by actually adding a passing test and re-running the oracle, which is the only way to show the term is absent rather than merely small."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS IS THE CLAUSE THAT CATCHES THE ACTUAL REGRESSION. It is not a variant of
+  BO-2900a-1 and must not be folded into it.
+
+  In the state that shipped, the fast-lane module exposed NO command surface at all.
+  Under BO-2900a-1 alone that state is out of scope — there is no way in to compare
+  the run against — so BO-2900a-1 would have passed it. The functions were reachable
+  from nothing: not from a command surface, not from an importing module that had one,
+  not from any automation. That is the condition this AC refuses.
+
+  BOUNDARY vs BO-2900b — READ BEFORE IMPLEMENTING EITHER. BO-2900b inventories the
+  capabilities the product REGISTERS and demands a caller for each. In the regression
+  state, ZERO capabilities were registered, so BO-2900b's forward check passes
+  vacuously — there is nothing in the inventory to be uncalled. BO-2900b catches the
+  later shape (a capability exists and nothing calls it); this AC catches the earlier
+  one (there is no capability and nothing reaches the code). Both are required to
+  cover the regression end to end, and neither implementer may treat the other as
+  covering their case. This asymmetry is easy to miss and expensive to rediscover.
+
+  DECIDABILITY. "Nothing reaches it" is stated as three concrete conditions — no way
+  in of its own, not reached from a unit that has one, not run as a program by any
+  automation — precisely so it does not degrade into an open-ended call-graph
+  question. If the three prove insufficient in practice, amend the list; do not
+  replace it with a vaguer predicate.
+
+  THE ANTI-RITUAL CLAUSE. "Adding a further passing test leaves the verdict unchanged"
+  is load-bearing. The reflex when a done-proof gate refuses is to write another test.
+  Here that is exactly the wrong response, and the criteria say so, so the refusal
+  cannot be worked around by the same behaviour that created the problem.
+
+  Verification must EXECUTE the evaluation against a fixture unit that genuinely has
+  no way in, and then against the same unit after one is added, asserting both
+  verdicts.
+
+  2026-08-13 (IT PO enrichment). Condition (3) is the one cross-family dependency in
+  the BO-2900a tree: it consumes BO-2900b-3's invocation collection rather than
+  growing a second, weaker notion of "is this run as a program". That is why this AC's
+  expects_from points across to BO-2900b-3 even though its depends_on stays within the
+  a-family — the ordering constraint is real and the implementer must build b-3's seam
+  first or stub it behind the same interface.

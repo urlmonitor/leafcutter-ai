@@ -1,4 +1,4 @@
-id: BO-2700f-2
+id: BO-2900f-2
 components:
   - build_orchestration
   - supervisor_system
@@ -21,8 +21,8 @@ criteria: |
     And gate C and gate D — the skipped ones — appear once each and not twice,
     And no requested gate is left with zero entries.
 depends_on:
-  - BO-2700f
-  - BO-2700f-1
+  - BO-2900f
+  - BO-2900f-1
 doc_links:
   - path: templates/skills/building-epics/SKILL.md
     relationship: describes
@@ -40,10 +40,10 @@ expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
 amended_by:
-  - "2026-08-13 expert-review remediation: the halt clause contradicted the completed-run Given inside one Then block (no requested gate may have zero entries AND that gate has zero entries); split out to BO-2700f-2-i and the Given now states the run completed."
+  - "2026-08-13 expert-review remediation: the halt clause contradicted the completed-run Given inside one Then block (no requested gate may have zero entries AND that gate has zero entries); split out to BO-2900f-2-i and the Given now states the run completed."
 superseded_by: null
 covered_by:
-  - BO-2700f-2-i
+  - BO-2900f-2-i
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
@@ -74,7 +74,7 @@ notes: |
   implementer reading them together gets no decidable rule. The completed-run
   invariant stays here — one entry per requested gate, no exceptions, which is
   what makes the count assertion meaningful. The aborted-run carve-out is now
-  BO-2700f-2-i, where it has its own Given (a run that halts before a later
+  BO-2900f-2-i, where it has its own Given (a run that halts before a later
   gate's decision point) and can be tested independently. Do not re-merge them:
   the carve-out is the clause an implementer will reach for to excuse a genuine
   gap, and keeping it in a separate scenario forces the halt record to be shown.

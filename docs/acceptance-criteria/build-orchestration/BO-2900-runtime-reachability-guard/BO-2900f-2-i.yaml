@@ -1,4 +1,4 @@
-id: BO-2700f-2-i
+id: BO-2900f-2-i
 components:
   - build_orchestration
   - supervisor_system
@@ -31,7 +31,7 @@ criteria: |
     excused, because zero entries is legitimate only when the halt is itself
     recorded.
 depends_on:
-  - BO-2700f-2
+  - BO-2900f-2
 doc_links:
   - path: templates/skills/building-epics/SKILL.md
     relationship: describes
@@ -55,18 +55,18 @@ implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
-  Split out of BO-2700f-2 on 2026-08-13 (expert review). In its parent the halt
+  Split out of BO-2900f-2 on 2026-08-13 (expert review). In its parent the halt
   case sat inside a Then block whose Given described a COMPLETED run, next to the
   clause "no requested gate is left with zero entries" — a direct contradiction
   that made neither clause testable.
 
   WHY THE CARVE-OUT NEEDS ITS OWN NEGATIVE SCENARIO. Without the second scenario
   the carve-out is an unbounded excuse: any missing entry can be attributed to a
-  halt nobody has to evidence, which reproduces the silence BO-2700f exists to
+  halt nobody has to evidence, which reproduces the silence BO-2900f exists to
   end. Pairing "no entry + halt recorded = legitimate" with "no entry + no halt
   record = defect" is what makes the parent's count invariant enforceable rather
   than advisory.
 
-  BOUNDARY vs the parent: BO-2700f-2 owns the completed run and asserts a COUNT.
+  BOUNDARY vs the parent: BO-2900f-2 owns the completed run and asserts a COUNT.
   This L3 owns the aborted run and asserts an EXPLANATION. An implementation that
   satisfies one and not the other has not landed the guarantee.

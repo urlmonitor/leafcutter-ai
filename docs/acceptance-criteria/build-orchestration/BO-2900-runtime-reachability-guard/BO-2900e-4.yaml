@@ -1,0 +1,103 @@
+id: BO-2900e-4
+components:
+  - build_orchestration
+  - commit_guardian
+title: "How-to: one table mapping every refusal the guard can emit to the action that clears it"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reachability guard is in place,
+  When a reader who has just been refused follows the guard's own output to the
+    documentation,
+  Then one table lists every refusal the guard can emit, and for each gives what is
+    unreachable, which side of the connection is missing, and the action that clears it,
+    And each row links to the guide that describes that action in full rather than
+      restating the procedure,
+    And the table states which refusals a recorded exemption releases and which it does
+      not,
+    And the destination is reachable from the guard's output, so a reader who has only
+      the refusal in front of them can find it,
+    And no procedure already documented in the proof-of-completion guide, the
+      capability-connection guide or the exemption guide is repeated here.
+depends_on:
+  - BO-2900e
+  - BO-2900e-1
+  - BO-2900e-2
+doc_links:
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: related
+    status: exists
+    relevance: "One of the three destinations the table links to; also a candidate home for the table itself."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The proof-of-completion procedures the table links to instead of restating."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The capability-connection procedures the table links to instead of restating."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The exemption procedure the table links to instead of restating."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "ONE HOME, and it is docs/how-to/done-proof-enforcement.md — the guide a refused reader most often meets first, and already the destination BO-2900a-4 extends. What this AC forbids is two homes; anchoring it here removes the choice rather than leaving the writer to make it."
+  - "One table, one row per refusal cause, four rows today: proof reached its code by direct import; nothing reaches the code at all; a registered capability nothing runs; an automation invocation naming a capability that does not exist. Columns: what is unreachable / which side is missing / the clearing action / where the full procedure lives."
+  - "Each row LINKS to its procedural guide (BO-2900a-4's section, the capability-automation-connection guide, the exemption how-to) and restates none of it. A fourth page re-explaining the same procedures from the message's point of view is the copy that goes stale, and it goes stale invisibly because its readers arrive from a refusal and never see the original."
+  - "State explicitly, per row, whether a recorded exemption releases that refusal: it releases only 'nothing reaches the code' and the deliberately-undriven capability case; it does NOT release the direct-import refusal or the stale-invocation refusal. Left to inference, the exemption becomes the universal answer to every row."
+  - "REACHABLE FROM THE OUTPUT: coordinate with BO-2900e-1's requirement that every refusal emits a pointer to this table. Confirm the emitted pointer resolves to this document's anchor; a table only findable by someone who already knows it exists serves nobody who needs it."
+  - "Satisfy check-doc-frontmatter, check-doc-length and check-doc-index, and update docs/INDEX.md if the guide's index entry changes."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900e-1
+  contract: "The four emitted refusal texts with their { cause, item, missing_side, clearing_actions } records, plus the pointer the guard emits with every refusal — the table's rows are the causes and the pointer must resolve to the table's anchor."
+test_required: false
+test_rationale: "The artifact is a table of prose in an existing how-to page; it has no executable surface a test could drive. The one mechanical property in its criteria — that the destination is reachable from the guard's output — is enforced on the emitting side by BO-2900e-1's requirement that every refusal carries the pointer, and is covered by that AC's executing message tests. Recorded explicitly so test-writer skips with an accurate reason rather than silently."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the parent L1's `documentation_triggers: [how-to]`.
+
+  Intended agent is `documentation-expert` — left null per this run's instruction.
+
+  A TABLE, NOT A FOURTH GUIDE — and the last clause makes that assertable. This tree
+  already produces three procedural guides (BO-2900a-4, BO-2900b-4, BO-2900d-4). A
+  fourth page re-explaining the same procedures from the message's point of view would
+  be the copy that goes stale, and it would go stale invisibly, because the reader who
+  needs it arrives from a refusal and never sees the original. What is genuinely missing
+  is the index: refusal in hand, which of the three do I want. That is one table.
+
+  REACHABLE FROM THE OUTPUT is the clause that decides whether this documentation is
+  used at all. A reader who has been refused has a terminal window, not a documentation
+  index. If the refusal does not carry a way to the table, the table serves only people
+  who already know it exists — who are not the people who need it.
+
+  THE EXEMPTION ROW IS THE ONE PEOPLE GET WRONG, which is why the table must say
+  explicitly which refusals the exemption releases and which it does not. Left to
+  inference, the exemption becomes the universal answer to every row (see BO-2900d-4's
+  containment fence).
+
+  PLACEMENT is left open: extending `docs/how-to/done-proof-enforcement.md` keeps it
+  beside the gate a reader most often meets first, but the table spans more than the
+  done-proof gate. The writer should choose one home and link the other guides to it —
+  what this AC forbids is two homes.
+
+  2026-08-13 (IT PO enrichment). Placement is now FIXED at
+  docs/how-to/done-proof-enforcement.md rather than left open, so BO-2900e-1's emitted
+  pointer has a stable target to be wired to. Leaving the home open would have made the
+  reachable-from-the-output clause depend on the writer and the coder independently
+  guessing the same destination.

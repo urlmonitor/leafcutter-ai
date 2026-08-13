@@ -1,0 +1,140 @@
+id: BO-2900a-2
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "Whether the proof went in the real way is decided by watching the run, never by reading the test's text"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two proof-of-done tests for the same acceptance criterion, over a unit that
+    exposes a runtime way in:
+    test P, which invokes the way in with the action under proof and reaches the code
+      under proof while it runs,
+    and test Q, which imports the code under proof directly, and whose file also
+      contains the name of the way in inside a comment, inside a docstring, and
+      inside a helper function that is never called,
+  When each test is evaluated for whether the proof reached the code through the way in,
+  Then test P is judged to have reached it and test Q is judged not to have,
+    And the judgement for each test is derived from what was entered while that test
+      executed,
+    And test Q receives the same judgement it would receive if every mention of the
+      way in were deleted from its file, so the presence of the name in the text
+      changes nothing.
+depends_on:
+  - BO-2900a
+  - BO-2900a-1
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Where the third eligibility condition is evaluated; this AC constrains HOW that condition may be decided."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "The component-level statement of why a source-text signal is not evidence of execution."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling honesty axis — the proof must run against the real artifact. Same instinct applied to fixtures rather than to reachability; do not fold the two."
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes the test run as the evidence of record; this AC applies that principle to how reachability itself is established."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    reach_record:
+      type: object
+      description: "One record per (proof test, code under proof): { test_nodeid: str, target: '<module>:<callable>', entry_point: '<module>:main'|null, entered_entry_point: bool, reached_through: bool, observation_ok: bool }. reached_through is true only when target was entered while an entry_point frame was an ancestor on the same call stack."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "Create scripts/ac_store/run_observer.py exposing observe_test_run(test_nodeids, *, targets, entry_points) -> list[ReachRecord], and call it from done_proof.py's existing pytest-invocation path (_run_pytest_and_parse, scripts/ac_store/done_proof.py:206) so the proof is observed on the run that already happens — do not add a second pytest run per AC."
+    - "THE MECHANISM MUST BE EXECUTION-DERIVED: a call-level recorder installed for the duration of the proof run (sys.monitoring on 3.12+, sys.setprofile fallback). No code path in the observer may read, parse, tokenize, import-for-inspection, or regex the test file's source. Decoy-immunity is then a property of the mechanism, not a filter that has to enumerate comment/docstring/dead-helper forms."
+    - "Records must be attributable to a SPECIFIC test, not to the run as a whole (pytest dynamic contexts, or one observed subprocess per test file). A run-level record makes every test in a file inherit the reachability of its most thorough sibling."
+    - "SELF-VALIDATION, FAIL LOUD. The recorder must confirm it observed at least one frame; an observation that recorded nothing returns observation_ok: false and is reported as 'observation unavailable', never as 'did not reach'. An observer that silently records nothing makes every test look like test Q and blocks the whole store; one that records everything makes every test look like test P and restores the original defect. Both are silent failures unless this flag exists."
+    - "Overhead budget: the recorder must be installed only around the proof run and must not more than double the wall-clock time of a single-file proof run; done_proof already invokes pytest per AC in the required CI gate."
+    - "scripts/ac_store/run_observer.py MUST be added to build_ac_store's deploy_map (scripts/build_phases.py:794) in the same change, or the deployed check_done_proof hook and the required CI done-proof job crash with ModuleNotFoundError."
+delivers_to:
+  agent: python-coder
+  contract: "list[ReachRecord] as above, one per (proof test, code under proof). Consumed by BO-2900a-1 (the direct-import refusal), BO-2900a-1-i (the reached-through distinction) and BO-2900a-3 (the no-way-in refusal)."
+expects_from: null
+test_spec:
+  - name: test_entry_point_proof_and_direct_import_proof_get_opposite_verdicts_in_one_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Executes the adversarial fixture pair — test P invoking main([...]) and test Q direct-importing with the entry point's name in a comment, a docstring and an uncalled helper — under the real observer, and asserts P is reached_through True and Q is reached_through False in the same assertion block."
+  - name: test_verdict_is_unchanged_when_every_textual_mention_is_deleted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Re-runs the observer over test Q with all three decoys stripped from the file and asserts a byte-identical ReachRecord — the property no text-based implementation can satisfy."
+  - name: test_observer_that_records_nothing_reports_observation_unavailable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With the recorder disabled or unable to install, the observer returns observation_ok False rather than reached_through False, so an inert harness is reported instead of silently blocking every AC."
+test_rationale: "This AC is entirely about the MECHANISM by which a fact is established, and every wrong mechanism produces a correct-looking predicate under direct-import testing: a substring scan, a comment-stripping scan and an import-graph scan all return the right answer for hand-fed inputs. Only executing the two real fixture tests under the real observer — and then re-executing test Q with the decoys deleted — distinguishes an execution-derived judgement from a text-derived one. The third test exists because the two silent failure modes of an observation harness (records nothing / records everything) are invisible to any test that asserts only the P-versus-Q verdict."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This AC exists because BO-2900a-1 is otherwise trivially satisfiable by the very
+  defect it prohibits, and that is not a hypothetical.
+
+  THE SELF-DEFEATING IMPLEMENTATION. The cheapest way to answer "did this test go in
+  through the way in" is to search the test file for the name of the entry point, or
+  for a subprocess invocation of the module. That implementation is a presence scan.
+  It stays green on a test that mentions the entry point and never runs it, and it
+  goes red on a test that reaches the entry point through a fixture or a helper whose
+  text does not name it. Shipping BO-2900a-1 on a source scan would put a
+  phantom-done guard inside the phantom-done guard — which is precisely how the
+  fast-lane runner shipped: its structural tests were green while its gates never
+  executed.
+
+  WHY THE THREE DECOYS IN TEST Q ARE NAMED INDIVIDUALLY. A comment, a docstring and
+  an uncalled helper are the three forms a partial implementation typically survives:
+  a naive substring scan is fooled by all three; a scan that strips comments is still
+  fooled by the docstring and the dead helper; an import-graph scan is still fooled by
+  the dead helper. Naming all three makes the fixture adversarial rather than
+  illustrative. The final clause — delete every mention and the verdict is unchanged —
+  is the decisive assertion; it is a property no text-based implementation can satisfy.
+
+  BOUNDARY. This AC governs the METHOD of the determination only. What the
+  determination is used for is BO-2900a-1; what happens when there is no way in at all
+  is BO-2900a-3; the wording of the resulting refusal is BO-2900e. Do not restate any
+  of those here.
+
+  Implementation caution for the IT PO: whatever observation mechanism is chosen must
+  itself be exercised end to end. An observation harness that silently records nothing
+  makes every test look like test Q and blocks the whole store; one that records
+  everything makes every test look like test P and restores the original defect. The
+  fixture pair in the criteria is the minimum viable check, and both verdicts must be
+  asserted in the same run — asserting only the rejection lets a
+  reject-everything implementation pass.
+
+  2026-08-13 (IT PO enrichment). Mechanism chosen: a call-level execution recorder
+  (sys.monitoring, sys.setprofile fallback) rather than coverage.py line/arc data.
+  Coverage arcs answer "was this line executed" but carry no call-stack ancestry, and
+  ancestry is exactly what BO-2900a-1-i's reached-through-versus-entered distinction
+  requires. The observation_ok flag is added as an explicit third state precisely
+  because the IT PO caution above names two silent failure modes that no verdict-only
+  assertion can detect.

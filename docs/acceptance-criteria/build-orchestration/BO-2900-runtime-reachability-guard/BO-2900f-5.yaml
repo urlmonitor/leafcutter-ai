@@ -1,4 +1,4 @@
-id: BO-2700f-5
+id: BO-2900f-5
 components:
   - build_orchestration
   - supervisor_system
@@ -26,10 +26,10 @@ criteria: |
       pre-existing unconditional record to be conditionalized — so the next
       implementer does not repeat it.
 depends_on:
-  - BO-2700f
-  - BO-2700f-1
-  - BO-2700f-2
-  - BO-2700f-3
+  - BO-2900f
+  - BO-2900f-1
+  - BO-2900f-2
+  - BO-2900f-3
 doc_links:
   - path: docs/reference/gate-outcome-records.md
     relationship: describes

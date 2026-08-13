@@ -1,0 +1,98 @@
+id: BO-2900d-1-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "An exemption with no reason does not exempt, and says so rather than failing as if absent"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a unit with no runtime way in, carrying a recorded exemption whose reason is
+    empty or contains only whitespace,
+  When the reachability guard evaluates it,
+  Then the unit is still reported and the change is refused,
+    And the report states that an exemption was found for the unit but carries no
+      reason, distinguishing it from the case where no exemption exists at all,
+    And the same unit with a non-empty reason is not reported.
+depends_on:
+  - BO-2900d-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
+    relationship: related
+    status: exists
+    relevance: "Governs message quality generally; this AC only requires that the two failure causes are told apart."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    reasonless_exemption_state:
+      type: string
+      description: "A third exemption state alongside 'absent' and 'in_force': 'reasonless'. Produced when a registry entry matches the item but its reason is empty or whitespace-only. Carries its own report line; never collapsed into 'absent'."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "THREE STATES, NOT TWO. The exemption lookup must return absent / reasonless / in_force. The easy implementation treats a blank reason as absent, which yields the right verdict with the wrong message: the author is told to add an exemption they can see they already added, concludes the guard is broken, and stops trusting it."
+    - "The reasonless entry must NOT be counted among the exemptions in force reported by BO-2900d-2 — it grants nothing, so counting it inflates the reviewable total with entries that are not doing anything."
+    - "SCOPE HONESTY — DO NOT WIDEN. Only empty-or-whitespace is mechanically decidable and only that is checked. Do not add a keyword blacklist for 'TODO', 'n/a', the unit's own name, or minimum length: every such rule is trivially evaded and fails honest reasons that happen to contain a banned word. Reason QUALITY is a review concern and BO-2900d-2's inventory is its instrument."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900d-1
+  contract: "The exemption registry loader and its record shape { item, kind, reason, recorded, recorded_by } from config/reachability_exemptions.yaml; this AC constrains the lookup's return states rather than the record shape."
+test_spec:
+  - name: test_exemption_with_whitespace_only_reason_still_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real guard over a fixture tree whose registry carries an entry for the unit with reason set to '   '; asserts a non-zero exit and that the unit is still reported."
+  - name: test_reasonless_report_is_distinguishable_from_no_exemption_at_all
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Compares the emitted text of the reasonless run against a run with no registry entry for the unit and asserts the two differ, with the reasonless run stating that an exemption was found but carries no reason."
+  - name: test_same_unit_with_a_non_empty_reason_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Fills the reason in and re-runs; asserts a zero exit and no finding, so the refusal above is about the blank reason and not about the entry's presence."
+  - name: test_reasonless_entry_is_not_counted_among_exemptions_in_force
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With one valid and one reasonless entry recorded, asserts the in-force total reported per BO-2900d-2 is 1, not 2."
+test_rationale: "The entire content of this AC is a difference between two emitted MESSAGES that share a verdict — refuse either way. A direct-import unit test of the lookup would assert an enum value and would pass on an implementation whose reporter maps both non-in-force states onto the same 'no exemption recorded' line, which is the defect this AC exists to prevent. Only running the guard twice and comparing the text it actually emitted can establish the distinction. The fourth test crosses into BO-2900d-2's inventory because the not-counted rule is only observable in the reported total."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Isolated as an L3 because it is the smallest gap through which the exemption becomes
+  a rubber stamp: if a reasonless exemption works, every exemption will eventually be
+  reasonless, and BO-2900d-2's reviewable inventory becomes a list of blanks.
+
+  THE DISTINGUISHING CLAUSE IS THE REAL CONTENT. The easy implementation treats a blank
+  reason as no exemption, which produces the right verdict with the wrong message: the
+  author is told to add an exemption they can see they already added, and concludes the
+  guard is broken. Telling the two apart costs one branch and saves the report from
+  being disbelieved.
+
+  SCOPE HONESTY — READ BEFORE WIDENING THIS. Only empty-or-whitespace is specified,
+  because only that is mechanically decidable. A reason of "TODO", "n/a", or the unit's
+  own name is just as useless, and this AC deliberately does NOT try to catch it: any
+  attempt produces a keyword blacklist that is trivially evaded and that fails honest
+  reasons which happen to contain a banned word. Reason QUALITY is a review concern,
+  and BO-2900d-2's reviewable inventory is the instrument that makes it reviewable.
+  Recording this decision here so a later implementer does not "improve" the rule into
+  a blacklist.
