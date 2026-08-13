@@ -1,0 +1,114 @@
+id: ACS-500g-3-i
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A second copy of a pattern-worthiness rule is rejected before it can drift"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the authoring-patterns skill is the single place the pattern-worthiness
+    rules are stated,
+  When a change is submitted that writes a recurrence threshold, a
+    slot-expressible-variance test, a genuine-vs-incidental test, or a slot naming
+    rule directly into the business-analyst instructions, the pattern-steward
+    instructions, or any other agent instruction file,
+  Then the change is rejected before it lands,
+  And the rejection message names the duplicated rule, the file that restated it,
+    and the skill as the one place it belongs.
+
+  Given a change that only edits the rules inside the authoring-patterns skill,
+  When it is submitted,
+  Then it is accepted.
+
+  Given an agent instruction file that merely points at the skill (a reference or a
+    load instruction, with no rule value of its own),
+  When it is submitted,
+  Then it is accepted — referencing the skill is not treated as duplication.
+depends_on: [ACS-500g-3]
+doc_links:
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "GAP RESOLUTION (where the gate lives) — five touchpoints, all mandatory, per the create-hook skill: (1) hook script templates/scripts/commit_guardian/check_pattern_rule_duplication.py; (2) a top-level config section `pattern_rule_duplication` in templates/scripts/commit_guardian/commit_guardian.json; (3) a hooks_manifest.hooks entry with id `check-pattern-rule-duplication` and entry `python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_pattern_rule_duplication.py`; (4) constants for every config key in templates/scripts/commit_guardian/config.py; (5) a row in the README commit-guardian hook table."
+  - "DEPLOY-MANIFEST RULE (repo-wide, non-negotiable). build_commit_guardian() in scripts/build_phases.py rglob-copies every file under templates/scripts/commit_guardian/, so a self-contained hook deploys automatically. But ANY module the hook imports from OUTSIDE that directory — e.g. anything in scripts/ac_store/ — MUST be added to that phase's hardcoded `deploy_map` in scripts/build_phases.py, or the deployed hook dies with ModuleNotFoundError at commit time. This is the exact failure done_proof.py hit. Prefer keeping the hook self-contained; if a shared helper is unavoidable, put it in templates/scripts/commit_guardian/ as a leading-underscore module."
+  - "Verify every name in the hook's `from config import ...` line exists in BOTH templates/scripts/commit_guardian/config.py and the live scripts/commit_guardian/config.py (create-hook Step 5a). A missing constant is an ImportError at hook startup in every adopter project."
+  - "THE GATE MUST NOT HARDCODE THE THRESHOLD. It reads the canonical value from templates/skills/authoring-patterns/SKILL.md's single declaration line and flags any OTHER file declaring a recurrence threshold. A hook that hardcodes 3 becomes the second copy it exists to prevent, and would keep passing after the skill changes to 2."
+  - "Scope of scanned files must be data-driven, not a hardcoded filename list: the config section declares the guarded globs (templates/agents/*.md, templates/skills/*/SKILL.md, templates/workflows/*, docs/how-to/*.md) and the single exempt path (the authoring-patterns skill). A new agent template must inherit the rule automatically."
+  - "The three criteria scenarios are three distinct verdicts — reject / accept-skill-edit / accept-plain-reference. The reference case is the false-positive risk: a line that merely names the skill, or a load instruction, carries no rule value and MUST pass. Discriminate on the presence of a rule VALUE (a number, or a stated test condition), not on the presence of the words."
+  - "Run only over staged files (git diff --cached --diff-filter=ACMRT), as a forward ratchet — the hook must not retroactively fail the existing store. Precondition: ACS-500g-3 removes the pre-existing 'two or more pages' threshold copy in templates/agents/business-analyst.md §3a step 3 before this gate is switched on."
+  - "Error-handling policy applies (CLAUDE.md rules 1-4, enforced by ruff E722/BLE001/TRY): wrap the subprocess and file reads, never bare-except, log-or-reraise. Exit 0 clean / 1 on violations; the message must name the duplicated rule, the offending file, and the skill as the one place it belongs."
+  - "After adding the manifest entry run `python scripts/build.py --target-dir . --force` and confirm `check-pattern-rule-duplication` appears in the regenerated .pre-commit-config.yaml — an entry present in commit_guardian.json but absent from the generated config is an inert gate."
+delivers_to:
+  agent: llm-expert
+  contract: "A deployed pre-commit gate `check-pattern-rule-duplication` that fails when a pattern-worthiness rule VALUE appears in any guarded file other than templates/skills/authoring-patterns/SKILL.md, and passes for skill-only edits and for value-free references to the skill. This is the mechanical guarantee that the ACS-500g-3 single-source arrangement cannot silently drift."
+expects_from:
+  - ac_id: ACS-500g-3
+    contract: "The single-source arrangement: rule values removed from templates/agents/business-analyst.md and templates/agents/pattern-steward.md, leaving value-free load-the-skill references, so the gate can be enabled without pre-existing violations."
+  - ac_id: ACS-500g-2
+    contract: "A single canonical, machine-parsable recurrence-threshold declaration line in templates/skills/authoring-patterns/SKILL.md that the hook parses as the authoritative value instead of hardcoding it."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_rule_value_in_agent_template_is_rejected
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Stage a fixture agent template that states a recurrence threshold value; run the hook's main() with HOOK_ROOT on the fixture repo and assert exit code 1 and that the message names the duplicated rule, the offending file, and the authoring-patterns skill."
+  - name: test_skill_only_edit_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Stage a change that edits only templates/skills/authoring-patterns/SKILL.md; run main() and assert exit code 0."
+  - name: test_plain_reference_to_skill_is_not_flagged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Stage an agent template whose only mention is a value-free load instruction naming the authoring-patterns skill; run main() and assert exit code 0 — the false-positive guard for the third criteria scenario."
+  - name: test_threshold_is_read_from_the_skill_not_hardcoded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Change the fixture skill's canonical threshold from 3 to 2; assert the hook then flags a template declaring 2 and accepts one declaring 3 — proves the value is parsed from the skill and not baked into the hook."
+  - name: test_guarded_globs_come_from_config_not_a_filename_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Add a brand-new agent template not named anywhere in the hook source, put a rule value in it, and assert it is flagged — proves scope is data-driven from the commit_guardian.json config section."
+  - name: test_deployed_hook_runs_without_import_error
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "Build into a temp target dir, then execute the deployed scripts/commit_guardian/check_pattern_rule_duplication.py as a subprocess; assert it exits 0 or 1 and never raises ModuleNotFoundError — the deploy-manifest guard from the done_proof.py regression."
+  - name: test_hook_id_present_in_generated_precommit_config
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "Run the build into a temp target dir and assert check-pattern-rule-duplication appears in the generated .pre-commit-config.yaml — a manifest entry that never reaches the generated config is an inert gate."

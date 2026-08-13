@@ -1,0 +1,97 @@
+id: ACS-500g
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "Repeated behavior gets promoted into a reusable pattern"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Behavior that keeps reappearing is turned into one reusable, adjustable spec.
+
+  When the same behavior shows up in more than one requirement, it is lifted
+  out into a single named pattern that other requirements point at — and adjust
+  for their own situation — instead of restating it from scratch. This happens
+  both while new requirements are being written and as a deliberate pass over
+  the requirements already on the shelf, so a starting set of patterns exists
+  rather than waiting for one to appear on its own. Without this producing
+  half, "define once, reuse everywhere" can never begin: with nothing to reuse,
+  every check for an existing pattern comes up empty and another one-off
+  specification is written instead.
+depends_on: [ACS-500]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+  - path: templates/agents/pattern-steward.md
+    relationship: specifies
+    status: planned
+delivers_to: null
+expects_from: null
+child_limit_override: 7
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 [commit/ac-pattern-steward]: added child_limit_override: 7. check-ac-tree-limits (ACS-100c-1) blocked the commit because ACS-500g has 7 L2 children (ACS-500g-1 through ACS-500g-7) against the default L1 cap of 5. The AC's own notes already describe designing 'so this L1 stays at the seven-child cap' — this override formalises that intent as the documented temporary waiver (see ACS-100h for the same pattern) rather than triggering a Pattern-C split mid-authoring."
+superseded_by: null
+covered_by:
+  - ACS-500g-1
+  - ACS-500g-2
+  - ACS-500g-3
+  - ACS-500g-4
+  - ACS-500g-5
+  - ACS-500g-6
+  - ACS-500g-7
+implemented_by: []
+assigned_agent: null
+estimated_complexity: null
+it_requirements:
+  - "L1 parent — not implemented directly. assigned_agent stays null (same convention as sibling L1 ACS-500a); all delivery happens through the seven L2 children."
+  - "The producer half spans three package surfaces that must all land for the capability to exist: a new agent template (templates/agents/pattern-steward.md), a new shared skill (templates/skills/authoring-patterns/SKILL.md), and a new commit-time gate (templates/scripts/commit_guardian/check_pattern_rule_duplication.py). None of the three exists today."
+  - "USER DECISION bound for this tree: the recurrence threshold is 3 distinct occurrences (rule of three). It is declared in exactly ONE place — templates/skills/authoring-patterns/SKILL.md — and read from there by both the pattern-steward and the business-analyst §3a Pattern-First Check. No other file may carry the value."
+  - "Prerequisite deliverable across the tree: config/agent_registry.json has NO pattern-steward entry today. Until that entry exists (id, tier, role, template_path, model, skills_used, components, produces, knowledge_channels), the agent cannot be spawned and every runtime-behaviour AC below is unbuildable."
+  - "Documentation trigger 'how-to' is satisfied by ACS-500g-2-ii (docs/how-to/promoting-a-shared-pattern.md), authored as an L3 under ACS-500g-2 so this L1 stays at the seven-child cap."
+change_target: prompt
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+test_required: false
+notes: |
+  THE MISSING PRODUCER HALF OF ACS-500 (load-bearing — carry into L2/L3).
+  ACS-500a-f all presuppose that patterns ALREADY EXIST: 500a says where a
+  recognised pattern lives, 500b keeps page specs to what is unique, 500c has
+  agents detect and link to EXISTING patterns, 500d propagates updates, 500e
+  captures composition, 500f enforces the above mechanically. NOTHING covers
+  CREATING a pattern in the first place, which closes the loop: the pattern
+  inventory is empty, so the pattern-first check never matches, so a standalone
+  AC is written, so no pattern is ever created. Verified in the live store —
+  ZERO pattern records and ZERO ACs setting implements_pattern, despite the
+  schema and the pre-commit hooks fully supporting both.
+
+  Two halves the BA must decompose (do NOT collapse into one):
+  (a) ONGOING PROMOTION — recurrence noticed while new requirements are being
+      authored is promoted at that moment, so the inventory keeps growing.
+  (b) RETROSPECTIVE SWEEP — a pass over the requirements already in the store
+      that seeds the first patterns and breaks the cold-start deadlock.
+  Both must yield a single parameterised definition that consumers reference
+  (feeding ACS-500a's one-place rule and ACS-500c's detect-and-link behaviour)
+  — this L1 is the producer, ACS-500c is the consumer; keep them distinct.
+
+  The HOW (which agent or skill performs promotion, the sweep's mechanics, the
+  record format) is deliberately unspecified here — that belongs to the BA and
+  IT-PO layers.

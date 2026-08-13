@@ -1,0 +1,62 @@
+id: ACS-500g-5-i
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "Re-running the sweep reports already-covered behavior instead of proposing a duplicate pattern"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a first sweep promoted the "row-level audit trail" behavior into a pattern
+    and converted four ACs to reference it,
+  When the sweep is run again over the same store,
+  Then that behavior is reported as already covered, naming the existing pattern id,
+  And no second pattern proposing the same behavior appears in the candidate list,
+  And the four converted ACs are not counted as fresh occurrences that could
+    re-qualify the behavior as a new candidate.
+
+  Given a fifth AC has since been written that specifies the audit-trail behavior
+    standalone,
+  When the sweep runs again,
+  Then that AC is reported as a conversion candidate for the existing pattern —
+    not as evidence for a new pattern.
+depends_on: [ACS-500g-5]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_pattern_refs.py
+    relationship: describes
+    status: exists
+  - path: templates/agents/pattern-steward.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Assignment follows ACS-500g-5: idempotency is a rule inside the same sweep mode in templates/agents/pattern-steward.md, which is llm-expert's owned surface. Reassigned from workflow-architect (not a ticket-phase agent)."
+  - "IDEMPOTENCY IS THE POINT: a second sweep over an unchanged store must produce a candidate list with zero new candidates. State this as a checkable postcondition of the sweep, not as an aspiration — re-running and diffing the two candidate reports is the acceptance evidence."
+  - "The already-covered check must use the deployed pattern-detection predicate _has_parameterized_slots (templates/scripts/commit_guardian/check_ac_pattern_refs.py) to build the existing-pattern inventory, so the sweep and the commit hook agree on what already counts as a pattern. A private predicate here re-creates the ACS-500f-2 drift."
+  - "Exclusion must be data-driven, not name-based: an AC is excluded from fresh-occurrence counting when it sets implements_pattern to an existing pattern id — never by matching a behavior name or an AC-id prefix. New conversions then inherit the exclusion automatically."
+  - "Distinguish the two output classes explicitly in the report: 'already covered' (the behavior maps to an existing pattern id) versus 'conversion candidate' (a standalone AC whose behavior matches an existing pattern and could be converted). Collapsing them into one bucket loses the actionable half."
+  - "A conversion candidate must never be promoted to a NEW pattern, regardless of how many standalone occurrences accumulate. Once a pattern exists for a behavior, additional standalone occurrences raise the conversion count, not a second promotion."
+  - "The near-miss ledger (ACS-500g-4-i) must be consulted and updated by the sweep too, so an occurrence counted by the sweep is not re-counted by a later authoring run and vice versa."
+  - "Prompt-only AC: no unit tests. Idempotency is demonstrated by the run-twice-and-diff evidence above and by the pattern-steward's evaluation under ACS-500g-6/-7."
+delivers_to:
+  agent: llm-expert
+  contract: "Idempotency rules in the pattern-steward sweep mode: an existing-pattern inventory built with the deployed _has_parameterized_slots predicate, exclusion of any AC setting implements_pattern from fresh-occurrence counting, and a report that separates 'already covered' from 'conversion candidate'."
+expects_from:
+  ac_id: ACS-500g-5
+  contract: "The retrospective sweep mode and its ranked candidate report, which this AC constrains to be idempotent on re-run."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+test_required: false

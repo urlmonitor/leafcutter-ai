@@ -1,0 +1,73 @@
+id: ACS-500g-2-i
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A newly promoted pattern is recognised as a pattern by both the authoring scan and the commit-time check"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the authoring-patterns skill's parameterised-criteria rule is applied to
+    promote a behavior with the varying values filter_field and export_format,
+  When the pattern record is written,
+  Then it declares both slots in its pattern_slots list,
+  And each declared slot also appears as the matching named placeholder inside the
+    criteria body,
+  So that a pattern-first inventory scan that recognises patterns by declared slots
+    AND a commit-time check that recognises patterns by placeholders in criteria
+    both classify the new record as a pattern.
+
+  Given an author writes a pattern record that declares slots in only one of those
+    two places (placeholders in criteria with no declared slot list, or a declared
+    slot list with no matching placeholder),
+  When the record is checked before it is written,
+  Then it is rejected with a message naming the slot that is present in one place
+    and missing from the other,
+  And the record is corrected to declare the slot in both places before it enters
+    the store.
+depends_on: [ACS-500g-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_pattern_refs.py
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Assignment follows ACS-500g-2: the deliverable is the pre-write checklist inside templates/skills/authoring-patterns/SKILL.md, which is llm-expert's owned surface. Reassigned from workflow-architect (is_ticket_phase:false, not dispatchable as a phase)."
+  - "Slot format is fixed by the schema: config/ac_store_schema.json defines pattern_slots as a uniqueItems array of '{word}' placeholder STRINGS (braces included, e.g. \"{filter_field}\"), and the criteria placeholder regex is [A-Za-z_][A-Za-z0-9_]* inside braces. Author both sides in that exact form — a bare `filter_field` entry with no braces will not match."
+  - "The both-places rule is an ADDITION on the producer side, not a change to the hook. _has_parameterized_slots in templates/scripts/commit_guardian/check_ac_pattern_refs.py is deliberately an OR (slots non-empty OR a placeholder in criteria) and MUST stay an OR — narrowing it to AND would retroactively de-classify existing records and is ACS-500f-2's territory, not this AC's."
+  - "The pre-write check is a producer-side checklist step in the skill, executed before the file is written. It has no commit-time enforcement of its own; the commit-time gate in this tree is ACS-500g-3-i (rule duplication), which is a different rule. Do not imply a hook exists for slot parity that does not."
+  - "The rejection message must name the specific slot and the side it is missing from (declared-but-not-placed, or placed-but-not-declared) — 'slots are inconsistent' is not actionable enough for an author to fix in one pass."
+  - "Parity between the two sides is asserted behaviourally on the first real record by ACS-500g-6's test_spec (which runs _has_parameterized_slots and the slot regex over the on-disk pattern AC and cross-checks both directions); that test carries this AC in its `covers` list."
+delivers_to:
+  agent: business-analyst
+  contract: "A pre-write slot-parity checklist step in templates/skills/authoring-patterns/SKILL.md: every entry of pattern_slots appears verbatim as a {word} placeholder in criteria, and every {word} placeholder in criteria appears in pattern_slots — applied before the first real pattern record is written in ACS-500g-6."
+expects_from:
+  ac_id: ACS-500g-2
+  contract: "The parameterised-criteria authoring rule from templates/skills/authoring-patterns/SKILL.md — one Given/When/Then scenario with every declared slot present as a named placeholder."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+test_required: false
+notes: |
+  Producer-side counterpart to ACS-500f-2. ACS-500f-2 aligns the CONSUMER's
+  detection predicate with the hook's; this AC makes the PRODUCER emit records
+  that satisfy both predicates at once, so an aligned consumer has something it
+  can actually see.

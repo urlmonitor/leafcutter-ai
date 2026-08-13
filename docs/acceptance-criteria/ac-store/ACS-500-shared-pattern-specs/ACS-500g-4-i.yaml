@@ -1,0 +1,64 @@
+id: ACS-500g-4-i
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A below-threshold repetition is recorded so the next occurrence can trip the threshold"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the recurrence threshold is 3 occurrences,
+  And an author writes an AC for a behavior that so far appears in only one other AC
+    (this is the second occurrence),
+  When the authoring run finishes,
+  Then the AC is written standalone — no pattern is created at two occurrences,
+  And the near-miss is recorded against the behavior, naming both occurrences and
+    the count reached (2),
+  And the record states which values already differ between the two occurrences.
+
+  Given that recorded near-miss,
+  When a later authoring run writes a third AC specifying the same behavior,
+  Then the threshold is recognised as met on that run using the recorded count plus
+    the new occurrence — the recurrence does not have to be rediscovered from
+    scratch,
+  And promotion happens in that run.
+depends_on: [ACS-500g-4]
+doc_links:
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Assignment follows ACS-500g-4: this extends the same in-run promotion step in templates/agents/business-analyst.md §3a step 3, which is llm-expert's owned surface. Reassigned from workflow-architect (not a ticket-phase agent)."
+  - "THE NEAR-MISS LEDGER NEEDS A HOME AND IT IS NOT THE AC STORE. A near-miss record is not an acceptance criterion; writing it as a YAML file under docs/acceptance-criteria/ would trip check-ac-schema (missing required fields) and the folder-density guard. Put it in a single append-only ledger outside the store — reports/pattern-candidates/near-misses.jsonl — alongside the ACS-500g-1-i candidate reports."
+  - "One JSON object per line with a stable behavior key so the later run can look the entry up rather than rediscover the recurrence: {behavior_key, occurrences: [ac_ids], count, differing_values: [names], first_seen, last_seen}. The behavior_key must be derived from the behavior, not from a filename or folder, so it survives an AC being moved."
+  - "Append, never rewrite: a later run that finds an existing behavior_key updates that behavior's entry by appending a new line rather than rewriting the file, so a crashed run cannot truncate the ledger. Re-running the same authoring run must not double-count an occurrence already listed for that behavior_key."
+  - "The threshold at which a near-miss is recorded instead of promoted is derived from the skill's single canonical value (count < 3), not restated as a number in the template or the ledger schema — ACS-500g-3-i's gate rejects a second copy."
+  - "The recorded count plus the new occurrence must be the input to the promotion decision on the later run. State this as reading the ledger BEFORE the pattern-first check's no-match branch decides to write standalone, otherwise the later run recomputes from scratch and the ledger is decorative."
+  - "The differing-values list feeds the slot proposal on promotion — record the names of the values that differ, not the values themselves, so the entry doubles as the proposed slot list (ACS-500g-2 rule 4)."
+  - "Prompt-only AC: no unit tests. The ledger's real effect is proven by the ACS-500g-6/-7 agent evaluation of the pattern-steward and by the store-level assertion in ACS-500g-7's test_spec."
+delivers_to:
+  agent: llm-expert
+  contract: "An append-only near-miss ledger at reports/pattern-candidates/near-misses.jsonl (one JSON object per line: behavior_key, occurrences, count, differing_values, first_seen, last_seen) plus the BA-template step that writes it below threshold and reads it before the no-match branch on a later run."
+expects_from:
+  ac_id: ACS-500g-4
+  contract: "The in-run promotion step in templates/agents/business-analyst.md §3a step 3, which this AC extends with the below-threshold record and the ledger read that precedes the promotion decision."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+test_required: false

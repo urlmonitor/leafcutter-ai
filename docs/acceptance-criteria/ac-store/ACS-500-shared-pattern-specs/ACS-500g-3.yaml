@@ -1,0 +1,88 @@
+id: ACS-500g-3
+components:
+  - ac_store
+readiness: approved
+priority: critical
+title: "Producer and consumer decide 'is this a pattern?' from one shared source that cannot drift"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the authoring-patterns skill states the recurrence threshold as 3 distinct
+    occurrences,
+  And the business-analyst's pattern-first check and the pattern-steward's
+    store-wide scan both decide pattern-worthiness,
+  When the threshold in the skill is changed from 3 to 2 and nothing else changes,
+  Then the business-analyst's next pattern-first check treats a behavior with 2
+    occurrences as pattern-worthy, with no edit made to the business-analyst
+    instructions,
+  And the pattern-steward's next scan qualifies candidates at 2 occurrences, with no
+    edit made to the pattern-steward instructions,
+  And neither the business-analyst nor the pattern-steward carries its own copy of
+    the recurrence threshold, the slot-expressible-variance test, the
+    genuine-vs-incidental test, or the slot naming rules — each defers to the skill
+    for all four.
+
+  Given a behavior that the skill's rules classify as incidental similarity,
+  When the business-analyst evaluates it during authoring and the pattern-steward
+    evaluates it during a store-wide scan,
+  Then both reach the same do-not-promote decision and both cite the same failing
+    rule.
+depends_on: [ACS-500g, ACS-500g-2]
+doc_links:
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: governs
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+  - path: config/skill_registry.json
+    relationship: governs
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+  - path: templates/agents/pattern-steward.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "GAP RESOLUTION (agent assignment): reassigned from workflow-architect to llm-expert. The deliverable is edits to two agent templates (templates/agents/business-analyst.md, templates/agents/pattern-steward.md) — llm-expert's owned surface and its explicit selection trigger. Sibling ACS-500c-1, which edits the same §3a section, is already assigned llm-expert."
+  - "THE SINGLE PLACE IS THE SKILL. The recurrence threshold value 3 (user decision, rule of three) lives in templates/skills/authoring-patterns/SKILL.md and nowhere else. Both readers load the skill; neither states a number."
+  - "CONCRETE DUPLICATE TO DELETE — templates/agents/business-analyst.md §3a step 3 currently reads 'If you believe the behavior is broadly reusable (the same behavior would appear on two or more pages)'. That parenthetical is an inline recurrence-threshold copy of 2, and it contradicts the canonical value of 3. Replace it with a load-the-skill instruction; do not substitute the number 3 for the number 2."
+  - "Also audit templates/agents/business-analyst.md §1 Step 7 (pattern_ac_inventory compilation) and §3a steps 1-4 for the other three rules. Step 1's reference to the _has_parameterized_slots predicate is a DETECTION predicate, not a pattern-worthiness rule — it stays; it is governed by ACS-500f-2, not by this AC."
+  - "The replacement text in each template must be a pure reference: name the skill and instruct the agent to load it. A reference with no rule value of its own must remain acceptable to the ACS-500g-3-i gate — that gate's third scenario exists precisely to protect this text, so keep it value-free."
+  - "Both readers must surface the SAME failure label on a do-not-promote decision. The labels are defined once in the skill (ACS-500g-2); the templates instruct the agent to echo the skill's label verbatim rather than paraphrasing it, otherwise 'both cite the same failing rule' is unverifiable."
+  - "Changes to templates/agents/business-analyst.md fall inside eval trigger closures — after editing, re-run the affected agent eval or the check-eval-staleness hook blocks the commit. Confirm with `python scripts/evals/eval_selector.py --check --changed-files templates/agents/business-analyst.md`."
+  - "Rebuild after editing templates (`python scripts/build.py --target-dir . --force`): the agents that actually run are the compiled copies under .claude/agents/, so an unrebuilt template change is a no-op at runtime."
+  - "Enforcement of this AC is delegated to ACS-500g-3-i, which adds the commit-time gate and carries the behavioural test_spec. This AC is prompt-only and is verified through that gate plus the ACS-500g-6/-7 agent evaluation; it declares no tests of its own."
+delivers_to:
+  - agent: python-coder
+    contract: "A repo state in which the pattern-worthiness rule values exist only in templates/skills/authoring-patterns/SKILL.md — the precondition check_pattern_rule_duplication.py (ACS-500g-3-i) can be turned on against without pre-existing violations. Includes deletion of the 'two or more pages' threshold copy in templates/agents/business-analyst.md §3a step 3."
+  - agent: llm-expert
+    contract: "Load-the-skill reference blocks in templates/agents/business-analyst.md §3a and templates/agents/pattern-steward.md, carrying no rule value of their own and echoing the skill's failure labels verbatim."
+expects_from:
+  ac_id: ACS-500g-2
+  contract: "templates/skills/authoring-patterns/SKILL.md as the single statement of the four pattern-worthiness rules, with the recurrence threshold declared once as 3 and a named failure label per rule."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500g-3-i]
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+test_required: false
+notes: |
+  The load-bearing constraint of this L1. If the producer's definition of "what is
+  a pattern" and the consumer's (business-analyst pattern-first check, ACS-500c-1)
+  are two separate texts, they drift: the producer promotes behaviors the consumer
+  will not match, and the consumer keeps writing standalone ACs beside patterns
+  that already exist. Integrating with the EXISTING consumer check is the
+  requirement here — this AC does not re-specify what that check does.
