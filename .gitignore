@@ -4,8 +4,9 @@
 .leafcutter.lock
 .gemini
 VERSION
-scripts/commit_guardian/
-scripts/doc_compliance/
+scripts/commit_guardian
+scripts/doc_compliance
+scripts/feedback
 .claude/.cache/
 .claude/agents
 .claude/skills
