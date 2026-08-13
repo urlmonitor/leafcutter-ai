@@ -194,6 +194,11 @@ export interface GraphEdge {
   shape?: string;             // artifact graph: "clean" | "ambiguous" | "freetext" | "derived" | "often-empty"
   cardinality?: string;       // artifact graph: e.g. "many-to-one"
   note?: string;              // artifact graph: caveat / gap reference
+  // A THIRD axis, orthogonal to the two trust axes: does the relation exist at
+  // all? "absent" edges are recorded gaps (KM-ADM-002), not weak links — they
+  // must never render as merely-untrusted, or the map claims links it does not
+  // have. Optional so an older graph document still renders as all-present.
+  status?: string;            // artifact graph: "present" | "absent"
 }
 
 /**
@@ -242,11 +247,15 @@ export interface ArtifactGraphEdge {
   source: string;
   target: string;
   rel: string;
-  field: string;
+  /** Absent on a status:"absent" edge — a relation that does not exist has no encoding field. */
+  field?: string;
   enforcement: string;
-  shape: string;
+  /** Absent on a status:"absent" edge — trust shape is meaningless for a relation that does not exist. */
+  shape?: string;
   cardinality: string;
   note: string;
+  /** "present" (default when omitted) | "absent" — see the JSON's legend.status. */
+  status?: string;
 }
 
 /* ---------- Product-truth flows ---------- */

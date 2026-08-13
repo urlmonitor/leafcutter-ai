@@ -37,6 +37,8 @@ export interface PngEdge {
   field?: string;
   enforcement?: string;
   shape?: string;
+  /** "present" (default) | "absent" — a recorded gap, drawn as a missing link. */
+  status?: string;
 }
 
 /** Provenance baked into the image so a shared PNG stands alone. */
@@ -196,7 +198,11 @@ export async function renderGraphPng(
     const t = byId.get(e.target);
     if (!s || !t) continue;
 
-    const spec = artifactEdgeStyle(e.enforcement ?? "none", e.shape ?? "clean");
+    const spec = artifactEdgeStyle(
+      e.enforcement ?? "none",
+      e.shape ?? "clean",
+      e.status ?? "present",
+    );
     const stroke = `hsl(${spec.hsl})`;
 
     const x1 = ox + s.x + NODE_W;
@@ -219,7 +225,11 @@ export async function renderGraphPng(
     ctx.strokeStyle = stroke;
     ctx.globalAlpha = spec.ingestability === "untrusted" ? 0.5 : 0.85;
     ctx.lineWidth = spec.ingestability === "ingestable" ? 1.6 : 1.2;
-    ctx.setLineDash(spec.dashed ? [5, 4] : []);
+    // Mirror the canvas: an absent edge gets a long open dash so the gap
+    // survives greyscale printing, where the red hue alone would not read.
+    ctx.setLineDash(
+      spec.ingestability === "absent" ? [2, 7] : spec.dashed ? [5, 4] : [],
+    );
     ctx.beginPath();
     ctx.moveTo(p0[0], p0[1]);
     ctx.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
@@ -241,8 +251,10 @@ export async function renderGraphPng(
     // Label rides the ACTUAL curve, not the straight-line midpoint — for any
     // edge spanning more than one column those differ substantially.
     const caption =
-      (e.field && e.field !== "—" ? e.field : e.rel ?? "") +
-      (spec.warnGlyph ? ` ${spec.warnGlyph}` : "");
+      spec.ingestability === "absent"
+        ? `${spec.warnGlyph} ${e.rel ?? ""} — missing`
+        : (e.field && e.field !== "—" ? e.field : e.rel ?? "") +
+          (spec.warnGlyph ? ` ${spec.warnGlyph}` : "");
     if (caption) {
       const [cx, cy] = bezierPoint(0.5, p0, p1, p2, p3);
       pending.push({ text: caption, cx, cy, color: stroke });

@@ -418,6 +418,10 @@ export function buildArtifactGraph(flow: Flow): Graph {
       shape: e.shape,
       cardinality: e.cardinality,
       note: e.note,
+      // Third axis: does this relation exist at all? Default "present" so a
+      // graph document authored before the status vocabulary still renders
+      // every edge as real rather than as an unlabelled gap.
+      status: e.status ?? "present",
     }));
 
   return { nodes, edges };

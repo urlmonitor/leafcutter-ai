@@ -75,7 +75,7 @@ export const ARTIFACT_GROUP_LABEL: Record<string, string> = {
   delivery: "Delivery",
 };
 
-export type Ingestability = "ingestable" | "reconcile" | "untrusted";
+export type Ingestability = "ingestable" | "reconcile" | "untrusted" | "absent";
 
 export interface ArtifactEdgeSpec extends EdgeStyleSpec {
   ingestability: Ingestability;
@@ -86,6 +86,7 @@ export interface ArtifactEdgeSpec extends EdgeStyleSpec {
 const INGESTABLE_HSL = "142 70% 55%"; // green  — ingest as-is
 const RECONCILE_HSL = "34 95% 62%";   // amber  — needs preprocessing
 const UNTRUSTED_HSL = "220 9% 62%";   // grey   — do not rely on
+const ABSENT_HSL = "0 72% 58%";       // red    — the relation does not exist
 
 /** Enforcement values that guarantee the link at commit time. */
 const STRONG_ENFORCEMENT = new Set(["enforced", "derived-validated"]);
@@ -97,15 +98,33 @@ const CAVEAT_SHAPE: Record<string, string> = {
 };
 
 /**
- * Resolve an artifact edge's visual spec from BOTH trust axes.
+ * Resolve an artifact edge's visual spec from the trust axes AND its status.
+ *
+ * `status` is checked FIRST and read from the edge's own declared field — never
+ * inferred from the absence of `shape` or `field`. A missing-relation edge is
+ * not a weak link; drawing it in the untrusted grey would let the four recorded
+ * gaps (KM-ADM-002) read as real links, which is exactly what recording them
+ * was meant to prevent.
  *
  * @param enforcement e.g. "enforced" | "warn" | "none" | "derived-validated"
  * @param shape       e.g. "clean" | "ambiguous" | "freetext" | "derived"
+ * @param status      "present" (default) | "absent"
  */
 export function artifactEdgeStyle(
   enforcement: string,
   shape: string = "clean",
+  status: string = "present",
 ): ArtifactEdgeSpec {
+  if (status === "absent") {
+    return {
+      label: "absent · no such link",
+      hsl: ABSENT_HSL,
+      dashed: true,
+      ingestability: "absent",
+      warnGlyph: "✗",
+    };
+  }
+
   const strong = STRONG_ENFORCEMENT.has(enforcement);
   const clean = shape === "clean" || shape === "derived";
   const warnGlyph = CAVEAT_SHAPE[shape] ?? null;
@@ -144,4 +163,5 @@ export const INGESTABILITY_LEGEND: {
   { key: "ingestable", label: "Ingest as-is", hsl: INGESTABLE_HSL, hint: "enforced/derived-validated AND clean" },
   { key: "reconcile", label: "Reconcile first", hsl: RECONCILE_HSL, hint: "enforced but ambiguous, or warn-only" },
   { key: "untrusted", label: "Do not rely on", hsl: UNTRUSTED_HSL, hint: "no enforcement" },
+  { key: "absent", label: "Does not exist", hsl: ABSENT_HSL, hint: "recorded gap — nothing encodes this link" },
 ];

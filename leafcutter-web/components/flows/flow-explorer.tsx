@@ -142,6 +142,7 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
       field: e.field,
       enforcement: e.enforcement,
       shape: e.shape,
+      status: e.status,
     }));
     const selfCount = Array.from(layout.selfRels.values()).reduce(
       (sum, arr) => sum + arr.length,
@@ -194,15 +195,20 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
 
     return layout.edges.map((e) => {
       const enforcement = e.enforcement ?? "none";
-      const spec = artifactEdgeStyle(enforcement, e.shape ?? "clean");
+      const status = e.status ?? "present";
+      const spec = artifactEdgeStyle(enforcement, e.shape ?? "clean", status);
       const pairKey = [e.source, e.target].sort().join("::");
       const nth = pairSeen.get(pairKey) ?? 0;
       pairSeen.set(pairKey, nth + 1);
 
       // Field first (what you grep for), relationship second (the abstraction).
-      const caption = e.field && e.field !== "—"
-        ? `${e.field}${spec.warnGlyph ? ` ${spec.warnGlyph}` : ""}`
-        : `${e.rel ?? e.label ?? ""}${spec.warnGlyph ? ` ${spec.warnGlyph}` : ""}`;
+      // An absent edge has no field to grep, so it captions the relation it
+      // WOULD encode, marked as missing rather than as a weak link.
+      const caption = status === "absent"
+        ? `${spec.warnGlyph} ${e.rel ?? e.label ?? ""} — missing`
+        : e.field && e.field !== "—"
+          ? `${e.field}${spec.warnGlyph ? ` ${spec.warnGlyph}` : ""}`
+          : `${e.rel ?? e.label ?? ""}${spec.warnGlyph ? ` ${spec.warnGlyph}` : ""}`;
 
       return {
         id: e.id,
@@ -219,7 +225,14 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
           stroke: `hsl(${spec.hsl})`,
           strokeWidth: spec.ingestability === "ingestable" ? 1.7 : 1.3,
           opacity: spec.ingestability === "untrusted" ? 0.55 : 0.85,
-          strokeDasharray: spec.dashed ? "5 4" : undefined,
+          // A long open dash reads as "this line isn't really there" — a
+          // second, non-colour channel so the gap survives greyscale printing
+          // and the PNG export.
+          strokeDasharray: spec.ingestability === "absent"
+            ? "2 7"
+            : spec.dashed
+              ? "5 4"
+              : undefined,
         },
         label: caption,
         labelShowBg: true,
@@ -241,6 +254,7 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
           field: e.field,
           enforcement,
           shape: e.shape,
+          status,
           cardinality: e.cardinality,
           note: e.note,
           ingestability: spec.ingestability,
@@ -354,7 +368,13 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
                     x1="0" y1="3" x2="20" y2="3"
                     stroke={`hsl(${row.hsl})`}
                     strokeWidth="2"
-                    strokeDasharray={row.key === "untrusted" ? "4 3" : undefined}
+                    strokeDasharray={
+                      row.key === "absent"
+                        ? "2 7"
+                        : row.key === "untrusted"
+                          ? "4 3"
+                          : undefined
+                    }
                   />
                 </svg>
                 <span className="text-foreground/85">{row.label}</span>
@@ -366,6 +386,8 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
             Labels show the <span className="font-mono">field</span> that encodes each edge.
             ⚠ ambiguous · ~ freetext · ∅ often-empty — these need partitioning before
             ingestion even when enforced. Dashes mark derived or untrusted links.
+            A red ✗ line is a relation the repo does NOT have — recorded so a gap
+            is distinguishable from an omission, never traversable.
             Click an edge for its full trust record; ↺ on a card lists
             self-referencing relationships.
           </p>
@@ -374,6 +396,7 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
             const spec = artifactEdgeStyle(
               selectedEdge.enforcement ?? "none",
               selectedEdge.shape ?? "clean",
+              selectedEdge.status ?? "present",
             );
             return (
               <div className="mt-3 border-t border-border/40 pt-2.5">
@@ -402,7 +425,9 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
                   <div>
                     <dt className="inline text-muted-foreground/70">trust </dt>
                     <dd className="inline text-foreground/85">
-                      {selectedEdge.enforcement} · {selectedEdge.shape}{" "}
+                      {selectedEdge.status === "absent"
+                        ? "no such link"
+                        : `${selectedEdge.enforcement} · ${selectedEdge.shape}`}{" "}
                       <span style={{ color: `hsl(${spec.hsl})` }}>
                         ({spec.ingestability})
                       </span>
