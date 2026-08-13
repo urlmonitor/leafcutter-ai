@@ -1,0 +1,40 @@
+id: KM-ADM-001
+readiness: reviewed
+priority: high
+components:
+  - knowledge_management
+status: active
+component: knowledge-management
+level: L2
+title: "Artifact data-map enforcement ratings match the commit-guardian hook registry"
+origin_agent: BrainCandy
+criteria: |
+  Given docs/reference/artifact-knowledge-graph.graph.json rates every edge with an
+    `enforcement` value drawn from the legend (enforced / derived-validated /
+    derived-raw / warn / none), and an edge's `note` names the hook that backs it
+  When the map is read to decide whether a link may be trusted during a refactor
+  Then an edge whose named hook is absent from
+    templates/scripts/commit_guardian/commit_guardian.json (or present with
+    enabled:false) is rated `enforcement: none`, because an unregistered hook never runs
+  And an edge whose named hook IS registered and enabled but does not block is rated
+    `enforcement: warn`
+  And specifically `ac-tested` (AC -> Test via covered_by) is rated `none` — its named
+    hook check_ac_coverage.py is unregistered dead code — while `ticket-touches`
+    (Ticket -> SourceFile via files_touched) is rated `warn`, because the
+    check-predone-scope hook IS registered and reports advisory scope violations
+  And the bug symptom ("ac-tested is rated warn and ticket-touches is rated none, so a
+    refactorer trusts the test link that nothing checks and discards the
+    files_touched link that is actually reported") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: the two-axis trust ratings were assigned from the
+  EXISTENCE of a hook script on disk (scripts/commit_guardian/check_ac_coverage.py) and
+  from prose in the source data-map document, rather than from
+  templates/scripts/commit_guardian/commit_guardian.json — the registry that decides
+  which hooks actually run at commit time. check_ac_coverage.py exists but appears
+  nowhere in commit_guardian.json, so it has never executed; check-predone-scope is
+  registered (files_touched_reconciliation.enabled:true, strict:false) and so warns on
+  every ticket commit. The regression class is "trust rating asserted from file
+  presence" — the covering test closes it by cross-checking each edge's claim against
+  the registry rather than re-asserting the two literal values.
+change_target: docs
+risk_surface: internal

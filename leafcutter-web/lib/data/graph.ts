@@ -12,6 +12,7 @@ import type {
   AC,
   AcRef,
   AgentDef,
+  ArtifactGraphNode,
   Component,
   Flow,
   Graph,
@@ -359,6 +360,71 @@ export function buildComponentGraph(components: Component[]): Graph {
     },
   }));
   return { nodes, edges: [] };
+}
+
+/**
+ * Artifact knowledge-graph: turn the authored nodes/edges JSON into a React Flow
+ * graph where every artifact type is a node and every field-level relationship is
+ * an edge. Nodes are positioned by `rank` (column) and row index within that rank.
+ * Only emits nodes/edges when the flow has graphNodes/graphEdges attached.
+ */
+export function buildArtifactGraph(flow: Flow): Graph {
+  if (!flow.graphNodes || !flow.graphEdges) return { nodes: [], edges: [] };
+
+  // Group nodes by rank so we can assign row indices within each column.
+  const nodesByRank = new Map<number, ArtifactGraphNode[]>();
+  for (const n of flow.graphNodes) {
+    const arr = nodesByRank.get(n.rank) ?? [];
+    arr.push(n);
+    nodesByRank.set(n.rank, arr);
+  }
+
+  const rowIndexOf = new Map<string, number>();
+  for (const arr of nodesByRank.values()) {
+    arr.forEach((n, i) => rowIndexOf.set(n.id, i));
+  }
+
+  const nodes: GraphNode[] = flow.graphNodes.map((n) => ({
+    id: n.id,
+    kind: "artifact",
+    label: n.label,
+    group: n.group,
+    meta: {
+      rank: n.rank,
+      row: rowIndexOf.get(n.id) ?? 0,
+      path: n.path,
+      key: n.key,
+      note: n.note,
+    },
+  }));
+
+  const nodeIds = new Set(nodes.map((n) => n.id));
+
+  const edges: GraphEdge[] = flow.graphEdges
+    .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+    .map((e): GraphEdge => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      kind: "flow",
+      label: e.rel,
+      enforcement: e.enforcement,
+      rel: e.rel,
+      // Carry the full authored payload. `shape` is required to evaluate the
+      // store's own ingestable_rule (enforcement AND shape), and `field` is
+      // the most actionable datum on the map — dropping either made the
+      // rendered graph claim more trust than the data supports.
+      field: e.field,
+      shape: e.shape,
+      cardinality: e.cardinality,
+      note: e.note,
+      // Third axis: does this relation exist at all? Default "present" so a
+      // graph document authored before the status vocabulary still renders
+      // every edge as real rather than as an unlabelled gap.
+      status: e.status ?? "present",
+    }));
+
+  return { nodes, edges };
 }
 
 /** Agent spawn-topology graph from the registry (who dispatches whom). */

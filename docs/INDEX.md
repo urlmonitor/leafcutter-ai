@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-08-12 13:42 UTC
+> Generated: 2026-08-13 22:13 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -34,6 +34,7 @@ task, then pull only those files.
 | code review | [docs/architecture/components/code-review.md](docs/architecture/components/code-review.md) | Architecture of the Fowler code-smell review capability: the developer-facing /code-smell-review flow, the shared core review method plus the two bucket catalogues, the two cost-tiered leaf reviewers (Sonnet + Opus), and the top-level orchestration that fans them out in parallel and merges their findings into one severity-ranked report. |
 | commit guardian | [docs/architecture/components/commit-guardian.md](docs/architecture/components/commit-guardian.md) | Pre-commit hook orchestration system that enforces code quality, ADR coverage, component integrity, and structural rules before every commit lands. |
 | doc compliance | [docs/architecture/components/doc-compliance.md](docs/architecture/components/doc-compliance.md) | Documentation compliance verification system that enforces frontmatter presence, description fields, doc-length limits, and coverage requirements across all project documentation. |
+| epic retrospective | [docs/architecture/components/epic-retrospective.md](docs/architecture/components/epic-retrospective.md) | Post-epic fact extraction subsystem. Reads a completed epic's ticket frontmatter, git history, and comment stream to produce a structured, machine-readable facts blob that grounds the retrospective-agent's narrative in measured evidence rather than recollection. |
 | feedback collector | [docs/architecture/components/feedback-collector.md](docs/architecture/components/feedback-collector.md) | Structured feedback collection system that aggregates agent quality signals into JSONL logs for retrospective analysis and continuous improvement. |
 | finalize | [docs/architecture/components/finalize.md](docs/architecture/components/finalize.md) | The finalize-feature workflow: pre-merge test baseline capture, PR merge gating, push-before-merge sync, main sync, and ticket/epic closure. |
 | glossary | [docs/architecture/components/glossary.md](docs/architecture/components/glossary.md) | Project terminology registry with automated coverage checks that ensure novel jargon is triaged and documented consistently across all project artifacts. |

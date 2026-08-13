@@ -1,0 +1,43 @@
+id: KM-ADM-006
+readiness: reviewed
+priority: high
+components:
+  - knowledge_management
+status: active
+component: knowledge-management
+level: L2
+title: "The data-map prose and the graph JSON cannot disagree about an edge's trust"
+origin_agent: BrainCandy
+criteria: |
+  Given the artifact knowledge graph exists twice — as the machine-readable
+    docs/reference/artifact-knowledge-graph.graph.json that Atlas renders, and as the
+    human-readable trust table in docs/reference/artifact-knowledge-graph-data-map.md
+    that the JSON names as its source_doc — with nothing keeping the two in step
+  When an edge's trust rating is corrected in one representation
+  Then the other carries the same rating, and a test fails if they diverge: for every
+    JSON edge whose encoding field also appears in the doc's trust table, the doc row's
+    enforcement value equals the JSON edge's enforcement
+  And that parity test asserts a minimum number of rows actually matched, so it cannot
+    silently pass by matching nothing when the table format shifts
+  And the doc documents the status axis and lists the four recorded absent relations, so
+    a reader of the prose learns about the gaps without opening the JSON
+  And the four ratings corrected in KM-ADM-001 and KM-ADM-005 are reflected in the doc:
+    TESTED_BY is none, TOUCHES is warn, and COVERS names its diff scope
+  And the bug symptom ("the doc still rates TESTED_BY warn and TOUCHES none after the
+    JSON was corrected, so whichever representation a reader happens to open decides
+    which links they trust") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: the doc was authored first and the JSON derived from
+  it by hand, with no mechanical link in either direction. Five corrections then landed on
+  the JSON alone (KM-ADM-001 through -005), so the prose now contradicts the SSOT on four
+  rows. The drift is silent because nothing reads both.
+  Direction of truth: the JSON is the SSOT — it is what Atlas renders and what the other
+  KM-ADM tests assert against. The doc is a derived human view, so the parity test is
+  written as "doc must agree with JSON", not the reverse.
+  Deliberate design of the test: it matches doc rows to JSON edges on the FIELD cell and
+  skips rows it cannot match (the table legitimately holds rows with no JSON counterpart,
+  e.g. ticket `source_ac`). A skip-what-you-cannot-match test degrades to vacuously green
+  if the table is reformatted, which is why the minimum-match-count assertion is part of
+  the criteria rather than an implementation detail.
+change_target: docs
+risk_surface: internal
