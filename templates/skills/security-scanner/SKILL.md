@@ -55,7 +55,7 @@ To suppress a known false positive, add an entry to `.security-allowlist` in the
 # .security-allowlist
 # Format: <rule_id>:<file_path>:<line_number>  OR  <rule_id>:*  (suppress globally)
 ENTROPY_HIGH:tests/fixtures/test_data.py:42
-API_KEY_GENERIC:docs/bybit-api.md:*
+API_KEY_GENERIC:docs/external-api.md:*
 ```
 
 ## Secrets Detection Rules
@@ -65,7 +65,7 @@ The scanner applies these rules in order:
 | Rule ID | Pattern / Method | Description |
 |---------|-----------------|-------------|
 | `ENV_FILE` | filename match `*.env`, `.env.*` | Staged .env files |
-| `BYBIT_API_KEY` | `[A-Za-z0-9]{36,}` near `bybit`, `api_key`, `apiKey` | Bybit API key pattern |
+| `EXCHANGE_API_KEY` | `[A-Za-z0-9]{36,}` near `api_key`, `apikey`, `api_secret` | Third-party API key pattern |
 | `GENERIC_SECRET` | keyword proximity: `secret`, `password`, `token`, `passwd` | Generic credential keyword |
 | `AWS_KEY` | `AKIA[0-9A-Z]{16}` | AWS access key pattern |
 | `PRIVATE_KEY` | `-----BEGIN (RSA\|EC\|OPENSSH) PRIVATE KEY-----` | Private key header |

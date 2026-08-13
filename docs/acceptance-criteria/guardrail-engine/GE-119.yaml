@@ -1,0 +1,45 @@
+id: GE-119
+readiness: reviewed
+priority: high
+components:
+  - commit_guardian
+status: active
+component: guardrail-engine
+level: L2
+title: "The contract-shrinking guard distinguishes an edited test from a deleted one"
+origin_agent: BrainCandy
+criteria: |
+  Given check_contract_shrinking.py blocks a commit that both changes production code and
+    weakens tests, and it detects a weakened test by matching the raw diff line
+    `-\s*def test_`
+  When a commit edits the BODY of an existing test, or renames nothing but reformats it —
+    which git renders as a removed `-    def test_x` line AND a matching added
+    `+    def test_x` line for the same test name
+  Then the guard does not report that test as deleted, because a test name that is both
+    removed and re-added in the same diff still exists
+  And the guard still blocks a genuine deletion, where a test name is removed with no
+    matching addition anywhere in the diff
+  And the "test file deleted" pattern likewise fires only when the diff shows the file
+    going to /dev/null, not merely because a test file appears on the `--- a/` side of an
+    ordinary modification
+  And the bug symptom ("a merge commit or any body-edit to an existing test is blocked as
+    contract shrinking, so the guard must be bypassed with SKIP to land routine work —
+    training the team to skip the very gate that protects tests") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: _scan_diff() applies each weakening pattern with a
+  bare finditer over the whole diff text and appends a violation per match. It never pairs
+  a removal with its corresponding addition, so it cannot tell "deleted" from "modified" —
+  every edited test body is a false positive.
+  Found live: merging origin/main into feat/atlas-artifact-knowledge-graph was blocked by
+  this guard. The single flagged line was
+    -    def test_drift_check_covers_shimmed_dirs(self):
+  whose matching
+    +    def test_drift_check_covers_shimmed_dirs(self):
+  sits in the same hunk — the test still exists at tests/test_build_artifact_parity.py:192.
+  That merge is net +4124/-19 across test files (main ADDED four test modules) and the full
+  suite is 3432 passed / 0 failed on the merged tree. Nothing was weakened.
+  Severity is about incentives, not just noise: because the guard cannot be satisfied on a
+  merge commit, the only way to land one today is SKIP=check-contract-shrinking — which
+  normalises bypassing a TDD gate. Fixing the detector is what makes the gate keepable.
+change_target: code
+risk_surface: internal

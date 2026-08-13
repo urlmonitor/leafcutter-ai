@@ -1,5 +1,5 @@
 ---
-title: "Author TDD documentation: explanation doc, how-to guide, and ADR-004"
+title: "Author TDD documentation: explanation doc, how-to guide, and ADR-027"
 status: done
 components:
   - build_pipeline
@@ -26,11 +26,11 @@ agents:
   pull-request: signed_off
 ---
 
-# 07: Author TDD documentation: explanation doc, how-to guide, and ADR-004
+# 07: Author TDD documentation: explanation doc, how-to guide, and ADR-027
 
 ## Goal
 
-In order to make the TDD workflow discoverable, understandable, and permanently recorded as an architectural decision, we need three documentation artifacts: an explanation doc (why TDD works this way in leafcutter), a how-to guide (how to write a TDD ticket), and ADR-004 capturing the decision to flip test-writer before coders.
+In order to make the TDD workflow discoverable, understandable, and permanently recorded as an architectural decision, we need three documentation artifacts: an explanation doc (why TDD works this way in leafcutter), a how-to guide (how to write a TDD ticket), and ADR-027 capturing the decision to flip test-writer before coders.
 
 ## Context
 
@@ -60,7 +60,7 @@ Content outline:
 - FAQ: "what if test-planner left my tests array empty?" → test-writer is skipped; start by writing an ADR or doc ticket instead
 - FAQ: "what if a red_baseline test is wrong?" → fix the test in a separate commit with no production code changes
 
-### 3. ADR-004: `docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md`
+### 3. ADR-027: `docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md`
 
 Decision: flip `test-writer` to run before `python-coder`/`sql-coder` (priority 5 instead of 8), making tests the contract that drives implementation rather than a post-hoc verification.
 
@@ -93,7 +93,7 @@ Then it provides step-by-step guidance for writing a ticket that will go through
 And it references the contract-shrinking hook (ticket 04)
 And it answers the FAQ about empty test_requirements
 
-Given docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md exists
+Given docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md exists
 When the file is read
 Then it records the decision, context, alternatives, and consequences in standard ADR format
 And it references the specific priority change (test-writer 8 → 5)
@@ -104,7 +104,7 @@ And it references this epic (EPIC-TDDWorkflowEnforcement)
 
 ### ADRs
 
-- `ADR-004: Test-First Workflow Enforcement in the Agentic Build Pipeline` — new ADR to be authored capturing the decision to flip test-writer priority and the three-layer contract-shrinking guard.
+- `ADR-027: Test-First Workflow Enforcement in the Agentic Build Pipeline` — new ADR to be authored capturing the decision to flip test-writer priority and the three-layer contract-shrinking guard.
 
 ## Sign-offs
 
@@ -120,27 +120,27 @@ And it references this epic (EPIC-TDDWorkflowEnforcement)
 
 ### 2026-05-27 02:00 — adr-author (status: ok)
 feedback-id: fb_2026-05-27_07_adr
-Authored docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md in standard ADR format. Status: Accepted (2026-05-27). Covers: (1) Context — test-AFTER failure modes with concrete examples from ADR-003; (2) Decision — test-writer priority 8→5, red_baseline contract schema, three-layer contract-shrinking guard; (3) Alternatives Considered — PR review only, separate design agent, honor-system only; (4) Consequences — positive (verifiable done criterion, test quality, blocked at commit) and negative (sequential constraint, skip-rule overhead, potential false positives). References all relevant files including agent_registry.json, template files, and new docs.
+Authored docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md in standard ADR format. Status: Accepted (2026-05-27). Covers: (1) Context — test-AFTER failure modes with concrete examples from ADR-003; (2) Decision — test-writer priority 8→5, red_baseline contract schema, three-layer contract-shrinking guard; (3) Alternatives Considered — PR review only, separate design agent, honor-system only; (4) Consequences — positive (verifiable done criterion, test quality, blocked at commit) and negative (sequential constraint, skip-rule overhead, potential false positives). References all relevant files including agent_registry.json, template files, and new docs.
 
 ### 2026-05-27 02:05 — architect-review (status: ok)
 feedback-id: fb_2026-05-27_07_arch
-ADR-004 review complete: alternatives are fairly represented (PR review rejected due to subjectivity/asynchrony, separate design agent rejected as over-engineering, honor-system-only rejected based on ADR-003 incident evidence). Consequences accurately reflect the actual implementation. Explanation doc correctly describes the red_baseline schema (test_name, file, error fields). How-to FAQ section covers the three most common confusion points: empty tests array, wrong test in red_baseline, blocker path. Both docs cross-reference each other and ADR-004. Approve.
+ADR-027 review complete: alternatives are fairly represented (PR review rejected due to subjectivity/asynchrony, separate design agent rejected as over-engineering, honor-system-only rejected based on ADR-003 incident evidence). Consequences accurately reflect the actual implementation. Explanation doc correctly describes the red_baseline schema (test_name, file, error fields). How-to FAQ section covers the three most common confusion points: empty tests array, wrong test in red_baseline, blocker path. Both docs cross-reference each other and ADR-027. Approve.
 
 ### 2026-05-27 02:10 — explanation-author (status: ok)
 feedback-id: fb_2026-05-27_07_explain
-Authored docs/explanation/tdd-workflow.md covering: what test-first in an agentic pipeline means (vs. classical TDD), the three-phase flow (test-planner BA → test-writer red → python-coder green), the red_baseline concept and its triple role (coder checklist, durable record, guard reference), all three contract-shrinking layers (hook blocking, supervisor warn, honor-system clause), the docs-only skip rule, and Python-only Phase 1 scope. Cross-references ADR-004 and the how-to guide.
+Authored docs/explanation/tdd-workflow.md covering: what test-first in an agentic pipeline means (vs. classical TDD), the three-phase flow (test-planner BA → test-writer red → python-coder green), the red_baseline concept and its triple role (coder checklist, durable record, guard reference), all three contract-shrinking layers (hook blocking, supervisor warn, honor-system clause), the docs-only skip rule, and Python-only Phase 1 scope. Cross-references ADR-027 and the how-to guide.
 
 ### 2026-05-27 02:15 — how-to-author (status: ok)
 feedback-id: fb_2026-05-27_07_howto
-Authored docs/how-to/writing-a-tdd-ticket.md with four steps (populate Test Requirements, understand what test-writer does, what happens when coder runs, what the hook catches) and six FAQ entries (empty tests array, wrong red_baseline test, coder cannot make test pass, SQL tickets, docs-only setup, and implicit coverage of the commit-splitting approach). Cross-references check_contract_shrinking.py error output verbatim (copy-paste from the hook's BLOCKED message). Cross-references explanation doc and ADR-004.
+Authored docs/how-to/writing-a-tdd-ticket.md with four steps (populate Test Requirements, understand what test-writer does, what happens when coder runs, what the hook catches) and six FAQ entries (empty tests array, wrong red_baseline test, coder cannot make test pass, SQL tickets, docs-only setup, and implicit coverage of the commit-splitting approach). Cross-references check_contract_shrinking.py error output verbatim (copy-paste from the hook's BLOCKED message). Cross-references explanation doc and ADR-027.
 
 ### 2026-05-27 02:16 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-27_07_pr
-All three acceptance criteria verified: (1) explanation doc exists and covers three-phase flow, red_baseline, all three guard layers, Python-only scope — confirmed. (2) How-to guide exists, covers step-by-step for ticket authors, references contract-shrinking hook with exact error output, answers empty test_requirements FAQ — confirmed. (3) ADR-004 exists in standard format, records decision with alternatives and consequences, references priority change (8→5) and the epic — confirmed. Approve for commit.
+All three acceptance criteria verified: (1) explanation doc exists and covers three-phase flow, red_baseline, all three guard layers, Python-only scope — confirmed. (2) How-to guide exists, covers step-by-step for ticket authors, references contract-shrinking hook with exact error output, answers empty test_requirements FAQ — confirmed. (3) ADR-027 exists in standard format, records decision with alternatives and consequences, references priority change (8→5) and the epic — confirmed. Approve for commit.
 
 ### 2026-05-27 02:17 — commit (status: ok)
 feedback-id: fb_2026-05-27_07_commit
-Committed: docs(tdd): add ADR-004, explanation doc, and how-to guide for TDD workflow.
+Committed: docs(tdd): add ADR-027, explanation doc, and how-to guide for TDD workflow.
 
 ### 2026-05-27 02:18 — pull-request (status: ok)
 feedback-id: fb_2026-05-27_07_pr_push
@@ -149,19 +149,19 @@ Branch pushed to origin. PR deferred until all epic tickets complete (one PR per
 ## Implementation Tasks
 
 ### adr-author
-- [ ] Author `docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md` following ADR standard format (Status, Context, Decision, Alternatives Considered, Consequences)
+- [ ] Author `docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md` following ADR standard format (Status, Context, Decision, Alternatives Considered, Consequences)
 - [ ] Reference the priority change: test-writer `"priority": 8 → 5`
 - [ ] Reference all three enforcement layers (hook, supervisor, docs)
 - [ ] Reference this epic
 
 ### architect-review
-- [ ] Review ADR-004 draft for architectural completeness — confirm alternatives are fairly represented and consequences are accurate
+- [ ] Review ADR-027 draft for architectural completeness — confirm alternatives are fairly represented and consequences are accurate
 - [ ] Confirm the explanation doc correctly describes the `red_baseline` schema
 - [ ] Confirm the how-to FAQ section covers the most common confusion points
 
 ### explanation-author
 - [ ] Author `docs/explanation/tdd-workflow.md` following the outline in Context
-- [ ] Include a reference to ADR-004 for the decision rationale
+- [ ] Include a reference to ADR-027 for the decision rationale
 - [ ] Include a cross-reference to `docs/how-to/writing-a-tdd-ticket.md`
 
 ### how-to-author
@@ -174,4 +174,4 @@ Branch pushed to origin. PR deferred until all epic tickets complete (one PR per
 - Touches money? No.
 - Touches data? No — new documentation files only.
 - Reversibility? Fully reversible: delete the three files.
-- Risk: ADR-004 must be written after the enforcement machinery is in place (tickets 02–05) to accurately describe the actual implementation, not the aspirational one.
+- Risk: ADR-027 must be written after the enforcement machinery is in place (tickets 02–05) to accurately describe the actual implementation, not the aspirational one.

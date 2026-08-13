@@ -1,17 +1,17 @@
 ---
-title: "Precommit-Autofix Routing Reference"
+title: Precommit-Autofix Routing Reference
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/README.md"
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
+- docs/agents/README.md
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+description: Overview of Precommit-Autofix Routing Reference.
 ---
-
 # Precommit-Autofix Routing Reference
 
 This document is the authoritative hook-by-hook routing audit for `.claude/precommit-autofix.json`.

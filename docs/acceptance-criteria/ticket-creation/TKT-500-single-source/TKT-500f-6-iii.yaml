@@ -28,7 +28,7 @@ criteria: |
   And it records that the skip was a legitimate docs-or-config-only skip.
 depends_on: [TKT-500f-6, TKT-500b-1]
 doc_links:
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: constrains
     status: exists
   - path: scripts/ac_store/generate_ticket_from_ac.py

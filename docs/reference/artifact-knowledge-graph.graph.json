@@ -1,0 +1,84 @@
+{
+  "id": "leafcutter/artifact-knowledge-graph",
+  "title": "Artifact Knowledge Graph — Data Map",
+  "summary": "Type-level map of leafcutter-ai's artifact nodes and the fields that connect them. Each edge carries the field that encodes it plus a two-axis trust rating (enforcement x shape), and a status marking whether the relation exists at all — relations the graph needs but the repo does not have are recorded as status 'absent' rather than omitted. This is the static schema of the knowledge graph; the dynamic Atlas view will later render live instances against these same edge types.",
+  "kind": "architecture",
+  "version": 2,
+  "source_doc": "docs/reference/artifact-knowledge-graph-data-map.md",
+  "legend": {
+    "status": {
+      "present": "The relation exists in the repo and is encoded by the named field.",
+      "absent": "The relation does NOT exist. Recorded deliberately so a missing traversal is distinguishable from one that was never needed. Carries no encoding field and is always enforcement 'none'."
+    },
+    "enforcement": {
+      "enforced": "A pre-commit hook and/or required CI gate blocks violations.",
+      "derived-validated": "Machine-generated AND its freshness/parity is blocked at commit.",
+      "derived-raw": "Machine-generated with no freshness guard.",
+      "warn": "Tooling warns but never blocks.",
+      "none": "No tooling reads it."
+    },
+    "shape": {
+      "clean": "Single unambiguous value form; ingestable as-is.",
+      "ambiguous": "One field multiplexes several edge types; must be partitioned.",
+      "freetext": "Unresolvable free-text string.",
+      "derived": "Generated back-reference.",
+      "often-empty": "Frequently blank in the live store."
+    },
+    "ingestable_rule": "A link is ingestable as-is only when status is 'present' AND enforcement is 'enforced' or 'derived-validated' AND shape is 'clean'. A status 'absent' edge is never ingestable — it documents a gap to be built."
+  },
+  "groups": {
+    "ac-core": "AC lifecycle: criteria, tickets, tests, code",
+    "prod-truth": "Product-truth: flows, screens, sample data",
+    "meta": "Cross-cutting: components, patterns, ADRs, docs",
+    "delivery": "Delivery record: changelog, commits"
+  },
+  "nodes": [
+    { "id": "ac", "label": "Acceptance Criterion", "group": "ac-core", "rank": 2, "path": "docs/acceptance-criteria/**/*.yaml", "key": "id", "note": "Hierarchical: L0->L1->L2->L3; parent derived by stripping the last ID segment." },
+    { "id": "ticket", "label": "Ticket", "group": "ac-core", "rank": 3, "path": "tickets/**/*.md", "key": "ac_traceability.id" },
+    { "id": "test", "label": "Test", "group": "ac-core", "rank": 4, "path": "unit_tests/**/*.py", "key": "<path>::<func>" },
+    { "id": "source_file", "label": "Source File", "group": "ac-core", "rank": 4, "path": "scripts/**, templates/**, app code", "key": "repo-relative path" },
+    { "id": "flow", "label": "Flow", "group": "prod-truth", "rank": 1, "path": "docs/product-truth/flows/**/*.flow.json", "key": "id (<product>/<name>)" },
+    { "id": "flow_node", "label": "Flow Node (step / branch)", "group": "prod-truth", "rank": 1, "path": "(embedded in flow)", "key": "<flow.id>#<node.id>", "note": "Reified so IMPLEMENTS/RENDERS are step-level, not flow-level." },
+    { "id": "mockup", "label": "Mockup", "group": "prod-truth", "rank": 0, "path": "docs/product-truth/mockups/**/*.mockup.json", "key": "screen" },
+    { "id": "mock_data", "label": "Mock Data", "group": "prod-truth", "rank": 0, "path": "docs/product-truth/mock-data/**/*.mock.json", "key": "id (<product>/<name>)" },
+    { "id": "pattern", "label": "Pattern (AC)", "group": "meta", "rank": 2, "path": "AC store (pattern entries)", "key": "id" },
+    { "id": "component", "label": "Component", "group": "meta", "rank": 3, "path": "docs/components.json", "key": "underscore id" },
+    { "id": "adr", "label": "ADR", "group": "meta", "rank": 5, "path": "docs/architecture/adrs/**", "key": "ADR-NNN" },
+    { "id": "doc", "label": "Doc", "group": "meta", "rank": 5, "path": "docs/**", "key": "path" },
+    { "id": "changelog", "label": "Changelog", "group": "delivery", "rank": 4, "path": "changelogs/**/*.md", "key": "filename" },
+    { "id": "git_commit", "label": "Git Commit", "group": "delivery", "rank": 5, "path": "(git history)", "key": "SHA" }
+  ],
+  "edges": [
+    { "id": "ac-parent-id", "source": "ac", "target": "ac", "rel": "PARENT_OF", "status": "present", "field": "(ID-derivation)", "enforcement": "derived-validated", "shape": "clean", "cardinality": "many-to-one", "note": "Canonical parent: strip the last ID segment (ACS-500a-1 -> ACS-500a)." },
+    { "id": "ac-parent-field", "source": "ac", "target": "ac", "rel": "PARENT_OF", "status": "present", "field": "parent", "enforcement": "none", "shape": "clean", "cardinality": "many-to-one", "note": "Explicit parent when not ID-derivable (ac_store_schema.json:499-503)." },
+    { "id": "ac-parent-coveredby", "source": "ac", "target": "ac", "rel": "PARENT_OF", "status": "present", "field": "covered_by (child entries)", "enforcement": "enforced", "shape": "ambiguous", "cardinality": "one-to-many", "note": "Integrity back-link; check-ac-parent-covered-by blocks missing links. Field shared with test paths (Gap 3)." },
+    { "id": "ac-depends", "source": "ac", "target": "ac", "rel": "DEPENDS_ON", "status": "present", "field": "depends_on", "enforcement": "enforced", "shape": "ambiguous", "cardinality": "many-to-many", "note": "Cycles blocked + write-locked; target-existence NOT checked. Multiplexes parent + pattern + dependency (Gap 8) — partition before use." },
+    { "id": "ac-pattern", "source": "ac", "target": "pattern", "rel": "COMPOSES_PATTERN", "status": "present", "field": "implements_pattern", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-one", "note": "check-ac-pattern-refs + check-ac-schema block bad/dropped refs." },
+    { "id": "ac-superseded", "source": "ac", "target": "ac", "rel": "SUPERSEDED_BY", "status": "present", "field": "superseded_by", "enforcement": "none", "shape": "clean", "cardinality": "one-to-many", "note": "No hook verifies the target exists." },
+    { "id": "ac-impl-ticket", "source": "ac", "target": "ticket", "rel": "IMPLEMENTED_BY_TICKET", "status": "present", "field": "implemented_by (.md entries)", "enforcement": "none", "shape": "ambiguous", "cardinality": "many-to-many", "note": "UNTRUSTED. Three coexisting shapes; schema says source paths but tooling writes ticket paths (Gap 1)." },
+    { "id": "ac-impl-source", "source": "ac", "target": "source_file", "rel": "IMPLEMENTED_BY_SOURCE", "status": "present", "field": "implemented_by (non-.md entries)", "enforcement": "none", "shape": "ambiguous", "cardinality": "many-to-many", "note": "UNTRUSTED. Prefer AC->Ticket->files_touched (Gap 1)." },
+    { "id": "ticket-traces", "source": "ticket", "target": "ac", "rel": "TRACES_TO", "status": "present", "field": "ac_traceability", "enforcement": "enforced", "shape": "clean", "cardinality": "one-to-one", "note": "{id, path}; ac-fulfillment-gate is a mandatory pre-commit phase." },
+    { "id": "ticket-touches", "source": "ticket", "target": "source_file", "rel": "TOUCHES", "status": "present", "field": "files_touched", "enforcement": "warn", "shape": "clean", "cardinality": "many-to-many", "note": "Declared != actual is a known phantom-done mode. check-predone-scope IS registered and reports undeclared source files on every ticket commit (advisory: files_touched_reconciliation.enabled true, strict false); change-scope-reviewer warns too. Flipping strict:true promotes this edge to 'enforced'." },
+    { "id": "ticket-depends", "source": "ticket", "target": "ac", "rel": "TICKET_DEPENDS_ON", "status": "present", "field": "depends_on", "enforcement": "none", "shape": "clean", "cardinality": "many-to-many", "note": "Values are AC IDs despite the name; NOT Ticket->Ticket (Gap 7)." },
+    { "id": "ac-tested", "source": "ac", "target": "test", "rel": "TESTED_BY", "status": "present", "field": "covered_by (test entries)", "enforcement": "none", "shape": "ambiguous", "cardinality": "many-to-many", "note": "UNTRUSTED. check_ac_coverage.py exists on disk but is NOT registered in commit_guardian.json, so it never runs and nothing reads covered_by test entries. Field shared with child-AC entries (Gap 3). Use the reverse edge test-covers instead." },
+    { "id": "test-covers", "source": "test", "target": "ac", "rel": "COVERS", "status": "present", "field": "# covers: <AC-ID>", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-many", "note": "Enforced for done ACs by check-done-proof (pre-commit + required CI) but DIFF-SCOPED: it evaluates only ACs changed in the current commit/PR and never re-evaluates a pre-existing done AC. So 'enforced' describes NEW work, not the store. Backlog: 244 of 607 done ACs carry no covering test tag (measured 2026-08-13; ratcheted by test_artifact_graph_covers_scope.py so it cannot grow). Do NOT read this edge as store-wide coverage. Coverage regex also truncates hierarchical ids (Gap 11)." },
+    { "id": "flownode-implements", "source": "flow_node", "target": "ac", "rel": "IMPLEMENTS", "status": "present", "field": "steps[].implements", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-many", "note": "Shape + reverse-parity enforced; target-existence WARN-only (Gap 10). Authored source of truth for graph<->AC linkage." },
+    { "id": "ac-realized", "source": "ac", "target": "flow_node", "rel": "REALIZED_BY", "status": "present", "field": "product_truth", "enforcement": "derived-validated", "shape": "derived", "cardinality": "many-to-many", "note": "GENERATED; drift-blocked at commit by check-product-truth-validate D2 + generate --check (corrected Gap 6)." },
+    { "id": "flownode-renders", "source": "flow_node", "target": "mockup", "rel": "RENDERS", "status": "present", "field": "steps[].screen", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-one", "note": "Bare screen id -> Mockup.screen; validated by validate_product_truth.py." },
+    { "id": "flow-usesdata", "source": "flow", "target": "mock_data", "rel": "USES_DATA", "status": "present", "field": "mock_data_ref", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-one", "note": "Validated by validate_product_truth.py." },
+    { "id": "mockup-usesdata", "source": "mockup", "target": "mock_data", "rel": "USES_DATA", "status": "present", "field": "mock_data_ref", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-one", "note": "Validated by validate_product_truth.py." },
+    { "id": "mockdata-usedby", "source": "mock_data", "target": "flow", "rel": "USES_DATA", "status": "present", "field": "used_by.*", "enforcement": "derived-raw", "shape": "derived", "cardinality": "one-to-many", "note": "Reverse index; no update protocol — rebuild from forward refs." },
+    { "id": "flownode-of-flow", "source": "flow", "target": "flow_node", "rel": "HAS_NODE", "status": "present", "field": "steps / branches", "enforcement": "enforced", "shape": "clean", "cardinality": "one-to-many", "note": "Structural containment of steps/branches within a flow." },
+    { "id": "ac-member", "source": "ac", "target": "component", "rel": "MEMBER_OF", "status": "present", "field": "components", "enforcement": "enforced", "shape": "clean", "cardinality": "many-to-many", "note": "AC schema enum validates against docs/components.json; other surfaces unenforced." },
+    { "id": "changelog-member", "source": "changelog", "target": "component", "rel": "MEMBER_OF", "status": "present", "field": "components", "enforcement": "none", "shape": "clean", "cardinality": "many-to-many", "note": "No hook validates." },
+    { "id": "changelog-adr", "source": "changelog", "target": "adr", "rel": "REFERENCES_ADR", "status": "present", "field": "adrs", "enforcement": "none", "shape": "clean", "cardinality": "many-to-many", "note": "No hook validates the ADR exists." },
+    { "id": "changelog-commit", "source": "changelog", "target": "git_commit", "rel": "RECORDS_COMMIT", "status": "present", "field": "commits", "enforcement": "none", "shape": "often-empty", "cardinality": "one-to-many", "note": "Frequently []; unreliable for changelog->commit joins." },
+    { "id": "changelog-ticket", "source": "changelog", "target": "ticket", "rel": "MENTIONS_TICKET", "status": "present", "field": "ticket", "enforcement": "none", "shape": "freetext", "cardinality": "one-to-one", "note": "Free-text basename; not programmatically resolvable (Gap 2)." },
+    { "id": "ac-docs", "source": "ac", "target": "doc", "rel": "DOCUMENTS", "status": "present", "field": "doc_links", "enforcement": "none", "shape": "clean", "cardinality": "many-to-many", "note": "Informational; string or {path, relationship, status, relevance} object." },
+
+    { "id": "source-implements-ac", "source": "source_file", "target": "ac", "rel": "IMPLEMENTS", "status": "absent", "enforcement": "none", "cardinality": "many-to-many", "note": "GAP — answers 'given this file, which ACs govern it?'. No source file carries any marker naming the AC it implements, and no index inverts the relation. Today this must be reconstructed by inverting ac-impl-source (UNTRUSTED) or by joining Ticket.files_touched -> ac_traceability (warn-rated). This is the single most load-bearing missing edge for refactoring: it is what tells you what not to touch." },
+    { "id": "test-exercises-source", "source": "test", "target": "source_file", "rel": "EXERCISES", "status": "absent", "enforcement": "none", "cardinality": "many-to-many", "note": "GAP — answers 'which tests guard this file?'. No coverage data is ingested into any artifact, so nothing records which source a test actually exercises. Only Test -> AC (test-covers) exists, so file-level test protection can only be guessed from import paths." },
+    { "id": "changelog-delivers-ac", "source": "changelog", "target": "ac", "rel": "DELIVERS", "status": "absent", "enforcement": "none", "cardinality": "many-to-many", "note": "GAP — answers 'when was this AC shipped?'. Changelog entries carry components, adrs, commits and a free-text ticket basename, but never AC ids. The nearest proxies are AC.implemented_by (UNTRUSTED) and raw git history; neither yields a release date per AC." },
+    { "id": "mockup-realizes-ac", "source": "mockup", "target": "ac", "rel": "REALIZES", "status": "absent", "enforcement": "none", "cardinality": "many-to-many", "note": "GAP — answers 'which ACs does this screen realise?'. A mockup declares a screen id but carries no AC back-link. Derivable transitively by reversing flownode-renders and following flownode-implements, so this is a convenience gap rather than a data gap — but screen-level AC lookup requires a join through the flow." }
+  ]
+}

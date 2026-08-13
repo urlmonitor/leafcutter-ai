@@ -127,8 +127,14 @@ _KNOWN_PATH_PREFIXES: tuple[str, ...] = (
 #: POSIX file paths (alphanumeric, ``_``, ``.``, ``-``, ``/``).  The pattern
 #: is anchored so that each match begins and ends on a word character,
 #: preventing trailing punctuation from being captured as part of the path.
+#: The leading component allows a single OPTIONAL ``.`` so that dotfile-
+#: prefixed paths (e.g. ``.github/workflows/ci.yml``) are captured intact
+#: instead of having their leading dot excluded from the match (bonus defect
+#: found alongside ACD-400b-6: a bare ``[A-Za-z0-9_]`` first-character class
+#: made ``re.finditer`` start one character late, at ``g`` in
+#: ``github/workflows/ci.yml``, silently dropping the dot).
 _PROSE_PATH_TOKEN_RE: re.Pattern[str] = re.compile(
-    r"[A-Za-z0-9_][A-Za-z0-9_.\-]*/[A-Za-z0-9_./\-]*[A-Za-z0-9_]"
+    r"\.?[A-Za-z0-9_][A-Za-z0-9_.\-]*/[A-Za-z0-9_./\-]*[A-Za-z0-9_]"
 )
 
 #: Canonical support agents always added to every generated ticket.
@@ -395,17 +401,32 @@ def _extract_local_paths(
 ) -> list[str]:
     """Extract local file paths from a doc_links list.
 
-    Filters out entries whose path starts with 'http' (URLs).  When
-    *relationships* is provided, only entries whose ``relationship`` field is
-    a member of that set are included; entries with an absent or non-matching
-    relationship are skipped.
+    Accepts BOTH supported ``doc_links`` entry shapes per the AC-store
+    schema:
+
+    * A ``{path, relationship, status}`` dict — filtered by *relationships*
+      exactly as before (only edit-surface relationships are included when
+      *relationships* is provided).
+    * A plain path string — this shape carries no ``relationship`` field, so
+      the relationship filter cannot apply to it. Instead, a plain-string
+      entry is included only when it is an implementation-relevant local
+      source path (extension in ``_SOURCE_CODE_EXTENSIONS``). This keeps the
+      derivation union-preserving over real implementation sources (never a
+      first-wins or single-element reduction that silently drops a
+      referenced path — ACD-400b-6) while still excluding purely
+      informational doc pages (``docs/**.md``, ``docs/**.yaml`` reference
+      pages, architecture docs) from ``files_touched``.
+
+    Filters out entries whose path starts with 'http' (URLs) in both shapes.
+    Any entry that is neither a string nor a dict is malformed; it is
+    skipped with a WARNING rather than raising (repo error-handling policy).
 
     Args:
-        doc_links: List of doc_link dicts (each has at least a 'path' key)
-                   or None/empty.
-        relationships: Optional frozenset of relationship strings to include.
-                       When ``None`` (default) no relationship filtering is
-                       applied.
+        doc_links: List of doc_link dicts or plain path strings (or
+                   None/empty).
+        relationships: Optional frozenset of relationship strings to include
+                       for dict-shaped entries. When ``None`` (default) no
+                       relationship filtering is applied to dict entries.
 
     Returns:
         List of local path strings (may be empty).
@@ -414,15 +435,23 @@ def _extract_local_paths(
         return []
     local: list[str] = []
     for link in doc_links:
-        if not isinstance(link, dict):
-            continue
-        if relationships is not None:
-            rel = link.get("relationship", "")
-            if rel not in relationships:
-                continue
-        path_val = link.get("path", "")
-        if isinstance(path_val, str) and path_val and not path_val.startswith("http"):
-            local.append(path_val)
+        if isinstance(link, dict):
+            if relationships is not None:
+                rel = link.get("relationship", "")
+                if rel not in relationships:
+                    continue
+            path_val = link.get("path", "")
+            if isinstance(path_val, str) and path_val and not path_val.startswith("http"):
+                local.append(path_val)
+        elif isinstance(link, str):
+            if link and not link.startswith("http") and Path(link).suffix.lower() in (
+                _SOURCE_CODE_EXTENSIONS
+            ):
+                local.append(link)
+        else:
+            logger.warning(
+                "Skipping malformed doc_links entry (expected str or dict): %r", link
+            )
     return local
 
 
@@ -1844,7 +1873,17 @@ def _build_frontmatter(
         "source_ac": ac_id,
         "components": _build_components_list(ac, ac_id),
         "created": today,
-        "depends_on": ac.get("depends_on") or [],
+        # A generated ticket is standalone (one ticket per AC): the source
+        # AC's own `depends_on` lists AC identifiers (typically its parent
+        # AC), never sibling ticket filenames. templates/hooks/
+        # ticket_frontmatter_guard.py's _check_depends_on requires every
+        # ticket depends_on entry to resolve to a sibling ticket file in the
+        # same tickets/ folder, so copying the AC-level value verbatim hard-
+        # blocks the generated ticket with "depends_on references missing
+        # file: '<AC-id>'" (ACD-400b-7). There is no ticket-scoped
+        # dependency source in an AC record for a standalone generated
+        # ticket, so depends_on is intentionally empty here.
+        "depends_on": [],
         "priority": _map_priority(ac),
         "roadmap_phase": "phase_1",
         "advances_current_outcome": True,

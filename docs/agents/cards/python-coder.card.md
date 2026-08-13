@@ -9,9 +9,9 @@ description: 'Standards-enforcing Python implementation agent. Writes, edits, an
   (excluding .sql files — defer those to sql-coder).'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # python-coder
 
@@ -231,6 +231,76 @@ flowchart TD
 - ACD-1500e-3: Emitted process-feedback is itself routable by a future run so the loop compounds
 - ACD-1500e-3-i: Router-emitted process-feedback cannot drive an infinite self-referential loop
 - ACD-1500e-4: Process-feedback recommends faster, more verbose, more structured emission
+- ACD-1600a-1: Generated ticket references its AC by id instead of copying the criteria
+- ACD-1600a-1-i: Unresolvable source AC aborts generation rather than embedding a partial copy
+- ACD-1600a-2: Generated ticket omits requirement and contract copies, keeping only the checklist
+- ACD-1600c-1: An AC missing file targets or a test contract is flagged not implementation-ready
+- ACD-1600c-1-i: Real ACs lacking file targets (ACD-300c-3, TQ-200a-1) are held back, not dispatched
+- ACD-1600c-2: An AC carrying both file targets and a test contract is released to its builder
+- ACD-1600d-1: A file target pointing at a deployed copy of a template is flagged for the canonical source
+- ACD-1600d-1-i: A genuinely source-only path under scripts/ is not falsely flagged
+- ACD-1600d-2: The canonical-source check applies to implemented_by and doc_links, not just file targets
+- ACD-1600e-1: Criteria embedding an authoring-pipeline precondition is flagged
+- ACD-1600e-1-i: A legitimate runtime or domain precondition is not mistaken for authoring framing
+- ACD-1600e-2: Criteria describing only the behaviour to build passes the check
+- ACD-1600f-1: A referenced supporting artifact is checked for schema consistency with the AC
+- ACD-1600f-1-i: A fixture using `request` where the AC specifies `input` is flagged
+- ACD-1600f-2: An artifact consistent with its AC passes the consistency check
+- ACD-1700a-1: A coder's spawn context excludes cross-role authoring content
+- ACD-1700a-2: Each role still receives its own role-appropriate context
+- ACD-1700b-1: An assigned_agent that mismatches the deliverable surface is flagged
+- ACD-1700b-1-i: A deliverable spanning two surfaces is flagged for a split, not a single agent
+- ACD-1700b-2: An assigned_agent that matches the deliverable surface passes the check
+- ACD-1700c-1: The tool assembles an agent's effective prompt from template, channels, and AC-graph context
+- ACD-1700c-1-i: An AC with no relationships renders empty sections rather than omitting or erroring
+- ACD-1700c-2: Dependencies are shown together with what they already shipped
+- ACD-1700c-3: Non-reproducible channels are explicitly marked in the rendered brief
+- ACD-1700c-4: Cross-agent AC content is shown as a pointer, not inlined as a full spec
+- ACD-1800a-1: A requirement carries an explicit deliverable checklist naming each artifact's kind and responsible craft
+- ACD-1800a-2: The deliverable checklist is validated against the requirement's change surface
+- ACD-1800a-2-i: A requirement that needs docs or a diagram but omits them from its checklist is flagged incomplete, naming each missing kind
+- ACD-1800b-1a: A per-deliverable sign-off record is stored on the requirement itself, in independent slots
+- ACD-1800b-2: A requirement is done only when every deliverable is signed off
+- ACD-1800b-2-i: A deliverable that does not apply is recorded as not-applicable, never silently skipped
+- ACD-1800c-1: A ticket enumerates its grouped requirements and carries no sign-offs of its own
+- ACD-1800c-2: A ticket is done exactly when all its grouped requirements are done
+- ACD-1800c-2-i: A requirement joins a ticket's group without the ticket duplicating the requirement's content
+- ACD-1800c-5: The sign-off parity gate accepts AC-side sign-offs and requires no body Sign-offs section on a thin ticket
+- ACD-1800d-1: A requirement records, per deliverable, the concrete artifact that delivered it, navigable both ways
+- ACD-1800d-1-i: A per-deliverable back-reference resolves to the hand-edited canonical file, never a generated or deployed copy
+- ACD-1800e-1: Re-deriving work from a requirement produces no duplicate deliverables, tickets, or sign-off slots
+- ACD-1800e-1-i: Re-deriving after a partial derivation fills only the missing items and leaves existing ones untouched
+- ACD-1900a-1: A legacy requirement with none of the new fields still validates
+- ACD-1900a-2: A new-shape requirement validates, and both shapes pass in one run
+- ACD-1900a-3: The rules stay permissive while any old-shape requirement remains
+- ACD-1900a-3-i: Edge: strict enforcement is prevented while any v1 record remains
+- ACD-1900b-1: A thinned ticket resolves its spec from the store
+- ACD-1900b-1-i: Edge: neither store nor ticket body resolvable halts, never silent-green
+- ACD-1900b-2: A legacy fat ticket resolves its spec from the ticket body (fallback)
+- ACD-1900b-3: A gate's verdict is driven by the resolved spec, never a fixed pass
+- ACD-1900c-1: The emit flag chooses fat vs thin ticket generation
+- ACD-1900c-2: The enforce flag chooses advisory dual-read vs required new-shape
+- ACD-1900c-2-i: Edge: flipping enforce back to false restores green in one step
+- ACD-1900c-3: enforce can only be turned on once no old-shape requirements remain
+- ACD-1900d-1: A new gate starts advisory and never blocks the build
+- ACD-1900d-2: A gate becomes required only after a sustained green window
+- ACD-1900d-3: A gate not in the deploy-manifest cannot be promoted to required
+- ACD-1900d-3-i: Edge: a required gate missing from the manifest is blocked before it blocks every merge
+- ACD-1900d-4: A new done-accounting gate judges only what a change touches
+- ACD-1900d-6: emit=true is refused unless the dual-read resolver and migrated read-side templates are deployed
+- ACD-1900e-1: Backfill adds missing fields to a chosen store and is safe to re-run
+- ACD-1900e-1-i: Edge: backfill on a partially-migrated store fills only the gaps
+- ACD-1900e-2: --dry-run previews the changes and writes nothing
+- ACD-1900e-3: Backfill preserves authored notes and never reverts finished work
+- ACD-1900e-4: Backfill never runs automatically inside a build
+- ACD-1900f-1: A consumer that upgrades the package and rebuilds keeps working
+- ACD-1900f-1-i: Edge: a consumer that upgraded but never backfilled still builds, with a warning
+- ACD-1900f-2: The build warns or safely refuses on schema_version skew
+- ACD-1900f-3: Dual-readers are retained through the window; legacy removal gated on its end
+- ACD-1900g-1: No consumer cutover until the model is proven on the self-host project
+- ACD-1900g-2: The final cutover is refused unless every go/no-go criterion holds
+- ACD-1900g-2-i: Edge: any single no-go signal blocks the cutover
+- ACD-1900g-3: Green sign-offs alone don't satisfy dogfood; a real-ticket spot-check is required
 - ACD-300b: A workflow script orchestrates the authoring agents in sequence based on the triage decision
 - ACD-300b-1: The strategic route dispatches PO v3, then BA v3, then IT PO v3 in strict sequence
 - ACD-300b-2: The behavioral and technical routes skip upstream agents and start at the correct stage
@@ -253,15 +323,21 @@ flowchart TD
 - ACD-400a-1-ii: Scanner reports unparseable YAML files as diagnostics without crashing
 - ACD-400a-1-iii: Scanner detects and reports circular dependencies without entering an infinite loop
 - ACD-400a-2: Scanner JSON output conforms to a defined schema with ready and blocked lists
-- ACD-400b: Generator produces a valid, wired ticket from any ready AC with bidirectional traceability
-- ACD-400b-1: Generator produces a valid ticket file with correct frontmatter, agents map, and criteria body
+- ACD-400a-3: Scanner does not treat an AC's own ancestor as a build-order blocker
+- ACD-400a-3-i: No transitive ancestor at any depth gates a leaf AC's readiness
+- ACD-400a-3-ii: A genuine non-ancestor dependency still gates readiness on work_status done
+- ACD-400a-4: A freshly-authored tree of approved todo leaves yields a non-empty ready list end to end
 - ACD-400b-1-i: Generator rejects an AC that has no criteria field with a descriptive error
 - ACD-400b-2: Generator writes implemented_by back-reference into source AC without modifying other fields
 - ACD-400b-2-i: Back-reference write preserves YAML formatting by using targeted append rather than full rewrite
 - ACD-400b-3: Generator is idempotent -- re-run with existing ticket exits non-zero without duplicating
 - ACD-400b-4: Generated ticket passes ticket_frontmatter_guard with correct structure and sign-offs
-- ACD-400b-5: Generator renders the ## Agent Contracts section for both single-mapping and list-shaped delivers_to/expects_from
 - ACD-400b-5-i: Agent Contracts rendering handles multi-entry lists, stray non-mapping elements, and empty/absent fields
+- ACD-400b-6: Generated files_touched includes every implementation source the AC points at, never dropping the behavior's home file
+- ACD-400b-6-i: Multi-source AC keeps the fix file when a delegating helper is also linked
+- ACD-400b-7: Generated standalone ticket's depends_on never leaks AC-level dependencies and passes the frontmatter guard
+- ACD-400b-7-i: A ticket generated from an AC that depends on its parent AC commits without a frontmatter-guard block
+- ACD-400b-8: Dotfile-prefixed paths referenced by an AC survive ticket generation with their leading dot intact
 - ACD-500a: The ticket prioritizer merges AC readiness into its output with a single opt-in flag
 - ACD-500a-1: Merged output contains both ticket and AC entries sorted by unified priority
 - ACD-500a-1-i: Merged output is empty when both ticket backlog and AC store return zero ready items
@@ -685,8 +761,27 @@ flowchart TD
 - BO-2500a-2: An AC whose linked covers test fails cannot be marked done
 - BO-2500a-2-i: An xfailed or skipped linked test does not count as passing
 - BO-2500a-3: An AC with a present, passing linked test is eligible to be marked done
+- BO-2500a-6: A done composite AC derives its proof from its children, not from a direct linked test
+- BO-2500a-6-i: Editing only a non-coverage field of a done composite does not trip the proof-of-done check
 - BO-2500b-1: A pre-commit check gives fast local proof-of-done feedback and is skippable
 - BO-2500c-1-i: A hand-typed fixture that could reproduce the bug's own blind spot is flagged
+- BO-2500e-1: The oracle discovers // covers:<id> tags in front-end tests through the shared seam
+- BO-2500e-1-i: A // covers tag pointing at a non-active AC id does not satisfy any done proof
+- BO-2500e-2: A passing front-end test run makes a JS-covered AC eligible to be marked done
+- BO-2500e-2-i: An AC covered in both Python and JS is eligible only when every linked test passes
+- BO-2500e-3: A JS-covered AC whose front-end test fails cannot be marked done
+- BO-2500e-3-i: When the JS runner is unavailable, JS-covered ACs fail closed
+- BO-2500e-4: A JS-covered AC stuck in progress can be mechanically marked done
+- BO-2500e-4-i: Python-covered ACs yield an unchanged verdict after JS support is added
+- BO-2500e-5: The pre-commit proof-of-done check covers JS-covered ACs
+- BO-2600a-1: resolve_connected_build_set can exclude a node's structural parent from the depends_on walk
+- BO-2600a-2: The select_connected CLI exposes --exclude-structural-parent
+- BO-2600a-5: goal_to_epic can build an epic from an explicit connected-set id list, not just a single AC's subtree
+- BO-2700a-1: selectDispatchPhases removes the pull-request phase when isEpicMember is true
+- BO-2700a-1-i: selectDispatchPhases is a safe no-op for epic members when no pull-request phase is present
+- BO-2700a-2: selectDispatchPhases retains the commit phase and every non-PR phase when isEpicMember is true
+- BO-2700a-3: selectDispatchPhases preserves all phases including pull-request when isEpicMember is false (single-ticket backward compatible)
+- BO-2700a-4: The epic batch call site opts into PR deferral; the single-ticket call site does not
 - BO-300a: Epic completion shows summary, worktree, test hints, and finalize command
 - BO-300a-1: Step 6 return object includes worktree_path and manual_tests fields
 - BO-300a-2: Step 6 message string contains all four sections in order
@@ -977,6 +1072,22 @@ flowchart TD
 - BP-900g-3: Handoff targets resolve in the actual consumer install tree — copy-tier presence is insufficient
 - BP-900g-3-i: Command-side reachability is coordinated with, and distinct from, the BP-811 workflow-.js shim reachability
 - BP-901: goal_to_epic.py main() only resolves the worktree root when a default path is actually needed
+- CR-100a-1: Structural bucket names exactly its six Modern smells
+- CR-100a-2: Design bucket names exactly its six Modern smells
+- CR-100a-3: Core review method holds no catalogue; findings carry the named smell
+- CR-100b-1: Every catalogue smell names at least one Fowler refactoring
+- CR-100c-1: Finding shows verbatim Before and a direction-only After
+- CR-100d-1: Core skill is registered, portable, and defines a three-level severity rubric
+- CR-100d-2: Orchestration merges both reviewers into one severity-ranked report
+- CR-100e-1: Review target may be a file, a folder, or a pasted snippet
+- CR-100e-1-i: Pasted snippet with no file path is still reviewed
+- CR-100f-1: The two buckets are a true partition of the Modern 12
+- CR-100f-1-i: No smell is duplicated across the two buckets
+- CR-100f-2: Tiered leaf reviewers: structural on Sonnet, design on Opus
+- CR-100f-3: Orchestration fans out to both leaf reviewers in parallel
+- CR-100f-3-i: Fan-out lives at the top level, not inside a sub-agent
+- CR-100f-4: Leaf reviewers are read-only and return their findings
+- CR-100f-5: The single-agent find-code-smells is fully retired
 - FIN-100a-4: Baseline (Step 0) and post-merge (Step 3) test runs use identical build/deploy setup
 - FIN-100c-11: Null-baseline recovery attempt is an extracted, independently testable named unit
 - FIN-100c-12: A recovered baseline is forwarded to triage with its own consistent, non-null baseline SHA
@@ -1061,6 +1172,10 @@ flowchart TD
 - GE-113c-1-iv: Every guard obtains the project root through one shared resolver so the wrong-root bug class cannot recur
 - GE-113c-1-v: check-secrets reads the .security-allowlist from the worktree checkout root so worktree-local suppressions are honored
 - GE-113c-2: A guard runs its check against the consumer project tree in the deployed layout
+- GE-113c-3: Allowlist entries suppress findings only when the allowlist path segments are a suffix of the finding path segments
+- GE-113c-3-i: A path-qualified allowlist entry does not suppress findings at a different directory with the same basename
+- GE-113c-3-ii: A longer allowlist path does not shadow a shorter finding path
+- GE-113c-3-iii: Bare-filename allowlist entries suppress all findings with that basename regardless of directory
 - GE-116a-1: Verification-required agent with no edit ability is blocked at commit
 - GE-116a-1-i: Verification-required agent with an empty abilities list is blocked
 - GE-116a-1-ii: Multiple contradictory agent definitions in one commit all block it
@@ -1091,6 +1206,7 @@ flowchart TD
 - GE-117e-1-i: When the component or AC cannot be inferred unambiguously, autofix prompts instead of guessing
 - GE-117e-2: A deliberate per-item opt-out with a reason clears the block and stays visible in the diff
 - GE-117e-2-i: An opt-out with no reason, or a global silent disable, does not clear the block
+- GE-118a-1: check_secrets resolves scan_secrets from the layout build.py deploys, not a hardcoded .claude path
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1172,7 +1288,22 @@ flowchart TD
 - KM-KGS-100a-2-i: Non-criterion and unparseable files under the acs surface produce no spurious nodes
 - KM-KGS-100a-3: An acceptance criterion's four relationship fields each become a distinct edge
 - KM-KGS-100b-1: Answer which code file delivers an acceptance criterion by following its edges
+- KM-KGS-100b-10: With the feature flag off (default), behavior is identical to today's live parse
+- KM-KGS-100b-10-i: Reader-first rollout: the reader and staleness guard are safe with the writer disabled
+- KM-KGS-100b-11: The index path resolves from project/output root and works in deployed and worktree layouts
+- KM-KGS-100b-11-i: Per-worktree isolation: untracked cache dir, never git-tracked, atomic per-surface writes
+- KM-KGS-100b-12: Refresh events proactively update the index at commit, build, and session boundaries
+- KM-KGS-100b-12-i: Post-commit refresh rebuilds only the surfaces whose files changed
+- KM-KGS-100b-12-ii: A build refreshes the registry-derived surfaces as a final build step
+- KM-KGS-100b-12-iii: A session-start freshness check catches events missed by a branch switch, pull, or fresh worktree
 - KM-KGS-100b-2: Acceptance criteria and their links are visible in the knowledge-graph visualization
+- KM-KGS-100b-5: Index-backed read returns the same graph as a live full parse
+- KM-KGS-100b-5-i: Persisted index reuses the existing render_json output shape (byte-parity)
+- KM-KGS-100b-6: Every index-backed read performs a mandatory stat-only staleness check
+- KM-KGS-100b-6-i: Unchanged HEAD and max-mtime short-circuit the full per-file stat sweep
+- KM-KGS-100b-7: On detected drift, only the affected surface is rebuilt on read, then served
+- KM-KGS-100b-8: A missed refresh event degrades to slower-not-wrong, never to a wrong answer
+- KM-KGS-100b-9: A missing or unparseable index falls back to the live full parse
 - KM-KGS-100c-1: Every surface declared in the config is ingested, however many there are
 - KM-KGS-100c-2: Declaring a new surface makes it join the map with no code change
 - KM-KGS-100d-1: Each declared surface is validated for the relationship kinds it promises
@@ -1280,6 +1411,7 @@ flowchart TD
 - TKT-500f-8: Generated ticket's files_touched includes the AC's real edit surface, unioned with doc_links
 - TKT-500f-8-i: List-form it_requirements: the named source surface is extracted into files_touched too
 - TKT-500f-9: Generated ticket frontmatter carries an ac_traceability entry (AC id + store path)
+- TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
 - TQ-100a-1: The suite runs every loadable test even when one file fails to load
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
 - TQ-100a-1-ii: A test file that raises at module scope does not stop the other files
@@ -1314,6 +1446,14 @@ flowchart TD
 - TQ-200b-2: The eval suite is wired into CI as a quality gate that blocks on regression
 - TQ-200b-3: An eval runs whenever any file in its dependency closure changes
 - TQ-200b-4: A triggering change with a missing or stale eval result is a hard failure, never a skip
+- TQ-300a-1: Registry loading and top-level validation are covered by tests
+- TQ-300a-2: Spawn bidirectionality checking is covered by tests
+- TQ-300a-3: Registry injection into templates is covered by tests
+- TQ-300b-1: The package audit and its report formatting are covered by tests
+- TQ-300b-2: Selection-criteria evaluation and its DSL are covered by tests
+- TQ-300b-3: Agent spawn-graph generation is covered by tests
+- TQ-300c-1: Ticket prioritization internals, including parked-ticket handling, are covered by tests
+- TQ-300c-2: Secret scanning is covered by tests
 - UXP-100c-2: Pipeline blocks until the user provides an explicit prototype decision
 - UXP-100c-2-i: Prototype with pending component research cannot be approved — only deferred
 - UXP-100c-4: Rejection stops the pipeline and records the rejection rationale

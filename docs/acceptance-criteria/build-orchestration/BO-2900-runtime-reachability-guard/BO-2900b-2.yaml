@@ -1,0 +1,131 @@
+id: BO-2900b-2
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Replay of the stranded build-lifecycle capabilities: the three states and which guard catches each"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the repository in state one, as it stood when five build-lifecycle functions
+    were added with passing proof tests, no registered capability on the command
+    surface, and no automation running them,
+  When the connection from registered capabilities to the automation that runs them
+    is checked,
+  Then nothing is reported, because the inventory of registered capabilities is empty,
+    And the criteria covering those five functions are nonetheless refused eligibility
+      to be marked done, because nothing reaches the code.
+
+  Given the repository in state two, in which the same functions are registered as the
+    capabilities `claim`, `release` and `mark-done`, and no automation invokes any of them,
+  When the same check runs,
+  Then all three are reported as registered capabilities that nothing runs,
+    And the change is refused.
+
+  Given the repository in state three, in which the build automation invokes all three
+    capabilities,
+  When the same check runs,
+  Then none of the three is reported and the change is not refused.
+depends_on:
+  - BO-2900b
+  - BO-2900b-1
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the five build-lifecycle functions and, since the corrective change, the capabilities that expose them."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The automation that did not invoke them in states one and two and does in state three."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The guard that catches state one. This AC asserts the hand-off explicitly because the forward check cannot catch it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-9.yaml
+    relationship: related
+    status: exists
+    relevance: "One of the criteria marked done in state one. Historical evidence only — do not amend it from this tree."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    regression_replay_fixture:
+      type: object
+      description: "Three named fixture states over one surface plus one automation script: state_one (no registered capability, no caller, passing proofs), state_two (three capabilities registered, no caller), state_three (three capabilities registered, all invoked). Each state is a complete tree the real checks are run against, not a set of hand-fed inventories."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "STATE ONE'S SPECIFIED OUTCOME IS A VACUOUS PASS OF THE FORWARD CHECK. Do not 'fix' it by widening the inventory into source scanning. The assertion for state one is a PAIR: the forward check reports nothing AND verify_done_eligible refuses the criteria over those functions with refusal_cause 'no_entry_point_reaches_code'. Asserting only the first half records the bug as correct behaviour."
+    - "All three states must be exercised in ONE test method or one clearly-ordered suite so the vacuity boundary is visible as a progression; three independent tests let state one be deleted later as 'trivially passing'."
+    - "The fixture must model the real shapes: an argparse surface with a subparser table, and an automation script that invokes it as a program with `python3 <script> <capability> --flag value` inside an executed command string — the shape templates/workflows-js/fast-lane-ship.js actually uses (lines 193, 264, 305, 312, 315, 465)."
+    - "This AC adds no production behaviour of its own. It is a regression-replay harness over BO-2900a-3 and BO-2900b-1; if it needs new production code to pass, one of those two is under-implemented and must be fixed there, not here."
+    - "Record in the test docstring that state one is the state the repository ACTUALLY occupied (PR 411) and state two is the state it never occupied, so a future reader does not reverse the two and conclude the forward check is broken."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900b-1
+  contract: "The forward check entry point and its uncalled_capability_finding record, run unmodified over each of the three fixture states; plus, for state one, verify_done_eligible's 'no_entry_point_reaches_code' verdict from BO-2900a-3."
+test_spec:
+  - name: test_state_one_forward_check_passes_vacuously_while_done_proof_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Builds the PR-411 state (functions present, passing covers-tagged proofs, no registered capability, no caller), runs the real forward check and asserts zero findings, then runs the real verify_done_eligible over the covering criteria and asserts refusal with cause 'no_entry_point_reaches_code'. Both halves in one method."
+  - name: test_state_two_reports_all_three_uncalled_capabilities_and_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Registers claim, release and mark-done with no automation invocation; runs the real check and asserts a non-zero exit and exactly three uncalled-capability findings naming all three."
+  - name: test_state_three_reports_nothing_once_the_automation_invokes_all_three
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adds the three invocations to the fixture automation script and asserts a zero exit with no findings, closing the progression."
+test_rationale: "This AC's entire content is the behaviour of two real gates over three real repository states, including one state whose correct outcome is a pass. A direct-import unit test would hand each gate a pre-built inventory and would therefore assert nothing about the vacuity boundary — the finding this AC exists to carry. Worse, the state-one assertion is a claim about the INTERACTION of two independently-implemented gates (forward check silent, done-proof refusing); only executing both over the same fixture tree can establish it. The tests build each state as a real tree with an argparse surface and an automation script and drive the production entry points."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  This is the regression replay the L0 and the parent L1 both call for. It is
+  deliberately written as THREE states rather than the obvious two, and the first
+  state is the reason.
+
+  THE CALIBRATION FINDING — READ THIS BEFORE IMPLEMENTING OR TESTING BO-2900b.
+  It is tempting to record "this guard would have failed the instant that change
+  landed" as a single scenario over the forward check. It would not have. In the state
+  that actually shipped, the command surface registered NOTHING: the functions existed,
+  their tests passed, and there was no capability for the forward check to find
+  uncalled. An inventory-based forward check passes VACUOUSLY on an empty inventory —
+  it reports zero findings and looks healthy. The forward check first bites in state
+  two, which the repository never occupied, because the capabilities and their callers
+  arrived together in the corrective change.
+
+  What this means concretely:
+    - State one is caught by BO-2900a-3 (nothing reaches the code, so no criterion
+      over it may be marked done). Not by this L1.
+    - State two is what this L1 prevents for every future capability.
+    - Anyone testing this L1 with a fixture modelled on the real regression will build
+      state one, watch the check pass, and conclude the check is broken — or, worse,
+      "fix" it by widening it into source scanning until it fires. The first scenario
+      is written into the criteria precisely so that passing there is the specified,
+      asserted outcome rather than a surprise.
+
+  A vacuous-pass check is only safe while its sibling exists. If BO-2900a-3 is ever
+  descoped, this L1 alone does not cover the regression it was created for.
+
+  Verification must EXECUTE the check over all three fixture states in one test run
+  and assert all three outcomes. Asserting only state two proves nothing about the
+  vacuity boundary, which is the finding this AC carries.

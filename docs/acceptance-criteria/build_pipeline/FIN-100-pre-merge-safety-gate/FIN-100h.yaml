@@ -1,0 +1,53 @@
+id: FIN-100h
+readiness: reviewed
+priority: critical
+components:
+  - finalize
+status: active
+component: build-pipeline
+level: L1
+title: "A finalize step that did not run is never recorded as having succeeded"
+origin_agent: BrainCandy
+criteria: |
+  Given /finalize-feature drives each step by dispatching a sub-agent and branching on the
+    `status` field of the JSON that agent returns, and an agent may legitimately DECLINE a
+    dispatch whose work falls outside its own contract
+  When a step's agent returns a status the workflow does not recognise — including a
+    refusal such as "refused", "wrong_agent" or "out_of_scope_for_<agent>"
+  Then the workflow never routes that unrecognised status onto the step's SUCCESS path, and
+    never records the step in completed_steps or emits a success outcome for it
+  And a refusal is distinguished from a genuine execution failure, because a refused step
+    did not run at all, whereas a failed step ran and produced a result
+  And for a step whose output is load-bearing for the merge decision — the pre-merge test
+    baseline and the origin/main integration merge — a refusal HALTS the run with a reason
+    naming the step and the refusing agent, rather than degrading silently
+  And each step is dispatched to an agent whose declared contract covers the work that step
+    performs, so a capability-requiring step (git worktree provisioning, build.py, pytest,
+    git merge) is not sent to an agent scoped to ticket-state verification
+  And the bug symptom ("step 2 reports 'Merged origin/main cleanly into feature worktree'
+    and pushes 2 onto completed_steps when the agent in fact refused and no merge occurred")
+    must not occur
+notes: |
+  Authored by /quick-fix. Found live, on the run that was meant to finalize
+  feat/atlas-artifact-knowledge-graph.
+  Root cause is a catch-all else. Step 2 branches:
+      if (mergeStatus === "conflict")           -> halt
+      if (mergeStatus === "already_up_to_date") -> skip
+      else                                      -> completedSteps.push(2);
+                                                   outcome('Merged origin/main cleanly ...')
+  The final else is the SUCCESS path, so ANY unrecognised status lands there. The agent
+  returned {"status": "refused", "reason": "out_of_scope_for_status-checker",
+  "merge_strategy": null} and the workflow recorded a clean merge that never happened. This
+  is phantom-done inside the tool whose whole purpose is preventing phantom-done — and it
+  sits directly upstream of the merge-to-main decision.
+  Contributing cause: 22 of the workflow's dispatches specify agentType "status-checker",
+  including step 0 (create a git worktree, run build.py, run pytest, capture a baseline) and
+  step 2 (git fetch / git merge / git merge --abort). status-checker's contract is
+  ticket-state verification and it correctly declined both, saying so explicitly:
+  "Recommend the orchestrator re-dispatch this baseline-capture task to the correct
+  specialist agent." The refusals were well-behaved; the workflow's handling of them was not.
+  Blast radius: step 0's refusal degrades to a null baseline, which makes the regression
+  comparison meaningless, and step 2's refusal is recorded as a successful merge. Together
+  they can carry an unintegrated, unverified branch to a PR merge into main.
+change_target: pipeline
+risk_surface: contract_boundary

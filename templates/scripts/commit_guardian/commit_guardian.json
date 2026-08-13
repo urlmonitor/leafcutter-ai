@@ -130,7 +130,6 @@
             "CLAUDE.md.template",
             "__init__.py",
             "setup.sh",
-            "bybit-trader.code-workspace",
             "how-to.md",
             "BOOTSTRAP.md",
             "CLAUDE.md"
@@ -355,8 +354,8 @@
         ]
     },
     "security_scanner": {
-        "_comment": "check_secrets.py — Path to the security-scanner skill's scripts directory, relative to the project root. Override if the skill lives at a different location in your project.",
-        "scripts_dir": ".claude/skills/security-scanner/scripts"
+        "_comment": "check_secrets.py — Fallback path to the security-scanner skill's scripts directory, relative to the project root, used only when the __file__-relative deployed-sibling directory (<output_root>/skills/security-scanner/scripts) does not exist. Override if the skill lives at a different location in your project.",
+        "scripts_dir": ".leafcutter/skills/security-scanner/scripts"
     },
     "commit_scope": {
         "_comment": "check_commit_scope.py — Warn-only guard that diffs staged files against the active ticket's files_touched frontmatter. Option (c) hybrid: always exits 0. Upgrade path to blocking (option b): change exit code in check_commit_scope.py.",
@@ -713,7 +712,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "AST-based hook (ADR-035): blocks commits when a staged .py file contains both a placeholder function (docstring/return token) AND a tainted-default rebinding to that function, unless a # default-path-smoke: <module_stem> marker exists in unit_tests/ or a # noqa: default-path-smoke line appears at the module top."
+                "_comment": "AST-based hook: blocks commits when a staged .py file contains both a placeholder function (docstring/return token) AND a tainted-default rebinding to that function, unless a # default-path-smoke: <module_stem> marker exists in unit_tests/ or a # noqa: default-path-smoke line appears at the module top."
             },
             {
                 "id": "check-commit-scope",
@@ -751,7 +750,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "ADR-034: Validates docs/roadmap.json against portable-dev-workflow/config/roadmap.schema.json on every commit touching that file. Exits non-zero on schema violations. Fail-open on script errors. See docs/architecture/adrs/ADR-034-roadmap-json-format-and-schema-design.md."
+                "_comment": "Validates docs/roadmap.json against config/roadmap.schema.json on every commit touching that file. Exits non-zero on schema violations. Fail-open on script errors."
             },
             {
                 "id": "regenerate-roadmap-mirror",

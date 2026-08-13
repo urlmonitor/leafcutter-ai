@@ -8,9 +8,9 @@ description: C4 mermaid diagram specialist. Always loads the write-c4-diagram sk
   — dispatched by documentation-expert only, for "design — C4 diagram" intent)
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # architecture-diagram-author
 
@@ -139,6 +139,14 @@ flowchart TD
 - ACD-100d: Component diagram for the AC-driven pipeline (scanner, generator, prioritizer)
 - ACD-100d-1: C4 component diagram written at docs/architecture/diagrams/ac-driven-pipeline.md
 - ACD-1200g-2: Sequence diagram illustrates the goal-to-epic dispatch flow
+- ACD-1600a-3: Sequence diagram of the thin-ticket reference-and-resolve flow
+- ACD-1600b-3: Sequence diagram of an agent resolving its spec from the store
+- ACD-1700a-3: Component diagram of the role-scoped context injection channels
+- ACD-1700c-6: Sequence diagram of assembling an agent's effective prompt
+- ACD-1800b-4: Sequence diagram shows the deliverable sign-off flow onto the requirement
+- ACD-1800c-4: Sequence diagram shows ticket completion derived from grouped requirement done-state
+- ACD-1900b-4: Sequence diagram shows store-first, body-fallback, and halt branches
+- ACD-1900c-5: State diagram shows the emit/enforce states and legal transitions
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
 - BO-1000a-4: Sequence diagram of the start-of-step narration emission path
 - BO-1000c-3: Sequence diagram of live progress delivery from background workflow to the conversation
@@ -184,6 +192,9 @@ flowchart TD
 - BP-800b-7: Component diagram for the specialist generation subsystem
 - BP-800e-5: Sequence diagram for the legacy-to-adaptive migration flow
 - BP-800f-5: Component diagram for database paradigm detection and specialist generation
+- CR-100e-3: Sequence diagram: /code-smell-review invocation to report
+- CR-100f-6: Component diagram: core, buckets, leaf agents, orchestration
+- CR-100f-7: Sequence diagram: parallel fan-out and merge
 - FIN-200a-5: Sequence diagram shows finalize invoking changelog generation
 - FIN-200b-3: Sequence diagram shows the entry committed pre-merge and landing in the merge
 - FIN-200c-4: State diagram shows the changelog-capture outcomes and their transitions

@@ -75,6 +75,16 @@ _FINALIZE_PREFLIGHT_RESPONSES = {
         "number": 99,
         "url": "https://github.com/test/test/pull/99",
     },
+    # FIN-100h: step 2 must now be stubbed explicitly. It used to be omitted
+    # because the old control flow routed ANY unrecognised status onto the
+    # success path, so the harness's generic fallback happened to "work".
+    # Step 2 now halts on a status outside its contract (that catch-all else
+    # was recording refused merges as clean ones), so steering the run to
+    # step 4 — which is what this dict exists to do — requires a real status.
+    "step-2-merge-main": {
+        "status": "already_up_to_date",
+        "merge_strategy": "already_up_to_date",
+    },
     "pre-step-4-sync-check": {
         "status": "up_to_date",
         "local_sha": "abc1234",

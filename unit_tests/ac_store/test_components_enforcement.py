@@ -59,7 +59,7 @@ class TestComponentsFieldErrors(unittest.TestCase):
         )
         self.assertEqual(errs, [])
 
-    def test_missing_key_fails(self):  # KM-KGS-100e-1
+    def test_missing_key_fails(self):  # covers: KM-KGS-100e-1
         errs = components_field_errors({}, _REGISTRY)
         self.assertTrue(any("Missing required field 'components'" in e for e in errs))
 
@@ -75,7 +75,7 @@ class TestComponentsFieldErrors(unittest.TestCase):
         errs = components_field_errors({"components": "knowledge-management"}, _REGISTRY)
         self.assertTrue(any("Missing required field 'components'" in e for e in errs))
 
-    def test_unknown_component_fails(self):  # KM-KGS-100e-1-ii
+    def test_unknown_component_fails(self):  # covers: KM-KGS-100e-1-ii
         errs = components_field_errors({"components": ["not-real"]}, _REGISTRY)
         self.assertTrue(any("unknown component" in e for e in errs))
 

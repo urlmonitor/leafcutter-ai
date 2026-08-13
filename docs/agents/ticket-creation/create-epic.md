@@ -1,22 +1,22 @@
 ---
-title: "Agent Reference: create-epic"
+title: 'Agent Reference: create-epic'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/Master_Plan.md"
-  - "tickets/09_done/EPIC-CodingAgents/04_create_epic_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/Master_Plan.md
+- tickets/09_done/EPIC-CodingAgents/04_create_epic_agent.md
 related_code:
-  - ".claude/agents/create-epic.md"
-  - ".claude/agents/create-ticket.md"
-  - ".claude/skills/create-ticket/SKILL.md"
+- .claude/agents/create-epic.md
+- .claude/agents/create-ticket.md
+- .claude/skills/create-ticket/SKILL.md
+description: 'Overview of Agent Reference: create-epic.'
 ---
-
 # Agent Reference: `create-epic`
 
 Internal identifier: `create-epic` (Haiku scaffolder).
@@ -236,7 +236,7 @@ Open questions resolved: 4 questions across 3 tickets.
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   file layout (§2), visibility classes (§3), tool allowlists (§4.4 exception
   comment rule), nesting depth soft cap (§5.4).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream ADR: three-tier ladder (§2.1), tool allowlist (§2.6), nesting
   depth (§2.7).
 - [`tickets/09_done/EPIC-CodingAgents/Master_Plan.md`](../../../tickets/09_done/EPIC-CodingAgents/Master_Plan.md) —

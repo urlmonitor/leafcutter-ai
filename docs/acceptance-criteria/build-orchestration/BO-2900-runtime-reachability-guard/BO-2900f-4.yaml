@@ -1,0 +1,163 @@
+id: BO-2900f-4
+components:
+  - build_orchestration
+  - supervisor_system
+title: "The skipped record is derived from the requested-gate set, so a newly added gate is covered without bespoke wiring"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set of quality gates a work item may request is extended with a new gate
+    that has no recording logic written specifically for it,
+    And a work item requests that new gate,
+    And the new gate does not execute because a setting that governs it is switched
+      off,
+  When the work item's gate results are recorded,
+  Then the new gate has exactly one recorded entry with outcome `skipped` and a
+    reason naming the setting that switched it off,
+    And that entry is produced by the same mechanism that records every other
+      requested gate, with no gate-name-specific branch added for it,
+    And removing that gate from the requested set removes its entry, with every
+      other gate's entry unchanged,
+    And no gate in the project is exempt from the rule by virtue of not being
+      enumerated anywhere.
+depends_on:
+  - BO-2900f
+  - BO-2900f-1
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch loop that iterates the requested-gate set — the single place the rule must live."
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+    relevance: "Where per-gate enablement terms are declared; a new term must not require new recording code."
+  - path: config/guardrail_gates.yaml
+    relationship: describes
+    status: exists
+    relevance: "The requested-gate vocabulary itself: (change_target, risk_surface) pairs mapped to gate agent names, plus the flow_change_gates and documentation_gates sections that union in further gates. Extending this file is the 'new gate' of the Given."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "_build_agents_map (line 651) and _CANONICAL_PHASE_ORDER (line 165) — the single iteration over the requested set that the recording must be a property of."
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+    relevance: "Carries live_surface_testing.enabled, whose safe default of false is the real disabling setting behind the tree's one genuine named instance. Use it as the realism check on the synthetic-gate fixture."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2100-live-app-proof/BO-2100d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The named instance of this defect for live-surface-tester, which depends_on BO-2900f-1. Do not re-implement its behaviour here; this AC owns the generic mechanism it inherits."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    gate_agnostic_recording_rule:
+      type: object
+      description: "Recording is a property of the iteration over the requested-gate set, not of any gate: for every G in requested_gates, exactly one record is produced from the same code path, with the gate name flowing through as data. Adding a gate to the requested-gate vocabulary (config/guardrail_gates.yaml, and the phase-order list it is realised through) must require ZERO edits to the recording code. Removing a gate from a work item's requested set removes exactly that gate's entry and leaves every other entry byte-identical."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "NO GATE-NAME-SPECIFIC BRANCH IN THE RECORDING SEAM. A gate name appearing as a literal inside the recording code IS the defect this AC exists to prevent — it repairs one gate and leaves every future gate starting out silent. The gate name is data flowing through one iteration, never a condition selecting between code paths."
+    - "THE EXTENSION TEST IS THE ACCEPTANCE TEST. Introduce a SYNTHETIC gate into the requested-gate vocabulary in a fixture, request it, switch it off, and assert its skip record appears with the recording code unmodified. A test using only gates that exist today cannot distinguish a generic iteration from a set of per-gate branches written for exactly those gates — the test author would hand it the same list the branches were written against."
+    - "DATA-DRIVEN EXEMPTION, NEVER BY NAME. No gate is exempt by virtue of not being enumerated: the requested set IS the enumeration. A gate outside it produces no entry by BO-2900f-1's gate D rule, which is a property of the data, not an exemption anyone maintains. Do not add an exclusion list; a name-keyed exclusion is the same per-gate wiring this AC forbids, wearing the opposite sign."
+    - "DO NOT USE change-scope-reviewer AS A FIXTURE OR A TEST CASE. It is requested by NOTHING — absent from _CANONICAL_PHASE_ORDER and from config/guardrail_gates.yaml, present only as a row in a phase table in templates/skills/building-epics/SKILL.md. Under BO-2900f-1's gate D clause this tree correctly produces nothing for it. An implementer who treats it as a test case here will either fail this AC or break the gate D clause trying to pass it. A gate nothing requests is a REACHABILITY defect belonging to BO-2900b / BO-2900c; flag it there."
+    - "live-surface-tester IS THE VALID NAMED INSTANCE — use it as the realism check, not as the mechanism. It is genuinely requested (a ticket asks via live_surface_test: true) and then genuinely does not run (live_surface_testing.enabled defaults to false in config/skills_config.default.json). Assert it end to end so the synthetic-gate fixture is anchored to a real shape, but implement nothing specific to it: BO-2100d-5 owns that named instance and must inherit this mechanism rather than duplicate it."
+    - "SHARED SEAM, SHARED FIX — IMPLEMENT WITH BO-2900f-2, NOT AFTER IT. Because the rule is one iteration, the cardinality conditionalization and this genericity constraint are the same few lines. Landing them separately means the second change re-opens the first: a per-gate branch added here multiplies the sites where the count can break, and a conditionalization done there against per-gate branches has to be redone once they are removed."
+delivers_to:
+  agent: python-coder
+  contract: "The gate-agnostic recording seam: a single iteration over the requested-gate set that emits one { gate, outcome, reason, source } record per member with the gate name carried as data. BO-2900f-2's cardinality conditionalization applies to this one seam; BO-2100d-5's live-surface-tester instance inherits its skip record from it without adding gate-specific code."
+expects_from:
+  ac_id: BO-2900f-1
+  contract: "The requested-gate set as computed by _build_agents_map before the enablement filter, and the { gate, outcome, reason, source } record shape. This AC constrains how the records are PRODUCED — one generic iteration, no per-gate branch — and changes neither the set nor the shape."
+test_spec:
+  - name: test_a_synthetic_new_gate_records_skipped_with_no_change_to_the_recording_code
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Adds a gate that exists nowhere in the codebase to the requested-gate vocabulary in a fixture, requests it, switches its governing setting off, and asserts exactly one entry with outcome 'skipped' and a reason naming that setting — with the production recording code untouched. This is the extension test from the Given and the AC's primary evidence."
+  - name: test_removing_the_new_gate_from_the_requested_set_removes_only_its_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Re-runs the same work item with the synthetic gate withdrawn and asserts its entry is gone while every other gate's entry is unchanged — the isolation half of the genericity claim."
+  - name: test_every_gate_in_the_requested_set_gets_an_entry_regardless_of_name
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Drives a work item requesting the full real vocabulary read from config/guardrail_gates.yaml with all gates switched off, and asserts an entry for every member. Count-agnostic: it reads the vocabulary rather than hard-coding a list, so a gate added to the config later is covered without the test being edited, and no gate is exempt by not being enumerated."
+  - name: test_live_surface_tester_requested_but_disabled_records_skipped_naming_the_config_key
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The real named instance driven end to end: a work item opting in via live_surface_test with live_surface_testing.enabled false, asserted to produce one skipped entry whose reason names the key and the file it resolved from. Anchors the synthetic fixture to a shape that actually occurs."
+test_rationale: "The claim under test is a negative one — that no gate-specific wiring exists — and negatives of that kind are usually attacked with a grep for gate literals in the recording code. That test is worthless here: it passes trivially against recording code that does not exist or is never reached, which is the exact failure mode this tree was created for. The only shape that can establish genericity behaviourally is extension: introduce a gate the implementation has never seen and assert it is recorded anyway. A test built from today's gate names cannot distinguish a generic iteration from a set of per-gate branches, because the branches would have been written for precisely those names. The third test is deliberately vocabulary-driven rather than list-driven so that the no-gate-is-exempt clause keeps holding as the vocabulary grows, and the fourth keeps the synthetic fixture honest by pinning it against live-surface-tester, the one instance in the repository where this defect is known to occur."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: withdrew the change-scope-reviewer example — that gate is requested by nothing, so under BO-2900f-1's gate D clause this tree provably cannot catch it; it is a reachability defect for BO-2900b/BO-2900c."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The parent L1 states the rule generically and explicitly forbids narrowing it to
+  one named gate at L2. This AC is what makes that stick mechanically rather than by
+  good intentions: the guarantee must be a property of the requested-gate iteration,
+  not a hand-written skip record per gate.
+
+  WHY IT IS WORTH ITS OWN AC — and note the earlier justification was factually
+  wrong. The draft claimed `live-surface-tester` and `change-scope-reviewer` were
+  "two independent instances of the same defect". They are not:
+    - `live-surface-tester` IS requested — a ticket asks for it via
+      `live_surface_test: true` in frontmatter — and then silently fails to run
+      because `live_surface_testing.enabled` defaults to false. That is exactly the
+      defect this tree fixes, and BO-2100d-5 is its named instance.
+    - `change-scope-reviewer` is requested by NOTHING. It is absent from
+      `_CANONICAL_PHASE_ORDER` in `scripts/ac_store/generate_ticket_from_ac.py` and
+      absent from `config/guardrail_gates.yaml`; its only appearance is a row in a
+      phase table in `templates/skills/building-epics/SKILL.md`. Under
+      BO-2900f-1's gate D clause — a gate the work item never requested produces no
+      entry — this tree correctly produces NOTHING for it. BO-2900f provably cannot
+      catch it, and an implementer who treats it as a test case for this AC will
+      either fail the AC or break the gate D clause trying to pass it.
+  A gate that nothing ever requests is a REACHABILITY defect: it belongs to
+  BO-2900b / BO-2900c, which govern whether a declared gate is wired at all. Flagged
+  there, not fixed here.
+
+  The justification for this AC therefore rests on the generic argument alone, which
+  is sufficient: a per-gate fix repairs one gate and leaves every future gate
+  starting out silent. The observable test is the extension test in the Given —
+  introduce a synthetic gate and assert its skip is recorded without touching the
+  recording code.
+
+  Implementer note tied to BO-2900f-2: because the rule is one shared iteration, the
+  cardinality bug and its fix are also shared — get the conditionalization right once
+  and every gate inherits it. That is the upside of refusing the per-gate branch.
+
+  2026-08-14 (IT PO enrichment). Three additions:
+
+  - THE VOCABULARY HAS A FILE, AND EXTENDING IT IS THE GIVEN. The requested-gate
+    vocabulary is config/guardrail_gates.yaml (per-surface lists, plus the
+    flow_change_gates and documentation_gates sections that union further gates in),
+    realised through _CANONICAL_PHASE_ORDER. "A new gate with no recording logic
+    written for it" is concretely a new entry there — which makes the extension test
+    constructible rather than hypothetical.
+  - THE NO-EXEMPTION CLAUSE IS TESTED VOCABULARY-DRIVEN, NOT LIST-DRIVEN. Asserting
+    against a hard-coded list of today's gates satisfies the clause today and stops
+    being true the moment the config grows. The test reads the vocabulary, so a gate
+    added later is covered without anyone remembering to edit the test.
+  - SEQUENCING WITH BO-2900f-2 IS NOT OPTIONAL. The two ACs constrain the same few
+    lines from opposite directions. Implemented separately, each partially undoes
+    the other; they should be one change with two sets of assertions.

@@ -1,0 +1,83 @@
+id: BO-2800c-2
+components:
+  - build_orchestration
+  - review_system
+title: "Each check's override rate is reported per check and per problem kind over a chosen window"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a body of recorded blocking findings and override records covering a chosen
+    reporting window, for example the last 90 days,
+  When the override report for that window is produced,
+  Then it states, for each gate, how many blocking findings it raised, how many of those
+    were overridden, and the resulting override rate as a proportion of that stated
+    denominator,
+  And it states the same three figures broken down per problem kind within each gate, so a
+    gate whose overrides all cluster on a single problem kind is distinguishable from one
+    whose overrides are spread across every kind it reports,
+  And it states, for each overridden finding, whether a defect matching that finding's
+    signature was subsequently recorded on the same piece of work, so overrides that were
+    later vindicated are distinguishable from overrides that let a real problem through,
+  And the reporting window is a parameter of the report rather than a fixed period.
+
+  Given override records of the three kinds BO-2800c-1 produces — a human-declared
+    override, an automated cross-agent phase skip, and an absent-manifest assumed pass,
+  When the override report is produced,
+  Then each gate's override figure is broken down by how the override arose, so an
+    automated skip is not read as a human judgement that the gate was wrong,
+  And the assumed-pass records are reported separately from the declared and automated
+    overrides and are excluded from every override-rate numerator, because no finding was
+    overruled in those cases and including them would inflate every gate's rate with
+    evidence that was simply never supplied.
+depends_on:
+  - BO-2800c
+  - BO-2800c-1
+  - BO-2800b-2
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2800-gate-value-measurement/BO-2800c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the three kinds of override record this report must break down: declared, automated skip, and assumed pass."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: corrected the false claim that BO-2500d-1..4 carry the retirement rules this report feeds; added the breakdown by how an override arose, now that BO-2800c-1 records three kinds."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SCOPE LINE, deliberate and load-bearing. This AC specifies the MEASUREMENTS a retirement
+  decision would need — override rate per gate, override rate per problem kind, the
+  clustering view, a parameterised window, and whether an override was followed by a real
+  defect. It does NOT specify any threshold or any action taken at a threshold.
+
+  PREMISE CORRECTED 2026-08-13. An earlier revision of these notes said the four action
+  rules the user described (downgrade a blocker to a warning above a high sustained
+  override rate; retire a gate that is almost always overridden with no downstream
+  defects; promote a rarely-overridden high-volume gate to a deterministic hook;
+  re-prompt a single problem kind rather than the whole gate when overrides cluster on
+  it) "all live in BO-2500d-1..4". They do not. A grep of the whole BO-2500 tree for
+  "override", "threshold" and "false positive" returns no relevant hit; BO-2500d-1..4 is
+  a static fast-lane / heavy-lane agent split whose four L2s are all already
+  work_status: done. Those four action rules are written in no AC in the store.
+
+  The scope line still stands on its own merits: measurement and policy are separate units
+  of work, and this AC is the measurement half. Each of the four decisions above IS
+  computable from the figures required here, which is the point — but where they get
+  written is an open question recorded in the BO-2800 L0 notes, not a pointer to BO-2500d.
+  Do not add a BO-2500d doc_link to this AC; there is no relationship to record.

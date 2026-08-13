@@ -55,7 +55,7 @@
         },
         "domain": {
           "type": ["string", "null"],
-          "description": "Domain tag (e.g. 'bybit-trader') for domain-specific agents. Null for portable agents."
+          "description": "Domain tag (e.g. 'trading', 'billing') for domain-specific agents. Null for portable agents."
         },
         "spawn_allowlist": {
           "type": "array",

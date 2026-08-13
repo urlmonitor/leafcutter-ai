@@ -668,6 +668,80 @@ class TestVerifyGreenAndCoverage(unittest.TestCase):
         }
         path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
+    def _write_composite_ac(self, ac_id: str, covered_by: list[str]) -> None:
+        """Write a minimal composite AC YAML (non-empty covered_by) for the
+        H-1 false-pass regression test.
+
+        Uses yaml.safe_dump (fixture-authenticity mandate) — never a
+        hand-typed YAML literal.
+        """
+        subdir = self.ac_root / "test-component"
+        subdir.mkdir(parents=True, exist_ok=True)
+        path = subdir / f"{ac_id}.yaml"
+        data: dict = {
+            "id": ac_id,
+            "title": f"Synthetic composite AC {ac_id}",
+            "component": "build-orchestration",
+            "level": "L1",
+            "status": "active",
+            "work_status": "done",
+            "readiness": "reviewed",
+            "priority": "medium",
+            "depends_on": [],
+            "amended_by": [],
+            "covered_by": covered_by,
+            "implemented_by": [],
+            "superseded_by": None,
+        }
+        path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+
+    def test_h1_composite_with_uncovered_child_is_not_a_false_pass(self) -> None:
+        # covers: BO-2500a-6
+        """H-1 regression: a composite AC whose real child has ZERO linked
+        tests must be reported as uncovered — verify_green_and_coverage must
+        NOT false-pass it.
+
+        BO-2500a-6 taught verify_done_eligible to derive a composite's
+        eligibility from its children (see done_proof._verify_composite_
+        eligible), which introduced two NEW reason-string shapes:
+        "composite {id} has no coverable children" and "composite {id} has
+        uncovered children: {ids}". verify_green_and_coverage's original
+        coverage check substring-matched the OLD leaf-only reason text
+        "no linked test found" — neither new composite reason contains that
+        substring, so an uncovered composite verdict (eligible=False) was
+        silently reported as coverage_ok=True, uncovered_ac_ids=[] — a FALSE
+        PASS that could let mark_done_built_acs flip an unproven composite
+        AC to work_status: done.
+
+        RED before the fix: coverage_ok is True and uncovered_ac_ids is []
+        even though the composite's only child has no covering test at all.
+        GREEN after the fix: verify_green_and_coverage must read the
+        structured verdict["eligible"] field (not the prose reason string)
+        and report coverage_ok=False with the composite id in
+        uncovered_ac_ids.
+        """
+        composite_id = "BO-FL-H1-COMPOSITE-UNCOV"
+        child_id = "BO-FL-H1-COMPOSITE-UNCOV-CHILD"
+        self._write_composite_ac(composite_id, covered_by=[child_id])
+        self._write_active_ac(child_id)
+        # Deliberately no test file anywhere — the child has zero linked tests.
+
+        verdict = verify_green_and_coverage(
+            ac_ids=[composite_id], test_root=self.test_root, ac_root=self.ac_root
+        )
+
+        self.assertFalse(
+            verdict["coverage_ok"],
+            "A composite AC whose child has zero linked tests must NOT be "
+            f"reported as coverage_ok=True (false pass). Got: {verdict}",
+        )
+        self.assertIn(
+            composite_id,
+            verdict.get("uncovered_ac_ids", []),
+            "The uncovered composite AC id must be named in uncovered_ac_ids "
+            f"so the caller refuses to mark it done. Got: {verdict}",
+        )
+
     def test_ac4_gate_passes_when_all_batch_tests_pass(self) -> None:
         # covers: BO-2400a-4
         """The gate returns green=True when all batch tests pass.

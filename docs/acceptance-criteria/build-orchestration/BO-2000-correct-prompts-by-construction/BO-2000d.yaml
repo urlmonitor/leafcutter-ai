@@ -24,7 +24,7 @@ criteria: |
 depends_on: [BO-2000]
 doc_links:
   - docs/architecture/agent_knowledge_plane.md
-  - docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy

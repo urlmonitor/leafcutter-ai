@@ -12,12 +12,12 @@ BUSINESS CONTEXT: The AC store uses a hierarchical ID scheme:
     feature (pre-commit hooks, store-wide scans, agent auto-updates) — they all
     call derive_parent_id() rather than implementing their own parsing.
 ARCHITECTURE: Pure-stdlib function; no external dependencies. Regex-based
-    parsing using the canonical AC ID patterns defined in ADR-007.
+    parsing using the canonical AC ID patterns defined in ADR-008.
     derive_parent_id() is the public API. All helpers are module-private.
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
-  - docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
 
 DECISION HISTORY:
   - 2026-06-08 [python-coder/ACS-100i-1]: Created ac_parent_id.py.
@@ -35,7 +35,7 @@ from __future__ import annotations
 import re
 
 # ---------------------------------------------------------------------------
-# Canonical regex patterns (aligned with ADR-007)
+# Canonical regex patterns (aligned with ADR-008)
 # ---------------------------------------------------------------------------
 
 # Root-level AC: exactly PREFIX + hyphen + three-or-more digits (no further

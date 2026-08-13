@@ -1,0 +1,104 @@
+id: INF-500d-2
+components:
+  - infrastructure
+  - feedback_collector
+title: "The documented catch-all writer switch is removed, and any unrecognised writer value is refused at load time"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the permitted-writer configuration documents an "all_agents" sentinel as the
+    supported way to say "every phase agent may write this category",
+  And the writers of the general-purpose categories are now derived from the live
+    agent roster, which is what the sentinel was reaching for and makes it redundant,
+  When the configuration as shipped is inspected,
+  Then the sentinel appears nowhere in the configuration or its documentation.
+
+  Given a permitted-writer configuration in which some category names the removed
+    sentinel — or any other writer value the submission path does not honour —
+  When that configuration is loaded,
+  Then loading is refused with an error naming the unrecognised writer value and the
+    category it appears in,
+  And no report is written under that configuration,
+  So that an author who copies the sentinel from an old ticket or an archived config
+    is told immediately rather than re-introducing a silent no-op.
+
+  Given the configuration's documentation as shipped,
+  When the documented writer values are compared against the writer values the
+    submission path actually honours,
+  Then every writer value the documentation describes is one the submission path
+    honours, and no documented value is silently ignored,
+  So that an author who follows the documentation cannot end up believing a
+    category is open when every write to it is in fact refused.
+depends_on:
+  - INF-500d
+  - INF-500d-1
+doc_links:
+  - path: templates/config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Ordering dependency. Once INF-500d-1 derives the general-purpose writers from the roster, the sentinel is redundant by construction — which is why this AC now specifies removal only. Land INF-500d-1 first; removing the sentinel before derivation exists would take away a documented escape hatch with nothing in its place."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Uses the same load-time rejection of unrecognised writer values, applied to the three explicitly enumerated restricted lists. Build the check once and let both ACs assert against it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+  - docs
+risk_surface: contract_boundary
+notes: |
+  COLLAPSED FROM AN EITHER/OR ON 2026-08-13. This AC previously offered the
+  implementer a choice: (a) implement the sentinel as "every ticket-phase agent", or
+  (b) remove it and reject it at load time. That was wrong for two reasons and the
+  choice has been made for (b):
+
+    1. It was unbuildable as written. An unresolved either/or gives test-writer no
+       red test to author — it would have to guess which branch ships, and half its
+       tests would be discarded.
+    2. Branch (a) was actively harmful. It defined the catch-all as "agents the
+       roster marks as a ticket-phase agent", a predicate that (measured
+       2026-08-13) excludes epic-supervisor and ticket-supervisor, both of which are
+       permitted writers today of tooling-issue, convention-ambiguity and blocker.
+       Shipping (a) would have revoked six live writer permissions. See INF-500d-1's
+       notes for the full measurement.
+
+  Once INF-500d-1 derives the general-purpose writers from the live roster, the
+  sentinel has no remaining job: the thing it was documented to do now happens
+  automatically and without a sentinel. Removal is therefore the cheaper resolution
+  AND the correct one.
+
+  Removing it from the documentation is only half the job — the second scenario is
+  the other half. Without the load-time rejection, a future author who copies the
+  sentinel from an old ticket or an archived config silently re-introduces the
+  no-op, and the third scenario (documented vocabulary equals honoured vocabulary)
+  goes quietly false again.
+
+  Evidence on 2026-08-13: the sentinel is documented in the configuration header, is
+  used by zero categories, and appears nowhere in the submission path. It is a
+  switch that reads as protection and provides none.
+
+  The third scenario is the durable invariant and is the one worth a permanent test.
+  It holds regardless of how the sentinel question was resolved and should outlive
+  this AC's removal work.

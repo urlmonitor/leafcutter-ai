@@ -1,43 +1,48 @@
 ---
-title: "Convention: ADR Numbering and Collision Prevention"
+title: 'Convention: ADR Numbering and Collision Prevention'
 type: how-to
 status: active
 created: 2026-05-17
-last_updated: 2026-05-17
+last_updated: 2026-08-13
 related_docs:
-  - "docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md"
-  - "docs/how-to/documentation/write-adr.md"
+- docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+- docs/how-to/documentation/write-adr.md
 related_code:
-  - "leafcutter/scripts/commit_guardian/check_adr_collision.py"
-  - "scripts/commit_guardian/check_adr_collision.py"
-  - "leafcutter/templates/agents/adr-author.md"
+- scripts/adr_refs.py
+- templates/scripts/commit_guardian/check_adr_collision.py
+- templates/agents/adr-author.md
+description: 'Overview of Convention: ADR Numbering and Collision Prevention.'
 ---
-
 # Convention: ADR Numbering and Collision Prevention
 
 This convention document specifies the rules for assigning ADR integers, explains the
-collision-prevention mechanism introduced by
-[ADR-029](../../docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md),
-and describes the 2026-05-15 incident that motivated it.
+collision-prevention mechanism recorded in
+[ADR-029](../architecture/adrs/ADR-029-adr-number-collision-prevention.md),
+and describes the numbering repair that motivated it.
 
 ---
 
-## 1. Background: The 2026-05-15 ADR-024 Collision Incident
+## 1. Background: The 2026-08-13 Numbering Repair
 
-On 2026-05-15, two epics ran in parallel and both independently claimed ADR number 024:
+By 2026-08-13 the corpus had accumulated **four** duplicated integers — ten ADR files
+sharing four numbers:
 
-| Epic | ADR File | Merge Order |
-|------|---------|-------------|
-| EPIC-FeedbackCollection | `ADR-024-feedback-collection.md` | Merged first |
-| EPIC-PortableSQLAgents | `ADR-024-portable-agent-project-context-layout.md` | Merged second |
+| Number | Files sharing it |
+|--------|------------------|
+| 004 | `consolidated-output-root`, `tdd-workflow-enforcement` |
+| 007 | `contract-driven-acs`, `ac-store-schema-id-format-enforcement`, `test-fixture-convention` |
+| 017 | `computed-quality-gates`, `dual-engine-workflow-support`, `worktree-quality-gate-guard` |
+| 025 | `first-class-flow-decisions`, `tiered-parallel-code-smell-review` |
 
-Because the git filenames differed, there was no merge conflict. The collision surfaced
-only post-merge as a logical ambiguity: two entirely different architectural decisions
-were both labelled ADR-024.
+Because the git filenames differ, none of these produced a merge conflict. Each collision
+surfaced only afterwards as a logical ambiguity: two or three entirely different decisions
+answering to one label, and **382 bare `ADR-NNN` citations** that no longer resolved to a
+single decision. The stale index had papered over it with invented `ADR-004b` / `ADR-007b`
+/ `ADR-007c` labels that appear nowhere in the filenames.
 
-**Resolution cost:** 1 manual file rename, 2 sed passes with a negative-lookahead guard
-to avoid clobbering the other ADR-024, 2 `build.py` reruns, and 2 push rounds while
-`main` kept advancing.
+**Resolution cost:** 6 file renames, ~430 citation rewrites across ~200 files, one
+sequence gap filled, and two ADRs written retroactively for decisions that were being
+cited but had never been recorded.
 
 **Root cause:** `adr-author` scans `docs/architecture/adrs/ADR-*.md` for the highest
 existing number and increments by one. This is correct for serial workflows but is racy
@@ -62,7 +67,7 @@ detects numeric collisions against `origin/main` and remote in-flight branches.
   Works within the existing integer sequence.
 
 The decision is recorded in full at
-[docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md](../../docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md).
+[docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md](../architecture/adrs/ADR-029-adr-number-collision-prevention.md).
 
 ---
 
@@ -92,18 +97,18 @@ and use the candidate number from Step 1.
 
 **If the script exits non-zero:** A collision was detected. The script prints:
 ```
-ERROR [check_adr_collision] ADR-029 is already claimed on origin/main.
-  Suggested next-free ADR number: 030
-  Rename your ADR file to: docs/architecture/adrs/ADR-030-<your-slug>.md
+ERROR [check_adr_collision] ADR-NNN is already claimed on origin/main.
+  Suggested next-free ADR number: NNN+1
+  Rename your ADR file to: docs/architecture/adrs/ADR-<NNN+1>-<your-slug>.md
 ```
-Use the suggested next-free number (`030` in this example) instead of your candidate.
+Use the suggested next-free number instead of your candidate.
 Update your filename accordingly before proceeding.
 
 ### Step 3 — Write the ADR file
 
 Write the ADR to `docs/architecture/adrs/ADR-NNN-<slug>.md` using the confirmed free
 number. Follow the full ADR authoring guide at
-[docs/how-to/documentation/write-adr.md](../../docs/how-to/documentation/write-adr.md).
+[docs/how-to/documentation/write-adr.md](../how-to/documentation/write-adr.md).
 
 ### Step 4 — Stage and commit
 
@@ -162,27 +167,33 @@ than post-merge — and the hook catches the common case (pushed feature branche
 
 ```
 # 1. Find next candidate number
-ls docs/architecture/adrs/ADR-*.md | sort | tail -1
-# → docs/architecture/adrs/ADR-028-timescaledb-bounds-cte.md → candidate is 029
+python scripts/adr_refs.py
+# → read the "Unclaimed numbers" line; the first entry is your candidate NNN.
+#   Prefer this over `ls | tail -1`: it also excludes numbers that own no file
+#   but are still cited somewhere, which would false-resolve if you reused them.
 
 # 2. Run collision guard (pre-write)
 python scripts/commit_guardian/check_adr_collision.py
-# → exits 0: proceed with 029
+# → exits 0: proceed with NNN
 # → exits 1: use the suggested number instead
 
 # 3. Write ADR
-# docs/architecture/adrs/ADR-029-<your-slug>.md
+# docs/architecture/adrs/ADR-NNN-<your-slug>.md
 
-# 4. Commit (hook also runs here as a second guard)
-git add docs/architecture/adrs/ADR-029-<your-slug>.md
-git commit -m "docs(adr): add ADR-029 <title>"
+# 4. Regenerate the index (it is generated, never hand-edited)
+python scripts/adr_refs.py --index --write
+
+# 5. Commit (hook also runs here as a second guard)
+git add docs/architecture/adrs/ADR-NNN-<your-slug>.md docs/architecture/adrs/README.md
+git commit -m "docs(adr): add ADR-NNN <title>"
 ```
 
 ---
 
 ## Related
 
-- [ADR-029: ADR Number Collision Prevention Mechanism](../../docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md)
-- [How-To: Write an Architecture Decision Record](../../docs/how-to/documentation/write-adr.md)
-- [`check_adr_collision.py`](../scripts/commit_guardian/check_adr_collision.py) — the collision-detection script
-- [`adr-author.md`](../templates/agents/adr-author.md) — the adr-author agent template
+- [ADR-029: ADR Number Collision Prevention Mechanism](../architecture/adrs/ADR-029-adr-number-collision-prevention.md)
+- [How-To: Write an Architecture Decision Record](../how-to/documentation/write-adr.md)
+- [`check_adr_collision.py`](../../templates/scripts/commit_guardian/check_adr_collision.py) — the forward collision guard
+- [`adr_refs.py`](../../scripts/adr_refs.py) — the retrospective audit: duplicates, gaps, dangling numbers, broken slugs, and the index generator
+- [`adr-author.md`](../../templates/agents/adr-author.md) — the adr-author agent template

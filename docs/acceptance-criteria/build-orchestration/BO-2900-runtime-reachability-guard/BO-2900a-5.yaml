@@ -1,0 +1,91 @@
+id: BO-2900a-5
+components:
+  - build_orchestration
+  - testing_quality
+title: "Sequence diagram: from a done claim to a verdict, including the run observation and the exemption branch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the entry-point condition on done eligibility is in place,
+  When a reader consults the architecture documentation for how a done claim is decided,
+  Then a sequence diagram shows the ordered interaction from the moment a criterion is
+    claimed done through to the verdict,
+    And it shows the existing two conditions — a linked proof exists, and it passes —
+      before the new one, so the reader sees where the condition was inserted,
+    And it shows the step that establishes what the proof reached while it ran, drawn
+      as an observation of the executing proof rather than as an inspection of its source,
+    And it shows the three terminal outcomes — eligible, refused because the proof did
+      not go in the real way, and refused because nothing reaches the code — as
+      distinct ends,
+    And it shows the recorded exemption as the branch that turns the second refusal
+      into an eligible verdict.
+depends_on:
+  - BO-2900a
+  - BO-2900a-1
+  - BO-2900a-2
+  - BO-2900a-3
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing sequence diagram for done-proof evaluation, from covers tag to verdict. This AC extends that diagram's subject; the writer must amend or supersede it, not draw a second one alongside."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "The component page the diagram belongs with."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Amend or supersede the EXISTING done-proof sequence diagram required by BO-2500a-5; locate it first and reconcile. Two diagrams of the same sequence, one of them stale, is the outcome this AC exists to prevent — a second diagram is a failure even if it is correct on the day it is drawn."
+  - "Draw the observation step as an interaction with the EXECUTING proof (a call-level recorder installed around the pytest run), never as a read of the test file. The single most likely misimplementation of this tree is a source scan, and a diagram that draws the step ambiguously will be cited as licence for it."
+  - "Render the three terminal outcomes as three distinct end states, not one 'rejected' box with a note — BO-2900e-1 requires two different messages with different clearing actions for the two refusals."
+  - "Place the diagram on docs/architecture/components/phantom-done-prevention.md and satisfy the repository diagram gates: check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming and check-mermaid-complexity. Use the next sequence number from scripts/next_diagram_seq.py rather than inventing an id."
+  - "Show the recorded exemption as an input branch that converts the no-way-in refusal to eligible, and show it converting ONLY that refusal — the exemption does not release the direct-import refusal."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900a-1
+  contract: "The ordered evaluation contract the diagram depicts: conditions 1 and 2 (linked proof exists; it passes) then the reachability condition, with refusal_cause values 'proof_not_through_entry_point', 'no_entry_point_reaches_code' and 'observation_unavailable' as the distinguishable outcomes."
+test_required: false
+test_rationale: "The artifact is a Mermaid sequence diagram embedded in an architecture page; it has no executable surface for a test to drive. Its correctness gates are the repository's diagram hooks (check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming, check-mermaid-complexity), which run at commit time rather than as unit tests. The behaviours depicted are covered by the executing tests on BO-2900a-1, BO-2900a-2 and BO-2900a-3."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the parent L1's second `documentation_trigger` (`sequence-diagram`).
+
+  Intended agent is `architecture-diagram-author` — left null per this run's
+  instruction.
+
+  COLLISION FLAGGED DELIBERATELY. BO-2500a-5 already requires a sequence diagram of
+  done-proof evaluation "from covers tag to done verdict". This AC changes that
+  sequence by inserting a third condition. Two diagrams of the same sequence, one of
+  them stale, is worse than none — so the criteria name the existing diagram and
+  require the writer to reconcile with it. This is the kind of duplication a
+  per-tree decomposition normally creates and nobody notices until both are wrong.
+
+  WHY THE OBSERVATION STEP IS CALLED OUT IN THE DIAGRAM. The single most likely
+  misimplementation of this tree is deciding reachability by reading source text
+  (see BO-2900a-2). A diagram that draws that step ambiguously will be used as
+  licence for the cheap version, so the criteria constrain how it is drawn.
+
+  The three-terminal-outcomes clause exists so the diagram cannot collapse the two
+  refusals into one "rejected" box — they have different causes and different
+  remedies, and BO-2900e requires the message to distinguish them.
+
+  2026-08-13 (IT PO enrichment). Assigned to architecture-diagram-author rather than
+  documentation-expert: the S7b documentation-gate mapping routes the
+  `sequence-diagram` trigger to that agent, the registry lists it as a dispatchable
+  ticket-phase agent, and the BA recorded the same intent. The task brief's
+  "all eight documentation ACs go to documentation-expert" is deliberately deviated
+  from for this AC and BO-2900b-5 only, and the deviation is reported.

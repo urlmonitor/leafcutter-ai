@@ -698,6 +698,17 @@ def verify_green_and_coverage(
     semantics identical to the done-proof gate.  Commit staging is gated on BOTH
     conditions; neither alone is sufficient.  Idempotent.
 
+    Coverage is decided from the STRUCTURED ``eligible``/``failing_tests``
+    fields of the verdict, never from substring-matching ``reason`` prose
+    (H-1 fix): an AC is uncovered when its verdict is ineligible AND it has
+    no failing_tests of its own — i.e. no covering test exists at all
+    (whether the AC is a leaf with zero linked tests, or a composite with no
+    coverable children / an uncovered child, per done_proof's composite
+    path). An ineligible verdict that DOES carry failing_tests means a
+    covering test exists but is not passing — that is a green/pass-fail
+    concern (handled below), not a coverage concern, so it is intentionally
+    NOT added to uncovered_ac_ids.
+
     Args:
         ac_ids: Batch of AC ids to verify.
         test_root: Root directory to scan for ``*.py`` test files.
@@ -732,12 +743,17 @@ def verify_green_and_coverage(
             test_root=test_root,
         )
 
-        reason: str = verdict.get("reason", "")
-        if "no linked test found" in reason:
+        verdict_failing_tests: list[str] = verdict.get("failing_tests", [])
+        if not verdict.get("eligible", False) and not verdict_failing_tests:
+            # Ineligible with no failing_tests means no covering test exists
+            # at all (leaf: "no linked test found"; composite: "no coverable
+            # children" / "uncovered children: ..." — see done_proof).  An
+            # ineligible verdict WITH failing_tests means a covering test
+            # exists but failed — a green concern, not a coverage concern.
             uncovered_ac_ids.append(ac_id)
             coverage_ok = False
 
-        for nodeid in verdict.get("failing_tests", []):
+        for nodeid in verdict_failing_tests:
             if nodeid not in seen_failing:
                 seen_failing.add(nodeid)
                 failing_tests.append(nodeid)

@@ -20,14 +20,14 @@ criteria: |
 depends_on:
   - BO-2000e
 doc_links:
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "Add an authoring-time guard that blocks a code ticket whose '## Test Requirements' section is empty or absent; the block message names the ticket."
-  - "Determine 'code ticket' by the presence of a coding phase agent (python-coder/sql-coder) in the ticket agents map, mirroring the ADR-004 docs-only skip rule."
+  - "Determine 'code ticket' by the presence of a coding phase agent (python-coder/sql-coder) in the ticket agents map, mirroring the ADR-027 docs-only skip rule."
   - "Test coverage: a code ticket with an empty/absent Test Requirements section is blocked with a naming reason; a code ticket with a populated section is admitted."
 delivers_to:
   agent: business-analyst
@@ -35,7 +35,7 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by: [BrainCandy]
 superseded_by: null
 covered_by:
 - BO-2000e-1-i

@@ -1,5 +1,5 @@
 ---
-title: "ADR-017: Dual-Engine Workflow Support — Canonical E2 Authoring + Build-Time E1 Shim"
+title: "ADR-030: Dual-Engine Workflow Support — Canonical E2 Authoring + Build-Time E1 Shim"
 description: "Records the decision to author all new workflow scripts exclusively in E2 top-level-body form, generate E1-compatible shim wrappers at build time, use a runtime engine-detection predicate to route execution, and explicitly fail on unrecognised engines rather than fall back to LLM. Establishes the canonical E2 authoring contract based on empirical probes of the Claude Code 2.1.185 workflow engine."
 type: "adr"
 status: "active"
@@ -21,7 +21,7 @@ related_code:
   - templates/workflows-js/quick-fix.js
 ---
 
-# ADR-017: Dual-Engine Workflow Support — Canonical E2 Authoring + Build-Time E1 Shim
+# ADR-030: Dual-Engine Workflow Support — Canonical E2 Authoring + Build-Time E1 Shim
 
 ## Status
 

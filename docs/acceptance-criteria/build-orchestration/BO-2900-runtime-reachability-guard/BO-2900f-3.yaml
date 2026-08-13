@@ -1,0 +1,177 @@
+id: BO-2900f-3
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A skipped gate is reported apart from a passing gate and never satisfies a requirement that it pass"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a work item whose recorded gate results contain gate A with outcome `passed`
+    and gate B with outcome `skipped` and a reason,
+    And gate B carries a requirement that it must pass before the work item is done,
+  When the run's completion summary is produced and the work item is assessed for
+    done-ness,
+  Then the summary lists gate B under a skipped outcome, separately from the gates
+    that passed, and repeats the reason it did not run,
+    And gate B is not included in any count or statement that all requested gates
+      passed,
+    And the requirement that gate B must pass is reported as UNMET, not as satisfied,
+    And the work item is assessed as NOT done, because `skipped` is not one of the
+      outcomes that make a requested gate done-eligible,
+    And the work item becomes done-eligible only when gate B is run and passes, or
+      when gate B is explicitly re-classified as not required for this work item —
+      never as a consequence of the skip itself,
+    And a work item whose only non-passing gate is a skipped one is distinguishable,
+      from the summary alone, from a work item on which every requested gate ran and
+      passed.
+depends_on:
+  - BO-2900f
+  - BO-2900f-1
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Defines done-eligibility as every agents: entry being in {not_needed, signed_off}. `skipped` is in neither set, which is the mechanical basis for the not-done clause here."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Where a supervisor reads phase outcomes to decide whether a work item may proceed."
+  - path: scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: "The done rule that ACTUALLY RUNS. VALID_STATUSES (line 36) and the `_check_done_folder` invariant (line 486, test at line 506) are the mechanical enforcement points; the signoff skill's statement of the same rule is prose. A change made only to the prose is a no-op. NOTE the line-506 test is a denylist over {needed, failed}, not the allowlist its own error message describes — see the DENYLIST constraint below before assuming a new enum value is refused by default."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Supplies the third non-passing state the roll-up must keep apart from skipped: a gate that was never reached because the run halted."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    gate_outcome_rollup:
+      type: object
+      description: "The completion summary partitions the requested-gate record set by outcome and reports the non-passing groups separately: { passed: [gate], failed: [gate], skipped: [{gate, reason}], unreached: [gate] }. The union of the four groups equals the requested set (guaranteed by BO-2900f-2's cardinality invariant plus BO-2900f-2-i's halt record). No group other than `passed` may be folded into a passed count or into an all-gates-passed statement. The done-eligible outcome set stays {not_needed, signed_off} and is NOT widened: `skipped` and `unreached` are both deliberately outside it."
+  reference_file_path: "scripts/commit_guardian/_signoff_parity_checks.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "DO NOT WIDEN THE DONE-ELIGIBLE SET. The rule is done-eligible iff every requested gate's outcome is in {not_needed, signed_off}. Adding `skipped` to that set — or special-casing it anywhere the set is tested — converts this whole tree into a rubber stamp in one line. The two ways out are the ones the criteria name: run the gate to a pass, or re-classify it as not required. The skip can never clear itself."
+    - "ENFORCE ON THE GATE THAT ACTUALLY RUNS. The done rule is stated in more than one place: mechanically in this file (the status enum and the done-folder invariant, enforced by a pre-commit hook) and in prose in templates/skills/signoff/SKILL.md. Update every statement, and be explicit in the commit about which one is load-bearing. A `skipped` outcome that the prose forbids counting as done, while the hook's enum still admits it, is a no-op with the appearance of a fix."
+    - "NO SELF-CLEARING RE-CLASSIFICATION. An implementation that rewrites a skipped gate to not_needed when it observes that the config disabling the gate is off has made the skip clear itself through a longer path. Re-classification must be an explicit, recorded act — the signoff skill already makes not_needed terminal and gated on user approval, and that path must be the only one. Assert this negatively: a second run with the same configuration must produce the same not-done verdict, never a drift to done."
+    - "SEPARATE GROUP, WITH THE REASON REPEATED. The skipped gates get their own group in the summary and each carries its reason forward from BO-2900f-1's record. Folding them into an 'other' or 'not passed' bucket loses the distinction between a gate that ran and failed (someone must fix the code) and a gate that never ran (someone must turn it on) — two different actions for the same-looking line."
+    - "FOUR OUTCOME GROUPS, NOT TWO. `unreached` (from BO-2900f-2-i's halt) is a fourth state and must not be merged into `skipped`: an unreached gate was never requested-and-disabled, it was requested-and-never-arrived-at, and reporting it as skipped would attribute a config cause to a run-termination event. This is the same term-collision discipline BO-2900f-1 applies on the producer side."
+    - "THE ACCEPTANCE TEST IS THE DISCRIMINATOR, AND IT IS ON THE EMITTED SUMMARY. Two runs differing only in whether one gate passed or was skipped must produce summaries whose TEXT differs. Asserting on an internal roll-up dict satisfies the letter and misses the point: the summary is what a human and the supervisor read, and the defect this AC prevents is a summary that reads as a clean pass."
+    - "SURFACE-DEPENDENT, AND THIS AC IS THE REASON THE CHOICE MATTERS MOST. Under the git-tracked ticket option the done rule already reads the work item's own agents map, so the record and the rule live on one surface and no new consumer is needed. Under the JSONL option the done rule and the record live on different surfaces, so a NEW consumer must read the sink and feed the verdict back into the done assessment — and any run where the sink is unreadable silently returns the old, permissive verdict. If the JSONL option is chosen, an unreadable sink must fail closed."
+    - "THE DONE CHECK IS A DENYLIST, NOT AN ALLOWLIST — VERIFY THIS BEFORE RELYING ON IT. `_check_done_folder` in scripts/commit_guardian/_signoff_parity_checks.py flags a status only when `status in (\"needed\", \"failed\")` (line 506). Its violation message reads \"must be 'signed_off' or 'not_needed'\", which states an allowlist the code does not implement. Consequence: adding `skipped` as a fifth VALID_STATUSES member makes it fall outside the DENYLIST, so a skipped gate would pass the done check in silence — precisely the defect this tree exists to end, introduced by the change meant to fix it. The enum addition is therefore NOT sufficient on its own: the branch must be inverted to an allowlist (`status not in (\"signed_off\", \"not_needed\")`) in the same change, and a test must drive a work item carrying a skipped gate through the check and assert it is REFUSED. Do not treat a green suite after the enum edit as evidence; the existing tests do not exercise a fifth value."
+delivers_to:
+  agent: documentation-expert
+  contract: "The completion summary's four-group partition { passed, failed, skipped: [{gate, reason}], unreached } and the done-eligibility rule as enforced — done-eligible iff every requested gate is in {not_needed, signed_off}, with the two named exits (run to a pass; explicit recorded re-classification). BO-2900f-5 states this verbatim as the published contract rather than paraphrasing it."
+expects_from:
+  ac_id: BO-2900f-1
+  contract: "The requested-gate record set — one { gate, outcome, reason, source } entry per requested gate, with reason present on every skipped entry. This AC consumes those records and adds no field to them; it constrains how they are grouped, counted and read for done-ness."
+test_spec:
+  - name: test_skipped_gate_is_listed_in_its_own_group_with_its_reason_repeated
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Produces a real completion summary for a run with one passed and one skipped gate and asserts against the emitted text that the skipped gate appears under its own heading, apart from the passed gates, and carries the reason forward."
+  - name: test_skipped_gate_is_excluded_from_every_passed_count_and_all_passed_statement
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the emitted summary's passed count is one, not two, and that no all-requested-gates-passed statement is produced for the run — the defect reproduced one layer up if the record exists but rolls up as green."
+  - name: test_pass_requirement_on_a_skipped_gate_is_reported_unmet
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With gate B carrying a must-pass requirement and recorded as skipped, asserts the requirement is reported UNMET rather than satisfied or omitted."
+  - name: test_work_item_with_a_skipped_requested_gate_is_not_done_eligible
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real done-eligibility check over the work item and asserts a not-done verdict, establishing that `skipped` is outside {not_needed, signed_off} at the enforcement point that blocks, not merely in the prose."
+  - name: test_running_the_gate_to_a_pass_is_what_makes_the_item_done_eligible
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Re-runs with the gate enabled and passing and asserts the verdict flips to done-eligible — so the not-done verdict above is attributable to the skip and not to some unrelated incompleteness."
+  - name: test_a_skip_never_clears_itself_across_repeated_assessments
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Assesses the same unchanged work item twice and asserts the not-done verdict is stable, with no drift to done and no silent re-classification of the skipped gate to not_needed."
+  - name: test_all_passed_run_and_one_skipped_run_produce_observably_different_summaries
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The discriminator from the AC notes: two runs differing only in pass-versus-skip for one gate, asserted to produce summaries whose emitted text differs. If they do not, the guarantee has not landed regardless of what the record contains."
+test_rationale: "The defect this AC prevents is not a missing value, it is a correct value that reads as a pass downstream — so every test has to assert on what the run emitted and what the done check decided, never on an intermediate structure. A direct-import test of a roll-up function would be handed a record set and would assert its grouping arithmetic, which is satisfied by an implementation whose completion summary then prints 'all gates passed' from a different code path and whose done check never consults the roll-up at all. That is the identical wiring failure this whole tree derives from. Test four is deliberately placed at the enforcement point that blocks rather than at the prose statement of the same rule, because the rule exists in both places and only one of them stops a commit. Test six exists because the most attractive wrong implementation is the one that is right on first assessment and drifts on the second — a skip that resolves itself through an inferred re-classification would pass tests one through five. Test seven asserts the whole AC as a single observable difference between two runs, which is the only shape that cannot be satisfied by an unwired roll-up."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: resolved the blocking question the notes had left open, which contradicted the UNMET clause and left done-ness under-determined against the signoff {not_needed, signed_off} rule."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Emitting the record is necessary but not sufficient. A `skipped` entry that any
+  downstream roll-up folds into "all gates green" reproduces the original defect one
+  layer up — the artifact exists but still reads as a pass. This AC is the consumer
+  side of BO-2900f-1's producer side, and it is the clause that makes the L1 title
+  literally true.
+
+  Testable discriminator for the implementer: two runs whose only difference is that
+  one gate passed versus was skipped must produce summaries that differ observably.
+  If they do not, the guarantee has not landed regardless of what the record file
+  contains.
+
+  RESOLVED 2026-08-13 — DOES A SKIPPED GATE BLOCK? YES. The earlier draft said this
+  was "deliberately NOT specified", while the criteria simultaneously required the
+  pass-requirement to be reported UNMET; against the signoff skill's done rule —
+  done-eligible iff every entry is in `{not_needed, signed_off}` — an implementer
+  could not tell whether an UNMET requirement stops the work item or merely
+  annotates it. The answer is that it stops it: `skipped` is in neither member of
+  the done-eligible set, so a requested gate recorded as skipped leaves the work
+  item not done, and the ONLY ways out are running the gate to a pass or an
+  explicit re-classification (the supervisor's `not_needed` path, which requires
+  user approval). The skip can never clear itself. Per-gate policy still governs
+  WHETHER a gate carries a pass-requirement at all — that stays with the gate's own
+  requirement — but once it does, this AC fixes the consequence.
+
+  2026-08-14 (IT PO enrichment). Three things the enrichment fixes that the
+  criteria leave to the implementer:
+
+  - A FOURTH OUTCOME GROUP. The criteria contrast `passed` with `skipped`, but
+    BO-2900f-2-i introduces a third non-passing state — a gate the run never
+    reached. Merging it into `skipped` would attribute a configuration cause to a
+    run-termination event and would send the reader to change a setting that is
+    not the problem. The roll-up therefore partitions into four groups, and only
+    `passed` may be counted as passing.
+  - THE LOAD-BEARING ENFORCEMENT POINT IS THE HOOK, NOT THE SKILL. The done rule
+    appears twice: mechanically in scripts/commit_guardian/_signoff_parity_checks.py
+    and in prose in templates/skills/signoff/SKILL.md. Only the first blocks. Both
+    must be updated, and the commit should say which one is the gate.
+  - SELF-CLEARING IS THE ATTRACTIVE WRONG IMPLEMENTATION. Inferring not_needed
+    from the fact that the disabling config is off is a small, reasonable-looking
+    change that reverses the AC entirely. It is called out as a constraint and
+    tested negatively with a repeated assessment, because it is the only failure
+    here that passes every positive test.
+
+  WHY THIS AC IS THE ONE THE SURFACE DECISION TURNS ON. The done rule already reads
+  the work item's own agents map. On the git-tracked ticket surface the record and
+  the rule are the same artifact, so the not-done clause is enforced by machinery
+  that exists and blocks today. On a JSONL surface they are two artifacts and a new
+  consumer has to join them — and the failure mode of that join is that an
+  unreadable sink yields the permissive verdict, which is the original defect with
+  extra steps. If the JSONL option is chosen, the join must fail closed.

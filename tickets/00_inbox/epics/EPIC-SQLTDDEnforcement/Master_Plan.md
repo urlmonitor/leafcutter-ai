@@ -26,7 +26,7 @@ This epic is the direct follow-on to `EPIC-TDDWorkflowEnforcement`. That epic:
 - Added the three-layer contract-shrinking guard (pre-commit hook, supervisor warn, honor-system).
 - Explicitly descoped SQL TDD to this follow-on epic.
 
-See [ADR-004](../../../docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md) for
+See [ADR-027](../../../docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md) for
 the formal decision record. See `tickets/99_done/EPIC-TDDWorkflowEnforcement/` for the
 completed predecessor epic.
 
@@ -45,7 +45,7 @@ completed predecessor epic.
 
 5. **Contract-shrinking hook extension**: `check_contract_shrinking.py` currently detects Python test weakening. Extend it to cover SQL test files (if SQL tests are in `.py` wrappers under `unit_tests/sql_functions/`, they are already covered; if they are `.sql` test files, add detection logic).
 
-6. **Documentation updates**: Update `docs/explanation/tdd-workflow.md` to remove the "Python-only Phase 1" qualifier and describe the full Python+SQL TDD flow. Update ADR-004 or author ADR-005 if the SQL TDD decision has materially different trade-offs.
+6. **Documentation updates**: Update `docs/explanation/tdd-workflow.md` to remove the "Python-only Phase 1" qualifier and describe the full Python+SQL TDD flow. Update ADR-027 or author ADR-005 if the SQL TDD decision has materially different trade-offs.
 
 ## Key Design Decisions
 

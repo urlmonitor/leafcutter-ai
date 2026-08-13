@@ -169,7 +169,7 @@ completion_manifest:
   branch_pushed: true
   pr_exists: true
   one_pr_per_epic_followed: true
-Pushed commit 814a128 to origin EPIC-TestFixtureConvention branch (dc13167..814a128). PR #44 already exists: "feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-007)" — one PR per epic convention followed; no new PR needed for ticket 02.
+Pushed commit 814a128 to origin EPIC-TestFixtureConvention branch (dc13167..814a128). PR #44 already exists: "feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-028)" — one PR per epic convention followed; no new PR needed for ticket 02.
 
 ### 2026-06-04 10:45 — commit (status: ok)
 feedback-id: fb_2026-06-04_56c0e53c

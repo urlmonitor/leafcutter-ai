@@ -1,23 +1,23 @@
 ---
-title: "Agent Reference: test-runner"
+title: 'Agent Reference: test-runner'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
-  - "infrastructure"
+- infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "unit_tests/README.md"
-  - "CLAUDE.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- unit_tests/README.md
+- CLAUDE.md
 related_code:
-  - ".claude/agents/test-runner.md"
-  - ".claude/commands/test.md"
-  - ".claude/skills/sql-test/SKILL.md"
+- .claude/agents/test-runner.md
+- .claude/commands/test.md
+- .claude/skills/sql-test/SKILL.md
+description: 'Overview of Agent Reference: test-runner.'
 ---
-
 # Agent Reference: `test-runner`
 
 User-facing identifier: `/test` (slash command).
@@ -177,6 +177,6 @@ session routes through `research-agent`.
   convention.
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   file layout (§2), tool allowlists (§4), strict-research-delegation (§4.2).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) — tier ladder (§2.1), tool policy (§2.6).
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — tier ladder (§2.1), tool policy (§2.6).
 - [`.claude/skills/sql-test/SKILL.md`](../../../.claude/skills/sql-test/SKILL.md) — sql-test skill reference.
 - [Ticket 26](../../../tickets/09_done/EPIC-CodingAgents/26_test_runner_agent.md) — the ticket that shipped this agent.

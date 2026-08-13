@@ -1,21 +1,21 @@
 ---
-title: "Agent Reference: architect-review"
+title: 'Agent Reference: architect-review'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/Master_Plan.md"
-  - "tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/Master_Plan.md
+- tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md
 related_code:
-  - ".claude/agents/architect-review.md"
-  - ".claude/agents/architect-review-deep.md"
+- .claude/agents/architect-review.md
+- .claude/agents/architect-review-deep.md
+description: 'Overview of Agent Reference: architect-review.'
 ---
-
 # Agent Reference: `architect-review`
 
 Pattern: Gatekeeper Escalation (see [conventions.md §5.3](../conventions.md#53-gatekeeper-escalation)).
@@ -111,8 +111,11 @@ recommends a new ADR file path:
 docs/architecture/adrs/ADR-{NNN}-{kebab-topic}.md
 ```
 
-NNN = highest existing ADR number + 1. Check `docs/architecture/` for the
-current high-water mark (currently ADR-006).
+NNN = the next free ADR number. Do not hard-code it here — a snapshot goes stale
+and then misleads. Resolve it at execution time with `python scripts/adr_refs.py`
+and take the first entry on the **Unclaimed numbers** line, which excludes numbers
+that own no file but are still cited somewhere. See
+[ADR-029](../../architecture/adrs/ADR-029-adr-number-collision-prevention.md).
 
 ---
 
@@ -266,7 +269,7 @@ Return the plan under those headings, followed by the structured JSON summary.
   "acceptance_adjustments": ["<revised AC from Opus>", "..."],
   "escalation": "opus",
   "escalation_reason": "has_alembic_migration=true, has_hypertable_change=true, has_public_api_change=true — three always-large triggers; 6 components touched: alembic, models, live_trader, sql_functions, api, dashboards",
-  "suggested_adr": "docs/architecture/adrs/ADR-007-cme-gap-context-pipeline.md"
+  "suggested_adr": "docs/architecture/adrs/ADR-NNN-some-decision-slug.md"
 }
 ```
 
@@ -286,7 +289,7 @@ escalated to architect-review-deep.
 - [`docs/agents/conventions.md §5.3`](../conventions.md#53-gatekeeper-escalation) —
   Gatekeeper Escalation pattern rules (model pin, Opus sub-agent file naming,
   mandatory `## Escalation` section).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md §2.3`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md §2.3`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream ADR worked example for `architect-review`.
 - [`tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md`](../../../tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md) —
   the ticket that shipped this agent.

@@ -13,7 +13,7 @@ ARCHITECTURE: Six output modes driven by --rollup, --current-outcome,
     results. Output is human-readable (default) or JSON (--format json).
     Exits with a clean error message (not traceback) when docs/roadmap.json
     is absent. --audit produces the full audit_result JSON for the
-    product-owner-agent (ADR-039).
+    product-owner agent.
 """
 from __future__ import annotations
 
@@ -519,7 +519,7 @@ DECISION HISTORY
   _starved() lists roadmap phases with no open tickets. _off_roadmap() lists
   open tickets with no valid roadmap_phase. _audit() produces the full
   audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the
-  product-owner-agent (ADR-039). roadmap-steward SKILL.md documents invocation.
+  product-owner agent. roadmap-steward SKILL.md documents invocation.
 - 2026-05-18 00:00 [EPIC-ProjectRoadmap/ticket 05]: Initial implementation. (#EPIC-ProjectRoadmap/05)
   Three output modes: --rollup, --current-outcome, --unassigned.
   Minimal YAML frontmatter parser (no PyYAML dependency) handles the subset

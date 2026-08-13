@@ -1,0 +1,44 @@
+id: KM-ADM-003
+readiness: reviewed
+priority: high
+components:
+  - knowledge_management
+status: active
+component: knowledge-management
+level: L2
+title: "Atlas draws an absent relation as a gap, never as an untrusted link"
+origin_agent: BrainCandy
+criteria: |
+  Given the artifact knowledge-graph JSON now marks a relation that does not exist in the
+    repo with status "absent" (KM-ADM-002), and the Atlas artifact-graph view colours
+    every edge by its ingestability verdict
+  When the view renders an edge whose status is "absent"
+  Then that edge resolves to its own ingestability verdict — distinct from the
+    "untrusted" verdict used for links that exist but nothing enforces — and is drawn
+    with a visual treatment no present edge can produce
+  And the verdict is derived from the edge's declared `status` field, never inferred
+    from the absence of another field such as `shape`
+  And the on-canvas legend carries a row for the absent treatment, so the reader can
+    decode it without opening the JSON
+  And an edge with no declared status still resolves to a present-edge verdict, so the
+    renderer degrades safely against an older graph document
+  And the bug symptom ("an absent relation renders identically to a present-but-
+    unenforced one, so the four recorded gaps read as real links and the map becomes
+    less truthful than before they were added") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: artifactEdgeStyle() resolves colour from the two
+  trust axes (enforcement x shape) only, and buildArtifactGraph() does not carry the new
+  `status` field out of the JSON at all, so a status:"absent" edge arrives at the
+  renderer indistinguishable from enforcement:"none" — the grey "do not rely on"
+  treatment. KM-ADM-002 therefore made the rendered map WORSE until this lands: four
+  relations that do not exist are drawn as if they do.
+  A one-file shortcut exists (absent edges are the only ones lacking `shape`, so
+  edges.ts could infer the verdict from that gap) and is deliberately rejected: inferring
+  state from a missing field rather than reading the declared one is the exact
+  antipattern KM-ADM-001 was filed against.
+  Scope note: this fix spans lib/data/types.ts, lib/data/graph.ts,
+  components/atlas/edges.ts and components/flows/flow-explorer.tsx. The user approved
+  the /quick-fix one-file constraint being relaxed for it rather than escalating to
+  /build-feature.
+change_target: ui
+risk_surface: internal

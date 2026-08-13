@@ -1,4 +1,20 @@
-# ADR-004: Test-First Workflow Enforcement in the Agentic Build Pipeline
+---
+title: "ADR-027: Test-First Workflow Enforcement in the Agentic Build Pipeline"
+description: "Decision to flip test-writer to priority 5 so it runs before the coder phases, capture a red baseline as evidence the tests constrain the implementation, and guard contract-shrinking test edits."
+type: "adr"
+status: "active"
+created: "2026-05-27"
+last_updated: "2026-08-13"
+deciders:
+  - BrainCandy
+components:
+  - build_pipeline
+related_docs:
+  - docs/explanation/tdd-workflow.md
+  - docs/how-to/writing-a-tdd-ticket.md
+---
+
+# ADR-027: Test-First Workflow Enforcement in the Agentic Build Pipeline
 
 ## Status
 

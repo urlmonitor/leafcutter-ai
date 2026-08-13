@@ -32,7 +32,7 @@ Usage:
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
-  - docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
 
 DECISION HISTORY:
   - 2026-06-08 [python-coder/ACS-100i-2]: Created check_ac_parent_covered_by.py.

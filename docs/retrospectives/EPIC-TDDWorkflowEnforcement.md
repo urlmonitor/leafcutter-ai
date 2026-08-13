@@ -18,7 +18,7 @@ by enforcing a "test-first" ordering for all agentic Python code tickets:
 4. **Ticket 04** — `check_contract_shrinking.py` pre-commit hook: blocks commits with test weakening + production code changes concurrent
 5. **Ticket 05** — `building-epics` SKILL.md and `ticket-supervisor` updated: phase-order, docs-only skip rule, post-coder contract-shrinking warn
 6. **Ticket 06** — `ticket-authoring` SKILL.md updated: agents map ordering, Sign-offs skeleton, `not_needed` guidance for `test-writer`
-7. **Ticket 07** — ADR-004, `docs/explanation/tdd-workflow.md`, `docs/how-to/writing-a-tdd-ticket.md` authored
+7. **Ticket 07** — ADR-027, `docs/explanation/tdd-workflow.md`, `docs/how-to/writing-a-tdd-ticket.md` authored
 8. **Ticket 08** — `EPIC-SQLTDDEnforcement` stub created in `tickets/00_inbox/epics/`
 
 ---
@@ -109,7 +109,7 @@ allow an earlier parallel run.
 | Phase retries | 0 |
 | Commits | 7 (one per ticket or ticket batch) |
 | Files modified | ~15 (templates + deployed copies + docs + tests) |
-| New files created | 7 (hook script, tests, ADR-004, explanation doc, how-to guide, sql-epic stub, retro) |
+| New files created | 7 (hook script, tests, ADR-027, explanation doc, how-to guide, sql-epic stub, retro) |
 
 ---
 

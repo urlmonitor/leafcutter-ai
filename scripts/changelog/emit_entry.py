@@ -501,7 +501,7 @@ if __name__ == "__main__":
 #   All three existing call sites (changelog-agent, epic-supervisor,
 #   build-single-ticket) supply --changelog-dir explicitly and continue to
 #   work unchanged. Fix addresses EPIC-GlossaryAutomation friction point where
-#   the script wrote into bybit-trader/changelogs/ instead of the worktree.
+#   the script wrote into the main repo's changelogs/ instead of the worktree.
 # - 2026-05-26 [python-coder/EPIC-LeafcutterVersioning/01]: (#EPIC-LeafcutterVersioning/01)
 #   Added optional `breaking` (bool) and `migration_steps` (list[str]) fields
 #   to support automated SemVer bump decisions. Cross-validation rule: when

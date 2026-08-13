@@ -12,9 +12,9 @@ description: 'Conditional phase agent that invokes a user-facing surface end-to-
   for a ticket whose user_facing_surface field is non-null.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # user-surface-smoker
 
@@ -104,7 +104,9 @@ flowchart TD
 
 ## Configuration
 
-*No configuration keys declared.*
+| Key | Required | Description |
+|-----|----------|-------------|
+| `ui_context_path` | No | Path to the UI context pointer file (default: docs/ui-context.md). Read once to sharpen mockup-conformance assertions against the app's real component idiom. |
 ---
 
 ## Contributor Notes

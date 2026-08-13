@@ -8,9 +8,9 @@ description: 'Picks the right test suite based on what has changed, runs it, and
   (python-coder, sql-coder) invokes this agent for its inner-loop test cycle.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # test-runner
 

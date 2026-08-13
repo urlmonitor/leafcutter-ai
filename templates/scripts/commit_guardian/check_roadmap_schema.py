@@ -9,7 +9,7 @@ BUSINESS CONTEXT: docs/roadmap.json is the machine-readable plan-of-record for t
 ARCHITECTURE: Reads the schema from leafcutter/config/roadmap.schema.json.
     Fail-open: exits 0 with a warning when the schema file is absent, git is unavailable,
     or any unexpected error occurs. Only fires when docs/roadmap.json is staged.
-    Decision rationale: ADR-034-roadmap-json-format-and-schema-design.md.
+    Decision rationale: config/roadmap.schema.json is the authoritative shape.
 
 Pre-commit hook contract:
 - Exit 0 = pass (commit proceeds).
@@ -174,5 +174,5 @@ if __name__ == "__main__":
 #   all error paths (absent schema, git unavailable, unexpected exceptions).
 #   Registered in leafcutter/scripts/commit_guardian/commit_guardian.json
 #   hooks_manifest under id "check-roadmap-schema".
-#   ADR: docs/architecture/adrs/ADR-034-roadmap-json-format-and-schema-design.md
+#   Schema: config/roadmap.schema.json
 # ====================================================================

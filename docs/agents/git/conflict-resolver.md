@@ -1,20 +1,20 @@
 ---
-title: "Agent Reference: conflict-resolver"
+title: 'Agent Reference: conflict-resolver'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/11_conflict_resolver_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/11_conflict_resolver_agent.md
 related_code:
-  - ".claude/agents/conflict-resolver.md"
-  - ".claude/agents/conflict-resolver-deep.md"
+- .claude/agents/conflict-resolver.md
+- .claude/agents/conflict-resolver-deep.md
+description: 'Overview of Agent Reference: conflict-resolver.'
 ---
-
 # Agent Reference: `conflict-resolver`
 
 Internal identifier: `conflict-resolver` (Sonnet gatekeeper).
@@ -136,7 +136,7 @@ search tools):
 All cross-cutting codebase research (blast radius, dependency graph, related
 docs) is delegated to `research-agent`. The conflict-resolver itself carries
 no `Grep`, `Glob`, or `jcodemunch` tools — strict-research-delegation
-([ADR-006 §2.6](../../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation)).
+([ADR-006 §2.6](../../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation)).
 
 ---
 
@@ -205,7 +205,7 @@ Before declaring a file resolved, the agent enforces:
   the Opus sub-agent file.
 - [`docs/agents/conventions.md`](../conventions.md) — Gatekeeper Escalation
   pattern (§5.3); tool allowlists (§4).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   Gatekeeper Escalation pattern (§2.3); strict-research-delegation (§2.6).
 - [Ticket 11](../../../tickets/09_done/EPIC-CodingAgents/11_conflict_resolver_agent.md) —
   the ticket that shipped this agent.

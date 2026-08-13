@@ -35,7 +35,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BO-400a, BO-400b, BO-400c]
+covered_by: [BO-400a, BO-400b, BO-400c, BO-400d]
 implemented_by: []
 change_target: schema
 risk_surface: contract_boundary

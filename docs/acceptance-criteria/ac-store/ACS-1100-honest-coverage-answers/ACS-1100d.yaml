@@ -1,0 +1,63 @@
+id: ACS-1100d
+components:
+  - ac_store
+  - testing_quality
+title: "A check built on a partial answer cannot report an all-clear"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Downstream checks inherit the coverage claim, not a false clean bill of health.
+
+  Anything that verifies the store on the back of an earlier answer carries that
+  answer's coverage figure through to its own result, so a check can only ever
+  claim to have cleared as much as it genuinely saw.
+depends_on:
+  - ACS-1100
+  - ACS-1100a
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100d-1
+  - ACS-1100d-2
+  - ACS-1100d-4
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the L1 that stops the defect propagating. Reporting a denominator at
+  the source (ACS-1100a) achieves nothing if the next tool in the chain drops it
+  and prints "all clear"; the store's own verifiers would go on confirming a
+  number nobody computed. Coverage must travel WITH the result through every
+  hop, and a verifier's own verdict is capped by the weakest coverage figure it
+  consumed.
+
+  Consider this the coverage analogue of the phantom-done family (BO-2500,
+  BP-1100): a green verdict over a partial scan is a phantom all-clear. Cite the
+  parallel; do not fold this into those trees — they govern proof that WORK is
+  done, this governs proof that a QUERY was complete.
+
+  DOCUMENTATION SPLIT (2026-08-13, expert review). The reference-doc trigger that
+  used to sit here has moved: the propagation contract and verdict cap are
+  documented by ACS-1100e-1, the single consolidated reference-doc AC covering all
+  four behavioural L1s (the former ACS-1100d-3 wrote the same file as three sibling
+  ACs). The component-diagram trigger STAYS here and is satisfied by ACS-1100d-4 —
+  a different artifact in a different target document by a different agent, and
+  deliberately not folded into ACS-1100e-1.

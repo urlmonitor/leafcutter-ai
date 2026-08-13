@@ -73,7 +73,7 @@ TOOL NOTE: Edit is included per AC. Write is deliberately omitted — this agent
 is read-only and must never modify code. The agent is narrowing below the Sonnet
 default of Write, which is always allowed per docs/agents/conventions.md §4.4
 (only widening above tier floor requires justification, not narrowing).
-See docs/architecture/adrs/ADR-006-agent-model-tiers.md §2.6.
+See docs/architecture/adrs/ADR-033-agent-model-tiers.md §2.6.
 Opus escalation target: medium-confidence cluster > 3 findings → spawn Opus
 sub-agent inline via Agent tool (gatekeeper escalation pattern, ADR-006 §2.3).
 -->

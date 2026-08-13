@@ -76,5 +76,5 @@ right skill for each extension type:
 - **Audit what's missing**: Ask `workflow-architect` to run a package audit. It uses the
   `package-audit` skill to run `scripts/package_audit.py` and present a gap report.
 
-See [ADR-020](docs/architecture/adrs/ADR-020-leafcutter-package-boundary.md)
+See [ADR-013](docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md)
 for the boundary classification rules (portable vs project-specific).

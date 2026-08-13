@@ -38,13 +38,13 @@ doc_links:
   - path: "docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md"
     relationship: describes
     status: exists
-  - path: "docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md"
+  - path: "docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md"
     relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "The invalid branch is triggered when the AC-id string is well-formed (parses as an AC-id token per the ADR-007 id format) but _load_ac_by_id returns None (no such AC in the store); verdict: 'invalid', declared_refs records the unresolved id, resolved: false — distinct from 'missing' (no ref at all)."
+  - "The invalid branch is triggered when the AC-id string is well-formed (parses as an AC-id token per the ADR-008 id format) but _load_ac_by_id returns None (no such AC in the store); verdict: 'invalid', declared_refs records the unresolved id, resolved: false — distinct from 'missing' (no ref at all)."
   - "Resolution uses the SAME extracted _load_ac_by_id shared module as GE-117b-1; the AC store is the authority for existence (ADR-010). Do not treat a well-formed-but-dangling ref as satisfied."
   - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
 delivers_to: null

@@ -1,0 +1,41 @@
+id: KM-200b
+title: "See what came in and what was worked off, side by side"
+component: knowledge-management
+components:
+  - knowledge_management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  Arrivals and completions for each kind of thing, over the period you choose.
+
+  For a week, a month, or any range you pick, you can see how many of each kind
+  were created and how many were consumed — closed, completed, retired, or
+  replaced — together with the net change between them, so the two halves of the
+  story are always read together instead of one at a time.
+depends_on:
+  - KM-200
+doc_links: []
+documentation_triggers:
+  - component-diagram
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Idea stub — covered_by deliberately empty (see KM-200 notes). This is the measure
+  itself and is the piece with real unknowns: several artifact kinds have no
+  outflow signal at all today (a retired skill, a superseded diagram, a deleted
+  hook), so decomposition must decide per kind whether outflow is observable, and
+  say so honestly where it is not, rather than reporting zero. The
+  component-diagram trigger reflects a new computed layer sitting between the
+  existing leafcutter-web/lib/data loaders and the views.

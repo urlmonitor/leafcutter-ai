@@ -10,9 +10,9 @@ description: 'Deep code review agent. Infers requirements and tech stack from th
   what pr-reviewer covers.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # code-review-architect
 

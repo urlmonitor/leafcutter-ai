@@ -10,9 +10,9 @@ description: 'Pre-PR self-review against the working diff. Classifies every find
   diff?". Also invoked by pull-request as a pre-open step.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # pr-reviewer
 

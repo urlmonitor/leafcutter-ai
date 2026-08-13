@@ -61,7 +61,7 @@ related_tickets:
 This document visualises how the Brain Trader agent ecosystem orchestrates code delivery. It uses a layered abstraction approach: starting with a high-level mapping of slash commands to their primary agents, followed by detailed "drill-down" views showing how orchestrators and supervisors distribute work to specialised sub-agents. 
 
 > [!TIP]
-> For the authoritative rules on how these agents are grouped into model tiers (Haiku, Sonnet, Opus), see [ADR-006](ADR-006-agent-model-tiers.md). For the underlying supervisor architecture and sign-off status mechanics, see [ADR-010](ADR-010-agent-supervisor-signoff-pattern.md).
+> For the authoritative rules on how these agents are grouped into model tiers (Haiku, Sonnet, Opus), see [ADR-033](adrs/ADR-033-agent-model-tiers.md). For the underlying supervisor architecture and sign-off status mechanics, see the [`signoff` skill](../../templates/skills/signoff/SKILL.md).
 
 ---
 
@@ -1997,7 +1997,7 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-vie
 ## Cross-References
 
 - [Agent Inventory](../agents/README.md) — Comprehensive table of all existing agents and slash commands.
-- [ADR-010 — Agent Supervisor & Ticket Sign-off Pattern](ADR-010-agent-supervisor-signoff-pattern.md) — Formal specification for the frontmatter status enum, commit-phase serialization lock, and pre-commit parity guards.
+- [`signoff` skill](../../templates/skills/signoff/SKILL.md) — Formal specification for the frontmatter status enum, commit-phase serialization lock, and pre-commit parity guards.
 - [Agent Supervisor Design Spec](../superpowers/specs/2026-05-08-agent-supervisor-design.md) — In-depth breakdown of the supervisor execution algorithms.
 
 <!--

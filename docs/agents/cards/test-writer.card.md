@@ -13,9 +13,9 @@ description: 'TDD test-first authoring agent. Spawned by ticket-supervisor at pr
   zero file writes) when tests array is empty or block is absent.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # test-writer
 
@@ -175,6 +175,7 @@ flowchart TD
 - BP-300a-6-i: debug.js is syntactically valid JavaScript
 - BP-700b-2-i: LLM trigger fires for tickets describing UI work without frontend file extensions in files_touched
 - BP-700b-3: Agent produces no output or side effects when not dispatched
+- GE-113c-3-iv: Direct unit tests for _is_suppressed cover both exploit paths
 - INF-100a-4: Wiring tests verify template Pre-Flight section and PROJECT_CONTEXT.md content
 - INF-400g-2-i: emit_event.py handles optional arguments gracefully (null in payload)
 - INF-400g-2-ii: emit_event.py appends (not overwrites) on subsequent calls
@@ -184,3 +185,4 @@ flowchart TD
 - INF-500b-2-i: Priority scoring ranks high-severity categories above equal-count low-severity
 - INF-500b-2-ii: JSON format output contains required keys
 - INF-500b-3-i: Trend detection uses >20% threshold for rising/falling classification
+- KM-KGS-100b-5-ii: Cache correctness is proven against a real store in a deployed layout

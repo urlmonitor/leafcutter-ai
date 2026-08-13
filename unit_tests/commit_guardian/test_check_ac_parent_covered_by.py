@@ -176,6 +176,7 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
         Uses _derive_parent_id imported deterministically from the worktree's own
         scripts/ac_store/ac_parent_id.py — no cwd dependency, no skipTest fallback.
         """
+        # covers: ACS-100i-2
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
 
@@ -491,6 +492,7 @@ class TestBinaryContentFailOpenAcs100i2i(unittest.TestCase):
 
     def test_binary_file_does_not_block_hook(self) -> None:
         """A staged YAML file with binary content must not cause exit code 1 (ACS-100i-2-i)."""
+        # covers: ACS-100i-2-i
         with tempfile.TemporaryDirectory() as tmpdir:
             returncode, _ = self._run_main_with_binary_file(Path(tmpdir))
 

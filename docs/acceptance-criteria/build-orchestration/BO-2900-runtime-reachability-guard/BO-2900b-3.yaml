@@ -1,0 +1,138 @@
+id: BO-2900b-3
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Only an actual invocation counts as a caller — a capability's name in text does not"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an automation script that runs the command surface with the capability
+    `mark-done` and its arguments,
+    And that same script contains the text `claim` in a comment, in a message it
+      prints to the operator, and in the name of one of its own local variables,
+    And it never runs the command surface with the capability `claim`,
+  When the invocations that automation makes are collected,
+  Then `mark-done` is collected as an invocation,
+    And `claim` is not collected as an invocation,
+    And the collected set is unchanged when the comment, the printed message and the
+      local variable are renamed,
+    And, in consequence, a registered `claim` capability is reported as having nothing
+      that runs it.
+depends_on:
+  - BO-2900b
+  - BO-2900b-1
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "A real automation script whose invocations are the input to this collection; it also prints operator-facing messages that name capabilities, which is the false-positive shape."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: related
+    status: exists
+    relevance: "Defines how automation scripts invoke tooling — the shape the collection must recognise."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns the automation layer whose invocations are collected here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    invocation:
+      type: object
+      description: "{ script: '<repo-relative path>', line: int, surface: '<script path the command runs>', capability: str }. One record per actual invocation of a command surface by an automation script. The capability is the first positional argument of the executed command, never a name found elsewhere in the file."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "THIS IS THE SHARED SEAM. collected_invocations(script_paths) -> list[Invocation] lives in scripts/commit_guardian/_reachability_inventory.py and is consumed by BO-2900b-1 forwards, BO-2900c-1/-2 backwards and BO-2900a-3 condition (3). Defined once; any second collector is a defect."
+    - "COLLECT FROM COMMAND STRINGS THAT THE SCRIPT EXECUTES, NOT FROM THE FILE'S TEXT. In this repository an automation script invokes the surface as a program from a command string (see templates/workflows-js/fast-lane-ship.js:193, 264, 305, 312, 315, 465: `python3 ${gateScript} <capability> --flag value`). The collector must locate the executed-command expressions — the arguments of the script's command-running calls and the command strings it hands to its runner — and take the capability as the first positional token after the surface path. Text elsewhere in the file (comments, printed operator messages, variable names, log lines) is out of scope by construction, not by a filter."
+    - "THE RENAME CLAUSE IS THE ACCEPTANCE PROPERTY: renaming the comment, the printed message and the local variable must produce a byte-identical collected set. Any implementation that can fail this is a substring scan regardless of how it is described. The three decoys are chosen to defeat, in order, a raw substring scan, a comment-stripping scan, and a string-literals-only scan."
+    - "The invocation crosses a language boundary (JavaScript automation invoking a Python surface as a program), so the connection is the ARGUMENT the automation passes, not any language-level reference. Do not attempt to resolve it via imports or symbols."
+    - "Surface identity must be resolved to a repo-relative path even when the command is built from a variable (e.g. `${gateScript}` bound to `${worktreePath}/scripts/build_orchestration/fast_lane.py`), so an invocation is attributed to the surface it actually runs. An unresolvable surface reference must be reported as such, never silently dropped — a silently dropped invocation makes a called capability look uncalled."
+delivers_to:
+  agent: python-coder
+  contract: "collected_invocations(script_paths) -> list[{ script: str, line: int, surface: str, capability: str }] from scripts/commit_guardian/_reachability_inventory.py. Consumed by BO-2900b-1 (which registered capabilities have a caller), BO-2900c-1 and BO-2900c-2 (which invocations name a capability that exists), and BO-2900a-3 condition (3) (is the unit run as a program by any automation)."
+expects_from:
+  ac_id: BO-2900c-4
+  contract: "The derived set of automation-script paths to collect from — the automation scripts that exist at the time of the check, never a hardcoded list."
+test_spec:
+  - name: test_only_the_executed_capability_is_collected_from_a_decoy_laden_script
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real collector over a fixture automation script that executes the surface with `mark-done` while naming `claim` in a comment, in a printed operator message and in a local variable; asserts mark-done is collected and claim is not."
+  - name: test_collected_set_is_byte_identical_after_renaming_all_three_decoys
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Re-runs the collector over the same script with the comment, the message and the variable renamed and asserts an identical list of Invocation records — the property no substring implementation can satisfy."
+  - name: test_uncollected_claim_makes_a_registered_claim_capability_report_as_uncalled
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the full forward check over the same fixture with `claim` registered on the surface and asserts it is reported as having nothing that runs it — the consequence clause, asserted end to end rather than inferred from the collector alone."
+  - name: test_collector_recognises_the_real_fast_lane_ship_invocations
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the collector against the actual templates/workflows-js/fast-lane-ship.js on disk and asserts it collects the real claim/release/mark_done/select_connected/verify_red_baseline/verify_green_and_coverage invocations, so the collector is calibrated against the real artifact rather than a synthetic fixture."
+test_rationale: "Every wrong implementation of this collector is a substring scan wearing a different name, and a direct-import unit test handed a list of tokens cannot tell the difference — it would pass on all four wrong variants. The rename-invariance property is only observable by running the real collector twice over two real files, and the consequence clause is only observable by running the forward check on top of it. The fourth test exists because of the repository's real-artifact spot-check rule in CLAUDE.md: synthetic fixtures reproduce the author's own assumptions about the invocation shape, and the shape here is a template literal inside a JavaScript command string, which is exactly the kind of format a hand-written fixture gets subtly wrong."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  This AC defines "what counts as a caller" ONCE, for both directions of the
+  bijection. BO-2900b-1 consumes it forwards (which registered capabilities have a
+  caller) and BO-2900c consumes it backwards (which invocations name a capability that
+  exists). It is placed under BO-2900b rather than duplicated in both trees; BO-2900c
+  references it and must not restate it.
+
+  WHY THIS IS A SEPARATE AC AND NOT A CLAUSE. Both directions of the bijection are only
+  as good as this collection, and it is the component most likely to be implemented as
+  a substring search — which fails in both directions at once and in opposite ways:
+    - Forwards, a capability whose name merely appears in a log line looks called, so
+      a genuinely stranded capability passes. That is the original defect, restored.
+    - Backwards, a capability name inside a comment looks like an invocation of a
+      capability that may not exist, so the reverse check raises a false alarm on a
+      change that is correct. False alarms are how guards get switched off.
+  Defining it once means one fixture set proves both directions.
+
+  THE RENAME CLAUSE IS THE DECISIVE ASSERTION. "The collected set is unchanged when the
+  comment, the message and the variable are renamed" is a property no substring-based
+  implementation can satisfy, and it is cheap to test. Prefer it to any assertion about
+  how the collection is implemented — the criteria constrain the outcome, and the IT PO
+  chooses the mechanism.
+
+  THE THREE DECOYS ARE CHOSEN, NOT ARBITRARY. A comment defeats a raw substring scan; a
+  printed operator message defeats a scan that strips comments (the string is live code
+  and genuinely executed); a local variable name defeats a scan that only looks at
+  string literals. An implementation that handles two of the three is the likely
+  half-finished state.
+
+  Note for the implementer: an automation script invokes the command surface as a
+  program, so the invocation crosses a language boundary. Do not assume the caller and
+  the capability can be connected by a language-level reference; the connection is the
+  argument the automation passes.
+
+  2026-08-13 (IT PO enrichment). MECHANISM CHOSEN: locate the script's executed-command
+  expressions and read the first positional token after the resolved surface path. This
+  is the only reading that satisfies the rename clause structurally — the three decoys
+  are then out of scope because they are not executed commands, rather than being
+  filtered out one shape at a time. The variable-bound surface path (`${gateScript}`) is
+  called out explicitly because it is the shape the real fast-lane-ship.js uses and the
+  one a naive literal-only implementation drops silently.

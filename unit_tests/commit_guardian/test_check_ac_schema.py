@@ -701,7 +701,7 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
     the criteria field may contain a plain-text placeholder instead of a full
     Given/When/Then scenario. The schema validator must accept this form.
 
-    See: ACS-500b-1-i, ADR-007 §Pattern-inherited ACs.
+    See: ACS-500b-1-i, ADR-008 §Pattern-inherited ACs.
     """
 
     def test_implements_pattern_with_plain_text_criteria_passes(self) -> None:

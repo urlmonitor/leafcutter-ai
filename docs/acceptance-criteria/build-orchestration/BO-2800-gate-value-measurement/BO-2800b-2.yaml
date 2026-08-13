@@ -1,0 +1,88 @@
+id: BO-2800b-2
+components:
+  - build_orchestration
+  - review_system
+title: "The same problem recurring across tickets collapses to one countable signature"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three recorded findings — two emitted by the documentation-verification gate with
+    rule identifier "how-to-missing-for-trigger" on two different tickets and with
+    different detail prose, and one emitted by the same gate with rule identifier
+    "reference-doc-missing-for-trigger",
+  When each finding's signature is computed,
+  Then the signature is derived from exactly two inputs — the emitting gate and the rule
+    identifier — and from nothing else,
+  And the two "how-to-missing-for-trigger" findings share one identical signature while the
+    third has a different one,
+  And changing only the free-text detail of a finding leaves its signature unchanged,
+  And changing only the file, ticket, or artifact the finding was raised against leaves its
+    signature unchanged,
+  And an aggregate over the recorded findings reports that shared signature with an
+    occurrence count of 2 spanning 2 tickets, so a problem that fires four times in one epic
+    is reported as one problem with a count of four rather than four unrelated paragraphs.
+
+  Given a finding mined from the frozen historical corpus, which carries an emitting agent
+    and prose but records nothing about the kind of artifact it was raised against,
+  When its signature is computed,
+  Then a signature is produced for it from the two inputs alone,
+  And no input that the historical record does not carry is required in order to signature
+    it, so the mined findings are countable rather than excluded for want of a field that
+    was never written.
+depends_on:
+  - BO-2800b
+  - BO-2800b-1
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: dropped surface_kind from the signature, reducing it to gate + rule_id. surface_kind was undefined store-wide, was not carried by any mined record, and its only appearance in the tree was as an unspecified signature input."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  DECIDED DESIGN POINT: signature = gate + "/" + rule_id. Free-text detail NEVER enters
+  the key, and neither does anything about the artifact the finding was raised against.
+  Motivating evidence from the user: 43 pull-request-review blocks, 3
+  documentation-verifier blocks, 6 test-runner blocks, and the same "AC line missing pipe
+  delimiters" defect firing four times in one epic — all uncounted.
+
+  WHY surface_kind WAS DROPPED, and the reasoning is worth keeping. The original signature
+  had three inputs, the third being the "kind of surface" a finding was raised against.
+  That term was defined nowhere in the AC store — it appeared only in this AC and in
+  BO-2800b-5, with no enumeration and no rule for assigning it. Two consequences followed.
+  First, this AC's own Given ("against the same kind of surface") was satisfiable by any
+  two equal literals, so the granularity question was never actually confronted by the
+  specification. Second, and decisively, the mined historical records carry no such field
+  at all, so the ~113 mined nested-false findings could not have been signatured under the
+  three-input rule — the very population BO-2800a exists to make countable.
+
+  rule_id is already gate-scoped, so a well-chosen rule identifier carries whatever
+  discrimination a surface distinction would have supplied. An undefined third input adds
+  fragmentation risk (the same problem splitting across surface labels) for no demonstrated
+  discrimination benefit. If a real collision appears — one rule identifier that genuinely
+  means two different problems depending on the artifact — the answer is to split the rule
+  identifier, not to reintroduce an undefined axis. Reconsider only on evidence of such a
+  collision.
+
+  The identity produced here is the defect_id that BO-2800c's override records reference.
+  Note that it is a CLASS identity, not an instance identity — BO-2800c-1 carries the
+  instance discriminator, because two firings of one rule on one ticket are two overrides.

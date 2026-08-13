@@ -1,0 +1,111 @@
+id: BO-2900f-5
+components:
+  - build_orchestration
+  - supervisor_system
+title: "Reference documentation states the skipped-gate record contract and its boundary with the workflow-step record"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the skipped-gate record contract is in place,
+  When a reader consults the project's reference documentation for gate outcomes,
+  Then a reference document states the shape of the record written for a requested
+    gate that did not run — the gate's name, the outcome value `skipped`, and the
+    reason including the setting or precondition that prevented it,
+    And it states the one-entry-per-requested-gate rule, including that a gate the
+      work item never requested produces no entry,
+    And it states that a skipped outcome is never counted as a pass in any roll-up,
+    And it names the finalize-workflow per-step record as the sibling guarantee on a
+      different surface, so a reader does not treat the two as one mechanism,
+    And it records the double-recording trap — that a skip-branch record requires the
+      pre-existing unconditional record to be conditionalized — so the next
+      implementer does not repeat it.
+depends_on:
+  - BO-2900f
+  - BO-2900f-1
+  - BO-2900f-2
+  - BO-2900f-3
+doc_links:
+  - path: docs/reference/gate-outcome-records.md
+    relationship: describes
+    status: planned
+    relevance: "The reference document this AC requires; does not exist yet."
+  - path: docs/reference/build-telemetry.md
+    relationship: related
+    status: exists
+    relevance: "Existing reference for build-run records — cross-link rather than duplicate."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling workflow-step guarantee the documentation must distinguish this from."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "States the four-value outcome enum {not_needed, needed, signed_off, failed} and the done rule. The reference must position the `skipped` record outcome against that enum explicitly, since a reader who knows the enum will otherwise assume `skipped` is a typo for `not_needed`."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2100-live-app-proof/BO-2100d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the diagnostic walkthrough for 'my live-app check did not run'. Link to it; do not restate any of its procedure here."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Create docs/reference/gate-outcome-records.md as a REFERENCE — the contract as it is, for a reader who needs to know what a record means. It is NOT a how-to: the diagnostic walkthrough for 'my check did not run' is BO-2100d-4's and must be linked, never restated. The audience split is the usual one and it is real here: the how-to serves someone who has just been surprised, this page serves someone deciding whether a record set is complete."
+  - "Document the record shape exactly as implemented, not as designed: the fields of a requested-gate record ({ gate, outcome, reason, source }), the outcome vocabulary including `skipped`, and the rule that reason and source are both required and non-empty on a skipped entry — reason naming the disabling condition, source naming where it was read from."
+  - "STATE THE TWO SENSES OF `skipped` IN ONE EXPLICIT PARAGRAPH. BO-2100b-2 uses the word behaviourally ('the live-app check is skipped for that ticket' when the ticket does not opt in) and this contract uses it as an outcome VALUE. They are opposites at the record level: the behavioural sense produces NO entry, the outcome sense produces one. This is the single most likely misreading of the whole contract and the one that turns the record into noise on every work item — do not leave it to inference."
+  - "Document the denominator rule (the requested set, captured before the enablement filter) together with the gate D negative (a gate the work item never requested produces no entry). The two only make sense as a pair; stating the first alone reads as 'record every gate in the project'."
+  - "Document the one-entry-per-requested-gate rule AND the halt carve-out from BO-2900f-2-i with BOTH its halves: zero entries plus a recorded halt naming the stopping point is legitimate; zero entries with no halt record is a defect. Publishing only the permissive half turns the carve-out into the documented excuse for every gap."
+  - "State that a skipped outcome is never counted as a pass in any roll-up and never makes a work item done-eligible, and name the two exits verbatim from BO-2900f-3: run the gate to a pass, or an explicit recorded re-classification. Say plainly that the skip cannot clear itself — the reader most likely to consult this page is the one hoping it can."
+  - "Record the double-recording trap as a named hazard, not a footnote: a skip-branch record requires the pre-existing unconditional record after the if/else to be conditionalized in the same change. Include the reason the original guard missed it — the count regex matched only quoted-string arguments and was blind to template literals — and cross-reference CLAUDE.md 'Skip-Branch Side-Effects'. A reader who sees only 'records exactly once' has the rule without the reason it is hard."
+  - "NAME THE SIBLING, DO NOT MERGE IT. BO-1000b-1-i's finalize-workflow per-step record is a different producer on a different surface with the same completeness instinct. State that they are two mechanisms, that neither is an implementation of the other, and that a change to one does not propagate — this is the paragraph that stops a future reader from 'unifying' them."
+  - "Cross-link docs/reference/build-telemetry.md rather than duplicating any JSONL record schema, and position the outcome vocabulary against the signoff skill's four-value enum explicitly so a reader who knows that enum does not read `skipped` as a variant of `not_needed`."
+  - "SURFACE-DEPENDENT — ONE SECTION CANNOT BE WRITTEN YET. The 'where the record lives' section depends on the user's unresolved choice between the git-tracked ticket surface and a durable JSONL sink; it is the only part of this page with no surface-agnostic form. Draft everything else and hold that section. Do not paper over it with a phrase like 'the recorded results', which is what the criteria had to do and what this reference exists to resolve."
+  - "Register in docs/INDEX.md and satisfy check-doc-frontmatter, check-doc-length and check-doc-index."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900f-1
+  contract: "The published contract this page states: BO-2900f-1's { gate, outcome, reason, source } record shape with the denominator and gate D rules, BO-2900f-2's one-entry-per-requested-gate count, BO-2900f-2-i's halt carve-out in both its halves, and BO-2900f-3's four-group roll-up plus the done-eligibility rule and its two exits. The page quotes these rather than paraphrasing them."
+test_required: false
+test_rationale: "The artifact is a prose reference page with no executable surface a test could drive. Every rule it publishes is enforced by the executing tests on BO-2900f-1, BO-2900f-2, BO-2900f-2-i and BO-2900f-3, which is the correct place for them — a test over this page could only assert that certain words appear, which is the presence-shaped test this whole tree exists to discredit. Recorded explicitly so test-writer skips with an accurate reason rather than silently."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the parent L1's `documentation_triggers: [reference-doc]`.
+
+  Intended agent is `documentation-expert` — left as `assigned_agent: null` per this
+  authoring run's instruction that the IT PO sets assignment. Flagging it here so the
+  enrichment pass does not have to re-derive it.
+
+  Scope note: this is a REFERENCE document (the contract as it is), not a how-to. The
+  diagnostic walkthrough for "my live-app check did not run" already has a home at
+  BO-2100d-4 — do not duplicate it here.
+
+  2026-08-14 (IT PO enrichment). Agent set to documentation-expert as the notes
+  above direct; no re-derivation was needed. Four things added to the requirements
+  that the criteria imply but do not name:
+
+  - THE TERM COLLISION GETS ITS OWN PARAGRAPH. BO-2900f-1's notes carry it as an
+    implementer warning; it belongs in the published contract too, because the
+    reader who confuses the two senses is exactly the reader consulting a reference
+    to find out what an entry means.
+  - THE HALT CARVE-OUT MUST BE PUBLISHED IN BOTH HALVES. Documenting only "zero
+    entries are legitimate when the run halted" converts the reference itself into
+    the excuse BO-2900f-2-i was split out to prevent. The defect half travels with
+    it or neither goes in.
+  - POSITION AGAINST THE SIGNOFF ENUM. A reader who knows {not_needed, needed,
+    signed_off, failed} will read `skipped` as a near-synonym of `not_needed` and
+    conclude the gate was waived. Since BO-2900f-3's entire point is that the two
+    are opposites with respect to done-ness, the reference has to say so directly.
+  - ONE SECTION IS BLOCKED, AND ONLY ONE. Everything except "where the record
+    lives" is writable before the user's record-surface decision. Recording the
+    boundary precisely so this AC is not treated as wholly blocked.

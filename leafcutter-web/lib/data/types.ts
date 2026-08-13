@@ -155,7 +155,7 @@ export interface AgentDef {
 
 /* ---------- Graph model (shared by AC Atlas & Architecture views) ---------- */
 
-export type GraphNodeKind = "ac" | "component" | "ticket" | "phase" | "agent";
+export type GraphNodeKind = "ac" | "component" | "ticket" | "phase" | "agent" | "artifact";
 export type GraphEdgeKind =
   | "depends_on"      // AC -> AC (or ticket -> ticket)
   | "delivers_to"     // AC -> AC contract
@@ -182,13 +182,80 @@ export interface GraphEdge {
   target: string;
   kind: GraphEdgeKind;
   weight?: number;            // used by rollup graphs (cross-component dep count)
-  label?: string;             // visible label on the edge (yes/no for decision diamonds)
+  label?: string;             // visible label on the edge (yes/no for decision diamonds, rel for artifact graph)
   sourceHandle?: string;      // React Flow source handle id ("yes" | "no" for decision nodes)
+  enforcement?: string;       // artifact graph: "enforced" | "derived-validated" | "derived-raw" | "warn" | "none"
+  rel?: string;               // artifact graph: relationship type label (PARENT_OF, DEPENDS_ON, …)
+  // The remaining artifact-graph fields are what make the map actionable: the
+  // FIELD is what you actually grep for, and SHAPE is the second trust axis
+  // without which "enforced" over-promises (an enforced+ambiguous edge like
+  // depends_on is a documented trap, not a guarantee).
+  field?: string;             // artifact graph: the frontmatter/body field encoding the edge
+  shape?: string;             // artifact graph: "clean" | "ambiguous" | "freetext" | "derived" | "often-empty"
+  cardinality?: string;       // artifact graph: e.g. "many-to-one"
+  note?: string;              // artifact graph: caveat / gap reference
+  // A THIRD axis, orthogonal to the two trust axes: does the relation exist at
+  // all? "absent" edges are recorded gaps (KM-ADM-002), not weak links — they
+  // must never render as merely-untrusted, or the map claims links it does not
+  // have. Optional so an older graph document still renders as all-present.
+  status?: string;            // artifact graph: "present" | "absent"
+}
+
+/**
+ * One self-referencing relationship on an artifact node (source === target),
+ * e.g. AC -> AC. Carries the encoding field so that three PARENT_OF entries
+ * are distinguishable rather than reading as a duplication bug.
+ */
+export interface SelfRel {
+  rel: string;
+  field: string;
+  enforcement: string;
+  shape: string;
+  note?: string;
 }
 
 export interface Graph {
   nodes: GraphNode[];
   edges: GraphEdge[];
+}
+
+/* ---------- Artifact knowledge-graph (authored static map) ---------- */
+
+/**
+ * One artifact node in the authored knowledge-graph JSON
+ * (docs/reference/artifact-knowledge-graph.graph.json).
+ * group: "ac-core" | "prod-truth" | "meta" | "delivery"
+ * rank: 0..5 column hint for left-to-right layout.
+ */
+export interface ArtifactGraphNode {
+  id: string;
+  label: string;
+  group: string;
+  rank: number;
+  path: string;
+  key: string;
+  note?: string;
+}
+
+/**
+ * One artifact edge in the authored knowledge-graph JSON.
+ * enforcement: "enforced" | "derived-validated" | "derived-raw" | "warn" | "none"
+ * shape:       "clean" | "ambiguous" | "freetext" | "derived" | "often-empty"
+ */
+export interface ArtifactGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  rel: string;
+  /** Absent on a status:"absent" edge — a relation that does not exist has no encoding field. */
+  field?: string;
+  enforcement: string;
+  /** Absent on a status:"absent" edge — trust shape is meaningless for a relation that does not exist. */
+  shape?: string;
+  cardinality: string;
+  note: string;
+  /** "present" (default when omitted) | "absent" — see the JSON's legend.status. */
+  status?: string;
 }
 
 /* ---------- Product-truth flows ---------- */
@@ -318,6 +385,10 @@ export interface Flow {
   scenarios: FlowScenario[];
   implSummary: FlowImplSummary; // derived from live AC status
   filePath: string;
+  // Authored artifact graph (present only for architecture-kind flows loaded from
+  // docs/reference/*.graph.json — absent for all journey/data flows).
+  graphNodes?: ArtifactGraphNode[];
+  graphEdges?: ArtifactGraphEdge[];
 }
 
 /** One place an AC appears in a flow — for the reverse "Appears in flows" index. */

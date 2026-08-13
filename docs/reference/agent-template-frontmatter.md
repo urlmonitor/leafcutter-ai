@@ -1,20 +1,20 @@
 ---
-title: "Reference: Agent Template Frontmatter Fields"
+title: 'Reference: Agent Template Frontmatter Fields'
 type: reference
 status: active
 created: 2026-05-28
 last_updated: 2026-05-28
 components:
-  - build_pipeline
-  - config_loader
+- build_pipeline
+- config_loader
 related_docs:
-  - "config/agent_registry.json"
-  - "config/agent_registry.schema.json"
-  - "templates/agents/"
-  - "scripts/template_compiler.py"
-  - "scripts/build_phases.py"
+- config/agent_registry.json
+- config/agent_registry.schema.json
+- templates/agents/
+- scripts/template_compiler.py
+- scripts/build_phases.py
+description: 'Overview of Reference: Agent Template Frontmatter Fields.'
 ---
-
 # Agent Template Frontmatter Fields
 
 Every agent in the leafcutter ecosystem is defined by a Markdown template file
@@ -99,7 +99,7 @@ appear in the deployed `.claude/agents/<name>.md` file.
 |---|---|---|---|---|
 | `portable` | boolean | no | `true` | When `true` (default), the agent is domain-agnostic and compiled by `build.py` for all adopter projects. When `false`, the agent is domain-specific and excluded from package compilation. Domain agents appear in `agent_registry.json` with `"portable": false`. In practice, every agent in `templates/agents/` currently has `portable: true`. |
 | `signoff` | boolean | no | `false` | When `true`, `template_compiler.compile_agent_template()` appends the canonical sign-off block (from `templates/agents/_signoff_block.md`) to the compiled body. Phase agents that invoke the `signoff` skill as their final action should set this to `true`. |
-| `domain` | string or null | no | `null` | Domain tag for project-specific agents (e.g. `"bybit-trader"`). When `null` (the standard case), the agent is portable. Mirrors the `domain` field in `agent_registry.json`. |
+| `domain` | string or null | no | `null` | Domain tag for project-specific agents (e.g. `"billing"`). When `null` (the standard case), the agent is portable. Mirrors the `domain` field in `agent_registry.json`. |
 | `config_keys` | map or `{}` | no | `{}` | Structured map of project-specific config keys the agent reads from `skills_config.json`. Each entry declares `required` (boolean) and `description` (string). An empty map (`{}`) means the agent needs no project-specific config. Used by the `onboard` wizard to prompt the user for values and by `build.py` to validate config completeness. |
 | `adopter_notes` | string (block scalar) | no | — | Free-text notes for developers who adopt the leafcutter package. Describes invocation context, constraints, or installation prerequisites. Stripped from the compiled output; only visible in the template source. When absent, omit the field entirely (do not write `adopter_notes: ""`). |
 | `requires_verification` | boolean | no | `false` | When `true`, `template_compiler.compile_agent_template()` appends the standard post-edit verification block before the sign-off block. The verification block prompts the agent to run `git diff --stat` after every Edit/Write batch. Phase agents that modify files should set this to `true`. |

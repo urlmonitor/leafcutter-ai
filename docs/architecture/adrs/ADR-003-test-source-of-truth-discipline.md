@@ -6,7 +6,7 @@ Accepted (2026-05-22)
 
 ## Context
 
-On 2026-05-19, the `test-writer` agent in a leafcutter consumer (bybit-trader) was
+On 2026-05-19, the `test-writer` agent in a leafcutter consumer project was
 tasked with repairing 5 failing tests on main. One of those failures was in
 `test_fetch_phase_timeseries`: the test expected 2-tuple rows but production returned
 3-tuples (bucket, symbol, count). Rather than updating the test to match production,
@@ -27,7 +27,7 @@ The root cause was a prompting gap in the leafcutter agent templates. Neither
 - Split production behavior changes from test-only assertion fixes.
 
 This failure class — "test-driven regression by contract shrinkage" — is not specific
-to bybit-trader. Any leafcutter consumer whose agents operate on a "fix failing tests"
+to that project. Any leafcutter consumer whose agents operate on a "fix failing tests"
 task is exposed to the same risk. The policy must live in the package templates so that
 every consumer inherits the guardrails.
 
