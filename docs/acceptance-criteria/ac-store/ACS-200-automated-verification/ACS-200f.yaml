@@ -1,0 +1,56 @@
+id: ACS-200f
+components:
+  - ac_store
+title: "An AC whose covering tests genuinely pass can be marked done through the normal path, without the operator knowing an environment variable"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC that is still recorded as not-yet-done,
+  And at least one test in the repository declares that it covers that AC,
+  And every such test passes when the suite is run without any special
+    environment configuration,
+  When an operator runs the done-marking tool for that AC with no environment
+    variables set beyond the repository defaults,
+  Then the tool's coverage gate treats those covering tests as passing,
+  And the AC is marked done and the tool exits successfully,
+  And the tool does not refuse on the ground that a covering test was reported
+    as an expected failure,
+  And the symptom ("the only way to satisfy the coverage gate is to already be
+    done, so a genuinely covered AC can never be marked done through the tool's
+    normal path") must not occur.
+depends_on: []
+doc_links:
+  - path: "docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Root cause is a self-defeating interaction, not a missing check: scripts/ac_store/mark_ac_done.py --ac <ID> --test-root unit_tests runs pytest to enforce its coverage gate but does not set AC_ENFORCE_STRICT=1, so the repo's pytest_ac_enforcement plugin xfail-masks the very tests the gate is about to read — the AC is still work_status: todo at that moment, which is precisely when marking done matters"
+  - "The verification run the gate performs must not be subject to the plugin's not-yet-done masking; the gate is the authority deciding done-ness, so it cannot consume a result the plugin has already downgraded on the basis of the not-yet-updated status"
+  - "Do NOT fix this by making the tool ignore xfail outcomes generally — that would contradict BO-2500a-2-i (an xfailed or skipped linked test does not count as passing). The distinction to preserve is between an outcome the enforcement plugin produced by masking a passing test and an outcome produced by a test that genuinely did not pass"
+  - "Requiring the operator to prefix an environment variable is not an acceptable fix; the normal documented invocation must succeed. Verified 2026-08-13: the identical invocation with AC_ENFORCE_STRICT=1 prefixed succeeded immediately ('marked GE-118b work_status=done') while the unprefixed one exited 3 with 'REFUSED: <ID> is not eligible for done — linked test xfail: <nodeid>'"
+  - "Both marking paths must agree: the pre-commit done-proof check and the CI done-proof gate must reach the same verdict as the tool for the same tree, or an AC marked done locally will be rejected at merge"
+  - "Verify behaviorally — run the real tool against a real not-yet-done AC in the real store whose covering test genuinely passes, in a fresh process with no environment overrides, and assert exit zero and the store write; do not grep the tool's source, and do not use a fixture AC that is already done"
+  - "Must follow the repo error-handling policy: specific-exception try/except around subprocess, file and YAML I/O, log at WARNING or higher or re-raise; no bare or silent excepts"
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-200f-1
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: "Verified defect, reproduced twice on 2026-08-13 while marking GE-118a-1 and GE-118b done. Chicken-and-egg: the coverage gate runs pytest without AC_ENFORCE_STRICT=1, the pytest_ac_enforcement plugin xfail-masks any test whose covered AC is not yet work_status: done, the AC under consideration is by definition still todo, so its genuinely-passing '# covers:' tests are reported as xfail and the gate refuses with exit 3. Adjacent but distinct existing ACs: BO-2500a-3 (positive eligibility when covers-tests pass) states the intended outcome but not this interaction; BO-2500a-2-i (xfail/skip is not passing) is the constraint the fix must not violate. Neither describes the masking loop, and both sit in build-orchestration rather than the ac-store tool surface."

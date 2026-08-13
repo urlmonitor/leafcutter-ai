@@ -1,0 +1,70 @@
+id: BP-100k-2
+components:
+  - build_pipeline
+title: "Every deployed output the build produces is recorded in the manifest's output mapping, so the output-drift gate has something to compare"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the build has just run over an unmodified checkout and deployed its
+    outputs into the project,
+  And a deployed output the build produced is staged for commit — for example
+    a deployed agent definition in the deployed agents directory,
+  When the output-drift gate inspects that staged output and looks up which
+    source it was produced from,
+  Then the manifest's output-mapping record names that deployed output and the
+    source artifact it was produced from,
+  And the gate reports, for that output, either that it matches its recorded
+    source or that it has drifted from it,
+  And the gate does not report that output as absent from the output mapping,
+  And the symptom ("the gate announces that a deployed file it inspected is not
+    in the output mapping, so a hand-edit to that deployed file can never be
+    detected") must not occur for any output the build actually produces.
+depends_on:
+  - BP-100k
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    manifest_output_mapping_coverage:
+      type: object
+      description: "Manifest section mapping every deployed output the build writes back to the source artifact it was produced from, so the output-drift gate can resolve a source for any deployed file it inspects instead of skipping it as unregistered."
+  reference_file_path: "scripts/build_helpers.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Entries must be recorded by the deploy phases as they write each output, so a newly added output is registered by the act of deploying it and cannot be forgotten in a separate bookkeeping step."
+    - "The mapping must cover outputs deployed by every phase, not only the phases that happen to register today; a phase that writes an output without recording a mapping must be detectable."
+    - "Verify behaviorally — run the build, then execute the output-drift gate against a real deployed output that is currently reported as unregistered and assert it now yields a match/drift verdict; do not grep the manifest writer's source."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+delivers_to:
+  agent: python-coder
+  contract: "A build manifest whose output-mapping section resolves every deployed output to its source, consumed by the output-drift gate to produce a match/drift verdict per inspected output."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Verified defect, 2026-08-13. Found only after GE-118b made the drift hooks actually run. The output_mappings section of <package>/.build_manifest.json (written by write_build_manifest() in scripts/build_helpers.py) does not cover every deployed output currently on disk, so check_output_drift.py emits 'INFO — .claude/agents/<name>.md not in output_mappings (intentional one-off or newly added output; run build.py to register it)' for many real build outputs, which are therefore never drift-checked. Sibling of BP-100k-1 (template_hashes coverage); the two manifest sections fail independently and were split so each can be tested on its own."
