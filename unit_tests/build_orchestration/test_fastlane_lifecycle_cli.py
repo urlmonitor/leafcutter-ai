@@ -99,7 +99,7 @@ def _write_ac(
     """
     subdir = ac_root / "test-component"
     subdir.mkdir(parents=True, exist_ok=True)
-    data = {
+    data: dict = {
         "id": ac_id,
         "title": f"Synthetic CLI test AC {ac_id}",
         "component": "build-orchestration",

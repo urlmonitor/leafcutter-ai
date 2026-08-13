@@ -979,20 +979,20 @@ def main(argv: list[str] | None = None) -> int:
         excluded_claimed = filter_result["excluded_claimed"]
         target_refused = filter_result["target_refused"]
         if target_refused:
-            result = {
+            refused_payload = {
                 "claimed": [],
                 "excluded_claimed": excluded_claimed,
                 "target_refused": True,
             }
-            print(json.dumps(result))
+            print(json.dumps(refused_payload))
             return 1
         claim_result = claim_build_set(to_build, ac_root=ac_root)
-        result = {
+        claim_payload = {
             "claimed": claim_result["claimed"],
             "excluded_claimed": excluded_claimed,
             "target_refused": False,
         }
-        print(json.dumps(result))
+        print(json.dumps(claim_payload))
         return 0
 
     if args.subcommand == "release":
@@ -1013,12 +1013,12 @@ def main(argv: list[str] | None = None) -> int:
                 covered_ac_ids.append(ac_id)
         mark_result = mark_done_built_acs(ac_ids, covered_ac_ids, ac_root=ac_root)
         stale_result = check_no_stale_todo(ac_ids, ac_root=ac_root)
-        result = {
+        mark_done_payload = {
             "marked_done": mark_result["marked_done"],
             "all_done": stale_result["all_done"],
             "stale": stale_result["stale"],
         }
-        print(json.dumps(result))
+        print(json.dumps(mark_done_payload))
         return 0 if stale_result["all_done"] else 1
 
     return 1  # unreachable with argparse required=True, but satisfies mypy
