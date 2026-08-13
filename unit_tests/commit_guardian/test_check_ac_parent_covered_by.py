@@ -167,6 +167,7 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
     """When a parent's covered_by omits the child ID, the hook emits a violation."""
 
     @_requires_import
+    # covers: ACS-100i-2
     def test_ac_perf_correctness_violation_when_child_missing_from_covered_by(self):
         """A child AC staged whose parent covered_by does not list it → violation returned.
 
