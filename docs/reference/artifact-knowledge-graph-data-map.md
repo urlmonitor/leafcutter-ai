@@ -58,7 +58,11 @@ One row per directed relationship between artifact types, keyed by the **field**
 - **Enforcement** — how strongly the link is guaranteed: `enforced` (a pre-commit hook and/or required CI gate blocks violations), `warn` (tooling warns but never blocks), `none` (no tooling reads it), `derived-validated` (machine-generated **and** its freshness/parity is blocked at commit), `derived-raw` (machine-generated with no freshness guard).
 - **Shape** — how clean the value is for ingestion: `clean` (single unambiguous form), `ambiguous` (one field multiplexes several edge types — must be partitioned), `freetext` (unresolvable string), `derived`.
 
-A link is ingestable as-is only when it is `enforced`/`derived-validated` **and** `clean`. Everything else needs the reconciliation noted in "Graph Ingestion Readiness".
+A third axis, **status**, records whether the relation exists at all: `present` (encoded by the named field) or `absent` (the relation does **not** exist — recorded deliberately so a missing traversal is distinguishable from one that was never needed). Every row in the table below is `present`; the `absent` relations are listed under "Edges not yet encoded". An `absent` edge carries no field and is always `none`.
+
+A link is ingestable as-is only when it is `present` **and** `enforced`/`derived-validated` **and** `clean`. Everything else needs the reconciliation noted in "Graph Ingestion Readiness".
+
+> **Enforcement is read from the hook registry, not from a script's existence.** A `check_*.py` file on disk that is absent from `templates/scripts/commit_guardian/commit_guardian.json` never runs, so its edge is `none` — see `TESTED_BY` below. `unit_tests/docs/test_artifact_graph_trust_ratings.py` enforces this rule against the JSON, and `test_artifact_graph_doc_parity.py` keeps this table in step with it.
 
 | Canonical Edge | Source | Field | Target | Cardinality | Enforcement | Shape | Notes (writer / hook / caveat) |
 |---|---|---|---|---|---|---|---|
@@ -71,9 +75,9 @@ A link is ingestable as-is only when it is `enforced`/`derived-validated` **and*
 | `IMPLEMENTED_BY_TICKET` / `IMPLEMENTED_BY_SOURCE` | AC | `implemented_by` | Ticket **or** SourceFile | Array | none | ambiguous | **UNTRUSTED.** Three coexisting shapes (ticket `.md` path / source path `#anchor` / empty). Schema says "source paths" (`ac_store_schema.json` L112-120) but `generate_ticket_from_ac.py`, `cross_reference_audit.py` write ticket paths; `audit_ac_area.py:247-290` splits on `.md` (Gap 1). |
 | `TRACES_TO` | Ticket | `ac_traceability` | AC | One-to-one | enforced | clean | `{ id, path }`; `ac-fulfillment-gate` is a mandatory pre-commit phase. |
 | — (display) | Ticket | `source_ac` | AC | One-to-one | none | clean | Informational; no hook. |
-| `TESTED_BY` | AC | `covered_by` (test entries) | Test | Array | warn | ambiguous | `check_ac_coverage.py` returns 0 unconditionally (`:234`) — warn-only (C4). Field shared with child-AC entries (Gap 3). |
-| `COVERS` | Test | `# covers: <AC-ID>` (inline) | AC | Many-to-many | enforced (for `done` ACs) | clean | Real enforcer is `check-done-proof` (commit_guardian.json:1054-1064): pre-commit **+ required CI backstop** for `work_status: done` ACs; warn otherwise (C5). Coverage regex captures only the **base id** — ingest the full token yourself (Gap 11). |
-| `TOUCHES` | Ticket | `files_touched` | SourceFile | Array | none | clean (semantic drift) | Declared ≠ actual is a known phantom-done mode; `change-scope-reviewer` detects but does not block. |
+| `TESTED_BY` | AC | `covered_by` (test entries) | Test | Array | none | ambiguous | **UNTRUSTED.** `check_ac_coverage.py` is not registered in `commit_guardian.json` at all, so it never runs — and it returns 0 unconditionally (`:234`) even if it did. Nothing reads `covered_by` test entries. Use the reverse edge `COVERS` instead. Field shared with child-AC entries (Gap 3). |
+| `COVERS` | Test | `# covers: <AC-ID>` (inline) | AC | Many-to-many | enforced (for changed `done` ACs) | clean | `check-done-proof` (commit_guardian.json:1054-1064): pre-commit **+ required CI backstop**. **DIFF-SCOPED** — it evaluates only ACs changed in the current commit/PR and never re-evaluates a pre-existing done AC, so "enforced" describes new work, not the store. Backlog: **244 of 607** done ACs carry no covering test tag (measured 2026-08-13; ratcheted so it cannot grow). Coverage regex captures only the **base id** — ingest the full token yourself (Gap 11). |
+| `TOUCHES` | Ticket | `files_touched` | SourceFile | Array | warn | clean (semantic drift) | Declared ≠ actual is a known phantom-done mode. `check-predone-scope` **is** registered and reports undeclared source files on every ticket commit (advisory: `files_touched_reconciliation.enabled: true, strict: false`); `change-scope-reviewer` warns too. Flipping `strict: true` promotes this row to `enforced`. |
 | `TICKET_DEPENDS_ON` | Ticket | `depends_on` | **AC** (not Ticket) | Array | none | clean (misleading name) | Values are AC IDs despite the name; do NOT build Ticket→Ticket edges from it (Gap 7). |
 | `IMPLEMENTS` | FlowNode (step/branch) | `steps[].implements` | AC | Array | enforced (shape + parity); **target-existence warn-only** | clean | `check-product-truth-validate` enforces schema shape and the derived-parity inversion; a flow can still reference a nonexistent AC and commit (C8, Gap 10). `flow.schema.json:43` calls this the authored source of truth for graph↔AC linkage. |
 | `REALIZED_BY` (reverse of `IMPLEMENTS`) | AC | `product_truth` | Flow / FlowNode | Array | derived-validated | derived | GENERATED by `generate_product_truth.py` — never hand-edited. **Drift-blocked at commit**: `check-product-truth-validate` D2 parity (`validate_product_truth.py:362-385`) + `check-product-truth-generate --check` both error on staleness (C7 — corrects old Gap 6). |
@@ -160,7 +164,7 @@ The following edges are enforced by pre-commit hooks or schema validators and ca
 - `TRACES_TO` via `Ticket.ac_traceability` (Ticket→AC) — enforced by `ac-fulfillment-gate`; object with `id` and `path`.
 - `IMPLEMENTS` via `Flow.steps[].implements` (FlowNode→AC) — shape + reverse-parity enforced; **accept but flag** dangling targets (target-existence is warn-only, Gap 10).
 - `REALIZED_BY` via `AC.product_truth` (AC→Flow) — `derived-validated`; drift-blocked at commit (corrected Gap 6). Safe for "which flows does this AC touch".
-- `COVERS` via test `# covers:` tags (Test→AC) — enforced for `done` ACs (`check-done-proof`, pre-commit + required CI). Parse the **full** id token, not the base-id regex (Gap 11).
+- `COVERS` via test `# covers:` tags (Test→AC) — enforced for `done` ACs (`check-done-proof`, pre-commit + required CI), but **diff-scoped**: the gate only ever sees ACs changed in a commit/PR, so absence of a `COVERS` edge does **not** mean the AC is untested — 244 of 607 done ACs simply predate the gate. Ingest the edges you find; do not infer coverage from their absence. Parse the **full** id token, not the base-id regex (Gap 11).
 - `MEMBER_OF` via `AC.components` (AC→Component) — schema-validated enum against `docs/components.json`.
 - `RENDERS` via `Flow.steps[].screen` (FlowNode→Mockup) — validated by `validate_product_truth.py`.
 - `USES_DATA` via `Flow.mock_data_ref` / `Mockup.mock_data_ref` (→MockData) — validated by `validate_product_truth.py`.
@@ -171,18 +175,22 @@ The following fields require preprocessing before use as graph edges:
 
 - `AC.depends_on` — partition into parent-hierarchy vs pattern-composition vs true dependency by cross-checking ID-derivation and the pattern registry; emit only the true-dependency entries as `DEPENDS_ON` (see Gap 8). Without this, "what depends on X" is polluted by parents and pattern parts.
 - `AC.implemented_by` — filter entries containing `.md` (ticket paths → `IMPLEMENTED_BY_TICKET`) separately from those not containing `.md` (source paths → `IMPLEMENTED_BY_SOURCE`). Treat empty lists as unlinked. Prefer traversing AC→Ticket→`files_touched` for source files (see Gap 1). UNTRUSTED.
-- `AC.covered_by` — separate entries matching `unit_tests/**` or `tests/**` (test paths → `TESTED_BY`) from entries matching the AC ID pattern (child AC IDs → `PARENT_OF` back-link). Each class is a different edge type (see Gap 3).
+- `AC.covered_by` — separate entries matching `unit_tests/**` or `tests/**` (test paths → `TESTED_BY`) from entries matching the AC ID pattern (child AC IDs → `PARENT_OF` back-link). Each class is a different edge type (see Gap 3). Note the two classes have very different trust: the child-AC back-link is `enforced`, the test entries are `none` — nothing reads or writes them. Prefer the reverse `COVERS` edge for test linkage.
+- `Ticket.files_touched` — `warn`-rated, not unread: `check-predone-scope` reports undeclared source files on every ticket commit. Usable as the least-bad AC→SourceFile route (via `ac_traceability`), but reconcile declared against actual before trusting it.
 - `Changelog.commits` — often empty; do not rely on this field for changelog→commit linkage without confirming the array is non-empty.
 - `Changelog.ticket` — free-text string; not a resolvable path or ID. Requires fuzzy matching or manual resolution (see Gap 2).
 - `MockData.used_by.*` — may be incomplete; rebuild from forward refs rather than trusting the stored value.
 
 ### Edges not yet encoded
 
-The following relationships have no metadata field; they cannot be ingested from artifact data alone:
+These relationships have no metadata field; they cannot be ingested from artifact data alone. They are carried in the graph JSON as edges with `status: "absent"` — recorded rather than omitted, so a reader can tell a **gap** apart from a relation that was considered and found irrelevant. Atlas draws them in red with a long open dash and an ✗ glyph, and they are never traversable.
 
-- Changelog → AC: no field exists; must be reconstructed indirectly via git SHAs when available.
-- Test → SourceFile: no metadata field; must infer from file naming conventions.
-- Mockup → AC: no direct field; must traverse via Flow step (see Gap 4).
+| Absent relation | The question it would answer | Why it is missing / nearest workaround |
+|---|---|---|
+| **SourceFile → AC** | "Given this file, which ACs govern it?" | No source file carries any marker naming the AC it implements, and no index inverts the relation. Reconstruct by inverting `implemented_by` (UNTRUSTED, Gap 1) or joining Ticket `files_touched` → `ac_traceability` (warn-rated). **This is the most load-bearing missing edge for refactoring — it is what tells you what not to touch.** |
+| **Test → SourceFile** | "Which tests guard this file?" | No coverage data is ingested into any artifact, so nothing records which source a test exercises. Only Test → AC (`COVERS`) exists, so file-level test protection can only be guessed from import paths. |
+| **Changelog → AC** | "When was this AC shipped?" | Changelog frontmatter carries `components`, `adrs`, `commits` and a free-text `ticket` basename, but never AC ids (Gap 2). Nearest proxies are `implemented_by` (UNTRUSTED) and raw git history; neither yields a release date per AC. |
+| **Mockup → AC** | "Which ACs does this screen realise?" | A mockup declares a `screen` id but carries no AC back-link. Derivable transitively by reversing `RENDERS` then following `IMPLEMENTS` (Gap 4), so this is a convenience gap rather than a data gap — but screen-level AC lookup requires a join through the flow. |
 
 ---
 
