@@ -1,0 +1,40 @@
+id: KM-ADM-002
+readiness: reviewed
+priority: high
+components:
+  - knowledge_management
+status: active
+component: knowledge-management
+level: L2
+title: "Artifact data map records missing relations explicitly instead of omitting them"
+origin_agent: BrainCandy
+criteria: |
+  Given docs/reference/artifact-knowledge-graph.graph.json is the map a refactorer reads
+    to decide what a change can safely touch, and a relation that does not exist in the
+    repo is currently just left out of the `edges` array
+  When the reader looks for a reverse lookup the graph is supposed to answer — "given
+    this source file, which ACs govern it?", "given this test, what code does it
+    exercise?", "when was this AC shipped?", "which ACs does this screen realise?"
+  Then each of those four traversals is present in the `edges` array as an explicit
+    record carrying `status: "absent"`, `enforcement: "none"`, and a note naming what is
+    missing and any transitive workaround
+  And every edge in the map carries an explicit `status` of either "present" or
+    "absent", with the vocabulary documented in the `legend` block
+  And an edge with `status: "absent"` never claims an encoding `field` and is never
+    rated anything but `enforcement: "none"`
+  And the bug symptom ("a relation the graph needs but does not have is silently
+    omitted, so the reader cannot tell 'considered and not applicable' apart from
+    'missing — this is a gap you will hit'") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: the edge schema had no vocabulary for expressing a
+  relation that SHOULD exist but does not, so at authoring time every non-existent link
+  was simply dropped. Absence and irrelevance then became indistinguishable in the
+  rendered map — the failure mode a Fable review flagged when asked how code connects
+  back to ACs: the AC -> SourceFile direction is recorded (untrusted), but the
+  SourceFile -> AC direction a refactorer actually needs is nowhere, and its nowhere-ness
+  looks identical to a deliberate omission.
+  Note the renderer consequence: adding these entries makes them drawable, so the Atlas
+  view must style status:"absent" distinctly (tracked separately) or they read as real
+  links.
+change_target: docs
+risk_surface: internal
