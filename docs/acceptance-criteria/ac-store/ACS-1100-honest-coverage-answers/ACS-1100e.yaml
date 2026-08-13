@@ -1,0 +1,66 @@
+id: ACS-1100e
+components:
+  - ac_store
+title: "The coverage contract is written down in one place a tool author will find"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One reference section explains the whole contract, not four scattered fragments.
+
+  Everything a reader needs in order to produce or consume an honest answer — what an
+  answer carries, how its total was arrived at, what may be left out and on what
+  grounds, what happens when the numbers do not add up, and what a downstream verdict
+  may claim — is written in a single place in the store's reference documentation, so
+  a tool written a year from now inherits the whole contract rather than rediscovering
+  a fraction of it.
+depends_on:
+  - ACS-1100
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "The single existing store reference document that all four coverage sections belong in."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100e-1
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY THIS L1 EXISTS (added 2026-08-13 in response to expert review).
+
+  The first authoring pass put a reference-doc AC under each of ACS-1100a, b, c and d
+  (ACS-1100a-4, ACS-1100b-3, ACS-1100c-3, ACS-1100d-3). All four wrote sections of the
+  SAME file, docs/reference/ac-schema.md. The build's file-touch parallelism gate would
+  have serialised them into four sequential tickets editing one file — a guaranteed
+  conflict — and they accounted for 5 of 15 leaves (33%) of the whole tree. They are now
+  one AC, ACS-1100e-1.
+
+  WHY A SIBLING L1 RATHER THAN A CHILD OF a/b/c/d. The consolidated section documents
+  contracts owned by all four behavioural L1s. Hanging it under any one of them would
+  (i) give a child prerequisites living outside its own parent's subtree — its
+  depends_on would reach into three sibling L1s' children — and (ii) gate one L1's
+  completion on documentation of behaviour that L1 does not own. A sibling L1 whose
+  single outcome is "the contract is written down" is the honest home. This takes the
+  L0 to five L1s (cap 7) and leaves every behavioural L1 at three children or fewer
+  (cap 5).
+
+  ACS-1100a, b and c consequently carry documentation_triggers: [] plus a
+  documentation_rationale naming this L1. ACS-1100d keeps [component-diagram], which is
+  a different artifact by a different agent (ACS-1100d-4) and is deliberately NOT
+  folded in here.

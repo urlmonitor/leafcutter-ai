@@ -1,0 +1,138 @@
+id: BO-2800c-1
+components:
+  - build_orchestration
+  - review_system
+title: "Every path that proceeds past a blocking check writes an override record naming that check and that finding"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the documentation-verification gate has raised a blocking finding on a piece of
+    work, and that finding carries a defect identifier,
+  When a human decides in prose that the work proceeds to completion anyway rather than the
+    finding being resolved,
+  Then a structured override record is created that names the overruled gate, the defect
+    identifier of the specific finding overruled, an instance identifier for that
+    particular firing, the piece of work, the time, who or what authorised proceeding, and
+    the stated reason,
+  And the override is attributed to that gate alone — a second gate that signed off green
+    on the same piece of work has no override recorded against it,
+  And the record exists as structured data that can be counted, not solely as a sentence in
+    the work's comment history.
+
+  Given a phase returns a blocking finding that the build workflow classifies as a
+    cross-agent blocker, and the workflow responds by adding that phase to its skipped list
+    and leaving the remaining phases unrun,
+  When the run finishes and reports its status,
+  Then an override record is created for that skipped phase, naming the gate, the finding
+    overruled, the piece of work, and the workflow itself as the authoriser, with the
+    classification recorded as the stated reason,
+  And the record is created whether or not the run reports itself as successful, so an
+    automated skip that ends in a successful-looking status is still counted as an override
+    of that gate,
+  And this automated path is recorded on the same terms and in the same store as an
+    override a human declared in prose, so the two are counted together rather than in
+    separate populations.
+
+  Given a sign-off comment that carries no completion manifest at all, and a supervisor
+    that proceeds by treating the absent manifest as though every item had been recorded
+    true,
+  When the supervisor proceeds,
+  Then an override record is created naming the signing agent's phase as the gate whose
+    evidence was waived, the piece of work, and the absent manifest as the stated reason,
+  And the record is flagged as an assumed pass rather than as a declared override, so a
+    report can separate evidence that was overruled from evidence that was never supplied,
+  And creating the record does not cause the supervisor to stop, retry, or demand the
+    manifest, because tolerating an absent manifest is an existing and deliberate posture.
+
+  Given a single gate raises two blocking findings on one piece of work,
+  When both are overruled,
+  Then two override records are created, one per finding, rather than a single record for
+    the work.
+
+  Given a single gate raises the same rule identifier twice on one piece of work — the same
+    problem kind firing on two different places in the same work — and both firings are
+    overruled,
+  When the override records are created,
+  Then the two records are distinguishable from one another by their instance identifiers
+    even though they carry the same defect identifier,
+  And an aggregate counts two overrides of that problem kind on that piece of work rather
+    than one,
+  And a report that groups by defect identifier still reports the problem kind once, with
+    an override count of two.
+depends_on:
+  - BO-2800c
+  - BO-2800b-2
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Carries two of the four override chokepoints: the manifest routing table's absent case ('proceed as if all-true') and blocker routing / failure adjudication, the point at which a human decides to proceed."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+    relevance: "The cross_agent branch of the phase loop pushes the phase to skippedPhases and breaks without re-raising the blocker; the run can still return a successful status. This is the automated override path and the one most likely to dominate the count."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: extended from the single ad-hoc-prose chokepoint to the automated cross-agent skip path and the absent-manifest assumed-pass path, after a census found at least four chokepoints of which only one was covered; added an instance identifier because the defect identifier is a class identity and could not distinguish two firings of one rule on one ticket."
+superseded_by: null
+covered_by:
+  - BO-2800c-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Motivating real example supplied by the user, from an epic ticket in the inbox:
+  "documentation-verifier (status: blocker) …; pr-reviewer signed off at 01:30 despite
+  this — proceeding per supervised path authorization." One prose line, attributable to
+  nothing, countable by nothing.
+
+  THERE IS NOT ONE CHOKEPOINT. The original AC assumed a single place where a human
+  declares an override. A census found at least four places where work proceeds past a
+  blocking check, and only one of them is the human-prose path:
+
+    1. The build workflow's cross-agent branch (templates/workflows-js/build-ticket.js,
+       the phase loop): a cross-agent blocker pushes the phase onto skippedPhases and
+       breaks out of the loop. The blocker is never re-raised and the run can still return
+       a successful status. This is fully automated, requires no human decision, and is
+       the path most likely to dominate the override count. It is now covered.
+    2. Absent manifest (templates/skills/building-epics/SKILL.md, manifest routing table):
+       an absent completion_manifest is treated as all-true and the supervisor proceeds.
+       About 645 of 3,423 sign-off comments carry no manifest, so this fires constantly.
+       It is now covered, flagged distinctly as an assumed pass rather than a declared
+       override, because no finding was actually overruled — evidence was simply never
+       supplied, and blending the two would inflate every gate's override rate.
+    3. Supervised commit auto-authorization (building-epics §5.0): the commit agent's
+       interactive confirmation gate is auto-authorized on a supervised dispatch. NOT
+       covered here, deliberately — no gate raised a finding and nothing was overruled;
+       what is bypassed is a confirmation prompt, not a check. Recording it as an override
+       would attribute a phantom false positive to the commit phase. If a case is later
+       made that prompt bypasses belong in the same ledger, they need their own record
+       kind, not this one.
+    4. Ad-hoc human prose — the path the original AC covered, still first above.
+
+  WHY AN INSTANCE IDENTIFIER WAS ADDED. The defect identifier referenced here is the
+  signature established by BO-2800b-2, which is derived from the gate and the rule
+  identifier alone — a CLASS identity. The original clause "two blocking findings overruled
+  on the same work produce two override records" therefore produced two byte-identical
+  records whenever the same rule fired twice on one ticket, which is exactly the motivating
+  case the user described (one defect firing four times in one epic). Without an instance
+  discriminator the two records are indistinguishable and a deduplicating store would
+  silently keep one, undercounting precisely the recurrence this goal exists to measure.
+
+  The class-identity reference is why this L1 is sequenced after b rather than in parallel
+  with it: an unattributed override count is a tally of frustration and cannot justify
+  anything.

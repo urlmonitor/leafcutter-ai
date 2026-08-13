@@ -1,0 +1,136 @@
+id: BP-1100b-4
+components:
+  - build_pipeline
+title: "The run-progress journal test is re-authored from a function-declaration regex into an executed assertion"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given run-progress journaling is covered today by a regular-expression assertion
+  in unit_tests/workflows/test_bo_1000c_1a.py that checks a journal-appending
+  function is DECLARED in the finalize workflow source
+  (templates/workflows-js/finalize-feature.js) and that its declaration mentions an
+  append mode,
+  And that assertion is green today with no evidence that any journal record has
+  ever been written by a real finalize run,
+  When the coverage for run-progress journaling is re-authored,
+  Then the declaration regex is no longer the only coverage of that behavior,
+  And at least one test executes the finalize workflow under the workflow test
+  harness and asserts observable outcomes: one journal record is appended per
+  completed step, the records appear in step order, and the records are still
+  present when the run ends,
+  And a run in which the append cannot happen in the execution environment — for
+  example because the engine the workflow runs under exposes no filesystem
+  primitive, so the append is swallowed by the surrounding error handler — fails at
+  least one of these tests instead of passing,
+  And renaming the journal-appending function, or changing the wording of its
+  declaration, without changing what is journaled leaves these tests green.
+
+  Given the workflow test harness those tests run under,
+  When a workflow body under test asks for a filesystem primitive,
+  Then the harness refuses it exactly as the real engine does — the only globals
+  reachable from the workflow body are the ones the engine injects (agent,
+  parallel, pipeline, phase, log, args, workflow, budget), and no module loader
+  is reachable from it,
+  And a workflow whose journaling depends on a filesystem primitive therefore
+  produces zero journal records under the harness,
+  And the re-authored tests are only accepted as satisfying this criterion once
+  the harness behaves this way, because until then they pass on a workflow that
+  cannot journal in production.
+depends_on:
+  - BP-1100b
+doc_links:
+  - path: unit_tests/workflows/test_bo_1000c_1a.py
+    relationship: describes
+    status: exists
+    relevance: "the test module whose declaration-existence regex this AC requires be replaced by executed coverage"
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: describes
+    status: exists
+    relevance: "the finalize workflow whose journal-append helper (~L575-582) never observably runs. Note the shape precisely: fs.appendFileSync sits inside the TRY (L577-578); the catch (L579-581) only logs. The helper IS called — from narrate() (L115) and outcome() (L153), which every numbered step invokes — so the defect is not an uncalled function but a call whose filesystem primitive the engine does not provide."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: modifies
+    status: exists
+    relevance: "run_workflow_under_e2() runs the workflow as a CommonJS temp file under plain node, where require('fs') resolves. Executing finalize-feature.js under it today writes 9 journal records, in step order, present at run end — i.e. it already satisfies all three assertions this AC demands, with zero implementation. The harness must be made engine-faithful before this AC is testable."
+  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "L51 lists the globals the real E2 engine injects (agent, parallel, pipeline, phase, log, args, workflow, budget) — no filesystem, no require. This is the contract the harness must match."
+  - path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100c-14.yaml
+    relationship: describes
+    status: exists
+    relevance: "approved precedent for this remediation shape, applied there to the null-baseline recovery module in the same workflow file — a different test module from this one"
+  - path: docs/retrospectives/EPIC-InFlightVisibility.md
+    relationship: describes
+    status: exists
+    relevance: "the epic that introduced run-progress step recording; source of the 'static presence is not runtime cardinality' finding this AC operationalises for the journal"
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: corrected two false evidence claims (try-vs-catch; appendJournal is called; the on-disk-absence argument); added the harness-fidelity prerequisite scenario after a reviewer showed the prescribed remedy is green today with no implementation."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Second of the two confirmed already-shipped grep-only tests. Sibling of the
+  deleted BP-1100b-3; different test module, different workflow, same defect
+  class.
+
+  WHY THE INCUMBENT ASSERTION IS GREP-ONLY (this part stands): asserting that a
+  function is declared with an append flag says nothing about whether it ever
+  runs. The declaration regex cannot distinguish a working journal from a
+  no-op one.
+
+  TWO EVIDENCE CLAIMS IN THE EARLIER DRAFT WERE WRONG — corrected 2026-08-13:
+    - "the append sits inside a catch that only logs" — it does not.
+      `fs.appendFileSync` is inside the TRY (finalize-feature.js L577-578); the
+      catch (L579-581) only logs. And `appendJournal` is not dead code: it is
+      called by `narrate()` (L115) and `outcome()` (L153), which every numbered
+      step invokes. The failure mode is that `require('fs')` throws under an
+      engine that provides no module loader, and the catch then swallows it —
+      not that the helper is never reached.
+    - "zero journal files exist anywhere on disk" — true, but NON-PROBATIVE.
+      `journalPath` is `WORKTREE_ROOT + '/run-progress.journal.jsonl'`
+      (L563), and finalize's Step 7 removes the worktree on every successful
+      run. An absent file is the expected observation whether journaling works
+      or not, so it is not evidence either way. The real evidence is the
+      injected-globals contract in ADR-017-dual-engine-workflow-support:51.
+
+  THE PRESCRIBED REMEDY IS A FALSE-GREEN TODAY — this is why the second
+  scenario exists. A reviewer executed `run_workflow_under_e2()`
+  (unit_tests/_workflow_engine_harness.py) against finalize-feature.js: it
+  wrote 9 journal records to disk, in step order, still present at run end —
+  precisely the three assertions the first scenario demands, green with zero
+  implementation. Cause: the harness writes a CommonJS temp file and runs it
+  under plain `node`, where `require('fs')` resolves. The real engine injects
+  only agent/parallel/pipeline/phase/log/args/workflow/budget and offers no
+  filesystem access. Authoring the first scenario against today's harness would
+  ship a test that certifies a behaviour the production engine cannot perform —
+  the same phantom-done shape this L1 exists to eliminate, reproduced inside its
+  own remediation.
+
+  NO AC OWNS THE HARNESS FIX YET. The second scenario states the prerequisite as
+  an assertable outcome rather than a footnote, but making
+  `run_workflow_under_e2()` engine-faithful (strip `require`, expose only the
+  injected globals) is a change to shared test infrastructure that every
+  workflow test depends on, and it will turn other currently-green workflow
+  tests red. Flagged for the IT PO: this may warrant its own AC and its own
+  ticket, sequenced before this one. Do not let an implementer quietly relax the
+  second scenario to get the first one green.
+
+  Whether the correct outcome is a working journal or a removed journal is an
+  implementation decision for the assignee; this AC constrains only that the
+  coverage must be able to tell the difference.
+
+  Tree note: BP-1100 (L0) has one L1 slot remaining (a-f of 7); no new L1 was created.

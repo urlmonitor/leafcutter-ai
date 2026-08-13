@@ -1,0 +1,93 @@
+id: ACS-1100a-2
+components:
+  - ac_store
+title: "The total is established without the query's own filters, so it cannot inherit the query's blind spot"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100a.yaml
+criteria: |
+  Given a store holding 180 records and a query whose own filter is misconfigured so
+    that its pass reaches only 40 of them,
+  When the answer is produced,
+  Then the reported total is 180, established by enumerating the records under the
+    store root without applying any of the query's own filters, match keys, or join
+    keys,
+  And the answer therefore reads 40 of 180, not 40 of 40,
+  And the same holds when the query's pass reaches nothing: an answer whose join
+    matched none of the 31 available records reads 0 of 31,
+  And the same holds for a population the query never sees: when 9 records of a given
+    kind exist under the store root and the query's pass surfaces none of them, the
+    answer reports 9 in scope and 0 observed rather than omitting that kind entirely,
+  And a measurement whose own argument handling collects no records from a location
+    that holds records reports the count that location holds rather than reporting a
+    clean outcome over an empty set: a validation run pointed at a directory holding 21
+    requirement records reports 21 in scope, never "no records to validate" with a
+    successful outcome,
+  And a total produced by applying the query's own filter set, match keys, or join keys
+    does not satisfy this criterion, because it carries the same blind spot,
+  And a single filter-free enumeration of the store root that yields both the total and
+    the result candidates in one traversal DOES satisfy this criterion — the required
+    independence is from the query's filters and keys, not from its traversal, and a
+    filter-free enumeration has no blind spot for the total to inherit.
+depends_on:
+  - ACS-1100a
+  - ACS-1100a-1
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "Reference implementation of the satisfying shape: its AC-YAML walk is a filter-free recursive glob that yields both the total and the result candidates in one traversal. This AC must NOT be read as requiring a second traversal of it."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "BINDING in-component grounding failure. Given a DIRECTORY argument it collects zero files through its own argument filter, prints 'No YAML files to validate.' and exits 0 — a zero-denominator silent pass in the store's own validator. Verified 2026-08-13 against the ACS-1100 folder, which held 21 requirement records at the time. An independently enumerated total exposes it immediately."
+  - path: scripts/agent-health/generate_health_report.py
+    relationship: related
+    status: exists
+    relevance: "NON-BINDING illustration, out of this AC's component (reads agent_telemetry.jsonl, owned by agent_telemetry). Reports five AC-authoring agents at a 100% success rate with no phase agent present at all, because the population is derived from the same misfiled events the summary reads. Cited to show the defect class in the wild; fixing it is NOT a completion condition for this AC and needs its own AC in its owning component."
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: related
+    status: exists
+    relevance: "NON-BINDING illustration, out of this AC's component. Returns an empty event map for every epic because its join reads keys the records do not carry. Cited to show the defect class in the wild; fixing it is NOT a completion condition for this AC and needs its own AC in its owning component."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the load-bearing AC of ACS-1100a. The word is INDEPENDENTLY, and it means
+  independent OF THE QUERY'S FILTERS AND KEYS: a total drawn through the result pass's
+  own filter reports 40 of 40 when the filter missed 140.
+
+  "SAME PASS" WAS STRUCK (2026-08-13, expert review). The original text also forbade a
+  total "produced by the same pass". That clause condemned the correct implementation:
+  scan_ac_store.py's AC-YAML walk is a filter-free recursive glob that yields both the
+  total and the results in one traversal, which is exactly right, and forcing a second
+  traversal is precisely the duplication the ACS-100h-7a exemption exists to avoid. The
+  test is now: does the total's derivation apply any filter, match key or join key that
+  the result pass applies? A filter-free enumeration answers no, however many passes it
+  is folded into.
+
+  This also genuinely resolves the ACS-900e overlap — see the notes on ACS-1100a-3.
+  Independence applies to the DENOMINATOR only; the rule applied to each individual
+  record is untouched by this AC.
+
+  GROUNDING (2026-08-13, expert review). The binding grounding scenario is now
+  IN-COMPONENT: validate_ac_schema.py's zero-denominator directory pass. The two
+  originally-named failures live in other components and read agent_telemetry.jsonl, so
+  binding this AC to them would have let it go done against scan_ac_store.py alone while
+  both named bugs stayed live. They are retained as clearly-labelled illustrations, and
+  each needs its own AC in its owning component.

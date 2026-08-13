@@ -1,0 +1,160 @@
+id: BO-2800a-1
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "The existing completion manifests are mined into a per-agent completion-evidence summary"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a git-tracked ticket corpus in which a sign-off comment carries a
+    completion_manifest block with two items — schema_migration_applied recorded as the
+    bare value true, and tests_green expanded to result: false with reason "assertion
+    200 != 404 on the candles endpoint" and remediation "respawn the coder with the
+    failing traceback",
+  When the completion evidence is mined across that corpus,
+  Then exactly two manifest-item records are produced for that comment — one per item,
+  And each record carries the ticket it came from, the signing phase agent, the manifest
+    item name, and the recorded item value,
+  And the record for tests_green carries the recorded reason and remediation text
+    verbatim, neither summarised, truncated, nor discarded.
+
+  Given four manifest items in the corpus written in four different shapes —
+    (a) diff_size_verified recorded as the bare value true,
+    (b) high_confidence_findings_found expanded to result: false carrying a reason and a
+        remediation,
+    (c) tests_green recorded as the bare value false with neither reason nor remediation,
+    (d) medium_confidence_findings recorded as the number 1 and suppressed_low_findings
+        recorded as the number 0,
+  When the completion evidence is mined,
+  Then (a) is tallied as a true-valued item, (b) and (c) are tallied as false-valued
+    items, and (c) is additionally reported as malformed, naming its ticket and its item,
+  And (d) is tallied under its own non-boolean-value figure, naming the ticket, the item,
+    and the recorded value, and is excluded from both the true-valued and the false-valued
+    tallies rather than being discarded,
+  And the reported denominator states the non-boolean figure alongside the true and false
+    figures, so the boolean tallies are visibly a subset of the items examined rather than
+    silently shrinking the population they are drawn from.
+
+  Given three false-valued items in the corpus — high_confidence_blockers_found recorded
+    false, escalation_triggered recorded false, and a result: false whose reason states
+    that a red baseline was the expected state of a test-first phase,
+  When the completion evidence is mined,
+  Then each is recorded as an item whose value is false, and none of the three is reported
+    as a problem caught by a check,
+  And every figure counting false-valued items is labelled as items recorded false with
+    their polarity undetermined, and carries the statement that a false value may record a
+    desirable outcome, an intentional baseline, or a genuine failure,
+  And no figure in the summary is titled or described as a count of problems caught,
+    defects found, or checks that fired.
+
+  Given three sign-off comments — (a) one whose declared status is ok and whose
+    completion_manifest carries one item expanded to result: false, (b) one whose declared
+    status is blocker carrying the same failed item, and (c) one whose declared status is
+    ok with every manifest item recorded true,
+  When the completion evidence is mined,
+  Then comment (a) is recorded as an ok-with-false occurrence attributed to its signing
+    agent and its ticket,
+  And comments (b) and (c) are not recorded as ok-with-false occurrences,
+  And the ok-with-false occurrences are reported under their own figure, separate from and
+    not folded into the count of false-valued items,
+  And the false-valued item inside comment (a) still appears in the manifest-item records,
+    so the two figures are independent views of the same evidence rather than alternatives.
+
+  Given sign-off comments predating the manifest convention that carry no
+    completion_manifest block at all,
+  When the completion evidence is mined,
+  Then those comments produce no manifest-item records and are reported only under a
+    separate "no manifest recorded" figure, never as failures and never as passes,
+  And the mining run completes and reports its figures without failing, without blocking
+    any build or sign-off, and without writing to, reformatting, or back-filling any
+    ticket file.
+
+  Given the manifest-item records mined from the whole tracked ticket corpus,
+  When the completion-evidence summary is produced,
+  Then it reports, for each signing agent, how many items that agent recorded true, how
+    many false, how many non-boolean, how many malformed, and how many ok-with-false
+    occurrences it produced,
+  And it reports the number of sign-off comments examined and the number of those that
+    carried a manifest, so every figure is presented against a stated denominator rather
+    than as a bare total,
+  And it reports no per-manifest-item-name breakdown,
+  And re-running the summary over the same corpus produces the same figures,
+  And the summary is produced from the tracked ticket corpus alone — no new
+    instrumentation is required and no change is made to how sign-offs are written.
+depends_on:
+  - BO-2800a
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "§2b defines the completion_manifest block: bare-true items, false items expanded to result/reason/remediation, and the Bare-False Rule."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The supervisor routing table for manifest state names the four states this AC must tally: all-true, ok-with-false, malformed, absent."
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Establishes the tolerate-absence posture — a missing completion_manifest warns and proceeds, never blocks. This AC reads the manifests that exist without contradicting that posture."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: absorbed BO-2800a-2 (ok-with-false), BO-2800a-3 (missing/malformed tolerance and read-only guarantee) and BO-2800a-4 (per-agent summary with stated denominators); added the non-boolean item shape; replaced the defect-caught reading of a false value with an undetermined-polarity rule; replaced the per-item-name breakdown with per-agent figures only."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  ONE AC BECAUSE IT IS ONE DELIVERABLE. This is a single retrospective pass over frozen
+  history producing one static report — a reviewer reproduced the whole of the original
+  five-AC a-series in about ninety lines on the first attempt. Splitting the read, the
+  shape classification, the tolerance rules and the summary across four ACs added AC
+  boundaries without adding testable behaviour, so they were collapsed here. Every clause
+  of BO-2800a-2, -3 and -4 survives; only their file boundaries were dropped.
+
+  MEASURED YIELD, and it is far thinner than the original tree assumed. Roughly 2,741 to
+  2,812 completion_manifest blocks parse cleanly across the corpus, but the population is
+  overwhelmingly positive: on the order of 9,400 true-valued items against roughly 113
+  nested-false, 56 bare-false and 66 ok-with-false occurrences. This is frozen history —
+  the figures do not grow. Size the implementation to that reality, not to the block count.
+
+  THREE ITEM SHAPES WERE SPECIFIED; THERE ARE FOUR. About 272 of 9,844 items (2.8%) carry
+  a non-boolean value — see `medium_confidence_findings: 1` and `suppressed_low_findings: 0`
+  in tickets/99_done/EPIC-BOPhantomDoneRemediation/04_bo400_donefolder_parity.md around
+  lines 150-151. The original enumeration (absent / bare-false / well-formed) left these
+  as neither true nor false, so they silently shrank the denominator. They now have their
+  own figure and are named in the denominator.
+
+  A FALSE VALUE IS NOT A CAUGHT DEFECT, and conflating them would have produced exactly
+  the false precision this goal exists to eliminate. Three unrelated things share the
+  value: an item whose name is negatively polarised, where false is the GOOD outcome
+  (`high_confidence_blockers_found: false`, `escalation_triggered: false`,
+  `high_findings: false`); an intentional test-first red baseline (see
+  tickets/TICKET-20260715-BuildPipelineAuditFindings.md around line 176); and a genuine
+  failure. Item polarity is not declared anywhere in the corpus and cannot be inferred
+  from the name, so this AC requires the tally to state that polarity is undetermined
+  rather than guess. Determining polarity per item name is a separate, later question.
+
+  NO PER-ITEM-NAME TABLE. The corpus carries roughly 3,902 distinct manifest item names
+  across about 10,051 items, of which some 3,205 appear exactly once, and about 95.4% of
+  all values are true. A per-item-name breakdown of that distribution is a table of
+  singletons — noise, not measurement. Per-agent figures (22 agents) are the useful cut
+  and are what this AC requires.
+
+  Retrospective only: the manifest format is the INPUT to this AC, never the deliverable.
+  The record shape produced here is the baseline that BO-2800b extends with identity and
+  category; b must not invent a parallel format.

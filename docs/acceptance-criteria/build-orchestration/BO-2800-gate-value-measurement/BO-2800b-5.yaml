@@ -1,0 +1,96 @@
+id: BO-2800b-5
+components:
+  - build_orchestration
+  - review_system
+title: "Reference documentation for the mined record, the defect record, the vocabularies, and the recurrence report"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the mined completion-evidence record produced by the historical mining pass,
+  When the reference documentation is published,
+  Then it lists every field of a manifest-item record — the source ticket, the signing
+    agent, the manifest item name, the recorded value, and the reason and remediation
+    carried by an item expanded to a nested object,
+  And it states how each of the five input cases is represented: an item recorded true, an
+    item expanded to result false with a reason and remediation, an item recorded as a bare
+    false, an item recorded with a non-boolean value, and an absent manifest,
+  And it states that an item recorded false does not by itself mean a check caught a
+    problem, giving the three cases that produce one — a negatively polarised item name
+    where false is the desirable outcome, an intentional test-first red baseline, and a
+    genuine failure — so a reader cannot read the false tally as a defect count,
+  And it states that a missing manifest is tolerated and never blocks, so a reader cannot
+    conclude that mining introduces a new blocking condition,
+  And it states that this mined record is the baseline that the defect record below extends
+    rather than replaces.
+
+  Given the countable defect record and the per-gate problem-kind vocabularies,
+  When the reference documentation is published,
+  Then it lists every field of a defect record, including the emitting gate, the rule
+    identifier, the free-text detail, the signature, and the signature method,
+  And it states the signature rule exactly — that the signature is derived from the
+    emitting gate and the rule identifier and from nothing else, and that the free-text
+    detail and the artifact the finding was raised against are both excluded,
+  And it defines the three signature-method values, stating which reports discount a
+    heuristic figure and that an unclassified figure is not discounted,
+  And it documents the declared vocabulary of each gate that reports findings, names the
+    gates exempt from declaring one together with the reason, and states how an
+    unclassified entry is promoted into a vocabulary and how the occurrences counted under
+    its retired identifier are carried across,
+  And it describes the recurrence report, stating that a rule identifier with a high
+    recurring count is a candidate for promotion to a deterministic pre-commit check —
+    cheaper than a language-model judgement and complete in its recall,
+  And it states that a defect record's signature is a problem-kind identity rather than an
+    instance identity, and is the identifier an override record must reference alongside
+    that override's own instance discriminator.
+depends_on:
+  - BO-2800b
+  - BO-2800a-1
+  - BO-2800b-1
+  - BO-2800b-2
+  - BO-2800b-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "House style exemplar for a field-by-field reference document in this repository."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2800-gate-value-measurement/BO-2800a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the mined completion-evidence record whose field list and five input shapes this document must carry."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: absorbed the mined-record field list from the deleted BO-2800a-5 so one document covers the record and its extension; removed surface_kind from the documented signature rule and field list; added the three signature-method values, the exempt-gate list, and the promotion migration."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc entries of BOTH BO-2800a and BO-2800b's
+  documentation_triggers. The mined record and the defect record are one record and its
+  extension, not two records, so they are documented in one place — BO-2800a-5 was deleted
+  and its field list folded in here. Documenting them separately would have produced two
+  field lists for one structure, kept in step by hand.
+
+  Suggested assignee at enrichment time: documentation-expert.
+
+  The deterministic-check promotion clause is the highest-value downstream USE of the
+  counts and is stated here as a documented benefit. It is NOT a gate-retirement rule.
+  Note that the retirement rules this tree originally deferred to BO-2500d-1..4 do not in
+  fact exist — see the BO-2800 notes. This document must therefore not point a reader at
+  them as though they were written; it documents the figures, and where the decision rules
+  should eventually live is recorded in BO-2800's notes.
