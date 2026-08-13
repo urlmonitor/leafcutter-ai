@@ -1,0 +1,61 @@
+id: ACS-200f-1
+components:
+  - ac_store
+title: "An AC whose covering tests genuinely fail, or that has no covering test at all, is still refused — the gate is unblocked, not weakened"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC that is still recorded as not-yet-done,
+  And a test in the repository declares that it covers that AC but that test
+    genuinely fails when the suite is run,
+  When an operator runs the done-marking tool for that AC with no environment
+    variables set beyond the repository defaults,
+  Then the tool refuses to mark the AC done,
+  And it exits non-zero and names the failing covering test,
+  And the AC's recorded status is left unchanged,
+  And given a second active AC for which no test in the repository declares
+    coverage at all,
+  When the operator runs the same tool for that AC,
+  Then the tool refuses and states that no covering test was found,
+  And given a third active AC whose only covering test is genuinely skipped or
+    genuinely expected to fail for a reason of its own,
+  When the operator runs the same tool for that AC,
+  Then the tool still refuses, so unblocking the masked-pass case does not turn
+    the gate into a rubber stamp.
+depends_on:
+  - ACS-200f
+doc_links:
+  - path: "docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This is the guard that keeps the ACS-200f fix honest: the cheapest way to make ACS-200f pass is to stop reading test outcomes at all, and this AC fails if that is what happens"
+  - "The three refusal cases must be distinguishable in the tool's message — genuinely failing covering test, no covering test, genuinely non-passing (skipped / independently xfailed) covering test — because they call for different operator actions"
+  - "The third case is the boundary with BO-2500a-2-i: an outcome that is non-passing on its own merits must remain non-passing, while an outcome the enforcement plugin produced solely by masking a passing not-yet-done AC must not"
+  - "Refusal must leave the AC YAML byte-identical; a refused run that has already rewritten part of the record is a worse failure than the refusal itself"
+  - "Verify behaviorally — run the real tool in a fresh process against a real store containing one AC with a deliberately failing covering test, one with no covering test, and one with an independently skipped covering test, and assert three distinct non-zero refusals and zero store writes; do not grep the tool's source"
+  - "Must follow the repo error-handling policy: specific-exception try/except around subprocess, file and YAML I/O, log at WARNING or higher or re-raise; no bare or silent excepts"
+delivers_to: null
+expects_from:
+  ac_id: ACS-200f
+  contract: "The unblocked coverage-gate verdict whose negative side this edge case pins down — the same verdict function, exercised on the refusing paths."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: "Paired negative case for ACS-200f. Authored deliberately because the reported symptom is a false REFUSAL, and the naive fix for a false refusal is to stop refusing — which would silently convert the strongest anti-phantom-done gate in the store into a rubber stamp and contradict BO-2500a-2-i. Id note: the store's id pattern does not admit a roman-numeral segment directly after a letter segment (ACS-200f-i is rejected), so this L3 takes the numeric child slot ACS-200f-1 under the letter-slot L2 ACS-200f — the same slot shape its sibling ACS-200e occupies."
