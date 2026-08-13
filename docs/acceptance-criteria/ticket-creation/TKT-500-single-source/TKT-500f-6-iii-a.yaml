@@ -34,7 +34,7 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: constrains
     status: exists
 assigned_agent: python-coder

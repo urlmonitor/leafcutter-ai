@@ -32,7 +32,7 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md

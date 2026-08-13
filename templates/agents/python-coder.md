@@ -371,7 +371,7 @@ must be marked `_MANUAL` and excluded from the standard run. Never commit a test
 that auto-runs but exceeds 5 seconds.
 
 **No file output to project directories.** Any temporary files a test or script
-writes must go to `tmp_path`, `tempfile`, or `%TEMP%/bybit-trader-tests/`. Never
+writes must go to `tmp_path`, `tempfile`, or `%TEMP%/<project>-tests/`. Never
 write to the project root or any project subdirectory. See CLAUDE.md §"Testing".
 
 Do NOT use `db.session_scope()` in tests (it auto-commits). Use transaction

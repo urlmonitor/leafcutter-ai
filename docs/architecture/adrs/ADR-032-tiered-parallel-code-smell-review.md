@@ -1,5 +1,5 @@
 ---
-title: "ADR-025: Tiered Parallel Code-Smell Review (Modern-12 Bucket Split + Depth-1 Orchestration)"
+title: "ADR-032: Tiered Parallel Code-Smell Review (Modern-12 Bucket Split + Depth-1 Orchestration)"
 description: "Records the decision to replace the single all-12 Opus code-smell reviewer (find-code-smells) with a tiered pipeline: the Modern-12 Fowler smells are partitioned into a structural (mechanical) bucket and a design (judgment) bucket over a shared core method skill; two read-only leaf reviewer agents run the buckets on Sonnet and Opus respectively and RETURN their findings; a top-level code-smell-review skill (and /code-smell-review command) fans out to both leaves in parallel and merges into one severity-ranked report, with merge-time re-verification of high-impact findings. Orchestration is a top-level skill rather than an agent to stay within Claude Code's depth-1 sub-agent limit (ADR-006)."
 type: adr
 status: active
@@ -28,7 +28,7 @@ related_code:
   - unit_tests/test_code_smell_review_wiring.py
 ---
 
-# ADR-025: Tiered Parallel Code-Smell Review (Modern-12 Bucket Split + Depth-1 Orchestration)
+# ADR-032: Tiered Parallel Code-Smell Review (Modern-12 Bucket Split + Depth-1 Orchestration)
 
 ## Status
 

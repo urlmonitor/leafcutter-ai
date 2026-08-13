@@ -6,7 +6,7 @@ These tests verify:
  - Slash in name maps to nested subdirectory
  - Missing fixture raises FileNotFoundError with the path in the message
 
-ADR-007 defines the fixture convention these tests exercise.
+ADR-028 defines the fixture convention these tests exercise.
 """
 import json
 import sys

@@ -12,9 +12,9 @@ description: 'Product-truth request classifier. Given a plain-language feature r
   agents to run for a request. Runs first, before any authoring agent.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # pt-classifier
 

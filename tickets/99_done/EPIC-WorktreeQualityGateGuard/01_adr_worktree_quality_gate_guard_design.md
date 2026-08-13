@@ -42,7 +42,7 @@ completion_manifest:
   adr_file_created: true
   all_sections_present: true
   status_set: true
-Authored ADR-017 (docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md) at Proposed status. It records the four-check probe model (binary, config, git_hook, canary — canary execution non-negotiable), the fail-closed-on-self-error invariant with no fail-open path, the index-0 self-healing hook, dual create-time/pre-drive gates, template/deployed parity per ADR-001 for all three guard scripts, and supersession of the interim one-file feature/SKILL.md slice (586d6191). Context cross-links ADR-001 and the EPIC-AcPipelineDeployGaps retrospective (Finding #2 fresh-worktree silent-skip). Handoff written to .pending/adr_handoff.json.
+Authored ADR-031 (docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md) at Proposed status. It records the four-check probe model (binary, config, git_hook, canary — canary execution non-negotiable), the fail-closed-on-self-error invariant with no fail-open path, the index-0 self-healing hook, dual create-time/pre-drive gates, template/deployed parity per ADR-001 for all three guard scripts, and supersession of the interim one-file feature/SKILL.md slice (586d6191). Context cross-links ADR-001 and the EPIC-AcPipelineDeployGaps retrospective (Finding #2 fresh-worktree silent-skip). Handoff written to .pending/adr_handoff.json.
 
 ### 2026-07-06 12:15 — documentation-expert (status: ok)
 feedback-id: fb_2026-07-06_3739ca7c
@@ -50,12 +50,12 @@ completion_manifest:
   doc_written: true
   cross_links_added: true
   diataxis_genre_correct: true
-Reviewed ADR-017 cross-links and confirmed: (1) ADR-017 correctly references ADR-001 and EPIC-AcPipelineDeployGaps in both frontmatter and body; (2) added a "See Also" back-link in ADR-001 pointing to ADR-017, explaining that ADR-017 extends ADR-001's template/deployed parity principle to the three guard scripts; (3) added a reference to ADR-017 in EPIC-AcPipelineDeployGaps.md at Finding #2 (the highest-value finding that motivated ADR-017) and at KI-1 (the proposed architectural improvement). All three documents now cross-reference each other bidirectionally. No other architecture docs require updating for this ADR.
+Reviewed ADR-031 cross-links and confirmed: (1) ADR-031 correctly references ADR-001 and EPIC-AcPipelineDeployGaps in both frontmatter and body; (2) added a "See Also" back-link in ADR-001 pointing to ADR-031, explaining that ADR-031 extends ADR-001's template/deployed parity principle to the three guard scripts; (3) added a reference to ADR-031 in EPIC-AcPipelineDeployGaps.md at Finding #2 (the highest-value finding that motivated ADR-031) and at KI-1 (the proposed architectural improvement). All three documents now cross-reference each other bidirectionally. No other architecture docs require updating for this ADR.
 
 ## Implementation Tasks
 
 ### adr-author
-- [x] Author ADR-017 — Worktree Quality Gate Guard at docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+- [x] Author ADR-031 — Worktree Quality Gate Guard at docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
   - Decision: the four-check probe model (binary, config, git_hook, canary) and why canary execution is non-negotiable
   - Decision: fail-closed-on-self-error invariant and why no fail-open path exists
   - Decision: index-0 self-healing hook registered first to guarantee config presence

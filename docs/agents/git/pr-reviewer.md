@@ -1,21 +1,21 @@
 ---
-title: "Agent Reference: pr-reviewer"
+title: 'Agent Reference: pr-reviewer'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/28_pr_reviewer_agent.md"
-  - "tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/28_pr_reviewer_agent.md
+- tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md
 related_code:
-  - ".claude/agents/pr-reviewer.md"
-  - ".claude/commands/pr-review.md"
+- .claude/agents/pr-reviewer.md
+- .claude/commands/pr-review.md
+description: 'Overview of Agent Reference: pr-reviewer.'
 ---
-
 # Agent Reference: `pr-reviewer`
 
 Implementing agent: `pr-reviewer` (Sonnet → Opus gatekeeper, user-facing).
@@ -179,7 +179,7 @@ specialist sub-skills:
 ## 10. Cross-Links
 
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1), file layout (§2), visibility classes (§3), tool allowlists (§4), gatekeeper escalation pattern (§5.3).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) — three-tier ladder (§2.1), gatekeeper escalation (§2.3), tool allowlist (§2.6).
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — three-tier ladder (§2.1), gatekeeper escalation (§2.3), tool allowlist (§2.6).
 - [`.claude/commands/pr-review.md`](../../../.claude/commands/pr-review.md) — slash-command workflow body.
 - [`tickets/09_done/EPIC-CodingAgents/28_pr_reviewer_agent.md`](../../../tickets/09_done/EPIC-CodingAgents/28_pr_reviewer_agent.md) — the ticket that shipped this agent.
 - [`tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md`](../../../tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md) — pull-request agent that invokes pr-reviewer as a pre-open step.

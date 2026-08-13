@@ -24,7 +24,7 @@ doc_links: []
 assigned_agent: documentation-expert
 estimated_complexity: S
 it_requirements:
-  - "Document the fixture, round-trip, and independent behavioral-check conventions authored in BO-2500c-1/-2/-3 and the fixture-quality lint in BO-2500c-1-i, consistent with ADR-007 test-fixture convention."
+  - "Document the fixture, round-trip, and independent behavioral-check conventions authored in BO-2500c-1/-2/-3 and the fixture-quality lint in BO-2500c-1-i, consistent with ADR-008 test-fixture convention."
   - "The how-to must be discoverable from the build-orchestration and testing documentation surfaces."
 delivers_to: null
 expects_from: null

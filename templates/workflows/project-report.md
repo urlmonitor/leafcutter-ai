@@ -339,7 +339,7 @@ After creating the report artifact, provide a concise executive summary in chat.
 Keep the chat summary to ~15 lines. The full detail is in the artifact.
 
 # RULES
-- All commands run from the project root: `c:\Users\Hendrik\Code\Bybit-Trader\Bybit-Trader Live\bybit-trader`
+- All commands run from the project root.
 - Use PowerShell syntax (this is Windows).
 - Exclude `.git`, `__pycache__`, `.venv`, `node_modules`, `.mypy_cache`, `.pytest_cache`, `alembic\versions` from all file scans.
 - Round percentages to 1 decimal place.

@@ -8,9 +8,9 @@ description: Diataxis "look up" specialist. Produces lookup-oriented reference d
   by documentation-expert only)
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # reference-author
 

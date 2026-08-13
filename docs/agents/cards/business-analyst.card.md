@@ -9,9 +9,9 @@ description: 'Business Analyst — L2/L3 behavioral decomposition agent. Receive
   operates exclusively at L2/L3 and produces AC YAML files.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # business-analyst
 

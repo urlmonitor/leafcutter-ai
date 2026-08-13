@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "config/ac_store_schema.json",
     "title": "AC Store — Acceptance Criterion YAML Schema",
-    "description": "JSON Schema (draft-07) for acceptance criterion files stored under docs/acceptance-criteria/. See ADR-007 for rationale and ID format specification.",
+    "description": "JSON Schema (draft-07) for acceptance criterion files stored under docs/acceptance-criteria/. See ADR-008 for rationale and ID format specification.",
     "type": "object",
     "required": [
         "id",

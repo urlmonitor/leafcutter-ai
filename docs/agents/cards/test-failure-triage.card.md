@@ -8,9 +8,9 @@ description: Classifies post-merge test failures into structured categories befo
   without re-running LLM reasoning. (internal — spawned by finalize-feature only)
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # test-failure-triage
 

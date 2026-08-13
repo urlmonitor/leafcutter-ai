@@ -1,11 +1,16 @@
 ---
-title: "Retrospective: EPIC-AcPipelineDeployGaps"
-description: "Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering six knowledge items on worktree setup, deployment AC assertions, test coverage, and epic close protocols."
+title: 'Retrospective: EPIC-AcPipelineDeployGaps'
+description: 'Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering
+  six knowledge items on worktree setup, deployment AC assertions, test coverage,
+  and epic close protocols.'
 date: 2026-06-17
 epic_branch: EPIC-AcPipelineDeployGaps
-pr: "https://github.com/urlmonitor/leafcutter-ai/pull/88"
+pr: https://github.com/urlmonitor/leafcutter-ai/pull/88
+created: '2026-08-13'
+last_updated: '2026-08-13'
+type: tutorial
+status: active
 ---
-
 # Retrospective: EPIC-AcPipelineDeployGaps
 
 Date: 2026-06-17
@@ -124,7 +129,7 @@ full phase set and closed signed-off in a single session.
   (25adec3). Root cause filed as TICKET-20260617-Worktree_Precommit_Bootstrap.md (open
   in inbox). This is the single highest-leverage systemic gap: zero hook coverage on
   every commit of every worktree-based epic drive.
-  **Architectural response:** [ADR-017 — Worktree Quality Gate Guard](../architecture/adrs/ADR-017-worktree-quality-gate-guard.md)
+  **Architectural response:** [ADR-031 — Worktree Quality Gate Guard](../architecture/adrs/ADR-031-worktree-quality-gate-guard.md)
   (2026-07-06) defines the durable fix: a four-check probe model (binary, config,
   git_hook, canary — canary execution non-negotiable), fail-closed-on-self-error
   invariant, index-0 self-healing hook, and dual create-time/pre-drive gates that close
@@ -237,7 +242,7 @@ repo root (as a `.leafcutter` symlink created by `install_shims`). Worktrees do 
 inherit it. The gap is structural: zero hook coverage on every commit of every epic
 drive.
 
-**Durable architectural response:** [ADR-017 — Worktree Quality Gate Guard](../architecture/adrs/ADR-017-worktree-quality-gate-guard.md) supersedes the interim mitigation and provides the full execution-proof design. The Knowledge Items below describe the interim guidance; ADR-017 defines the permanent implementation.
+**Durable architectural response:** [ADR-031 — Worktree Quality Gate Guard](../architecture/adrs/ADR-031-worktree-quality-gate-guard.md) supersedes the interim mitigation and provides the full execution-proof design. The Knowledge Items below describe the interim guidance; ADR-031 defines the permanent implementation.
 
 **Proposed Knowledge Item text:**
 

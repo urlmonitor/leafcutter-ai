@@ -1,17 +1,17 @@
 ---
-title: "Portable Testing Conventions"
+title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
 last_updated: 2026-06-04
 components:
-  - infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/coding/test-writer.md"
-  - "docs/agents/coding/test-runner.md"
-  - "leafcutter/config/skills_config.default.json"
+- docs/agents/coding/test-writer.md
+- docs/agents/coding/test-runner.md
+- leafcutter/config/skills_config.default.json
+description: Overview of Portable Testing Conventions.
 ---
-
 # Portable Testing Conventions
 
 This document describes the test infrastructure conventions that the
@@ -152,7 +152,7 @@ python -m pytest unit_tests/ -k "_MANUAL"
 All test output (temp files, result artifacts, logs) must go to:
 - `tmp_path` fixture (pytest) — automatically cleaned up.
 - `tempfile.mkdtemp()` (unittest) — clean up in `tearDown`.
-- `%TEMP%/bybit-trader-tests/` — shared test output dir for longer-lived artifacts.
+- `%TEMP%/leafcutter-tests/` — shared test output dir for longer-lived artifacts.
 
 The `testing_context.test_output_dir` config key holds this path.
 
@@ -225,7 +225,7 @@ setUp pattern.
 
 ---
 
-## Fixture Convention (ADR-007)
+## Fixture Convention (ADR-028)
 
 **Agents are required to read this section.** `test-writer` and `python-coder`
 are instructed in their system prompts to consult this file before authoring
@@ -310,7 +310,7 @@ test files as part of its deliverable.
 
 ### Cross-Reference
 
-- [docs/architecture/adrs/ADR-007-test-fixture-convention.md](../architecture/adrs/ADR-007-test-fixture-convention.md) — binding architectural decision
+- [docs/architecture/adrs/ADR-028-test-fixture-convention.md](../architecture/adrs/ADR-028-test-fixture-convention.md) — binding architectural decision
 - `tests/conftest.py` — canonical implementation of `load_fixture()`
 - `tests/fixtures/_shared/.gitkeep` — establishes the shared fixture directory in version control
 

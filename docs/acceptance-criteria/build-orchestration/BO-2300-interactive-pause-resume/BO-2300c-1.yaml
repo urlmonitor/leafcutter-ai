@@ -55,7 +55,7 @@ it_requirements:
     - "The context payload must be captured as a snapshot at the moment of pause (not re-derived at answer time), so it remains correct when the answerer returns much later (see durability BO-2300e-1)."
     - "The context must include what the run has done, what it proposes, and the decision being asked, and must be persisted with the pending-question record."
     - "Context capture must not include secrets/credentials; snapshot only the decision-relevant artifacts."
-    - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "E2 top-level-body form (ADR-030); deployed/template parity via build.py (ADR-001)."
     - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js); assert the persist agent() call args carry a context payload { work_done_so_far, proposal, decision_summary } captured at pause time. Do NOT test a standalone Python module."
   delivers_shape:
     description: "The context snapshot this AC establishes populates the record's context field from BO-2300a-1."

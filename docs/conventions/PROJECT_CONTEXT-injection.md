@@ -1,22 +1,23 @@
 ---
-title: "Convention: PROJECT_CONTEXT Injection for Portable Agents"
+title: 'Convention: PROJECT_CONTEXT Injection for Portable Agents'
 type: convention
 status: active
 created: 2026-05-15
 last_updated: 2026-05-15
 components:
-  - infrastructure
+- infrastructure
 related_docs:
-  - docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md
-  - leafcutter/templates/agents/README.md
-  - .agents/agents/README.md
+- docs/how-to/inject-project-knowledge-into-agents.md
+- leafcutter/templates/agents/README.md
+- .agents/agents/README.md
+description: 'Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents.'
 ---
-
 # Convention: PROJECT_CONTEXT Injection for Portable Agents
 
-> Cross-reference: [ADR-025](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md)
-> captures the full rationale and rejected alternatives for all decisions documented here.
-> This convention file is the operational reference; ADR-025 is the architectural record.
+> This convention file is the authoritative record for the five locked decisions
+> below — both the operational rules and the rationale for them. For the
+> task-oriented walkthrough, see
+> [How-To: Inject Project Knowledge Into Agents](../how-to/inject-project-knowledge-into-agents.md).
 
 Portable agents in `leafcutter/templates/agents/` are project-agnostic by design.
 They contain no hardcoded project paths, deploy commands, or domain knowledge. Project-specific
@@ -25,7 +26,7 @@ at startup. This document pins the five locked decisions that govern this patter
 
 ## Layout
 
-**Option C layout** (locked, per ADR-025 §Decision 1): templates are flat single files;
+**Option C layout** (locked — Decision 1): templates are flat single files;
 project context is folder-shaped on the project side.
 
 ```
@@ -54,9 +55,9 @@ Key properties:
 - Project-side context lives under `.agents/agents/<agent-name>/` (a dedicated folder per agent).
 - Folders are created on first use; never pre-created empty.
 - Option A (templates also become folders) is the deferred convergence target and is mechanically
-  scriptable from Option C when multi-artifact-per-agent becomes the norm. See ADR-025.
+  scriptable from Option C when multi-artifact-per-agent becomes the norm.
 - Option B (lowercase `project_context.md` in a flat companion folder) is **explicitly ruled out**
-  and must not be re-proposed. See ADR-025.
+  and must not be re-proposed.
 
 ## Filename
 
@@ -65,12 +66,12 @@ The canonical filename is `PROJECT_CONTEXT.md` — uppercase, exactly as written
 - Lowercase variants (`project_context.md`) are **forbidden** in any path created under this convention.
 - The uppercase canonical form matches the precedent established in
   `leafcutter/templates/skills/README.md` for the skills surface.
-- Any existing lowercase reference is a stale artifact from before ADR-025 was locked and
-  must be rewritten when encountered.
+- Any existing lowercase reference is a stale artifact from before this convention was
+  locked and must be rewritten when encountered.
 
 ## Discovery
 
-Discovery is **runtime, agent-side** (locked, per ADR-025 §Decision 3).
+Discovery is **runtime, agent-side** (locked — Decision 3).
 
 Each agent reads its own `.agents/agents/<name>/PROJECT_CONTEXT.md` at startup as a Pre-Flight step.
 The typical Pre-Flight instruction in an agent template reads:
@@ -92,7 +93,7 @@ walk `.agents/agents/` and return presence information only — they never alter
 
 ## Missing-Context Fallback
 
-When an agent's `PROJECT_CONTEXT.md` is absent (locked, per ADR-025 §Decision 4):
+When an agent's `PROJECT_CONTEXT.md` is absent (locked — Decision 4):
 
 1. The agent **silently skips** the project-context load step.
 2. The agent writes **exactly one line** to the debug log:
@@ -112,7 +113,7 @@ compilation reporting (reporting only — it does not affect the compiled agent 
 
 ## Registry Contract
 
-The registry contract is **implicit by file presence** (locked, per ADR-025 §Decision 5).
+The registry contract is **implicit by file presence** (locked — Decision 5).
 
 `leafcutter/config/agent_registry.json` does **NOT** gain a new
 `expects_project_context` field. The build pipeline and runtime agents probe for
@@ -128,17 +129,17 @@ directories carry an explicit explainer:
 
 - `leafcutter/templates/agents/README.md` — "Templates are flat single files. The
   project-side companion lives at `.agents/agents/<name>/PROJECT_CONTEXT.md` (folder-shaped).
-  See ADR-025 for rationale."
+  See this convention for rationale."
 - `.agents/agents/README.md` — same explainer from the project-side perspective, plus a pointer
-  to `leafcutter/templates/agents/` and ADR-025.
+  to `leafcutter/templates/agents/` and this convention.
 
 Both README files are maintained by ticket 01 and ticket 02 of EPIC-PortableSQLAgents. See those
 tickets for the detailed authoring tasks.
 
 ## See Also
 
-- [ADR-025: Portable Agent PROJECT_CONTEXT Layout](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md) — full rationale and rejected alternatives
 - [How-To: Inject project knowledge into agents](../how-to/inject-project-knowledge-into-agents.md) — step-by-step adoption guide
+- [`templates/agents/README.md`](../../templates/agents/README.md) — the template-side explainer
 - `leafcutter/templates/agents/README.md` — template directory explainer
 - `.agents/agents/README.md` — project-side directory explainer
 - `leafcutter/scripts/build.py` — `find_project_contexts()` and `get_project_context_metadata()` helpers

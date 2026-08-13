@@ -54,9 +54,6 @@ doc_links:
   - path: "scripts/selection_criteria_evaluator.py"
     relationship: implements
     status: exists
-  - path: "docs/architecture/adrs/ADR-018-selection-criteria-dsl.md"
-    relationship: describes
-    status: planned
   - path: "config/agent_registry.json"
     relationship: describes
     status: exists

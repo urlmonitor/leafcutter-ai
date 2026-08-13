@@ -8,9 +8,9 @@ description: Structural impact gatekeeper for proposed changes. Receives a refin
   invoked by parent agents only)
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # architect-review
 

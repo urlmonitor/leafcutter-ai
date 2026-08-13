@@ -563,4 +563,4 @@ The `my-agent` agent MUST defer certain work to other agents or to the user:
 | `templates/skills/building-epics/SKILL.md` | Ticket-supervisor dispatch loop, failure adjudication, retry caps, commit-phase lock |
 | `config/agent_registry.json` | Single source of truth for agent IDs, spawn_allowlist, spawned_by, is_ticket_phase |
 | `docs/agents/README.md §PROJECT_CONTEXT Injection` | Runtime-discovery convention for PROJECT_CONTEXT.md files |
-| `docs/architecture/adrs/ADR-006-agent-model-tiers.md` | Policy source for model tier selection, tool allowlists, nesting depth cap |
+| `docs/architecture/adrs/ADR-033-agent-model-tiers.md` | Policy source for model tier selection, tool allowlists, nesting depth cap |

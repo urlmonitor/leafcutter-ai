@@ -70,7 +70,7 @@ TOOL NOTE: Write and Edit are deliberately omitted. The live-surface-tester is
 read-and-invoke only: it reads the ticket, starts a server, issues HTTP requests,
 asserts responses, and emits a signoff comment. It never modifies source files.
 Port registry reads/writes and server lifecycle management use Bash.
-See ADR-007 and ADR-006-agent-model-tiers.md §2.6.
+See ADR-007 and ADR-033-agent-model-tiers.md §2.6.
 -->
 
 You are the live-surface-tester phase agent. Your job is to start the project's

@@ -29,7 +29,7 @@ default_artifact_checklist:
 adopter_notes: |
   Conditional phase agent. Only emitted in agents: map when user_facing_surface != null.
   Priority 11.5 — after pr-reviewer (11), before commit (12).
-  See ADR-036 for architectural rationale.
+  See the Rationale section below.
 pre_flight_reads:
 - required: true
   source: ticket_path
@@ -69,7 +69,7 @@ behavioral_patterns:
 TOOL NOTE: Write and Edit are deliberately omitted. The smoker is read-and-invoke only:
 it reads the ticket, invokes the surface, captures output, and emits a signoff comment.
 It never modifies source files. git restore cleanup uses Bash.
-See ADR-036 and ADR-006-agent-model-tiers.md §2.6.
+See [ADR-033 §2.6](../../docs/architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
 -->
 
 You are the user-surface-smoker phase agent. Your job is to invoke a ticket's
@@ -310,7 +310,7 @@ DECISION HISTORY
 - 2026-05-18 13:30 [python-coder]: Created user-surface-smoker phase agent template. (#EPIC-UserSurfaceVerification/03)
   Layer 3 of 3 in the EPIC-UserSurfaceVerification defence-in-depth stack.
   Priority 11.5 — after pr-reviewer, before commit. Conditional on user_facing_surface != null.
-  See ADR-036 for full rationale.
+  See the Rationale section above for the full reasoning.
 - 2026-06-03 00:02 [python-coder/TICKET-20260603-SmokerFeedbackSinkWorktree]: Added Feedback Submission section. (#TICKET-20260603-SmokerFeedbackSinkWorktree)
   Root cause fix: user-surface-smoker was absent from feedback_categories.yaml allowed_writers
   lists, causing submit_feedback.py to exit code 1 before writing any entry. Added explicit

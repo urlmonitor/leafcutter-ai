@@ -205,7 +205,7 @@ feedback-id: fb_2026-06-04_a16ff5e5
 completion_manifest:
   branch_pushed: true
   pr_exists: true
-Branch EPIC-ACTraceabilityStore pushed to origin. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) covers this epic — ticket 11 commit 82030b0 is now included in that PR.
+Branch EPIC-ACTraceabilityStore pushed to origin. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-008) covers this epic — ticket 11 commit 82030b0 is now included in that PR.
 
 ## Implementation Tasks
 

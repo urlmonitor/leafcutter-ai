@@ -1,17 +1,17 @@
 ---
-title: "How to create an agent template"
+title: How to create an agent template
 type: how_to
 status: active
 created: 2026-05-28
 last_updated: 2026-05-28
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - docs/agent-registry.md
-  - docs/build-pipeline.md
-  - docs/reference/skills-config-fields.md
+- docs/agent-registry.md
+- docs/build-pipeline.md
+- docs/reference/skills-config-fields.md
+description: Overview of How to create an agent template.
 ---
-
 # How to create an agent template
 
 This guide walks you through every step required to add a new agent to the
@@ -127,7 +127,7 @@ requires_verification: true
 |---|---|---|---|
 | `portable` | boolean | Yes | `true` for domain-agnostic agents; `false` for domain-specific ones. |
 | `signoff` | boolean | Yes for phase agents | Set `true` when this agent uses the `signoff` skill to mark tickets done. |
-| `domain` | string or null | Yes | Set to `null` when `portable: true`; set to a domain tag (e.g. `"bybit-trader"`) otherwise. |
+| `domain` | string or null | Yes | Set to `null` when `portable: true`; set to a domain tag (e.g. `"billing"`) otherwise. |
 | `config_keys` | object | No | Map of `<key>: {required: bool, description: str}` pairs. Keys here are injected into the body from `skills_config.json` at build time. |
 | `adopter_notes` | string | No | Free-text guidance for developers installing this agent in a new project. |
 | `requires_verification` | boolean | No | When `true`, build.py emits a warning if the compiled output is not verified by a test. |

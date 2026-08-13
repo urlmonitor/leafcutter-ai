@@ -26,3 +26,8 @@ ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:*
 ENTROPY_HIGH:unit_tests/agents/test_llm_expert_artifacts.py:*
 # False positive: guardrail_config_path kwarg pattern in BO-2200a-3-i tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_bo_2200a_3_i.py:*
+# False positives: pre-existing markdown file-path / doc-link references (not secrets)
+ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
+ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
+ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
+ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382

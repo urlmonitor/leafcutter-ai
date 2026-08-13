@@ -9,9 +9,9 @@ description: 'Pinned-haiku agent that classifies a jargon candidate term and ret
   step.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # glossary-triage
 

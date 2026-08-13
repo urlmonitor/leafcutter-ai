@@ -213,7 +213,7 @@ def run_audit(
 
     Args:
         project_root: Absolute path to the consumer project root (e.g. the
-            bybit-trader checkout).
+            adopting repository's checkout).
         package_root: Absolute path to the leafcutter package root
             (the directory containing config/, scripts/, templates/).
         boundary_config_path: Optional override for the boundary config file.

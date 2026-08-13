@@ -6,10 +6,10 @@ type: epic_completion
 components: 
   - build_pipeline
 summary: "Completed the TDD workflow enforcement epic, enabling test-first agentic development with automated contract-shrinking protection across all Python code tickets."
-description: "Flipped test-writer to priority 5 (before coders), added red_baseline capture contract, three-layer contract-shrinking guard (pre-commit hook + supervisor warn + honor-system), docs-only skip rule, and full TDD documentation (ADR-004, explanation doc, how-to guide)."
+description: "Flipped test-writer to priority 5 (before coders), added red_baseline capture contract, three-layer contract-shrinking guard (pre-commit hook + supervisor warn + honor-system), docs-only skip rule, and full TDD documentation (ADR-027, explanation doc, how-to guide)."
 epic: "EPIC: Flip the leafcutter build pipeline to true TDD"
 adrs: 
-  - ADR-004-tdd-workflow-enforcement
+  - ADR-027-tdd-workflow-enforcement
 tickets: 
   - 01_agent_registry_priority_update.md
   - 02_test_writer_rewrite.md
