@@ -2625,7 +2625,7 @@
                 "signoff"
             ],
             "priority": 11.5,
-            "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects. See ADR-036.",
+            "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects.",
             "conditional": true,
             "conditional_field": "declares_side_effect",
             "conditional_field_legacy": "user_facing_surface",

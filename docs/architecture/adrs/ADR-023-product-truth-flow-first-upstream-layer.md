@@ -234,7 +234,7 @@ ACs; a dataset is shared across many ACs; a screen is rendered by many steps.
 Flattening these many-to-many structures into per-AC fields would duplicate the
 data across ACs and lose the shared canonical dataset — reintroducing exactly the
 synthetic-fixture drift this store exists to kill. It would also overload the AC
-schema (ADR-007b) far beyond its purpose.
+schema (ADR-008) far beyond its purpose.
 
 ### Alternative B — Make flows the backlog (supersede ADR-010)
 
@@ -272,7 +272,7 @@ the validator flag drift. This is a hard rule (rule 3), not a preference.
 ## References
 
 - [ADR-010 — AC Store as Authoritative Backlog](ADR-010-ac-store-as-authoritative-backlog.md) — the backlog inversion this ADR amends (scopes its authority to "the backlog").
-- [ADR-007 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — the per-agent AC format the BA emits when decomposing a flow step.
+- [ADR-008 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — the per-agent AC format the BA emits when decomposing a flow step.
 - [docs/architecture/components/ux-prototyping.md](../components/ux-prototyping.md) — the component architecture doc for the product-truth store.
 - [docs/product-truth/README.md](../../product-truth/README.md) — the store's operational README (layout, linkage, seeds).
 - [docs/how-to/authoring-product-truth-artifacts.md](../../how-to/authoring-product-truth-artifacts.md) — the by-hand authoring guide (search → add-vs-create protocol).

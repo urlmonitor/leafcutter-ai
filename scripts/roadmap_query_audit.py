@@ -4,7 +4,7 @@ GOAL: Provide the PO-audit output modes (_starved, _off_roadmap, _audit) for
     roadmap_query.py. Extracted to keep roadmap_query.py under the 400-line
     limit.
 BUSINESS CONTEXT: Exposes three audit-specific output modes used by the
-    product-owner-agent (ADR-039) to identify roadmap drift: phases with no
+    product-owner agent to identify roadmap drift: phases with no
     open tickets (starved), open tickets not linked to any roadmap phase
     (off-roadmap), and a combined audit_result JSON for the PO agent's
     grounding step.
@@ -209,6 +209,6 @@ DECISION HISTORY
   to keep that module under 400 lines. Provides _starved(), _off_roadmap(),
   and _audit() — the three PO-audit output modes. roadmap_query.py imports
   these functions and wires them into the CLI (--starved, --off-roadmap,
-  --audit flags). Implements the audit_result JSON contract for ADR-039.
+  --audit flags). Implements the audit_result JSON contract.
 ====================================================================
 """

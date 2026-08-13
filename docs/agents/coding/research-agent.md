@@ -1,20 +1,20 @@
 ---
-title: "Agent Reference: research-agent"
+title: 'Agent Reference: research-agent'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "CLAUDE.md"
-  - "tickets/09_done/EPIC-CodingAgents/00_research_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- CLAUDE.md
+- tickets/09_done/EPIC-CodingAgents/00_research_agent.md
 related_code:
-  - ".claude/agents/research-agent.md"
+- .claude/agents/research-agent.md
+description: 'Overview of Agent Reference: research-agent.'
 ---
-
 # Agent Reference: `research-agent`
 
 Implementing agent: `research-agent` (Sonnet, internal).
@@ -285,7 +285,7 @@ the user steers that session directly, so it keeps search tools. The rule applie
 only to spawned agents under `.claude/agents/`.
 
 For the full rationale (context isolation, payload size, cost), see
-[ADR-006 §2.6](../../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
+[ADR-006 §2.6](../../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
 
 ---
 
@@ -294,7 +294,7 @@ For the full rationale (context isolation, payload size, cost), see
 - [`docs/agents/conventions.md`](../conventions.md) — §4.2 (strict
   research-delegation rule), §4.3 (carve-outs), §1 (frontmatter schema),
   §3.3 (internal visibility class).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   §2.6 (tool allowlist + research-delegation rationale), §2.5 (visibility
   classes), §2.1 (three-tier model ladder).
 - [`CLAUDE.md`](../../../CLAUDE.md) — § "jCodeMunch MCP Server": the canonical

@@ -25,7 +25,7 @@ doc_links:
   - path: docs/reference/claude-code-hooks.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
     relationship: describes
     status: exists
   - path: config/agent_registry.json

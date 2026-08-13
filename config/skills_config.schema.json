@@ -133,7 +133,7 @@
     "test_output_dir": {
       "type": "string",
       "description": "Directory for test output files. Must be outside the project root.",
-      "default": "%TEMP%/bybit-trader-tests/"
+      "default": "%TEMP%/leafcutter-tests/"
     },
     "worktree_base_path": {
       "type": "string",

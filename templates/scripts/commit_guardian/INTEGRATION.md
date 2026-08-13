@@ -1,7 +1,7 @@
 # Commit Guardian + Doc Compliance — Integration Guide
 
 > **Audience:** A developer setting up a fresh project (e.g. CubeCoder or any new
-> Bybit-Trader-style repo) who wants commit-time quality gates without tribal knowledge.
+> Python repo) who wants commit-time quality gates without tribal knowledge.
 > Following this guide end-to-end takes under an hour and leaves you with a working
 > pre-commit pipeline.
 

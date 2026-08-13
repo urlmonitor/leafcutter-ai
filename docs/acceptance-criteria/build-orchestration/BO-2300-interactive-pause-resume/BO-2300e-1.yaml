@@ -29,7 +29,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
     relationship: describes
     status: exists
   - path: docs/reference/workflow-authoring-contract.md
@@ -62,7 +62,7 @@ it_requirements:
     - "The pending-question record, its context snapshot, and the run's pause point must survive the workflow process exiting (durable on-disk .leafcutter/paused_runs/<run_id>.json, not in-memory); a fresh process must be able to load it and resume."
     - "Resume in a new process must use the harness resumeFromRunId replay so committed prior stages are carried forward, not redone."
     - "Durable-store access performed by the dispatched agent (and any Python helper it invokes) is external I/O and must follow the project error-handling policy (typed except, WARNING+ log, no silent swallow)."
-    - "E2 bans wall-clock/random in the workflow body (ADR-017): any staleness timestamp must be written into the record at pause (by the persist agent) or passed via args, never computed with Date.now() in the body."
+    - "E2 bans wall-clock/random in the workflow body (ADR-030): any staleness timestamp must be written into the record at pause (by the persist agent) or passed via args, never computed with Date.now() in the body."
     - "Deployed/template parity via the build.py round-trip (ADR-001)."
     - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js): a first harness run pauses and persists; a SECOND harness invocation (new process) supplies the answer via args and resumes from pause_point via resumeFromRunId, with committed stages carried forward (not re-dispatched in agent_calls). Do NOT test a standalone Python module."
 delivers_to:

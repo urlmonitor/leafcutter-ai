@@ -10,9 +10,9 @@ description: 'Confirmation-gated PR creation agent. Reads recent commits on the 
   a pull request", or "push and open a PR for this branch".'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # pull-request
 

@@ -16,7 +16,7 @@ description: 'Overview of ADR-020: Live Surface Tester — Port Registry, Read-O
 ---
 # ADR-020: Live Surface Tester — Port Registry, Read-Only Constraint, and Conditional Dispatch
 
-> **Renumbering note (2026-07-10):** originally authored as ADR-007 on the
+> **Renumbering note (2026-07-10):** originally authored as ADR-008 on the
 > `EPIC-LiveSurfaceTesting` branch; renumbered to ADR-020 on revival because 007
 > was independently reused on `main`. Some implementation details below (registry
 > file location, port range, schema) drifted from the shipped `port_registry.py`

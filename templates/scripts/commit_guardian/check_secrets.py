@@ -169,7 +169,7 @@ def _is_prose_exempt(line: str, file_path: Path) -> bool:
        flagged because the apikey token survives the removal.
 
     Note: This function only suppresses ENTROPY_HIGH findings.  Regex-based
-    rules (PRIVATE_KEY, AWS_KEY, BYBIT_API_KEY, GENERIC_SECRET) are never
+    rules (PRIVATE_KEY, AWS_KEY, EXCHANGE_API_KEY, GENERIC_SECRET) are never
     suppressed by this function.
 
     Args:

@@ -36,7 +36,7 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
-  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
     relationship: describes
     status: exists
   - path: config/paths.json
@@ -49,7 +49,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "Standardize enforcement on the LIST field `components`, NOT the scalar `component`: the knowledge graph's component_membership edge is built from the `components` list (see config/paths.json acs surface edge_fields), so the required-field check MUST require a non-empty `components` list. The scalar `component` may remain for backward compatibility but is not the field the graph reads."
-  - "Reconcile the reference docs with the enforced field: docs/reference/ac-schema.md currently marks the scalar `component` required and the `components` list 'rarely used', and ADR-007 lists only the scalar as required. Update both so the `components` list is documented as the authoritative component-membership field this rule enforces."
+  - "Reconcile the reference docs with the enforced field: docs/reference/ac-schema.md currently marks the scalar `component` required and the `components` list 'rarely used', and ADR-008 lists only the scalar as required. Update both so the `components` list is documented as the authoritative component-membership field this rule enforces."
   - "Add the requirement to the path that actually gates commits: per the BA's ac-store-conventions note, when the JSON schema (config/ac_store_schema.json) cannot be resolved the hook falls back to a MANUAL field-validation branch, and that manual path is what gates in practice. Add the non-empty-`components`-list check to that manual branch in scripts/commit_guardian/check_ac_schema.py, to config/ac_store_schema.json, AND to the agent-side scripts/ac_store/validate_ac_schema.py — all three, so schema-present and schema-absent environments behave identically."
   - "Commit-guardian parity per ADR-001: edit the deployed hook under scripts/commit_guardian/ and its package source under templates/scripts/commit_guardian/ together, and verify byte-parity via the build.py round-trip; never edit one side only."
   - "Rejection is a hard block (non-zero exit) that names the offending file and states a component membership is required; a conforming file (non-empty components list) passes unchanged. Follow the project error-handling policy."

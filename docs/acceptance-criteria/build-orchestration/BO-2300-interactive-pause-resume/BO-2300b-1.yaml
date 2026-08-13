@@ -58,7 +58,7 @@ it_requirements:
     - "Exactly three question types are supported: single_choice (approve/edit/cancel), priority_choice (critical/high/medium/low), free_text; the raising gate declares which type it needs."
     - "Each emitted question must state its valid answer shape (allowed option set for the choice types; any-text for free_text) so the answer contract is unambiguous."
     - "Define the type/answer-shape vocabulary once in the shared JS helper (a single shared definition), not duplicated per gate, so the gates that raise questions and the validator that checks answers (BO-2300b-2) cannot drift."
-    - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "E2 top-level-body form (ADR-030); deployed/template parity via build.py (ADR-001)."
     - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js); assert the emitted question object (captured via the pause/persist agent() call args) carries the declared type and valid_answers for each of the three gate types. Do NOT test a standalone Python module."
   delivers_shape:
     description: "The question sub-schema this AC establishes populates the record's question field from BO-2300a-1."

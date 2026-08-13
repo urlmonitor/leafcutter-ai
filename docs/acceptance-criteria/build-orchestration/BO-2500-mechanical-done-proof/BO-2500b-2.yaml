@@ -25,7 +25,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: describes
     status: exists
 assigned_agent: llm-expert

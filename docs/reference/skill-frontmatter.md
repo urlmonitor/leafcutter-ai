@@ -1,18 +1,18 @@
 ---
-title: "Reference: SKILL.md Frontmatter Fields"
+title: 'Reference: SKILL.md Frontmatter Fields'
 type: reference
 status: active
 created: 2026-05-28
 last_updated: 2026-05-28
 components:
-  - "build_pipeline"
-  - "config_loader"
+- build_pipeline
+- config_loader
 related_docs:
-  - "leafcutter-ai/config/skill_registry.json"
-  - "leafcutter-ai/config/skill_registry.schema.json"
-  - "leafcutter-ai/templates/skills/"
+- leafcutter-ai/config/skill_registry.json
+- leafcutter-ai/config/skill_registry.schema.json
+- leafcutter-ai/templates/skills/
+description: 'Overview of Reference: SKILL.md Frontmatter Fields.'
 ---
-
 # Reference: SKILL.md Frontmatter Fields
 
 Every skill in the leafcutter ecosystem is defined by a `SKILL.md` file. The
@@ -129,7 +129,7 @@ Each entry in the `skills` array describes one skill:
 | `id` | string | **yes** | Unique skill identifier. Must match `name` in the skill's frontmatter and the directory name under `templates/skills/`. Pattern: `^[a-z][a-z0-9-]*$`. |
 | `name` | string | **yes** | Human-readable display name (Title Case). Used in documentation tables. |
 | `portable` | boolean | **yes** | `true` = domain-agnostic; belongs in the package. `false` = domain-specific; stays in the originating project. |
-| `domain` | string or null | **yes** | Domain tag (e.g. `"bybit-trader"`) for domain-specific skills. `null` for portable skills. |
+| `domain` | string or null | **yes** | Domain tag (e.g. `"billing"`) for domain-specific skills. `null` for portable skills. |
 | `template_path` | string | for portable | Relative path from the leafcutter workspace root to the skill's template directory. Format: `leafcutter/templates/skills/<id>/`. Present only when `portable: true`. |
 | `dependencies` | array of string | **yes** | IDs of other skills this skill invokes at runtime. Used to build the skill dependency graph. May be `[]` when dependency mapping is non-trivial or when the skill has no runtime skill dependencies. |
 | `internal` | boolean | no | Mirrors the frontmatter `internal` flag. When `true`, excludes the skill from user-facing summaries. |

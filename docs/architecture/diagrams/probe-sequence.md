@@ -12,9 +12,9 @@ components:
   - commit_guardian
 related_docs:
   - docs/architecture/components/worktree-quality-gate-guard.md
-  - docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+  - docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
 related_adrs:
-  - ADR-017
+  - ADR-031
 tags:
   - probe
   - four-check
@@ -101,7 +101,7 @@ Parent: [Worktree Quality Gate Guard — Container Overview](../components/workt
 
 - [Worktree Quality Gate Guard — Container Overview](../components/worktree-quality-gate-guard.md) — parent container.
 - [Gates Sequence](gates-sequence.md) — the three gates that invoke this probe.
-- [ADR-017 — Worktree Quality Gate Guard](../adrs/ADR-017-worktree-quality-gate-guard.md).
+- [ADR-031 — Worktree Quality Gate Guard](../adrs/ADR-031-worktree-quality-gate-guard.md).
 
 <!--
 ====================================================================

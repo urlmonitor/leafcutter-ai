@@ -1,20 +1,20 @@
 ---
-title: "ADR-009: IT Product Owner v3 — Source Code Access Restriction"
-type: "adr"
-status: "accepted"
-created: "2026-06-05"
-last_updated: "2026-06-05"
+title: 'ADR-009: IT Product Owner v3 — Source Code Access Restriction'
+type: adr
+status: accepted
+created: '2026-06-05'
+last_updated: '2026-06-05'
 deciders:
-  - BrainCandy
+- BrainCandy
 requires_ac: TKT-300a
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - docs/architecture/adrs/ADR-007-contract-driven-acs.md
-  - config/agent_registry.json
-  - docs/components.json
+- docs/architecture/adrs/ADR-007-contract-driven-acs.md
+- config/agent_registry.json
+- docs/components.json
+description: 'Overview of ADR-009: IT Product Owner v3 — Source Code Access Restriction.'
 ---
-
 # ADR-009: IT Product Owner v3 — Source Code Access Restriction
 
 ## Status
@@ -35,7 +35,7 @@ creation pipeline: a `business-analyst` (BA) pass writes business-level intent
 and agent selection; an `product-owner-agent` (IT PO) pass enriches L2/L3
 acceptance criteria with technical fields — `assigned_agent`, `it_requirements`,
 and `delivers_to`/`expects_from` interface contracts. This two-phase design is
-mandated by ADR-007.
+mandated by ADR-008.
 
 The initial IT PO v3 template was drafted with permission to read source code
 files (`.py`, `.ts`, `.sql`) to understand the implementation landscape when
@@ -70,7 +70,7 @@ long-term stability for several reasons:
    everything an IT PO needs to make correct assignment, splitting, and interface
    decisions. Source reading is redundant when these documents are maintained.
 
-ADR-007 decision item 4 states explicitly: "IT PO reads architecture docs, not
+ADR-008 decision item 4 states explicitly: "IT PO reads architecture docs, not
 code." This ADR formalises that decision as a named constraint with the IT PO v3
 template as its scope, documents the permitted knowledge sources, and records
 the trade-off against the completeness requirement it creates for
@@ -155,7 +155,7 @@ is an accepted cost of the transition period.
 - Coder agents (`python-coder`, `sql-coder`, `frontend-coder`) continue to read
   source code as their primary knowledge source. This decision does not change
   their access model.
-- The `ac-validator` agent (introduced by ADR-007) reads sign-off comments and
+- The `ac-validator` agent (introduced by ADR-008) reads sign-off comments and
   `completion_manifest:` blocks, not source code. It is unaffected.
 
 ## Alternatives
@@ -199,7 +199,7 @@ required `components.json` coverage.
 
 ## References
 
-- ADR-007 — Contract-Driven Acceptance Criteria; decision item 4 establishes
+- ADR-008 — Contract-Driven Acceptance Criteria; decision item 4 establishes
   the principle that IT PO reads architecture docs, not code.
 - TKT-300a — IT PO enrichment spec; the ticket that scopes IT PO v3 behaviour.
 - TKT-100l — BA writes behavior, IT PO adds implementation; establishes the

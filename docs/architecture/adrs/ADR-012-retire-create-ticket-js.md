@@ -57,9 +57,9 @@ The workflow consumed four specific fields from the `business-analyst` return:
 
 ### The v3 business-analyst contract
 
-ADR-007 (Contract-Driven ACs) and ADR-007b (AC Store Schema) established the
+ADR-008 (Contract-Driven ACs) and ADR-008 (AC Store Schema) established the
 AC YAML store as the structured requirements surface. In the v3 business-analyst
-(introduced post-ADR-007), the agent operates exclusively at L2/L3 and produces
+(introduced post-ADR-008), the agent operates exclusively at L2/L3 and produces
 **AC YAML files** — not a JSON payload. It does not return any of the four fields
 above; they are all undefined at runtime.
 
@@ -247,6 +247,6 @@ This path:
 
 - [ADR-010 — AC Store as Authoritative Backlog](ADR-010-ac-store-as-authoritative-backlog.md) — establishes the source-of-truth inversion; names `/build-ac` as the authoritative backlog-to-ticket path.
 - [ADR-006 — Flatten the Supervisor Chain](ADR-006-flatten-supervisor-chain.md) — the ADR under which `create-ticket.js` was originally written; provides the depth-1 context for the workflow script pattern.
-- [ADR-007 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — establishes the per-agent AC format that the v3 business-analyst produces.
+- [ADR-008 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — establishes the per-agent AC format that the v3 business-analyst produces.
 - [templates/workflows-js/create-ticket.js](../../../templates/workflows-js/create-ticket.js) — the retired file; contains the runtime retirement guard added by this ADR.
 - EPIC-AcPipelineDeployGaps ticket 01 — the commissioning ticket for this retirement; the architect-review comment records the adjudication rationale.

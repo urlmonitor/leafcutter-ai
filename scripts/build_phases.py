@@ -599,7 +599,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     **Engine resolution**: ``config["workflows"]["engine"]`` is resolved before
     any file is written. The value ``"auto"`` resolves to ``"e2"`` (the
-    deterministic E2 top-level-body engine, per ADR-017 and ticket 09). The
+    deterministic E2 top-level-body engine, per ADR-030 and ticket 09). The
     resolved engine is passed to ``_emit_workflow_variant``. Only ``"e2"`` and
     ``"auto"`` are supported; ``"e1"`` raises ``ValueError`` (the E1 wrap was
     removed in EPIC-DualEngineWorkflowSupport ticket 09 — it produced an
@@ -632,7 +632,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
     # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
     # Engine selection is purely config-driven; the version check below is a
-    # floor gate only and must NOT influence which engine is selected (ADR-017).
+    # floor gate only and must NOT influence which engine is selected (ADR-030).
     engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
@@ -1929,7 +1929,8 @@ def validate_agent_self_description(
                                 problems.append(
                                     f"Registry entry '{agent_name}' has invalid "
                                     f"knowledge_channels channel value {channel}.\n"
-                                    f"  Valid range is 1-11 (per ADR-029 Agent Knowledge Plane).\n"
+                                    f"  Valid range is 1-11 (per docs/architecture/"
+                                    f"agent_knowledge_plane.md).\n"
                                     f"  Fix hint: Correct the channel value."
                                 )
 
@@ -2556,7 +2557,7 @@ def clean_stale_artifacts(
 #   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
 # - 2026-07-02 [python-coder/EPIC-DualEngineWorkflowSupport/07]:
 #   build_workflow_scripts(): resolved "auto" → "e2" explicitly before
-#   calling _emit_workflow_variant (ADR-017: E2 is the default deterministic
+#   calling _emit_workflow_variant (ADR-030: E2 is the default deterministic
 #   engine). Version check remains a floor gate only — it warns/skips when
 #   the Claude Code version is below the minimum but does NOT influence engine
 #   selection. Updated _emit_workflow_variant docstring to reflect that "auto"

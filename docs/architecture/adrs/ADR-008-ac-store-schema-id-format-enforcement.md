@@ -1,5 +1,5 @@
 ---
-title: "ADR-007: AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model"
+title: "ADR-008: AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model"
 description: "Defines the AC YAML schema, hierarchical ID format with parent derivation algorithm, status lifecycle, and stdlib-only commit-time enforcement model for the leafcutter AC Traceability Store."
 type: "adr"
 status: "accepted"
@@ -9,7 +9,7 @@ components:
   - build_pipeline
 ---
 
-# ADR-007: AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model
+# ADR-008: AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model
 
 ## Status
 

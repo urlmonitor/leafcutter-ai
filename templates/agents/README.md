@@ -32,7 +32,7 @@ Project context is per-project, changes independently, and is discovered at runt
 inlined at build time. The folder-shaped project side allows multiple companion files per
 agent in the future (diagrams, test fixtures, etc.) without restructuring the template.
 
-See [ADR-025](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md)
+See [Convention: PROJECT_CONTEXT Injection](../../docs/conventions/PROJECT_CONTEXT-injection.md)
 for the full rationale and rejected alternatives.
 
 ## The filename is `PROJECT_CONTEXT.md` (uppercase, canonical)
@@ -77,7 +77,7 @@ PROJECT_CONTEXT.md not found for <agent-name>; running template-only
 
 3. Add an entry in `leafcutter/config/agent_registry.json`.
 4. Run `python leafcutter/scripts/build.py` to materialise the template.
-5. If the agent needs bybit-trader (or other project) context, author
+5. If the agent needs project-specific context, author
    `.agents/agents/<agent-name>/PROJECT_CONTEXT.md` following the how-to at
    `leafcutter/docs/how-to/inject-project-knowledge-into-agents.md`.
 
@@ -95,7 +95,6 @@ whose primary entry point is a user-facing slash command.
 | `workflow-architect` | `/workflow-architect` | Meta-agent owning the leafcutter package surface. | `workflow-architect.md` |
 ## See Also
 
-- [ADR-025: Portable Agent PROJECT_CONTEXT Layout](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md)
-- [Convention: PROJECT_CONTEXT Injection](../docs/conventions/PROJECT_CONTEXT-injection.md)
-- [How-To: Inject project knowledge into agents](../docs/how-to/inject-project-knowledge-into-agents.md)
+- [Convention: PROJECT_CONTEXT Injection](../../docs/conventions/PROJECT_CONTEXT-injection.md)
+- [How-To: Inject project knowledge into agents](../../docs/how-to/inject-project-knowledge-into-agents.md)
 - `.agents/agents/README.md` — project-side directory explainer

@@ -1172,7 +1172,7 @@ For each candidate file, grep its top-level imports and cross-check against the
 project-specific module list in `package_boundary.json`:
 
 ```bash
-grep -E "^from |^import " <candidate_file> | grep -E "alembic|bybit|sql_|database_manager|live_trader|collector"
+grep -E "^from |^import " <candidate_file> | grep -E "alembic|sql_|database_manager|live_trader|collector"
 ```
 
 If the grep returns anything, the file is project-specific by ADR-020 and must

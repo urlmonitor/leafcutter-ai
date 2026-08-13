@@ -74,7 +74,6 @@ classification, the agent MUST NOT write any file and MUST emit `status: questio
 
 **Note:** This check applies to `architecture-diagram-author` and `architecture-author`.
 It is encoded here in the shared skill so both agents receive the same behaviour.
-See ADR-027 for the policy rationale.
 
 ---
 
@@ -159,10 +158,10 @@ Request: "Document the candle data ingestion pipeline"
 
 ---
 
-## Section 3: Diagram format rule (from ADR-015)
+## Section 3: Diagram format rule
 
-**Read `docs/architecture/adrs/ADR-015-diagram-format-and-legends.md` now.**
-Do not rely on memory — the ADR is the single source of truth. Key summary:
+The rules below are the single source of truth for diagram format in this skill.
+Do not rely on memory:
 
 - **Mermaid is required** for all diagrams in this project.
 - PlantUML, draw.io, Structurizr, hand-drawn SVG, inline ASCII: all banned.
@@ -407,7 +406,7 @@ C4Component
     ...
 ```
 
-Parent: [Bybit Trader — Container Diagram](../c2-001-container-diagram.md)
+Parent: [My Project — Container Diagram](../c2-001-container-diagram.md)
 ```
 
 - Use the exact human-readable title from the parent doc's `title:` frontmatter

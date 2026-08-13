@@ -106,7 +106,7 @@ completion_manifest:
   branch_pushed: true
   pr_created: true
   pr_body_complete: true
-Pushed commit 536476f to origin/EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) now includes this commit. No new PR created — one PR per epic convention. Branch is ahead of remote by 0 commits after push.
+Pushed commit 536476f to origin/EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-008) now includes this commit. No new PR created — one PR per epic convention. Branch is ahead of remote by 0 commits after push.
 
 ### 2026-06-04 12:10 — commit (status: ok)
 feedback-id: fb_2026-06-04_2a77f16b

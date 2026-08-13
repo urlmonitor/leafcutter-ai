@@ -28,7 +28,7 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: describes
     status: exists
 assigned_agent: python-coder

@@ -1,21 +1,21 @@
 ---
-title: "pull-request agent — Reference"
+title: pull-request agent — Reference
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-27
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md
 related_code:
-  - ".claude/agents/pull-request.md"
-  - ".claude/commands/pull-request.md"
-  - ".claude/commands/commit-push-pr.md"
+- .claude/agents/pull-request.md
+- .claude/commands/pull-request.md
+- .claude/commands/commit-push-pr.md
+description: Overview of pull-request agent — Reference.
 ---
-
 # pull-request agent
 
 The `pull-request` agent is the PR-creation half of the commit -> push -> PR
@@ -185,7 +185,7 @@ except when escalating to Opus (which is also a depth-bounded sub-agent call).
 
 - [Agent conventions](../conventions.md) -- frontmatter schema, visibility
   classes, tool allowlists, patterns.
-- [ADR-006](../../architecture/ADR-006-agent-model-tiers.md) -- policy source
+- [ADR-006](../../architecture/adrs/ADR-033-agent-model-tiers.md) -- policy source
   for model tiers, gatekeeper escalation, confirmation-gated visibility class.
 - [EPIC-CodingAgents Master_Plan](../../../tickets/09_done/EPIC-CodingAgents/Master_Plan.md)
 - [Ticket 12](../../../tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md)

@@ -31,7 +31,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
     relationship: describes
     status: exists
 it_requirements:
@@ -53,7 +53,7 @@ it_requirements:
     - "'paused_awaiting_input' and 'cancelled' must be distinct, inspectable run statuses; only 'paused_awaiting_input' is eligible for resume-by-answer."
     - "Status inspection must be read-only (must not mutate run state); reading the record is done via an agent() dispatch (the E2 body performs no direct fs read)."
     - "The distinction is load-bearing for the rest of BO-2300: resume/durability must target only pause records and never attempt to revive a truly-cancelled run."
-    - "Deployed/template parity via the build.py round-trip (ADR-001); E2 top-level-body form (ADR-017)."
+    - "Deployed/template parity via the build.py round-trip (ADR-001); E2 top-level-body form (ADR-030)."
     - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) — a headless gate returns paused_awaiting_input while an explicit-cancel answer returns cancelled; assert the two are distinguishable and only the former is resume-eligible. Do NOT test a standalone Python module."
 delivers_to: null
 expects_from:

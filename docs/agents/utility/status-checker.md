@@ -1,19 +1,19 @@
 ---
-title: "Agent Reference: status-checker"
+title: 'Agent Reference: status-checker'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
 related_code:
-  - ".claude/agents/status-checker.md"
-  - ".claude/commands/status.md"
+- .claude/agents/status-checker.md
+- .claude/commands/status.md
+description: 'Overview of Agent Reference: status-checker.'
 ---
-
 # Agent Reference: `status-checker`
 
 Implementing agent: `status-checker` (Sonnet, user-facing).

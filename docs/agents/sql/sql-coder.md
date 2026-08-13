@@ -1,20 +1,20 @@
 ---
-title: "Agent Reference: sql-coder"
+title: 'Agent Reference: sql-coder'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/database-domain.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/database-domain.md
 related_code:
-  - ".claude/agents/sql-coder.md"
-  - ".claude/commands/sql-coder.md"
+- .claude/agents/sql-coder.md
+- .claude/commands/sql-coder.md
+description: 'Overview of Agent Reference: sql-coder.'
 ---
-
 # Agent Reference: `sql-coder`
 
 Implementing agent: `sql-coder` (Sonnet, user-facing, ORCHESTRATOR).

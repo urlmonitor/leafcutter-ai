@@ -36,8 +36,8 @@ HOOK SHIM INSTALL: After worktree creation both subcommands invoke
     continues normally.
 PORTABILITY: ``_install_drift_hook`` writes a post-checkout hook that invokes
     ``scripts/commit_guardian/post_checkout_drift_check.py``.  That script is an
-    optional adopter-side extension (alembic drift detection in the bybit-trader
-    origin), so the installer early-returns when the target script is missing.
+    optional adopter-side extension (alembic drift detection in the originating
+    project), so the installer early-returns when the target script is missing.
     Projects that ship the drift checker get the hook automatically; projects
     that do not are unaffected.
 INSTALLED-COPY PATH RESOLUTION: ``_resolve_installed_layout()`` detects whether
@@ -1466,7 +1466,8 @@ DECISION HISTORY
   target repo, since the drift checker is an optional adopter-side extension
   rather than a leafcutter primitive. Projects that ship the drift checker
   still get the hook automatically; projects that do not are unaffected.
-  Source: bybit-trader/scripts/setup_ticket_worktree.py (history below).
+  Source: the originating project's scripts/setup_ticket_worktree.py
+  (history below).
 - 2026-05-13 09:00 [Agent/ticket-supervisor]: Added _install_pre_commit_shims()
   (TICKET-20260513-AutoInstall_PreCommit_Hook_Shims). Idempotently installs
   missing pre-commit hook shims (post-commit, post-checkout, etc.) into the

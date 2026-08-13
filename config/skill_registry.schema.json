@@ -41,7 +41,7 @@
         },
         "domain": {
           "type": ["string", "null"],
-          "description": "Domain tag (e.g. 'bybit-trader') for domain-specific skills. Null for portable skills."
+          "description": "Domain tag (e.g. 'trading', 'billing') for domain-specific skills. Null for portable skills."
         },
         "template_path": {
           "type": "string",

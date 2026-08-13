@@ -27,7 +27,7 @@ doc_links:
   - path: docs/acceptance-criteria/index.yaml
     relationship: governs
     status: exists
-  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
     relationship: describes
     status: exists
   - path: config/ac_store_schema.json
@@ -39,7 +39,7 @@ it_requirements:
   - "New fields implements_pattern (string|null) and pattern_bindings (object|null) must be added to config/ac_store_schema.json as optional fields"
   - "All existing AC YAML files must remain valid after schema changes -- new fields are optional additions with null defaults"
   - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
-  - "Schema enforcement must use stdlib-only approach consistent with ADR-007 (no external dependencies required)"
+  - "Schema enforcement must use stdlib-only approach consistent with ADR-008 (no external dependencies required)"
   - "Must complete validation in <200ms for AC stores with up to 500 files"
 delivers_to:
   agent: python-coder

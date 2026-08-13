@@ -1,7 +1,12 @@
 ---
-description: Documents the self-hosting boundary for leafcutter-ai — config-driven path resolution, build output separation, and user-curated PROJECT_CONTEXT.md preservation across upgrades.
+description: Documents the self-hosting boundary for leafcutter-ai — config-driven
+  path resolution, build output separation, and user-curated PROJECT_CONTEXT.md preservation
+  across upgrades.
+created: '2026-08-13'
+last_updated: '2026-08-13'
+type: tutorial
+status: active
 ---
-
 # ADR-001: Self-Hosting Boundary — Config-Driven Path Resolution
 
 ## Status
@@ -81,4 +86,4 @@ The `--self` flag approach was rejected because it adds a special code path that
 
 ## See Also
 
-- [ADR-017 — Worktree Quality Gate Guard](ADR-017-worktree-quality-gate-guard.md) — extends the template/deployed source parity principle established here (Decision §3, "Build outputs vs source") to the three guard scripts that enforce pre-commit hook execution in epic worktrees. Per ADR-017 Decision §5, each guard script's authoritative source lives in the tracked template tree and `build.py` deploys it to the consumer/worktree location — directly applying the ADR-001 boundary rule. This was motivated by the fresh-worktree silent-skip failure in EPIC-AcPipelineDeployGaps Finding #2, where a guard that only existed in a deployed (untracked) location would itself vanish in a fresh worktree, reproducing the exact class of bug it was designed to prevent.
+- [ADR-031 — Worktree Quality Gate Guard](ADR-031-worktree-quality-gate-guard.md) — extends the template/deployed source parity principle established here (Decision §3, "Build outputs vs source") to the three guard scripts that enforce pre-commit hook execution in epic worktrees. Per ADR-031 Decision §5, each guard script's authoritative source lives in the tracked template tree and `build.py` deploys it to the consumer/worktree location — directly applying the ADR-001 boundary rule. This was motivated by the fresh-worktree silent-skip failure in EPIC-AcPipelineDeployGaps Finding #2, where a guard that only existed in a deployed (untracked) location would itself vanish in a fresh worktree, reproducing the exact class of bug it was designed to prevent.

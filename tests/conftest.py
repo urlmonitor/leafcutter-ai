@@ -1,7 +1,7 @@
 """
 Shared pytest configuration and helpers for the leafcutter-ai test suite.
 
-Fixture convention (ADR-007):
+Fixture convention (ADR-028):
   tests/
     conftest.py             ← load_fixture() helper (this file)
     fixtures/

@@ -415,7 +415,7 @@ DECISION HISTORY
   for documentation violations. Extracted all validation helpers (Mermaid diagram
   verification, DECISION HISTORY enforcement, architecture validation, complex
   construct detection) to doc_validators.py to stay under 400-line limit.
-- 2026-05-18 12:45 [python-coder]: Wired --report-legacy flag (advisory legacy entry count) and validate_tail_tags_in_diff call into main() for EPIC-DocTraceability ADR-033. (#EPIC-DocTraceability/03) (ADR-033)
+- 2026-05-18 12:45 [python-coder]: Wired --report-legacy flag (advisory legacy entry count) and validate_tail_tags_in_diff call into main() for EPIC-DocTraceability. (#EPIC-DocTraceability/03)
 - 2026-06-03 [python-coder]: Added encoding="utf-8" to subprocess.run() in get_staged_files() to fix UnicodeDecodeError on Windows when git output contains non-cp1252 bytes. Refactored check_sql_header, check_py_header, check_yaml_adr to use OSError instead of bare Exception catch (BLE001/TRY300 compliance). (#EPIC-TemplateDocViolations/05)
 ====================================================================
 """

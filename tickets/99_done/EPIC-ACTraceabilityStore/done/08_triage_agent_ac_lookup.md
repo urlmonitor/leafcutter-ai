@@ -160,7 +160,7 @@ completion_manifest:
   branch_pushed: true
   pr_open: true
   commit_on_pr_branch: true
-Pushed commit 937bd3a to remote branch EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) is OPEN and now includes ticket 08's changes. No new PR needed — one PR per epic convention applies.
+Pushed commit 937bd3a to remote branch EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-008) is OPEN and now includes ticket 08's changes. No new PR needed — one PR per epic convention applies.
 
 ## Implementation Tasks
 
