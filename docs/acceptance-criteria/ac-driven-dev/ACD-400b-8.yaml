@@ -1,0 +1,55 @@
+id: ACD-400b-8
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Dotfile-prefixed paths referenced by an AC survive ticket generation with their leading dot intact"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given an AC that references a dotfile-prefixed repository path — for example
+    ".github/workflows/ci.yml" named in the AC's technical requirements text,
+  When the generator produces the ticket for that AC,
+  Then the generated ticket's files_touched contains the exact path
+    ".github/workflows/ci.yml", including its leading dot,
+  And files_touched does not contain the dot-stripped variant
+    "github/workflows/ci.yml",
+  And every path listed in the generated ticket's files_touched names a file
+    that exists in the repository.
+depends_on: [ACD-400b]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File of record: scripts/ac_store/generate_ticket_from_ac.py — the path-extraction that harvests file paths out of an AC's prose fields (including it_requirements bullets) must preserve a leading dot, so a dotfile-prefixed path is captured from its first character rather than one character in."
+  - "Path extraction must treat a leading dot as part of the path token for every dotfile-prefixed directory or file (.github/, .claude/, .leafcutter/, .pre-commit-config.yaml), not only for extensions."
+  - "The generator must not emit a path variant that does not exist on disk: a derived files_touched entry that cannot be resolved in the repository is a defect, not an acceptable near-miss."
+  - "Must follow the repo error-handling policy: specific-exception try/except around any file/YAML I/O, log at WARNING or higher (or re-raise); no bare or silent excepts."
+  - "Verify behaviorally — craft an AC whose prose names a dotfile-prefixed path, generate the ticket, and assert the emitted frontmatter's files_touched; do not grep the generator source or assert on the extraction pattern itself."
+test_spec:
+  - name: test_files_touched_preserves_leading_dot_paths
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Generating a ticket from an AC that references a dotfile-prefixed path emits that exact path (leading dot intact) in files_touched and never the dot-stripped variant."
+    covers: [ACD-400b-8]
+delivers_to:
+  agent: python-coder
+  contract: "A ticket whose files_touched points the coder at real dotfile-prefixed paths, not dot-stripped variants that resolve to nothing"
+expects_from:
+  ac_id: ACD-400b-6
+  contract: "files_touched derivation that collects every implementation source path referenced by the AC"
+origin_agent: business-analyst-v3
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/ac_store/generate_ticket_from_ac.py
+- unit_tests/ac_store/test_generator_frontmatter_gaps.py
+change_target: code
+risk_surface: contract_boundary
