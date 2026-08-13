@@ -1,0 +1,88 @@
+id: BO-2900c-3
+components:
+  - build_orchestration
+  - build_pipeline
+title: "How-to: the reverse-direction content of the connection guide — stale calls, renames and removals"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the capability-to-automation connection checks are in place,
+  When an author who is renaming or removing an operator-facing capability consults
+    the project's task-oriented documentation,
+  Then the same how-to guide that covers adding a capability also covers renaming and
+    removing one,
+    And it shows the refusal produced by an automation invocation naming a capability
+      that does not exist, and states that the remedy is to fix the call,
+    And it states that a rename produces findings of two kinds in one change — stale
+      callers and a newly uncalled capability — with one underlying fix, so neither
+      kind is exempted away,
+    And it states that a removal produces stale-caller findings only,
+    And no second guide covering the reverse direction is created.
+depends_on:
+  - BO-2900c
+  - BO-2900c-1
+  - BO-2900c-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires the forward-direction guide. This AC's content lands in that same document; the two ACs are satisfied by one guide."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: related
+    status: exists
+    relevance: "The operator guide for the command surface being renamed or removed from; the guide must be reachable from it."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Write into the SAME file BO-2900b-4 creates — docs/how-to/capability-automation-connection.md. Creating any second page covering the reverse direction fails this AC's final clause outright; there is no ambiguity to resolve at writing time."
+  - "Quote the real stale-invocation refusal the check emits (script, invocation site, unregistered capability name, and the list of capabilities the surface does register) and state the single remedy: fix the call."
+  - "State the rename case as ONE cause with ONE fix producing TWO kinds of finding, and say explicitly that exempting the uncalled-capability finding is the wrong response — that is the specific failure mode BO-2900c-2 was written to prevent."
+  - "State the removal asymmetry plainly: a removal produces stale-caller findings only, and no uncalled-capability finding, because there is nothing left to be uncalled."
+  - "Do not restate the exemption procedure (BO-2900d-4) or the refusal-to-action table (BO-2900e-4); link to both."
+  - "The combined guide must still satisfy check-doc-length after this content lands; if it exceeds the limit, split by AUDIENCE as the other ACs in this tree do, never by direction."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900b-4
+  contract: "The existing guide at docs/how-to/capability-automation-connection.md, its forward-direction sections and its heading structure — this AC adds the reverse-direction sections into that file rather than creating a new one."
+test_required: false
+test_rationale: "The artifact is prose added to an existing how-to page; it has no executable surface for a test to drive. The behaviours documented are covered by executing tests on BO-2900c-1 and BO-2900c-2. Recorded explicitly so test-writer skips with an accurate reason rather than silently, per the CLAUDE.md note on the absent-test-block auto-skip."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the parent L1's `documentation_triggers: [how-to]`.
+
+  Intended agent is `documentation-expert` — left null per this run's instruction.
+
+  DELIBERATELY NOT A SECOND GUIDE, and the criteria say so as an assertable clause.
+  BO-2900b and BO-2900c each carry a `how-to` trigger, and the mechanical response is
+  two documents. That would be wrong for the reader: an author renaming a capability
+  trips both checks in a single change and needs one page describing one fix. Two
+  pages also guarantee divergence, because the reverse-direction content is the half
+  that changes least and rots first.
+
+  The rule this decomposition applied: a documentation trigger requires the CONTENT to
+  exist and be reachable, not a new file per trigger. Where two sibling L1s document
+  two halves of one workflow, their documentation ACs name the shared destination.
+  This is the same instinct as defining the invocation-collection rule once at
+  BO-2900b-3 rather than in both directions.
+
+  For the writer: BO-2900b-4 owns the guide's existence, placement and forward-direction
+  content; this AC owns the reverse-direction content within it. Satisfying one without
+  the other leaves the guide half-written.
+
+  2026-08-13 (IT PO enrichment). The shared destination is now named explicitly
+  (docs/how-to/capability-automation-connection.md) on both this AC and BO-2900b-4, so
+  the "one guide" constraint is mechanical rather than a matter of the writer noticing
+  the cross-reference.

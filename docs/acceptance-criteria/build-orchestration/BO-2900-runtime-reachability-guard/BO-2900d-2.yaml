@@ -1,0 +1,116 @@
+id: BO-2900d-2
+components:
+  - build_orchestration
+  - testing_quality
+title: "Every exemption in force is listed with its reason on every run, so the set can be reviewed and counted"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given seven exemptions are recorded across the project, each naming a unit and
+    stating a reason,
+    And the change being checked touches none of the exempted units,
+    And no finding is produced,
+  When the reachability guard runs,
+  Then its output lists all seven exemptions, each with the unit it covers and its
+    stated reason,
+    And it states the total number in force,
+    And this listing is produced on a run that reports no findings, not only on a run
+      that refuses a change,
+    And when an eighth exemption is recorded, the next run lists eight.
+depends_on:
+  - BO-2900d
+  - BO-2900d-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Establishes what an exemption is; this AC makes the accumulated set visible."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "Where the guard's operator-facing output belongs in the component picture."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    exemption_inventory_report:
+      type: object
+      description: "{ in_force: [{ item: str, kind: str, reason: str }], total_in_force: int, stale: [{ item: str, reason: str }] }. Emitted on EVERY run of the guard regardless of outcome. total_in_force counts in_force only — never reasonless entries (BO-2900d-1-i) and never stale entries (BO-2900d-3)."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "EMIT ON EVERY RUN, INCLUDING CLEAN ONES. The listing must be produced on the zero-exit path as well as the refusing path. The natural implementation prints exemptions only when explaining a suppressed finding, which makes the accumulated set visible solely to whoever just tripped over one — nobody ever sees the whole list, which is the defect this AC closes."
+    - "The listing is derived from the registry read, not from the findings, so it is independent of whether the change touched an exempted unit. The count must therefore change when the registry changes and never when the change under check changes."
+    - "STATE THE TOTAL SEPARATELY FROM THE LIST. A list of nineteen entries scrolls past; a stated total is what a reviewer compares against last month's. Keep it as its own field and its own output line so a later ratchet (a cap, a review trigger) has something to hold onto."
+    - "The total counts entries IN FORCE only: exclude reasonless entries (BO-2900d-1-i) and stale entries (BO-2900d-3). An inflated total hides exactly the entries those two ACs exist to surface."
+    - "In pre-commit mode the listing must stay short enough not to bury the findings — list one line per exemption and put the total on its own line; do not add pagination, truncation or a --verbose gate, since a truncated list defeats the purpose."
+delivers_to:
+  agent: python-coder
+  contract: "exemption_inventory_report as specified in config_schema_fragment, emitted on every run of the guard. Consumed by BO-2900d-3 (stale entries appear in its own section and not in the total) and by BO-2900d-5's reference documentation of the output contract."
+expects_from:
+  ac_id: BO-2900d-1
+  contract: "load_exemptions() -> list[{ item, kind, reason, recorded, recorded_by }] from config/reachability_exemptions.yaml, plus the three-state classification (absent / reasonless / in_force) that determines which entries count toward the total."
+test_spec:
+  - name: test_clean_run_with_seven_exemptions_lists_all_seven_and_the_total
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real guard over a fixture tree with seven recorded exemptions and a change touching none of them; asserts a zero exit and that the emitted output contains all seven items with their reasons and a stated total of 7."
+  - name: test_recording_an_eighth_exemption_changes_the_next_runs_total_to_eight
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Appends an eighth entry to the fixture registry and re-runs; asserts the emitted total is 8, so the count is derived from the registry rather than from a fixed string."
+  - name: test_listing_is_present_on_a_refusing_run_as_well_as_a_clean_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the guard on a change that produces a finding and asserts both the finding and the full exemption listing appear, so the two output sections are independent."
+test_rationale: "The load-bearing clause is 'on a run that reports no findings' — a statement about which code path emits the listing, which is invisible to any test that calls a formatting helper directly. A direct-import unit test of a list-renderer passes on a renderer that is only ever called from the refusal branch, which is precisely the implementation this AC exists to forbid, and it is the same class of defect as a gate that is defined and never reached. Each test therefore runs the real guard and reads the output it actually emitted, on both the clean and the refusing path."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This AC is what stops the exemption from quietly becoming the norm, and it is the one
+  most likely to be dropped as "just logging". It is not logging: an escape hatch whose
+  usage cannot be counted is an escape hatch nobody can argue about.
+
+  THE CLAUSE THAT CARRIES THE WEIGHT is "on a run that reports no findings". The
+  natural implementation prints exemptions only when explaining a suppressed finding —
+  so exemptions become visible only to the person who just tripped over one, and the
+  accumulated set is never seen by anyone. Listing on every run means the number appears
+  in ordinary output, and a jump from seven to nineteen is noticed by whoever is
+  watching, without anyone having to go looking.
+
+  THE COUNT IS SEPARATE FROM THE LIST, deliberately. A list of nineteen entries scrolls
+  past; a stated total is the thing a reviewer compares against last month's. It also
+  gives a later ratchet something to hold onto — a cap, or a review trigger — without
+  this AC having to specify one now.
+
+  WHY REASON QUALITY IS NOT ASSERTED HERE. BO-2900d-1-i deliberately declines to judge
+  reason quality mechanically, because every mechanical version is a blacklist that is
+  trivially evaded. This AC is the compensating control: the reasons are all in one
+  place, on every run, so a human can judge them. The two ACs are a pair — implementing
+  one without the other leaves either an unenforceable rule or an invisible list.
+
+  BOUNDARY: the message shown when a finding IS produced is BO-2900e. This AC governs
+  the exemption inventory only, and it appears whether or not any finding occurred.
+
+  Verification must EXECUTE the guard on a clean change with exemptions recorded and
+  read its actual output. A test asserting that the guard's source contains a listing
+  routine passes on a routine that is never called.

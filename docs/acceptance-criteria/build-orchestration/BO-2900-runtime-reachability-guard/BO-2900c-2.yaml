@@ -1,0 +1,118 @@
+id: BO-2900c-2
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Renaming a capability reports every stale caller and the newly uncalled capability as separate findings"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the capability `mark-done` is registered and is invoked by two automation
+    scripts,
+    And a change renames the registered capability to `finalise` and updates neither
+      automation script,
+  When both directions of the connection are checked,
+  Then each of the two automation scripts is reported for invoking `mark-done`, which
+    is no longer registered,
+    And `finalise` is separately reported as a registered capability that nothing runs,
+    And the two kinds of finding are distinguishable from each other rather than
+      merged into one count,
+    And when the same change also updates both automation scripts to invoke `finalise`,
+      no finding is reported,
+    And when the change removes the capability entirely and updates neither script,
+      both scripts are still reported and no uncalled-capability finding is produced.
+depends_on:
+  - BO-2900c
+  - BO-2900c-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Produces the uncalled-capability finding that the rename case raises alongside the stale-caller findings."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires the message to say which side of the connection is missing; the rename is the case where both sides are, for different reasons."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    finding_set:
+      type: object
+      description: "{ stale_invocations: [stale_invocation_finding], uncalled_capabilities: [uncalled_capability_finding], counts: { stale_invocations: int, uncalled_capabilities: int } }. Two kinds carried in two lists with two counts — never one flat list with a kind attribute the reporter then loses."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "THE TWO KINDS MUST STAY SEPARATELY COUNTABLE end to end — in the returned structure, in the emitted output and in the count BO-2900e-2 requires. A single undifferentiated list makes a rename read as N+1 unrelated problems, and the natural response is to exempt the uncalled-capability finding permanently while fixing only the callers."
+    - "THE REMOVAL ASYMMETRY IS THE CLAUSE MOST LIKELY TO BE GOT WRONG: removing a capability leaves stale callers but creates NO uncalled capability, because there is nothing left to be uncalled. Do not model a rename as 'one finding of each kind'; derive each kind independently from its own comparison, and the removal case falls out correctly. An implementation that pairs them emits a phantom finding naming a capability that no longer exists."
+    - "Report EVERY stale caller, not the first. The fixture carries two callers precisely because a first-match implementation satisfies a single-caller scenario and then walls the author twice."
+    - "Both directions must run in the same invocation of the check, so a rename produces its full finding set in one run. This is BO-2900e-2's completeness rule applied to the case where it matters most; consume it rather than restating it."
+    - "This AC asserts the interaction and the finding shapes only. Message wording belongs to BO-2900e-1 and the invocation-collection rule to BO-2900b-3 — do not re-derive either here."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900c-1
+  contract: "stale_invocation_finding records for the caller side, and BO-2900b-1's uncalled_capability_finding records for the surface side, both produced by one run of check_reachability.py so the rename's two kinds are observable together."
+test_spec:
+  - name: test_rename_reports_two_stale_callers_and_one_uncalled_capability_as_distinct_kinds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real check over a fixture tree where `mark-done` is renamed to `finalise` and neither of two automation scripts is updated; asserts exactly two stale_invocation findings (one per script) and exactly one uncalled_capability finding, retrievable and counted separately."
+  - name: test_rename_with_both_callers_updated_reports_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Same rename with both scripts updated to invoke `finalise`; asserts a zero exit and an empty finding set."
+  - name: test_removal_reports_stale_callers_and_no_uncalled_capability_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The capability is removed and neither script updated; asserts two stale_invocation findings and zero uncalled_capability findings, so no phantom finding names a capability that no longer exists."
+test_rationale: "The whole subject of this AC is the INTERACTION of two independently-implemented checks over one change, and an interaction is not observable from either check in isolation — which is exactly what a direct-import unit test of one comparison would exercise. The removal asymmetry in particular can only be caught by running both directions over a real tree in the removal state: an implementation that pairs the two kinds returns the correct rename answer and the wrong removal answer, and both look right when the comparisons are called separately with hand-fed inventories. All three states drive the production entry point over a real fixture tree with two automation scripts."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The rename is the scenario the parent L1 was written for, and it is the one case
+  where both directions fire on a single change. Isolated as its own L2 because the
+  interaction between the two checks is not observable from either one alone.
+
+  WHY THE FINDINGS MUST STAY DISTINGUISHABLE. A rename produces N stale-caller findings
+  plus one uncalled-capability finding. If the checks report into one undifferentiated
+  list, the author reads "three problems" where there is one cause and one fix, and the
+  natural response is to treat the uncalled-capability finding as noise and exempt it —
+  permanently exempting the new capability while fixing only the callers. Keeping the
+  kinds distinct is what makes the single remedy legible.
+
+  THE REMOVAL CLAUSE IS A DELIBERATE ASYMMETRY, and it is the clause most likely to be
+  got wrong. Removing a capability leaves stale callers but creates no uncalled
+  capability — there is nothing left to be uncalled. An implementation that models the
+  rename as "one finding of each kind" will emit a phantom uncalled-capability finding
+  on a removal, naming a capability that no longer exists. Asserting the removal case
+  here prevents that.
+
+  TWO CALLERS, NOT ONE, in the fixture is intentional: a check that reports only the
+  first stale caller satisfies a single-caller scenario, and the author then fixes one
+  script and re-runs into the same wall. BO-2900e-2 states the general
+  report-them-all rule; this AC exercises it on the case where it matters most.
+
+  BOUNDARY: this AC asserts the interaction and the finding shapes. The wording of
+  either message belongs to BO-2900e; the invocation-collection rule belongs to
+  BO-2900b-3. Do not restate either.
+
+  Verification must EXECUTE both checks over all three fixture states (rename without
+  updates, rename with updates, removal without updates) and assert the findings in
+  each.

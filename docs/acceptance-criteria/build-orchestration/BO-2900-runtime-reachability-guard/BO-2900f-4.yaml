@@ -1,0 +1,88 @@
+id: BO-2900f-4
+components:
+  - build_orchestration
+  - supervisor_system
+title: "The skipped record is derived from the requested-gate set, so a newly added gate is covered without bespoke wiring"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set of quality gates a work item may request is extended with a new gate
+    that has no recording logic written specifically for it,
+    And a work item requests that new gate,
+    And the new gate does not execute because a setting that governs it is switched
+      off,
+  When the work item's gate results are recorded,
+  Then the new gate has exactly one recorded entry with outcome `skipped` and a
+    reason naming the setting that switched it off,
+    And that entry is produced by the same mechanism that records every other
+      requested gate, with no gate-name-specific branch added for it,
+    And removing that gate from the requested set removes its entry, with every
+      other gate's entry unchanged,
+    And no gate in the project is exempt from the rule by virtue of not being
+      enumerated anywhere.
+depends_on:
+  - BO-2900f
+  - BO-2900f-1
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch loop that iterates the requested-gate set — the single place the rule must live."
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+    relevance: "Where per-gate enablement terms are declared; a new term must not require new recording code."
+assigned_agent: null
+estimated_complexity: null
+it_requirements: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: withdrew the change-scope-reviewer example — that gate is requested by nothing, so under BO-2900f-1's gate D clause this tree provably cannot catch it; it is a reachability defect for BO-2900b/BO-2900c."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The parent L1 states the rule generically and explicitly forbids narrowing it to
+  one named gate at L2. This AC is what makes that stick mechanically rather than by
+  good intentions: the guarantee must be a property of the requested-gate iteration,
+  not a hand-written skip record per gate.
+
+  WHY IT IS WORTH ITS OWN AC — and note the earlier justification was factually
+  wrong. The draft claimed `live-surface-tester` and `change-scope-reviewer` were
+  "two independent instances of the same defect". They are not:
+    - `live-surface-tester` IS requested — a ticket asks for it via
+      `live_surface_test: true` in frontmatter — and then silently fails to run
+      because `live_surface_testing.enabled` defaults to false. That is exactly the
+      defect this tree fixes, and BO-2100d-5 is its named instance.
+    - `change-scope-reviewer` is requested by NOTHING. It is absent from
+      `_CANONICAL_PHASE_ORDER` in `scripts/ac_store/generate_ticket_from_ac.py` and
+      absent from `config/guardrail_gates.yaml`; its only appearance is a row in a
+      phase table in `templates/skills/building-epics/SKILL.md`. Under
+      BO-2900f-1's gate D clause — a gate the work item never requested produces no
+      entry — this tree correctly produces NOTHING for it. BO-2900f provably cannot
+      catch it, and an implementer who treats it as a test case for this AC will
+      either fail the AC or break the gate D clause trying to pass it.
+  A gate that nothing ever requests is a REACHABILITY defect: it belongs to
+  BO-2900b / BO-2900c, which govern whether a declared gate is wired at all. Flagged
+  there, not fixed here.
+
+  The justification for this AC therefore rests on the generic argument alone, which
+  is sufficient: a per-gate fix repairs one gate and leaves every future gate
+  starting out silent. The observable test is the extension test in the Given —
+  introduce a synthetic gate and assert its skip is recorded without touching the
+  recording code.
+
+  Implementer note tied to BO-2900f-2: because the rule is one shared iteration, the
+  cardinality bug and its fix are also shared — get the conditionalization right once
+  and every gate inherits it. That is the upside of refusing the per-gate branch.

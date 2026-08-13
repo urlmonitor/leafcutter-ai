@@ -1,0 +1,80 @@
+id: BO-2900f-2
+components:
+  - build_orchestration
+  - supervisor_system
+title: "Exactly one recorded outcome per requested gate — on the executed path and the skipped path alike"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a work item requests four quality gates — gate A and gate B, which execute,
+    and gate C and gate D, which are skipped because they are switched off,
+    And the run reaches every one of those four gates' decision points and finishes,
+  When the recorded gate results are read,
+  Then the number of recorded entries equals four — the number of gates requested,
+    And gate A, gate B, gate C and gate D each appear exactly once,
+    And gate C and gate D — the skipped ones — appear once each and not twice,
+    And no requested gate is left with zero entries.
+depends_on:
+  - BO-2900f
+  - BO-2900f-1
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch loop whose skip branch and post-branch recording must be reconciled."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Shipped the double-recording bug this AC exists to prevent recurring on the gate surface."
+assigned_agent: null
+estimated_complexity: null
+it_requirements: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: the halt clause contradicted the completed-run Given inside one Then block (no requested gate may have zero entries AND that gate has zero entries); split out to BO-2900f-2-i and the Given now states the run completed."
+superseded_by: null
+covered_by:
+  - BO-2900f-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This AC carries the KNOWN TRAP forward from BO-1000b-1-i's implementation. Read
+  before implementing or writing tests for it:
+
+  - CONDITIONALIZE, DON'T ADD. When the skip branch of the enablement `if/else`
+    gains a record-writing call, the pre-existing UNCONDITIONAL record-writing call
+    that sits AFTER the `if/else` must be moved into the execute branch or guarded.
+    Adding the skip-branch call while leaving the unconditional one produces TWO
+    entries on the skip path. Symmetrically, moving it without leaving one on every
+    path produces a gap. That is why this AC asserts a COUNT, not a presence.
+  - TESTS MUST BE BEHAVIOURAL, NOT STRUCTURAL. Assert the cardinality by reading the
+    collected records after a run and counting entries per requested gate. A test
+    that greps the source for the presence of a recording call passes on the buggy
+    double-recording code.
+  - IF A STRUCTURAL TEST IS WRITTEN ANYWAY, it must match single-quoted,
+    double-quoted AND backtick template-literal argument styles. BO-1000b-1-i's
+    count guard used a regex that matched only quoted-string first arguments and
+    was therefore blind to the template-literal skip calls that caused the bug —
+    it stayed green on broken code. See CLAUDE.md "Skip-Branch Side-Effects".
+
+  THE HALT CASE MOVED OUT (2026-08-13, expert review). The earlier draft asserted,
+  in one Then block under a Given describing a completed run, both "no requested
+  gate is left with zero entries" and "when the run halts, that gate has zero
+  entries". Those cannot both be evaluated against one scenario, and an
+  implementer reading them together gets no decidable rule. The completed-run
+  invariant stays here — one entry per requested gate, no exceptions, which is
+  what makes the count assertion meaningful. The aborted-run carve-out is now
+  BO-2900f-2-i, where it has its own Given (a run that halts before a later
+  gate's decision point) and can be tested independently. Do not re-merge them:
+  the carve-out is the clause an implementer will reach for to excuse a genuine
+  gap, and keeping it in a separate scenario forces the halt record to be shown.

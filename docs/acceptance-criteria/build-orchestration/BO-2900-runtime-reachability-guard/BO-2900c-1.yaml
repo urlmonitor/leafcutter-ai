@@ -1,0 +1,139 @@
+id: BO-2900c-1
+components:
+  - build_orchestration
+  - build_pipeline
+title: "An automation invocation naming a capability that does not exist is refused before the run, not during it"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the product's command surface registers the capabilities `claim`, `release`
+    and `mark-done`,
+    And an automation script invokes the command surface with the capability
+      `mark-complete`, which is not registered,
+  When the connection from automation invocations to registered capabilities is checked,
+  Then the invocation is reported, naming the automation script, the invocation site
+    within it, and the capability name that does not exist,
+    And the report lists the capabilities the surface does register, so the author can
+      see what was expected,
+    And the change is refused,
+    And the refusal happens without executing the automation, so the mismatch is
+      surfaced before an operator's run reaches that step,
+    And an automation script whose invocations all name registered capabilities is not
+      reported.
+depends_on:
+  - BO-2900c
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "A real automation script that invokes the command surface — the caller side this check reads."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The command surface each invocation is resolved against."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines what counts as an invocation. This AC consumes that definition and must not restate it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The forward direction. Same two inventories, opposite comparison — reuse the seam that builds them."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns both the surface and the automation, and where the reverse check appears in the picture."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    stale_invocation_finding:
+      type: object
+      description: "{ kind: 'stale_invocation', script: '<repo-relative path>', line: int, capability: str, surface: '<module path>', registered_capabilities: [str], clearing_action: 'correct the invocation to name a registered capability' }. Distinct kind from uncalled_capability_finding so BO-2900c-2's two-kind requirement holds."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "ONE SEAM, TWO VERDICTS. Reuse scripts/commit_guardian/_reachability_inventory.py exactly as BO-2900b-1 builds it — registered_capabilities() from the built parser and collected_invocations() from executed commands — and compare in the opposite direction. Do not build a second inventory, a second collector, or a second hook; this is a mode of the same check_reachability.py entry point."
+    - "THE VERDICT MUST BE REACHED WITHOUT EXECUTING THE AUTOMATION. Building the surface's parser is permitted (that is the surface, not the automation); running the automation script, or shelling out to it, is not. The timing IS the benefit — a stale invocation already fails today, loudly, mid-run, after earlier steps have taken effect."
+    - "Emit the registered capability set alongside the finding. It costs nothing (the inventory is already in hand) and it answers all three questions the author has at once: is the name wrong, was the capability removed, or did the surface fail to build."
+    - "The clean case must be asserted, not assumed: a script whose invocations all resolve produces no finding. A reverse check that reports everything is indistinguishable from a broken one at a glance, and it is the exact failure mode of an empty inventory (see BO-2900c-4's fail-closed rule, which must be respected here rather than reimplemented)."
+    - "Emit stale_invocation as a DISTINCT finding kind from uncalled_capability, with its own clearing action. BO-2900c-2 depends on the two kinds staying countable separately and BO-2900e-1 specifies two different messages."
+delivers_to:
+  agent: python-coder
+  contract: "list[stale_invocation_finding] as specified in config_schema_fragment, emitted by the reverse mode of check_reachability.py. Consumed by BO-2900c-2 (rename/removal interaction), BO-2900e-1 (fourth refusal message) and BO-2900e-2 (single-run completeness and grouping)."
+expects_from:
+  ac_id: BO-2900b-3
+  contract: "collected_invocations(script_paths) -> list[{ script: str, line: int, surface: str, capability: str }] — the invocation-collection rule defined once at BO-2900b-3 and consumed here unchanged, together with BO-2900b-1's registered_capabilities(surface) inventory taken from the built parser."
+test_spec:
+  - name: test_invocation_of_an_unregistered_capability_is_reported_and_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Invokes check_reachability.main() over a fixture surface registering claim/release/mark-done and an automation script invoking `mark-complete`; asserts a non-zero exit and that the output names the script, the invocation line and the unregistered capability."
+  - name: test_report_lists_the_capabilities_the_surface_does_register
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Same run: asserts the emitted text lists claim, release and mark-done so the author can see what was expected."
+  - name: test_clean_automation_script_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A script whose invocations all name registered capabilities produces a zero exit and no findings, asserted in the same suite so a report-everything implementation fails."
+  - name: test_verdict_is_reached_without_executing_the_automation_script
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The fixture automation script writes a sentinel file as its first statement; after the check runs and refuses, the sentinel is absent — proving the verdict was reached without running the automation."
+test_rationale: "The load-bearing clause here is a NEGATIVE property of the implementation — the verdict is reached without executing the automation — and no direct-import unit test can observe it, because a helper handed two sets never executes anything either way. Only running the real entry point over a fixture tree whose automation script leaves a side-effect on execution can establish it; that is what the fourth test does. The first three drive the same real entry point and assert exit code and emitted text, because an implementation that defines the reverse comparison but never reaches it passes any test that calls the comparison directly — the precise defect that produced this tree."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The reverse half of the bijection. Analytical decisions recorded for the IT PO and
+  the implementer:
+
+  - THIS DIRECTION IS THE CHEAP ONE AND IT IS STILL WORTH ITS OWN AC. Both directions
+    compare the same two inventories — the capabilities the built surface registers,
+    and the invocations the automation makes. Once BO-2900b-1 and BO-2900b-3 exist, the
+    reverse comparison is nearly free. It is separated because it fires on a different
+    change (a rename or removal, not an addition), has a different remedy (fix the
+    call, not add a caller), and produces a different message. Folding it into
+    BO-2900b would give one AC two failure modes and one message, which BO-2900e then
+    could not specify cleanly.
+
+  - "BEFORE THE RUN, NOT DURING IT" IS THE ENTIRE BENEFIT. A stale invocation already
+    fails today — loudly, in the middle of an operator's build, after the earlier steps
+    have taken effect. Nothing needs to be built to make it fail; what this AC buys is
+    the timing. The clause is testable: the check must reach its verdict without the
+    automation being executed. Without that clause, an implementation that simply runs
+    the automation and watches for an error technically satisfies every other line here
+    while delivering none of the value.
+
+  - LIST WHAT DOES EXIST. Naming only the unknown capability leaves the author guessing
+    whether the name is wrong, the capability was removed, or the surface failed to
+    build. Listing the registered set answers all three at once and costs nothing,
+    since the inventory is already in hand.
+
+  - THE NEGATIVE SCENARIO (a clean script is not reported) is included because a
+    reverse check that reports every invocation is indistinguishable from a broken one
+    at first glance, and it is the failure mode of an implementation whose inventory
+    is empty because the surface failed to build. See BO-2900c-3's derivation rule.
+
+  Verification must EXECUTE the check against a fixture pair — one script with a stale
+  invocation, one with only valid ones — and assert both outcomes.

@@ -1,0 +1,66 @@
+id: BO-2900c
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Automation never reaches for a capability that isn't there"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every call the automation makes points at something that genuinely exists.
+
+  Renaming or removing a capability can no longer leave automation pointing at
+  something that is gone — the mismatch is caught up front instead of failing in
+  the middle of somebody's run.
+depends_on:
+  - BO-2900
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900c-1
+  - BO-2900c-2
+  - BO-2900c-3
+  - BO-2900c-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  2026-08-13 (BA decomposition). Four L2s: -1 the reverse check itself (an invocation
+  naming an unregistered capability is reported and refused BEFORE the automation
+  runs), -2 the rename and removal interaction with the forward check, -3 the
+  documentation AC satisfying the `how-to` trigger, -4 derived coverage of the
+  automation set plus fail-closed behaviour when the capability inventory cannot be
+  built. No L3 was added: the cases that warranted isolation (empty inventory, removal
+  asymmetry) are load-bearing clauses of -4 and -2 rather than separable edge cases,
+  and padding this tree would obscure that -1 is nearly free once BO-2900b exists.
+
+  DEPENDENCY ON BO-2900b — NOT A DUPLICATE. Both directions compare the same two
+  inventories. The what-counts-as-an-invocation rule is defined ONCE at BO-2900b-3 and
+  consumed here; the registered-capability inventory seam is BO-2900b-1's. This L1
+  contributes the opposite comparison, a different trigger (rename or removal, not
+  addition), a different remedy (fix the call, not add a caller) and a different
+  message. Implementers should build both directions on one seam and keep two verdicts.
+
+  CRITICAL ASYMMETRY recorded in BO-2900c-4: on an empty capability inventory the
+  FORWARD check correctly reports nothing, while the REVERSE check would incorrectly
+  report every invocation in the repository. Same condition, opposite correct
+  responses. Unifying the two behind a single "empty inventory" branch gets one wrong.
+
+  TIMING IS THE BENEFIT, not detection: a stale invocation already fails today, in the
+  middle of an operator's run, after earlier steps have taken effect. BO-2900c-1 makes
+  the verdict reachable without executing the automation, which is the clause that
+  distinguishes this L1 from doing nothing.

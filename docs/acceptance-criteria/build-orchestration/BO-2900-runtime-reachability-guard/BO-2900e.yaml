@@ -1,0 +1,66 @@
+id: BO-2900e
+components:
+  - build_orchestration
+  - commit_guardian
+title: "When the guard stops you, it tells you exactly what is unreachable"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A block that names the stranded thing and the one action that clears it.
+
+  Being stopped comes with a plain statement of what could not be reached, which
+  side of the connection is missing, and what to do about it — so the fix takes
+  minutes instead of an investigation.
+depends_on:
+  - BO-2900
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900e-1
+  - BO-2900e-2
+  - BO-2900e-3
+  - BO-2900e-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Added by the product owner, not requested explicitly. A blocking gate whose message
+  does not name the stranded item costs more than it saves.
+
+  2026-08-13 (BA decomposition). Four L2s: -1 enumerates the FOUR refusal causes this
+  tree can produce and fixes the item, the missing side and the clearing action for each;
+  -2 requires one run to report every finding, with the second-run clause that rules out
+  a fix-then-discover cycle; -3 makes the requirement standing rather than one-off (a new
+  refusal cause without an exercised message is refused, and quality is proven by running
+  the guard, not by inspecting message templates); -4 the how-to satisfying the trigger,
+  scoped to a refusal-to-action table rather than a fourth procedural guide.
+
+  THE FOUR CAUSES, for whoever implements this: a proof that reached its code by direct
+  import (BO-2900a-1); code nothing reaches at all (BO-2900a-3); a registered capability
+  with no caller (BO-2900b-1); an automation invocation naming a capability that does not
+  exist (BO-2900c-1). Only the second has two legitimate clearing actions; offering an
+  exemption on the other three converts a short fix into a permanent hole.
+
+  ENUMERATION OVER RULE. "Every message is clear" is not testable and a single generic
+  message with the item interpolated satisfies any rule-shaped wording. The decomposition
+  therefore names the causes and the required elements, and deliberately asserts NOTHING
+  about prose so the messages stay editable (BO-2900e-3, third scenario).
+
+  BOUNDARY vs BO-2900f: f governs the ABSENCE of a record for a gate that never ran; this
+  L1 governs the CONTENT of a refusal that is emitted. BO-2900f-1's notes already draw the
+  same line from the other side.
