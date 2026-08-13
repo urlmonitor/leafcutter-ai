@@ -1917,28 +1917,47 @@ def _replace_implemented_by_entry(
 
 def _translate_ticket_depends_on(
     ticket_file: Path,
+    raw_deps: list[str],
     ac_to_epic_filename: dict[str, str],
 ) -> None:
-    """Rewrite ticket depends_on entries from raw AC ids to co-located epic filenames.
+    """Write *raw_deps* into ticket_file's frontmatter, translated to epic filenames.
 
-    Reads the YAML frontmatter from *ticket_file*, translates every entry in the
-    ``depends_on`` list that matches a key in *ac_to_epic_filename* to the
-    corresponding epic-folder filename, and writes the updated frontmatter back to
-    disk. No-ops when the file has no frontmatter, no depends_on, or when every
-    depends_on entry is already a ticket filename (no matching key in the map).
+    Reads the YAML frontmatter from *ticket_file*, translates every entry in
+    *raw_deps* that matches a key in *ac_to_epic_filename* to the corresponding
+    epic-folder filename (falling back to the raw id unchanged when it is not
+    a key in the map — e.g. a dependency outside the generated set), and writes
+    the result as the ticket's ``depends_on`` field. No-ops when the file has no
+    frontmatter or *raw_deps* is empty.
 
-    This is the generation-time AC-id → ticket-filename translation required by
+    This is the generation-time AC-id -> ticket-filename translation required by
     BO-2600a-5 AC-4 so ``ticket_frontmatter_guard`` passes without a downstream
     hook auto-fix.
 
+    DECISION HISTORY:
+        2026-08-13 (tgh-build regression fix): *raw_deps* is now supplied by the
+        caller (sourced from :func:`resolve_leaf_dependencies`'s dependency graph,
+        already built before ticket generation) instead of being read back from
+        the ticket file's own frontmatter. generate_ticket_from_ac.py intentionally
+        emits ``depends_on: []`` for every standalone ticket it writes (ACD-400b-7:
+        a generated standalone ticket must never leak AC ids into depends_on, since
+        ticket_frontmatter_guard requires every entry to resolve to a sibling ticket
+        file). Reading the AC-level dependency list back out of the ticket file is
+        therefore no longer possible — the caller must pass it explicitly from the
+        AC store's own dependency graph.
+
     Args:
         ticket_file: Path to a ticket markdown file inside the assembled epic folder.
+        raw_deps: The raw AC ids this ticket's source AC depends on (restricted to
+            the generated set), as computed by :func:`resolve_leaf_dependencies`.
         ac_to_epic_filename: Mapping from AC id (e.g. ``"BO-5C1"``) to the
             corresponding epic-folder filename (e.g. ``"01_TICKET-BO-5C1.md"``).
     """
     import logging  # noqa: PLC0415
 
     _log = logging.getLogger(__name__)
+
+    if not raw_deps:
+        return
 
     try:
         content = ticket_file.read_text(encoding="utf-8")
@@ -1968,16 +1987,10 @@ def _translate_ticket_depends_on(
     if not isinstance(fm, dict):
         return
 
-    raw_deps = fm.get("depends_on") or []
-    if not isinstance(raw_deps, list) or not raw_deps:
-        return
-
     translated = [
         ac_to_epic_filename.get(str(dep), str(dep))
         for dep in raw_deps
     ]
-    if translated == [str(d) for d in raw_deps]:
-        return  # No translation occurred — nothing to write.
 
     fm["depends_on"] = translated
     new_fm_yaml = yaml.safe_dump(fm, allow_unicode=True, default_flow_style=False)
@@ -2085,12 +2098,19 @@ def build_epic_from_ids(
         for i, ac_id in enumerate(topo_order, start=1)
     }
 
-    # Step 8 — Translate depends_on in each epic-folder ticket from raw AC ids to
+    # Step 8 — Write depends_on into each epic-folder ticket, translating raw AC
+    # ids from the already-computed dependency graph (dep_graph, Step 1) into
     # co-located ticket filenames (BO-2600a-5 AC-4: generation-time translation).
-    for ticket_file in sorted(epic_folder.iterdir()):
-        if ticket_file.suffix != ".md" or ticket_file.name == "Master_Plan.md":
-            continue
-        _translate_ticket_depends_on(ticket_file, ac_to_epic_filename)
+    #
+    # DECISION HISTORY: 2026-08-13 (tgh-build regression fix) — the raw dependency
+    # list is sourced from dep_graph (built at Step 1 from the AC store), not read
+    # back from each ticket file's own frontmatter. generate_ticket_from_ac.py
+    # (ACD-400b-7) intentionally emits `depends_on: []` on every standalone ticket
+    # it writes, so there is nothing left to read back and translate at this point.
+    for ac_id in topo_order:
+        ticket_file = epic_folder / ac_to_epic_filename[ac_id]
+        raw_deps = dep_graph.get(ac_id, [])
+        _translate_ticket_depends_on(ticket_file, raw_deps, ac_to_epic_filename)
 
     # Step 9 — Update implemented_by in source AC YAMLs to point at the epic-folder
     # ticket path, using repo-relative paths in both old and new forms.
@@ -2690,5 +2710,17 @@ DECISION HISTORY
   group (required=True) containing --ac and --ids; main() routes on args.ids.
   Covered by 6 unit tests in unit_tests/build_orchestration/test_bo_2600a_5.py;
   how-to documentation added in docs/how-to/goal-to-epic.md §5.
+- 2026-08-13 (tgh-build regression fix): generate_ticket_from_ac.py's ACD-400b-7
+  fix (a generated standalone ticket must never leak AC ids into depends_on)
+  hardcoded every generated ticket's depends_on to [], which silently broke
+  build_epic_from_ids()'s depends_on translation — _translate_ticket_depends_on()
+  used to read the raw AC ids back out of each ticket's own frontmatter, but that
+  frontmatter now always reads depends_on: []. Fixed by sourcing the raw AC-id
+  dependency list from dep_graph (already computed at Step 1 via
+  resolve_leaf_dependencies) instead of reading it back from the ticket file.
+  _translate_ticket_depends_on() now takes raw_deps as an explicit parameter.
+  generate_ticket_from_ac.py itself is unchanged — standalone ticket generation
+  (ACD-400b-7) still emits depends_on: [] with no opt-in flag, so no call-site
+  audit of that script was required.
 ====================================================================
 """
