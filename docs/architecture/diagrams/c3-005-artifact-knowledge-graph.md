@@ -196,7 +196,7 @@ Related upstream diagram: [AC-Driven Pipeline — Component Diagram](c2-001-ac-d
 - **Governing ADR:** [ADR-023 — Product-Truth Store as the Flow-First Upstream Layer Beside the AC Store](../adrs/ADR-023-product-truth-flow-first-upstream-layer.md)
 - **Component doc:** [Knowledge Management — Cross-Surface Knowledge Graph](../components/knowledge-management.md)
 - **Query surface:** [`scripts/knowledge_query.py`](../../../scripts/knowledge_query.py) — traverses these edges across all `paths.json` surfaces.
-- **Diagram format:** [ADR-015 — Diagram Format and Legends](../adrs/ADR-015-diagram-format-and-legends.md)
+- **Diagram format:** [`write-c4-diagram` skill §3](../../../templates/skills/write-c4-diagram/SKILL.md) — the mermaid-only rule and legend conventions
 - **Architecture index:** [docs/architecture/README.md](../README.md)
 
 <!--
