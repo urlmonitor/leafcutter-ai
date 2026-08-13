@@ -1,0 +1,107 @@
+id: KM-200
+title: "Know whether you are finishing things as fast as you are starting them"
+component: knowledge-management
+components:
+  - knowledge_management
+  - ux_prototyping
+level: L0
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  See what you are producing, what you are finishing, and the gap between.
+
+  Everything this project makes — requirements, tickets, epics, tests, code,
+  decision records, diagrams and the rest of the written material, changelogs,
+  agents, skills, hooks, components, retrospectives — arrives at some point and
+  is worked off at some point. Today only the arriving half is visible, and only
+  to whoever happens to count it by hand. This goal makes both halves visible for
+  every kind of thing the project produces: created means it was authored and
+  added; consumed means it was closed, completed, retired, or replaced. Seeing
+  the two side by side tells you at a glance whether you are keeping up, where a
+  queue is quietly growing, and which kinds of work are being finished as fast as
+  they are started. And because a single total hides very different populations,
+  the counts distinguish real queued work from work still being written and from
+  ideas that were deliberately parked — so thinking cheaply never looks like
+  falling behind.
+depends_on: []
+doc_links:
+  - path: leafcutter-web/lib/data/ac-store.ts
+    relationship: related
+    status: exists
+    relevance: "Existing loader for the requirements store — an analytics layer reads from loaders like this rather than re-reading the repo."
+  - path: leafcutter-web/lib/data/activity.ts
+    relationship: related
+    status: exists
+    relevance: "Existing repository-activity loader — the closest thing to an inflow signal that already exists."
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100.yaml
+    relationship: context
+    status: exists
+    relevance: "Neighbouring L0. Connectivity (what builds this, what proves it) — NOT population counts over time. This goal may ride on its cross-surface inventory; it does not duplicate it."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  IDEA STUB — PARKED, NOT QUEUED. Authored 2026-08-14 under the new cheap-capture
+  convention: L0 + L1 only, no L2/L3, no BA hand-off. `covered_by` is DELIBERATELY
+  EMPTY on this L0 and on every KM-200x child, so the whole tree reads as a parked
+  idea (level in {L0,L1} and not covered_by) and is structurally excluded from the
+  build loop. The parent->child link is intentionally recorded in ONE direction
+  only: each L1 carries depends_on: [KM-200]. Do not "repair" the missing
+  covered_by list without a decision to un-park this tree — restoring it is the act
+  that turns the stub into a real backlog item, and it must be paired with L2
+  decomposition. Note that check_ac_parent_covered_by will object to this shape at
+  commit time; that is expected for a stub, not a defect to be silently patched.
+
+  ADD-VS-CREATE: a new root L0 was chosen over grafting onto an existing tree.
+    - KM-KGS-100 (traceability map) answers "what builds this and what proves it"
+      for ONE artifact — a connectivity question. This goal answers "how many of
+      these arrived and how many were worked off" across ALL artifacts — a
+      population question over time. Different question, and KM-KGS-100 is already
+      at five L1s with a large subtree.
+    - ACS-1100 (honest denominators) is a STANDING principle every figure here must
+      obey, not a home for it: it governs how an answer describes its own coverage,
+      not what is counted. Inherited, not duplicated.
+    - BO-2800 (gate value measurement) measures CHECKS, not artifacts. BP-400
+      measures a DRIVE run. INF-500 is retrospective tooling resilience. All three
+      are event/run-scoped; none owns a standing corpus census.
+    - UXP-100 / UXP-490 own product-truth and prototypes; the Atlas views under
+      UXP-520 / UXP-550 are the surface this would appear on, not the capability.
+  Namespace: knowledge-management, whose remit is already cross-surface ingestion
+  of every artifact kind. Plain `KM-NNN` prefix (not a new compound sub-prefix)
+  because derive_parent_id mis-derives compound ids — KM-KGS-100a resolves to
+  "KM-KGS", so any new compound tree would ship a broken parent link. KM-200 rather
+  than KM-100 purely to avoid visual collision with KM-KGS-100 in prose and greps.
+
+  MOTIVATING EVIDENCE (manual weekly report, 2026-08-07 -> 2026-08-13): 339 ACs
+  authored vs 108 marked done (~3:1); store 2,482 -> 2,819 files, done 544 -> 651;
+  52 new test files / 332 new test cases; 3 ADRs; 4 component docs; 2 C4 diagrams;
+  18 changelog entries; 11 tickets; 20 PRs merged; 23 version tags. The report was
+  hand-assembled once and is not repeatable — that is the gap KM-200e names.
+
+  THE SEED REQUIREMENT IS KM-200c. The 3:1 ratio above is misleading on its own
+  because readiness: draft conflates three populations: buildable backlog
+  (approved L2/L3 at work_status todo — the only bucket that gates throughput),
+  authoring WIP (draft/reviewed L2/L3 — 159 L2 + 49 L3 at the time of writing) and
+  parked idea stubs (childless L0/L1 — 47, of which this tree is now seven). Any
+  decomposition that reports one undifferentiated AC count fails this goal, because
+  it punishes the cheap-parking behaviour the store wants to encourage.
+
+  ROADMAP CONFLICT — RESOLVE BEFORE PROMOTING THIS TREE TO approved. No
+  roadmap_phase is claimed on purpose. docs/vision.md lists "Runtime telemetry
+  dashboard or analytics" under "What We're NOT Doing (Yet)", alongside "GUI or
+  web-based configuration interface" — which the Atlas web view has already
+  overtaken. Either the vision's out-of-scope list is stale and should be amended,
+  or this tree stays parked until a phase claims it. That is a user decision; no
+  vision or roadmap file was changed while authoring this stub.
