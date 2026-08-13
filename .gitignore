@@ -29,6 +29,12 @@ scripts/doc_compliance/
 __pycache__/
 *.pyc
 
+# Virtualenvs (never commit — a `git add -A` would otherwise stage ~130 MB).
+# `/env/` is root-anchored so a legitimately-named `env` subdirectory is not swallowed.
+.venv/
+venv/
+/env/
+
 # Build manifest (generated per-build, machine-specific hashes)
 .build_manifest.json
 
