@@ -1,0 +1,90 @@
+id: ACS-500g-2
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "An authoring-patterns skill states the pattern-worthiness rules as decidable tests"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a candidate behavior that recurs across ACs,
+  When an author consults the authoring-patterns skill to decide whether it becomes
+    a pattern,
+  Then the skill returns a promote / do-not-promote decision derived from four
+    stated rules, and each rule is decidable without further judgement calls:
+    1. Recurrence — the behavior must appear in at least a stated NUMBER of distinct
+       ACs (the skill states the number, e.g. 3; it does not say "several" or
+       "often"),
+    2. Slot-expressible variance — every difference between the occurrences must be
+       a substituted VALUE; when an occurrence needs a Given, When or Then step the
+       others do not have, the variance is not slot-expressible and the behavior is
+       not promoted,
+    3. Genuine shared behavior — occurrences that share nouns but assert different
+       outcomes (both mention "a table", one asserts sorting, the other asserts a
+       printed total) are classified as incidental similarity and rejected,
+    4. Slot naming and scope — one slot per independently varying value, each slot
+       named for the value it carries (filter_field, export_format), and no slot
+       carrying two values that can vary apart from each other,
+  And a do-not-promote decision names which of the four rules failed,
+  And the skill states how to write the parameterised criteria body: one
+    Given/When/Then scenario in which every declared slot appears as a named
+    placeholder and every value that does not vary is written literally.
+depends_on: [ACS-500g]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: governs
+    status: exists
+  - path: docs/how-to/creating-a-skill.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+  - path: config/skill_registry.json
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: governs
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "GAP RESOLUTION (agent assignment): reassigned from workflow-architect to llm-expert. llm-expert is is_ticket_phase:true, its selection_criteria explicitly triggers on `files_touched contains templates/skills/*/SKILL.md`, and its skills_used already includes add-skill-to-package — the same promotion path workflow-architect would take. workflow-architect (is_ticket_phase:false) cannot be dispatched as a ticket phase."
+  - "PREREQUISITE DELIVERABLE — the skill registry entry. Promote via the add-skill-to-package skill: create templates/skills/authoring-patterns/SKILL.md AND append {id: authoring-patterns, description, path: templates/skills/authoring-patterns/SKILL.md, internal: false} to config/skill_registry.json using Edit (never Write). A skill directory without a registry entry is not deployed to adopter projects by build.py."
+  - "SINGLE SOURCE OF TRUTH — the recurrence threshold value is 3 (rule of three, user decision). Declare it exactly ONCE, in this SKILL.md, on a single canonical, machine-parsable line so the ACS-500g-3-i gate can read the authoritative value instead of hardcoding it. No other file in the repo may carry a numeric recurrence threshold."
+  - "The frontmatter must satisfy docs/reference/skill-frontmatter.md: `name: authoring-patterns` matching the directory name, a single-line `description:` (the check-description-field hook rejects an empty or multi-line one), and an `allowed-tools:` line. Portability: no project-specific absolute paths in the body (ADR-013)."
+  - "Each of the four rules must be written as a decidable test with a stated pass/fail condition and a named failure label the caller can echo back (e.g. rule-2-not-slot-expressible), so a do-not-promote decision can name the failing rule without prose interpretation."
+  - "The parameterised-criteria authoring rule must produce records that satisfy BOTH live detection predicates at once: a non-empty `pattern_slots` list AND at least one matching {word} placeholder in `criteria` (see _has_parameterized_slots in templates/scripts/commit_guardian/check_ac_pattern_refs.py, whose predicate is an OR — emitting both makes the record recognisable to the inventory scan and the hook alike). Detailed in ACS-500g-2-i."
+  - "The skill is shared by three readers — the pattern-steward (ACS-500g-1), the business-analyst §3a Pattern-First Check (ACS-500g-3), and the how-to guide (ACS-500g-2-ii). Write it reader-agnostic: no instruction that only makes sense inside one agent's run loop."
+  - "Run `python scripts/build.py --validate-only` then `python scripts/build.py --target-dir . --force` after adding the skill, and confirm the skill appears in the deployed .leafcutter/skills/ (or .claude/skills/) layout — an unbuilt skill is invisible to every reader above."
+delivers_to:
+  - agent: llm-expert
+    contract: "templates/skills/authoring-patterns/SKILL.md registered in config/skill_registry.json — holding the recurrence threshold (3, declared once), the slot-expressible-variance test, the genuine-vs-incidental test, the slot naming/scope rules, and the parameterised-criteria authoring rule. Consumed by ACS-500g-1, ACS-500g-3, ACS-500g-4."
+  - agent: python-coder
+    contract: "A single canonical, machine-parsable declaration line for the recurrence threshold that check_pattern_rule_duplication.py (ACS-500g-3-i) parses as the authoritative value, so the gate never hardcodes 3."
+  - agent: documentation-expert
+    contract: "The four rules as the linkable source ACS-500g-2-ii's how-to points at instead of restating."
+  - agent: business-analyst
+    contract: "The slot naming and parameterised-criteria rules used to author the first pattern record in ACS-500g-6."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500g-2-i, ACS-500g-2-ii]
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+test_required: false
