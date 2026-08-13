@@ -1,0 +1,48 @@
+id: BO-2800c-1-i
+components:
+  - build_orchestration
+  - review_system
+title: "An override of an unlabelled finding is still recorded, flagged as unattributed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a gate has raised a blocking finding that carries no defect identifier — for example
+    a historical prose-only blocker recorded before problem kinds were declared,
+  When the work proceeds past that finding anyway,
+  Then an override record is still created and is still attributed to the overruling of that
+    named gate,
+  And the record is flagged as unattributed at the problem-kind level, naming the absent
+    defect identifier as the reason,
+  And that record contributes to the per-gate override count but is excluded from every
+    per-problem-kind override rate,
+  And any report presenting per-problem-kind rates states how many override records were
+    excluded as unattributed, so the gap in the denominator is visible rather than silent.
+depends_on:
+  - BO-2800c-1
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Genuine edge case, not a variant: without it, the safest implementation of BO-2800c-1
+  (require a defect identifier) silently DROPS exactly the overrides that motivated the
+  goal — the prose-only ones. Dropping them is the same signal loss recorded on BO-400d
+  for the `failed` status value.

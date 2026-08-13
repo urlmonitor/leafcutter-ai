@@ -1,0 +1,81 @@
+id: BO-2800d
+components:
+  - build_orchestration
+  - review_system
+title: "Spot the checks that have never once stopped anything"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A check that never objects is a different problem from one that is ignored.
+
+  Some checks have run for the entire recorded history of the project and never
+  raised a single objection. That silence is reported in its own right — with how
+  many times each check ran without ever speaking up — because a check nobody ever
+  hears is usually looking at the wrong thing or never really reached, which needs
+  a different fix from a check that speaks up and gets waved through.
+depends_on:
+  - BO-2800
+  - BO-2800a
+  - BO-2800b
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500d.yaml
+    relationship: related
+    status: exists
+    relevance: "The already-shipped, STATIC precedent for dropping review overhead — a hand-decided fast-lane / heavy-lane agent split, all four L2s work_status: done. This L1 is the evidence-driven successor: BO-2500d decided once, by hand; this decides from the record. No dependency exists between the two trees in either direction and none may be recorded."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2700-runtime-reachability-guard/BO-2700.yaml
+    relationship: related
+    status: exists
+    relevance: "A check that never fires may be unreachable rather than useless — BO-2700 is the reachability guard that would catch that cause. Read before assuming silence means the check is worthless."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: |
+  The how-to written under BO-2800e covers reading the value report and acting on what it
+  says, and the silent-check section is part of that one report — a second how-to would
+  describe the same surface twice and the two would drift apart. Nothing here introduces a
+  separate surface, workflow, or state machine of its own.
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS A SEPARATE BENEFIT FROM THE OVERRIDE RATE. Zero-yield and high-override are
+  different diagnoses with different remedies, and collapsing them into one "low value"
+  number gives the wrong advice for both. Overruled-a-lot means the check is wrong too
+  often. Never-fired means nobody has ever tested whether it is right at all — the check
+  may be misconfigured, pointed at nothing, or never reached, and retiring it would remove
+  a guard that was never actually on duty.
+
+  THE EVIDENCE, FROM A LIVE MINING PASS OVER THE RECORDED HISTORY. Nine checks show zero
+  blocks across every run on file. Five of them, with their run counts: llm-expert 0/84,
+  ac-fulfillment-gate 0/15, user-surface-smoker 0/14, ac-validator 0/11,
+  change-scope-reviewer 0/1. Treat these as the worked examples at decomposition — they are
+  the real corpus, not an illustration.
+
+  BEWARE THE DENOMINATOR. 0/1 and 0/84 are not the same finding. A check that has run once
+  and not fired has told you nothing; a check that has run eighty-four times and not fired
+  has told you something. Any L2 that reports a bare zero without the number of runs behind
+  it is reporting noise as signal — the run count must travel with the zero.
+
+  SILENCE HAS AT LEAST THREE CAUSES, AND THIS L1 MUST NOT PRE-JUDGE WHICH. The check runs
+  and genuinely finds nothing (the code is clean); the check runs but can never produce a
+  blocking result by construction (advisory by design); or the check never really runs at
+  all (misconfigured or unreachable — see the BO-2700 link). Report the silence and the
+  evidence; leave the verdict to BO-2800e, which is where the remedy is chosen.
+
+  DEPENDS ON BO-2800a AND BO-2800b, NOT ON BO-2800c. The zero-block finding falls out of the
+  mined corpus and the per-check problem counts. It does not need override rates, and wiring
+  it behind BO-2800c would block a cheap, immediately useful report behind the most expensive
+  measurement in the tree.

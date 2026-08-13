@@ -1,0 +1,105 @@
+id: ACS-1100a-3
+components:
+  - ac_store
+title: "The independent-total rule is exempt only where a declared mandate says so, and only for the total"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100a.yaml
+criteria: |
+  Given ACS-100h-7a (approved) mandates exactly one implementation of the AC-tree
+    child-counting and limit rule and forbids a second independent traversal,
+  When the independent-total requirement of ACS-1100a-2 is applied across the store's
+    query surfaces,
+  Then the AC-tree child-limit counter appears in a declared exemption record that
+    names the surface and names ACS-100h-7a as the mandate granting the exemption,
+  And no second traversal of the AC tree is written to produce a total for that
+    counter — it meets the coverage requirement instead by self-reporting what it
+    examined and excluded from within the one shared callable (ACS-1100b-2),
+  And a surface absent from the declared exemption record may not report a total
+    derived through its own result filters, match keys, or join keys,
+  And a surface that reuses one shared filter-free enumeration for both its total and
+    its results needs no exemption entry at all, because it already satisfies
+    ACS-1100a-2 — the exemption record is for surfaces that cannot enumerate
+    independently, not for every surface that reuses a traversal,
+  And the exemption withholds the independent total only: the rule applied to each
+    individual record keeps whatever single-implementation mandate already governs it,
+    on exempt and non-exempt surfaces alike, and nothing in ACS-1100 authorises
+    forking a per-record rule to satisfy a coverage requirement.
+depends_on:
+  - ACS-1100a
+  - ACS-1100a-2
+  - ACS-100h-7a
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7a.yaml
+    relationship: related
+    status: exists
+    relevance: "The approved single-implementation mandate that this exemption record must name for the AC-tree child-limit counter. Its shared callable does not exist yet (work_status: todo) and the duplication it targets is live, so it is a depends_on prerequisite, not just background reading."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100c-6.yaml
+    relationship: related
+    status: exists
+    relevance: "Second AC binding the same exempt surface — the superseded-child exclusion must be applied inside the one shared child-counting callable, not by a second traversal."
+  - path: docs/acceptance-criteria/ac-store/ACS-900-deprecation-hygiene/ACS-900e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Its it_requirements name the shared unit as _load_ac_yamls — an ENUMERATION path, not a per-record rule. Resolved by ACS-1100a-2's filter-free-enumeration reading, not by the denominator-vs-rule boundary. See notes."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  The ACS-100h-7a conflict is settled at the L0 and MUST NOT be re-litigated. What this
+  AC adds is a mechanism that stops the exemption from WIDENING: the exemption is a
+  declared record naming both the surface and the mandating AC, so a future implementer
+  cannot claim exemption by assertion.
+
+  THE GENERAL BOUNDARY (carried into the criteria text deliberately, not left in
+  notes): independence applies to the DENOMINATOR — how many records were in scope —
+  never to the RULE applied per record. Where an AC already mandates one shared
+  implementation of a rule, that mandate stands and ACS-1100 wraps a coverage
+  statement around it.
+
+  ==========================================================================
+  ACS-900e — CORRECTED RESOLUTION (2026-08-13, expert review).
+  ==========================================================================
+  The first authoring pass claimed ACS-900e "governs the RULE (how an AC is mapped to
+  its source files)" and was therefore resolved by the denominator-versus-rule boundary.
+  THAT WAS WRONG. Read ACS-900e-1's it_requirements: the shared unit it mandates is
+  named explicitly as _load_ac_yamls — "load each AC dict, read its implemented_by
+  list", extracted into an importable shared module. That is an ENUMERATION over the AC
+  store: it is the denominator path, not a per-record rule. The boundary above does not
+  touch it, and no second exemption entry can be justified on those grounds.
+
+  It is resolved instead by the corrected ACS-1100a-2. _load_ac_yamls is a FILTER-FREE
+  enumeration of the AC store — it loads every AC dict — so a total drawn from it shares
+  no filter, match key or join key with the deprecation hook's own retired-AC selection.
+  One shared filter-free enumeration serves both the total and the results, exactly as
+  ACS-900e-1 demands and exactly as ACS-1100a-2 now permits. No second traversal, no
+  exemption entry, no conflict. This is why "same pass" had to be struck from
+  ACS-1100a-2: with it in place, ACS-900e-1's mandated shared helper would have been
+  non-compliant by construction.
+
+  ACS-100c-6 binds the already-exempt tree-counter surface, so it needs no new entry
+  either.
+
+  DEPENDENCY (2026-08-13, expert review). ACS-100h-7a is readiness: approved but
+  work_status: todo — its single shared callable does not exist yet, and the duplication
+  it targets is still live (two copies of check_ac_limits.py in the package source at
+  675 and 637 lines, verified 2026-08-13). The exemption record cannot name a callable
+  that has not been built, so ACS-100h-7a is a genuine depends_on prerequisite and has
+  been promoted out of doc_links into depends_on.

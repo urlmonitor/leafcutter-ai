@@ -1,0 +1,159 @@
+id: BP-1100b-5
+components:
+  - build_pipeline
+title: "A newly added presence-only assertion over workflow or gate source is rejected before the change is accepted"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a change whose staged hunks add a test assertion whose only check is that
+  a named symbol appears in the text of a file matched by one of the scanned-source
+  globs — `templates/workflows-js/**/*.js`, `scripts/workflows/**/*.js`,
+  `templates/scripts/commit_guardian/**/*.py`, or `scripts/commit_guardian/**/*.py`
+  — for example an assertion that the string "emit_agent_telemetry" is contained
+  in that file's contents, or a regular-expression match that a function of a
+  given name is declared there,
+  And the added assertion carries no waiver comment,
+  When the change is checked before it is accepted,
+  Then the assertion is reported as a violation that names the test file, the
+  asserted symbol, and the source file the assertion scans,
+  And the report states that a presence-only assertion over workflow or
+  commit-guardian source stays green on unreachable code and therefore is not
+  coverage,
+  And the report names the waiver comment as the way to accept the assertion
+  deliberately.
+
+  Given a change whose staged hunks add the same shape of assertion,
+  And the added assertion is preceded by a waiver comment of the form
+  `# presence-only: <reason>` carrying a non-empty reason,
+  When the change is checked before it is accepted,
+  Then the assertion is not reported,
+  And the waiver comment and its reason are listed in the check's output so the
+  waivers accumulated in the repository are readable in one place.
+
+  Given a change whose staged hunks add a presence-only assertion over a file
+  matched by none of the scanned-source globs,
+  When the change is checked before it is accepted,
+  Then the assertion is not reported.
+
+  Given a repository that already contains presence-only assertions over the
+  scanned sources, and a change that touches none of them,
+  When the change is checked before it is accepted,
+  Then no pre-existing assertion is reported, because the check reads the staged
+  hunks and not whole files,
+  And the check reports a violation on a newly added presence-only assertion
+  regardless of who authored it and regardless of whether the same change also
+  modified the source file the assertion scans.
+depends_on:
+  - BP-1100b
+doc_links:
+  - path: unit_tests/workflows/test_bo2400a_runner_wiring.py
+    relationship: describes
+    status: exists
+    relevance: "in-tree calibration example: class TestIntegrationReferencesNotDormant holds three substring-form instances of the shape this rule must catch (choose_lane, emit_agent_telemetry, assemble_context_bundle)"
+  - path: unit_tests/workflows/test_bo_1000c_1a.py
+    relationship: describes
+    status: exists
+    relevance: "second in-tree example: the regular-expression form of the same shape (a function-declaration match), which a substring-only rule would miss"
+  - path: unit_tests/workflows/test_bo_1000a_2_i.py
+    relationship: describes
+    status: exists
+    relevance: "NAMED NON-TARGET (~L166): asserts the literal AC id 'BO-1000a-2-i' appears in finalize-feature.js. That is a documentation-marker requirement, not a behavioural claim, so the rule must not report it. Calibrate against it."
+  - path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100c-14.yaml
+    relationship: describes
+    status: exists
+    relevance: "precedent showing that thin boolean presence smoke checks are acceptable ALONGSIDE behavioral coverage; under this AC those are accepted via the waiver comment rather than by inference"
+  - path: docs/retrospectives/EPIC-TrustworthyTestGate.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: replaced the colliding 'guardrail-gate source file' term with explicit path globs; replaced the statically-undecidable accompanying-test exemption with an explicit waiver comment; scoped the check to staged hunks; added the named non-target and the dead-test inventory."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Why this is NOT a duplicate of BP-1100b-1 or BP-1100b-2. Those two are authoring
+  instructions scoped to one trigger and one actor: -1 makes ticket-supervisor
+  dispatch test-writer when a workflow .js file is in files_touched, and -2 tells
+  test-writer what kind of test to author for a modified workflow function. Both
+  are advisory-by-construction — they constrain an agent's behavior at authoring
+  time, and both only fire when a ticket modifies workflow JavaScript.
+
+  This AC is a DETECTION rule over the change itself. It fires on the assertion
+  shape irrespective of author (test-writer, a coder, or a human), and
+  irrespective of whether the change touched the workflow source at all — which is
+  exactly how both confirmed grep-only tests reached main.
+
+  THREE CORRECTIONS FROM THE 2026-08-13 EXPERT REVIEW. Each replaced a clause that
+  looked precise but was not implementable as written:
+
+  1. "GUARDRAIL-GATE SOURCE FILE" COLLIDED WITH EXISTING VOCABULARY. In this
+     repository that phrase already denotes `config/guardrail_gates.yaml` — a
+     config that maps change_target/risk_surface to injected agents (see
+     `scripts/ac_store/generate_ticket_from_ac.py` L202, L566, L701). It contains
+     no gate logic and is not a plausible target of a presence assertion. An
+     implementer reading the old wording would have scoped the rule at the wrong
+     file. The criteria now name path globs instead of a category noun. If the
+     glob set is wrong, amend the globs — do not reintroduce a category name.
+
+  2. THE OLD EXEMPTION WAS NOT STATICALLY DECIDABLE. It exempted an assertion
+     "accompanied in the same change by a test that executes that symbol's
+     behavior". Deciding that requires call-graph reasoning across a
+     JavaScript/Python boundary. Every implementer would approximate it as "some
+     test in the change mentions the symbol" — which every incumbent violation
+     already satisfies, so the rule would report nothing. It is replaced by an
+     explicit `# presence-only: <reason>` waiver: a decision a human writes down,
+     which is greppable, reviewable, and countable. The FIN-100c-14 precedent
+     (thin smoke checks alongside real coverage) is preserved by that waiver, not
+     by inference.
+
+  3. WHOLE-FILE SCANNING WOULD MAKE THIS UNMERGEABLE. A reviewer counted 46
+     pre-existing violations across `unit_tests/workflows/` and
+     `unit_tests/commit_guardian/`. As a blocking whole-file gate the rule fires
+     46 times on its own introducing commit. Staged-hunks-only makes it a
+     ratchet: the backlog is cleaned by the sweep below, and nothing new lands.
+
+  DEAD-TEST INVENTORY for the follow-up sweep (NOT in this AC's scope — recorded
+  so it is not rediscovered). `unit_tests/workflows/test_bo2400a_runner_wiring.py`
+  class `TestIntegrationReferencesNotDormant` holds THREE identical presence
+  assertions, not one:
+    - `test_h1_choose_lane_referenced_in_runner` (~L351) — choose_lane
+    - `test_h1_emit_agent_telemetry_referenced_in_runner` (~L373) — emit_agent_telemetry
+    - `test_h1_assemble_context_bundle_referenced_in_runner` (~L394) — assemble_context_bundle
+  Each asserts only that the symbol's name appears in `fast-lane-build.js`. Two of
+  the three backing modules — `scripts/build_orchestration/path_selection.py` and
+  `scripts/injection_builders.py` — have no `__main__` entry point, so the JS
+  cannot invoke them as scripts and the symbols cannot be reached from the runner
+  at all. Fixing one of the three and leaving two is the likely failure mode of a
+  sweep that has not read this note.
+
+  NAMED NON-TARGET: `unit_tests/workflows/test_bo_1000a_2_i.py` (~L166) asserts
+  that the literal string "BO-1000a-2-i" appears in `finalize-feature.js`. That is
+  the correct test for a documentation-marker requirement — the AC it covers asks
+  for the policy to be documented in the source — and the rule must not report it.
+  Any implementation that flags it has over-matched.
+
+  Deliberately left open for it-po: the enforcement surface. "Checked before the
+  change is accepted" is satisfiable either by a mechanical pre-commit gate over
+  the staged test diff or by a pr-reviewer checklist item; the criteria constrain
+  the outcome, not the mechanism. A mechanical gate is the stronger reading given
+  that the incumbent instances survived review — and note the staged-hunks
+  scoping in the criteria already assumes a diff-aware checker.
+
+  Calibration constraint worth carrying into implementation: the rule must match
+  both the substring form and the regular-expression declaration form.
+
+  Tree note: BP-1100 (L0) has one L1 slot remaining (a-f of 7); no new L1 was created.

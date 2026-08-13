@@ -1,0 +1,109 @@
+id: BO-400d-4
+components:
+  - build_orchestration
+  - ticket_lifecycle
+title: "The retry that succeeded is counted in the epic's rework figures"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a completed epic in which python-coder failed once and passed on its
+    second attempt, pr-reviewer failed twice and passed on its third, every
+    other agent passed first time, and every agent ended the drive `signed_off`,
+  When the epic's per-agent rework figures are produced,
+  Then python-coder is reported with 2 attempts and 1 failure,
+  And pr-reviewer is reported with 3 attempts and 2 failures,
+  And every other agent is reported with 1 attempt and 0 failures,
+  And those figures are computed from each ticket's `prior_failures:` list and
+    its terminal agent states — the failure count being the number of entries
+    for that agent, and the attempt count that number plus one when the agent
+    ended `signed_off`,
+  And for a ticket written before `prior_failures:` existed, the same figures
+    are read from that ticket's append-only `## Comments` blocker entries, each
+    of which names the failing agent in its heading,
+  And for a second epic in which no agent ever failed, every agent is reported
+    with 0 failures and an empty failure history,
+  So that a reported 0 means "no failure happened" and can no longer be produced
+    by a failure that was overwritten.
+depends_on:
+  - BO-400d
+  - BO-400d-2
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: modifies
+    status: exists
+    relevance: "The read side. Already parses ## Comments headings for a per-comment status and already counts blockers; the agent name is matched but discarded by a non-capturing [^(]+ in _COMMENT_HEADING_RE."
+  - path: docs/product-truth/flows/leafcutter/how-acs-are-built.flow.json
+    relationship: implements
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: dropped the ban on Comments-derived figures (that log is append-only, so the overwrite defect does not apply to it); dropped the depends_on edge to the deleted BO-400d-1."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Honours the parent's USER-CONFIRMED product decision: `failed -> signed_off`
+  STAYS LEGAL. Every ticket in this AC's first scenario travels that transition;
+  the point is that the epic can now count it, not that it should be prevented.
+
+  WHY THIS AC IS NOT OPTIONAL PADDING: BO-400d-2 writes the record; nothing yet
+  READS it. The observed symptom the parent L1 was raised from is a read-side
+  one — running the epic fact extraction over a real epic reports `failed: 0`
+  for all nine agents and a blocker-comment count of 0, because the epic's
+  failure history was erased by its own success. Landing only the write side
+  leaves that same 0 on the screen, now backed by data that contradicts it.
+  This AC is where the L1's stated benefit — "rework is something you can see
+  and measure" — actually becomes observable, and it is the one AC in this set
+  whose test would fail if the new field were written but never consumed.
+
+  THE DISCRIMINATING CLAUSE is the last one. Today a reported 0 has two possible
+  meanings — "nothing failed" and "something failed and was overwritten" — and
+  a reader cannot tell them apart. The second scenario (an epic with no failures
+  at all) exists so the test pins down that 0 now carries exactly one meaning.
+
+  THE `## Comments` READING IS ALLOWED, and the earlier draft was wrong to ban
+  it (corrected 2026-08-13). That draft required the figures to be read from the
+  new fields "not inferred by counting repeated `## Comments` entries", which
+  forbade the ONLY implementation shippable before BO-400d-2 lands. Two facts
+  make the ban unjustified:
+    - `scripts/retrospective/extract_epic_facts.py` ALREADY compiles
+      `_COMMENT_HEADING_RE` over each comment heading and already counts
+      blockers in `_count_comment_statuses`. It discards the agent name only
+      because the heading's agent segment is matched by a non-capturing `[^(]+`
+      — a one-line change, not a new mechanism.
+    - The `## Comments` log is APPEND-ONLY. The overwrite defect this L1 exists
+      to fix is a property of the terminal-state register, not of that log, so
+      the reason to distrust the frontmatter figure does not transfer to the
+      comment count.
+  The criteria now name `prior_failures:` as the source once it exists and the
+  comment log as the source for tickets predating it. What the criteria still
+  refuse is a figure derived from the terminal state alone, which is the actual
+  defect.
+
+  KNOWN LIMIT of the comment-derived reading, for the implementer: a `blocker`
+  comment is written by §4 Failed Path, so it corresponds 1:1 with a `failed`
+  write — but a `handoff` comment does not, and must not be counted as a
+  failure. Count `(status: blocker)` headings only.
+
+  BOUNDARY: this is the rework/attempt count for BO-400d's own record. It is not
+  BO-2800's gate-value measurement — that tree counts what each CHECK catches,
+  keyed by the rule_id vocabulary it defines. Different question, different owner.

@@ -1,0 +1,166 @@
+id: INF-500d-5
+components:
+  - infrastructure
+  - feedback_collector
+title: "A report that could not be written is held and retried, and a run that lost many of them is not quietly torn down"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a report cannot be written to the durable location at the moment it is filed,
+  And the recorded reason is one that means nothing was written,
+  When the failure is recorded,
+  Then the report's full content is retained in a holding place that is outside the
+    temporary workspace the agent ran in and outside the durable location that could
+    not be written — the operating system's temporary directory, which the record
+    identifier's own fallback file already proves is reachable from every drive,
+  And the agent's verdict is still delivered.
+
+  Given a report is placed in the holding place,
+  When it is held,
+  Then the record identifier it will carry is minted at that moment and stored with
+    the held content,
+  And the marker recorded in the run cites that same identifier,
+  So that the identifier an operator reads in the run is the identifier the record
+    ends up having.
+
+  Given held reports exist from an earlier failed write,
+  When the next report from the same project is written successfully,
+  Then the held reports are written through to the durable location as well,
+  And each held report is written with the identifier it was given at hold time,
+    unchanged,
+  And each held report appears exactly once after the flush, with no duplicate of a
+    report that had already been written.
+
+  Given a report whose recorded reason is that the write succeeded but the identifier
+    was not captured,
+  When failures are collected for holding,
+  Then that report is never placed in the holding place,
+  So that the flush cannot duplicate a record that already exists.
+
+  Given a run finishes and recorded more failed report writes than the configured
+    tolerated share,
+  When the drive reaches the point at which its temporary workspace is to be removed,
+  Then removal is refused with a message stating how many reports failed to land, out
+    of how many attempted, what the tolerated share is, and where the held reports
+    are,
+  And the refusal happens once at that boundary, not per ticket, so no individual
+    phase gains a new way to be blocked,
+  And the refusal happens BEFORE the workspace is removed, while the reports are
+    still recoverable.
+
+  Given the same refusal is presented and the operator judges the loss acceptable or
+    has recovered the reports by hand,
+  When the operator explicitly overrides the refusal,
+  Then the workspace is removed and the drive completes,
+  So that the check can never become a stuck state that no remediation can clear.
+
+  Given a run's failure count is at or below the tolerated share,
+  When it reaches the workspace-removal boundary,
+  Then removal proceeds unchanged and no operator attention is required.
+depends_on:
+  - INF-500d
+  - INF-500d-3
+  - INF-500d-4
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: describes
+    status: exists
+    relevance: "Hosts the real gate. Its final step is the one that removes the drive's temporary workspace — the moment at which unflushed reports become unrecoverable — so the gate belongs immediately before it. Confirm the exact insertion point during technical enrichment."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Supplies the reason set this AC filters on. Only reasons meaning 'nothing was written' may enter the holding place; the succeeded-but-uncited reason is excluded by the fourth scenario or the flush produces duplicates."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Supplies the durable location the flush writes THROUGH TO. The holding place is deliberately NOT that location — see this AC's notes on the circularity that an earlier draft contained."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "BOUNDARY. Its fail-open guarantee is per-submission and stays intact: the gate added here is a batch check at the workspace-removal boundary, never a per-submission blocker."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary
+notes: |
+  This is the "fail-open is not fail-silent" half of the package, split out from
+  INF-500d-3 so that each AC covers one behaviour: INF-500d-3 makes a single
+  failure legible; this AC makes a failure recoverable (hold and flush) and makes
+  a run-wide pattern of failures visible (batch gate).
+
+  THE HOLDING PLACE IS THE OS TEMPORARY DIRECTORY, NOT THE DURABLE LOCATION. An
+  earlier draft said the holding place "must satisfy INF-500d-4's durability
+  invariant", which is circular: the queue would be required to live in the very
+  location whose unwritability is what triggered the hold. It only has to satisfy
+  the weaker property that actually matters — survive removal of the temporary
+  workspace. The OS temporary directory does, is already used by the submission path
+  for the record-identifier fallback file (so it is proven reachable from inside
+  every worktree and from plain checkouts), and is available when the durable
+  location is not. It is not durable in the long term, which is exactly why the
+  flush and the removal gate below both exist.
+
+  THE IDENTIFIER IS MINTED AT HOLD TIME. Measured on 2026-08-13, the record
+  identifier is generated fresh on each submission using a random salt, so a
+  held-then-flushed report would be written under a NEW identifier and the identifier
+  already cited in the run would never resolve — turning a rescued record into an
+  orphan and leaving the operator with a citation that looks like data loss. The
+  second and third scenarios pin mint-at-hold and carry-through-unchanged.
+
+  THE GATE'S HOST WAS A NAME THAT DOES NOT RUN. An earlier draft placed the batch
+  gate in the epic-archival check. Two problems, both fatal, both fixed above:
+
+    1. It is not wired. Searched on 2026-08-13: the archival check skill has ZERO
+       references anywhere in the workflow sources, and the finalization workflow's
+       enumerated steps contain no archival step at all. A gate hosted there would
+       never execute.
+    2. Even if it were wired, it was a permanent stuck state. Archival happens after
+       the workspace is gone, so the gate would trip precisely when the reports it is
+       complaining about are already unrecoverable — no remediation could make it
+       pass, and the operator's only exit would be to disable it.
+
+  Moving the gate to the workspace-removal boundary fixes both: that step demonstrably
+  exists and runs, and it sits immediately BEFORE the loss, so refusing is actionable.
+  The explicit operator override is mandatory regardless — a gate whose failure
+  condition is "data was already lost" must always have a way through, or it will be
+  disabled wholesale the first time it fires.
+
+  SINGLE-TICKET AND FAST-LANE COVERAGE IS NOW CLOSED, DELIBERATELY. The archival check
+  skill states it must not be invoked for single-ticket branches, so hosting the gate
+  there would have given standalone and fast-lane drives no loss detection whatsoever
+  — the drives most likely to run unattended. Workspace removal happens on every drive
+  shape, so the relocated gate covers all of them. If enrichment finds the removal step
+  is not shared across drive shapes, that is a gap to report, not to quietly accept.
+
+  The tolerated share is intentionally left as a configured value rather than a
+  number fixed in the criteria: the right threshold depends on drive size, and
+  freezing it here would make the AC fail for reasons unrelated to the behaviour.
+  Whoever enriches this should pick a default and record it.
+
+  The gate is deliberately a batch check rather than a per-submission blocker. A
+  per-ticket blocker would contradict BO-2000a-3's approved fail-open guarantee and
+  would let a telemetry outage halt real work — the precise trade-off the fail-open
+  posture exists to avoid. At the workspace boundary, refusing costs nothing but an
+  operator's attention, which is exactly what was missing when a whole drive completed
+  with the sink unreachable and 23 failures went unnoticed.

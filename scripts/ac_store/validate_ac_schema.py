@@ -28,14 +28,35 @@ AC-2: Schema requires priority field with enum [critical, high, medium, low].
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 # _ac_components lives alongside this script; sys.path[0] is the script dir when
 # invoked as `python scripts/ac_store/validate_ac_schema.py ...`.
 from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
+
+# Same schema file the commit-time hook (templates/scripts/commit_guardian/
+# check_ac_schema.py, SCHEMA_PATH) validates staged ACs against. Resolving the
+# repo root the same way _ac_components.default_registry_path() does
+# (three parents up from this file: scripts/ac_store/validate_ac_schema.py ->
+# repo_root) keeps both validators pinned to the one source-of-truth schema so
+# their verdicts cannot drift apart (ACS-200e).
+_SCHEMA_REL = Path("config") / "ac_store_schema.json"
+
+
+def _default_schema_path() -> Path:
+    """Return the repo-root-relative config/ac_store_schema.json path.
+
+    Mirrors _ac_components.default_registry_path()'s resolution so both the
+    components registry and the AC schema are located the same way regardless
+    of whether this script is invoked with a relative or absolute argument.
+    """
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    return repo_root / _SCHEMA_REL
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +92,76 @@ _FIELD_HELP: dict[str, str] = {
 }
 
 
-def _validate_file(path: Path, registry_ids: set[str] | None = None) -> list[str]:
+def load_ac_store_schema(schema_path: Path | None = None) -> tuple[dict[str, Any] | None, str | None]:
+    """Load config/ac_store_schema.json — the same schema file the commit hook uses.
+
+    Args:
+        schema_path: Path to the schema JSON file. Defaults to the repo's
+            canonical `config/ac_store_schema.json` location.
+
+    Returns:
+        A `(schema, warning)` pair. On success `schema` is the parsed dict and
+        `warning` is None. When the schema cannot be loaded, `schema` is None
+        and `warning` is a human-readable message explaining exactly why —
+        per ACS-200e AC-3, this validator must never fall silently back to
+        reporting success; the caller is responsible for surfacing `warning`.
+    """
+    path = schema_path if schema_path is not None else _default_schema_path()
+    if not path.is_file():
+        return None, f"AC schema file not found at {path} — schema-level validation was SKIPPED."
+
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return None, f"Cannot read schema file {path}: {exc} — schema-level validation was SKIPPED."
+
+    try:
+        schema = json.loads(content)
+    except json.JSONDecodeError as exc:
+        return None, f"Schema file {path} is not valid JSON: {exc} — schema-level validation was SKIPPED."
+
+    return schema, None
+
+
+def _schema_field_errors(path: Path, data: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+    """Validate `data` against `schema` using jsonschema, returning error strings.
+
+    Uses the identical mechanism the commit-time hook's `validate_with_jsonschema`
+    helper uses (`jsonschema.Draft7Validator`) against the SAME schema file, so
+    a file that fails here is guaranteed to also fail at commit time and vice
+    versa (ACS-200e parity requirement).
+
+    Args:
+        path: The AC YAML file being validated (used only for error prefixing).
+        data: Parsed YAML content.
+        schema: Parsed JSON Schema dict.
+
+    Returns:
+        Error message strings; empty list when `data` satisfies `schema`. If
+        jsonschema is not importable, returns a single explicit error string
+        rather than silently treating the file as valid.
+    """
+    try:
+        import jsonschema
+    except ImportError as exc:
+        return [
+            f"{path}: jsonschema is not importable ({exc}) — schema-level "
+            "validation was SKIPPED. Install jsonschema to enable it."
+        ]
+
+    validator = jsonschema.Draft7Validator(schema)
+    return [
+        f"{path}: schema violation at "
+        f"{'.'.join(str(part) for part in err.absolute_path) or '<root>'} — {err.message}"
+        for err in sorted(validator.iter_errors(data), key=str)
+    ]
+
+
+def _validate_file(
+    path: Path,
+    registry_ids: set[str] | None = None,
+    schema: dict[str, Any] | None = None,
+) -> list[str]:
     """Validate a single YAML file for required readiness/priority/components fields.
 
     Args:
@@ -79,6 +169,13 @@ def _validate_file(path: Path, registry_ids: set[str] | None = None) -> list[str
         registry_ids: Valid component ids from index.yaml. When None, the
             registry is loaded lazily (per-call) — callers validating many files
             should load it once and pass it in.
+        schema: Parsed `config/ac_store_schema.json` content. When provided,
+            the file is ALSO validated against it via jsonschema (ACS-200e) so
+            the standalone validator's verdict agrees with the commit-time
+            hook's. When None, schema-level validation is skipped for this
+            call — callers must surface that explicitly (see
+            `load_ac_store_schema`'s warning return value) rather than let the
+            skip look like a passing schema check.
 
     Returns a list of error strings. Empty list = valid.
     """
@@ -157,6 +254,17 @@ def _validate_file(path: Path, registry_ids: set[str] | None = None) -> list[str
                     f"ACs. AC {data['id']} has level {ac_level!r}."
                 )
 
+    # --- Validate against config/ac_store_schema.json (ACS-200e) ---
+    # This is the SAME schema file the commit-time hook
+    # (templates/scripts/commit_guardian/check_ac_schema.py) validates staged
+    # ACs against, so a file that passes here is guaranteed to also pass the
+    # hook and vice versa. Only runs when a schema was actually loaded — the
+    # caller (main()) is responsible for printing an explicit warning when it
+    # was not, per ACS-200e AC-3 (never silently report success without the
+    # schema check having run).
+    if schema is not None:
+        errors.extend(_schema_field_errors(path, data, schema))
+
     return errors
 
 
@@ -183,6 +291,27 @@ def main(argv: list[str] | None = None) -> int:
     # Load the component registry once for the whole run.
     registry_ids = load_registry_ids()
 
+    # Load the AC store schema once for the whole run (ACS-200e). Both the
+    # schema file's presence and jsonschema's importability are checked up
+    # front so a run-wide skip is reported explicitly ONCE via a WARNING,
+    # rather than looking like a passing schema check for every file (AC-3:
+    # never silently report success without the schema check having run).
+    try:
+        import jsonschema  # noqa: F401
+    except ImportError as exc:
+        print(
+            f"WARNING: jsonschema is not importable ({exc}) — schema-level "
+            "validation against config/ac_store_schema.json was SKIPPED for "
+            "this entire run. Install jsonschema to enable parity with the "
+            "commit-time hook.",
+            file=sys.stderr,
+        )
+        schema: dict[str, Any] | None = None
+    else:
+        schema, schema_warning = load_ac_store_schema()
+        if schema_warning is not None:
+            print(f"WARNING: {schema_warning}", file=sys.stderr)
+
     for arg in args:
         path = Path(arg)
         if not path.exists():
@@ -190,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if path.suffix not in {".yaml", ".yml"}:
             continue  # Skip non-YAML files silently
-        errors = _validate_file(path, registry_ids)
+        errors = _validate_file(path, registry_ids, schema)
         all_errors.extend(errors)
         files_checked += 1
 
@@ -222,3 +351,17 @@ if __name__ == "__main__":
 #   separate if-branches with no short-circuit); added MODULE/GOAL/BUSINESS CONTEXT/
 #   ARCHITECTURE docstring fields and this DECISION HISTORY block per doc-enforcer.
 #   (#EPIC-DocumentationCoverageGuarantee/07)
+# - 2026-08-13 15:00 [python-coder]: Closed the false-green gap where this
+#   validator's docstring claimed schema validation it never performed. Added
+#   load_ac_store_schema() + _schema_field_errors(), which load and apply the
+#   SAME config/ac_store_schema.json the commit-time hook
+#   (templates/scripts/commit_guardian/check_ac_schema.py) validates against,
+#   via the identical jsonschema.Draft7Validator mechanism — so the two
+#   verdicts cannot drift. Schema path is resolved the same way
+#   _ac_components.default_registry_path() resolves docs/components.json
+#   (three parents up from this file), so it works for both relative and
+#   absolute invocation. When jsonschema is not importable or the schema file
+#   is absent/unreadable/invalid JSON, main() prints an explicit WARNING to
+#   stderr naming the reason and falls back to the existing hand-rolled checks
+#   only — it never silently reports success as if the schema check had run.
+#   (#TICKETLESS reason=quick-fix-ACS-200e-schema-validator-parity)

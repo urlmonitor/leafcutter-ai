@@ -1,0 +1,79 @@
+id: ACS-1100b-2
+components:
+  - ac_store
+title: "A counter that may not be duplicated still reports what it examined and excluded"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b.yaml
+criteria: |
+  Given the AC-tree child-limit counter, which ACS-100h-7a requires to remain exactly
+    one shared implementation with no second independent traversal,
+  When it is invoked and returns its set of limit violations,
+  Then the same callable also reports, alongside that violation set, how many parent
+    records it examined and each child it left out of the count paired with the ground
+    for leaving it out — for example children excluded on the ground that their status
+    is superseded, per ACS-100c-6,
+  And this self-report is what satisfies the coverage requirement for this surface, so
+    no second traversal of the AC tree is written to produce a total for it,
+  And when the callable is invoked over a narrowed set of parents it also reports the
+    number of parents under the store root, so a staged-scope invocation reads as a
+    scoped figure against a store figure rather than as a complete picture,
+  And both callers of the shared callable — the commit-time path and the scaffold-time
+    path — receive the same examined count and the same exclusion list, so the two
+    enforcement points cannot report different coverage,
+  And the self-report is returned to the caller as part of the answer, not emitted only
+    as an operator warning.
+depends_on:
+  - ACS-1100b
+  - ACS-1100b-1
+  - ACS-100h-7a
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7a.yaml
+    relationship: related
+    status: exists
+    relevance: "The approved single-implementation mandate; this AC is how the exempt surface meets ACS-1100 without violating it. Its shared callable does not exist yet (work_status: todo), so it is a depends_on prerequisite: there is no single return value to extend until it is built."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100c-6.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the superseded-child exclusion that the shared callable applies — the exclusion this self-report must declare with its ground."
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: related
+    status: exists
+    relevance: "One of the two live copies of the child-counting logic (675 lines; the second is templates/scripts/commit_guardian/hooks/check_ac_limits.py at 637 lines, verified 2026-08-13). Extending a return value across two divergent copies is not possible — ACS-100h-7a must land first."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the alternative route to coverage honesty for the ONE surface exempted from
+  the independent-total rule (see ACS-1100a-3). The exemption exists because
+  ACS-100h-7a is approved and forbids a second traversal; nothing here re-opens that.
+
+  Extending the existing callable's return value with an examined count and a declared
+  exclusion list is an addition to the single implementation, not a fork of it — the
+  child-counting and limit RULE stays exactly where it is. Independence applies to the
+  denominator, never to the rule applied per record.
+
+  ACS-100h-7a's delivers_to contract already fixes the violation-set shape; the
+  examined/excluded self-report is an additive field on that same return value, which
+  the IT PO should express as an amendment to the contract rather than a new callable.
+
+  DEPENDENCY (2026-08-13, expert review). ACS-100h-7a is readiness: approved but
+  work_status: todo. The single shared callable this AC extends DOES NOT EXIST YET —
+  the child-counting logic is still two copies of check_ac_limits.py (675 and 637
+  lines). "Both callers receive the same examined count" is unimplementable against two
+  divergent copies, so ACS-100h-7a has been promoted from doc_links into depends_on.

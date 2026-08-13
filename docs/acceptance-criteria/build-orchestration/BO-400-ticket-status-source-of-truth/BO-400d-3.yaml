@@ -1,0 +1,172 @@
+id: BO-400d-3
+components:
+  - build_orchestration
+  - ticket_lifecycle
+title: "Parity guard blocks a sign-off that leaves an observed failure unaccounted for"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose `## Comments` log carries the entry headed
+    "### 2026-08-12 09:15 — python-coder (status: blocker)",
+  And whose frontmatter `agents:` map records `python-coder: signed_off` after a
+    passing retry, with the matching `## Sign-offs` line
+    "- [x] python-coder — 2026-08-13 10:14",
+  When the ticket sign-off parity guard runs at commit time,
+  Then it reads the ticket's `prior_failures:` list as a fourth place alongside
+    the three it already checks — the frontmatter `agents:` map, the
+    `## Sign-offs` checklist, and the Implementation Tasks checkboxes,
+  And the commit is allowed when that list holds an entry for python-coder at
+    2026-08-12 09:15,
+  And the commit is blocked, with a message naming python-coder and the
+    unaccounted blocker comment at 2026-08-12 09:15, when no such entry is
+    present — whether the entry was never written or was removed by a later
+    edit,
+  And a ticket recording `python-coder: signed_off` with the matching
+    `prior_failures:` entry passes the guard, so the `failed -> signed_off`
+    transition remains a legal, committable path.
+
+  Given the guard carrying this fourth check,
+  When any commit that stages a ticket file is made,
+  Then the guard runs on that commit as a registered commit-time hook,
+  And it runs whether the ticket was driven by the single-ticket route, the
+    epic route, or committed by hand,
+  And it runs in blocking mode, so an unaccounted failure stops the commit
+    rather than printing a warning that the commit ignores.
+depends_on:
+  - BO-400d
+  - BO-400d-2
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Canonical rule set the guard and every phase agent read. BOTH §1.5 (\"Three-Place Parity Rule\") and §5 (Validator Rules) state the place count and must move to four together."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "Already draws check-ticket-signoff-parity in the hook flow diagram, though the hook is not in fact registered — the diagram is the stale claim this AC's registration clause resolves."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: re-specified the trigger onto the append-only ## Comments blocker entry (the old Sign-offs-line trigger was already a parity violation and was destroyed by the retry edit); added the hook-registration clause; dropped the no-regression clause; extended the stale-doc list."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Honours the parent's USER-CONFIRMED product decision: `failed -> signed_off`
+  STAYS LEGAL. Read the fourth clause of the first scenario as load-bearing,
+  not decorative: this guard extension must be built so the transition still
+  COMMITS CLEANLY whenever the history accounts for it. What the guard rejects
+  is an unaccounted failure, never the transition itself. A future reviewer who
+  turns this into a transition ban has inverted the requirement — banning it
+  makes agents stop writing `failed` at all, and `failed` is the only failure
+  signal that survives today.
+
+  WHY THE TRIGGER MOVED TO THE `## Comments` LOG (2026-08-13, expert review).
+  The earlier draft triggered on a `## Sign-offs` line reading
+  "- [ ] python-coder — failed 09:15" sitting next to frontmatter
+  `python-coder: signed_off`. That state is unreachable AND self-contradictory:
+    - It is ALREADY a violation today. `_check_parity` in
+      `templates/scripts/commit_guardian/_signoff_parity_checks.py` compares the
+      frontmatter status against the parsed Sign-offs kind and reports a
+      mismatch, so the guard blocks that pair before any fourth check runs. The
+      old draft therefore asserted both "the commit is allowed when the list
+      holds a matching entry" and "the existing checks behave as they do today"
+      — the two cannot both hold.
+    - The evidence destroys itself. `templates/skills/signoff/SKILL.md` §2 step
+      3 tells the retrying agent to find "- [ ] <agent_name>" and replace it
+      with "- [x] <agent_name> — <ts>". That old_string PREFIX-MATCHES the
+      failed line, producing "- [x] python-coder — <new ts> — failed <old ts>",
+      which matches none of `_SIGNED_OFF_RE` / `_FAILED_RE` / `_NEEDED_RE`. The
+      failed marker is erased by the very edit that creates the retry.
+  The `## Comments` log does not have either problem: §4 Failed Path step 3
+  requires a `(status: blocker)` comment naming the agent and timestamp, the log
+  is append-only, and `scripts/retrospective/extract_epic_facts.py` already
+  compiles a per-comment heading regex over it. That is the durable evidence the
+  guard reads. The no-regression clause ("the three checks produce the same
+  verdicts they produce today") was deleted — it was the clause that made the
+  old draft contradictory, and it is not a behaviour worth asserting.
+
+  THE GUARD IS NOT WIRED — REGISTRATION IS IN SCOPE (verified 2026-08-13).
+  `check-ticket-signoff-parity` appears in NO `.pre-commit-config.yaml`. It
+  appears in `templates/scripts/precommit-autofix.json` (an autofix mapping for
+  a hook that never fires) and in `docs/pre-commit-hooks.md`'s flow diagram (a
+  drawing of a hook that is not installed). Its only production invocation is a
+  prompt-level Bash line in `templates/skills/build-single-ticket/SKILL.md`
+  (~L224) with `--enforce`, on the single-ticket path only; the module itself
+  defaults to warn-only. Shipping a fourth check into a guard that nothing
+  invokes is the phantom-done pattern this store exists to prevent, which is
+  why the second scenario makes registration an assertable outcome rather than
+  an implementation footnote.
+
+  BOUNDARY vs BP-300b-4 — NO CONFLICT, and this is deliberate. BP-300b-4
+  requires the planner to raise a `drift_warnings` entry for a ticket whose
+  frontmatter says `python-coder: needed` while its Sign-offs line says
+  `failed`. This AC does NOT legalise any frontmatter/Sign-offs mismatch — the
+  guard's existing parity check still rejects every one of them, and the ticket
+  in this AC's Given is internally consistent (`signed_off` in both places).
+  Had the trigger stayed on the failed Sign-offs line, every retried ticket
+  would have produced a permanent drift warning; moving it to the Comments log
+  removes that interaction entirely. Do not reintroduce the Sign-offs-line
+  trigger without re-checking BP-300b-4.
+
+  ONE BEHAVIOUR, TWO TRIGGERS: a never-written entry and a later-deleted entry
+  are not two behaviours. Both present the guard with the identical detectable
+  state — a failure the ticket itself still evidences, with no corresponding
+  history entry — so both are covered by this single check rather than split
+  across two ACs.
+
+  NEIGHBOUR, NOT DUPLICATE: BO-400a-2-i ("Parity violation: status done but
+  agents map has needed entries") is a different violation on the same guard
+  surface. Neither subsumes the other.
+
+  STALE DOCS THIS AC INVALIDATES — three places, not one. All say the parity
+  guard checks THREE places; it becomes four.
+    1. `templates/skills/signoff/SKILL.md:43` — "### Three-Place Parity Rule
+       (CRITICAL — read before proceeding)". This one is INSIDE this AC's own
+       implementation surface and is NOT optional: §1.5 is the section every
+       phase agent reads immediately before signing off, so updating §5 alone
+       leaves the authoritative pre-flight instruction wrong.
+    2. `docs/agents/llm-expert/PROJECT_CONTEXT.md:214` — "### The Parity Guard
+       (Three-Place Parity Rule)". Outside this L1's subtree (owned by BP-200,
+       whose BP-200b-4 is `work_status: done`); recorded here so the gap is not
+       discovered by a reader trusting the stale count.
+    3. `docs/agents/cards/llm-expert.card.md:393` — "BP-200b-4: Signoff protocol
+       section documents the three-place parity guard...". NOTE: this file is
+       GENERATED by `scripts/generate_agent_cards.py` from the AC's own title,
+       so it cannot be hand-edited — it corrects itself only when BP-200b-4's
+       `title` is amended and the cards are regenerated. That is a second reason
+       the amendment has to be made by BP-200's owner.
+
+  IMPLEMENTATION-SURFACE POINTER (for the IT PO, deliberately kept out of
+  criteria): the guard is
+  `templates/scripts/commit_guardian/check_ticket_signoff_parity.py` with its
+  checks in `_signoff_parity_checks.py`; its canonical rule set is §5 of
+  `templates/skills/signoff/SKILL.md`. Registration means an entry in
+  `.pre-commit-config.yaml` plus the deploy-manifest rule in CLAUDE.md ("New
+  Hook / Gate Dependencies Must Be in the Build Deploy-Manifest").
+
+  OPEN — WRITE SURFACE NOT YET CHOSEN BY THE USER. The first scenario names the
+  git-tracked `## Comments` log as the evidence the guard reads, and
+  `prior_failures:` as the git-tracked record it checks against. If the user
+  instead routes agent status records to a durable JSONL sink, the guard's
+  evidence source changes and this Given has to be re-pointed. The rule itself
+  — a sign-off may not leave an observed failure unaccounted for — is unchanged
+  either way. Do not implement the evidence read before that decision lands.

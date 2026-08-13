@@ -36,6 +36,7 @@ covered_by:
   - BO-2500e-4
   - BO-2500e-5
   - BO-2500e-6
+child_limit_override: 8
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]
 change_target: pipeline

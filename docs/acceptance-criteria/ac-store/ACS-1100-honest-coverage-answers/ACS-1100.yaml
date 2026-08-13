@@ -1,0 +1,131 @@
+id: ACS-1100
+components:
+  - ac_store
+title: "Trust an answer about your requirements, because it tells you how much it covered"
+component: ac-store
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every answer states how much of the whole it actually looked at.
+
+  Today a question about your requirements comes back with results and no sense of
+  scale, so an answer that quietly saw a fraction of them looks exactly like one
+  that saw all of them — and every check built on top of that answer confidently
+  agrees with it. This goal ends silent partial answers: every result arrives with
+  a total it was measured against and a plain statement of what was counted and
+  what was left out. When the two do not add up and nobody can explain the
+  difference, the answer stops instead of being passed on as a clean bill of health.
+depends_on: []
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "In-component grounding failure: given a DIRECTORY argument it prints 'No YAML files to validate.' and exits 0 — a zero-denominator silent pass in the store's own validator. Verified 2026-08-13 against the 21-file ACS-1100 folder."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7a.yaml
+    relationship: related
+    status: exists
+    relevance: "Mandates exactly ONE child-counting implementation for tree limits — explicitly exempted from ACS-1100a's independent-denominator rule. See notes."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100a
+  - ACS-1100b
+  - ACS-1100c
+  - ACS-1100d
+  - ACS-1100e
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  New root L0 in ac-store, authored 2026-08-13. Next free hundred (100–1000 are
+  taken). Five L1s a–e: report a denominator (a), say how it was arrived at (b),
+  halt on an unexplained gap (c), stop downstream checks from laundering a partial
+  answer into an all-clear (d), and write the whole contract down once (e).
+
+  THE DEFECT: every query that reports on the store returns results with no
+  denominator. A query that silently covered 40 of 180 records is shaped exactly
+  like one that covered all 180, and every downstream verifier inherits that
+  denominator and then confirms it — the store's own tooling agrees with itself
+  about a number nobody computed.
+
+  PLACEMENT — DO NOT HANG THIS UNDER ACS-200. The ACS-200 folder is structurally
+  broken: there is no ACS-200.yaml L0 at all, and ACS-200d depends on a
+  nonexistent ACS-200b. Grafting onto it would inherit that breakage. (The
+  ACS-200 repair is a separate concern and is NOT in scope here; ACS-200e is
+  in-flight under another process at the time of writing.)
+
+  ==========================================================================
+  SCOPED CONFLICT — RESOLVE HERE, DO NOT LEAVE IT FOR A BA TO TRIP OVER.
+  ==========================================================================
+  ACS-100h-7a (readiness: approved) mandates the OPPOSITE for tree counting:
+  "the same callable is used by both the pre-commit hook path and any
+  scaffold-time caller, so there is exactly one implementation of the
+  child-counting and limit rule (no second independent traversal)."
+
+  Resolution: the AC-tree child-limit counter is EXEMPT from ACS-1100a's
+  independent-denominator requirement. ACS-100h-7a wins on that surface, and no
+  second traversal may be written to satisfy ACS-1100. The tree-limit counter
+  meets ACS-1100's intent a different way: the single shared callable itself
+  reports how many parents it examined and what it excluded (ACS-1100b), so the
+  answer is still self-describing without duplicating the rule.
+
+  The general boundary, stated so it generalises: ACS-1100's independence
+  requirement applies to the DENOMINATOR (how many records were in scope), never
+  to the RULE being applied to each record. Where an existing AC already mandates
+  a single shared implementation of a rule, that mandate stands; ACS-1100 adds a
+  coverage statement around it, it does not fork it.
+
+  ==========================================================================
+  EXPERT-REVIEW AMENDMENTS (2026-08-13) — read before decomposing further.
+  ==========================================================================
+  1. INDEPENDENCE IS ABOUT FILTERS AND JOIN KEYS, NOT ABOUT PASS COUNT. The
+     original ACS-1100a-2 forbade a total "produced by the same pass". That
+     condemned the CORRECT implementation: scan_ac_store.py's _walk_ac_yamls is a
+     filter-free rglob that yields both the total and the results in one traversal,
+     which is exactly right — a filter-free enumeration has no blind spot to
+     inherit, and forcing a second traversal is the waste ACS-100h-7a exists to
+     prevent. "Same pass" has been struck; only filter/match-key/join-key
+     independence remains.
+  2. ACS-900e IS RESOLVED BY (1), NOT BY THE DENOMINATOR-VS-RULE BOUNDARY.
+     ACS-900e-1's it_requirements name the shared unit as _load_ac_yamls ("load
+     each AC dict, read its implemented_by list") — that is an ENUMERATION /
+     denominator path, not a per-record rule. The boundary above therefore does
+     not settle it; the filter-free-enumeration reading in (1) does. See the notes
+     on ACS-1100a-3.
+  3. SCOPED CALLERS ARE LEGITIMATE. All eight AC pre-commit hooks resolve their
+     work set from `git diff --cached` — staged scope. Without an exclusion ground
+     for it, the ACS-1100c-1 halt would fire on EVERY commit, reporting ~2,783
+     records unaccounted for against a store of 2,784 YAML files (counted
+     2026-08-13). "Outside the requested scope" is now a declared exclusion ground,
+     and a scoped answer reports both its scope total and the store total.
+  4. GROUNDING IS NOW IN-COMPONENT. Every record in this tree is
+     components: [ac_store], but the two originally-named grounding failures
+     (scripts/agent-health/generate_health_report.py and
+     scripts/retrospective/extract_epic_facts.py) both read agent_telemetry.jsonl
+     and belong to other components — so every AC here could go done against
+     scan_ac_store.py alone while both named bugs stayed live. The binding
+     grounding scenario is now in-component: validate_ac_schema.py given a
+     DIRECTORY prints "No YAML files to validate." and exits 0. The two external
+     scripts are retained as explicitly non-binding illustrations only.
+     FOLLOW-UP NEEDED (not in this tree): those two bugs need their own ACs in
+     their owning components (agent_telemetry and the retrospective surface).
+     ACS-1100 as scoped will NOT fix them.

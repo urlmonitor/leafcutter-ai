@@ -1,0 +1,77 @@
+id: BO-2700
+components:
+  - build_orchestration
+  - testing_quality
+title: "Work only counts as done when it is actually reachable when the product runs"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Nothing counts as delivered until it is genuinely wired into how the product runs.
+
+  It is still possible to finish work, pass every check, and ship something that
+  nothing ever calls — a capability that exists on paper but is never reached when
+  a person actually uses the product. This goal closes that gap: proof of completion
+  must come from running the work the way it is really used, and every capability
+  the product advertises must be genuinely connected to the automation that runs it,
+  in both directions. Anything stranded is caught the moment it is introduced, with
+  a clear explanation of what is unreachable, so a stranded feature can never quietly
+  reach customers.
+
+  This is the third honesty axis of proof-of-done, alongside BO-2500a ("a real test
+  passes") and BO-2500c ("the test uses real data"): the test must also be reached
+  through the real caller. It is the mechanical, gate-level counterpart to the
+  ticket-level and epic-level phantom-done prevention in BP-1100.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2700a
+  - BO-2700b
+  - BO-2700c
+  - BO-2700d
+  - BO-2700e
+  - BO-2700f
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored from a user request on 2026-08-13 describing a two-layer reachability
+  guard. Framing decisions made during authoring, recorded for the BA and IT PO:
+
+  - Placed as a NEW L0 rather than extra L1s under BO-2500. BO-2500 already carries
+    four L1s and its axis is "the proof is honest" (a real test, real data, an
+    unskippable gate). This tree's axis is "the code under proof is really reached"
+    — a different failure mode. Per the build-orchestration PROJECT_CONTEXT rule, a
+    drive-time gate concern belongs in build-orchestration.
+  - Distinct from BP-1100 (build-pipeline): BP-1100 prevents phantom-done at the
+    TICKET and EPIC level (files_touched naming an executable surface, outside-in
+    angle testing at finalize). BO-2700 is the mechanical AC-level gate. Do not
+    fold either into the other.
+  - Distinct from BP-1000e (source <-> shipped workflow-script byte parity) and
+    INF-600g (agent registry spawned_by reciprocity). Those are file-copy parity and
+    agent-registry reciprocity; BO-2700b/c is command-surface <-> automation-caller
+    reciprocity. Same instinct, different registries.
+  - The user described only the two enforcement layers. Two supporting guarantees
+    were added because the guard is unusable without them: BO-2700d (an honest,
+    reviewable exemption for code that legitimately has no runtime entry point —
+    without it the guard blocks every helper module and gets switched off) and
+    BO-2700e (a failure message that names what is unreachable).
+  - "This would have failed the instant PR 411 landed" is regression EVIDENCE, not a
+    separate benefit — decompose it as a replay/regression scenario under BO-2700b.
+
+  Explicitly OUT OF SCOPE for this tree (tracked as separate follow-ups by the user):
+  the AC-schema ownership-checklist change, the inline pr-reviewer gate in the fast
+  lane, and the warn-only orphan-detection meta-test.
