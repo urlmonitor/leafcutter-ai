@@ -32,11 +32,67 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Shipped the double-recording bug this AC exists to prevent recurring on the gate surface."
-assigned_agent: null
-estimated_complexity: null
-it_requirements: null
-delivers_to: null
-expects_from: null
+  - path: scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: "Already computes a per-item completeness relation (frontmatter agents map against the Sign-offs checklist, with no-gap and no-orphan rules). The one-entry-per-requested-gate count is the same shape of check and belongs here on the ticket surface."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Supplies the requested-gate set the count is taken against — the four in the Given are whatever _build_agents_map produced for the work item."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    gate_record_cardinality_rule:
+      type: object
+      description: "A completeness relation over one work item's records: for every gate G in the requested set, count(entries where entry.gate == G) == 1 on any run that reached G's decision point. Violations are reported as two distinct kinds so the failure is actionable: { kind: 'duplicate', gate: str, count: int } when the count exceeds one, and { kind: 'gap', gate: str } when it is zero. A gap is legitimate only under the BO-2900f-2-i halt carve-out; a duplicate is never legitimate."
+  reference_file_path: "scripts/commit_guardian/_signoff_parity_checks.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "CONDITIONALIZE, DON'T ADD — this is the whole AC. When the skip branch of the enablement if/else gains a record-writing call, the pre-existing UNCONDITIONAL record-writing call that sits AFTER the if/else must be moved into the execute branch or guarded in the same change. Adding the skip-branch call and leaving the unconditional one produces two entries on the skip path; moving it without leaving one on every path produces a gap. Before writing the fix, enumerate every path through the gate's decision point and state the entry count for each; the enumeration is the evidence, not the diff."
+    - "ASSERT A COUNT, NEVER A PRESENCE. A test that greps the source for a recording call passes on the buggy double-recording code — that is precisely how BO-1000b-1-i shipped. No presence-shaped test may be the primary evidence for this AC. The primary evidence is reading the collected records after a real run and counting entries per requested gate."
+    - "IF A STRUCTURAL TEST IS WRITTEN ANYWAY, its pattern must match single-quoted, double-quoted AND backtick template-literal argument styles. BO-1000b-1-i's count guard matched only quoted-string first arguments and was therefore blind to the template-literal skip calls that caused the bug; it stayed green on broken code. See CLAUDE.md 'Skip-Branch Side-Effects'. A structural test is admissible only as a supplement to the behavioural count, never as a substitute."
+    - "ONE RECORDING SEAM SHARED WITH BO-2900f-4. Because BO-2900f-4 forbids gate-name-specific branches, there is exactly one recording site per path. Get the conditionalization right once and every gate inherits it — and conversely, a per-gate branch introduced here multiplies the number of places the cardinality can break, which is why the two ACs must be implemented together rather than in sequence."
+    - "REPORT DUPLICATES AND GAPS DISTINCTLY. Collapsing both into one 'record count wrong' failure loses the diagnosis: a duplicate means the unconditional call was left in place, a gap means it was moved without a replacement on every path. Two failure kinds, two messages, and the gate name in both."
+    - "SURFACE-DEPENDENT ENFORCEMENT POINT — NAME BOTH. Under the git-tracked ticket option, the count is enforced in the frontmatter-to-Sign-offs parity relation this file already computes, and the enforcement runs as a pre-commit hook. Under the JSONL option, the counting validator is new code and must be given its own gate that actually runs — an invariant asserted only in a unit test and never on a real run is not enforcement. Either way the count must be checked by something that BLOCKS, because the AC's failure mode is a record set that looks complete."
+delivers_to:
+  agent: python-coder
+  contract: "The cardinality relation and its two violation kinds — { kind: 'duplicate', gate, count } and { kind: 'gap', gate } — over one work item's requested-gate record set. BO-2900f-2-i consumes the 'gap' kind and adds the halt carve-out that decides when a gap is legitimate; BO-2900f-3 relies on the count holding so that a per-outcome roll-up is a partition of the requested set rather than a sample of it."
+expects_from:
+  ac_id: BO-2900f-1
+  contract: "The requested-gate record set — one { gate, outcome, reason, source } entry per requested gate, with the requested set captured before the enablement filter. This AC constrains the CARDINALITY of that set and adds no field to the record shape."
+test_spec:
+  - name: test_four_requested_gates_on_a_completed_run_produce_exactly_four_entries
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Drives a real completed run over a work item requesting four gates, two executing and two switched off, and asserts the total entry count equals four — the count asserted against the requested set, not against a literal."
+  - name: test_each_requested_gate_appears_exactly_once
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Over the same run, asserts per-gate counts are all exactly one, so a compensating pair (one gate duplicated, another missing) cannot pass the total-count assertion above."
+  - name: test_a_skipped_gate_is_recorded_once_and_not_twice
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The direct regression test for the BO-1000b-1-i double-recording bug on the gate surface: drives the skip path specifically and asserts the count for that gate is one. Must fail on an implementation that adds a skip-branch record while leaving the unconditional post-branch record in place."
+  - name: test_no_requested_gate_has_zero_entries_on_a_completed_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the gap side of the invariant on a run that reached every decision point — the symmetric failure produced by moving the unconditional call into one branch only."
+  - name: test_duplicate_and_gap_are_reported_as_distinct_violation_kinds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Feeds the validator a record set with one duplicated gate and one missing gate and asserts two violations of different kinds, each naming its gate — so the diagnosis survives to the operator instead of collapsing into one count mismatch."
+test_rationale: "This AC exists because a structural test passed on the exact bug it describes. BO-1000b-1-i's count guard grepped for the recording call and its regex matched only quoted-string arguments, so the template-literal skip calls that caused the double-recording were invisible to it and the suite stayed green on broken code. Repeating that shape here would be self-defeating, so every test drives a real run to completion and counts the entries the run actually produced. The count must also be taken per gate rather than in total: a total-only assertion is satisfied by a compensating pair — one gate recorded twice and another not at all — which is a strictly worse state than the bug being guarded against. The fifth test sits in commit_guardian because the violation-reporting side is the enforcement point that has to block, and a validator that detects both faults but reports them identically leaves the implementer unable to tell which half of the conditionalization went wrong."
 origin_agent: BrainCandy
 created: 2026-08-13
 amended_by:
@@ -78,3 +134,25 @@ notes: |
   gate's decision point) and can be tested independently. Do not re-merge them:
   the carve-out is the clause an implementer will reach for to excuse a genuine
   gap, and keeping it in a separate scenario forces the halt record to be shown.
+
+  2026-08-14 (IT PO enrichment). Two additions the criteria imply but do not name:
+
+  - THE COUNT MUST BE PER GATE, NOT IN TOTAL. The criteria say both "the number of
+    recorded entries equals four" and "each appear exactly once", and only the
+    second is load-bearing. A total-only check is satisfied by a compensating pair
+    — one gate duplicated, one missing — which is worse than the bug this AC
+    guards. The test contract asserts both, with the per-gate assertion as the
+    primary.
+  - DUPLICATE AND GAP ARE DIFFERENT DIAGNOSES. A duplicate means the unconditional
+    post-branch call was left in place; a gap means it was moved into one branch
+    only. Reporting them as one 'count wrong' failure discards exactly the
+    information the implementer needs to know which half of the conditionalization
+    they got wrong, so the violation record carries a kind.
+
+  ENFORCEMENT POINT. On the ticket surface this is the same shape of completeness
+  relation that _signoff_parity_checks.py already computes between the frontmatter
+  agents map and the Sign-offs checklist, and it runs as a blocking pre-commit
+  hook. That is a real advantage of the ticket option for THIS AC specifically:
+  the counting machinery and the gate that runs it both already exist. Under the
+  JSONL option both are new, and the invariant needs a blocking gate of its own —
+  an invariant asserted only in unit tests is not enforcement.
