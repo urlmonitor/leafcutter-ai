@@ -32,7 +32,7 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: [BO-2500a, BO-2500b, BO-2500c, BO-2500d]
+covered_by: [BO-2500a, BO-2500b, BO-2500c, BO-2500d, BO-2500e]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

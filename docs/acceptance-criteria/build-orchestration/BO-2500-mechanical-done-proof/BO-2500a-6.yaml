@@ -1,0 +1,79 @@
+id: BO-2500a-6
+components:
+  - build_orchestration
+  - testing_quality
+title: "A done composite AC derives its proof from its children, not from a direct linked test"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a work_status: done composite AC (an AC that has children or a non-empty
+    covered_by) whose child ACs are each covered by a passing "# covers:" test,
+  When the proof-of-done coverage check is run in its CI-changed mode against
+    that composite,
+  Then the check treats the composite as satisfied because its proof is derived
+    from its covered children,
+  And the check does NOT fail the composite for lacking a direct "# covers:" test
+    of its own,
+  And a work_status: done leaf AC (one with no children and an empty covered_by)
+    still fails the check unless it has its own passing "# covers:" test.
+depends_on: [BO-2500a]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    done_proof_composite_children_gate:
+      type: object
+      description: "Verdict for a done AC whose covered_by resolves to real child ACs: satisfied when those children are covered by passing tests, without requiring a direct '# covers:' test of its own; a childless (leaf) done AC still requires its own passing covers-tagged test."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "File of record: scripts/ac_store/done_proof.py (the module backing the required CI gate 'Proof-of-done coverage check (BO-2500b)', invoked from .github/workflows/ci.yml). The composite-vs-leaf distinction must live in this module's done-eligibility logic."
+    - "A composite AC is one with children or a non-empty covered_by; it is satisfied when all its children are covered by passing tests, WITHOUT requiring a direct '# covers:' test of its own."
+    - "A leaf AC (no children, empty covered_by) must still fail unless it has its own passing '# covers:' test — the leaf path must not be weakened by the composite exemption."
+    - "The composite/leaf classification must be data-driven (derived from children/covered_by), never a hard-coded AC-id allowlist."
+    - "If the fix introduces a new import into done_proof.py or its hook, add that module to the build deploy-manifest (build_ac_store deploy_map in scripts/build_phases.py) so the deployed CI gate does not raise ModuleNotFoundError; verify by running the deployed gate, not only the source-tree unit tests."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file/YAML I/O and any pytest subprocess call, log at WARNING or higher (or re-raise); no bare or silent excepts."
+    - "Verify behaviorally — EXECUTE the checker over a fixture AC store (composite-with-covered-children and done-leaf-without-test), not by grepping done_proof.py."
+test_spec:
+  - name: test_done_composite_with_covered_children_passes
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Running the proof-of-done check in CI-changed mode over a fixture store passes a done composite whose children are each covered by a passing test, with no direct linked test of its own."
+    covers: [BO-2500a-6]
+  - name: test_done_leaf_without_test_still_fails
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "The check fails a done leaf AC (no children, empty covered_by) that has no passing '# covers:' test of its own."
+    covers: [BO-2500a-6]
+delivers_to:
+  agent: python-coder
+  contract: "A proof-of-done verdict for a composite AC that is satisfied when all children are covered by passing tests, without requiring a direct linked test"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-2500a-6-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260813-BO-2500a-6.md
+- scripts/ac_store/done_proof.py
+- scripts/build_orchestration/fast_lane.py
+- unit_tests/ac_store/test_done_proof_composite.py

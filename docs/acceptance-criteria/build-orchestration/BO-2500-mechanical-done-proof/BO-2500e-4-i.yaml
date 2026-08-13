@@ -1,0 +1,73 @@
+id: BO-2500e-4-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Python-covered ACs yield an unchanged verdict after JS support is added"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC covered only by Python "# covers:<id>" tests,
+  When the done-proof oracle evaluates it after JS / vitest support has been added,
+  Then it yields the same verdict it did before JS support existed — the same eligibility outcome
+    and the same blocking reasons,
+  So adding front-end proof-of-done does not change or regress Python-covered behavior.
+depends_on:
+  - BO-2500e-4
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    done_proof_python_no_regression:
+      type: object
+      description: "Guarantee that an AC covered only by Python '# covers:<id>' tests yields the identical done-proof verdict (same eligibility outcome and same blocking reasons) after JS/vitest support is added as it did before."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Adding JS/vitest support must not alter the verdict for a Python-only-covered AC — same eligibility outcome and same blocking reasons as before JS support."
+    - "The Python-only path must not invoke the JS runner (no incidental vitest call) when an AC has no '// covers:' tags."
+    - "Cover this with a regression test that asserts the pre-JS Python verdict equals the post-JS Python verdict for representative eligible and blocked cases."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500e-4
+  contract: "The end-to-end mark-done path whose Python-covered behavior this edge case pins as unchanged."
+test_spec:
+  - name: test_python_only_ac_verdict_unchanged_after_js_support
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A Python-only-covered AC yields the same eligibility outcome and blocking reasons after JS support is added as before."
+  - name: test_python_only_path_does_not_invoke_vitest
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Evaluating a Python-only-covered AC (no '// covers:' tags) does not invoke the JS runner."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L3 edge case for BO-2500e-4 — the no-regression guarantee the parent L1 BO-2500e states
+  ("Python-covered behavior is unchanged"). IT-PO to enrich with a regression test spec.

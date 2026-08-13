@@ -1,0 +1,50 @@
+id: UXP-610-1
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Probing a CI-only endpoint in production leaks no internal detail"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a production deployment of the Atlas,
+  When a client sends a request to /api/drift-guard or /api/mock-toggle-check,
+  Then the response is a plain not-found that discloses no filesystem paths, stack traces,
+    or other internal details,
+  So an attacker cannot probe the absent endpoints to learn anything about the server internals.
+depends_on:
+  - UXP-610
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "In production the response to /api/drift-guard and /api/mock-toggle-check must be a plain not-found body with no filesystem paths, stack traces, error messages, or handler-specific detail — indistinguishable from any other absent route."
+  - "The not-found must result from the endpoint being absent from the production build (UXP-610), not from a handler that runs and formats an error, so no internal code path can leak detail."
+delivers_to: null
+expects_from:
+  ac_id: UXP-610
+  contract: "The production build that excludes the CI-only endpoints; this edge case constrains the observable response (plain not-found, zero internal disclosure) when they are probed."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: privacy
+test_spec:
+  - name: prod_probe_returns_clean_not_found
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    description: "Probing /api/drift-guard or /api/mock-toggle-check on a production deployment returns a plain not-found disclosing no filesystem paths, stack traces, or internal detail."
+notes: |
+  L3 edge case for UXP-610 — the no-leakage guarantee: probing the absent endpoints in production
+  returns a clean not-found with no internal detail. IT-PO to enrich.

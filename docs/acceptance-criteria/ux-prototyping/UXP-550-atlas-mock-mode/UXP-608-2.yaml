@@ -1,0 +1,50 @@
+id: UXP-608-2
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "The production lock overrides an explicit opt-in — lock wins over allow"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a production deployment that has BOTH explicitly opted in to allowing runtime overrides
+    AND set the production lock LEAFCUTTER_MOCK_LOCK=real,
+  When a request arrives carrying ?mock=1,
+  Then the lock takes precedence over the opt-in and the deployment serves real data with the
+    live badge — the override is ignored,
+  So the resolution order is lock > opt-in-allow > runtime override > env default, and the
+    UXP-553-1 production lock remains the absolute guarantee of real data.
+depends_on:
+  - UXP-608
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "The seam in leafcutter-web/lib/data/mock.ts must apply the precedence order lock > opt-in-allow > runtime override > env default: when LEAFCUTTER_MOCK_LOCK=real is set, it must resolve to live even if the explicit override opt-in is also set and ?mock=1 is present."
+  - "The production lock (UXP-553-1) must remain the highest-precedence input and cannot be overridden by the opt-in allow flag or any request-time override."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: production_lock_beats_opt_in_and_override
+    target_dir: leafcutter-web/lib/data/__tests__/
+    framework: vitest
+    type: unit
+    description: "With LEAFCUTTER_MOCK_LOCK=real, the explicit override opt-in set, and ?mock=1 present, the seam resolves to live with the live badge — lock wins over allow and override."
+notes: |
+  L3 edge case for UXP-608 specifying the interaction with the UXP-553-1 production LOCK: the lock
+  outranks even an explicit override opt-in. Establishes the full precedence order. IT-PO to enrich.

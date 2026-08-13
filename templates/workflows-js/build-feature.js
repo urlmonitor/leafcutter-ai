@@ -230,6 +230,29 @@ function sortByCanonicalPriority(phases) {
   );
 }
 
+/**
+ * From a ticket's candidate phases, return those to actually dispatch.
+ *
+ * Pure function (no module state) so it is unit-testable in isolation — this is
+ * the load-bearing decision behind BO-2700 ("one PR per epic"): for an
+ * epic-member ticket the pull-request phase is dropped (the single epic-level PR
+ * is opened later by finalize-feature, NOT per ticket), while the commit phase
+ * and every other phase are retained (commit's pre-commit hooks must fire per
+ * ticket). For a standalone ticket (isEpicMember=false) the list is returned
+ * unchanged, so single-ticket behavior is unaffected.
+ *
+ * @param {Array<{agent: string, status: string}>} orderedPhases
+ * @param {boolean} isEpicMember
+ * @returns {Array<{agent: string, status: string}>}
+ */
+function selectDispatchPhases(orderedPhases, isEpicMember) {
+  const phases = orderedPhases || [];
+  if (!isEpicMember) {
+    return phases;
+  }
+  return phases.filter((p) => p.agent !== "pull-request");
+}
+
 // ---------------------------------------------------------------------------
 // Phase 0 — Resolve target and worktree
 // ---------------------------------------------------------------------------
@@ -393,7 +416,7 @@ function toWorktreePath(resolvedPath, worktreePath) {
 // @returns {object} — { status, ticket_path, title, completed_phases, skipped_phases, message }
 // ---------------------------------------------------------------------------
 
-async function driveTicketPhases(worktreeTicketPath) {
+async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   // -------------------------------------------------------------------------
   // Step 1 — Planner: read ticket frontmatter → ordered_phases JSON
   // -------------------------------------------------------------------------
@@ -421,8 +444,15 @@ async function driveTicketPhases(worktreeTicketPath) {
   // -------------------------------------------------------------------------
   // Step 2 — Filter and sort needed phases
   // -------------------------------------------------------------------------
+  // selectDispatchPhases applies the "one PR per epic" rule (BO-2700): for an
+  // epic-member ticket it drops the pull-request phase (the single epic PR is
+  // opened by finalize-feature, not per ticket); commit and all other phases are
+  // retained. Standalone tickets (isEpicMember=false) are unaffected.
   const neededPhases = sortByCanonicalPriority(
-    orderedPhases.filter((p) => p.status === "needed")
+    selectDispatchPhases(
+      orderedPhases.filter((p) => p.status === "needed"),
+      isEpicMember
+    )
   );
 
   if (neededPhases.length === 0) {
@@ -675,7 +705,9 @@ if (target_type === "epic") {
           // Drive each ticket through its needed phases using the flattened
           // per-phase driver (driveTicketPhases) so each phase runs under its
           // own agent template. No ticket-supervisor is dispatched here.
-          const result = await driveTicketPhases(worktreeTicketPath);
+          // isEpicMember=true → the per-ticket pull-request phase is deferred;
+          // finalize-feature opens the single epic-level PR.
+          const result = await driveTicketPhases(worktreeTicketPath, true);
           return {
             ticket_path: ticket.path,
             status: result && result.status ? result.status : "ok",

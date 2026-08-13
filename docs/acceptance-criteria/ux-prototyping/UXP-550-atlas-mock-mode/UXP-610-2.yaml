@@ -1,0 +1,52 @@
+id: UXP-610-2
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "The CI-only endpoints remain present in the non-production build the checks need"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a CI / non-production build of the Atlas,
+  When the mock-mode CI checks call /api/drift-guard and /api/mock-toggle-check,
+  Then both endpoints are present and respond, so the drift-guard (UXP-609) and toggle checks
+    can run,
+  So gating the endpoints out of production does not disable the CI checks that depend on them.
+depends_on:
+  - UXP-610
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "In a CI / non-production build, the /api/drift-guard and /api/mock-toggle-check route handlers under leafcutter-web/app/api/ must be compiled in and respond, so the same production-gating that removes them in production must leave them present in CI."
+  - "The gating condition (UXP-610) and the production-detection signal (UXP-608-3) must be the single control point, so presence-in-CI and absence-in-production are two sides of one decision and cannot drift apart."
+delivers_to:
+  agent: frontend-coder
+  contract: "The /api/drift-guard and /api/mock-toggle-check endpoints present and responding in the non-production build, which the UXP-609 CI drift-guard and mock-toggle checks invoke."
+expects_from:
+  ac_id: UXP-610
+  contract: "The production-gating control point that excludes the endpoints in production; this edge case pins its complement — the endpoints remain present in the CI build."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal
+test_spec:
+  - name: ci_build_includes_ci_endpoints
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    description: "In a CI / non-production build, /api/drift-guard and /api/mock-toggle-check are present and respond so the mock-mode CI checks can run."
+notes: |
+  L3 edge case for UXP-610 — the positive complement: the endpoints must survive in the CI build so
+  the mock-mode checks keep working. IT-PO to enrich.

@@ -196,5 +196,183 @@ class TestFastLaneBuildCommand(unittest.TestCase):
         )
 
 
+class TestLifecycleWiringInWorkflow(unittest.TestCase):
+    """Structural tests for lifecycle (claim/release/mark_done) wiring in fast-lane-ship.js.
+
+    These tests assert that the JS workflow INVOKES the new CLI subcommands — not
+    just that the underlying Python functions exist in isolation. They read the
+    real JS source as text and assert on the presence and placement of the
+    lifecycle subcommand calls.
+
+    All tests are RED because fast-lane-ship.js does not yet call the `claim`,
+    `release`, or `mark_done` subcommands. The AssertionError on the missing
+    string IS the intended red state.
+
+    === Lifecycle wiring contract (for python-coder / JS-coder to implement) ===
+
+    1. claim subcommand — AFTER Resolve, BEFORE test-writer dispatch:
+       After the resolver returns the build set (acIds), the workflow must
+       invoke `fast_lane.py claim --ac-ids <batch> --ac-root <store>` to flip
+       all resolved ACs from todo → in_progress, preventing a concurrent run
+       from stealing the same set. This must appear textually between the
+       phase("Resolve") call and the agentType: "test-writer" dispatch.
+
+    2. release subcommand — on failure/abort branches:
+       On any non-success early exit (gate-fail, agent-error), the workflow
+       must invoke `fast_lane.py release --ac-ids <batch> --ac-root <store>`
+       to release claimed-but-not-done ACs back to todo — so no AC is
+       permanently stuck in in_progress blocking future runs.
+
+    3. mark_done subcommand — at commit phase:
+       At the finish/commit phase, the workflow must call
+       `fast_lane.py mark_done --ac-ids <batch> --ac-root <store> --test-root <wt>`
+       instead of (or in addition to) solely calling mark_ac_done.py. The
+       `mark_done` subcommand runs the stale-todo guard atomically, which
+       mark_ac_done.py alone does not.
+    """
+
+    def _require_workflow(self) -> str:
+        """Read fast-lane-ship.js and fail loudly if it doesn't exist."""
+        content = _read(_WORKFLOW_PATH)
+        self.assertIsNotNone(
+            content,
+            f"templates/workflows-js/fast-lane-ship.js does not exist at "
+            f"{_WORKFLOW_PATH} — cannot run lifecycle wiring tests.",
+        )
+        return content  # type: ignore[return-value]
+
+    def test_ac7_claim_invoked_after_resolve_before_test_writer(self) -> None:
+        # covers: BO-2400f-7
+        """The `claim` CLI subcommand is invoked after Resolve and before test-writer dispatch.
+
+        After the resolver returns the build set, the workflow must claim all ACs
+        (flip them to in_progress) before dispatching test-writer — preventing a
+        concurrent run from stealing the same set. The `claim` invocation must
+        appear TEXTUALLY between the phase("Resolve") call and the
+        agentType: "test-writer" dispatch.
+
+        RED because fast-lane-ship.js does not yet call the `claim` subcommand.
+        The assertIn("claim", between_region) fails with AssertionError.
+        """
+        content = self._require_workflow()
+
+        # Locate the Resolve phase entry and the test-writer agent dispatch.
+        resolve_pos = content.find('phase("Resolve")')
+        test_writer_pos = content.find('"test-writer"')
+
+        self.assertGreater(
+            resolve_pos,
+            -1,
+            'fast-lane-ship.js must contain phase("Resolve") — structural check.',
+        )
+        self.assertGreater(
+            test_writer_pos,
+            -1,
+            'fast-lane-ship.js must contain "test-writer" agent dispatch — structural check.',
+        )
+
+        # The region between the Resolve phase call and the test-writer dispatch.
+        between_region = content[resolve_pos:test_writer_pos]
+
+        self.assertIn(
+            "claim",
+            between_region,
+            "The `claim` CLI subcommand must be invoked AFTER the Resolve phase and "
+            "BEFORE the test-writer dispatch in fast-lane-ship.js (BO-2400f-7). "
+            "The workflow must flip ACs to in_progress before any build work begins "
+            "so a concurrent run cannot steal the same set. "
+            f"Searched in the {len(between_region)}-char region from "
+            "phase(\"Resolve\") to the test-writer dispatch — 'claim' was not found.",
+        )
+
+    def test_ac10_release_invoked_on_failure_abort_branches(self) -> None:
+        # covers: BO-2400f-10
+        """The `release` CLI subcommand is invoked on failure/abort branches.
+
+        On a non-success exit (gate-fail, agent-error paths), the workflow must
+        release any claimed ACs back to todo — so no AC is permanently stuck in
+        in_progress blocking future runs. The `release` subcommand must appear
+        at least once in the JS source.
+
+        RED because fast-lane-ship.js does not reference `release` at all.
+        The assertIn("release", content) fails with AssertionError.
+        """
+        content = self._require_workflow()
+
+        # A `release` invocation must appear somewhere in the JS source.
+        self.assertIn(
+            "release",
+            content,
+            "The `release` CLI subcommand must be referenced in fast-lane-ship.js "
+            "(BO-2400f-10). On any non-success early exit (gate-fail, agent-error), "
+            "the workflow must release claimed ACs back to todo so no AC is permanently "
+            "stuck in in_progress. No 'release' reference was found in the file.",
+        )
+
+        # Verify `release` appears near a failure return path: the release call
+        # should be close to at least one early-return block in the JS.
+        return_positions = [
+            i for i in range(len(content)) if content[i : i + 8] == "return {"
+        ]
+        release_pos = content.find("release")
+
+        has_release_near_return = any(
+            abs(release_pos - rp) <= 2000 for rp in return_positions
+        )
+
+        self.assertTrue(
+            has_release_near_return,
+            "The `release` call must appear near a failure/abort return block "
+            "(within 2000 chars of a 'return {' statement — BO-2400f-10). "
+            "Workflow abort paths must release claimed ACs before returning. "
+            f"release_pos={release_pos}, "
+            f"nearest return_pos={min(return_positions, key=lambda rp: abs(release_pos - rp)) if return_positions else 'none'}",
+        )
+
+    def test_ac9_mark_done_subcommand_invoked_at_commit_phase(self) -> None:
+        # covers: BO-2400f-9
+        """The `mark_done` CLI subcommand is invoked at the Commit phase.
+
+        At the finish/commit phase, the workflow must call the `mark_done` CLI
+        subcommand (not solely mark_ac_done.py). The `mark_done` subcommand runs
+        the stale-todo guard atomically — which mark_ac_done.py alone does not.
+
+        The `mark_done` string must appear in the JS after phase("Commit").
+
+        RED because fast-lane-ship.js currently uses mark_ac_done.py only;
+        the `mark_done` subcommand of fast_lane.py is not yet referenced.
+        The assertIn("mark_done", commit_region) fails with AssertionError.
+
+        Note: 'mark_done' (underscore) must appear, not 'markDone' (camelCase) —
+        the CLI subcommand name uses underscores as its positional argument.
+        'mark_ac_done' (the legacy script name) does NOT satisfy this assertion.
+        """
+        content = self._require_workflow()
+
+        # Find the Commit phase entry.
+        commit_pos = content.find('phase("Commit")')
+        self.assertGreater(
+            commit_pos,
+            -1,
+            'fast-lane-ship.js must contain phase("Commit") — structural check.',
+        )
+
+        # The region from the Commit phase onwards.
+        commit_region = content[commit_pos:]
+
+        self.assertIn(
+            "mark_done",
+            commit_region,
+            "The `mark_done` CLI subcommand must be invoked at the Commit phase "
+            "in fast-lane-ship.js (BO-2400f-9). This replaces sole reliance on "
+            "mark_ac_done.py — the `mark_done` subcommand runs the coverage gate "
+            "AND the stale-todo guard atomically. "
+            f"Searched in the {len(commit_region)}-char commit phase region — "
+            "'mark_done' was not found. (Note: 'mark_ac_done' satisfies mark_ac_done.py "
+            "but NOT 'mark_done' the CLI subcommand; 'markDone' is camelCase and does "
+            "not match either.)",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

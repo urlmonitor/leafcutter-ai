@@ -1,0 +1,49 @@
+id: UXP-608-1
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "A production deployment that explicitly opts in honors the runtime override"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a production deployment that has EXPLICITLY opted in to allowing runtime mock overrides
+    and has no production lock set,
+  When a request arrives carrying ?mock=1,
+  Then the override is honored and the deployment serves bundled fixtures with the mock badge,
+  So default-deny is an opt-out-able safe default, not a hard prohibition — an operator who
+    wants overrides in production can turn them on.
+depends_on:
+  - UXP-608
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "When the explicit override opt-in flag is set in a production deployment with no production lock, the seam in leafcutter-web/lib/data/mock.ts (via leafcutter-web/middleware.ts) must honor ?mock=1 and resolve to mock, serving fixtures with the mock badge."
+  - "The opt-in must be an explicit server-side configuration value, not derivable from untrusted request input, so only an operator can enable overrides in production."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: production_opt_in_honors_mock_override
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: unit
+    description: "In production with the explicit override opt-in set and no production lock, ?mock=1 is honored and the deployment resolves to mock with the mock badge."
+notes: |
+  L3 edge case for UXP-608 — the positive complement of default-deny: an explicit opt-in makes
+  the override take effect. IT-PO to enrich.

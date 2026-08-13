@@ -41,7 +41,8 @@ amended_by: []
 superseded_by:
   - ACD-1600a
   - ACD-1800c
-covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4, ACD-400b-5]
+covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4, ACD-400b-5, ACD-400b-6, ACD-400b-7, ACD-400b-8]
+child_limit_override: 9
 implemented_by:
 - scripts/ac_store/generate_ticket_from_ac.py
 change_target: code

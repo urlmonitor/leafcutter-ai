@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the AC store contains an approved, active, todo L2 "Z-300a-1"
     with depends_on: [Z-300a, W-400b-2], where "Z-300a" is its own parent L1
@@ -44,7 +44,9 @@ created: 2026-08-12
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- scripts/ac_store/scan_ac_store.py
+- unit_tests/ac_store/test_acd_400a_3.py
 test_spec:
   - name: test_satisfied_non_ancestor_dep_clears_to_ready
     target_dir: unit_tests/ac_store/

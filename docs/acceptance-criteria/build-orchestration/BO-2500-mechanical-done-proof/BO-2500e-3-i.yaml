@@ -1,0 +1,74 @@
+id: BO-2500e-3-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "When the JS runner is unavailable, JS-covered ACs fail closed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC covered only by "// covers:<id>" tests but the JS test runner (vitest) cannot
+    be invoked (not installed or unavailable in the environment),
+  When the done-status of that AC is evaluated,
+  Then the AC cannot be marked done and the verdict names the unavailable JS runner as the reason,
+  And the oracle does not skip the JS-covered AC or treat the missing runner as a pass,
+  So an absent runner fails closed rather than silently passing front-end work.
+depends_on:
+  - BO-2500e-3
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    done_proof_js_runner_unavailable_fails_closed:
+      type: object
+      description: "Verdict that, when the JS test runner (vitest) cannot be invoked, blocks a JS-covered AC from being marked done and names the unavailable runner as the reason — the oracle must not skip the AC or treat the missing runner as a pass."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Distinguish 'runner ran and test failed' (BO-2500e-3) from 'runner could not run': an uninvokable/absent vitest must produce a distinct blocking verdict that names the unavailable JS runner as the reason."
+    - "A missing or uninvokable runner must fail closed — never skip the JS-covered AC and never treat the absence as a pass; wrap the subprocess invocation and surface the failure per the error handling policy."
+    - "Verdict must be idempotent for a given store + environment state."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500e-3
+  contract: "The JS fail-closed verdict this edge case extends to the missing/unavailable-runner case."
+test_spec:
+  - name: test_unavailable_js_runner_fails_closed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "When vitest cannot be invoked, a JS-covered AC cannot be marked done and the verdict names the unavailable runner as the reason."
+  - name: test_missing_runner_not_treated_as_pass_or_skip
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An uninvokable JS runner is never treated as a pass and the JS-covered AC is not skipped."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L3 edge case for BO-2500e-3 — a missing runner must fail closed, not skip. Distinguishes
+  "runner ran and test failed" (BO-2500e-3) from "runner could not run". IT-PO to enrich.

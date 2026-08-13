@@ -1,0 +1,50 @@
+id: UXP-608-3
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: reviewed
+priority: medium
+title: "Outside production, runtime overrides are honored without an explicit opt-in"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a non-production (dev or preview) deployment that is unlocked and has NOT set an explicit
+    override opt-in,
+  When a request arrives carrying ?mock=1,
+  Then the override is honored and the deployment serves bundled fixtures with the mock badge,
+  So the default-deny behavior is scoped to production only — the in-app toggle keeps working
+    out of the box in dev and preview.
+depends_on:
+  - UXP-608
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+it_requirements:
+  - "The default-deny gate in leafcutter-web/middleware.ts / leafcutter-web/lib/data/mock.ts must be scoped to production only: in a non-production (dev or preview), unlocked deployment with no opt-in, ?mock=1 must be honored and resolve to mock without any configuration."
+  - "Production-vs-non-production must be detected from a single, explicit server-side signal (e.g. NODE_ENV / deploy-target env) evaluated server-side, never inferred from untrusted request input; the same signal must be used consistently by the default-deny gate and any documentation."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: dev_preview_honors_override_without_opt_in
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: unit
+    description: "In an unlocked non-production (dev/preview) deployment with no opt-in, ?mock=1 is honored and the deployment resolves to mock with the mock badge."
+notes: |
+  L3 edge case for UXP-608 defining the production boundary of default-deny: dev/preview keep the
+  permissive unlocked default (UXP-553-1) so the in-app toggle works without configuration. IT-PO
+  to enrich, and to nail down exactly how "production" is detected (e.g. NODE_ENV / deploy target).

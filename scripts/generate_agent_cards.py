@@ -651,6 +651,65 @@ def _scan_ac_assignments(
     return results
 
 
+def _scan_all_ac_assignments(
+    docs_root: Path,
+) -> dict[str, list[dict[str, Any]]]:
+    """Scan the AC store ONCE and group active ACs by ``assigned_agent``.
+
+    Walks ``docs_root/docs/acceptance-criteria/`` a single time, parses each
+    ``.yaml`` / ``.yml`` file once, and returns a mapping of ``assigned_agent``
+    -> list of ``{"id", "title", "assigned_agent"}`` dicts (each group sorted
+    by AC ``id``).  This is the batch equivalent of calling
+    :func:`_scan_ac_assignments` for every agent, but it avoids re-walking and
+    re-parsing the entire store once per agent — an O(agents × ac_files) cost
+    that pegged the CPU for >12 minutes on a large store.
+
+    Args:
+        docs_root: Absolute path to the package root (repo root).  The AC
+            store is expected at ``docs_root/docs/acceptance-criteria/``.
+
+    Returns:
+        Mapping of agent id to its list of matching active AC dicts.  Empty
+        mapping when the AC store directory does not exist.
+    """
+    ac_dir = docs_root / "docs" / "acceptance-criteria"
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    if not ac_dir.exists():
+        return grouped
+
+    for dirpath, _dirs, filenames in os.walk(ac_dir):
+        for filename in filenames:
+            if not (filename.endswith(".yaml") or filename.endswith(".yml")):
+                continue
+            filepath = Path(dirpath) / filename
+            try:
+                text = filepath.read_text(encoding="utf-8")
+            except OSError as exc:
+                _log.warning("Cannot read AC file %s: %s", filepath, exc)
+                continue
+            try:
+                data = yaml.safe_load(text)
+            except yaml.YAMLError as exc:
+                _log.warning("YAML parse error in %s: %s", filepath, exc)
+                continue
+            if not isinstance(data, dict):
+                continue
+            assigned_agent = data.get("assigned_agent")
+            if not assigned_agent:
+                continue
+            if data.get("status") != "active":
+                continue
+            grouped.setdefault(assigned_agent, []).append({
+                "id": data.get("id", Path(filename).stem),
+                "title": data.get("title", ""),
+                "assigned_agent": assigned_agent,
+            })
+
+    for entries in grouped.values():
+        entries.sort(key=lambda d: d.get("id", ""))
+    return grouped
+
+
 def render_references(
     registry_entry: dict[str, Any],
     card_path: Path | None = None,
@@ -915,6 +974,15 @@ def build_agent_cards(
     cards_dir = target_root / "docs" / "agents" / "cards"
     written = 0
 
+    # Scan the AC store ONCE and group by assigned_agent, rather than
+    # re-walking + re-parsing every AC YAML file per agent.  A per-agent scan
+    # is O(agents × ac_files); on a large store (thousands of AC files ×
+    # dozens of agents) that pegged the CPU for >12 minutes.  Skipped entirely
+    # in dry-run mode, where card content is never materialised.
+    ac_assignments_by_agent = (
+        {} if dry_run else _scan_all_ac_assignments(target_root)
+    )
+
     for template_file in sorted(agents_template_dir.glob("*.md")):
         if template_file.name.startswith("_"):
             continue  # Skip helper templates
@@ -941,7 +1009,7 @@ def build_agent_cards(
 
         card_path = cards_dir / f"{agent_id}.card.md"
 
-        ac_assignments = _scan_ac_assignments(agent_id, target_root)
+        ac_assignments = ac_assignments_by_agent.get(agent_id, [])
 
         try:
             card_content = generate_card(
@@ -1019,4 +1087,16 @@ def build_agent_cards(
 #   follow project error-handling rules (OSError + yaml.YAMLError
 #   wrapped, never bare except, never silently swallowed).
 #   (#EPIC-SelfDescribingAgentsCorrections/10)
+#
+# - 2026-08-12 [debug]:
+#   Perf fix — build_agent_cards() called _scan_ac_assignments() once per
+#   agent, and each call re-walked + re-parsed the ENTIRE AC store. With a
+#   large store (2714 AC YAML files × 59 agents = ~160k yaml.safe_load calls)
+#   this pegged the CPU for ~13 min with no output, hanging build.py's
+#   "Agent cards" phase during worktree bootstrap. Added
+#   _scan_all_ac_assignments() which walks the store ONCE and groups active
+#   ACs by assigned_agent; build_agent_cards() now builds that index once
+#   (skipped in dry-run) and looks up per agent — O(agents × ac_files) →
+#   O(ac_files). Single walk ~16s vs ~775s. _scan_ac_assignments() is left
+#   intact for the direct-call unit tests; per-agent results are byte-identical.
 # ====================================================================
