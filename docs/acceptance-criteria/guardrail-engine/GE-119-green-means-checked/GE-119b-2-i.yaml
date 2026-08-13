@@ -1,0 +1,60 @@
+id: GE-119b-2-i
+title: "Main-checkout verdicts are unchanged by the shared resolution path"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the main checkout, in which every check already resolves its prerequisites today,
+  And a recorded baseline of the verdict each check produces there against a fixed fixture of
+    staged changes, captured before the shared resolution facility is adopted,
+  When each check is executed in the main checkout after adoption against that same fixture,
+  Then each check produces the same verdict as its recorded baseline,
+  And no check that previously located its prerequisites now fails to locate them,
+  And no check that previously reported a violation now reports a clean result,
+  And the only observable difference between before and after is confined to working copies
+    in which resolution previously failed.
+
+  Coverage note: the baseline must be captured by execution before the change, not asserted
+  from memory or from the check sources afterwards. A comparison against a baseline recorded
+  after the change proves nothing.
+depends_on:
+  - GE-119b-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119b-2
+  contract: "The shared prerequisite-resolution facility, adopted across the check family."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GE-119b-2 touches every check in the family at once. That is the right shape of fix and
+  also the largest blast radius in this tree — the failure mode is a consolidation that
+  quietly changes what one check finds in the layout where it already worked.
+
+  The precedent is explicit in the store: GE-118a-1 carries "And the main-checkout behavior
+  is unchanged (backward compatible)" as a criterion clause for exactly this reason, on a
+  change one eighteenth this size.
+
+  The third clause — no check that previously reported a violation now reports clean — is
+  the one that matters most. A consolidation bug that makes a check stop finding things is
+  invisible against a clean fixture, so the fixture must provoke a real violation for every
+  check. That fixture is shared with GE-119b-4; build it once.

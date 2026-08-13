@@ -1,0 +1,62 @@
+id: ACS-1200d-1-i
+components:
+  - ac_store
+title: "A tree that was un-parked but never broken down is shown as exactly that"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d-1.yaml
+criteria: |
+  Given a tree that has completed the un-park transition — marker removed and
+    covered_by populated with its feature-level children — but that has no
+    record at level L2 or below anywhere under it,
+  When the store-wide orphan scan is executed as a process over the store,
+  Then the tree is reported as un-parked and not yet broken down, as a state of
+    its own, naming the root record,
+  And it is not reported in the parked section,
+  And it is not reported as an orphan, because its back-links are present,
+  And the buildable-work scan returns no record from that tree,
+  And leaving the tree unchanged does not restore the marker: a record only
+    becomes parked again when an author sets the marker again.
+depends_on:
+  - ACS-1200d-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The report whose sections this state must be distinguishable within."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200d-1
+  contract: "The completed un-park transition, here without the decomposition that is supposed to accompany it"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The gap between the two named failure modes. Once the back-links are restored
+  the tree stops being an orphan and stops being parked, and because it has no
+  leaves it never reaches the buildable queue either — so without this AC it
+  falls out of every report and becomes invisible while looking healthy. That is
+  the parked-forever risk arriving through the exit door rather than the
+  entrance.
+
+  The no-silent-reversion clause matters for the same reason the marker is
+  positive in the first place: a state the system re-applies on your behalf is
+  not a decision anyone made.
+
+  Deliberately no duration, age, or count here — how long a tree has sat in any
+  state is KM-200c's remit.

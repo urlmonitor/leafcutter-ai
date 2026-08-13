@@ -1,0 +1,73 @@
+id: GE-119d-2
+title: "Set-up refuses to hand over a working copy whose protection it could not establish"
+component: guardrail-engine
+components:
+  - worktree_manager
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set-up command cannot locate the script that verifies the commit-time checks are
+    active, or the script that installs the commit-time shims,
+  When it reaches those steps,
+  Then it does not continue with the behaviour observed today — a warning reading "not found
+    ... graceful no-op" followed by a successfully created working copy,
+  And it names the missing scripts and states the protection they would have established,
+  And it fails the set-up, because the alternative is handing the caller a working copy in
+    which the commit-time checks do not run,
+  And the working copy it leaves behind, if any, is reported as unprotected so the caller
+    cannot mistake it for a prepared one,
+  And this block-rather-than-announce outcome is recorded as the deliberate per-case
+    disposition required by GE-119a-2, with the stated reason that the artifact handed over is
+    otherwise unprotected.
+
+  Coverage note: cover this by running the real set-up command in a workspace where those
+  scripts are genuinely unreachable, and asserting on the observed failure and the state of any
+  copy left behind. This is the case that was observed live while creating the working copy
+  this tree was authored in, so it reproduces without contrivance.
+depends_on:
+  - GE-119d
+  - GE-119d-1
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119d-1
+  contract: "The per-step protection outcome record this criterion escalates on."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119d-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AN EXPLICIT PER-CASE DISPOSITION DECISION, made here rather than inherited. GE-119a-2
+  requires each case to choose between block and announce with no blanket default; this AC
+  makes the choice for the set-up path and states the reason.
+
+  The reason it is BLOCK here, while several checks may legitimately be ANNOUNCE: a check that
+  announces leaves a human looking at the announcement, in a session where the work is
+  happening. Set-up hands over an artifact that is then used for hours by someone who was not
+  watching it run. An announcement at hand-over time is read once, if at all; the unprotected
+  copy persists. The asymmetry is in who sees the message and when, not in severity.
+
+  OBSERVED: setup_ticket_worktree.py create-ac-worktree warned that verify_precommit_active.py
+  and install_pre_commit_shims.py were "not found ... graceful no-op" while creating the very
+  working copy this tree was authored in. As the PO put it: a set-up step named "verify
+  protection is active" that no-ops when it cannot find itself is the worst case of the whole
+  goal — the one check whose job is to catch this failure is itself subject to it.

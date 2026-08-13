@@ -1,0 +1,77 @@
+id: GE-119b-5
+title: "The manual link-the-layout workaround is deleted, not left standing beside the fix"
+component: guardrail-engine
+components:
+  - documentation_system
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project's pre-drive instructions currently direct the reader to link the deployed
+    layout into a fresh working copy by hand, and warn that all package checks are otherwise
+    silently skipped for the entire drive,
+  When the parity behaviour of GE-119b-1 through GE-119b-4 is in place,
+  Then that manual instruction is removed from the pre-drive instructions rather than left in
+    place alongside the fix,
+  And the how-to states instead what a reader should now expect — that the checks reach the
+    same verdict from any working copy — and gives the one command that confirms it for the
+    copy in front of them,
+  And no remaining instruction anywhere in the documentation set tells a reader to create the
+    layout link by hand as a prerequisite for the checks to run,
+  And the related latent-hazard note about a suppression file resolving through the layout
+    link is either removed with it or rewritten to describe the behaviour that now holds,
+  And the removal is verified by searching the documentation set for the instruction and
+    finding no surviving occurrence.
+depends_on:
+  - GE-119b
+  - GE-119b-4
+doc_links:
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "Pre-Drive Checklist -> 'Worktree pre-commit config (MANDATORY)' is the manual workaround to delete."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119b-4
+  contract: "Demonstrated family-wide parity — the precondition that makes the manual instruction obsolete rather than merely inconvenient."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in GE-119b's documentation_triggers. The PO was explicit that
+  this trigger is a REPLACEMENT, not an addition: "that instruction must be deleted rather
+  than left to rot beside the fix."
+
+  Why deletion is the criterion rather than an update: a documented manual workaround for a
+  defect that no longer exists is worse than no documentation. It teaches every future reader
+  that the checks cannot be trusted from a worktree, so they keep applying the workaround, and
+  the day it stops being applied nobody knows whether the resulting behaviour is the fix
+  working or the workaround missing. The store already carries an instance of this rot: the
+  memory note for GE-118a-1 has to say "FIXED at source 2026-08-13 — stop applying the old
+  per-worktree workaround," which is only necessary because the workaround outlived its cause.
+
+  ORDERING: this AC must land AFTER GE-119b-4 demonstrates parity, never before. Deleting the
+  workaround while the defect is still live removes the only thing protecting drives from it.
+
+  DISTINCT FROM GE-119d-5, which is also a how-to AC on the same document. This one REMOVES
+  the obsolete manual step for the check family; GE-119d-5 ADDS what a prepared working copy
+  now guarantees and how to confirm it. Sequence d-5 after b-5 so the two edits do not
+  reintroduce each other's text.

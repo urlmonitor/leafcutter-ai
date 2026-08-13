@@ -1,0 +1,76 @@
+id: ACS-1200b-1
+components:
+  - ac_store
+title: "Every health surface that judges a tree by its back-links is enumerated and each one is proven parked-aware"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+criteria: |
+  Given an enumeration recorded in the repository of every AC-store surface that
+    decides whether a requirement tree is broken by reading a parent's covered_by
+    or by deriving a parent id — the store-wide orphan scan among them,
+  And a fixture tree consisting of one parent carrying parked: true with a
+    non-empty parked_reason and an empty covered_by, plus two child records not
+    listed in it,
+  When each surface named in that enumeration is executed as a process against
+    that fixture,
+  Then none of them classifies the fixture as broken, missing, orphaned,
+    unlinked, or incomplete,
+  And each of them exits with the same status it returns for a fully linked
+    tree,
+  And a test reads the enumeration and asserts one executed parked-tree
+    assertion per entry, so a surface added to the enumeration without such an
+    assertion fails that test rather than passing unnoticed,
+  And the enumeration is compared against the set of AC-store surfaces
+    discovered to read covered_by or derive a parent id, and the comparison
+    fails naming any surface present in one and absent from the other,
+  And a surface that is patched but left out of the enumeration therefore
+    cannot be counted as satisfying this criterion.
+depends_on:
+  - ACS-1200b
+  - ACS-1200a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Lists the AC-store hooks and scans; the starting point for the discovered set this enumeration is compared against."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the marker every enumerated surface must recognise."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The enumeration of back-link-reading health surfaces, and the per-surface parked-tree assertion it drives"
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The parked / parked_reason field pair, read identically by every enumerated surface"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The PO's instruction was to ENUMERATE the readers rather than fix only the one
+  named in the L1 notes — one unpatched reader is enough to keep sending people
+  to "repair" a parked tree. This AC makes the enumeration an executable object
+  rather than a paragraph: a list the tests read, reconciled against what is
+  actually in the tree, so the next reader added to the store cannot join
+  silently.
+
+  Deliberately NOT a count. This AC never asserts how many surfaces exist; it
+  asserts that the enumeration and the discovered set agree. A fixed count would
+  rot on the first new scanner (the ACS-800/KM-KGS count-agnostic precedent) and
+  would also start drifting into KM-200c's population-reporting remit.
+
+  The named-surface behaviour for the orphan scan specifically — including what
+  it must show instead of hiding the tree — is ACS-1200b-2.

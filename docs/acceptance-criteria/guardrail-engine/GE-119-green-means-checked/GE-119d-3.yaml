@@ -1,0 +1,80 @@
+id: GE-119d-3
+title: "The set-up path locates its own helper scripts through the shared resolution facility"
+component: guardrail-engine
+components:
+  - worktree_manager
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set-up command must locate the scripts that verify commit-time protection is
+    active and that install the commit-time shims,
+  When it resolves them,
+  Then it uses the same shared resolution facility the checks use, rather than a private
+    search of its own,
+  And it locates those scripts from every workspace layout the build actually produces —
+    demonstrated by running set-up in each such layout and observing the scripts were found,
+  And the not-found condition observed while creating a working copy does not arise in a
+    workspace that has been built,
+  And when the workspace genuinely has not been built, the failure is the one described in
+    GE-119d-2-i rather than a silent no-op,
+  And no private root-walking search for these scripts remains in the set-up path.
+
+  Coverage note: the load-bearing clause is the one requiring set-up to be RUN in each layout.
+  Asserting that the set-up path calls the shared facility does not cover it — the observed
+  defect was a resolution that returned the wrong location, which a call-site assertion cannot
+  see.
+depends_on:
+  - GE-119d
+  - GE-119b-2
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: related
+    status: exists
+    relevance: "Candidate shared facility — see the open question recorded on GE-119b-2."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119b-2
+  contract: "The single shared prerequisite-resolution facility, reused here rather than duplicated for the set-up path."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FOLD QUESTION, ANSWERED EXPLICITLY. The PO gave the BA latitude: "if decomposition shows
+  the set-up no-op and the check-side resolution failure are literally the same root cause,
+  this L1 may be folded into GE-119b — but say so explicitly rather than dropping it."
+
+  DECISION: NOT FOLDED. They share a root cause but not a surface, and the difference changes
+  the work. The shared cause is one resolution mechanism that assumes the source-tree layout,
+  which is why this AC consumes GE-119b-2's facility rather than building a second one — the
+  fix is genuinely shared. But GE-119b's acceptance shape is "two runs of a check agree", and
+  no amount of check-side parity produces the behaviour GE-119d-1 and GE-119d-2 require,
+  because the set-up path has no verdict to compare; it has an artifact to hand over or refuse.
+  Folding would have carried the resolution fix across and quietly dropped the report-and-refuse
+  behaviour, which is the part that was actually observed failing.
+
+  So: the RESOLUTION fix is shared (this AC, depends_on GE-119b-2), and the REPORTING and
+  REFUSAL behaviours are GE-119d's own (GE-119d-1, GE-119d-2). That split is the answer to the
+  latitude the PO granted, recorded here rather than left implicit.
+
+  IT-PO: this AC and GE-119b-2 must be scheduled together — this one cannot land first, and
+  landing GE-119b-2 without it leaves the set-up path as the last private root-walk in the
+  codebase, which is the position from which the pattern regrows.

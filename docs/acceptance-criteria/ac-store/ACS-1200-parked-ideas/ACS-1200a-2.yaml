@@ -1,0 +1,78 @@
+id: ACS-1200a-2
+components:
+  - ac_store
+  - commit_guardian
+title: "The commit-time back-link check passes a parked tree with nothing skipped"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given a parent record KM-200.yaml carrying parked: true and a non-empty
+    parked_reason, with covered_by set to an empty list,
+  And six child records KM-200a.yaml through KM-200f.yaml, none of which is
+    listed in KM-200's covered_by,
+  And all seven files staged for commit,
+  When the parent-back-link check is executed as a process against that staged
+    set, with no SKIP variable set for it and no hook disabled,
+  Then the process exits 0,
+  And it reports no violation for any of KM-200a through KM-200f,
+  And its output names KM-200 once as a recognised parked record, together with
+    the reason recorded on that record, so the exemption is visible in the run
+    rather than silent,
+  And the run is distinguishable from a run in which the check did not execute:
+    the same staged set with the parked marker removed from KM-200.yaml exits
+    non-zero and reports six violations,
+  And a test that only inspects the check's source text for the word "parked",
+    or for the presence of an exemption branch, does not satisfy this criterion:
+    coverage requires executing the check as a process and asserting its exit
+    code and its output.
+depends_on:
+  - ACS-1200a
+  - ACS-1200a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Documents the back-link protocol this check enforces; amended by ACS-1200a-3."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119b.yaml
+    relationship: related
+    status: exists
+    relevance: "SEQUENCING HAZARD. GE-119b makes this same check run reliably in every working copy. Landing GE-119b first, while the check still enforces the uncorrected rule, blocks every parked idea MORE consistently. This AC must land before GE-119b or in the same release."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A parked-aware parent-back-link check. ORDERING CONTRACT: must land before, or in the same release as, GE-119b — GE-119b increases how reliably this check runs, so shipping it first amplifies the wrong rule."
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The parked / parked_reason field pair on the parent record, and the rule that a record with an empty covered_by and no marker is not parked"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1200a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The core behaviour change. The differential clause (marker removed => six
+  violations) is not decoration: it is what separates "the check passed because
+  the tree is recognised" from "the check passed because it never ran", which is
+  exactly the failure GE-119 exists to close. Without it a fail-open regression
+  in this check would read as a green result for this AC.
+
+  The grep-only exclusion is repo convention (CLAUDE.md, "Gate / Workflow ACs —
+  Verify Behaviorally, Not by Grep"): a structural test asserting the exemption
+  branch exists passes on dead code.
+
+  SEQUENCING WITH GE-119b — recorded here because it belongs on the AC that
+  changes the rule. The reciprocal link cannot be written from this tree
+  (GE-119b is authored in the guardrail-engine tree); the IT PO or the
+  coordinator should add the matching ordering note to GE-119b, or land both in
+  one release.

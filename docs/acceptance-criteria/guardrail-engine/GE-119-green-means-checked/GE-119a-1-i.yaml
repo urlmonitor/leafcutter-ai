@@ -1,0 +1,61 @@
+id: GE-119a-1-i
+title: "One unparseable input, while the check still ran, remains an ordinary pass"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given 5 staged agent definition files, of which exactly 1 cannot be parsed,
+  And the check that inspects agent definitions can reach every prerequisite it needs,
+  When the check runs,
+  Then it inspects the 4 parseable definitions and reports its findings for them,
+  And it warns about the 1 unparseable definition, naming that file,
+  And it does not block the commit on account of the unparseable definition,
+  And its overall result is the ordinary success value, NOT the could-not-check value
+    defined by GE-119a-1 — because the check did run,
+  And the behaviour approved in GE-116a-1-iii ("Unparseable agent definition fails open
+    and does not block the commit") is therefore observably unchanged by this feature.
+
+  Coverage note: this must be exercised by running the check against a real staged file
+  set containing a genuinely unparseable definition, not by asserting that a fail-open
+  branch exists in the source.
+depends_on:
+  - GE-119a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-116-consistent-agent-config
+    relationship: context
+    status: exists
+    relevance: "GE-116a-1-iii is the approved AC this criterion protects from regression."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-1
+  contract: "The distinction between the ordinary success value and the could-not-check value."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the CONTRADICTION GUARD for the whole tree. GE-119 draws a line, and this AC is
+  the test that the line was drawn in the right place: fail-open on ONE bad input while
+  the check still ran is correct and stays; reporting SUCCESS for a check that never ran
+  is what stops.
+
+  If an implementation makes this AC fail, the implementation has over-reached into
+  "never fail open" and must be narrowed — not this AC weakened. GE-116a-1-iii carries
+  readiness: approved, so it outranks any draft criterion in this tree.

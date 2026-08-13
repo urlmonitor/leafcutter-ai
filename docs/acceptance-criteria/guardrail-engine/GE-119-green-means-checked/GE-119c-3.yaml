@@ -1,0 +1,68 @@
+id: GE-119c-3
+title: "Every registered check is exercised by the harness, and a new check cannot opt out by omission"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the guardrail engine's hook manifest, which lists every check it installs,
+  When the harness sweep runs,
+  Then the set of checks it actually exercised is compared against the manifest,
+  And any check present in the manifest with no harness case is reported by name as uncovered,
+  And the sweep reports a failure when any manifest check is uncovered,
+  And adding a new check to the manifest without a harness case therefore fails the sweep
+    rather than passing silently,
+  And a harness case naming a check that is not in the manifest is also reported, so the sweep
+    cannot be satisfied by exercising a check that is no longer installed.
+
+  Coverage note: exercise this by adding an entry to a manifest fixture with no matching
+  harness case and asserting the sweep names it and fails. A test asserting that the current
+  manifest is fully covered passes forever and catches nothing on the day check nineteen is
+  added — which is the day this AC exists for.
+depends_on:
+  - GE-119c
+  - GE-119c-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A manifest-to-harness coverage comparison that GE-119b-4's parity sweep consumes as its completeness guarantee."
+expects_from:
+  ac_id: GE-119c-1
+  contract: "The harness's record of which checks it exercised."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE ANTI-REGRESSION CLAUSE FOR THE WHOLE TREE. GE-119c is, in the PO's framing, "the reason
+  the other three do not quietly come back." This is the AC that carries that weight: without
+  it, GE-119a and GE-119b hold for the eighteen checks that exist on the day they land and for
+  none that arrive afterwards.
+
+  Note the symmetry with GE-119a-2-i. That AC stops a new check omitting its cannot-run
+  disposition; this one stops a new check omitting its parity coverage. Both are the same
+  insight applied at different layers — a family-wide rule that is not mechanically checked
+  against the family's own registry decays one addition at a time. The registry, not a
+  hand-maintained list, must be the source of the expected set in both.
+
+  The final clause guards the other drift direction: a harness whose case list has outlived
+  the checks it names is a sweep that looks thorough and exercises ghosts.

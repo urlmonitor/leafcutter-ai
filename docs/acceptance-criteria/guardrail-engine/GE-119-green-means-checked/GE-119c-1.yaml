@@ -1,0 +1,85 @@
+id: GE-119c-1
+title: "A harness executes the deployed checks out of process from a real separate working copy"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a verification harness for the guardrail engine's checks,
+  When it exercises a check,
+  Then it creates a real second working copy of the repository, stages real files in it, and
+    invokes the check as a separate process in the way the commit path invokes it,
+  And it asserts on what that process observably produced — its result status and the text it
+    wrote for the reader — and on nothing imported from the source tree,
+  And the source tree is not on the import path of the process under test, so a check that can
+    only find its prerequisites via the source tree fails the harness rather than passing in
+    it,
+  And the harness reports, per check exercised, the result status and output text from each of
+    the two working copies, so a disagreement can be read directly rather than inferred from a
+    failed assertion,
+  And a harness case that only searches a check's source text for a string is not accepted as
+    coverage for any criterion in this tree.
+
+  Coverage note: the third clause is the one that distinguishes this harness from the tests
+  that already exist. Demonstrate it by pointing the harness at a check that resolves its
+  prerequisites only via the source tree and showing the harness fails — a harness that cannot
+  be made to fail is not evidence (CLAUDE.md, "Gate / Workflow ACs — Verify Behaviorally, Not
+  by Grep").
+depends_on:
+  - GE-119c
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+    relevance: "The harness stands up a working copy; reuse the existing creation path rather than inventing a second one."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "Out-of-process execution of a deployed check from a second working copy, returning its result status and output text for comparison."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119c-1-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE NEW VERIFICATION SURFACE. Everything else in GE-119c consumes this; GE-119b-1,
+  GE-119b-3 and GE-119b-4 declare expects_from against it.
+
+  WHY THE EXISTING TESTS DO NOT COUNT, in the PO's words: today's unit tests for these checks
+  import from the source tree, which is precisely the layout in which the bug does not
+  reproduce. A test that cannot fail on the observed defect is not evidence. The
+  source-tree-off-the-import-path clause is therefore not a stylistic preference — it is the
+  single property that makes this harness able to see the defect class at all.
+
+  IT-PO — assignment is deliberate. This is assigned to test-writer rather than python-coder
+  because the deliverable is verification apparatus, and the failure mode being guarded
+  against is an implementer building a harness shaped to pass against their own fix. If the
+  harness and the fixes are built by the same agent in the same pass, the red-baseline
+  evidence required by GE-119c-2 is worth much less. Sequence this AC first, capture its red
+  result, then implement GE-119b.
+
+  OPEN FOR THE IT-PO: whether "a real second working copy" is a git worktree, a clone, or a
+  copied tree is not specified here on purpose. The behavioural requirement is only that the
+  source tree is not importable from it and that the deployed layout is what the check sees.
+  The worktree route matches how people actually work, which is the L1's standard, but it
+  carries the constraint that a worktree shares the object store — relevant if the harness
+  runs concurrently with anything else.

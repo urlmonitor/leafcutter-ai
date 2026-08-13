@@ -1,0 +1,66 @@
+id: ACS-1200a-4
+components:
+  - ac_store
+  - commit_guardian
+title: "The tree that forced the bypass commits cleanly with no bypass"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given the seven KM-200 records exactly as they exist on disk in the store —
+    KM-200.yaml plus KM-200a.yaml through KM-200f.yaml, not a hand-authored
+    fixture — with the parked marker and a reason added to KM-200.yaml only,
+  And those seven paths staged for commit,
+  When the parent-back-link check is executed as a process in a fresh process
+    against exactly those staged paths, with no SKIP variable set and no hook
+    bypass of any kind,
+  Then the process exits 0,
+  And the same execution over the same seven on-disk files with the parked
+    marker removed from KM-200.yaml exits non-zero and reports six violations,
+    naming KM-200a through KM-200f,
+  And the difference between the two runs is the marker alone, so the passing
+    run is attributable to recognition of the parked state and not to the check
+    having stopped running.
+depends_on:
+  - ACS-1200a
+  - ACS-1200a-1
+  - ACS-1200a-2
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The real on-disk tree. Merged 2026-08-14 in PR #433; the commit only landed with SKIP=check-ac-parent-covered-by set, which is the defect this AC closes."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-2
+  contract: "The parked-aware parent-back-link check, exercised here against the real store records rather than a fixture"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  REAL-ARTIFACT SPOT-CHECK, per CLAUDE.md ("Real-artifact behavioral spot-check
+  before declaring done"). ACS-1200a-2 proves the behaviour against a
+  purpose-built fixture; this one proves it against the exact records that
+  forced the bypass, written by the real authoring path with real YAML
+  serialisation. The repo has already shipped a hook that passed every synthetic
+  fixture and was a complete no-op on real files, for precisely the
+  fixture-shape reason.
+
+  Deliberately narrow: this AC asserts the two runs and their difference. It
+  does NOT assert anything about the other 54 pre-existing orphans in the store
+  — that boundary is ACS-1200b-3.

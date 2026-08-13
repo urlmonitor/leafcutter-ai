@@ -1,0 +1,65 @@
+id: ACS-1200d-1
+components:
+  - ac_store
+  - commit_guardian
+title: "Un-parking is one change that removes the marker and restores the child list together"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
+criteria: |
+  Given KM-200.yaml carries parked: true with a non-empty parked_reason and an
+    empty covered_by, and its six children KM-200a through KM-200f exist,
+  When a single staged change removes both parked and parked_reason from
+    KM-200.yaml and adds all six child ids to its covered_by, and the AC-store
+    checks are executed as processes against that staged set,
+  Then every one of them exits 0,
+  And the store-wide orphan scan run afterwards reports KM-200 in neither its
+    orphan list nor its parked section,
+  And the six children are reported as normally linked to their parent,
+  And no check had to be skipped and no bypass was used to land the transition.
+depends_on:
+  - ACS-1200d
+  - ACS-1200a-1
+  - ACS-1200a-2
+  - ACS-1200b-2
+doc_links:
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: related
+    status: exists
+    relevance: "The procedure ACS-1200d-4 documents; this AC is the behaviour that procedure describes."
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "Its notes already state the intended transition in prose — restoring the parent's child list is the act that turns a stub into a real backlog item, and it must be paired with breaking the idea down."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The un-park transition as a single atomic change, whose two halves ACS-1200d-2 forbids landing separately"
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The parked / parked_reason field pair whose removal is one half of this transition"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1200d-1-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The exit door. A state with no defined way out is a landfill. This AC defines
+  the way out as ONE act with both halves in it — marker off, child list on —
+  so the before and after are visible in a single change rather than drifting
+  across two commits nobody connects.
+
+  The KM-200 notes already carry the prose version of this rule ("do not repair
+  the missing link without a decision to un-park this tree"). This AC makes it a
+  supported step instead of a warning comment that only works if someone reads
+  it; the half-transitions it implies are forbidden by ACS-1200d-2.

@@ -1,0 +1,65 @@
+id: ACS-1200c-1
+components:
+  - ac_store
+  - commit_guardian
+title: "A decomposed tree with a genuinely missing back-link is still blocked after the change"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
+criteria: |
+  Given a decomposed parent record whose covered_by lists two of its three
+    children — ACS-1200a listing ACS-1200a-1 and ACS-1200a-2 but not the newly
+    added ACS-1200a-3,
+  And no record anywhere in that tree carries parked or parked_reason,
+  And ACS-1200a-3.yaml is staged for commit,
+  When the parent-back-link check is executed as a process against that staged
+    set, after the parked exemption has landed,
+  Then the process exits non-zero,
+  And it reports exactly one violation, naming ACS-1200a-3 as the child and
+    ACS-1200a as the parent that does not list it,
+  And it reports no violation for ACS-1200a-1 or ACS-1200a-2,
+  And executing the pre-change implementation of the check against the identical
+    staged set produces the same verdict and the same violation set, so the
+    exemption demonstrably removed no enforcement from this case,
+  And a test that only inspects the check's source does not satisfy this
+    criterion: coverage requires executing the check and asserting its exit code
+    and its reported violations.
+depends_on:
+  - ACS-1200c
+  - ACS-1200a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Defines the back-link protocol whose strength this criterion holds constant for non-parked trees."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-2
+  contract: "The parked-aware parent-back-link check, exercised here on a tree that carries no marker"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The PO asked for this L1's evidence to be in the NEGATIVE, and this is the
+  primary instance: the proof is a decomposed tree with a genuinely missing link
+  STILL being blocked after the change, not the parked tree being allowed.
+
+  The before/after comparison against the pre-change implementation is what
+  makes "still full-strength" measurable rather than asserted. Without it, a
+  weakened check that happens to block this one case would pass.
+
+  The unmarked CHILDLESS tree — a stub minus the marker, which looks identical
+  to a parked one — is ACS-1200c-3. This AC deliberately covers the decomposed
+  case only.

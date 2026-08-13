@@ -1,0 +1,82 @@
+id: GE-119b-1
+title: "The AC-parent-covered-by check reaches the same verdict with and without the deployed-layout link"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a set of staged AC YAML files that violate the parent covered_by rule in 6 places,
+  And two working copies of the same repository at the same commit — one that exposes the
+    deployed layout and one that does not,
+  When the AC-parent-covered-by pre-commit check is executed against those identical staged
+    files from each working copy in turn,
+  Then both runs report the same verdict: blocked, naming the same 6 violations,
+  And neither run reproduces the observed asymmetry, in which the copy without the deployed
+    layout printed "cannot import derive_parent_id: ac_parent_id.py not found via package
+    import, script-relative, or project-root walk.; skipping check (fail-open)" and exited
+    successfully,
+  And the verdict is determined by the staged content alone — the identity of the working
+    copy the check was run from does not appear in the result.
+
+  Coverage note: covered only by a test that executes the check as a separate process from a
+  real second working copy that does not have the source tree on its import path — the
+  harness of GE-119c-1. A test that imports the check module from the source tree runs in the
+  one layout in which the defect cannot reproduce, and so cannot fail on it; that is exactly
+  what masked this class of defect until now. Grep-only coverage does not satisfy this
+  criterion (CLAUDE.md, "Gate / Workflow ACs — Verify Behaviorally, Not by Grep").
+depends_on:
+  - GE-119b
+  - ACS-1200a
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: context
+    status: exists
+    relevance: "Opposite-direction change to the same check — see the sequencing hazard in notes."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "A harness that stands up a second working copy and executes the deployed check out of process."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119b-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  SEQUENCING HAZARD — READ BEFORE SCHEDULING. This AC and ACS-1200a (sibling tree,
+  ac-store component) modify check_ac_parent_covered_by.py in OPPOSITE directions:
+    - GE-119b-1 makes the check RUN RELIABLY from every working copy.
+    - ACS-1200a changes WHICH RULE the check enforces, so that a deliberately parked idea
+      stub is not treated as a violation.
+  Landing GE-119b-1 alone makes the WRONG rule fire more reliably: every parked idea stub
+  would be blocked more consistently than it is today, because today the check silently
+  skips itself in the working copies where the stubs are authored. Net effect of shipping
+  this AC first is a REGRESSION in usable behaviour, even though it is a correct fix.
+
+  Required ordering: land ACS-1200a with or before GE-119b-1, or land both in the same
+  release. ACS-1200a is recorded in this AC's depends_on to make the ordering machine-
+  visible to the build sequencer rather than leaving it as prose. It is a scheduling
+  dependency, not a structural parent — the structural parent is GE-119b.
+
+  ACCEPTANCE SHAPE, as the PO specified it: the two runs must agree. This is the canonical
+  reproduction of the whole GE-119 defect class and is labelled DIRECTLY OBSERVED AND
+  REPRODUCIBLE — same check, same repo, same staged files, opposite verdicts decided purely
+  by workspace layout.

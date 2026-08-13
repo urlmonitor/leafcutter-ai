@@ -1,0 +1,65 @@
+id: ACS-1200a-3
+components:
+  - ac_store
+title: "The written back-link rule matches the enforced one"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given docs/reference/ac-schema.md, which today states that a missing parent
+    back-link blocks the commit, with no stated exception,
+  When the reference is read after this feature has landed,
+  Then its field table lists parked and parked_reason with their types, whether
+    each is required, and the rule that parked_reason must be a non-empty string
+    whenever parked is true,
+  And it states the single condition under which a missing covered_by back-link
+    does not block a commit — the derived parent record carries the parked
+    marker — and states in the same place that an empty covered_by on its own is
+    not that condition,
+  And it states that the marker applies only to the record that carries it and
+    is not inherited by that record's children,
+  And it links the un-park transition to the how-to that describes it,
+  And no sentence remains anywhere in the document asserting that a missing
+    back-link always, or unconditionally, blocks the commit.
+depends_on:
+  - ACS-1200a
+  - ACS-1200a-1
+  - ACS-1200a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "The document this AC amends. Sections affected: the YAML field table, and the check_ac_parent_covered_by hook description."
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: related
+    status: exists
+    relevance: "Target of the un-park cross-link; its procedure is authored by ACS-1200d-4."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The final field names, types and validity rule for parked / parked_reason as implemented"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the mandatory reference-doc trigger on ACS-1200a. The PO's reason for
+  making it mandatory rather than nice-to-have: shipping the exemption while the
+  reference still documents the rule as unconditional leaves the written rule
+  contradicting the enforced one — which is how a corrected safeguard gets
+  "repaired" back to the wrong behaviour by someone reading the docs.
+
+  The last clause is the checkable one. An addition that describes the exemption
+  while leaving the old absolute statement in place elsewhere in the document
+  does not satisfy this AC.

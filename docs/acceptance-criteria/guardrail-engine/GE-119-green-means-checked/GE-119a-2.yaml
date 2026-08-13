@@ -1,0 +1,78 @@
+id: GE-119a-2
+title: "Each check declares, for itself, whether a cannot-run condition blocks or only announces"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the registry of pre-commit checks that the guardrail engine installs,
+  When a check is registered,
+  Then its registration records an explicit cannot-run disposition with exactly one of two
+    values — "block", meaning a could-not-check outcome fails the commit, or "announce",
+    meaning a could-not-check outcome is reported unmissably and the commit proceeds,
+  And no value is inferred on the check's behalf when the field is absent,
+  And when a check reaches a could-not-check outcome, the disposition recorded for that
+    check is what determines whether the commit fails — demonstrated by running one check
+    under a genuine cannot-run condition once with each disposition and observing two
+    different commit results,
+  And at least the two checks whose cannot-run behaviour was observed carry a recorded,
+    reviewable decision with a stated reason: the AC-parent-covered-by check and the
+    AC-schema check,
+  And the recorded disposition is readable without running anything, so the decision for
+    every check can be reviewed as a set.
+
+  Coverage note: the determining clause is covered by executing the check under both
+  dispositions and comparing the commit results. Asserting that the disposition field is
+  present in the registry does not cover it — a field that is read by nothing passes that
+  assertion.
+depends_on:
+  - GE-119a
+  - GE-119a-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Documents the current per-hook attributes (mode: error/warn) that a disposition sits alongside."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-1
+  contract: "The could-not-check outcome value this disposition is applied to."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119a-2-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THIS is where the PO's explicit instruction lands: "Whether a cannot-run condition
+  should also BLOCK is a per-check L2 decision — there is no blanket default." This AC
+  does not pick an answer for the family; it requires that an answer exist, per check,
+  recorded, with a reason, and that it actually govern behaviour.
+
+  Why a recorded field rather than a code branch per check: the failure mode this tree
+  addresses is 18 checks each quietly making the same wrong choice in private. A recorded
+  set of dispositions makes the choices reviewable side by side, which is the only way
+  the "18 instances of one defect" framing (GE-119b notes) stays true after the fix.
+
+  IT-PO: an existing per-hook "mode" concept (error / warn) already exists in the hook
+  manifest. Determine whether the cannot-run disposition is a second axis of that field or
+  a distinct one — they are not the same question. "mode: warn" describes what the check
+  does when it FINDS a violation; the disposition describes what it does when it cannot
+  LOOK. A check can legitimately be warn-on-violation and block-on-cannot-run.

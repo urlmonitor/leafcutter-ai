@@ -1,0 +1,65 @@
+id: ACS-1200d-2
+components:
+  - ac_store
+  - commit_guardian
+title: "Half an un-park is refused, and the message says which half is missing"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
+criteria: |
+  Given KM-200.yaml carries parked: true with a non-empty parked_reason and an
+    empty covered_by, and its six children KM-200a through KM-200f exist,
+  When a staged change removes parked and parked_reason while leaving covered_by
+    empty, and the parent-back-link check is executed as a process against that
+    staged set,
+  Then it exits non-zero, reports the six children as missing back-links, and
+    its message states that the record is no longer marked parked and its child
+    list has not been restored,
+  And when instead a staged change adds the six child ids to covered_by while
+    leaving parked: true in place, the checks exit non-zero, name KM-200, and
+    state that a record marked parked must not list children,
+  And each message names the specific half of the transition that is missing,
+    so the developer is not left to infer it from a generic back-link error,
+  And both verdicts come from executing the checks as processes and asserting
+    their exit codes and messages.
+depends_on:
+  - ACS-1200d
+  - ACS-1200d-1
+  - ACS-1200c-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Shares the message-quality shape: name the record, the rule, and the remedy that actually applies."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200d-1
+  contract: "The definition of the two halves of the un-park transition"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The PO's first failure mode: accidental un-parking, where someone "fixes" a
+  parked tree and it silently changes state. Both halves are refused for the
+  same reason — a record that is half-parked is a record nobody can read a
+  decision off.
+
+  The second case (children listed while still marked parked) is the one that
+  would otherwise pass silently: the back-link rule is satisfied, so without an
+  explicit contradiction check the tree would sit in the parked section of the
+  health report while looking decomposed everywhere else.

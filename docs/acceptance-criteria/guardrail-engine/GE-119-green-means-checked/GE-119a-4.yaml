@@ -1,0 +1,81 @@
+id: GE-119a-4
+title: "An inspection that resolved none of the targets it was given does not report success"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the AC store schema validator is invoked with one explicit argument naming a
+    directory that contains 27 AC YAML files,
+  When the validator resolves that argument into the set of files it will inspect, and that
+    set is empty,
+  Then it states that it inspected nothing and names the argument it could not resolve into
+    files,
+  And it reports a failure, replacing the behaviour observed today — the line "No YAML
+    files to validate" followed by a success result,
+  And an invocation whose named targets do resolve to files is unaffected and reports as
+    before,
+  And an invocation given no targets at all, in a context where nothing is in scope — for
+    example a commit-time run where no matching file is staged — still reports an ordinary
+    pass, because the rule fires on targets that were named but not resolved, never on an
+    empty scope,
+  And an argument form the validator still cannot resolve after any convenience handling is
+    added produces the reported failure, so the criterion is not satisfied by teaching the
+    validator to expand directory arguments alone.
+
+  Coverage note: cover this by invoking the validator with a directory argument against a
+  directory that genuinely contains AC files, and asserting on the observed result and
+  message. Both boundary invocations — targets-named-but-unresolved, and no-targets-empty-
+  scope — must be exercised, or the fix will make legitimate empty-scope runs fail.
+depends_on:
+  - GE-119a
+doc_links:
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Describes validate_ac_schema.py as the agent-side validator that checks a subset independently."
+  - path: CLAUDE.md
+    relationship: context
+    status: exists
+    relevance: "The AC-store hygiene pre-flight instructs a bulk directory-argument invocation — the exact call that silently inspects nothing."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLACEMENT DECISION (the BA was asked to consider whether this belongs here). It does.
+  The surface differs from the other GE-119a children — this is an agent-side validator
+  invoked by hand, not a commit-time check — but the defect is the same one the L1 names:
+  a tool reports success for an inspection it never performed. Grouping it under a
+  different L1 would split one defect class across two parents for a reason that is about
+  invocation mechanics rather than behaviour.
+
+  OBSERVED IN-SESSION during this very pipeline: validate_ac_schema.py given a DIRECTORY
+  argument printed "No YAML files to validate" and exited 0 instead of erroring on the
+  argument form. The instruction to pass explicit file paths is a live workaround for this
+  defect, exactly as the manual layout-link step is the live workaround for GE-119b.
+
+  SEVERITY NOTE for the IT-PO: CLAUDE.md's "AC-store hygiene — bulk pre-flight" section
+  tells operators to run this validator with a directory argument before a finalization
+  drive. That documented pre-flight therefore currently inspects nothing and reports
+  success — the pre-flight designed to surface AC violations in bulk is itself a silent
+  pass. Fixing this AC without also correcting or removing that instruction leaves the
+  operator with a green pre-flight they should not trust.

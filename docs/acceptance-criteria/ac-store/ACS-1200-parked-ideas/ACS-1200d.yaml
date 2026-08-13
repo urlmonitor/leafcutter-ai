@@ -29,7 +29,11 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACS-1200d-1
+  - ACS-1200d-2
+  - ACS-1200d-3
+  - ACS-1200d-4
 implemented_by: []
 change_target:
   - code
@@ -51,3 +55,18 @@ notes: |
   what has been sitting parked and for how long. Note that (2) borders on
   KM-200c's counting remit; keep this L1 to the transition itself and leave the
   population reporting there.
+
+  BA DECOMPOSITION (2026-08-14). ACS-1200d-1 makes the transition one atomic
+  change (marker off and child list on together) and ACS-1200d-2 refuses either
+  half on its own with a message naming which half is missing — that pair is
+  failure mode (1). ACS-1200d-3 measures the queue effect in three states
+  against the real store: parked adds nothing, un-parked-but-undecomposed still
+  adds nothing, only a real approved leaf arrives. ACS-1200d-1-i covers the gap
+  the two failure modes leave between them — a tree un-parked but never broken
+  down, which is neither parked nor orphaned nor buildable and would otherwise
+  vanish from every report while looking healthy. ACS-1200d-4 is the how-to, and
+  it removes the old skip-the-check instruction rather than adding beside it.
+
+  Failure mode (2) is addressed only to the extent of keeping parked trees
+  VISIBLE (the parked report section, ACS-1200b-2). No AC here counts or ages
+  them, and nothing here depends on KM-200c, which is itself parked.

@@ -1,0 +1,58 @@
+id: ACS-1200a-2-i
+components:
+  - ac_store
+  - commit_guardian
+title: "A parked marker exempts only the record it is set on, never the records beneath it"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-2.yaml
+criteria: |
+  Given KM-200.yaml carries parked: true with a non-empty parked_reason and an
+    empty covered_by,
+  And its child KM-200a.yaml carries no parked field, has its own child
+    KM-200a-1.yaml, and does not list KM-200a-1 in its covered_by,
+  And KM-200.yaml, KM-200a.yaml and KM-200a-1.yaml are all staged,
+  When the parent-back-link check is executed as a process against that staged
+    set,
+  Then the process exits non-zero,
+  And it reports exactly one violation, naming KM-200a-1 as the child and
+    KM-200a as the parent that does not list it,
+  And it reports no violation for KM-200a, whose own parent KM-200 carries the
+    marker,
+  And the marker on KM-200 is not applied to KM-200a: a mixed tree yields one
+    exempted link and one enforced link in the same run.
+depends_on:
+  - ACS-1200a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Parent-derivation algorithm the exemption lookup must reuse — the marker is checked on the derived parent only, not walked up the ancestry."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-2
+  contract: "The per-record exemption lookup, applied to the derived parent of each staged child"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The containment edge case. An inherited or transitive marker would let one
+  field at the root of a tree mute every rule beneath it — the "universal mute
+  button" outcome ACS-1200c exists to prevent, arriving by the back door.
+
+  The scenario is not hypothetical: a tree part-way through un-parking has
+  exactly this shape (root still marked, one branch decomposed). The mixed run
+  is the useful assertion — a check that gets the exemption right but silences
+  the whole staged set would still pass a test that only looked at exit code.

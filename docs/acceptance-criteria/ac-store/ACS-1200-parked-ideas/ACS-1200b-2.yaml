@@ -1,0 +1,66 @@
+id: ACS-1200b-2
+components:
+  - ac_store
+title: "The orphan scan reports a parked tree as parked instead of as an orphan, and does not hide it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+criteria: |
+  Given the store contains KM-200.yaml carrying parked: true with the reason
+    "captured as an outline; not decomposed yet" and an empty covered_by,
+  And its six children KM-200a.yaml through KM-200f.yaml,
+  When the store-wide orphan scan is executed as a process over the store,
+  Then none of KM-200a through KM-200f appears in its orphan list,
+  And KM-200 appears in a separate parked section of the same report, naming the
+    six records it holds and the reason recorded on it,
+  And the tree is therefore still visible in the report: a report in which
+    KM-200 and its six children appear nowhere at all does not satisfy this
+    criterion,
+  And the scan's exit status is the same as it is for a store containing no
+    parked tree,
+  And a test that inspects the scan's source for a parked branch does not
+    satisfy this criterion: coverage requires executing the scan and asserting
+    the contents of the two sections of its report.
+depends_on:
+  - ACS-1200b
+  - ACS-1200a-1
+  - ACS-1200b-1
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The six records this scan currently reports as orphans."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200b-1
+  contract: "The enumeration entry for the orphan scan, and the shared marker-reading rule applied to it"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1200b-2-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  RECOGNITION, NOT SUPPRESSION at the reporting layer. The cheap implementation
+  — filter parked trees out of the scan entirely — satisfies "stops showing up
+  as a problem" while destroying the visibility that makes parking safe. The
+  L0's whole framing is that a parked idea stays VISIBLE in the store and merely
+  sits outside the buildable backlog, so the report must show it, in its own
+  section, with its reason.
+
+  The separate section is also what keeps ACS-1200d's un-park decision possible
+  without borrowing KM-200c's counting remit: it lists the parked trees; it does
+  not tally them or age them.

@@ -1,0 +1,63 @@
+id: ACS-1200c-2
+components:
+  - ac_store
+  - commit_guardian
+title: "The block message tells the developer which of the two remedies applies"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
+criteria: |
+  Given the parent-back-link check has blocked a commit because ACS-1200a-3 is
+    not listed in its parent ACS-1200a's covered_by,
+  When the message it produced is read,
+  Then it names the child record id ACS-1200a-3, the parent record id ACS-1200a,
+    the file path of the parent record, and the rule that was violated,
+  And it states both available remedies in the same message — add the child id
+    to the parent's covered_by list, or mark the parent as parked by setting
+    parked: true together with a parked_reason — so the developer can tell which
+    one applies to the tree in front of them,
+  And it states that marking a record parked is the second remedy only when the
+    tree has deliberately not been broken down yet,
+  And it does not name skipping the check as a remedy anywhere,
+  And the message is written to stdout, not only to stderr,
+  And a message that names only the rule and the offending record, without both
+    remedies, does not satisfy this criterion.
+depends_on:
+  - ACS-1200c
+  - ACS-1200c-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-400-ac-governance/ACS-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The message-quality model the PO named: name the id, the rule, and the remedy. This AC extends that shape to two remedies because the change introduces a second legitimate resolution."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200c-1
+  contract: "The block decision this message explains"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Before this change there was one remedy, so a message naming the rule was
+  enough. After it there are two, and a developer who cannot tell which applies
+  will reach for the third, wrong one — the skip — which is the habit this whole
+  goal exists to break. Hence the explicit clause forbidding the message from
+  offering the skip.
+
+  The "only when deliberately not broken down yet" clause matters: without it the
+  message reads as offering a mute button for any inconvenient block.

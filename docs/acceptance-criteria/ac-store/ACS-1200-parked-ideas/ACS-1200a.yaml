@@ -30,7 +30,11 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACS-1200a-1
+  - ACS-1200a-2
+  - ACS-1200a-3
+  - ACS-1200a-4
 implemented_by: []
 change_target:
   - code
@@ -53,3 +57,15 @@ notes: |
   currently documents the back-link protocol as unconditional ("missing links
   block the commit"), so shipping the exemption without amending that reference
   leaves the written rule contradicting the enforced one.
+
+  BA DECOMPOSITION (2026-08-14). The L2 decision the PO left open is settled in
+  ACS-1200a-1: the signal is a field pair on the record — parked: true plus a
+  non-empty parked_reason — set by the author, stored on the AC record itself
+  (no side registry or ignore-list), and explicitly NOT inherited by children
+  (ACS-1200a-2-i). The matching negative, that an unmarked childless tree is
+  still blocked and still reported, lives under ACS-1200c-3 so it cannot be
+  dropped by relaxing this L1. ACS-1200a-4 re-proves the exemption against the
+  real on-disk KM-200 records rather than a fixture.
+
+  ORDERING WITH GE-119b is carried on ACS-1200a-2 (delivers_to contract and
+  doc_links): that AC must land before, or in the same release as, GE-119b.

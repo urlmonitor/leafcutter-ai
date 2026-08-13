@@ -1,0 +1,65 @@
+id: GE-119c-5
+title: "The new verification surface is drawn as an architecture component"
+component: guardrail-engine
+components:
+  - documentation_system
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the harness introduced by GE-119c-1 is a new architectural piece rather than a change
+    to an existing one,
+  When a reader opens the guardrail engine's architecture documentation,
+  Then a component diagram shows the harness, the separate working copy it stands up, the
+    deployed check processes it invokes, and the hook manifest it compares its coverage
+    against,
+  And the diagram distinguishes the harness's out-of-process invocation path from the existing
+    in-process unit tests that import checks from the source tree,
+  And it states which of those two paths can observe the defect class this tree addresses and
+    which cannot,
+  And the boundary that the source tree does not cross into the process under test is shown,
+    since that boundary is the property the harness exists to enforce,
+  And the diagram is reachable from the guardrail engine's component documentation rather than
+    filed only under testing.
+depends_on:
+  - GE-119c
+  - GE-119c-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "The harness's actual structure — copy creation, invocation path, and manifest comparison — to draw rather than to guess at."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the component-diagram entry in GE-119c's documentation_triggers. The PO's reason,
+  preserved: the trigger is for the new verification surface itself, which is a new
+  architectural piece and not a change to an existing one.
+
+  The in-process-versus-out-of-process clause is the point of the diagram. The reason this
+  defect class survived is that a reasonable engineer looked at a directory full of passing
+  tests for these checks and concluded they were covered. A diagram that shows the two test
+  paths side by side, and marks which one is blind to layout, is what stops the next engineer
+  reaching the same conclusion.
+
+  Sequence after GE-119c-1 is built. Drawing the harness before it exists produces a diagram
+  of the author's intention, which then has to be corrected — and in practice is not.

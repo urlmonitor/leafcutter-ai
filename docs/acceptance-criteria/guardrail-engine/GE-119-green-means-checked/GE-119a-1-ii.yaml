@@ -1,0 +1,63 @@
+id: GE-119a-1-ii
+title: "A check that falls back to a weaker inspection reports its clean result as unverified"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check that has an authoritative inspection and a reduced substitute it can fall
+    back to when the authoritative one is unavailable,
+  And the authoritative inspection is unavailable for this run,
+  And the reduced substitute finds nothing wrong with the staged files,
+  When the check reports,
+  Then the clean finding is labelled as produced by the reduced substitute and as not
+    authoritative,
+  And the output names which inspection did not happen,
+  And the result value is distinguishable from the value produced when the authoritative
+    inspection ran and found nothing wrong,
+  And a reader who sees only the final line can tell the two apart.
+
+  Coverage note: cover this by running the check twice on the same staged files — once
+  with the authoritative inspection available and once without — and asserting the two
+  results are distinguishable. Asserting only that both exit 0 does not cover it.
+depends_on:
+  - GE-119a-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Documents that check_ac_schema.py has exactly this authoritative-vs-manual fallback shape."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-1
+  contract: "The could-not-check result vocabulary, extended with a degraded-but-ran value."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The THIRD state. GE-119a-1 covers "could not run at all"; GE-119a-1-i covers "ran
+  fully, one input was bad". This covers the state between them: the check ran, but with
+  a weaker instrument than the one its contract promises. A clean result from a weaker
+  instrument is the most dangerous of the three because it looks exactly like a real pass.
+
+  GE-119a-3 is the concrete instance (the AC-schema check degrading to manual field
+  validation). This AC generalises it so a fourth point patch is not what ships — see the
+  repeat-defect history in GE-119 notes (GE-112 already patched an adjacent defect in the
+  same file).

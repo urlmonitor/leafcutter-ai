@@ -1,0 +1,59 @@
+id: GE-119a-2-i
+title: "A check registered without a cannot-run disposition is named as a gap, never silently defaulted"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check is added to the registry with no cannot-run disposition recorded,
+  When the guardrail engine validates its own registry,
+  Then it names the newly added check and states that its cannot-run disposition is
+    missing,
+  And it does not assign a disposition on that check's behalf,
+  And the validation result is a failure, not a warning that scrolls past among other
+    output,
+  And the same result is produced whether the registry is validated from the main
+    checkout or from a separate working copy.
+
+  Coverage note: exercise this by adding a disposition-less entry to a registry fixture and
+  running the validation, asserting on the observed failure and the named check. A test
+  that only asserts every current check has a disposition passes forever and catches
+  nothing on the day check nineteen is added.
+depends_on:
+  - GE-119a-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-2
+  contract: "The registry field that records each check's cannot-run disposition."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: internal
+notes: |
+  The anti-regression clause for GE-119a-2. Without it, the disposition field is a
+  convention rather than a rule, and check nineteen inherits the silent-pass behaviour by
+  omission — which is precisely how the current family of 18 arrived at the same defect
+  independently.
+
+  Note the last clause: the registry validation is itself a check, so it is subject to the
+  parity requirement of GE-119b. A registry validator that cannot read the registry from a
+  worktree and passes anyway would be the same bug one level up.

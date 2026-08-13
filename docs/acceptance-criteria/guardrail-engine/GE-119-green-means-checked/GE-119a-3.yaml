@@ -1,0 +1,84 @@
+id: GE-119a-3
+title: "The AC-schema check reports a non-authoritative result when it cannot load the schema it validates against"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the AC-schema pre-commit check is invoked on staged AC YAML files,
+  And the authoritative AC store schema document cannot be resolved from the working copy
+    the check is running in,
+  When the check runs,
+  Then it states that authoritative schema validation did not happen and names the schema
+    document it could not reach,
+  And any clean finding produced by its reduced manual field validation is labelled as not
+    authoritative, per GE-119a-1-ii,
+  And the reduced finding is not presented with the same result value as a run in which
+    the authoritative schema was loaded and satisfied,
+  And a staged AC file that authoritative validation would reject is never reported as
+    clean without that label,
+  And the label appears on the reduced run even when the reduced validation finds nothing
+    at all to report.
+
+  Coverage note: covered only by running the check with the schema document genuinely
+  unreachable and asserting the observed output and result value. Asserting that a fallback
+  branch exists in the source does not cover it, and neither does a test that makes the
+  schema unreachable by monkey-patching an import inside the same process — the observed
+  defect is a path-resolution failure, so the unreachability must be real.
+depends_on:
+  - GE-119a
+  - GE-119a-1-ii
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the authoritative-vs-manual split and warns that the fallback is what actually gates in some environments."
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: modifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: related
+    status: exists
+    relevance: "The schema document whose unreachability triggers the silent degrade."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-1-ii
+  contract: "The degraded-but-ran result value and its non-authoritative label."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  EVIDENCE LABELS — carry them through unchanged.
+    - OBSERVED: check_ac_schema.py cannot resolve config/ac_store_schema.json from a
+      separate working copy and silently degrades to manual field validation. The fallback
+      sits at templates/scripts/commit_guardian/check_ac_schema.py:623.
+    - REPORTED BY A PARALLEL SESSION, NOT VERIFIED: that 26 schema-violating files
+      consequently looked clean. This AC does NOT assert that number. Producing a measured
+      figure is GE-119c-4's job; cite 26 only with the "reported, not verified" label until
+      GE-119c-4 has run.
+
+  REPEAT-DEFECT CONTEXT: GE-112 already fixed an adjacent defect in this same file (the
+  manual validator running on the jsonschema SUCCESS path). This is the second defect in
+  one file in one area. That is the argument for satisfying this AC via the generalised
+  behaviour of GE-119a-1-ii plus the shared resolution facility of GE-119b-2, rather than a
+  third patch local to this file. An implementation that changes only this file, and would
+  not have prevented the neighbouring instances, has met the letter of this AC and missed
+  its point — flag that at review.
+
+  NOTE the visibility/parity split: making the check ANNOUNCE the degrade is this AC.
+  Making the schema document actually resolvable from a worktree is GE-119b-3. Both are
+  needed; neither substitutes for the other.

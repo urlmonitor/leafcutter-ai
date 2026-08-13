@@ -1,0 +1,69 @@
+id: ACS-1200c-4
+components:
+  - ac_store
+  - commit_guardian
+title: "The marker cannot be applied to work that has already been broken down"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
+criteria: |
+  Given a record that carries parked: true and a non-empty parked_reason while
+    the store also contains at least one descendant of it at level L2,
+  When the AC schema validator is executed as a process against that record,
+  Then it exits non-zero, naming the record id, the L2 descendants found, and
+    the rule that a parked record must have no descendant below the feature
+    level,
+  And when the parent-back-link check is executed against a staged set
+    containing that record and its children, the exemption is not granted and
+    each missing back-link is reported as a violation,
+  And a record that carries parked: true at readiness: approved is likewise
+    rejected by the validator, naming the record id, its readiness, and the rule
+    that an approved requirement cannot be parked,
+  And a record carrying parked: true whose descendants are all at the feature
+    level and whose readiness is draft or reviewed is accepted,
+  And these verdicts come from executing the validator and the check as
+    processes and asserting their exit codes and messages.
+depends_on:
+  - ACS-1200c
+  - ACS-1200a-1
+  - ACS-1200a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "The validity rule for the marker documented alongside the fields by ACS-1200a-3."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The parked / parked_reason field pair, whose validity conditions this criterion constrains"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1200c-4-i
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  Without this, the marker becomes a universal mute button: any tree blocked for
+  a genuinely missing back-link can be unblocked by pasting two fields onto its
+  parent, and the safeguard is gone in a way that looks like compliance. The
+  marker means "not broken down yet", so a record with L2 descendants, or one
+  already approved for build, is asserting two contradictory things at once and
+  the contradiction is refused rather than resolved silently.
+
+  The accepted case is stated explicitly so the rule cannot be implemented as a
+  blanket refusal that also blocks legitimate parking.
+
+  ACS-1200a-2-i covers the neighbouring containment question (the marker is not
+  inherited); this one covers where the marker may validly be placed at all.

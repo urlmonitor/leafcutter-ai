@@ -1,0 +1,79 @@
+id: GE-119c-4
+title: "The unverified count of files that only looked clean is replaced with a measured one"
+component: guardrail-engine
+components:
+  - testing_quality
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the report that 26 schema-violating AC files looked clean under the reduced manual
+    field validation — a figure recorded as reported by a parallel session and never
+    independently reproduced,
+  When the harness validates the AC store twice from the same working copy, once with the
+    authoritative schema and once with the reduced manual field validation,
+  Then it reports the actual number of files accepted by the reduced validation and rejected
+    by the authoritative one, and lists those files by path,
+  And it reports which authoritative rule each listed file violates, so the finding is
+    actionable rather than a count,
+  And the measured number is what is cited from that point on, whether or not it equals 26,
+  And a measured result of zero is reported as the finding rather than treated as a broken
+    measurement,
+  And the measurement is repeatable on demand against the store as it stands, not captured
+    once as a static number in a document.
+
+  Coverage note: the two validations must both be executed against the real on-disk AC store,
+  not a synthetic fixture. A fixture built by an author who already knows which rules the
+  reduced validation omits reproduces that author's assumptions and cannot surprise them
+  (CLAUDE.md, "Real-artifact behavioral spot-check before declaring done").
+depends_on:
+  - GE-119c
+  - GE-119c-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Documents the authoritative-vs-manual split whose divergence this AC measures."
+  - path: config/ac_store_schema.json
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "Execution of the AC-schema check from a controlled working copy under each validation mode."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  EVIDENCE DISCIPLINE, which is the actual subject of this AC. The 26 figure is labelled
+  REPORTED BY A PARALLEL SESSION AND UNVERIFIED everywhere it appears in this tree, and this
+  AC is the only thing that can change that label. Until it runs, cite 26 only with the label
+  attached; after it runs, cite the measured number instead. Do not let the figure be promoted
+  to fact by repetition — that is the same failure as a green check that never ran, applied to
+  a number instead of a verdict.
+
+  The zero clause is not defensive filler. If the measured divergence is zero, the honest
+  reading is that the reduced validation happens to cover the rules the current store
+  exercises — which weakens the urgency argument for GE-119a-3 while leaving its correctness
+  untouched, because the divergence is a property of the store on the day it was measured, not
+  a property of the check. Say so if it happens; do not re-run until a more alarming number
+  appears.
+
+  The repeatability clause is what makes this a harness capability rather than an
+  investigation. A number written into a document is stale the next day; a measurement that
+  can be re-run answers the question again after the store grows.

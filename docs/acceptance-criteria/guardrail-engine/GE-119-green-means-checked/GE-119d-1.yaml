@@ -1,0 +1,64 @@
+id: GE-119d-1
+title: "Working-copy set-up reports the outcome of every protection step it attempted"
+component: guardrail-engine
+components:
+  - worktree_manager
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the command that prepares a fresh working copy for a drive,
+  When it finishes,
+  Then it presents exactly one recorded outcome for each protection step it attempted —
+    established, or not established with the reason,
+  And a step recorded as not established names the specific artifact it could not find or
+    create, not the general activity that failed,
+  And the closing summary states how many protection steps were not established,
+  And a run in which any protection step was not established is not presented as a completed
+    set-up,
+  And each attempted step appears exactly once in the report, on every path through the
+    command, including paths where a step was skipped.
+
+  Coverage note: cover this by running the real set-up command and asserting on the report it
+  produced, including at least one run in which a step genuinely cannot be established. The
+  final clause needs a run per path, not a source inspection — a per-step record added inside
+  a skip branch while an unconditional record remains after the branch produces a duplicate
+  entry that no static check sees (CLAUDE.md, "Skip-Branch Side-Effects").
+depends_on:
+  - GE-119d
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-step protection outcome record that GE-119d-2 escalates on and GE-119d-5 documents."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The visibility half of GE-119d — the same rule as GE-119a-1, applied to the set-up path
+  rather than to a check. Reporting comes before refusing (GE-119d-2) because a set-up that
+  refuses without saying which step failed just moves the opacity.
+
+  The exactly-once clause is drawn from a defect this project has already shipped: skip-branch
+  step records were added while the unconditional record after the branch was left in place,
+  so every skipped step double-recorded, and the structural test's pattern was blind to it.
+  A per-step outcome report that miscounts is a report a reader stops trusting, at which point
+  it protects nothing.

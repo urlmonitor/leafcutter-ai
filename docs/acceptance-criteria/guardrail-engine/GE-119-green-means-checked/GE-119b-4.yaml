@@ -1,0 +1,68 @@
+id: GE-119b-4
+title: "Every check in the manifest reaches an identical verdict from either working copy"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the full set of checks registered in the guardrail engine's hook manifest,
+  And one fixture of staged changes that provokes a genuine violation for each of those
+    checks, so that a check which stops working is visible rather than trivially green,
+  When every check is executed against that fixture from the main checkout, and again from a
+    separate working copy,
+  Then every check reports the same verdict from both,
+  And any check whose two verdicts differ is reported by name together with both verdicts,
+  And the comparison covers every check in the manifest — a check that the sweep did not
+    exercise is reported as a gap rather than counted as agreeing,
+  And the sweep reports a failure when any check disagrees or any check is uncovered.
+
+  Coverage note: this criterion is the family-wide generalisation of GE-119b-1 and is
+  meaningful only when executed. It is covered by running the GE-119c-1 harness across the
+  manifest; a per-check unit test that imports from the source tree cannot distinguish the two
+  layouts and therefore cannot cover it.
+depends_on:
+  - GE-119b
+  - GE-119b-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "Out-of-process execution of a deployed check from a second working copy, returning its observable result and output."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The parity claim at family scale. GE-119b-1 and GE-119b-3 fix the two OBSERVED instances;
+  this AC is what makes the L1's promise ("same work, same verdict, whichever copy you are
+  in") true of the sixteen that were never tested rather than of the two that were.
+
+  THE FIXTURE IS THE HARD PART, and it is deliberately in the criteria rather than left
+  implicit. A sweep run against a clean fixture passes trivially: every check agrees, because
+  every check finds nothing in both copies — including a check that has silently stopped
+  running altogether. The fixture must provoke a real violation per check for the comparison
+  to carry information. Shared with GE-119b-2-i; build it once.
+
+  DIVISION OF LABOUR with GE-119c-3: this AC owns the VERDICT-AGREEMENT assertion; GE-119c-3
+  owns the MANIFEST-COVERAGE assertion (no check may opt out by omission). They are stated
+  from both directions on purpose — the sweep's own completeness is exactly the property that
+  a silent-pass culture erodes first.

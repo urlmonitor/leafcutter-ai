@@ -31,7 +31,12 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-119d-1
+  - GE-119d-2
+  - GE-119d-3
+  - GE-119d-4
+  - GE-119d-5
 implemented_by: []
 change_target: code
 risk_surface: internal

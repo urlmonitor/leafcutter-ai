@@ -1,0 +1,66 @@
+id: ACS-1200d-4
+components:
+  - ac_store
+title: "The how-to tells you how to park an idea and how to take it back out"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
+criteria: |
+  Given docs/how-to/ac-traceability-store.md,
+  When it is read after this feature has landed,
+  Then it contains a procedure for parking an idea that names the two fields to
+    set, states that the reason must be written, and states that no check is to
+    be skipped to record it,
+  And a procedure for un-parking that states both halves — remove the marker and
+    restore the parent's child list — must land in the same change, and that the
+    idea should be broken down as part of that decision,
+  And it states the thing not to do: repairing a parked record's child list
+    without a decision to un-park the tree,
+  And it states what a reader will see for each state in the store-health
+    report, so a parked tree and a broken one can be told apart from the report
+    alone,
+  And any instruction anywhere in the documentation telling a reader to skip the
+    parent-back-link check in order to record an idea is removed rather than
+    left beside the new procedure.
+depends_on:
+  - ACS-1200d
+  - ACS-1200d-1
+  - ACS-1200d-2
+doc_links:
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: specifies
+    status: exists
+    relevance: "The document this AC amends."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Holds the field definitions (ACS-1200a-3); the how-to gives the procedure and links to it rather than restating the schema."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200d-1
+  contract: "The un-park transition as implemented, including which halves must land together"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to trigger on ACS-1200d. Written as a REPLACEMENT rather
+  than an addition: the last clause removes any surviving instruction to skip
+  the check when recording an idea, which is the habit the whole goal exists to
+  end. A new procedure sitting next to the old workaround leaves the workaround
+  in circulation.
+
+  Scope line: the fields and their validity rules are documented once in the
+  reference (ACS-1200a-3); this how-to is the procedure and the decision, and
+  links to the reference rather than duplicating it.

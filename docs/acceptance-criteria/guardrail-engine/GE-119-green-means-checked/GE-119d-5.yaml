@@ -1,0 +1,65 @@
+id: GE-119d-5
+title: "The how-to states what a prepared working copy guarantees and how to confirm it"
+component: guardrail-engine
+components:
+  - documentation_system
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who has just had a working copy prepared for them,
+  When they consult the how-to for managing commit-time checks,
+  Then it states what set-up guarantees — that the checks are active and reach the same
+    verdicts as the main checkout,
+  And it states what set-up does when it cannot establish that: it names the missing part and
+    refuses, rather than handing over an unprotected copy,
+  And it gives the one command the reader runs to confirm protection is active in the copy in
+    front of them, and what its output looks like in both the healthy and the unhealthy case,
+  And it does not instruct the reader to establish any part of the protection by hand,
+  And it does not reintroduce the manual layout-link step that GE-119b-5 removes.
+depends_on:
+  - GE-119d
+  - GE-119d-2
+  - GE-119b-5
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119d-2
+  contract: "The set-up refusal behaviour and its message, to document as it actually is."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in GE-119d's documentation_triggers.
+
+  DELIBERATELY DISTINCT FROM GE-119b-5, which edits the same document. GE-119b-5 REMOVES the
+  obsolete manual workaround for the check family; this AC ADDS the set-up guarantee and the
+  confirmation command. They are separate ACs because they have different preconditions —
+  b-5 waits on GE-119b-4, this waits on GE-119d-2 — and because a single AC covering both
+  would let an author satisfy it by doing whichever half was easier.
+
+  The ordering is recorded in depends_on: GE-119b-5 first. Both edits touch the same document
+  and the final clause here is what stops the second edit restoring text the first deleted —
+  a real hazard when two agents edit one how-to in sequence from separate ACs.
+
+  The confirm-command clause is the substantive addition. A reader who has been told for months
+  to link the layout by hand will not stop doing it because a sentence was deleted; they stop
+  when they are given something to run that tells them they do not need to.

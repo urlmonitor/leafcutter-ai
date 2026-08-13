@@ -1,0 +1,67 @@
+id: ACS-1200d-3
+components:
+  - ac_store
+title: "Parking a tree never adds work to the buildable queue, and un-parking alone does not either"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
+criteria: |
+  Given the real store, over which the buildable-work scan returns a baseline
+    ready set that contains no KM-200 record — 436 ready records when measured
+    on 2026-08-14,
+  When the parked marker and a reason are added to KM-200.yaml and the scan is
+    executed again as a process over the same store,
+  Then the ready set it returns is identical to the baseline, record for record,
+    so marking a tree parked adds nothing to the queue and removes nothing from
+    it,
+  And when KM-200 is un-parked per ACS-1200d-1 while no record below the feature
+    level has been authored under it, the scan still returns no KM-200 record,
+  And once a record at level L2 exists under KM-200 and reaches readiness
+    approved, that record — and only that record — appears in the ready set,
+  And each of the three states is measured by executing the scan and comparing
+    the returned sets, not by inspecting its source.
+depends_on:
+  - ACS-1200d
+  - ACS-1200a-1
+  - ACS-1200d-1
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "Verified 2026-08-14: a store scan returned 436 ready records with zero KM-200 records among them, which is the baseline this criterion holds constant."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200d-1
+  contract: "The un-parked state, whose effect on the ready set this criterion measures"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  "Nothing drifts into the work queue by accident", made measurable in three
+  steps: parked adds nothing, un-parked-but-undecomposed still adds nothing, and
+  only a real decomposed and approved leaf arrives. The exclusion holds today as
+  a side effect of how the scan selects leaves; this AC pins it as an intended
+  guarantee so a future change to that selection cannot quietly promote every
+  parked stub into the backlog.
+
+  The 436 figure is the measured baseline on 2026-08-14, cited so the
+  implementer starts from a real number; the assertion that must hold is that
+  the two ready sets are identical, not that the count is 436.
+
+  Set comparison, not count comparison — an unchanged total made of a different
+  set of records is the failure this would otherwise miss.

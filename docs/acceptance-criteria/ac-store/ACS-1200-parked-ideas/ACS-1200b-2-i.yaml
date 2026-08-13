@@ -1,0 +1,54 @@
+id: ACS-1200b-2-i
+components:
+  - ac_store
+title: "A record whose parent does not exist is still reported, even if the record marks itself parked"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2.yaml
+criteria: |
+  Given a record whose derived parent id resolves to no file anywhere in the
+    store,
+  And that record itself carries parked: true with a non-empty parked_reason,
+  When the store-wide orphan scan is executed as a process over the store,
+  Then the record is still reported as broken, naming the record id and the
+    parent id that resolves to no file,
+  And it is not listed in the parked section, because no existing parent record
+    granted it that state,
+  And the same record with the marker removed produces the identical report
+    entry, so the marker changed nothing about this verdict.
+depends_on:
+  - ACS-1200b-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Parent-derivation algorithm — the exemption is granted by a marker found on an existing derived parent, never by a marker a record sets on itself."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200b-2
+  contract: "The parked-aware orphan scan and its two report sections"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Closes the self-exemption hole. If a record could exempt ITSELF, the marker
+  would become a per-file mute switch for any structural complaint, which is the
+  suppression outcome the L0 rules out. The exemption is directional: a marker
+  on an existing parent excuses that parent's missing back-links to its
+  children, and nothing else.
+
+  A dangling parent is a genuinely broken tree, not a parked one — exactly the
+  class of breakage the recognition-not-suppression constraint exists to keep
+  visible.

@@ -1,0 +1,71 @@
+id: GE-119a-5
+title: "The no-silent-pass rule is written where the next check author will find it"
+component: guardrail-engine
+components:
+  - documentation_system
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reference documentation an author consults before adding a check to the
+    guardrail engine,
+  When that author reads it,
+  Then it states the no-silent-pass rule in the form this tree defines it: a check that
+    could not perform its inspection reports a could-not-check outcome rather than success,
+  And it states the boundary against the existing fail-open convention explicitly — failing
+    open on one bad input while the check still ran remains correct and is not repealed —
+    and cites GE-116a-1-iii as the approved example,
+  And it states the third state as well: a check that fell back to a reduced inspection
+    labels its clean result as not authoritative,
+  And it states that the cannot-run disposition, block or announce, is recorded per check
+    with no implicit default, and names where it is recorded,
+  And the existing documentation that records only the fail-open convention, without its
+    limit, is corrected in place rather than contradicted by a second document,
+  And the AC-parent-covered-by reproduction is included as the worked example of the
+    difference between "nothing wrong here" and "I never looked".
+depends_on:
+  - GE-119a
+  - GE-119a-1
+  - GE-119a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "Currently documents the fail-open convention for the AC hooks without stating its limit."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md
+    relationship: context
+    status: exists
+    relevance: "Records the fail-open contradiction and the line GE-119 draws."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-2
+  contract: "The recorded per-check disposition vocabulary and its storage location, to document accurately."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc entry in GE-119a's documentation_triggers.
+
+  The PO's reason for the trigger, preserved: "a rule that 18 checks must obey has to be
+  written down somewhere a future author will find it; today the opposite rule (fail open
+  quietly) is the one that is documented." That makes the CORRECTION clause load-bearing —
+  adding a new document while the old one still says "any unexpected exception causes the
+  hook to exit 0" leaves the next author with two rules and no ordering between them.
+
+  Sequence this after GE-119a-2 lands, so the disposition storage location documented here
+  is the one that actually exists rather than one the author guessed at.

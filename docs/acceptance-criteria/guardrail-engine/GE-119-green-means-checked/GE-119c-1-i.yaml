@@ -1,0 +1,61 @@
+id: GE-119c-1-i
+title: "The harness reports its own setup failure instead of passing vacuously"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the harness cannot complete the creation of its separate working copy — for example
+    the copy is created but the deployed layout it needs was never built,
+  When the harness runs,
+  Then it states that no check was exercised and names the setup step that did not complete,
+  And it reports a failure rather than reporting that every check passed,
+  And a run in which zero checks were exercised is never reported as a successful sweep, even
+    when no assertion failed,
+  And the count of checks actually exercised appears in the harness output, so a reader can
+    see that the number is not zero without reading the assertions.
+
+  Coverage note: exercise this by running the harness against a deliberately incomplete setup
+  and asserting on the observed failure and message. This case must be run, not reasoned
+  about — the whole point is that the vacuous path produces no failing assertion of its own.
+depends_on:
+  - GE-119c-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "The harness's per-check execution loop and its reported exercised-check count."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE HARNESS IS ITSELF SUBJECT TO GE-119a. A verification surface built to catch "reported
+  success without checking anything" that can itself report success without checking anything
+  is the same defect one level up — and it is the most likely place for it to recur, because
+  a harness that stands up infrastructure has far more ways to half-fail than a check does.
+
+  The project has already been bitten by exactly this shape: a green sweep over zero real
+  subjects. The fast-lane runner passed its structural tests while never executing its
+  red/green gates, and the phantom-done hook passed its unit tests while being a no-op on
+  every real ticket. Both were green sweeps over nothing. This AC is the interlock.
+
+  The exercised-count clause matters more than it looks. A failure assertion catches a harness
+  that breaks loudly; the reported count catches a harness that silently narrows its own
+  subject list — the slower and more common decay.

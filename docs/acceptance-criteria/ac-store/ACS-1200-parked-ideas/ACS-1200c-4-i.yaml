@@ -1,0 +1,64 @@
+id: ACS-1200c-4-i
+components:
+  - ac_store
+title: "An approved requirement with nothing under it is reported as a contradiction, not quietly parked"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-4.yaml
+criteria: |
+  Given BP-900d.yaml — a feature-level record at readiness: approved with an
+    empty covered_by and no descendants — carrying no parked marker,
+  When the store-wide orphan scan is executed as a process over the real store,
+  Then BP-900d is still reported, and it is reported as an approved requirement
+    with nothing under it rather than as a parked record or as an ordinary
+    orphan,
+  And the report names its id and its readiness so the contradiction is legible
+    without opening the file,
+  And when a parked marker is added to BP-900d while its readiness remains
+    approved, the validator rejects the record per ACS-1200c-4,
+  And the record only becomes validly parkable once its readiness is lowered
+    from approved.
+depends_on:
+  - ACS-1200c-4
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900d.yaml
+    relationship: context
+    status: exists
+    relevance: "The real record this criterion is written against: the single childless feature-level record in the store at readiness approved, found while calibrating the parked-stub population on 2026-08-14."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200c-4
+  contract: "The rule that an approved record cannot be parked, applied here to the one real record in that state"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Calibration evidence, 2026-08-14: of the childless feature-level records in
+  the store, all but one sit at draft or reviewed. BP-900d is the lone approved
+  one. Approved means "ready to build" while an empty child list means "nothing
+  to build" — the record asserts both, so it is a data defect either way, and
+  the risk this AC guards against is that the parked convention absorbs it and
+  makes the defect permanent.
+
+  This AC does NOT fix BP-900d and does not require anyone to. It requires that
+  the record stays visible and correctly described. Deciding its fate is
+  ordinary store hygiene, out of scope here for the same reason the 54
+  pre-existing orphans are (ACS-1200b-3).
+
+  It also does not count or tabulate the childless population — that is
+  KM-200c's remit; this criterion names one record.

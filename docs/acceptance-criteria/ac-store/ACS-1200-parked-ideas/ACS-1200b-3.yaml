@@ -1,0 +1,65 @@
+id: ACS-1200b-3
+components:
+  - ac_store
+title: "The pre-existing orphan backlog is not swept up by the exemption"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+criteria: |
+  Given the real AC store, over which the store-wide orphan scan reports a
+    baseline of 60 orphans before this feature lands, of which 54 belong to
+    trees that pre-date the parked convention and carry no marker,
+  When the orphan scan is executed as a process over the same store after the
+    exemption lands, with the marker added only to KM-200.yaml,
+  Then all 54 pre-existing orphans are still reported, each by id,
+  And the reported total falls by exactly the number of records excused by a
+    marker on their derived parent, and by no more,
+  And no record disappears from the report unless a marker exists on its derived
+    parent,
+  And the two runs are compared record by record rather than by total alone, so
+    an equal count made up of a different set of records does not satisfy this
+    criterion.
+depends_on:
+  - ACS-1200b
+  - ACS-1200b-2
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The six records that are expected to leave the orphan list; the other 54 must not."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200b-2
+  contract: "The parked-aware orphan scan, exercised here against the real store rather than a fixture"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The blast-radius boundary the PO drew: granting the exemption and cleaning up
+  genuine orphans are separate pieces of work, and the 54 pre-existing ones must
+  survive this change untouched. The point of the L1 is that afterwards the
+  remaining orphan count MEANS something again — which is only true if nothing
+  was quietly absorbed.
+
+  Record-by-record comparison rather than a count comparison is deliberate: a
+  totals-only assertion passes when six records leave the list and six unrelated
+  ones join it.
+
+  The 60/54 figures are the measured baseline on 2026-08-14, cited so the
+  implementer starts from a real number; the assertion that must hold is the
+  before/after set difference, not those literals.

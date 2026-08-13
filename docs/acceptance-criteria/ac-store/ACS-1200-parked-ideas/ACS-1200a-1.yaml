@@ -1,0 +1,80 @@
+id: ACS-1200a-1
+components:
+  - ac_store
+  - commit_guardian
+title: "A parked tree is marked by a field its author sets on purpose, never by an empty child list"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given an AC YAML record KM-200.yaml at readiness: draft whose covered_by is an
+    empty list, and which carries the two fields parked: true and
+    parked_reason: "captured as an outline; not decomposed yet",
+  When the AC schema validator is executed as a process against that file,
+  Then it exits 0 and reports the record as valid,
+  And the same record with parked: true and parked_reason absent exits non-zero
+    with a message naming KM-200, the field parked_reason, and the rule that a
+    parked record must state its reason,
+  And the same record with parked: true and parked_reason set to the empty
+    string "" exits non-zero with that same message,
+  And a record carrying neither field validates exactly as it did before this
+    change, so both fields are optional for every record that is not parked,
+  And both fields are read from the AC record itself: no separate registry,
+    ignore-list, allow-list, or configuration file is consulted to learn that
+    KM-200 is parked, so a reader of the record can see the state and the stated
+    reason without opening a second file,
+  And a record whose covered_by is empty and which carries no parked field is
+    reported by the validator as NOT parked, so the absence of children is never
+    by itself the signal.
+depends_on:
+  - ACS-1200a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "The field table this criterion adds parked and parked_reason to. ACS-1200a-3 amends the prose that currently states the back-link rule is unconditional."
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The real record this criterion is written against — a childless L0 at readiness draft whose covered_by is deliberately empty."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The parked / parked_reason field pair and its validity rule, consumed by the back-link check (ACS-1200a-2) and by every health surface enumerated in ACS-1200b-1."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  RECOGNITION, NOT SUPPRESSION — this is the AC where that constraint becomes
+  mechanical. The exemption granted in ACS-1200a-2 keys off this positive field,
+  never off "covered_by is empty". The final clause is the load-bearing one: a
+  childless record with no marker is reported as not-parked, which is what keeps
+  a genuinely half-broken tree distinguishable from a deliberately parked one.
+  The matching negative — that such a tree is still blocked and still reported —
+  is ACS-1200c-3, deliberately placed under the enforcement L1 so the guarantee
+  cannot be dropped by relaxing this one.
+
+  WHY A REASON IS REQUIRED, not just a boolean: the PO's constraint is that the
+  signal be something an author sets ON PURPOSE and a reader can SEE. A bare
+  boolean can be pasted in reflexively; a required non-empty reason makes the
+  act deliberate and makes the decision legible later. It also gives ACS-1200d
+  something to show at the un-park decision.
+
+  DELIBERATELY NOT INCLUDED: any duration or population field (parked_since, a
+  count of parked trees, an age threshold). Reporting how many trees are parked
+  and for how long is KM-200c's remit; this tree defines and enforces the state
+  only. KM-200c is itself parked, so nothing here depends on it.

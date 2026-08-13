@@ -30,7 +30,11 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACS-1200c-1
+  - ACS-1200c-2
+  - ACS-1200c-3
+  - ACS-1200c-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -49,3 +53,15 @@ notes: |
   remedy) if the block message needs revising to explain the new distinction —
   a developer who hits the block must be able to tell whether the fix is "add
   the link" or "mark this as parked".
+
+  BA DECOMPOSITION (2026-08-14), all four written in the negative as instructed:
+  ACS-1200c-1 is the decomposed tree still blocked, proved against the
+  pre-change implementation so "still full-strength" is measured rather than
+  asserted. ACS-1200c-2 is the two-remedy message (ACS-400e-1 shape, extended
+  because there are now two legitimate resolutions), and it forbids naming the
+  skip as a third. ACS-1200c-3 is the recognition-not-suppression test: a
+  childless tree minus the marker is still caught by BOTH surfaces, and adding
+  the marker alone flips both verdicts. ACS-1200c-4 stops the marker being a
+  universal mute button — it cannot be applied to a record with L2 descendants
+  or to an approved one — with ACS-1200c-4-i pinning the single real record in
+  the store (BP-900d) that sits in that contradictory state.

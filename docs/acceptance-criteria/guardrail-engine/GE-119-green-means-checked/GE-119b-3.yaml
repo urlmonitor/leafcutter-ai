@@ -1,0 +1,77 @@
+id: GE-119b-3
+title: "Configuration and data prerequisites resolve from a separate working copy, not only importable helpers"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the AC-schema check, whose unresolvable prerequisite is a schema document rather than
+    an importable helper module,
+  And a fixture of staged AC YAML files of which a known number violate the authoritative
+    schema,
+  When the check is executed against those identical staged files from the main checkout and
+    again from a separate working copy,
+  Then both runs load the authoritative schema document,
+  And both report the identical set of violating files,
+  And neither run substitutes the reduced manual field validation,
+  And the degradation to manual field validation observed today when running from a separate
+    working copy no longer occurs,
+  And the same holds for at least one further prerequisite kind beyond a schema document — a
+    configuration document read at runtime — so the resolution facility is shown to handle
+    data files generally and not one path special-cased.
+
+  Coverage note: covered by executing the check from a real second working copy through the
+  GE-119c-1 harness and comparing the two reported violation sets. A test that asserts the
+  schema path resolves to a non-empty string does not cover it — the observed defect produced
+  a path that was wrong, not a path that was empty.
+depends_on:
+  - GE-119b
+  - GE-119b-2
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: modifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Warns that the manual fallback is what actually gates in some environments."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-119b-2
+  contract: "The shared resolution facility, covering data and configuration prerequisites as well as helper modules."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE AC FROM GE-119b-1. The two observed failures look alike from the
+  outside — a check quietly does less than it promises from a worktree — but the prerequisite
+  kinds differ: GE-119b-1 is a failed MODULE IMPORT, this is a failed DATA FILE lookup. An
+  implementation that fixes module resolution and calls the family done leaves every
+  config-reading and data-reading check exactly as broken as before, while the canonical
+  reproduction turns green. That is a realistic partial fix and this AC is what prevents it.
+
+  The final clause exists for the same reason at a smaller scale: fixing the one observed
+  schema path is a fourth point patch. Requiring a second, different data prerequisite forces
+  the resolution to be general.
+
+  PAIRED WITH GE-119a-3, NOT REDUNDANT WITH IT. This AC makes the schema reachable; GE-119a-3
+  makes the check announce it when it is not. Both are needed — GE-119b-3 cannot cover every
+  future environment, and GE-119a-3 alone leaves the check honestly reporting that it did
+  nothing.
