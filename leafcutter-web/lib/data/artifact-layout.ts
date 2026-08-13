@@ -9,14 +9,33 @@
  *   1. Barycenter ordering — nodes inside a column are re-ordered so each sits
  *      near the average vertical position of its neighbours (Sugiyama step 2).
  *      A few forward/backward sweeps removes most crossings.
- *   2. Self-edge extraction — edges whose source === target (AC -> AC parent /
- *      depends_on / superseded_by) are pulled OUT of the layout and reported
- *      per node, so the caller can badge them instead of drawing degenerate
- *      loops that overlap the card.
+ *   2. Self-edge handling — edges whose source === target (AC -> AC) are always
+ *      reported per node so the caller can badge them. Whether they are ALSO
+ *      drawn depends on what the relation means; see SELF_RELS_DRAWN below.
  *
  * Pure functions, no React and no fs: safe to import anywhere.
  */
 import type { GraphEdge, GraphNode, SelfRel } from "./types";
+
+/**
+ * Self-relations that are DRAWN as edges in addition to being badged.
+ *
+ * Not every self-edge deserves a line. The AC node carries five, and they split
+ * cleanly in two:
+ *
+ *   - Three PARENT_OF variants encode ONE derivable hierarchy (strip the last ID
+ *     segment). They are structure, not a traversal, and drawing all three would
+ *     put three overlapping loops on the card for a fact the badge states better.
+ *   - DEPENDS_ON and SUPERSEDED_BY are genuine many-to-many traversals: given
+ *     this AC, which others does a change here reach? That is the question the
+ *     whole map exists to answer, so it must be a clickable line — the trust
+ *     panel (enforcement, shape, cardinality, the Gap 8 caveat) hangs off edge
+ *     selection and is unreachable from a badge.
+ *
+ * Drawing does NOT imply trusting: ac-depends stays enforced-but-AMBIGUOUS and
+ * still renders amber with its warn glyph.
+ */
+export const SELF_RELS_DRAWN = new Set(["DEPENDS_ON", "SUPERSEDED_BY"]);
 
 /** Horizontal distance between rank columns (node is 200px wide). */
 export const ARTIFACT_COL_GAP = 320;
@@ -28,12 +47,23 @@ export interface ArtifactPosition {
   y: number;
 }
 
+/** Append to a Map-of-arrays, creating the bucket on first use. */
+function arrPush<T>(map: Map<string, T[]>, key: string, value: T): void {
+  const arr = map.get(key) ?? [];
+  arr.push(value);
+  map.set(key, arr);
+}
+
 export interface ArtifactLayout {
   /** nodeId -> canvas position. */
   positions: Map<string, ArtifactPosition>;
-  /** nodeId -> self-referencing relationships, each with its encoding field. */
+  /** nodeId -> ALL self-referencing relationships, each with its encoding field. */
   selfRels: Map<string, SelfRel[]>;
-  /** Edges with self-references removed — safe to hand to React Flow. */
+  /**
+   * Edges to hand React Flow: every cross-node edge, plus the self-edges whose
+   * relation is in SELF_RELS_DRAWN. The drawn self-edges also appear in
+   * `selfRels` — badge and line are complementary, not exclusive.
+   */
   edges: GraphEdge[];
 }
 
@@ -57,17 +87,22 @@ export function layoutArtifactGraph(
   // identical strings and read as a duplication bug.
   const selfRels = new Map<string, SelfRel[]>();
   const linkEdges: GraphEdge[] = [];
+  // Self-edges promoted to drawn edges, tracked separately so they can be kept
+  // OUT of the barycenter adjacency below.
+  const drawnSelfEdges: GraphEdge[] = [];
   for (const e of edges) {
     if (e.source === e.target) {
-      const arr = selfRels.get(e.source) ?? [];
-      arr.push({
-        rel: e.rel ?? e.label ?? "self",
+      const rel = e.rel ?? e.label ?? "self";
+      arrPush(selfRels, e.source, {
+        rel,
         field: e.field ?? "—",
         enforcement: e.enforcement ?? "none",
         shape: e.shape ?? "clean",
         note: e.note,
       });
-      selfRels.set(e.source, arr);
+      // Badged AND drawn — the badge keeps the field-level detail, the edge
+      // makes the relation clickable and countable.
+      if (SELF_RELS_DRAWN.has(rel)) drawnSelfEdges.push(e);
     } else {
       linkEdges.push(e);
     }
@@ -150,5 +185,9 @@ export function layoutArtifactGraph(
     });
   }
 
-  return { positions, selfRels, edges: linkEdges };
+  // Promoted self-edges join the drawn set only HERE, after layout is settled.
+  // They are deliberately excluded from `neighbours` above: a self-edge would
+  // register a node as its own barycenter neighbour, dragging its row toward
+  // its own current position and defeating the crossing reduction.
+  return { positions, selfRels, edges: [...linkEdges, ...drawnSelfEdges] };
 }

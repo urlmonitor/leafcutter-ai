@@ -43,6 +43,7 @@ interface XY {
   y: number;
 }
 import { flowNodeTypes } from "./flow-nodes";
+import { artifactEdgeTypes } from "./self-loop-edge";
 import {
   edgeStyle,
   artifactEdgeStyle,
@@ -200,6 +201,11 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
       const pairKey = [e.source, e.target].sort().join("::");
       const nth = pairSeen.get(pairKey) ?? 0;
       pairSeen.set(pairKey, nth + 1);
+      // AC -> AC traversals (DEPENDS_ON, SUPERSEDED_BY) are promoted to drawn
+      // edges by the layout. A default bezier between two centred handles on
+      // the SAME card is a flat line through the card, so they get a custom
+      // arc renderer instead.
+      const isSelfLoop = e.source === e.target;
 
       // Field first (what you grep for), relationship second (the abstraction).
       // An absent edge has no field to grep, so it captions the relation it
@@ -214,6 +220,7 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
         id: e.id,
         source: e.source,
         target: e.target,
+        type: isSelfLoop ? "selfLoop" : undefined,
         animated: false,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -258,6 +265,8 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
           cardinality: e.cardinality,
           note: e.note,
           ingestability: spec.ingestability,
+          // Stacks the second self-loop clear of the first.
+          nth,
         },
         labelBgBorderRadius: 3,
         interactionWidth: 18,
@@ -275,6 +284,7 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
         onEdgeClick={onEdgeClick}
         onPaneClick={() => setSelectedEdge(null)}
         nodeTypes={flowNodeTypes}
+        edgeTypes={artifactEdgeTypes}
         fitView
         fitViewOptions={{ padding: 0.18, minZoom: 0.3 }}
         minZoom={0.15}

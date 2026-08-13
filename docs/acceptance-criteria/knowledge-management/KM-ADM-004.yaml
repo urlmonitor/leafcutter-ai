@@ -1,0 +1,47 @@
+id: KM-ADM-004
+readiness: reviewed
+priority: high
+components:
+  - knowledge_management
+status: active
+component: knowledge-management
+level: L2
+title: "AC-to-AC dependency is drawn as a traversable edge, not hidden in a badge"
+origin_agent: BrainCandy
+criteria: |
+  Given the artifact graph's layout lifts every edge whose source equals its target out
+    of the drawn edge set and reports it as a per-node badge row instead
+  When the view renders the Acceptance Criterion node, which carries all five self-
+    referencing relations (three PARENT_OF variants, DEPENDS_ON, SUPERSEDED_BY)
+  Then DEPENDS_ON and SUPERSEDED_BY — the two relations that are genuine many-to-many
+    traversals rather than structural hierarchy — are drawn as visible edges on the
+    canvas, selectable by click, and counted in the graph's edge total
+  And clicking one opens the same trust record panel any other edge opens, so its
+    enforcement, shape, cardinality and caveat note are reachable without opening the
+    JSON
+  And the three PARENT_OF variants remain badge rows, because they encode one derivable
+    hierarchy rather than a traversal, and drawing all five would produce five
+    overlapping loops on one card
+  And every self-relation still appears in the node badge, so no relation is lost from
+    the field-level listing by being promoted to an edge
+  And the bug symptom ("AC -> AC dependency, the relation a refactorer most needs in
+    order to know what else a change touches, is invisible as a link, unclickable, and
+    absent from the edge count") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: layoutArtifactGraph() partitions edges purely on
+  source === target and drops the whole class from its returned `edges` array, so React
+  Flow never sees them. That was a deliberate choice — the original comment says drawing
+  them produced "degenerate loops that overlap the card" — but it treats a structural
+  hierarchy link (PARENT_OF, derivable by stripping an ID segment) and a real dependency
+  traversal (DEPENDS_ON) as the same thing. Only the former is safely summarisable as a
+  badge.
+  Context: the user named AC <-> AC dependency one of the two most load-bearing relations
+  in the whole knowledge graph, "because they would tell us what to (not) touch and watch
+  out for when refactoring or enhancing a feature". A relation with that role must be
+  traversable in the view, not summarised.
+  Caveat carried forward: ac-depends is enforced BUT ambiguous — depends_on multiplexes
+  parent, pattern and dependency references (Gap 8), and target-existence is not checked.
+  Promoting it to a visible edge must not promote it to a trusted one; it keeps its
+  amber "reconcile first" verdict and its warn glyph.
+change_target: ui
+risk_surface: internal

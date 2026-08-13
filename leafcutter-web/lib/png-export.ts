@@ -128,18 +128,31 @@ export async function renderGraphPng(
   // edge and left orphan arrow stubs. Reserve the deepest control-point
   // overhang on each side.
   let overhang = 0;
+  // Self-loops arc ABOVE their card. If the looping node is the topmost one,
+  // the arc would be clipped off the canvas, so reserve its lift too.
+  let topOverhang = 0;
+  const selfSeen = new Map<string, number>();
   const byId = new Map(nodes.map((n) => [n.id, n]));
   for (const e of edges) {
     const s = byId.get(e.source);
     const t = byId.get(e.target);
     if (!s || !t) continue;
+    if (e.source === e.target) {
+      const nth = selfSeen.get(e.source) ?? 0;
+      selfSeen.set(e.source, nth + 1);
+      const top = s.y + NODE_H / 2 - (NODE_H / 2 + 58 + nth * 34);
+      topOverhang = Math.max(topOverhang, minY - top);
+      continue;
+    }
     const dx = Math.max(40, Math.abs(t.x - (s.x + NODE_W)) * 0.45);
     overhang = Math.max(overhang, dx);
   }
   const sidePad = PAD + Math.min(overhang, 260);
+  // The title band already provides some headroom; only reserve the excess.
+  const topPad = Math.max(0, topOverhang - TITLE_BAND / 2);
 
   const width = maxX - minX + sidePad * 2;
-  const height = maxY - minY + PAD * 2 + TITLE_BAND + LEGEND_H;
+  const height = maxY - minY + PAD * 2 + TITLE_BAND + LEGEND_H + topPad;
 
   const canvas = document.createElement("canvas");
   canvas.width = width * SCALE;
@@ -168,7 +181,7 @@ export async function renderGraphPng(
 
   // Translate so the graph's top-left sits below the title band.
   const ox = sidePad - minX;
-  const oy = PAD - minY + TITLE_BAND;
+  const oy = PAD - minY + TITLE_BAND + topPad;
 
   // Node rects, used both for drawing and for label collision avoidance.
   const nodeRects: Rect[] = nodes.map((n) => ({
@@ -216,11 +229,23 @@ export async function renderGraphPng(
     pairSeen.set(pairKey, nth + 1);
     const bow = nth * 26;
 
-    const dx = Math.max(40, Math.abs(x2 - x1) * 0.45);
+    // A self-edge (AC -> AC: DEPENDS_ON / SUPERSEDED_BY) has source and target
+    // on the same card, so the normal left-to-right control points collapse
+    // into a line straight through it. Arc over the top instead, mirroring the
+    // SelfLoopEdge component so the PNG matches the canvas.
+    const selfLoop = e.source === e.target;
+    const dx = selfLoop ? 0 : Math.max(40, Math.abs(x2 - x1) * 0.45);
+    const apexY = Math.min(y1, y2) - NODE_H / 2 - (58 + nth * 34);
+    const midX = (x1 + x2) / 2;
+
     const p0: [number, number] = [x1, y1];
-    const p1: [number, number] = [x1 + dx, y1 - bow];
-    const p2: [number, number] = [x2 - dx, y2 - bow];
-    const p3: [number, number] = [x2, y2];
+    const p1: [number, number] = selfLoop ? [x1 + 46, y1] : [x1 + dx, y1 - bow];
+    const p2: [number, number] = selfLoop ? [midX + 70, apexY] : [x2 - dx, y2 - bow];
+    const p3: [number, number] = selfLoop ? [midX, apexY] : [x2, y2];
+    // Second half of the self-loop arc, drawn only in the selfLoop branch.
+    const q1: [number, number] = [midX - 70, apexY];
+    const q2: [number, number] = [x2 - 46, y2];
+    const q3: [number, number] = [x2, y2];
 
     ctx.strokeStyle = stroke;
     ctx.globalAlpha = spec.ingestability === "untrusted" ? 0.5 : 0.85;
@@ -233,6 +258,7 @@ export async function renderGraphPng(
     ctx.beginPath();
     ctx.moveTo(p0[0], p0[1]);
     ctx.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+    if (selfLoop) ctx.bezierCurveTo(q1[0], q1[1], q2[0], q2[1], q3[0], q3[1]);
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -256,7 +282,8 @@ export async function renderGraphPng(
         : (e.field && e.field !== "—" ? e.field : e.rel ?? "") +
           (spec.warnGlyph ? ` ${spec.warnGlyph}` : "");
     if (caption) {
-      const [cx, cy] = bezierPoint(0.5, p0, p1, p2, p3);
+      // A self-loop's apex IS its midpoint; for a normal edge sample the curve.
+      const [cx, cy] = selfLoop ? [midX, apexY] : bezierPoint(0.5, p0, p1, p2, p3);
       pending.push({ text: caption, cx, cy, color: stroke });
     }
   }
