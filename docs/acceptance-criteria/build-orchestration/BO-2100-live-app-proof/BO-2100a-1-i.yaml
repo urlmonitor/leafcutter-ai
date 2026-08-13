@@ -34,7 +34,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
     relationship: describes
     status: exists
-  - path: docs/acceptance-criteria/build-orchestration/BO-2700-runtime-reachability-guard/BO-2700f-1.yaml
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml
     relationship: related
     status: exists
     relevance: "The generic loud-skip rule, including the negative clause that an unrequested gate produces no record."
@@ -52,7 +52,7 @@ amended_by:
   - reason: resolve-contradiction-with-BP-014
     note: "2026-08-13 — amended by the business-analyst on the user's explicit decision. This AC previously required only that the agents map contain NO live-surface-tester key in states (a), (b) and (c), with no record of the absence. That contradicted BP-014 (build_pipeline, readiness: reviewed), which requires the phase to emit status: skipped when live_surface_test is not true or live_surface_testing is disabled. The user decided the loud-skip behaviour wins. The original intent is preserved unchanged — the key stays out of the map in all three states — the amendment adds only that in state (a) the absence must be RECORDED. Title updated to match."
   - reason: ba-analysis-requested-set-boundary
-    note: "2026-08-13 — the amendment deliberately requires a skipped record in state (a) ONLY. States (b) and (c) are cases where the ticket never requested the check, so per BO-2700f-1 they must produce no record. Applying the loud-skip rule to all three states would record every gate on every ticket and bury the signal. A literal reading of BP-014 ('skipped when live_surface_test is not true OR live_surface_testing is disabled') would cover states (b) and (c) too; that reading is rejected here as over-broad — flagged to the user in the BA sign-off."
+    note: "2026-08-13 — the amendment deliberately requires a skipped record in state (a) ONLY. States (b) and (c) are cases where the ticket never requested the check, so per BO-2900f-1 they must produce no record. Applying the loud-skip rule to all three states would record every gate on every ticket and bury the signal. A literal reading of BP-014 ('skipped when live_surface_test is not true OR live_surface_testing is disabled') would cover states (b) and (c) too; that reading is rejected here as over-broad — flagged to the user in the BA sign-off."
 superseded_by: null
 covered_by: []
 implemented_by:

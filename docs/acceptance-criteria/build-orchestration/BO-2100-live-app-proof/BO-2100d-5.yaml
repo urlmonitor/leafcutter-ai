@@ -30,7 +30,7 @@ criteria: |
 depends_on:
   - BO-2100d
   - BO-2100a-1
-  - BO-2700f-1
+  - BO-2900f-1
 doc_links:
   - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
     relationship: describes
@@ -47,7 +47,7 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Builds the two-toggle flag-reading path at authoring time. Nothing reads live_surface_test mechanically today, so this AC's 'produced from the ticket's own request' clause has no producer until BO-2100a-1 lands."
-  - path: docs/acceptance-criteria/build-orchestration/BO-2700-runtime-reachability-guard/BO-2700f-1.yaml
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml
     relationship: related
     status: exists
     relevance: "The generic rule this AC is the named instance of. Implement the generic mechanism, not a live-surface-tester-specific branch."
@@ -66,7 +66,7 @@ implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
-  The concrete instance of BO-2700f. Uses BO-2100d's LAST FREE CHILD SLOT (-1..-5,
+  The concrete instance of BO-2900f. Uses BO-2100d's LAST FREE CHILD SLOT (-1..-5,
   cap 5) — no further children may be added to BO-2100d without a split.
 
   EVIDENCE THIS AC IS GROUNDED IN (2026-08-13): `live-surface-tester` dispatch
@@ -84,10 +84,10 @@ notes: |
   absent from `_CANONICAL_PHASE_ORDER` in
   `scripts/ac_store/generate_ticket_from_ac.py` and absent from
   `config/guardrail_gates.yaml`, appearing only as a row in a phase table in
-  `templates/skills/building-epics/SKILL.md`. Under BO-2700f-1's gate D clause a
-  never-requested gate correctly produces NO entry, so BO-2700f provably cannot
+  `templates/skills/building-epics/SKILL.md`. Under BO-2900f-1's gate D clause a
+  never-requested gate correctly produces NO entry, so BO-2900f provably cannot
   surface it. A gate nothing ever requests is a REACHABILITY defect and belongs to
-  BO-2700b / BO-2700c. The generic-mechanism argument for BO-2700f-4 stands on its
+  BO-2900b / BO-2900c. The generic-mechanism argument for BO-2900f-4 stands on its
   own merits and does not need this example.
 
   MISSING PRODUCER — WHY BO-2100a-1 IS NOW A DEPENDENCY. The third clause requires
@@ -127,7 +127,7 @@ notes: |
   things:
     - a skip clause — "the phase emits status: skipped (not failed) when
       live_surface_test is not true or live_surface_testing is disabled" — which is
-      now triplicated across BP-014, this AC, and BO-2700f-1; and
+      now triplicated across BP-014, this AC, and BO-2900f-1; and
     - a live-server HAPPY PATH that NOTHING ELSE IN THE STORE COVERS: start a dev
       server on a registry-allocated port, issue each declared HTTP request, assert
       status AND body AND headers against the fixture, tear the server down.

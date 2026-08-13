@@ -28,10 +28,10 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The already-shipped, STATIC precedent for dropping review overhead — a hand-decided fast-lane / heavy-lane agent split, all four L2s work_status: done. This L1 is the evidence-driven successor: BO-2500d decided once, by hand; this decides from the record. No dependency exists between the two trees in either direction and none may be recorded."
-  - path: docs/acceptance-criteria/build-orchestration/BO-2700-runtime-reachability-guard/BO-2700.yaml
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900.yaml
     relationship: related
     status: exists
-    relevance: "A check that never fires may be unreachable rather than useless — BO-2700 is the reachability guard that would catch that cause. Read before assuming silence means the check is worthless."
+    relevance: "A check that never fires may be unreachable rather than useless — BO-2900 is the reachability guard that would catch that cause. Read before assuming silence means the check is worthless."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -72,7 +72,7 @@ notes: |
   SILENCE HAS AT LEAST THREE CAUSES, AND THIS L1 MUST NOT PRE-JUDGE WHICH. The check runs
   and genuinely finds nothing (the code is clean); the check runs but can never produce a
   blocking result by construction (advisory by design); or the check never really runs at
-  all (misconfigured or unreachable — see the BO-2700 link). Report the silence and the
+  all (misconfigured or unreachable — see the BO-2900 link). Report the silence and the
   evidence; leave the verdict to BO-2800e, which is where the remedy is chosen.
 
   DEPENDS ON BO-2800a AND BO-2800b, NOT ON BO-2800c. The zero-block finding falls out of the
