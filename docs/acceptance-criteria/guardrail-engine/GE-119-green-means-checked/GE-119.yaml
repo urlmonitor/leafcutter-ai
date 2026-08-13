@@ -1,0 +1,116 @@
+id: GE-119
+title: "Trust that a green check actually checked something"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Green means it was checked — never "it could not run".
+
+  The automatic checks that protect your work must be able to tell you the
+  difference between "I looked and found nothing wrong" and "I could not look at
+  all". Today a check that cannot reach what it needs can still report success,
+  so a clean result is indistinguishable from a check that did nothing — the
+  exact "looks finished, was never verified" failure this project exists to
+  prevent, happening inside the protection itself. After this goal, every check
+  either does its job or says plainly that it could not, it reaches the same
+  verdict wherever you are working, and that sameness is proven by exercising
+  the checks the way people actually use them.
+depends_on: []
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118.yaml
+    relationship: context
+    status: exists
+    relevance: "Prior art. GE-118 is two landed point fixes for this class of defect (one check's helper lookup, one manifest path). This goal is the structural generalisation across the whole family."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119a
+  - GE-119b
+  - GE-119c
+  - GE-119d
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ADD-VS-CREATE — a NEW sibling L0 was chosen over grafting onto GE-118a.
+    - Triage suggested GE-118a as the parent. Rejected: GE-118a is an L1 whose
+      SUBJECT is one check ("check-secrets resolves its scanner scripts dir"),
+      and its only child GE-118a-1 is already done. Hanging a cross-cutting
+      policy (18 checks), a failure-mode rule, and a verification mechanism
+      under a single-check L1 inverts containment — the general rule would sit
+      beneath the specific instance — and it would reopen an effectively
+      complete node, muddying done-accounting.
+    - GE-118's L0 was also considered as the parent and rejected as too narrow
+      in the OTHER direction: its stated scope is dependency RESOLUTION from the
+      deployed layout ("hooks find their helpers"). Two of the benefits here are
+      not resolution problems at all — a check can also degrade quietly because
+      of a parse error, a missing config, or an unbuilt workspace. GE-118 =
+      the two point fixes that landed (GE-118a-1, GE-118b, both done);
+      GE-119 = the class of defect they are instances of. GE-118 is NOT amended
+      or superseded by this tree; it stays as the record of shipped work.
+    - No other L0 owns this. GE-111 is traceability surviving refactors,
+      GE-113 is misplaced artifacts, GE-116 is self-contradictory settings,
+      BO-600 is gate routing. None of them promises "green means checked".
+
+  STANDING-RULE CONTRADICTION — resolve at L2, do not let the BA flatten it.
+    This project has an explicit, DELIBERATE fail-open convention: a guard that
+    hits an internal error (crash, parse failure, git failure) exits 0 with a
+    stderr warning so a script bug never hard-blocks an unrelated commit. It is
+    written into the ac-store PROJECT_CONTEXT ("blocking vs fail-open"), into
+    the ac-schema reference, and is an approved AC in its own right
+    (GE-116a-1-iii, "Unparseable agent definition fails open and does not block
+    the commit"). This goal does NOT repeal that convention and must not be
+    decomposed as "never fail open".
+    The distinction it draws is narrower and sharper: fail-open on ONE bad input
+    while the check still ran is fine; reporting SUCCESS when the check never
+    ran at all is not. The unit of the rule is visibility, not blocking — a
+    degraded run must be distinguishable from a clean run by whoever reads the
+    output. Whether "cannot run at all" should also BLOCK (vs. only announce
+    loudly) is a per-check decision the BA/IT-PO must make explicitly, not a
+    blanket default.
+
+  EVIDENCE (state the confidence levels as recorded — do not upgrade them).
+    - DIRECTLY OBSERVED AND REPRODUCIBLE: check_ac_parent_covered_by.py, run
+      from a working copy lacking the deployed-layout link, printed "cannot
+      import derive_parent_id ...; skipping check (fail-open)" and exited 0.
+      With the link in place, the SAME check on the SAME staged files blocked
+      with 6 violations. Same check, same repo, opposite verdicts decided purely
+      by workspace layout.
+    - OBSERVED: check_ac_schema.py cannot resolve config/ac_store_schema.json
+      from a separate working copy and silently degrades to "manual field
+      validation" instead of authoritative schema validation (fallback at
+      templates/scripts/commit_guardian/check_ac_schema.py:623). A parallel
+      session REPORTED that 26 schema-violating files consequently looked clean
+      — that count is UNVERIFIED and must be independently reproduced before it
+      is cited as fact.
+    - OBSERVED: 18 checks under templates/scripts/commit_guardian/ share the
+      same root-walking resolution pattern (_find_project_root / parents[]);
+      many are explicitly documented fail-open.
+    - CORROBORATING: setup_ticket_worktree.py create-ac-worktree itself warned
+      that verify_precommit_active.py and install_pre_commit_shims.py were "not
+      found ... graceful no-op" — the same degrade-quietly reflex in the
+      set-up path (see GE-119d).
+    - REPEAT-DEFECT HISTORY: GE-112 already fixed an adjacent defect in
+      check_ac_schema.py (the manual validator running on the schema SUCCESS
+      path). Two defects in the same file in one area is the argument for a
+      structural fix over a third point patch.
+
+  Authored at the PO stage of /plan-feature; L0/L1 only. BA decomposes to L2/L3.

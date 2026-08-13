@@ -1,0 +1,51 @@
+id: ACS-1200c
+title: "Full-strength enforcement for work that is genuinely broken down"
+component: ac-store
+components:
+  - ac_store
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  The exemption is narrow — real, decomposed work is still held to the rule.
+
+  Making room for parked ideas does not loosen anything for work that has been
+  broken down into deliverable pieces: a genuinely broken link there is still
+  caught and still stops the commit.
+depends_on:
+  - ACS-1200
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: "Preserves the existing documented enforcement behaviour for non-parked trees — nothing new for a reader to learn."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The guard-on-the-guard L1, and the reason this goal is not simply "make the
+  check quieter". Without it, the cheapest implementation of ACS-1200a — relax
+  the rule, or treat every missing back-link as intentional — passes, and the
+  safeguard is gone rather than corrected.
+
+  This L1 is the one that must be verifiable in the negative: the evidence for
+  it is a decomposed tree with a genuinely missing link STILL being blocked
+  after the change, not merely the parked tree being allowed. The BA should
+  write it that way round.
+
+  Model the message quality on ACS-400e-1 (name the id, the rule, and the
+  remedy) if the block message needs revising to explain the new distinction —
+  a developer who hits the block must be able to tell whether the fix is "add
+  the link" or "mark this as parked".

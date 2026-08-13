@@ -1,0 +1,55 @@
+id: ACS-1200a
+title: "Record a parked idea without switching anything off"
+component: ac-store
+components:
+  - ac_store
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Saving a parked idea passes the safeguards first time, nothing skipped.
+
+  Writing down an outline you have deliberately not broken down yet is accepted
+  as the valid, intended thing it is — so nobody ever has to learn the habit of
+  waving a safeguard through.
+depends_on:
+  - ACS-1200
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  The core L1. Surface: check_ac_parent_covered_by.py (the commit-time
+  parent-back-link check).
+
+  RECOGNITION, NOT SUPPRESSION — the distinction the BA must hold: the
+  exemption has to key off a positive, deliberate signal that says "this is
+  parked", not off the absence of something. "Parent has no children listed"
+  is also exactly what a half-finished, genuinely broken tree looks like; an
+  exemption that keys off absence alone would silence real breakage. What the
+  parked signal IS (a field, a readiness value, a level-plus-state combination)
+  is an L2 decision — the PO's constraint is only that it must be something an
+  author sets on purpose and a reader can see.
+
+  The reference-doc trigger is mandatory rather than nice-to-have: ac-schema.md
+  currently documents the back-link protocol as unconditional ("missing links
+  block the commit"), so shipping the exemption without amending that reference
+  leaves the written rule contradicting the enforced one.

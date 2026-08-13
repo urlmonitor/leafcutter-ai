@@ -1,0 +1,58 @@
+id: GE-119b
+title: "The same protection applies wherever you are working"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Same work, same verdict — whichever copy of the project you are in.
+
+  The checks reach the same conclusion on the same change regardless of which
+  working copy it is made from, so your safety net never depends on where you
+  happen to be sitting.
+depends_on:
+  - GE-119
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The parity L1. Distinct from GE-119a: 119a is about what a check does when it
+  cannot run; this one is about removing the reason it could not run.
+
+  DIRECTLY OBSERVED, REPRODUCIBLE: check_ac_parent_covered_by.py exited 0 with
+  "skipping check (fail-open)" from a working copy lacking the deployed-layout
+  link, and blocked with 6 violations on the identical staged files once the
+  link was present. That is the acceptance shape for this L1: the two runs must
+  agree.
+
+  The BA should treat the shared root-walking resolution pattern
+  (_find_project_root / parents[] walking, present in all 18 checks under
+  templates/scripts/commit_guardian/) as ONE defect with 18 instances, not 18
+  defects. GE-112, GE-118a-1 and GE-118b are three prior point patches in this
+  same area — a fourth point patch is the failure mode to avoid here.
+
+  The how-to trigger is a REPLACEMENT, not an addition: the project currently
+  carries a manual workaround for this in the pre-drive checklist (link the
+  deployed layout into a fresh working copy by hand, or all package checks are
+  silently skipped). When this L1 lands, that instruction must be deleted rather
+  than left to rot beside the fix.

@@ -1,0 +1,106 @@
+id: ACS-1200
+title: "Capture a half-formed idea without bypassing your own safeguards"
+component: ac-store
+components:
+  - ac_store
+  - commit_guardian
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Park an idea in seconds — with nothing switched off to allow it.
+
+  Thinking out loud should be cheap. Today you can write an idea down as a bare
+  outline, but the safeguards that keep the requirement store healthy read that
+  outline as a mistake and refuse it, so recording an idea means turning a
+  safeguard off. Every single time. That teaches everyone that safeguards are
+  optional — corrosive on its own, and directly at odds with the work to make
+  those same safeguards trustworthy. After this goal, "parked for later" is a
+  state the system recognises and respects everywhere it looks, while anything
+  that has genuinely been broken down into work is still held to the full
+  standard.
+depends_on: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Documents the parent back-link protocol that a parked idea deliberately does not satisfy — this reference must state the exemption once it exists."
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The tree that surfaced this: six children, all blocked, safeguard bypassed to record them. Its notes are the fullest written statement of the parked convention."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1200a
+  - ACS-1200b
+  - ACS-1200c
+  - ACS-1200d
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  ADD-VS-CREATE — a NEW root L0 in ac-store, deliberately NOT a graft.
+    - GE-118 rejected: its scope is dependency resolution from the deployed
+      layout. This is not a resolution problem; the safeguard here works
+      perfectly and is enforcing the wrong rule.
+    - GE-113 rejected ("a commit is stopped with a clear explanation"): that L0
+      is about work landing in the WRONG PLACE and being explained clearly. Here
+      the work is in the right place and the explanation is already clear — the
+      rule itself is what needs a recognised exception. Correct message, wrong
+      verdict.
+    - ACS-400 rejected ("only requirement authors can define what done means"):
+      authorship governance — WHO may change a definition. This is lifecycle
+      state — WHAT state an idea is in. Different promise, and ACS-400 already
+      carries five L1s.
+    - ac-store's PROJECT_CONTEXT records a three-quadrant governance map:
+      ACS-200 = test coverage of live requirements; ACS-400 = who may edit a
+      definition; ACS-900 = code lifecycle of a RETIRED requirement. A
+      deliberately PRE-decomposition state is a genuinely empty fourth quadrant.
+      That emptiness is what earns a sibling L0, following the same reasoning
+      that minted ACS-800 and ACS-900. ACS-1200 = next free hundred.
+
+  SCALAR COMPONENT vs GRAPH COMPONENTS: the tree lives in the ac-store namespace
+  because the thing being defined is a store state and its conventions. The
+  commit-time surface it changes lives in the guardrail family — carried on the
+  `components` graph list, not by splitting the tree across two namespaces.
+
+  DEPENDENCY / SEQUENCING NOTE for the IT-PO: this tree and GE-119 point at
+  overlapping code (check_ac_parent_covered_by.py). They are NOT the same work —
+  GE-119b makes that check run everywhere, ACS-1200a makes it enforce the right
+  rule — but a check that starts running reliably everywhere and still holds the
+  wrong rule blocks every parked idea MORE consistently. Sequence accordingly, or
+  at least land them in the same release.
+
+  MOTIVATING EVIDENCE: the KM-200 tree (merged today, PR #433) was authored under
+  the cheap-capture convention — L0 + L1 only, readiness draft, parent covered_by
+  DELIBERATELY empty so the tree stays visible in the store while sitting outside
+  the buildable backlog (the build scanner's leaf test matches only L2/L3).
+  check_ac_parent_covered_by demanded the back-link on all six children and the
+  commit only landed with the safeguard skipped. scan_ac_orphans.py reports the
+  same six as orphans (60 store-wide, 54 of them pre-existing — so the orphan
+  surface needs the same exemption, and cleaning it up is a separate concern from
+  granting the exemption).
+
+  DO NOT DUPLICATE KM-200c: counting how many ideas are parked versus queued
+  versus in authoring is KM-200c's job. This goal defines and enforces the state;
+  KM-200c reports populations of it. If the BA finds itself writing a counting
+  criterion here, it belongs there instead — but note that KM-200c is itself
+  parked, so this tree must not take a dependency on it.
+
+  ROADMAP: no roadmap_phase claimed, on purpose. Phase 1's exit criteria are
+  about clean installs and build idempotency; this is store-convention health
+  and does not advance them. The user should either claim a phase for it at the
+  final gate or accept it as unphased backlog. No roadmap or vision file was
+  modified while authoring this tree.
+
+  Authored at the PO stage of /plan-feature; L0/L1 only. BA decomposes to L2/L3.

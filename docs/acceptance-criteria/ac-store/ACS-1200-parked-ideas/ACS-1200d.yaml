@@ -1,0 +1,53 @@
+id: ACS-1200d
+title: "Un-parking an idea is a deliberate, visible step"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  An idea joins the real backlog only when someone decides it should.
+
+  Moving something from "parked" to "queued" is an explicit act with a visible
+  before and after, so nothing drifts into the work queue by accident and
+  nothing valuable is lost by sitting still.
+depends_on:
+  - ACS-1200
+doc_links:
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  The exit-door L1. A state with no defined way out is a landfill, and the risk
+  of making parking cheap is that parked becomes forgotten.
+
+  The KM-200 notes already state the intended transition in prose: restoring the
+  parent's child list is the act that turns a stub into a real backlog item, and
+  it must be paired with breaking the idea down — "do not repair the missing
+  link without a decision to un-park this tree". This L1 makes that a supported
+  step instead of a warning comment that only works if someone reads it.
+
+  Two failure modes for the BA to cover, in this order of importance:
+  (1) accidental un-parking — someone "fixes" a parked tree and it silently
+  enters the buildable backlog undecomposed; (2) parked-forever — no way to see
+  what has been sitting parked and for how long. Note that (2) borders on
+  KM-200c's counting remit; keep this L1 to the transition itself and leave the
+  population reporting there.
