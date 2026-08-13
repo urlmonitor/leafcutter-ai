@@ -1,0 +1,63 @@
+id: ACS-1100d-4
+components:
+  - ac_store
+  - testing_quality
+title: "A component diagram shows the coverage figure travelling from store root to final verdict"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100d.yaml
+criteria: |
+  Given the chain that runs from the store root through a query, a reconciliation
+    gate, and one or more downstream verifiers,
+  When a reader consults the architecture documentation for the store,
+  Then a component diagram shows each participant in that chain — the independent
+    enumeration that establishes the total, the query pass that produces the results,
+    the reconciliation gate, and the downstream verifiers — as distinct elements,
+  And it shows the coverage figure as what travels along the connections between them,
+    so a reader can point at the hop where a figure would be lost,
+  And it marks the reconciliation gate as the point where an unreconciled answer is
+    withheld rather than passed on,
+  And it marks the surface exempted from independent enumeration — the AC-tree
+    child-limit counter — as self-reporting from a single shared callable, so the
+    diagram does not imply a second traversal exists for it.
+depends_on:
+  - ACS-1100d
+  - ACS-1100d-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: related
+    status: exists
+    relevance: "Existing architecture surface for store-adjacent components; the coverage chain diagram belongs in the same architecture documentation set."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7a.yaml
+    relationship: related
+    status: exists
+    relevance: "The exempt surface the diagram must mark as single-callable self-reporting."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the component-diagram entry of documentation_triggers on ACS-1100d.
+
+  The diagram earns its place because the defect is a chain property, not a property of
+  any single tool: every participant looks correct in isolation and the figure is lost
+  between them.
+
+  Intended agent is architecture-diagram-author; assigned_agent is deliberately left
+  null in this authoring pass per the run's constraints, for the IT PO to set at
+  enrichment. The exact target document is for the diagram author to place within the
+  existing architecture set.

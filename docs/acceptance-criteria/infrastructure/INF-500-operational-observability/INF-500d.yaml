@@ -1,0 +1,133 @@
+id: INF-500d
+components:
+  - infrastructure
+  - feedback_collector
+title: "When an agent reports something, it actually lands — and is never quietly lost"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What agents report is written down, kept, and never silently discarded.
+
+  Every report an agent is asked to make is accepted from any agent entitled to
+  make it, lands somewhere that outlives the temporary workspace the agent ran in,
+  and — when it genuinely cannot be written — says plainly which report failed and
+  why. The record you read back later is the record that was actually produced,
+  not the small fraction that happened to survive.
+depends_on:
+  - INF-500
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: templates/config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires CONFIG to resolve to the worktree's own .leafcutter/. That stays true and must NOT be unified with the durable-sink path."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Mandates one shared guard root resolver based on the worktree toplevel. Adopting it for the record sink would preserve the very defect this AC fixes."
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "A one-time snapshot enumeration of the writers of its day (done). INF-500d is the structural fix so the list cannot go stale again. Its it_requirement 'must not remove any existing allowed_writers entries' binds INF-500d-1's derived set."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-500d-1
+  - INF-500d-2
+  - INF-500d-3
+  - INF-500d-4
+  - INF-500d-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+  - component-diagram
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  Added 2026-08-13 as a fourth L1 under INF-500 "You can see what happened and
+  why" (tree now a–d, cap 7). PLACEMENT NOTE: this L1 was first drafted as
+  INF-100d and deliberately re-parented to INF-500 before decomposition.
+  INF-100's axis is "the agent has what it needs to start"; this work's axis is
+  "what the agent produced survives to be read", which is INF-500's axis and
+  matches its existing children (INF-500a retrospective facts survive archival,
+  INF-500b/c the feedback pipeline). Do not move it back.
+
+  This L1 merges two separately-reported problems that share one benefit ("the
+  report actually lands"): the writer-acceptance problem and the durability
+  problem. Four concrete defects sit underneath it — decompose each as its own
+  L2, do NOT re-cut this at L1.
+
+  1. STALE WRITER VOCABULARY. The set of agents permitted to write a report is a
+     closed, hand-maintained list. Four current gate agents are absent from it,
+     so their writes are rejected outright. BOUNDARY vs INF-100c-3 (readiness:
+     approved, work_status: done): INF-100c-3 enumerated the phase agents that
+     existed when it was written — a SNAPSHOT, and it is genuinely done. Adding
+     four more names by hand would just re-run that snapshot and go stale again.
+     INF-500d's requirement is STRUCTURAL: the permitted-writer set must derive
+     from the live agent registry rather than a hand-curated duplicate. Do not
+     re-author or re-open INF-100c-3, and do not mark INF-500d a duplicate of it.
+     TWO CONSTRAINTS ON HOW IT DERIVES, both carried in INF-500d-1: the predicate
+     is plain roster membership and nothing narrower (a ticket-phase predicate
+     would revoke two supervisors that write three categories each today), and
+     derivation applies to the general-purpose categories only (the three
+     deliberately restricted lists stay literal — see INF-500d-1-i).
+
+  2. DOCUMENTED-BUT-DEAD ESCAPE HATCH. An `[all_agents]` sentinel is documented
+     as a way to permit every agent, and is not implemented. A documented switch
+     that silently does nothing is worse than no switch: authors use it and
+     believe they are covered. This L1 originally left the resolution open
+     (implement it, or remove it). It is now CLOSED TO REMOVAL — see INF-500d-2.
+     Once defect 1 derives the writer set from the live roster the sentinel has
+     no remaining job, and the "implement it" branch was defined on a predicate
+     that would have revoked live writers. An unresolved either/or also leaves
+     test-writer nothing to author a red test against.
+
+  3. UNDIFFERENTIATED FAILURE. A failed write emits a single generic marker with
+     no reason, so a rejected writer, a missing config, and an unwritable path
+     are indistinguishable to the caller. BOUNDARY vs INF-100c-4: that AC covers
+     ONE specific submit-side message (missing config path). INF-500d requires
+     the CALLER-VISIBLE failure marker to name the cause in every case, not just
+     that one. Complementary, not duplicative. The reason set must include the
+     case where the write SUCCEEDED but the identifier was not captured — the
+     dominant observed cause, and the one that must never be retried; see
+     INF-500d-3.
+
+  4. RECORDS DESTROYED WITH THE WORKSPACE — and the resolver trap.
+     The sink resolves into the per-drive worktree, which is deleted at the end
+     of the drive, so the records go with it. Roughly nine in ten cited records
+     are unresolvable today (measured 2026-08-13; the figure moves every drive,
+     so re-measure before quoting).
+
+     THE LOAD-BEARING CONSTRAINT — the three deliberately coexisting resolution
+     rules, and why unifying them re-creates the defect — LIVES IN INF-500d-4's
+     notes and is NOT duplicated here. Read it there before touching any resolver;
+     it is where the IT PO lifts it into it_requirements.
+
+  DECOMPOSITION (business-analyst, 2026-08-13): defect 1 -> INF-500d-1 (+ L3
+  INF-500d-1-i, restricted categories stay literal and exempt from derivation);
+  defect 2 -> INF-500d-2 (removal branch only); defect 3 -> INF-500d-3
+  (reason-coded marker, five reasons) and INF-500d-5 (hold/flush plus a batch gate
+  at the workspace-removal boundary); defect 4 -> INF-500d-4 (+ L3 INF-500d-4-i,
+  unresolvable enduring location).

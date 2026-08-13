@@ -1,0 +1,37 @@
+id: BO-2700a
+components:
+  - build_orchestration
+  - testing_quality
+title: "Proof of completion comes from running the work the way people really use it"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Completion is proven through the real way in, not a shortcut around it.
+
+  When a piece of work is reachable through a real way of using the product, the
+  proof that it is finished must go in that same way — so something that nothing
+  in the product actually calls can never be counted as done.
+depends_on:
+  - BO-2700
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+change_target: pipeline
+risk_surface: internal

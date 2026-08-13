@@ -1,0 +1,108 @@
+id: INF-500d-1-i
+components:
+  - infrastructure
+  - feedback_collector
+title: "Deliberately restricted categories keep an explicit writer list and are exempt from derivation"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three categories exist whose narrow writer sets are a deliberate design
+    decision rather than an oversight — quality-concern, subagent-quality and
+    process-finding,
+  And the permitted-writer set is derived from the live agent roster for the
+    general-purpose categories ONLY, while these three keep an explicit, literally
+    enumerated writer list that derivation never widens,
+  When a submitter that is an entry in the live roster but is not on the enumerated
+    list of one of those three categories submits to it (for example a coder agent
+    submitting to quality-concern),
+  Then the report is rejected with an error naming the category and stating that the
+    category's writer list is explicitly restricted,
+  And the same submitter's report to a general-purpose category in the same run is
+    still accepted,
+  So that broadening the general categories does not silently flatten the two-tier
+    vocabulary into "everyone may write everything".
+
+  Given the enumerated writer list of one of those three categories,
+  When the permitted-writer configuration is loaded,
+  Then every entry on that list is either an identity present in the live agent roster
+    or the designated non-agent guard identity,
+  And any other value is rejected at load time with an error naming the value and the
+    category it appears in,
+  So that the lists that stay hand-maintained cannot rot into names that no longer
+    exist while the derived lists stay current by construction.
+depends_on:
+  - INF-500d-1
+doc_links:
+  - path: templates/config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Shares the load-time rejection of unrecognised writer values. INF-500d-2 applies it to the removed catch-all sentinel; the second scenario here applies the same check to the three enumerated lists. One mechanism, two callers — do not build it twice."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  Authored as an L3 because it is the failure mode a naive reading of INF-500d-1
+  produces: "derive the writers from the roster" implemented bluntly makes every
+  roster agent a permitted writer of every category, destroying the reviewer-class
+  and supervisor-only restrictions that the category vocabulary was designed around
+  (Master_Plan Key Design Decision #2, recorded in the file's DECISION HISTORY).
+  The restriction axis (which CLASS of writer) is orthogonal to the staleness axis
+  (which NAMES exist) and must survive the fix.
+
+  WHY THESE THREE ARE EXEMPT FROM DERIVATION RATHER THAN DERIVED ON A CLASS FIELD.
+  An earlier draft of this AC assumed the restrictions could be re-expressed as a
+  derived "reviewer-class" / "supervisor-class" / "guard-class" predicate. They
+  cannot, and an implementer who tries will ship something wrong:
+
+    - "Reviewer-class" is NOT a roster field. It exists only as a two-line header
+      comment in the permitted-writer configuration file naming pr-reviewer and
+      architect-review. Nothing machine-readable backs it.
+    - The roster's `category` field cannot substitute for it. Measured on
+      2026-08-13: sql-coder and sql-query both carry category: supervisor (so a
+      supervisor-only derivation would admit two coders to subagent-quality, and
+      would NOT admit ticket-supervisor's actual peers by that field alone);
+      pr-reviewer carries category: implementation while architect-review carries
+      category: planning, so no single category value selects the reviewer pair and
+      any value that includes pr-reviewer also admits every other implementation
+      agent.
+    - The guard-only category's writer is a literal non-agent identity that is
+      absent from the roster entirely, so no roster-derived predicate can produce it.
+
+  The three lists are two, two and one entry long, they encode a deliberate design
+  decision rather than an enumeration of what happened to exist, and — unlike the
+  general-purpose lists, amended for staleness on 2026-06-03, 2026-06-08 and
+  2026-07-17 — they have never gone stale. Keeping them literal is the correct
+  trade, and the second scenario supplies the guard that stops them going stale
+  silently in future.
+
+  OBSERVED, NOT SPECIFIED HERE. On 2026-08-13 the submission path skips writer
+  validation entirely for submissions that declare a non-agent source, so the
+  guard-only category's restriction is today enforced by convention rather than by
+  the check. Recorded for the IT PO's awareness; closing that bypass is a separate
+  defect and is deliberately out of scope for this AC.

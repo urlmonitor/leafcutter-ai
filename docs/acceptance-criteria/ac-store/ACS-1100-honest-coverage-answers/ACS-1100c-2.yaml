@@ -1,0 +1,79 @@
+id: ACS-1100c-2
+components:
+  - ac_store
+title: "A fully declared answer reconciles and passes without a halt"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100c.yaml
+criteria: |
+  Given a total of 180 records, an answer covering 148 of them, and declared exclusions
+    of 24 deprecated records and 8 non-requirement records, each with its ground stated,
+  When the reconciliation runs,
+  Then 148 plus 24 plus 8 equals the total of 180, the answer is returned, and no halt
+    is raised,
+  And the returned answer still carries its total, its covered count, and its declared
+    exclusions, so passing reconciliation never strips the coverage figure,
+  And an answer covering every record — 180 of 180 with no exclusions declared — also
+    passes without a halt,
+  And an answer that legitimately matched no records but enumerated all 180 — 0 covered,
+    180 declared excluded with grounds — passes, distinguishing a genuine empty result
+    from the unaccounted-for shortfall of ACS-1100c-1,
+  And a scoped answer passes on the same terms: 3 covered against a store total of 2,784
+    with 2,781 declared excluded on the ground that they are outside the requested scope,
+    with the scope named and both totals reported, reconciles and is returned,
+  And passing reconciliation is not itself an all-clear: each of these returned answers
+    still caps what a downstream verdict may claim under ACS-1100d-2, so no answer that
+    passes here may be read as licensing an unqualified all-clear.
+depends_on:
+  - ACS-1100c
+  - ACS-1100c-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-900-deprecation-hygiene/ACS-900d.yaml
+    relationship: related
+    status: exists
+    relevance: "Same no-false-positive convention used in this component: the legitimate PASS cases are specified as their own AC so the gate cannot be disabled for over-firing."
+  - path: .pre-commit-config.yaml
+    relationship: related
+    status: exists
+    relevance: "Declares the eight AC hooks whose work set comes from git diff --cached — the scoped-caller pass case this AC must admit, or the halt fires on every commit."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The guardrail against the halt being switched off for over-firing — the same
+  no-false-positive posture ACS-900d takes for the deprecation hook.
+
+  The 0-covered clause is the sharp one: "0 covered, everything declared excluded" must
+  PASS while "0 covered, nothing declared" must HALT. Both look like an empty answer
+  today; the declared exclusions are the only thing that separates them.
+
+  SCOPED PASS CASE ADDED (2026-08-13, expert review). All eight AC pre-commit hooks
+  resolve their work set from git diff --cached. The scoped answer is the highest-volume
+  pass case in the whole system — it happens on every commit — so it is specified here
+  as an explicit non-halting case rather than left to be inferred from the exclusion
+  grounds list.
+
+  RECONCILING IS NOT ALL-CLEAR-ELIGIBLE. The final clause is here to stop the natural
+  misreading that an answer passing this AC licenses an unqualified all-clear downstream.
+  It does not: ACS-1100d-2 caps the verdict separately, and under that cap only
+  covered == total with no declared exclusions and no could-not-classify records unlocks
+  an unqualified all-clear. The two ACs are consistent by construction — this one governs
+  whether the ANSWER halts, d-2 governs what a VERDICT may CLAIM.

@@ -1,0 +1,144 @@
+id: BO-2100d-5
+components:
+  - build_orchestration
+title: "A live-app check that is switched off records a skipped outcome instead of nothing"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose frontmatter sets `live_surface_test: true`
+    And a project configuration whose `live_surface_testing.enabled` is `false`, or
+      whose `live_surface_testing` block is absent entirely,
+  When the ticket is driven to completion,
+  Then the ticket's recorded phase outcomes contain exactly one `live-surface-tester`
+    entry whose outcome is `skipped`,
+    And its reason names `live_surface_testing.enabled` as the term that prevented
+      dispatch, and names the configuration file that term is read from,
+    And that entry is produced from the ticket's own request — the
+      `live_surface_test: true` frontmatter flag — even though no
+      `live-surface-tester` phase was added to the ticket's `agents:` map,
+    And no development server is started and no HTTP assertion is issued,
+    And the ticket's completion summary does not present the live-app check as
+      passed,
+    And a ticket that does not set `live_surface_test: true` produces no
+      `live-surface-tester` entry at all.
+depends_on:
+  - BO-2100d
+  - BO-2100a-1
+  - BO-2700f-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the two-toggle dispatch condition (frontmatter flag AND project enablement) that produces the silent non-dispatch."
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+    relevance: "Where live_surface_testing.enabled is defaulted; the term the skip reason must name."
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2100-live-app-proof/BO-2100a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Builds the two-toggle flag-reading path at authoring time. Nothing reads live_surface_test mechanically today, so this AC's 'produced from the ticket's own request' clause has no producer until BO-2100a-1 lands."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2700-runtime-reachability-guard/BO-2700f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The generic rule this AC is the named instance of. Implement the generic mechanism, not a live-surface-tester-specific branch."
+assigned_agent: null
+estimated_complexity: null
+it_requirements: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: withdrew the false change-scope-reviewer parallel; added the missing BO-2100a-1 dependency (nothing mechanically reads live_surface_test today); added the `skipped` term-collision note; recorded the BP-014 split precondition and corrected its stale template claim."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The concrete instance of BO-2700f. Uses BO-2100d's LAST FREE CHILD SLOT (-1..-5,
+  cap 5) — no further children may be added to BO-2100d without a split.
+
+  EVIDENCE THIS AC IS GROUNDED IN (2026-08-13): `live-surface-tester` dispatch
+  requires BOTH `live_surface_test: true` in ticket frontmatter AND
+  `live_surface_testing.enabled: true` in the project skills config, which defaults
+  to false. Nine tickets set the frontmatter flag. The config term was globally
+  false. Result: zero comments from that agent repo-wide, and no artifact anywhere
+  explaining why.
+
+  CORRECTION — `change-scope-reviewer` IS NOT THE SAME CLASS OF PROBLEM. An earlier
+  version of this note cited it as a second instance of the same defect. That is
+  wrong and the parallel is withdrawn. `live-surface-tester` IS requested (the
+  frontmatter flag is the request) and then silently dropped by a config toggle —
+  the defect this AC records. `change-scope-reviewer` is requested by NOTHING: it is
+  absent from `_CANONICAL_PHASE_ORDER` in
+  `scripts/ac_store/generate_ticket_from_ac.py` and absent from
+  `config/guardrail_gates.yaml`, appearing only as a row in a phase table in
+  `templates/skills/building-epics/SKILL.md`. Under BO-2700f-1's gate D clause a
+  never-requested gate correctly produces NO entry, so BO-2700f provably cannot
+  surface it. A gate nothing ever requests is a REACHABILITY defect and belongs to
+  BO-2700b / BO-2700c. The generic-mechanism argument for BO-2700f-4 stands on its
+  own merits and does not need this example.
+
+  MISSING PRODUCER — WHY BO-2100a-1 IS NOW A DEPENDENCY. The third clause requires
+  the entry to be produced "from the ticket's own request". Nothing mechanically
+  reads `live_surface_test` today: it appears in `templates/agents/live-surface-tester.md`
+  and as a `conditional_field` declaration in `config/agent_registry.json`, and no
+  script reads that key. BO-2100a-1 is the AC that builds the two-toggle read at
+  authoring time; without it there is no requested-set to derive a record from, and
+  an implementer would satisfy this AC by iterating the `agents:` map — which is
+  exactly what the disabled toggle empties (see DERIVATION below).
+
+  TERM COLLISION — `skipped` NOW MEANS TWO DIFFERENT THINGS. BO-2100b-2 (approved)
+  uses the word BEHAVIOURALLY: when a ticket does not opt in, "the live-app check is
+  skipped for that ticket". This AC uses it as a RECORD OUTCOME. They are opposites
+  in effect: the state BO-2100b-2 describes — no opt-in — must produce NO
+  `live-surface-tester` entry at all (the final clause above), specifically NOT an
+  entry whose outcome reads `skipped`. An implementer who conflates the two senses
+  will emit a skipped record for every ticket in the repository.
+
+  BOUNDARY vs BO-2100b-1 and BO-2100a-1-i: those govern the DECISION not to dispatch
+  (no agents-map entry, no server). This AC governs the RECORD of that decision.
+  Both remain true; the change is that the absence is written down. BO-2100b-1 and
+  BO-2100a-1-i were amended on 2026-08-13 to say so — see their notes.
+
+  BOUNDARY vs BO-2100d-1/-2: those are cases where the check was enabled and then
+  failed to run (missing prerequisite, bad startup command) — a loud FAILURE. This
+  is the case where the check was requested and never attempted — a loud SKIP. The
+  distinction matters: a skip is not a failure and must not be reported as one.
+
+  DERIVATION: the entry must come from the requested set (frontmatter flag), not from
+  the agents map, because the agents map is exactly what the disabled toggle empties.
+  An implementation that iterates the agents map will produce nothing and reproduce
+  the defect while appearing to satisfy this AC's first clause.
+
+  BP-014 MUST BE SPLIT BEFORE ANY SUPERSESSION — recommendation only, not performed
+  here. `BP-014` (a parentless loose L2 in `build_pipeline/`) contains TWO unrelated
+  things:
+    - a skip clause — "the phase emits status: skipped (not failed) when
+      live_surface_test is not true or live_surface_testing is disabled" — which is
+      now triplicated across BP-014, this AC, and BO-2700f-1; and
+    - a live-server HAPPY PATH that NOTHING ELSE IN THE STORE COVERS: start a dev
+      server on a registry-allocated port, issue each declared HTTP request, assert
+      status AND body AND headers against the fixture, tear the server down.
+  Superseding BP-014 wholesale to remove the duplicate skip clause would delete the
+  only specification of that happy path. Split it first — re-home the happy path
+  under a BO-2100 L1, then retire the skip clause. Also note BP-014's own notes are
+  stale: they claim the agent "has no source template under `templates/agents/`",
+  but `templates/agents/live-surface-tester.md` exists and its documented behaviour
+  already emits `(status: skipped)`. Correcting that note is left to BP-014's owner.
+
+  OPEN — RECORD SURFACE NOT YET CHOSEN BY THE USER. "The ticket's recorded phase
+  outcomes" is deliberately unlocated: the user has not decided between the
+  git-tracked ticket surface and a durable JSONL sink. Every clause above holds
+  either way. Do not implement the surface before that decision lands.
