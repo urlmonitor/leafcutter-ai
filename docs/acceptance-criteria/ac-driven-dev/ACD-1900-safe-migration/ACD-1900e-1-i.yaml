@@ -1,0 +1,52 @@
+id: ACD-1900e-1-i
+components:
+  - ac_driven_dev
+title: "Edge: backfill on a partially-migrated store fills only the gaps"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a store where some ACs already carry the new fields and others are missing them,
+  When the backfill runs,
+  Then only the records missing fields are modified,
+  And every record that already carried the new fields is left byte-identical.
+depends_on:
+  - ACD-1900e-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The backfill CLI (scripts/ac_store/backfill_schema_version.py) whose per-record gap-filling this edge exercises on a partially-migrated store."
+it_requirements:
+  - "Canonical source: scripts/ac_store/backfill_schema_version.py. On a partially-migrated store, only records missing fields are modified; every record that already carries the new fields is left byte-identical (per-record idempotency, not just whole-store)."
+  - "Test must EXECUTE the backfill against a real on-disk mixed store fixture and diff each record class (already-migrated vs missing) -- never grep-only, never hand-indented literals."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_backfill_modifies_only_records_missing_fields
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "On a partially-migrated store, the backfill modifies only the records that are missing new fields."
+  - name: test_already_migrated_records_left_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Records that already carry the new fields are left byte-identical by the backfill."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -1,7 +1,7 @@
 id: BO-2100a-1-i
 components:
   - build_orchestration
-title: "live-surface-tester is absent from the agents map unless both toggles are on"
+title: "live-surface-tester is absent from the agents map unless both toggles are on, and a requested-but-disabled check is recorded as skipped"
 component: build-orchestration
 level: L3
 status: active
@@ -19,7 +19,13 @@ criteria: |
     (c) neither toggle set,
   When the business-analyst produces the ticket's `agents:` map
   Then the map contains NO `live-surface-tester` key in any of states (a), (b), or (c)
-    And the key appears ONLY when the feature toggle and the project toggle are both true.
+    And the key appears ONLY when the feature toggle and the project toggle are both true
+    And in state (a) — and ONLY state (a) — the ticket additionally carries exactly one
+      recorded `live-surface-tester` outcome of `skipped` whose reason names
+      `live_surface_testing.enabled` as the term that prevented dispatch, because the
+      ticket asked for the check and did not get it
+    And in states (b) and (c) the ticket carries NO `live-surface-tester` outcome
+      record at all, because the ticket never asked for the check.
 depends_on: [BO-2100a-1]
 doc_links:
   - path: templates/skills/ticket-authoring/SKILL.md
@@ -28,17 +34,35 @@ doc_links:
   - path: docs/architecture/adrs/ADR-020-live-surface-tester.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2700-runtime-reachability-guard/BO-2700f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The generic loud-skip rule, including the negative clause that an unrequested gate produces no record."
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "The default must be fail-safe: when either toggle is false or absent, the phase must NOT be added."
   - "Coverage must exercise all three negative states (a), (b), (c) plus the positive both-on case, so no single-toggle path can silently enable the phase."
+  - "Added 2026-08-13: coverage must also assert the record asymmetry — state (a) produces exactly one skipped record, states (b) and (c) produce none. A test that asserts a record in all three states is wrong and will drive an implementation that records gates nobody requested."
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-10
-amended_by: []
+amended_by:
+  - reason: resolve-contradiction-with-BP-014
+    note: "2026-08-13 — amended by the business-analyst on the user's explicit decision. This AC previously required only that the agents map contain NO live-surface-tester key in states (a), (b) and (c), with no record of the absence. That contradicted BP-014 (build_pipeline, readiness: reviewed), which requires the phase to emit status: skipped when live_surface_test is not true or live_surface_testing is disabled. The user decided the loud-skip behaviour wins. The original intent is preserved unchanged — the key stays out of the map in all three states — the amendment adds only that in state (a) the absence must be RECORDED. Title updated to match."
+  - reason: ba-analysis-requested-set-boundary
+    note: "2026-08-13 — the amendment deliberately requires a skipped record in state (a) ONLY. States (b) and (c) are cases where the ticket never requested the check, so per BO-2700f-1 they must produce no record. Applying the loud-skip rule to all three states would record every gate on every ticket and bury the signal. A literal reading of BP-014 ('skipped when live_surface_test is not true OR live_surface_testing is disabled') would cover states (b) and (c) too; that reading is rejected here as over-broad — flagged to the user in the BA sign-off."
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/TICKET-20260710-BO-2100a-1-i.md
+notes: |
+  2026-08-13 amendment record. This file was `readiness: approved`; it was amended
+  rather than superseded because its behavioural intent (the key stays out of the
+  agents map unless both toggles are on) is unchanged. The user made this call to
+  resolve a live contradiction between this AC and BP-014.
+
+  The requested-versus-unrequested distinction added here is the load-bearing detail
+  for whoever implements BO-2100d-5: "skipped" means "you asked and it did not
+  happen", not "it did not happen".

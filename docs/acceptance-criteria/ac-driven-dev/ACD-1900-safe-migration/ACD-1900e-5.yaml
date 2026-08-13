@@ -1,0 +1,44 @@
+id: ACD-1900e-5
+components:
+  - ac_driven_dev
+title: "How-to guide covers running the opt-in backfill safely"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given the opt-in backfill with its --dry-run, --ac-store-dir, idempotency,
+    notes-preservation, and grandfathering behaviours,
+  When the how-to guide for bringing an existing store up to date is published,
+  Then it documents previewing with --dry-run, targeting a store with --ac-store-dir,
+    re-running safely, and that finished work is preserved,
+  And a reader following it can migrate a sample store and re-run the backfill with no
+    further changes.
+depends_on:
+  - ACD-1900e
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The implemented backfill CLI, its flags (--dry-run, --ac-store-dir), idempotency, notes-preservation, and grandfathering behaviours to document accurately."
+it_requirements:
+  - "Canonical source: a how-to under docs/how-to/. Must document previewing with --dry-run, targeting a store with --ac-store-dir, re-running safely (idempotent), and that finished work (done records, authored notes) is preserved."
+  - "Must give a reproducible procedure by which a reader migrates a sample store and re-runs the backfill with no further changes; flags and script path cited must match scripts/ac_store/backfill_schema_version.py exactly."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

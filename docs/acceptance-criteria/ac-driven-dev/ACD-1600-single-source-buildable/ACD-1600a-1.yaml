@@ -1,0 +1,82 @@
+id: ACD-1600a-1
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Generated ticket references its AC by id instead of copying the criteria"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a leaf AC ACS-100a-1 with a non-empty Gherkin criteria block exists in the store,
+  When the ticket generator produces the ticket for ACS-100a-1,
+  Then the ticket frontmatter carries source_ac: ACS-100a-1 as the reference to the requirement,
+  And the ticket body does NOT contain the AC's criteria text reproduced verbatim,
+  And a reader of the ticket is directed to the store record at
+    docs/acceptance-criteria/ac-driven-dev/<feature-folder>/ACS-100a-1.yaml for the
+    authoritative criteria,
+  And the store record remains the single copy of that criteria.
+depends_on: [ACD-1600a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/generate_ticket_from_ac.py (source-only Python; no templates/ counterpart)."
+  - "The generator must write source_ac: <id> into the ticket frontmatter as the sole reference to the requirement."
+  - "The ticket body must NOT reproduce the AC's Gherkin criteria text verbatim; the store record remains the single copy of that criteria."
+  - "The ticket must direct a reader to the store record path docs/acceptance-criteria/{component}/<feature-folder>/{id}.yaml for the authoritative criteria."
+  - "Single-source invariant: after generation the criteria text exists in exactly one place (the store), never duplicated in the ticket body."
+  - "GOVERNANCE CAVEAT: reverses ADR-400b / ADR-400b-1 (verbatim criteria in ticket body); gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2_cutover, and the flag-off path must still produce a valid ticket."
+delivers_to:
+  agent: python-coder
+  contract: "Thin generated ticket carrying source_ac frontmatter pointer to the store record and NO verbatim criteria copy; consumed by the phase-agent spec resolver (ACD-1600b-1) and constrained by the unresolvable-source edge case (ACD-1600a-1-i)."
+expects_from: null
+test_spec:
+  - name: test_ticket_frontmatter_carries_source_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Running the generator for a stored leaf AC produces a ticket whose frontmatter carries source_ac: <id>."
+  - name: test_ticket_body_omits_verbatim_criteria
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The generated ticket body does not contain the AC's Gherkin criteria text reproduced verbatim."
+  - name: test_reader_directed_to_store_record_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The ticket body directs a reader to the store record path docs/acceptance-criteria/{component}/<feature-folder>/{id}.yaml."
+  - name: test_store_remains_single_copy_of_criteria
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After generation the criteria text is present only in the store record, not duplicated in the ticket (single-source invariant)."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1600a-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  REVERSES inherited ACD-400b ("the ticket body contains the AC's Gherkin criteria
+  verbatim") and ACD-400b-1 ("the ## Acceptance Criteria section contains the AC's
+  criteria field verbatim"). If ACD-1600 is approved, ACD-400b and ACD-400b-1 must
+  be amended or superseded by governance so the two rules do not conflict. Flagged
+  by the PO in ACD-1600 notes; surfaced here for the IT-PO / user.
+
+  IT-PO enrichment (2026-08-12): canonical generator surface
+  (scripts/ac_store/generate_ticket_from_ac.py), aligned with sibling ACD-1600a-2 and
+  edge child ACD-1600a-1-i; gated behind ac_unit_of_work.emit per ADR-026.

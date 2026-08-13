@@ -1,0 +1,52 @@
+id: ACD-1900d-3
+components:
+  - ac_driven_dev
+title: "A gate not in the deploy-manifest cannot be promoted to required"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a gate script that is absent from the build deploy-manifest,
+  When promotion of that gate to a required check is attempted,
+  Then promotion is refused with an error naming the missing deploy-manifest entry;
+  And when the script is present in the deploy-manifest, promotion is permitted.
+depends_on:
+  - ACD-1900d
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+it_requirements:
+  - "Canonical source: scripts/build_phases.py (the deploy_map / deploy-manifest) and the gate-promotion check. Promotion of a gate to a required check MUST be refused with an error naming the missing deploy-manifest entry when its backing script is absent from the deploy_map, and permitted when present (ADR-026 non-negotiable rule 2, deploy-manifest-first; the done_proof.py ModuleNotFoundError precedent)."
+  - "The check must read the actual deploy_map in scripts/build_phases.py, not a duplicated list; a script's presence must be determined from that single source."
+  - "Test must EXECUTE the promotion check with the script absent from and present in the deploy_map and assert refused/permitted -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_promotion_refused_when_absent_from_deploy_manifest
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Promotion of a gate whose backing script is absent from the build deploy-manifest is refused with an error naming the missing entry."
+  - name: test_promotion_permitted_when_in_deploy_manifest
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Promotion is permitted when the gate script is present in the deploy-manifest."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1900d-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

@@ -1,0 +1,86 @@
+id: ACS-1100b-1
+components:
+  - ac_store
+title: "An answer names its scope, its inclusion rule, and every exclusion with a ground"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b.yaml
+criteria: |
+  Given an answer reporting 148 records covered against a total of 180,
+  When a reader inspects how that figure was arrived at,
+  Then the answer names the root it enumerated, the rule by which a record was
+    counted as in scope, and each exclusion as a count paired with a stated ground —
+    for example 24 records excluded on the ground that they are deprecated and 8 on
+    the ground that they are not requirement records,
+  And the covered count plus every declared exclusion count sums to the total
+    (148 + 24 + 8 = 180),
+  And an exclusion recorded with no stated ground is reported as an unexplained
+    shortfall rather than as a legitimate exclusion,
+  And a ground that is not on the published list of legitimate grounds is treated as
+    no ground at all, so "excluded because the query did not reach it" cannot be
+    recorded as a legitimate exclusion,
+  And an answer a caller deliberately narrowed reports its narrowing as a declared
+    exclusion under the ground that the records are outside the requested scope, names
+    the scope, and reports BOTH figures — a run over 3 staged records in a store of
+    2,784 reads "3 of 3 in scope, scope = staged paths; store = 2,784, 2,781 excluded
+    as outside the requested scope" — so the scoped figure and the store figure are
+    both visible and a reader can never mistake one for the other,
+  And an answer that reports only its scope total, with no store total alongside it,
+    does not satisfy this criterion, because a scope total alone is the very "40 of 40"
+    shape ACS-1100a-2 forbids,
+  And the method travels with the answer to its caller rather than being written only
+    to an operator-facing log, so a consumer of the answer can read the exclusions it
+    inherited.
+depends_on:
+  - ACS-1100b
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "Store query surface whose answers must carry the method record."
+  - path: .pre-commit-config.yaml
+    relationship: related
+    status: exists
+    relevance: "Declares the eight AC hooks whose work set is resolved from git diff --cached. They are the motivating scoped callers for the outside-the-requested-scope ground and the dual scope/store total."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: internal
+notes: |
+  A bare total is not enough: 180 of 180 means nothing if the scope silently skipped a
+  whole folder. Deliberate exclusions are legitimate and expected — the requirement is
+  that each be DECLARED with a ground, not that they be eliminated.
+
+  The sum clause is what makes the method mechanically checkable and is the input to
+  the reconciliation in ACS-1100c-1: covered + declared exclusions must equal the
+  total, and any residue is the shortfall.
+
+  SCOPED CALLERS (2026-08-13, expert review). All eight AC pre-commit hooks resolve
+  their work set from git diff --cached. Without the outside-the-requested-scope ground
+  every commit would trip the ACS-1100c-1 halt with roughly 2,783 records unaccounted
+  for. The ground makes them honest rather than broken — but ONLY together with the
+  dual-total clause. A scoped answer that reported "3 of 3" without the store total
+  would be the exact defect ACS-1100 exists to remove, wearing a scope label. Both
+  figures, always.
+
+  The "travels with the answer" clause exists because a method written only to a log
+  cannot be inherited by a downstream verifier (ACS-1100d-1).

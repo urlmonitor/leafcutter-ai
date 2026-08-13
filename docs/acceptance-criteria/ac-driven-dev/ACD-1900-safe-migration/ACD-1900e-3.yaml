@@ -1,0 +1,54 @@
+id: ACD-1900e-3
+components:
+  - ac_driven_dev
+title: "Backfill preserves authored notes and never reverts finished work"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a store whose ACs contain human-authored notes blocks and some records with
+    work_status: done,
+  When the backfill runs,
+  Then every notes block is preserved verbatim,
+  And no record with work_status: done is reverted to an earlier work_status.
+depends_on:
+  - ACD-1900e
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900e-1
+  contract: "The backfill CLI (scripts/ac_store/backfill_schema_version.py) whose write path this AC constrains to preserve notes and done-status."
+it_requirements:
+  - "Canonical source: scripts/ac_store/backfill_schema_version.py. Every human-authored notes block MUST be preserved verbatim (byte-for-byte) and no record with work_status: done may be reverted to an earlier work_status (grandfathering, ADR-026 non-negotiable rule 4)."
+  - "The backfill must insert only the target new field(s) and must not reserialize/reflow untouched content (which would alter notes formatting); done records are read-only w.r.t. work_status."
+  - "Test must EXECUTE the backfill against a real on-disk store fixture containing multi-line notes blocks and work_status: done records, and assert verbatim notes + unchanged done status -- never grep-only, never hand-indented literals."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_notes_blocks_preserved_verbatim
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "After the backfill, every human-authored notes block is byte-for-byte identical to before."
+  - name: test_done_records_not_reverted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "No record with work_status: done is reverted to an earlier work_status by the backfill."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

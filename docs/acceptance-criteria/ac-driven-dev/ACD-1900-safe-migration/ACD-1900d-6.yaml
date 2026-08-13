@@ -1,0 +1,79 @@
+id: ACD-1900d-6
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "emit=true is refused unless the dual-read resolver and migrated read-side templates are deployed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the dual-read spec resolver and the migrated read-side agent and gate templates
+    are NOT all present in the deployed layout,
+  When ac_unit_of_work.emit is set to true,
+  Then the flip is refused with an error naming each missing read-side surface,
+  And ac_unit_of_work.emit remains false;
+  And given the dual-read resolver and the migrated read-side agent and gate templates
+    ARE present in the deployed layout,
+  When ac_unit_of_work.emit is set to true,
+  Then the flip is accepted.
+depends_on:
+  - ACD-1900d
+  - ACD-1900b-1
+  - ACD-1900c-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900c-1
+  contract: "The ac_unit_of_work.emit flag defined in config/guardrail_gates.yaml whose flip-to-true this guard intercepts; the guard refuses the flip and keeps emit=false unless the read-side surfaces are deployed."
+it_requirements:
+  - "Canonical source: the emit-enable path in scripts/ac_store/ that reads the ac_unit_of_work.emit flag from config/guardrail_gates.yaml (templates/scripts/ac_store/ does not exist, so scripts/ac_store/ is the canonical source for this python surface; it mirrors the enforce-enable guard ACD-1900c-3). Setting emit=true MUST be refused unless the dual-read spec resolver (ACD-1900b-1) AND the migrated read-side agent and gate templates are ALL present in the DEPLOYED layout."
+  - "Presence MUST be verified from the DEPLOYED layout (e.g. .claude/agents/ and the deployed scripts/), NOT the source tree -- the source tree masks the gap (the done_proof.py ModuleNotFoundError precedent, ADR-026 rule 2). The refusal error MUST NAME each missing read-side surface, and on refusal ac_unit_of_work.emit remains false (no partial flip)."
+  - "This is the emit-flag analogue of the deploy-manifest guard ACD-1900d-3-i and implements ADR-026 rule 6 (the thin generator and universal dual-read ship in the SAME self-build). The required read-side surface set must be data-driven (iterate the declared set of required surfaces), never a single hard-coded path -- new read-side surfaces inherit the guard automatically."
+  - "Gate/workflow AC (CLAUDE.md 'verify behaviorally, not by grep'): the test MUST exercise the emit-enable path against a deployed-layout fixture with the read-side surface ABSENT (expect refusal naming each missing surface, emit stays false) and PRESENT (expect acceptance), verified from the deployed layout -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML/import I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_emit_true_refused_when_readside_absent_names_surfaces
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Setting ac_unit_of_work.emit=true from a deployed-layout fixture missing the dual-read resolver / migrated read-side templates is refused with an error naming each missing read-side surface, and emit remains false."
+  - name: test_emit_true_accepted_when_readside_present
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Setting ac_unit_of_work.emit=true from a deployed-layout fixture where the resolver and migrated read-side agent/gate templates are all present is accepted."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 3 from the independent v2 review. Mirrors ADR-026 non-negotiable rule 6 (self-host is a
+  self-consistent build: the thin generator and universal dual-read ship in the SAME self-build)
+  and rule 2 (deploy-manifest-first). ACD-1900c-3 gates enforce=true on "zero v1 records", but
+  nothing gates emit=true on the read-side actually being PRESENT IN THE DEPLOYED LAYOUT; flipping
+  emit=true before the dual-read resolver (ACD-1900b-1) and migrated read-side agent/gate templates
+  are deployed re-opens the phantom-green window. This guard refuses emit=true (with a clear error
+  naming what is missing) until they are deployed -- the emit-flag analogue of the deploy-manifest
+  guard ACD-1900d-3-i. Placed under ACD-1900d because it is a deploy-manifest / advisory-before-
+  required presence guard; the emit flag itself is defined in ACD-1900c-1 (hence depends_on).
+  Per CLAUDE.md (gate/workflow ACs verify BEHAVIORALLY): the covering check MUST exercise the
+  emit-enable path against a DEPLOYED-layout fixture with the read-side surface absent (expect
+  refusal naming it) and present (expect acceptance) -- never grep-only, and verified from the
+  deployed layout, not the source tree. IT-PO to add it_requirements + surface wiring.
+
+  IT-PO enrichment (2026-08-12): canonical source scripts/ac_store/ emit-enable path +
+  config/guardrail_gates.yaml (ac_unit_of_work.emit); presence verified from the DEPLOYED layout
+  per ADR-026 rule 2. Behavioral test_spec exercises absent/present deployed-layout fixtures.

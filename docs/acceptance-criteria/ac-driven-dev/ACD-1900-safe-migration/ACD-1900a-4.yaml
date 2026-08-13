@@ -1,0 +1,48 @@
+id: ACD-1900a-4
+components:
+  - ac_driven_dev
+title: "Reference doc describes schema_version and the new optional fields"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the additive schema_version marker and the optional deliverable-checklist and
+    per-deliverable sign-off fields have been added to the schema,
+  When the AC schema reference documentation is published,
+  Then it documents schema_version (1 = legacy default, 2 = new), lists each new
+    optional field, and states that additionalProperties is not enforced until the
+    store is 100% backfilled,
+  And a reader following the reference can validate one v1 sample and one v2 sample
+    against the documented rules and observe both pass.
+depends_on:
+  - ACD-1900a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900a-2
+  contract: "The finalized schema_version marker and the optional deliverable_checklist / per-deliverable sign-off field definitions in config/ac_store_schema.json to document accurately."
+it_requirements:
+  - "Canonical source: docs/reference/ac-schema.md. Must document schema_version (1 = legacy default, 2 = new), enumerate each new optional field (deliverable_checklist, per-deliverable sign-offs), and state that additionalProperties is not enforced until the store is 100% backfilled."
+  - "Must include one runnable v1 sample and one v2 sample a reader can validate against scripts/ac_store/validate_ac_schema.py and observe both pass; the documented field shapes must match config/ac_store_schema.json exactly."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

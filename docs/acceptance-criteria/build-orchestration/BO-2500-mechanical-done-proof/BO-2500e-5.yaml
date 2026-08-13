@@ -1,0 +1,79 @@
+id: BO-2500e-5
+components:
+  - build_orchestration
+  - commit_guardian
+title: "The pre-commit proof-of-done check covers JS-covered ACs"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a developer commits locally with staged work whose ACs are covered by "// covers:<id>"
+    vitest tests,
+  When the proof-of-done pre-commit check runs,
+  Then its verdict includes those JS-covered ACs (running the JS test runner as needed) alongside
+    any Python-covered ACs, reporting pass or fail for each,
+  And it remains skippable locally (SKIP=<hook-id> / git --no-verify) as fast feedback,
+  So local proof-of-done feedback covers front-end work, not only Python work.
+depends_on:
+  - BO-2500e
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    proof_of_done_precommit_js_coverage:
+      type: object
+      description: "The pre-commit proof-of-done hook's verdict includes JS-covered ACs — it runs the JS test runner (vitest) as needed and reports pass/fail for each JS- and Python-covered AC, while remaining skippable locally (SKIP=<hook-id> / --no-verify)."
+  reference_file_path: "templates/scripts/commit_guardian/check_done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py"
+  constraints:
+    - "The hook must consume the JS-inclusive done-proof verdict from the BO-2500e engine (done_proof.py) rather than re-deriving covers/pass semantics, so local and CI verdicts stay identical."
+    - "The hook must remain non-blocking locally: it reports pass/fail and is honored by SKIP=<hook-id> and git --no-verify (fast feedback, not the final gate)."
+    - "On failure it must print the specific AC ids and reasons (missing/failing/non-passing linked test, unavailable runner) for both JS- and Python-covered ACs, per the error handling policy."
+    - "Deploy-manifest rule: any module this hook imports (done_proof.py and any new JS-runner helper) MUST be present in the build deploy map so the DEPLOYED hook does not crash with ModuleNotFoundError; verify by running the deployed hook after python scripts/build.py, not only the source-tree unit tests."
+    - "Invoking vitest must stay within the pre-commit latency budget; scope the JS run to the staged/linked tests and do not run the full suite when a scoped check suffices."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500e-2
+  contract: "Per-AC JS eligibility/pass-fail verdict { ac_id, can_be_done, reason } from the JS-inclusive done-proof engine, which the pre-commit hook renders as local pass/fail feedback."
+test_spec:
+  - name: test_precommit_verdict_includes_js_covered_acs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The pre-commit proof-of-done check reports pass/fail for JS-covered ACs (running vitest as needed) alongside Python-covered ACs."
+  - name: test_precommit_js_check_is_skippable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The check remains bypassable locally via SKIP=<hook-id> / --no-verify and does not hard-block the commit."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L2 under BO-2500e — extends the existing pre-commit proof-of-done hook (BO-2500b-1) so its verdict
+  includes JS-covered ACs, keeping the local check skippable. IT-PO to enrich (hook wiring, latency
+  budget for invoking vitest, assigned_agent).

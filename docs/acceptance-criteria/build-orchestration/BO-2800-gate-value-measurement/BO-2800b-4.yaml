@@ -1,0 +1,126 @@
+id: BO-2800b-4
+components:
+  - build_orchestration
+  - review_system
+title: "Unrecognised problem kinds stay distinct in an unclassified namespace and are queued for promotion"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three findings emitted by the pull-request review gate whose rule identifiers are
+    absent or are not present in that gate's declared vocabulary — two whose detail prose
+    normalises to the same key, and one whose detail prose normalises to a different key,
+  When the findings are recorded,
+  Then each is assigned a rule identifier inside that gate's unclassified namespace,
+    written as the word "unclassified", then the emitting gate name, then the normalised
+    prose key, and each is recorded rather than dropped,
+  And the two findings sharing a normalised prose key receive one identical rule identifier
+    while the third receives a different one, so distinct unknown problem kinds remain
+    distinct rather than collapsing into a single identifier per gate,
+  And each takes part in signature computation and occurrence counting on the same terms as
+    a declared rule identifier, with its signature method recorded as "unclassified",
+  And each distinct unclassified rule identifier is listed, with its own occurrence count,
+    in that gate's promotion queue as a proposed new entry in its declared vocabulary.
+
+  Given a failure that produced no gate finding at all and therefore carries no prose to
+    normalise — for example a coder phase whose tests stayed red,
+  When its rule identifier is written,
+  Then it is written as the word "unclassified" followed by the name of the emitting gate,
+    or by the name of the failing phase agent where no gate emitted it, with no third
+    segment,
+  And that two-segment form and the three-segment form are both valid members of the same
+    unclassified namespace,
+  And the bare, gate-agnostic word "unclassified" is never written as a rule identifier,
+    because it would merge every gate's unknowns into one bucket and leave the per-gate
+    promotion queue with nothing to queue.
+
+  Given an unclassified rule identifier in a promotion queue that has already accumulated
+    an occurrence count, and an owned gate that adds a corresponding entry to its declared
+    vocabulary,
+  When the entry is promoted,
+  Then the finding's rule identifier changes to the newly declared one and its signature
+    changes with it, since the signature is derived from the gate and the rule identifier,
+  And a recorded mapping from the retired unclassified identifier to the promoted declared
+    one is written, so an aggregate reports the occurrences counted before and after
+    promotion as one total against the promoted identifier rather than as two unrelated
+    problems,
+  And the signature method on records created after promotion is "declared", while records
+    created before it retain "unclassified" and remain reachable through the mapping,
+  And no occurrence counted before the promotion is discarded or double-counted.
+
+  Given the pull-request review gate, which is permanently exempt from declaring a
+    vocabulary because the skill its findings come from cannot be modified by this project,
+  When its unclassified identifiers are queued,
+  Then the queue records that this gate cannot accept a promotion, naming the reason,
+  And its identifiers remain permanently in the unclassified namespace and continue to be
+    counted at full weight rather than being discounted or expired from the queue.
+depends_on:
+  - BO-2800b
+  - BO-2800b-1
+  - BO-2800b-2
+  - BO-2800b-3
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400d-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Downstream consumer of this namespace spelling. It writes the two-segment form for a failure with no emitting gate; this AC states that form is valid and that the bare gate-agnostic word is not."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: added a normalised-prose sub-key so distinct unknowns stay distinct; pinned unclassified/<gate> as canonical and barred the bare form; corrected the promotion transition to unclassified -> declared and added the identifier-migration mapping the signature change requires; stated the exempt-gate case."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: internal
+notes: |
+  DECIDED DESIGN POINT: the vocabulary must LEARN rather than OSSIFY. A closed vocabulary
+  with no intake path silently discards every problem kind nobody anticipated, which
+  reintroduces the uncounted-defect problem one level down.
+
+  WHY THE SUB-KEY WAS ADDED. As originally written, every unrecognised finding from one
+  gate collapsed into the single identifier "unclassified/<gate>". That made the promotion
+  loop unrunnable rather than merely coarse: there was exactly one unclassified identifier
+  per gate, so "listed with its occurrence count in a promotion queue" degenerated to a
+  one-row queue whose count was just the gate's unrecognised total, and "promote
+  unclassified/pr-reviewer into pr-reviewer's vocabulary" named no actual problem kind to
+  promote. A normalised-prose sub-key restores the distinction between unknowns. This is
+  the same prose normalisation BO-2800b-3 defines, reused as a sub-key rather than as a
+  primary identity — it does not reintroduce free-text clustering as the dedup mechanism,
+  which remains barred for declared findings.
+
+  CANONICAL SPELLING. `unclassified/<gate>` is canonical; the bare, gate-agnostic
+  `unclassified` is not written. BO-400d-2 consumes this spelling and already writes the
+  two-segment form (extending it to `unclassified/<phase-agent>` for failures with no
+  emitting gate), which is why the sub-key is stated here as an extension that applies
+  when prose is available rather than as a mandatory third segment — a mandatory third
+  segment would have broken that consumer. BO-400d-2 is owned by a sibling author and is
+  not edited from this tree.
+
+  PROMOTION CHANGES THE SIGNATURE, and the original AC did not say what happens to the
+  occurrences already counted under the old one. Because signature = gate + rule_id, a
+  promotion necessarily retires one signature and creates another; without the mapping
+  clause, "without discarding occurrences already counted" was an assertion no
+  implementation could satisfy. The mapping is the migration rule.
+
+  Distinguish the two promotions in this tree, they are different:
+    - here (b-4) — promoting an unclassified rule identifier INTO a gate's vocabulary;
+    - in b-5's report — promoting a high-count rule identifier to a DETERMINISTIC
+      pre-commit check.

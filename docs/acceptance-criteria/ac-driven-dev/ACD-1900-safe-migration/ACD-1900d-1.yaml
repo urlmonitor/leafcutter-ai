@@ -1,0 +1,51 @@
+id: ACD-1900d-1
+components:
+  - ac_driven_dev
+title: "A new gate starts advisory and never blocks the build"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a newly added gate configured enabled: true, strict: false,
+  When it runs against a change that contains a violation it detects,
+  Then it reports the finding on stderr but exits 0 (non-blocking, advisory),
+  And the build or commit is not failed by that gate.
+depends_on:
+  - ACD-1900d
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  - "Canonical source: the gate script under scripts/commit_guardian/ and its config entry in config/guardrail_gates.yaml. A gate configured enabled: true, strict: false MUST report its finding on stderr but exit 0 (advisory), so neither the build nor the commit is failed by it (ADR-026 non-negotiable rule 3, advisory-before-required)."
+  - "The advisory-vs-blocking behaviour must be driven by the strict flag read from config in the gate's control flow, not hard-coded."
+  - "Test must EXECUTE the gate against a change containing a real violation and assert exit 0 with the finding on stderr -- never grep-only (a grep test passes on dead code)."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_advisory_gate_reports_finding_exits_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A gate with enabled: true, strict: false run against a real violation reports the finding on stderr and exits 0."
+  - name: test_advisory_gate_does_not_fail_build_or_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The advisory gate does not fail the build or commit despite detecting a violation."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

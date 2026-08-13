@@ -2,8 +2,8 @@
 title: "Documentation Index"
 type: reference
 status: active
-created: 2026-06-30
-last_updated: 2026-06-30
+created: 2026-08-11
+last_updated: 2026-08-11
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -13,7 +13,7 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-08-13 21:12 UTC
+> Generated: 2026-08-13 22:13 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -34,6 +34,7 @@ task, then pull only those files.
 | code review | [docs/architecture/components/code-review.md](docs/architecture/components/code-review.md) | Architecture of the Fowler code-smell review capability: the developer-facing /code-smell-review flow, the shared core review method plus the two bucket catalogues, the two cost-tiered leaf reviewers (Sonnet + Opus), and the top-level orchestration that fans them out in parallel and merges their findings into one severity-ranked report. |
 | commit guardian | [docs/architecture/components/commit-guardian.md](docs/architecture/components/commit-guardian.md) | Pre-commit hook orchestration system that enforces code quality, ADR coverage, component integrity, and structural rules before every commit lands. |
 | doc compliance | [docs/architecture/components/doc-compliance.md](docs/architecture/components/doc-compliance.md) | Documentation compliance verification system that enforces frontmatter presence, description fields, doc-length limits, and coverage requirements across all project documentation. |
+| epic retrospective | [docs/architecture/components/epic-retrospective.md](docs/architecture/components/epic-retrospective.md) | Post-epic fact extraction subsystem. Reads a completed epic's ticket frontmatter, git history, and comment stream to produce a structured, machine-readable facts blob that grounds the retrospective-agent's narrative in measured evidence rather than recollection. |
 | feedback collector | [docs/architecture/components/feedback-collector.md](docs/architecture/components/feedback-collector.md) | Structured feedback collection system that aggregates agent quality signals into JSONL logs for retrospective analysis and continuous improvement. |
 | finalize | [docs/architecture/components/finalize.md](docs/architecture/components/finalize.md) | The finalize-feature workflow: pre-merge test baseline capture, PR merge gating, push-before-merge sync, main sync, and ticket/epic closure. |
 | glossary | [docs/architecture/components/glossary.md](docs/architecture/components/glossary.md) | Project terminology registry with automated coverage checks that ensure novel jargon is triaged and documented consistently across all project artifacts. |
@@ -97,6 +98,7 @@ task, then pull only those files.
 | ADR 024 interactive pause resume | [docs/architecture/adrs/ADR-024-interactive-pause-resume.md](docs/architecture/adrs/ADR-024-interactive-pause-resume.md) | Records the decision to replace the cancel-on-headless behaviour of interactive workflow gates with a pause-and-persist substrate. When no human is reachable, a gate terminates the run cleanly, writes a durable pending-question record keyed by run id under .leafcutter/paused_runs/, and returns a distinct paused_awaiting_input status instead of silently resolving to a safe default and exiting with status ok. Resume re-invokes the same workflow with the human's answer available and resumeFromRunId set so the harness replays committed agent() calls, execution deterministically reaches the same gate, and resolveGate() consults the record's answer before making the gate's agent() call. Covers the shared substrate helper imported by plan-feature.js, build-feature.js, and finalize-feature.js, the answer-application-by-type contract, question-type validation, durability and idempotency, and the E2/ADR-017 body constraints. |
 | ADR 025 first class flow decisions | [docs/architecture/adrs/ADR-025-first-class-flow-decisions.md](docs/architecture/adrs/ADR-025-first-class-flow-decisions.md) | Records the decision to promote decision points from implicit second-class `branches[]` to explicit first-class `decisions[]` entities in the product-truth flow schema — each decision carrying a from-step, a human-readable question, and labelled outcomes (condition + edge label + target). Multi-branch forks chain (diamond → diamond → happy path) rather than fanning into one N-way diamond. All ~15 existing flows are migrated and enriched, and the Leafcutter Atlas renders each decision as a diamond node with labelled yes/no edges. |
 | ADR 025 tiered parallel code smell review | [docs/architecture/adrs/ADR-025-tiered-parallel-code-smell-review.md](docs/architecture/adrs/ADR-025-tiered-parallel-code-smell-review.md) | Records the decision to replace the single all-12 Opus code-smell reviewer (find-code-smells) with a tiered pipeline: the Modern-12 Fowler smells are partitioned into a structural (mechanical) bucket and a design (judgment) bucket over a shared core method skill; two read-only leaf reviewer agents run the buckets on Sonnet and Opus respectively and RETURN their findings; a top-level code-smell-review skill (and /code-smell-review command) fans out to both leaves in parallel and merges into one severity-ranked report, with merge-time re-verification of high-impact findings. Orchestration is a top-level skill rather than an agent to stay within Claude Code's depth-1 sub-agent limit (ADR-006). |
+| ADR 026 ac driven build v2 phased migration | [docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md](docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md) | Decision to roll out the single-source / AC-as-unit-of-work / thin-ticket redesign as a read-side-first phased migration behind a two-stage flag, dogfooded on self-host before any consumer cutover, rather than a big-bang. |
 
 ## How-To Guides
 

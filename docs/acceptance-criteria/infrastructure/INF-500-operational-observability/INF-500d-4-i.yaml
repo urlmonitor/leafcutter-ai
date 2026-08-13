@@ -1,0 +1,68 @@
+id: INF-500d-4-i
+components:
+  - infrastructure
+  - feedback_collector
+title: "When the enduring location cannot be determined, the sink says so rather than quietly using the disposable one"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a report is filed from a context where the enduring project location cannot
+    be determined — the drive is not running under version control at all, or the
+    version-control tooling is unavailable to the caller,
+  When the durable report location is resolved,
+  Then the sink does not silently fall back to the temporary workspace directory,
+  And the report is either written to a location the caller can confirm is not the
+    disposable workspace, or the write is refused with a failure reason naming the
+    unresolved location,
+  And in the refusal case the agent's verdict is still delivered.
+
+  Given a project that uses no temporary workspaces at all, so the drive runs
+    directly in the ordinary project checkout,
+  When a report is filed,
+  Then it is written to the same durable location that a workspace-based drive
+    would have used, and is readable there,
+  So that consumer projects without the worktree-per-drive convention are not
+    given a second, divergent storage location.
+depends_on:
+  - INF-500d-4
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary
+notes: |
+  Authored as an L3 because the fallback path is where the original defect will
+  reappear. A resolver that prefers the enduring location but falls back to the
+  current working directory when it cannot determine one lands back inside the
+  disposable workspace in exactly the situation nobody tests — and does so
+  silently, which is how ~95% of records were lost without anyone noticing.
+
+  The second scenario guards the opposite error: a fix written only for the
+  worktree case must not give plain single-checkout consumer projects a different
+  sink, or reports become split across two locations depending on how the drive
+  happened to be launched.
+
+  The refusal branch is bounded by INF-500d-3: refusing the write is only
+  acceptable because the verdict still lands and the reason is legible.

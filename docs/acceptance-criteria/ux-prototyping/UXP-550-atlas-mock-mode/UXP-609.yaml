@@ -1,0 +1,63 @@
+id: UXP-609
+components:
+  - ux_prototyping
+  - testing_quality
+readiness: reviewed
+priority: medium
+title: "The mock-mode safety check cannot pass unless it is really reading fixtures"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the CI drift-guard that checks the bundled fixtures for drift against the same schemas
+    and loaders used for real data,
+  When it runs,
+  Then it first asserts that mock mode is genuinely active (isMockActive() is true — the app is
+    really reading the fixtures, not the live repo) before it evaluates drift,
+  And it reports a clean result only when that assertion holds AND no drift is found,
+  And if mock mode is not genuinely active it exits with a failure that names the reason instead
+    of reporting clean,
+  So a mis-configured environment can never produce a false "all clear".
+depends_on:
+  - UXP-593
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: specified-by
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "The drift-guard route (leafcutter-web/app/api/drift-guard/route.ts, invoked by leafcutter-web/scripts/run-mock-toggle-check.sh in .github/workflows/fixture-drift.yml) must assert isMockActive() from leafcutter-web/lib/data/mock.ts is true BEFORE evaluating drift; the mock-active assertion must gate the drift evaluation, not run after it."
+  - "The guard must fail closed: it may report a clean result only when the mock-active assertion holds AND no drift is found; any other state must be a non-clean failure, never a silent pass."
+  - "On failure it must name the reason (e.g. mock mode not active) in its output per the project error handling policy, so a mis-configured CI environment is diagnosable rather than falsely green."
+  - "The mock-active check must use the same isMockActive() seam the app uses, so the guard cannot pass while the app would read the live repo."
+delivers_to: null
+expects_from: {}
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-609-1
+  - UXP-609-2
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+test_spec:
+  - name: drift_guard_asserts_mock_active_before_drift
+    target_dir: leafcutter-web/app/api/drift-guard/__tests__/
+    framework: vitest
+    type: integration
+    description: "The drift-guard checks isMockActive() is true before evaluating drift and reports clean only when the assertion holds AND no drift is found."
+  - name: drift_guard_fails_when_mock_not_active
+    target_dir: leafcutter-web/app/api/drift-guard/__tests__/
+    framework: vitest
+    type: integration
+    description: "When isMockActive() is false, the drift-guard exits with a failure naming the reason instead of reporting clean."
+notes: |
+  Mock-mode hardening follow-up (independent code review finding M-1). The CI drift-guard must
+  assert isMockActive() is true so a mis-set env cannot produce a false green. Criteria sharpened
+  to Gherkin by BA; L3 edge cases cover mis-set env and the empty-fixture "passes on nothing" gap.
+  IT-PO to enrich.

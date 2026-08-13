@@ -1,0 +1,56 @@
+id: ACD-1700c-1-i
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "An AC with no relationships renders empty sections rather than omitting or erroring"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a target AC that has no dependencies, no dependents, and no siblings,
+  When the tool renders the AC-graph task context,
+  Then each of those sections is rendered as explicitly empty (for example "none"),
+  And the tool does not omit the section,
+  And the tool does not error.
+depends_on: [ACD-1700c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "For an AC with no dependencies, dependents, or siblings, each such section renders as explicitly empty (e.g. 'none'); the tool must not omit the section and must not error (exit 0)."
+  - "The explicit-empty marker must be uniform across the three relationship sections."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1700c-1
+  contract: "The AC-graph task-context renderer; this edge case constrains its behaviour when dependencies, dependents, and siblings are all empty."
+test_spec:
+  - name: test_empty_dependencies_renders_none
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "An AC with no dependencies renders the dependencies section as explicitly empty."
+  - name: test_empty_dependents_and_siblings_render_none
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "An AC with no dependents and no siblings renders both sections as explicitly empty."
+  - name: test_no_relationships_does_not_error
+    target_dir: unit_tests/ac_driven_dev/
+    framework: pytest
+    type: unit
+    description: "Rendering an AC with no relationships exits 0 with all three sections present."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

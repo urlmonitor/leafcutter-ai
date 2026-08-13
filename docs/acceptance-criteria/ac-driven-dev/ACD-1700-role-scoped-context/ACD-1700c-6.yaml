@@ -1,0 +1,43 @@
+id: ACD-1700c-6
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Sequence diagram of assembling an agent's effective prompt"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the effective-prompt assembly flow,
+  When the sequence diagram is authored,
+  Then it shows the tool gathering the agent template, the reproducible harness channels,
+    and the AC-graph task context, then composing them into one brief,
+  And it shows non-reproducible channels being marked and cross-agent AC content rendered as a pointer,
+  And it is committed under docs/architecture/ and linked from the ACD-1700c feature.
+depends_on: [ACD-1700c, ACD-1700c-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Sequence diagram must show the tool gathering the agent template, the reproducible harness channels, and the AC-graph task context, then composing them into one brief."
+  - "Must show non-reproducible channels being marked and cross-agent AC content rendered as a pointer (consistent with ACD-1700c-3 and ACD-1700c-4)."
+  - "Must be committed under docs/architecture/ and linked from the ACD-1700c feature."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1700c-1
+  contract: "The effective-prompt assembly flow (template + channels + AC-graph context composition) that this sequence diagram depicts."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

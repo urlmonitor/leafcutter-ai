@@ -1,0 +1,105 @@
+id: BO-400d
+components:
+  - build_orchestration
+  - ticket_lifecycle
+title: "See how many attempts a piece of work really took, not just how it ended"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A ticket remembers every attempt it took, not only its final outcome.
+
+  Work that failed, was retried, and eventually succeeded leaves a visible trail
+  of each attempt alongside its final state — so rework is something you can see
+  and measure instead of something that quietly disappears the moment the work
+  finally passes.
+depends_on:
+  - BO-400
+doc_links:
+  - path: docs/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: BO-400d-1 folded into BO-400d-2 and removed from covered_by."
+superseded_by: null
+covered_by:
+  - BO-400d-2
+  - BO-400d-3
+  - BO-400d-4
+implemented_by: []
+documentation_triggers:
+  - state-diagram
+  - reference-doc
+change_target: schema
+risk_surface: internal
+notes: |
+  Added 2026-08-13 as a fourth L1 under BO-400 (tree now a–d, cap 7). Framing
+  decisions recorded for the BA and IT PO:
+
+  - THE DEFECT: ticket frontmatter is a TERMINAL-STATE REGISTER, not a history.
+    `failed -> signed_off` is a legal transition that OVERWRITES the prior value,
+    so a ticket that failed twice and then succeeded is byte-identical to one
+    that succeeded first time. Every rework measure built on that field therefore
+    undercounts, silently and permanently.
+
+  - PRODUCT DECISION — USER-CONFIRMED, DO NOT RE-LITIGATE AT L2:
+    ==========================================================================
+    The `failed -> signed_off` transition STAYS LEGAL. It must not be banned,
+    blocked, or gated.
+    ==========================================================================
+    Rationale: banning it does not preserve history, it destroys the last of it.
+    Agents that cannot progress past a `failed` value will simply stop writing
+    `failed` at all, and `failed` is the only failure signal that survives today.
+    A BA who "fixes" this by making the transition illegal has made the problem
+    strictly worse. Any L2 proposing a transition ban is out of scope.
+
+  - THE ACTUAL REQUIREMENT: an APPEND-ONLY record of attempts, kept ALONGSIDE the
+    terminal state. The terminal-state field keeps its current meaning and its
+    current transitions (BO-400's "frontmatter is the single source of truth for
+    current state" is unchanged and must not be weakened). The new record answers
+    a different question — "what happened on the way here" — and nothing may
+    rewrite or delete an entry once appended.
+
+  - BOUNDARY vs the rest of the BO-400 tree: BO-400a/b/c are about WHERE current
+    state lives (frontmatter, not folder moves) and retiring the done/ subfolder
+    convention. BO-400d adds HISTORY next to that state. It does not change where
+    current state lives, and must not reintroduce any file-system-move semantics.
+
+  - Note for the BA on style: BO-400's existing children are written in the older
+    Gherkin-at-L1 form. BO-400d follows the current PO v3 convention (benefit
+    prose at L0/L1, Gherkin from L2 down). Decompose it into Gherkin L2s as usual;
+    do not rewrite this L1 into Gherkin to match its siblings.
+
+  - CHILD SET CHANGED 2026-08-13 (expert review). The tree was d-1..d-4; it is now
+    d-2..d-4. BO-400d-1 ("attempt count recorded alongside the terminal state")
+    was folded into BO-400d-2 and its file deleted: both landed in the same two
+    files (`templates/skills/signoff/SKILL.md` and the ticket frontmatter schema)
+    and so collided on `files_touched`, and its separate `attempts: N` field was
+    dropped because the figure is derivable from the failure list plus the
+    terminal state — two fields that must agree is a NEW parity surface in a tree
+    whose entire defect is surfaces disagreeing. The crash-and-resume scenario it
+    carried survives verbatim inside BO-400d-2. Slot d-1 is retired, not reusable.
+
+  - OPEN QUESTION FOR THE USER, blocking implementation of all three children:
+    whether the attempt record is written to the git-tracked ticket (frontmatter
+    `prior_failures:` plus the existing `## Comments` log, as the criteria
+    currently assume) or to a durable JSONL sink. The behaviour is identical
+    either way — append-only, one entry per failure, count derived not stored —
+    but the location is not, and BO-400d-3's guard reads whichever surface wins.

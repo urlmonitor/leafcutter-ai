@@ -1,0 +1,49 @@
+id: ACD-1800c-4
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Sequence diagram shows ticket completion derived from grouped requirement done-state"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the ticket-as-grouping model of ACD-1800c is implemented,
+  When the sequence diagram for ticket completion is read,
+  Then it shows an agent completing individual requirements,
+  And it shows the ticket's done-state being derived from the done-state of every
+    grouped requirement,
+  And it shows no completion step that targets the ticket directly.
+depends_on: [ACD-1800c, ACD-1800c-1, ACD-1800c-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid sequenceDiagram showing: an agent completing individual requirements; the ticket's done-state DERIVED from the done-state of every grouped requirement; and NO completion step targeting the ticket directly."
+  - "Home the diagram in a canonical docs surface (embed in docs/reference/ac-schema.md or a docs/architecture/ diagram doc); never point at a build-output copy. Keep the flow in spec-parity with the grouping-ticket behaviour (ACD-1800c-1 / ACD-1800c-2)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800c-1
+  contract: "The implemented thin grouping-ticket + ticket-done-derivation behaviour whose flow the diagram depicts."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Documentation AC produced for the sequence-diagram trigger on ACD-1800c.
+
+  IT-PO enrichment (2026-08-12): test_required: false (diagram/docs surface).

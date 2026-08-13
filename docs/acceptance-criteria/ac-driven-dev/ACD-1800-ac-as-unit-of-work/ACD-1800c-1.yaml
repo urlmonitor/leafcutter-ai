@@ -1,0 +1,72 @@
+id: ACD-1800c-1
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "A ticket enumerates its grouped requirements and carries no sign-offs of its own"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a ticket that groups three requirements into one feature,
+  When the ticket is inspected,
+  Then the ticket enumerates exactly the set of requirements it groups,
+  And the ticket carries no per-phase or per-deliverable sign-offs of its own,
+  And every sign-off relevant to the feature is found on one of the grouped
+    requirements rather than on the ticket.
+depends_on: [ACD-1800c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The generated ticket is a thin grouping container: scripts/ac_store/generate_ticket_from_ac.py must emit the grouped AC membership BY REFERENCE and MUST NOT emit a per-phase or per-deliverable Sign-offs section of its own (supersedes the ACD-400b / ACD-400b-4 wired-ticket premise -- do not edit ACD-400b here)."
+  - "Emission is behind the ADR-026 `ac_unit_of_work.emit` flag; when off, fat-ticket generation returns (safe because gates dual-read). Do not remove the legacy-emit path until the ADR-026 go/no-go conditions hold."
+  - "Gate parity: the ticket sign-off parity gate scripts/commit_guardian/check_ticket_signoff_parity.py must not REQUIRE a ## Sign-offs section on a grouping ticket. Reconcile the gate before it is promoted to required (ADR-026 rule 3), else a thin ticket blocks every commit."
+  - "Canonical source: scripts/ac_store/generate_ticket_from_ac.py (and, if the human-facing ticket convention changes, the ticket-authoring skill prose -- flagged as a caveat, may require an llm-expert follow-up AC)."
+delivers_to:
+  agent: python-coder
+  contract: "Thin grouping ticket that enumerates member AC ids by reference and carries NO per-phase/per-deliverable Sign-offs section; consumed by the by-reference edge case (ACD-1800c-2-i) and the ticket-done computation (ACD-1800c-2)."
+expects_from: null
+test_spec:
+  - name: test_ticket_enumerates_grouped_requirements
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A ticket grouping three requirements enumerates exactly those three AC ids."
+  - name: test_ticket_carries_no_signoffs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The generated grouping ticket has no per-phase or per-deliverable Sign-offs section of its own."
+  - name: test_signoffs_live_on_requirements_not_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Every feature sign-off is found on a grouped requirement, not on the ticket."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  CONCEPT B. The ticket is a grouping/scoping container. SUPERSESSION INTENT
+  (recorded, not applied here): replaces the premise of ACD-400b (generator produces
+  a fully WIRED ticket with a per-ticket agents map + sign-offs). Complements
+  ACD-1600a (thin ticket references its AC) -- ACD-1600a says the ticket does not
+  COPY the spec; this says the ticket is not the UNIT OF WORK at all.
+
+  IT-PO enrichment (2026-08-12): surface = generator scripts/ac_store/generate_ticket_from_ac.py;
+  added ac_store to graph components.

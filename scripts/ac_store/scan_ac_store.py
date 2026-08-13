@@ -229,11 +229,50 @@ def _is_dep_done(dep_id: str, id_index: dict[str, AcRecord]) -> bool:
     return dep_rec.get("work_status", "") == "done"
 
 
+def _get_ancestor_ids(ac_id: str) -> frozenset[str]:
+    """Return the set of all transitive ancestor AC ids for *ac_id*.
+
+    Walks the parent chain using :func:`derive_parent_id` applied iteratively
+    until the root (no parent) is reached. The AC id itself is not included.
+
+    This is a pure helper used by :func:`_classify_ac` to exclude an AC's own
+    hierarchy links from the blocking dependency set (ACD-400a-3). Because both
+    this function and :func:`derive_parent_id` are pure (no I/O, no shared
+    state), no try/except is applied (project Error Handling Policy Rule 4).
+
+    Args:
+        ac_id: The AC id whose ancestor set should be computed.
+
+    Returns:
+        Frozenset of ancestor AC id strings (parent, grandparent, …). Returns
+        an empty frozenset when *ac_id* is already a root-level id or is an
+        empty string.
+    """
+    ancestors: set[str] = set()
+    current = ac_id
+    while True:
+        parent = derive_parent_id(current)
+        if parent is None:
+            break
+        ancestors.add(parent)
+        current = parent
+    return frozenset(ancestors)
+
+
 def _classify_ac(
     ac: AcRecord,
     id_index: dict[str, AcRecord],
 ) -> tuple[str, list[str]]:
     """Classify *ac* as 'ready' or 'blocked' based on depends_on resolution.
+
+    Ancestor-aware: any entry in ``depends_on`` that is a transitive ancestor
+    of *ac* (i.e. reachable by walking :func:`derive_parent_id` upward from
+    *ac*'s own id) is excluded from the blocking set before the done-gate is
+    applied. Authoring agents routinely place an AC's parent-hierarchy link in
+    ``depends_on`` (e.g. L2 ``X-100a-1`` lists ``X-100a`` in ``depends_on``);
+    those links must never gate readiness because L0/L1 composites are never
+    built as leaves and never reach ``work_status: done``. Only genuine
+    non-ancestor ``depends_on`` entries may block an AC (ACD-400a-3).
 
     Args:
         ac: The AC record to classify.
@@ -242,9 +281,12 @@ def _classify_ac(
     Returns:
         A tuple ``('ready', [])`` or ``('blocked', [<blocking_dep_ids>])``.
     """
+    ac_id: str = ac.get("id") or ""
+    ancestors: frozenset[str] = _get_ancestor_ids(ac_id)
     depends_on: list[str] = ac.get("depends_on") or []
     blocking: list[str] = [
-        dep for dep in depends_on if not _is_dep_done(dep, id_index)
+        dep for dep in depends_on
+        if dep not in ancestors and not _is_dep_done(dep, id_index)
     ]
     if blocking:
         return "blocked", blocking
@@ -1009,5 +1051,16 @@ DECISION HISTORY
   build guard in goal_to_epic.py (CyclicDependencyError from
   topological_sort) is NOT weakened — it still hard-fails for intra-scope
   cycles (ACD-1200c-1-i preserved).
+- 2026-08-12 [TICKET-20260812-ACD-400a-3]: Ancestor-aware _classify_ac()
+  (ACD-400a-3). Added _get_ancestor_ids() pure helper that walks
+  derive_parent_id() iteratively to build the complete transitive ancestor
+  set for an AC id. Modified _classify_ac() to exclude any depends_on entry
+  that is a transitive ancestor of the AC being classified before applying
+  the done-gate. Authoring agents routinely place parent-hierarchy links in
+  depends_on (e.g. L2 X-100a-1 lists depends_on: [X-100a]); those links
+  must never gate readiness because L0/L1 composites never reach
+  work_status: done. Only genuine non-ancestor deps may block an AC.
+  Ancestor exclusion applies at any depth (grandparent, great-grandparent,
+  …). _get_ancestor_ids() is a pure function — no try/except (Rule 4).
 ====================================================================
 """

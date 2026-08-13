@@ -1,0 +1,91 @@
+id: BO-2800c
+components:
+  - build_orchestration
+  - review_system
+title: "Every time a check is overruled, it counts against that check"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Overrides are counted, so a check that mostly cries wolf can finally be dropped.
+
+  When a check blocks and the work goes ahead anyway, that override is recorded
+  against the check rather than left as a passing remark — so you can see how
+  often each check is wrong, and retiring one becomes an evidence-backed decision
+  instead of an argument nobody can win.
+depends_on:
+  - BO-2800
+  - BO-2800b
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Carries two override chokepoints: blocker routing and failure adjudication, and the manifest routing table's absent case, which proceeds as if all-true."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+    relevance: "Its cross-agent branch skips the blocked phase and breaks without re-raising the blocker — the automated override path."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: corrected the false claim that BO-2500d is unbuildable without this L1 and that retirement rules live in BO-2500d-1..4; consolidated the reference-doc L2 into the how-to."
+superseded_by: null
+covered_by:
+  - BO-2800c-1
+  - BO-2800c-2
+  - BO-2800c-3
+  - BO-2800c-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE DEFECT: when a check blocks and work proceeds regardless, the override is a
+  one-line prose note. Consequence, stated plainly: NO check's false-positive rate
+  is measurable, and therefore NO check can ever be retired. The set only grows.
+
+  An override must be attributed to the SPECIFIC check that was overruled, using
+  the problem-kind vocabulary BO-2800b establishes — an unattributed override
+  count is just a tally of frustration and cannot justify retiring anything. That
+  is why this L1 depends on BO-2800b rather than running in parallel with it.
+  Note that BO-2800b's signature is a problem-KIND identity; an override record
+  needs its own instance discriminator on top of it, or two firings of one rule on
+  one ticket collapse into one record. BO-2800c-1 carries that.
+
+  THERE IS NO SINGLE OVERRIDE CHOKEPOINT. A census found at least four places where
+  work proceeds past a blocking check, and only one of them is a human writing prose.
+  The automated cross-agent skip in the build workflow requires no human at all and is
+  the path most likely to dominate the count; the absent-manifest case fires on roughly
+  645 of 3,423 sign-off comments. Any L2 here that assumes one human-authored chokepoint
+  will measure a small and unrepresentative slice. See BO-2800c-1's notes for the full
+  census and for the one chokepoint deliberately excluded.
+
+  BOUNDARY, WITH ITS PREMISE CORRECTED 2026-08-13. Earlier revisions of these notes
+  claimed that BO-2500d "already carries four L2s of retirement criteria (BO-2500d-1..4)"
+  and "is unbuildable without this measurement". Both claims are false — a grep of the
+  whole BO-2500 tree for "override", "threshold" and "false positive" returns no relevant
+  hit, BO-2500d-1..4 are a static fast-lane / heavy-lane agent split, and all four are
+  already work_status: done. The threshold-to-action rules exist in no AC anywhere and
+  need a separate home that has not been authored yet. See the BO-2800 L0 notes.
+
+  The boundary itself still holds, on its own merits rather than by deferral: this L1
+  produces figures and does not decide what to do with them. An L2 here that specifies a
+  threshold for removing a gate, or names which gates to remove, is mixing measurement
+  with policy and makes the measurement unshippable. Reject it — but do not tell the
+  author it belongs in BO-2500d, because it does not; it belongs in a decision tree that
+  still has to be written.
+
+  Recording an override must not make overriding harder. This is a measurement
+  L1, not a governance L1: if capturing the override adds friction, operators
+  will stop declaring overrides and the last signal is lost — the same failure
+  mode recorded on BO-400d for the `failed` status value.

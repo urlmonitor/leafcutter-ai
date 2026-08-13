@@ -1,0 +1,90 @@
+id: ACD-1800c-5
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "The sign-off parity gate accepts AC-side sign-offs and requires no body Sign-offs section on a thin ticket"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a thin (v2) grouping ticket that carries no "## Sign-offs" section in its
+    body but whose grouped AC records carry AC-side per-deliverable sign-offs,
+  When the ticket sign-off parity validator runs,
+  Then the validator does NOT require a body "## Sign-offs" section for that ticket,
+  And it accepts the AC-side per-deliverable sign-offs as the sign-off record,
+  And the ticket passes the parity check;
+  And given a legacy fat ticket that carries a body "## Sign-offs" section listing the
+    needed agents as signed off,
+  When the same validator runs,
+  Then that fat ticket still passes, its body sign-offs honoured during the
+    dual-record window.
+depends_on:
+  - ACD-1800c
+  - ACD-1800c-1
+  - ACD-1800b-1a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "The AC-side per-deliverable sign-off record on the requirement: deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?}. The parity gate resolves this from the grouped ACs and accepts it in lieu of a body '## Sign-offs' section on a thin ticket."
+it_requirements:
+  - "Canonical source: templates/scripts/commit_guardian/check_ticket_signoff_parity.py and its helper templates/scripts/commit_guardian/_signoff_parity_checks.py (the deployed scripts/commit_guardian/ copies are build output per ADR-001; never hand-edit them). The parity validator MUST NOT require a body \"## Sign-offs\" section on a thin (v2) grouping ticket."
+  - "On a thin ticket with no body \"## Sign-offs\", the validator resolves the sign-off record from the grouped ACs' AC-side per-deliverable sign-offs (the deliverables[].signoff records defined in ACD-1800b-1a) and passes when they satisfy parity; a legacy fat ticket's body \"## Sign-offs\" MUST still be honoured during the dual-record window (dual-read, not replace)."
+  - "Reconcile this gate BEFORE it is promoted to required (ADR-026 rule 3) -- it closes the exact parity concern flagged in ACD-1800c-1's it_requirements (\"the ticket sign-off parity gate must not REQUIRE a ## Sign-offs section on a grouping ticket\"), else a thin ticket blocks every commit."
+  - "Gate/workflow AC (CLAUDE.md 'verify behaviorally, not by grep'): the test MUST EXECUTE the parity gate against a real thin ticket (AC-side sign-offs, no body ## Sign-offs) and a real legacy fat ticket and assert BOTH pass, plus a thin ticket with unresolvable/unmet AC-side sign-offs and assert it is BLOCKED (proving the verdict is not a fixed pass) -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_thin_ticket_with_ac_side_signoffs_passes_without_body_section
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the parity gate against a thin ticket that has no body '## Sign-offs' but whose grouped ACs carry AC-side per-deliverable sign-offs passes the parity check."
+  - name: test_legacy_fat_ticket_body_signoffs_still_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the same gate against a legacy fat ticket with a body '## Sign-offs' section listing needed agents signed off still passes (body sign-offs honoured during the dual-record window)."
+  - name: test_thin_ticket_with_unmet_ac_side_signoffs_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the gate against a thin ticket with no body '## Sign-offs' and unresolvable/unmet AC-side sign-offs is blocked, proving the verdict tracks the sign-off state and is not a fixed pass."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 2(a) from the independent v2 review. Canonical surface: the parity validator
+  templates/scripts/commit_guardian/check_ticket_signoff_parity.py (and its helper
+  _signoff_parity_checks.py). Placed under ACD-1800c because 1800c-1's it_requirements
+  already flag this exact gate parity concern ("the ticket sign-off parity gate must not
+  REQUIRE a ## Sign-offs section on a grouping ticket") and 1800c is "ticket carries no
+  sign-offs of its own". ACD-1800b moves per-deliverable sign-offs ONTO the AC (schema in
+  ACD-1800b-1a, hence depends_on) but nothing yet teaches the parity gate to accept AC-side
+  sign-offs during the dual-record window -- this closes that gap so a thin ticket is not
+  blocked for lacking a body ## Sign-offs section, while a legacy fat ticket's body sign-offs
+  are still honoured.
+  Per CLAUDE.md (gate/workflow ACs verify BEHAVIORALLY): the covering check MUST EXECUTE the
+  parity gate against a real thin ticket (AC-side sign-offs, no body ## Sign-offs) and a real
+  legacy fat ticket and assert both pass -- never grep-only. IT-PO to add it_requirements +
+  surface wiring.
+
+  IT-PO enrichment (2026-08-12): canonical source templates/scripts/commit_guardian/ (ADR-001;
+  deployed scripts/commit_guardian/ is build output). Behavioral test_spec executes the parity
+  gate on real thin + legacy-fat tickets (both pass) and an unmet thin ticket (blocked).

@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the AC store contains a three-level lineage:
     - L1 "Y-200a" (composite, work_status not done),
@@ -40,7 +40,9 @@ created: 2026-08-12
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- scripts/ac_store/scan_ac_store.py
+- unit_tests/ac_store/test_acd_400a_3.py
 test_spec:
   - name: test_grandparent_ancestor_does_not_block_leaf
     target_dir: unit_tests/ac_store/

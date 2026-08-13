@@ -1,0 +1,83 @@
+id: BO-2800a
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "Start from the evidence you have already been collecting"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The completion records you already keep become usable evidence.
+
+  Thousands of structured completion records are already stored with every piece
+  of finished work — what passed, what did not, and what was done about it — and
+  nothing has ever read them. This turns that existing history into the first
+  measurement of what your checks are actually catching, without waiting to
+  collect anything new.
+depends_on:
+  - BO-2800
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "§2b defines the completion_manifest block format (result / reason / remediation)."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "§2.2 defines the 'ok-with-false' downgrade this L1 must also count."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: collapsed the five-AC L2 set to BO-2800a-1 alone after two independent mining passes showed the yield is a static report over frozen history; moved the reference-doc trigger to BO-2800b-5."
+superseded_by: null
+covered_by:
+  - BO-2800a-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: |
+  The reference documentation for the mined completion-evidence record is written once,
+  under BO-2800b-5, not twice. The mined record IS the baseline that BO-2800b's defect
+  record extends, so documenting it separately here would produce two field lists for one
+  record that would then have to be kept in step by hand. BO-2800b-5's criteria absorb the
+  mined record's field list, its four input shapes, and the tolerate-absence statement.
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS FIRST: roughly 2,741 to 2,812 `completion_manifest:` blocks already sit in
+  git-tracked ticket Comments, carrying structured `result: false` / `reason` /
+  `remediation` triples. They are written, versioned, and entirely unread. This
+  is the cheapest available data source AND it validates the record schema that
+  BO-2800b will need — build it before anything that requires new instrumentation.
+
+  SIZE THIS L1 TO ITS MEASURED YIELD, NOT ITS BLOCK COUNT. Two reviewers independently ran
+  the mining pass. The corpus is real and parseable, but the signal in it is thin: on the
+  order of 9,400 true-valued items against roughly 113 nested-false, 56 bare-false and
+  66 ok-with-false occurrences, over frozen history that does not grow. This is one
+  one-shot report, which is why the L2 set is a single AC rather than five.
+
+  ALSO UNCOUNTED, AND IN SCOPE HERE: the `building-epics` "ok-with-false" downgrade,
+  where an agent signs off `ok` while still carrying failed manifest items. That is a
+  distinct signal from a plain failure — it is a check that fired, was recorded as
+  failed, and was then walked past. Count it separately; do not let it be flattened into
+  the generic false-valued-item count.
+
+  A FALSE VALUE IS NOT A CAUGHT DEFECT. Real items include
+  `high_confidence_blockers_found: false` and `escalation_triggered: false`, where false
+  is the desirable outcome, and intentional test-first red baselines recorded as
+  `result: false`. Item polarity is declared nowhere in the corpus. Any L2 under this L1
+  that reports a false-valued tally as a count of problems caught is wrong — see
+  BO-2800a-1.
+
+  Retrospective-only mining is explicitly acceptable for this L1 — no new
+  instrumentation, no change to how sign-offs are written. If an L2 proposes
+  changing the manifest format, that is scope creep: the format is the input,
+  not the deliverable.

@@ -1,0 +1,72 @@
+id: BO-2700f-2-i
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A run that halts leaves later gates with no entry, and the halt itself is recorded so the shortfall is explained"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a work item requests four quality gates — gate A, gate B, gate C and
+    gate D, in that order,
+    And the run halts after gate B's decision point and before gate C's,
+  When the recorded gate results are read,
+  Then gate A and gate B each have exactly one entry,
+    And gate C and gate D have zero entries, because the run never reached their
+      decision points,
+    And the recorded results carry a halt entry naming the gate the run stopped
+      at and the reason it stopped,
+    And a reader of the record can tell, from the record alone, that gate C and
+      gate D are unreached rather than silently dropped.
+
+  Given the same four requested gates and a run that halts after gate B,
+    And no halt entry is written,
+  When the recorded gate results are read,
+  Then the missing entries for gate C and gate D are reported as a defect, not
+    excused, because zero entries is legitimate only when the halt is itself
+    recorded.
+depends_on:
+  - BO-2700f-2
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch loop that can terminate early — where the halt record has to be emitted."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The workflow-step analogue, where zero recorded outcomes are legitimate only on a full-workflow halt."
+assigned_agent: null
+estimated_complexity: null
+it_requirements: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Split out of BO-2700f-2 on 2026-08-13 (expert review). In its parent the halt
+  case sat inside a Then block whose Given described a COMPLETED run, next to the
+  clause "no requested gate is left with zero entries" — a direct contradiction
+  that made neither clause testable.
+
+  WHY THE CARVE-OUT NEEDS ITS OWN NEGATIVE SCENARIO. Without the second scenario
+  the carve-out is an unbounded excuse: any missing entry can be attributed to a
+  halt nobody has to evidence, which reproduces the silence BO-2700f exists to
+  end. Pairing "no entry + halt recorded = legitimate" with "no entry + no halt
+  record = defect" is what makes the parent's count invariant enforceable rather
+  than advisory.
+
+  BOUNDARY vs the parent: BO-2700f-2 owns the completed run and asserts a COUNT.
+  This L3 owns the aborted run and asserts an EXPLANATION. An implementation that
+  satisfies one and not the other has not landed the guarantee.

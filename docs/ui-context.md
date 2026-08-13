@@ -1,73 +1,45 @@
 ---
-# docs/ui-context.md — the host app's UI source-of-truth POINTER file.
-#
-# This file holds NO token VALUES (no hex, no HSL channels, no font names, no
-# radius numbers). It holds POINTERS to the app's live sources so it can never go
-# stale: mockup-author, frontend-coder, and user-surface-smoker FOLLOW these
-# pointers to the real files and read the CURRENT values at run time.
-#
-# Host app: the Leafcutter Atlas (leafcutter-web/) — a Next.js (App Router) +
-# Tailwind app. This repo IS the host app (dogfooding).
+title: UI Context — pointers to the app's real design system
+components:
+- frontend_coding
 filled: true
 stack:
-  framework: next        # next | react | vue | svelte | flask | plain
-  css: tailwind          # tailwind | scss | css-modules | plain-css
-# The AUTHORITATIVE css/theme/token files, in priority order. Open each and read
-# the REAL current values (custom properties, theme mappings). Never snapshot.
+  framework: next
+  css: tailwind
 stylesheets:
-  - leafcutter-web/app/globals.css        # token SSOT — :root CSS custom properties + base layer
-  - leafcutter-web/tailwind.config.ts     # maps the custom properties onto Tailwind theme keys + radius scale
-# The dir whose class/prop idiom your markup should echo. kit.tsx is the shared
-# presentational primitive set (Panel / SectionHeader / Badge …).
+- leafcutter-web/app/globals.css
+- leafcutter-web/tailwind.config.ts
 component_library: leafcutter-web/components/ui/kit.tsx
-# Where the app declares/loads its fonts (follow the pointer to read the actual
-# families and the CSS-variable names they are exposed under).
 fonts: leafcutter-web/app/layout.tsx
-# Brand / style-guide / design-principle docs. Defaults to the shipped Claude
-# frontend-design convention (now embedded in the frontend-coder agent template).
-# Read for rules the raw tokens do not encode (density, states, brand voice).
 design_principles:
-  - templates/agents/frontend-coder.md                                  # the shipped frontend-design convention (embedded "Design Principles")
-  - templates/skills/frontend-design/SKILL.md                           # the same convention as a standalone reference doc
-  - docs/how-to/using-frontend-coder-with-design-integration.md         # how the convention is applied + overridden in this project
-# Optional external references (advisory only — never a token source).
+- templates/agents/frontend-coder.md
+- templates/skills/frontend-design/SKILL.md
+- docs/how-to/using-frontend-coder-with-design-integration.md
 brand_links:
-  - leafcutter-web/README.md   # the Atlas' own identity/overview + which repo it reads
-# ── Data layer & mock mode (ADR-022) ─────────────────────────────────────────
-# APP-SPECIFIC bindings a frontend agent needs to build/extend "mock mode" — the
-# real app running against bundled fixtures instead of live data. The mock-mode
-# CONCEPT is universal (env default -> runtime override -> optional prod lock; one
-# data-access seam swaps real->fixtures; a visible badge; a CI drift guard); only
-# the bindings below are per-app. Unlike the design pointers above these are
-# FACTS/bindings (a seam file+function, a fixtures dir, exact env/flag names) —
-# they ARE the contract the agent codes against, so they are NAMED here, not
-# pointed at. Another app fills its own.
+- leafcutter-web/README.md
 data_layer:
-  # The SINGLE file+function where real-vs-mock data resolution happens. One seam
-  # swaps the whole app at once; no per-page/per-loader mock branch exists.
-  data_access_seam: leafcutter-web/lib/data/repo.ts   # repoRoot() / repoPath()
-  # How loaders resolve paths: EVERY loader reads through repoPath(), so switching
-  # what repoRoot() returns swaps every view at once (whole-app by construction).
-  loaders_convention: "all loaders read paths through repoPath(); no loader carries its own mock branch"
-  # Where the bundled mock fixture repo lives, and the NATIVE on-disk formats it
-  # must mirror so the same loaders parse the fixtures unchanged.
+  data_access_seam: leafcutter-web/lib/data/repo.ts
+  loaders_convention: all loaders read paths through repoPath(); no loader carries
+    its own mock branch
   fixtures_dir: leafcutter-web/fixtures/
   fixtures_formats:
-    - "YAML — AC store (docs/acceptance-criteria/**, index.yaml)"
-    - "markdown — tickets (tickets/**)"
-    - "JSON — docs/roadmap.json, docs/components.json, config/agent_registry.json, docs/product-truth/{flows,mock-data,mockups}/**"
-  # The mock toggle. Resolution order is FIXED: prod lock > runtime override > env default.
+  - YAML — AC store (docs/acceptance-criteria/**, index.yaml)
+  - markdown — tickets (tickets/**)
+  - JSON — docs/roadmap.json, docs/components.json, config/agent_registry.json, docs/product-truth/{flows,mock-data,mockups}/**
   mock_toggle:
-    env_default: LEAFCUTTER_MOCK               # server env; =1 defaults mock ON, unset/0 = real
-    badge_flag: NEXT_PUBLIC_LEAFCUTTER_MOCK    # client-readable; drives the visible badge ONLY (never the authority for what is served)
-    runtime_override: "cookie or ?mock query-param"   # per-session in-app toggle; takes precedence over env_default
-    production_lock: LEAFCUTTER_MOCK_LOCK      # =real forbids all overrides -> guaranteed real data
-    resolution_order: "production_lock > runtime_override > env_default"
-  # Drift guard: fixtures are validated against the real schemas AND parsed through
-  # the same native-format loaders in CI, so mock output can never silently drift.
-  drift_guard: "CI validates each fixture against its real schema + parses it through its native-format loader"
+    env_default: LEAFCUTTER_MOCK
+    badge_flag: NEXT_PUBLIC_LEAFCUTTER_MOCK
+    runtime_override: cookie or ?mock query-param
+    production_lock: LEAFCUTTER_MOCK_LOCK
+    resolution_order: production_lock > runtime_override > env_default
+  drift_guard: CI validates each fixture against its real schema + parses it through
+    its native-format loader
+created: '2026-08-12'
+last_updated: '2026-08-12'
+type: tutorial
+status: active
+description: Overview of UI Context — pointers to the app's real design system.
 ---
-
 # UI Context — Leafcutter Atlas
 
 This is the single human-curated entry point to the Atlas' real design system.

@@ -1,0 +1,79 @@
+id: BO-2500e-2
+components:
+  - build_orchestration
+  - testing_quality
+title: "A passing front-end test run makes a JS-covered AC eligible to be marked done"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC whose only linked test is a "// covers:<id>" test in a .ts/.tsx file, and that
+    test passes when the JS test runner (vitest) executes it,
+  When the done-status of that AC is evaluated,
+  Then the oracle runs the JS test runner, observes the genuine pass, and reports the AC eligible
+    to be marked done,
+  So a real, passing front-end test counts as proof-of-done exactly like a passing Python test.
+depends_on:
+  - BO-2500e
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    done_proof_js_eligibility_verdict:
+      type: object
+      description: "Per-AC eligibility verdict for a JS-covered AC that is true only when the '// covers:<id>' test(s) genuinely pass under the JS test runner (vitest); the oracle actually invokes vitest and observes the pass rather than assuming it."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The oracle must invoke the JS test runner (vitest) with the leafcutter-web project config (leafcutter-web/vitest.config.ts) and observe a genuine pass of the '// covers:'-linked test(s) before reporting eligibility — a pass must never be assumed without running the runner."
+    - "Eligibility is the verdict only, not the work_status transition itself (the end-to-end mark-done is BO-2500e-4)."
+    - "A JS-covered AC must be treated identically to a Python-covered AC for eligibility: real passing test => eligible, mirroring BO-2500a-3."
+    - "The vitest invocation must be idempotent and complete within the fast-lane latency budget for a typical batch; scope the run to the linked tests where possible rather than the whole suite."
+delivers_to:
+  agent: python-coder
+  contract: "Per-AC JS eligibility verdict { ac_id, can_be_done, reason } derived from running vitest over the '// covers:'-linked tests; consumed by end-to-end mark-done (BO-2500e-4), the pre-commit hook (BO-2500e-5), and the CI gate (BO-2500e-6)."
+expects_from:
+  ac_id: BO-2500e-1
+  contract: "JS covers-tag linkage (ac_id -> [.ts/.tsx test locations]) from the shared extract_covers_tag seam that this eligibility verdict runs vitest against."
+test_spec:
+  - name: test_passing_vitest_makes_js_ac_eligible
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An active AC whose only linked test is a passing '// covers:<id>' vitest test is reported eligible to be marked done after the oracle runs vitest and observes the pass."
+  - name: test_oracle_actually_invokes_vitest
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Eligibility for a JS-covered AC is derived from an actual vitest invocation, not assumed without running the runner."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500e-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  L2 under BO-2500e. Mirrors BO-2500a-3 (present + passing linked test => eligible) but for the JS
+  runner. Eligibility is the verdict, not the transition itself (see BO-2500e-4 for the end-to-end
+  mark-done). IT-PO to confirm the vitest invocation contract and add it_requirements/test_spec.

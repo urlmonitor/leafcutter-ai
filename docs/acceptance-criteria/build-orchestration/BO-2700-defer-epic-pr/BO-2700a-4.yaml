@@ -1,0 +1,65 @@
+id: BO-2700a-4
+components:
+  - build_orchestration
+title: "The epic batch call site opts into PR deferral; the single-ticket call site does not"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given templates/workflows-js/build-feature.js wires the per-ticket phase driver
+    to the pure helper selectDispatchPhases(orderedPhases, isEpicMember),
+  When the epic batch loop drives an epic-member ticket through its phases,
+  Then it invokes the per-ticket driver so that selectDispatchPhases receives
+    isEpicMember=true for that ticket (the epic call site passes true),
+  And when the standalone single-ticket path drives a ticket,
+  Then it invokes the per-ticket driver without opting in, so selectDispatchPhases
+    receives the default isEpicMember=false (the single-ticket call site does not
+    pass true) and the single-ticket build still opens its own pull request.
+notes: |
+  This AC covers the call-site WIRING — which caller opts into PR deferral — as
+  opposed to the filtering behavior of selectDispatchPhases itself (BO-2700a-1/-2/-3).
+  Because build-feature.js is a Workflow-engine script that uses injected globals
+  (agent()/parallel()) and is not importable, this wiring is verified STRUCTURALLY:
+  a test parses the JS source (the pattern used by
+  unit_tests/workflows/test_fast_lane_ship_structure.py) and asserts (a) the epic
+  batch call site passes isEpicMember=true and (b) the single-ticket call site does
+  not. Pair with `node --check` and an independent runtime-path review, per the
+  CLAUDE.md workflow-AC caveat. The behavioral guarantee that the true/false inputs
+  produce the correct dispatch sets is carried by the executable ACs BO-2700a-1,
+  BO-2700a-2, and BO-2700a-3.
+depends_on: [BO-2700a]
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    Call-site wiring verification (structural, not behavioral): parse the JS source
+    of build-feature.js and assert (a) the epic batch loop call site passes
+    isEpicMember=true to selectDispatchPhases, and (b) the standalone single-ticket
+    call site does not. Pairs with `node --check` syntax validation.
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_bo_2700_defer_epic_pr.py
+implemented_by:
+- templates/workflows-js/build-feature.js
+change_target: pipeline
+risk_surface: internal

@@ -1,0 +1,85 @@
+id: ACD-1800d-1
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "A requirement records, per deliverable, the concrete artifact that delivered it, navigable both ways"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement with a code deliverable and a tests deliverable that have both
+    been produced,
+  When the requirement is inspected after the work is done,
+  Then the requirement records, for the code deliverable, the concrete artifact that
+    delivered it,
+  And it records, for the tests deliverable, the concrete artifact that delivered it,
+  And each recorded reference points at the canonical source per ACD-1600d,
+  And following the recorded reference connects the requirement to its delivering
+    artifact, and the artifact back to the requirement it satisfied.
+depends_on: [ACD-1800d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Each deliverable on a completed requirement must record the concrete artifact that delivered it (implemented_by at deliverable grain); the record must be navigable both ways (requirement->artifact and artifact->requirement)."
+  - "Each recorded reference MUST resolve to the canonical hand-edited source under templates/ or scripts/ per ACD-1600d -- never a build-output/deployed copy under .claude/ or the workspace-parent mirror. Reuse the ACD-1600d canonical-source resolver; do NOT inline a second copy (drift risk)."
+  - "Carry-forward + reframing of ACD-400b-2 (implemented_by back-reference) at AC/deliverable grain; ACD-400b-2 stays active and is not superseded."
+  - "Ship advisory (warn) before required, and grandfather schema_version < 2 (ADR-026 rules 3-4)."
+  - "Canonical source only: scripts/ac_store/ (the writer in generate_ticket_from_ac.py plus the resolver/validator); never a deployed copy."
+delivers_to:
+  agent: python-coder
+  contract: "Per-deliverable back-reference (implemented_by at deliverable grain) that resolves to canonical hand-edited source and is navigable both ways; consumed by the canonical-source edge case ACD-1800d-1-i."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "deliverables[] checklist items ({kind, craft}) that each per-deliverable back-reference attaches to."
+test_spec:
+  - name: test_code_deliverable_records_delivering_artifact
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A completed requirement records, for its code deliverable, the concrete artifact that delivered it."
+  - name: test_tests_deliverable_records_delivering_artifact
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A completed requirement records, for its tests deliverable, the concrete artifact that delivered it."
+  - name: test_backref_resolves_to_canonical_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Each recorded per-deliverable reference resolves to the canonical source per ACD-1600d, not a build-output copy."
+  - name: test_backref_navigable_both_ways
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Following the reference connects the requirement to its delivering artifact, and the artifact back to the requirement it satisfied."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1800d-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  CARRY-FORWARD + reframing of ACD-400b-2 (implemented_by back-reference). ACD-400b-2
+  stays ACTIVE and is not superseded; there the back-reference is a ticket path
+  written by the generator. This L2 reframes the guarantee at AC/deliverable grain
+  under the AC-as-unit-of-work model: the requirement records, per deliverable, the
+  artifact that delivered it. Points at the canonical source per ACD-1600d.
+
+  IT-PO enrichment (2026-08-12): writer + resolver surface in scripts/ac_store/
+  (generate_ticket_from_ac.py plus the shared ACD-1600d canonical-source resolver);
+  aligned with edge child ACD-1800d-1-i; added ac_store to graph components.

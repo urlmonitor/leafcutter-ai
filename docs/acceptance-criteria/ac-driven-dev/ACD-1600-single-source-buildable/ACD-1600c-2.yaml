@@ -1,0 +1,55 @@
+id: ACD-1600c-2
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "An AC carrying both file targets and a test contract is released to its builder"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given an AC that carries concrete file targets (it_requirements) and a test contract (a test_spec),
+  When the implementation-readiness gate evaluates it,
+  Then it is classified implementation-ready,
+  And it is eligible for dispatch to its assigned builder,
+  And no not-ready flag is raised against it.
+depends_on: [ACD-1600c, ACD-1600c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Canonical source to change: scripts/ac_store/scan_ac_store.py (the leaf-readiness/completeness gate; source-only Python)."
+  - "An AC that carries non-empty file targets (it_requirements) AND a test contract (test_spec, or test_required: false) must be classified implementation-ready and eligible for dispatch, with no not-ready flag raised."
+  - "A test contract is satisfied by either a non-empty test_spec or test_required: false — do not require test_spec when the AC is genuinely test-free (change_target docs/prompt)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-1
+  contract: "The implementation-readiness completeness gate: a classifier over (file targets present, test contract present)."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+test_spec:
+  - name: test_ac_with_targets_and_test_contract_is_ready
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An AC carrying file targets and a test contract is classified implementation-ready and eligible for dispatch."
+  - name: test_no_not_ready_flag_on_complete_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "No not-ready flag is raised against a complete AC."

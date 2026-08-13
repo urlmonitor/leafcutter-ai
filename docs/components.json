@@ -43,12 +43,17 @@
       "id": "agent_telemetry",
       "name": "Agent Telemetry",
       "type": "analysis",
-      "description": "Event emission and tracking for supervisor dispatch, agent sign-offs, and failure rates.",
+      "description": "Per-invocation telemetry: the JSONL emitter and its append-only sink, plus the read-side reports over that sink — the per-agent health table and the build-lane comparison report.",
       "detail_ref": "docs/architecture/components/agent-telemetry.md",
       "status": "active",
       "primary_code": [
-        ".claude/skills/agent-telemetry/scripts/emit_event.py"
-      ]
+        "scripts/agent-health/",
+        "scripts/agent-health/agent_telemetry.py",
+        "scripts/agent-health/generate_health_report.py",
+        "debugging/logs/agent_telemetry.jsonl"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "bootstrap_installer": {
       "id": "bootstrap_installer",
@@ -70,6 +75,7 @@
       "detail_ref": "docs/architecture/components/build-orchestration.md",
       "status": "active",
       "primary_code": [
+        "templates/workflows/build-feature.md",
         "templates/workflows-js/build-epic.js"
       ],
       "agent_affinity": [],
@@ -147,6 +153,23 @@
         "templates/agents/reference-author.md"
       ]
     },
+    "epic_retrospective": {
+      "id": "epic_retrospective",
+      "name": "Epic Retrospective",
+      "type": "analysis",
+      "description": "Post-epic fact extraction: reads a completed epic's ticket frontmatter, git history, and comment stream into a structured facts blob that grounds the retrospective-agent's narrative in measured evidence.",
+      "detail_ref": "docs/architecture/components/epic-retrospective.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/retrospective/",
+        "templates/agents/retrospective-agent.md"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": [],
+      "depends_on": [
+        "agent_telemetry"
+      ]
+    },
     "feedback_collector": {
       "id": "feedback_collector",
       "name": "Feedback Collector",
@@ -206,6 +229,15 @@
         "scripts/build_glossary.py",
         "docs/glossary.md"
       ]
+    },
+    "infrastructure": {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "type": "infrastructure",
+      "description": "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": []
     },
     "injection_builder": {
       "id": "injection_builder",
@@ -513,74 +545,6 @@
       "primary_code": [
         "scripts/worktree/"
       ]
-    },
-    "finalize": {
-      "id": "finalize",
-      "name": "Finalize",
-      "type": "orchestration",
-      "description": "ACs for the finalize-feature workflow.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/workflows-js/finalize-feature.js"
-      ]
-    },
-    "build_orchestration": {
-      "id": "build_orchestration",
-      "name": "Build Orchestration",
-      "type": "orchestration",
-      "description": "ACs for build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": [
-        "templates/workflows/build-feature.md",
-        "templates/workflows-js/build-epic.js"
-      ]
-    },
-    "infrastructure": {
-      "id": "infrastructure",
-      "name": "Infrastructure",
-      "type": "infrastructure",
-      "description": "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": []
-    },
-    "ux_prototyping": {
-      "id": "ux_prototyping",
-      "name": "UX Prototyping",
-      "type": "utility",
-      "description": "ACs for the UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": []
-    },
-    "persona_management": {
-      "id": "persona_management",
-      "name": "Persona Management",
-      "type": "analysis",
-      "description": "ACs for persona definitions, AC targeting by persona, and persona knowledge graph queries.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": []
-    },
-    "stakeholder_delivery": {
-      "id": "stakeholder_delivery",
-      "name": "Stakeholder Delivery",
-      "type": "utility",
-      "description": "ACs for stakeholder-facing delivery of product value: the presentation-agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": []
-    },
-    "ac_driven_dev": {
-      "id": "ac_driven_dev",
-      "name": "AC-Driven Development",
-      "type": "orchestration",
-      "description": "ACs for the AC-driven development pipeline: /plan-feature authoring, /build-ac selection and ticket generation, and the AC-first build loop that treats the AC store as the authoritative backlog.",
-      "detail_ref": null,
-      "status": "active",
-      "primary_code": []
     }
   }
 }

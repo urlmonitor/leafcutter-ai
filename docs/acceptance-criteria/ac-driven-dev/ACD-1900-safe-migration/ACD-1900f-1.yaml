@@ -1,0 +1,53 @@
+id: ACD-1900f-1
+components:
+  - ac_driven_dev
+title: "A consumer that upgrades the package and rebuilds keeps working"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_3_migration
+criteria: |
+  Given a consumer whose store is entirely in the old (v1) shape,
+  When the consumer upgrades the leafcutter package and runs build.py,
+  Then the build completes successfully,
+  And no v1 record in the consumer's store is rejected by the upgraded build.
+depends_on:
+  - ACD-1900f
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The dual-read resolver retained through the compatibility window so an all-v1 consumer store builds without rejection."
+it_requirements:
+  - "Canonical source: scripts/build.py / scripts/build_phases.py. A consumer whose store is entirely v1 that upgrades the package and runs build.py MUST have the build complete successfully with no v1 record rejected (backward compatibility via dual-read)."
+  - "Test must EXECUTE build.py end-to-end against an all-v1 consumer-sim store fixture and assert success + zero rejections -- never grep-only. Verify from the deployed layout, not the source tree."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_consumer_all_v1_store_build_succeeds
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "An all-v1 consumer store that upgrades the package and runs build.py completes the build successfully."
+  - name: test_no_v1_record_rejected_by_upgraded_build
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "No v1 record in the consumer's store is rejected by the upgraded build."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1900f-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

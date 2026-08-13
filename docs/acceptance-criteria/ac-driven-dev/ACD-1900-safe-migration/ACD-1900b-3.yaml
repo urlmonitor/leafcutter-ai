@@ -1,0 +1,57 @@
+id: ACD-1900b-3
+components:
+  - ac_driven_dev
+title: "A gate's verdict is driven by the resolved spec, never a fixed pass"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a gate running against a thinned ticket whose source_ac resolves to a store AC
+    whose criteria are deliberately unmet by the work under test,
+  When the gate executes,
+  Then the gate returns a blocking verdict because it consumes the resolved spec in
+    its control flow,
+  And when the same work is changed to satisfy the resolved criteria, the gate returns
+    ok -- proving the verdict tracks the resolved spec and is not a fixed pass.
+depends_on:
+  - ACD-1900b
+  - ACD-1900b-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The shared spec-resolution API returning the resolved-spec dict (store-first) that the gate consumes in its control flow to compute its verdict."
+it_requirements:
+  - "Canonical source: the gate script under scripts/commit_guardian/ (or scripts/ac_store/) plus the shared resolver in scripts/ac_store/generate_ticket_from_ac.py. The gate's verdict MUST be computed from the resolved spec in its control flow -- the resolved criteria must be a data input to the pass/block decision, not decorative."
+  - "Scope includes gate-bearing AGENT TEMPLATES, not only scripts: templates/agents/ac-fulfillment-gate.md and templates/agents/ac-validator.md exhibit the fixed-pass/skip risk (ac-fulfillment-gate returns ok when ac_traceability is absent). Their verdict must likewise track the resolved spec; a literal implementer must harden these template surfaces too, not just the .py gate. (See the dedicated fulfillment-gate migration AC for the absent-ac_traceability -> dual-read/blocker fix.)"
+  - "This is a gate/workflow AC: the test MUST execute the gate twice against the SAME resolved spec -- once with work that violates the resolved criteria (expect blocking verdict) and once with work that satisfies them (expect ok) -- proving the verdict tracks the resolved spec and is not a fixed pass. Grep-only tests are explicitly disallowed (they pass on dead code)."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/YAML I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_gate_blocks_when_resolved_criteria_unmet
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Executing the gate against work that violates the resolved store-AC criteria returns a blocking verdict."
+  - name: test_gate_ok_when_work_satisfies_resolved_criteria
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Executing the gate against work that satisfies the same resolved criteria returns ok, proving the verdict tracks the resolved spec (not a fixed pass)."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

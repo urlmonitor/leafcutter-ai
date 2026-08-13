@@ -1,0 +1,90 @@
+id: ACD-1800a-1
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "A requirement carries an explicit deliverable checklist naming each artifact's kind and responsible craft"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given a requirement that will change source code and must ship the tests and a
+    how-to update that go with it,
+  When the requirement is inspected,
+  Then the requirement carries an explicit deliverable checklist,
+  And the checklist enumerates one item per artifact the requirement needs -- a
+    code item, a tests item, and a how-to documentation item,
+  And each checklist item names its kind (one of code, tests, docs, diagram, or
+    config) and the craft responsible for producing it,
+  And the full scope of the requirement is readable from the checklist alone,
+    without consulting any other artifact.
+depends_on: [ACD-1800a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The deliverable checklist is a NEW additive AC-schema field (a list of items, each `{kind, craft}`). Declare it OPTIONAL in the canonical schema config/ac_store_schema.json; do NOT tighten additionalProperties until the store is 100% backfilled (ADR-026 safety rule 1)."
+  - "The `kind` value must be exactly one of {code, tests, docs, diagram, config}. Validate the enum at EVERY enforcement point that actually gates commits: scripts/commit_guardian/check_ac_schema.py plus its manual-validation fallback in scripts/commit_guardian/_ac_schema_validators.py (the load-bearing gate when jsonschema is absent), mirrored by the agent-side scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is a partial/no-op gate."
+  - "The `craft` attribute value must resolve to a real agent id in config/agent_registry.json; reject an unknown craft."
+  - "Tolerant reader: absence of the checklist (schema_version < 2) is legacy mode -- derive/skip, never fail (ADR-026 rule 4)."
+  - "Canonical source only: edit config/ac_store_schema.json and scripts/ac_store/*.py; never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001 / ADR-026)."
+delivers_to:
+  agent: python-coder
+  contract: "deliverables[] checklist field on the AC record: a list of {kind: code|tests|docs|diagram|config, craft: <agent_registry id>}; consumed by the checklist-vs-change-surface validator (ACD-1800a-2-i) and by the per-deliverable sign-off store (ACD-1800b-1a)."
+expects_from: null
+test_spec:
+  - name: test_deliverable_checklist_present_on_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "An AC with a code+tests+docs change surface exposes a non-empty deliverable checklist field."
+  - name: test_checklist_one_item_per_artifact_kind
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The checklist enumerates exactly one item for each artifact the requirement needs (code, tests, docs)."
+  - name: test_checklist_item_names_kind_and_craft
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Each checklist item carries a `kind` and a `craft` attribute."
+  - name: test_checklist_kind_enum_rejects_unknown_value
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A checklist item whose kind is not in {code,tests,docs,diagram,config} fails validation."
+  - name: test_checklist_craft_must_be_registry_agent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A checklist item whose craft is not an agent in agent_registry.json fails validation."
+origin_agent: BrainCandy
+created: 2026-08-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  CONCEPT A (part 1) -- the AC as a self-contained mini-ticket that enumerates its
+  own deliverables. Declaration/presence behaviour of ACD-1800a. Complements
+  ACD-1600a (ticket references the AC, no copy) and ACD-1600b (agents read the spec
+  from the store); does not duplicate ACD-1600c (buildable = concrete files + test
+  contract), which gates SPEC completeness -- this L2 is about the requirement
+  declaring the full set of DELIVERABLES.
+
+  IT-PO enrichment (2026-08-12): surface = AC-store schema (config/ac_store_schema.json)
+  + validators (scripts/ac_store/, scripts/commit_guardian/); added ac_store to the
+  graph components list so component_membership edges point at the code that implements
+  this. This is the normative deliverable-checklist model documented by ACD-1800a-3.

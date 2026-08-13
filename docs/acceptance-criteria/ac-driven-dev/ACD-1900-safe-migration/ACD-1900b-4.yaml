@@ -1,0 +1,47 @@
+id: ACD-1900b-4
+components:
+  - ac_driven_dev
+title: "Sequence diagram shows store-first, body-fallback, and halt branches"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the dual-read resolution path (store-first lookup, ticket-body fallback, and
+    halt when neither resolves),
+  When the sequence diagram for spec resolution is authored,
+  Then it shows the phase-agent or gate calling the resolver, the store-first branch,
+    the ticket-body fallback branch, and the halt-on-unresolvable branch,
+  And each branch in the diagram corresponds to an outcome a reader can reproduce by
+    running the resolver against the three inputs.
+depends_on:
+  - ACD-1900b
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900b-1
+  contract: "The implemented dual-read resolver (store-first, body-fallback, halt) whose three branches the diagram must accurately depict."
+it_requirements:
+  - "Canonical source: a sequence diagram under docs/architecture/ (Mermaid). Must show the phase-agent or gate calling the resolver, the store-first branch, the ticket-body fallback branch (ACD-1900b-2), and the halt-on-unresolvable branch (ACD-1900b-1-i)."
+  - "Each branch drawn must correspond to a reproducible outcome of running the resolver in scripts/ac_store/generate_ticket_from_ac.py against the three inputs (resolvable source_ac, body-only fat ticket, unresolvable ticket) -- the diagram must not depict a branch the code does not implement."
+test_required: false
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

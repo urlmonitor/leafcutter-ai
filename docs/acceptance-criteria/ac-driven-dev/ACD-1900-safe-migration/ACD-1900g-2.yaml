@@ -1,0 +1,58 @@
+id: ACD-1900g-2
+components:
+  - ac_driven_dev
+title: "The final cutover is refused unless every go/no-go criterion holds"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_acbuild_2_cutover
+criteria: |
+  Given the go/no-go criteria set (strict store validation = 0; 10 consecutive green
+    required-CI self-host merges under enforce: true; a full self-host epic
+    spot-checked on a real ticket in a fresh process; render comprehension test
+    passes; every gate script in the deploy-manifest; at least one consumer or
+    consumer-sim upgraded green; rollback rehearsed),
+  When the final legacy-removal cutover is evaluated and any single criterion is unmet,
+  Then the cutover is refused and the unmet criteria are named;
+  And when every criterion holds, the cutover is permitted.
+depends_on:
+  - ACD-1900g
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: ACD-1900g-1
+  contract: "The dogfood-precondition signal (recorded self-host epic) as one of the go/no-go criteria; the evaluator also reads the strict-validation, green-merge-count, spot-check, render, deploy-manifest, consumer-upgrade, and rollback-rehearsed signals."
+it_requirements:
+  - "Canonical source: the go/no-go cutover evaluator under scripts/ac_store/ (or scripts/). The evaluator MUST refuse the final legacy-removal cutover if ANY single criterion is unmet and name the unmet criteria; it permits the cutover only when every criterion holds (ADR-026 Go/No-Go section)."
+  - "Every criterion must be evaluated from a real signal source (strict store validation = 0; >=10 consecutive green required-CI self-host merges under enforce:true; a recorded fresh-process real-ticket spot-check; render comprehension test pass; every gate script present in scripts/build_phases.py deploy_map; >=1 consumer/consumer-sim upgraded green; rollback rehearsed) -- no criterion may be stubbed to a constant pass."
+  - "Test must EXECUTE the evaluator with each criterion independently unmet (expect refusal naming it) and with all met (expect permitted) -- never grep-only."
+  - "Must follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file/subprocess I/O in typed try/except and log-or-reraise; no bare except."
+test_spec:
+  - name: test_cutover_refused_when_any_criterion_unmet_names_unmet
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "When any single go/no-go criterion is unmet, the cutover is refused and the unmet criteria are named."
+  - name: test_cutover_permitted_when_all_criteria_hold
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "When every go/no-go criterion holds, the cutover is permitted."
+origin_agent: BrainCandy
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1900g-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

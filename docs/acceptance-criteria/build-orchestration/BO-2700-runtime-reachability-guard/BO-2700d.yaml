@@ -1,0 +1,42 @@
+id: BO-2700d
+components:
+  - build_orchestration
+  - testing_quality
+title: "Work that genuinely has no way in is handled honestly, not falsely blamed"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Legitimate exceptions are recorded on the record, never waved through silently.
+
+  Some work is only ever used by other work and has no way in of its own. That case
+  is recognised and allowed with a stated, visible reason, so the guard stays
+  trustworthy instead of crying wolf until somebody turns it off.
+depends_on:
+  - BO-2700
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Added by the product owner, not requested explicitly. Without a scoped, reviewable
+  exemption the reachability guard blocks every library/helper module and will be
+  disabled in practice. The exemption must be explicit and visible on the record —
+  never an implicit pass.
