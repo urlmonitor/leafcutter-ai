@@ -497,6 +497,7 @@ class TestValidateComponentMinimumSchemaAcs300g1(unittest.TestCase):
 
     def test_valid_entry_passes(self) -> None:
         """A fully valid component entry returns no errors."""
+        # covers: ACS-300g-1
         errors = _validate_minimum("my_component", _full_entry())
         self.assertEqual(errors, [], f"Unexpected errors: {errors}")
 
