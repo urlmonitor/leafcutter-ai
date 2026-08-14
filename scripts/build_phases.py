@@ -2215,6 +2215,152 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
+# ---------------------------------------------------------------------------
+# Agent-support script deploy spec (AC BP-900g-5)
+# ---------------------------------------------------------------------------
+# Scripts referenced by deployed agent and skill templates that had no deploy
+# phase and were therefore silently dead in every consumer install. They were
+# invisible to the reference guard until BP-900g-4 taught the extractor to see
+# output-root-form references.
+#
+# This is the SINGLE source of truth for the phase below and for
+# _manifest_agent_support_scripts() in build.py, which imports it. The two must
+# not be allowed to drift — a manifest that disagrees with what is actually
+# deployed is precisely the BP-900g-4 defect.
+#
+# Directories deploy recursively (every .py), which also carries sibling modules
+# an entry point imports. Single files list any same-directory module they load
+# at import time explicitly, because a missing one fails at runtime, not here.
+
+AGENT_SUPPORT_SCRIPT_DIRS: tuple[str, ...] = (
+    # changelog-agent.md, epic-supervisor.md, build-single-ticket/SKILL.md
+    "changelog",
+    # retrospective-agent.md
+    "retrospective",
+    # retrospective-agent.md — generate_health_report.py sits next to
+    # agent_telemetry.py, so the directory deploys as a unit.
+    "agent-health",
+)
+
+AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
+    # architect-review.md, architecture-diagram-author.md
+    "next_diagram_seq.py",
+    # roadmap-query/SKILL.md, roadmap-steward/SKILL.md
+    "roadmap_query.py",
+    # NOT referenced by any template directly, but roadmap_query.py loads it via
+    # importlib at MODULE SCOPE (spec_from_file_location against its own parent
+    # directory), so roadmap_query.py cannot even be imported without it.
+    "roadmap_query_audit.py",
+    # package-audit/SKILL.md
+    "package_audit.py",
+)
+
+
+def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
+                                dry_run: bool, force: bool) -> int:
+    """Deploy agent-support scripts to ``<target_root>/scripts/``.
+
+    Copies the directories in ``AGENT_SUPPORT_SCRIPT_DIRS`` (recursively, all
+    ``.py``) and the individual files in ``AGENT_SUPPORT_SCRIPT_FILES`` from the
+    package ``scripts/`` tree, preserving relative layout so that
+    ``scripts/<name>`` in a template resolves to the same path in the consumer
+    install.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-08-14 [BrainCandy/BP-900g-5]:
+    #   Added build_agent_support_scripts() phase, emptying KNOWN_UNDEPLOYED_ALLOWLIST.
+    #   Six agent capabilities (changelog-agent, retrospective-agent,
+    #   architect-review, the roadmap skills, package-audit) referenced scripts that
+    #   no phase deployed, so they failed at their first command in every consumer
+    #   install. Driven off a module-level spec that build.py's manifest helper
+    #   imports, so the deployed set and the declared set cannot diverge.
+    #   (#BP-900g-5)
+    """
+    scripts_src = PACKAGE_ROOT / "scripts"
+    written = 0
+
+    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
+        src_dir = scripts_src / dir_name
+        if not src_dir.is_dir():
+            _log.warning(
+                "build_agent_support_scripts: source directory not found, skipping: %s",
+                src_dir,
+            )
+            continue
+        for src_file in sorted(src_dir.rglob("*.py")):
+            rel = src_file.relative_to(scripts_src).as_posix()
+            written += _copy_agent_support_file(src_file, target_root, rel, dry_run, force)
+
+    for file_name in AGENT_SUPPORT_SCRIPT_FILES:
+        src_file = scripts_src / file_name
+        if not src_file.is_file():
+            _log.warning(
+                "build_agent_support_scripts: source script not found, skipping: %s",
+                src_file,
+            )
+            continue
+        written += _copy_agent_support_file(
+            src_file, target_root, file_name, dry_run, force
+        )
+
+    return written
+
+
+def _copy_agent_support_file(src_file: Path, target_root: Path, rel: str,
+                             dry_run: bool, force: bool) -> int:
+    """Copy one agent-support script to ``<target_root>/scripts/<rel>``.
+
+    Args:
+        src_file: Absolute path to the source script.
+        target_root: Absolute path to the target project root directory.
+        rel: Path of the script relative to the package ``scripts/`` directory.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites an existing file.
+
+    Returns:
+        1 when a file was written (or would be in dry-run mode), else 0.
+    """
+    output_path = target_root / "scripts" / rel
+
+    if not _should_overwrite(output_path, force):
+        return 0
+
+    if _files_content_identical(src_file, output_path):
+        global _uptodate_count  # noqa: PLW0603
+        _uptodate_count += 1
+        return 0
+
+    if dry_run:
+        print(f"  [DRY-RUN] would copy scripts/{rel}")
+        return 1
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_file, output_path)
+    except OSError as exc:
+        _log.warning(
+            "build_agent_support_scripts: failed to copy %s → %s: %s",
+            src_file,
+            output_path,
+            exc,
+        )
+        raise
+    print(f"  scripts/{rel}")
+    return 1
+
+
 def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
                                       dry_run: bool, force: bool) -> int:
     """Deploy build-orchestration scripts to ``<target_root>/scripts/build_orchestration/``.

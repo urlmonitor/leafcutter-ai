@@ -194,6 +194,42 @@ def test_extractor_does_not_capture_unrelated_prefixes(tmp_path: Path) -> None:
     )
 
 
+def test_extractor_does_not_capture_host_project_paths(tmp_path: Path) -> None:
+    """Host-project paths containing a ``scripts/`` component must NOT be captured.
+
+    Templates legitimately reference scripts belonging to the CONSUMER's project
+    (``python debugging/scripts/check/prod_status_check.py`` in status-checker.md)
+    and to the package-development tree (``python leafcutter/scripts/build.py``).
+    Neither is a leafcutter deliverable. Normalising them into ``scripts/...``
+    deploy keys would make the guard demand a deploy phase for a file that is not
+    ours, failing the build for every consumer — the EPIC-BuildGuardFalsePositive
+    failure mode. Only a dot-prefixed output root may precede ``scripts/``.
+    """
+    # covers: BP-900g-5
+    templates = tmp_path / "templates"
+    _write_template(
+        templates,
+        "synthetic_host_paths.md",
+        "python debugging/scripts/check/prod_status_check.py --action all\n"
+        "python leafcutter/scripts/build.py --target-dir .\n",
+    )
+
+    refs = _bri.extract_script_path_refs(templates)
+
+    assert "scripts/check/prod_status_check.py" not in refs, (
+        "extract_script_path_refs() captured 'scripts/check/prod_status_check.py' "
+        "from the host-project path 'debugging/scripts/check/prod_status_check.py'. "
+        f"Extracted: {sorted(refs)!r}. Only an output root (the "
+        "'{{config.output_root}}/' token or a dot-prefixed root like '.leafcutter/') "
+        "may precede 'scripts/' (AC BP-900g-5)."
+    )
+    assert "scripts/build.py" not in refs, (
+        "extract_script_path_refs() captured 'scripts/build.py' from the "
+        "package-development path 'leafcutter/scripts/build.py'. "
+        f"Extracted: {sorted(refs)!r} (AC BP-900g-5)."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tier 1b — fast_lane.py must be in the deployable manifest
 # ---------------------------------------------------------------------------
@@ -381,6 +417,106 @@ def test_deployed_fast_lane_actually_executes(tmp_path: Path) -> None:
         f"Deployed fast_lane.py returned {ids!r} for GE-113c-3. Expected the target "
         "plus its four L3 children, with the structural parent GE-113c excluded "
         "(AC BP-900g-4 / BO-2600a-4)."
+    )
+
+
+def test_known_undeployed_allowlist_is_empty() -> None:
+    """KNOWN_UNDEPLOYED_ALLOWLIST must stay empty.
+
+    BP-900g-5 emptied it. An entry means an agent or skill is shipping with a
+    command it cannot run, suppressed rather than fixed — so re-parking anything
+    here should be a visible, deliberate act that fails CI first.
+    """
+    # covers: BP-900g-5
+    import build_propagation_audit as _bpa
+
+    assert _bpa.KNOWN_UNDEPLOYED_ALLOWLIST == frozenset(), (
+        "KNOWN_UNDEPLOYED_ALLOWLIST is not empty: "
+        f"{sorted(_bpa.KNOWN_UNDEPLOYED_ALLOWLIST)!r}. Each entry is a leafcutter "
+        "script that a deployed agent or skill invokes but no build phase ships, so "
+        "that capability dies at its first command in a consumer install. Add the "
+        "script to build_agent_support_scripts' deploy spec instead of parking it "
+        "here (AC BP-900g-5)."
+    )
+
+
+def test_previously_undeployed_scripts_are_deployable() -> None:
+    """The six formerly-dead agent-support scripts must be in the deployable set."""
+    # covers: BP-900g-5
+    deployable = _build._get_source_deployable_scripts(_REPO_ROOT)
+
+    for expected in (
+        "scripts/changelog/emit_entry.py",
+        "scripts/next_diagram_seq.py",
+        "scripts/retrospective/extract_epic_facts.py",
+        "scripts/agent-health/generate_health_report.py",
+        "scripts/roadmap_query.py",
+        "scripts/package_audit.py",
+        # Not referenced by any template, but roadmap_query.py execs it at import.
+        "scripts/roadmap_query_audit.py",
+    ):
+        assert expected in deployable, (
+            f"_get_source_deployable_scripts() does not include {expected!r}. It is "
+            "invoked by a deployed agent or skill (or imported at module scope by one "
+            "that is), so it must be deployed (AC BP-900g-5)."
+        )
+
+
+def test_deployed_agent_support_scripts_import_cleanly(tmp_path: Path) -> None:
+    """Every newly-deployed agent-support script must IMPORT from the deployed tree.
+
+    Presence is not reachability — the lesson from ac_parent_id.py. roadmap_query.py
+    is the sharp case here: it execs roadmap_query_audit.py from its own directory at
+    module scope, so it is importable only if that sibling was deployed too.
+
+    Each script is imported in a fresh subprocess (not merely stat'ed), with the
+    deployed scripts directory on sys.path, so a missing dependency surfaces as the
+    ImportError a consumer would hit.
+    """
+    # covers: BP-900g-5
+    target_dir = tmp_path / "consumer"
+    target_dir.mkdir()
+
+    exit_code = _build.main(["--target-dir", str(target_dir)])
+    assert exit_code == 0, f"build.py --target-dir exited {exit_code!r}; expected 0."
+
+    output_root = _find_output_root(target_dir)
+    scripts_dir = output_root / "scripts"
+
+    targets = [
+        ("changelog/emit_entry.py", "emit_entry"),
+        ("next_diagram_seq.py", "next_diagram_seq"),
+        ("retrospective/extract_epic_facts.py", "extract_epic_facts"),
+        ("agent-health/generate_health_report.py", "generate_health_report"),
+        ("roadmap_query.py", "roadmap_query"),
+        ("package_audit.py", "package_audit"),
+    ]
+
+    failures: list[str] = []
+    for rel, mod_name in targets:
+        script_path = scripts_dir / rel
+        if not script_path.is_file():
+            failures.append(f"{rel}: not deployed")
+            continue
+        code = (
+            "import importlib.util,sys;"
+            f"s=importlib.util.spec_from_file_location({mod_name!r}, {str(script_path)!r});"
+            "m=importlib.util.module_from_spec(s);"
+            "sys.modules[s.name]=m;"
+            "s.loader.exec_module(m)"
+        )
+        proc = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, timeout=60
+        )
+        if proc.returncode != 0:
+            failures.append(f"{rel}: {proc.stderr.strip().splitlines()[-1:]}")
+
+    assert not failures, (
+        "Deployed agent-support scripts that do not import cleanly:\n  "
+        + "\n  ".join(failures)
+        + "\nThe file being present is not enough — a module it imports at import "
+        "time is missing from the deployed tree. Add that module to the deploy spec "
+        "in build_phases.AGENT_SUPPORT_SCRIPT_DIRS/FILES (AC BP-900g-5)."
     )
 
 
