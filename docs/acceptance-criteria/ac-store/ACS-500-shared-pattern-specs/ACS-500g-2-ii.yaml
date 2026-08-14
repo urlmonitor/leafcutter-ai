@@ -1,0 +1,73 @@
+id: ACS-500g-2-ii
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A how-to guide walks a reader from a noticed repetition to a referenced pattern"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a reader who has noticed the same behavior specified in three ACs and has
+    never promoted a pattern before,
+  When they follow the how-to guide for promoting a pattern,
+  Then the guide takes them through, in order: applying the four pattern-worthiness
+    rules, naming the slots, writing the parameterised body, writing the pattern
+    record, and converting the source ACs to reference it,
+  And the guide shows one worked example end to end, with the before state (three
+    standalone specs) and the after state (one pattern plus three references with
+    their bindings),
+  And the guide states how to run the store-wide retrospective sweep and how to
+    read its candidate list,
+  And the guide points at the authoring-patterns skill as the place the rules live
+    rather than restating the rules itself.
+depends_on: [ACS-500g-2, ACS-500g-1, ACS-500g-4, ACS-500g-5]
+doc_links:
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/promoting-a-shared-pattern.md
+    relationship: specifies
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Target path: docs/how-to/promoting-a-shared-pattern.md — the diataxis how-to genre, matching the existing docs/how-to/ family (ac-driven-development.md, ac-traceability-store.md). documentation-expert should delegate to how-to-author per its delegate-to-specialist pattern, since the guide exceeds five steps."
+  - "Satisfies the parent L1's documentation_triggers: [how-to]. This is the only documentation AC in the ACS-500g batch; without it the S7b documentation gate blocks the batch."
+  - "Frontmatter must satisfy the check-doc-frontmatter hook (title, type/doc_type, created/updated dates in the project's format) — a docs/how-to/ page with missing or malformed frontmatter is rejected at commit time."
+  - "NO RULE VALUES IN THE GUIDE. The guide must not state the recurrence threshold number, the slot-expressible-variance test, the genuine-vs-incidental test, or the slot naming rules. It links to templates/skills/authoring-patterns/SKILL.md. Restating any of them makes the guide a second copy that drifts, and is exactly what ACS-500g-3-i's gate is designed to reject."
+  - "The worked example must use the real store's field names and real on-disk shapes: pattern_slots entries as '{word}' strings, implements_pattern as the pattern AC id, pattern_bindings as one key per declared slot. A hand-invented shape teaches readers a format the commit hooks reject."
+  - "Sequence the guide against the real command surface: the sweep is run by dispatching the pattern-steward agent, and its candidate list is read from the report artifact under reports/pattern-candidates/ (ACS-500g-1-i). Name the actual invocation, not a placeholder."
+  - "Add the new page to the docs index the check-doc-links / doc-index transform maintains, so the link graph stays complete."
+delivers_to:
+  agent: documentation-expert
+  contract: "docs/how-to/promoting-a-shared-pattern.md — promotion end to end (four rules by reference, slot naming, parameterised body, pattern record, source-AC conversion, running the sweep and reading its candidate list), with one before/after worked example and no restatement of the rules themselves."
+expects_from:
+  - ac_id: ACS-500g-2
+    contract: "templates/skills/authoring-patterns/SKILL.md, so the guide can link to the four rules instead of duplicating them."
+  - ac_id: ACS-500g-5
+    contract: "The retrospective sweep and the shape of its ranked candidate report, so the guide can describe how to run it and how to read the output."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+notes: |
+  Satisfies the parent L1's documentation_triggers: [how-to]. Authored as an L3
+  under ACS-500g-2 rather than a direct L1 child so ACS-500g stays within the
+  seven-child cap.

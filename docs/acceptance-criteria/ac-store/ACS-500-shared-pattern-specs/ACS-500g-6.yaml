@@ -1,0 +1,106 @@
+id: ACS-500g-6
+components:
+  - ac_store
+readiness: approved
+priority: critical
+title: "The first pattern produced is the three-round seeded-gap agent-evaluation protocol"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the pattern capability has produced no patterns yet,
+  When the first pattern is authored,
+  Then it is the agent-evaluation protocol — a parameterised specification for
+    verifying that a newly built or modified agent actually does a good job,
+  And it declares at least three slots: one naming the agent under test, one naming
+    the task set or fixtures used for each of the three rounds, and one naming the
+    known-missing items each round's fixtures deliberately contain,
+  And its parameterised body specifies three rounds, each round giving the agent
+    under test a task drawn from that round's task set,
+  And each round's task material contains deliberately seeded gaps or defects whose
+    correct answers are recorded before the round is run,
+  And each round scores the agent solely on which of that round's recorded seeded
+    items it reports,
+  And a run of the protocol is instantiated purely by supplying values for the
+    declared slots — the three-round structure itself is not restated per agent.
+depends_on: [ACS-500g, ACS-500g-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_pattern_refs.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: governs
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+assigned_agent: business-analyst
+estimated_complexity: M
+it_requirements:
+  - "The deliverable is an AC-STORE RECORD, not code: a new pattern AC YAML in docs/acceptance-criteria/ac-store/ authored by business-analyst (the agent that owns Gherkin criteria bodies). It is not a package artifact, so neither workflow-architect nor llm-expert applies here."
+  - "Slot format is fixed by config/ac_store_schema.json: pattern_slots is a uniqueItems array of '{word}' placeholder STRINGS with braces. Declare at least three — {agent_under_test}, {round_task_sets}, {round_seeded_items} — and place each verbatim as a placeholder in the criteria body (the ACS-500g-2-i both-places rule)."
+  - "Multi-value slots: the per-round task sets and per-round seeded items each carry three values (one per round). pattern_bindings values may be arrays (schema: 'Values may be strings, arrays, or objects'), so bind them as three-element arrays rather than inventing three separate slots per round — one slot per independently varying value is ACS-500g-2 rule 4."
+  - "The three-round structure, the seeded-gap mechanic and the scoring rule are written LITERALLY in the parameterised body (they do not vary). Only the three slot values vary. A per-agent restatement of the structure violates the criteria's last clause and is what the pattern exists to prevent."
+  - "The record must be recognised as a pattern by the DEPLOYED predicate _has_parameterized_slots in templates/scripts/commit_guardian/check_ac_pattern_refs.py. Satisfy both limbs (non-empty pattern_slots AND placeholders in criteria) so the business-analyst §1 Step 7 inventory scan and the commit hook both see it."
+  - "Do NOT set implements_pattern on this record — it is the pattern, not a consumer. Its first consumer is ACS-500g-7."
+  - "INTEGRATION CONFLICT TO RECONCILE (raised as a caveat, not silently absorbed): the repo already has an agent-evaluation harness at scripts/evals/ (run_agent_eval.py, eval_selector.py, agent_eval_config.json) that scores by a FRACTIONAL threshold — pt-classifier is configured at 0.7. The all-or-nothing rule in ACS-500g-6-i contradicts that regime. The pattern must state which regime governs and, if the harness is to enforce it, a seeded_gap scoring mode with threshold 1.0 and per-round verdicts is required — that is a python-coder change this docs AC does not cover. Flag it rather than assuming the harness already behaves this way."
+  - "This pattern is the project's agent-quality gate, so it must be instantiable for the pattern-steward built in ACS-500g-1 — check the slot set against that concrete case before finalising."
+delivers_to:
+  - agent: business-analyst
+    contract: "The agent-evaluation protocol as the store's FIRST pattern AC: pattern_slots ['{agent_under_test}', '{round_task_sets}', '{round_seeded_items}'] (at minimum), each present as a {word} placeholder in a criteria body that states the three-round seeded-gap structure literally. Consumed by ACS-500g-7 via implements_pattern."
+  - agent: llm-expert
+    contract: "A non-empty pattern inventory — the first record that makes the business-analyst §3a pattern-first check return a match instead of empty, ending the cold start."
+expects_from:
+  ac_id: ACS-500g-2
+  contract: "The slot naming/scope rules and the parameterised-criteria authoring rule from templates/skills/authoring-patterns/SKILL.md, including the both-places slot declaration rule from ACS-500g-2-i."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500g-6-i, ACS-500g-6-ii, ACS-500g-6-iii]
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+test_spec:
+  - name: test_agent_eval_pattern_is_recognised_by_the_deployed_predicate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Load the real agent-evaluation pattern AC from the on-disk store and call check_ac_pattern_refs._has_parameterized_slots on it; assert True — executes the same predicate the commit hook and the BA inventory scan run, against the real artifact."
+  - name: test_agent_eval_pattern_declares_slots_in_both_places
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Run the {word} placeholder regex over the real record's criteria and compare both directions against pattern_slots; assert every declared slot appears as a placeholder and every placeholder is declared."
+    covers:
+      - ACS-500g-6
+      - ACS-500g-2-i
+  - name: test_agent_eval_pattern_declares_the_three_required_slots
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Assert the real record declares at least three slots covering the agent under test, the per-round task sets, and the per-round seeded items."
+  - name: test_agent_eval_pattern_is_not_itself_a_consumer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Assert the pattern record leaves implements_pattern unset and pattern_bindings empty — a pattern that references another pattern would break the producer/consumer distinction this AC establishes."
+notes: |
+  Deliberate dogfooding. This is simultaneously (1) the first real pattern the
+  producer half emits — proving the mechanism end to end with real slots and a
+  real consumer (ACS-500g-7) — and (2) the project's agent-quality gate: no new
+  or modified agent is treated as verified until it has been run through this
+  protocol. Slot names are described in prose here rather than written as
+  placeholders so this requirement AC is not itself mistaken for a pattern
+  record.

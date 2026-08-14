@@ -1,0 +1,49 @@
+id: BP-015
+components:
+  - build_pipeline
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: high
+work_status: done
+title: "Worktree bootstrap provisions .env even when the checkout already contains one"
+origin_agent: BrainCandy
+created: 2026-08-14
+criteria: |
+  Given a new git worktree has been created by scripts/setup_ticket_worktree.py,
+  And the worktree checkout already contains a `.env` entry at its root
+    (`.env` is a tracked file in this repository, and has historically been
+    committed as a symlink pointing at the main repo's absolute `.env` path),
+  When _bootstrap() provisions the worktree's `.env`,
+  Then any pre-existing `.env` entry at the worktree root is removed before the
+    new one is created,
+  And the worktree ends up with a usable `.env` resolving to the main repo's
+    `.env` contents,
+  And bootstrap does not abort with FileExistsError from os.symlink,
+  And bootstrap does not abort with shutil.SameFileError from the copy fallback
+    when the pre-existing entry resolves to the same path as the source,
+  And a pre-existing entry that is a broken or self-referential symlink is
+    removed without following it.
+depends_on: []
+doc_links:
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+covered_by:
+  - "unit_tests/test_setup_ticket_worktree.py"
+implemented_by:
+  - scripts/setup_ticket_worktree.py
+  - templates/scripts/setup_ticket_worktree.py
+change_target: code
+risk_surface: internal
+notes: >-
+  Authored by /quick-fix. Root cause: _bootstrap() called os.symlink(env_src,
+  env_dst) without first clearing env_dst. A checked-out `.env` symlink made
+  os.symlink raise FileExistsError, and the copy fallback then raised
+  SameFileError because env_dst resolved to env_src — so every fresh worktree
+  failed to bootstrap. Observed 2026-08-13 while bootstrapping a scratch
+  worktree during the AC-store scanner work.

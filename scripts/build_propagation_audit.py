@@ -117,6 +117,36 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     "scripts/feedback/resolve_feedback.py",
 ])
 
+# ---------------------------------------------------------------------------
+# Known-undeployed allowlist (AC BP-900g-4, emptied by BP-900g-5) — KEEP EMPTY
+# ---------------------------------------------------------------------------
+# These are NOT external dependencies. An entry here is a leafcutter script that
+# exists in the package source, is referenced by a deployed agent or skill, and
+# has no deploy phase — so the capability is silently dead in a consumer install.
+#
+# It is kept separate from EXTERNAL_DEPENDENCY_ALLOWLIST so the distinction stays
+# legible: that set means "legitimately not ours to deploy", this one means
+# "our bug, seen, not yet fixed".
+#
+# BP-900g-4 populated it with the references that widening the extraction pattern
+# made visible. BP-900g-5 emptied it: six of those now deploy via
+# build_agent_support_scripts(), and the seventh
+# (debugging/scripts/check/prod_status_check.py in status-checker.md) turned out
+# not to be a leafcutter script at all — it is a HOST-project path that the
+# then-too-permissive prefix had mis-normalised into a scripts/... deploy key. The
+# prefix now requires a dot-prefixed output root, so it is no longer captured.
+#
+# This set is empty and must stay empty. Adding an entry is a regression, not a
+# fix: it means shipping an agent that cannot run. Deploy the script instead.
+
+KNOWN_UNDEPLOYED_ALLOWLIST: frozenset[str] = frozenset()
+
+# The guard treats both sets as resolved. They are unioned rather than merged so
+# that emptying KNOWN_UNDEPLOYED_ALLOWLIST is a self-contained change.
+_RESOLVED_ALLOWLIST: frozenset[str] = (
+    EXTERNAL_DEPENDENCY_ALLOWLIST | KNOWN_UNDEPLOYED_ALLOWLIST
+)
+
 # Regex to extract script basename from entries like:
 #   python scripts/commit_guardian/check_foo.py [args...]
 _ENTRY_RE = re.compile(r"scripts[/\\]commit_guardian[/\\]([\w.]+\.py)")
@@ -198,7 +228,7 @@ def check_broken_references(
         templates but neither deployed nor allowlisted. An empty set means all
         references are accounted for and the build may exit zero.
     """
-    effective_allowlist = EXTERNAL_DEPENDENCY_ALLOWLIST if allowlist is None else allowlist
+    effective_allowlist = _RESOLVED_ALLOWLIST if allowlist is None else allowlist
     resolved = deployed_scripts | effective_allowlist
     return refs - resolved
 
@@ -345,7 +375,7 @@ def build_broken_ref_report(
         List of ``BrokenRefEntry`` instances, one per unique missing script
         path. An empty list means all references are accounted for.
     """
-    effective_allowlist = EXTERNAL_DEPENDENCY_ALLOWLIST if allowlist is None else allowlist
+    effective_allowlist = _RESOLVED_ALLOWLIST if allowlist is None else allowlist
     resolved = deployed_scripts | effective_allowlist
     entries: list[BrokenRefEntry] = []
     for script_path, source_templates in refs_to_sources.items():

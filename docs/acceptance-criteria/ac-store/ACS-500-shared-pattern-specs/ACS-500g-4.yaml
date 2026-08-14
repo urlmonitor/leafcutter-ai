@@ -1,0 +1,78 @@
+id: ACS-500g-4
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "Recurrence noticed while authoring is promoted in that same authoring run"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an author is writing a new AC for "every write records who changed the row
+    and when",
+  And the pattern-first check for that behavior returns no match because no pattern
+    for it exists,
+  And two ACs already in the store specify that same behavior standalone,
+  And the shared rules set the recurrence threshold at 3 occurrences,
+  When the AC being written becomes the third occurrence,
+  Then a pattern for the behavior is produced during that same authoring run,
+    before the new AC is written,
+  And the new AC is written referencing that pattern with a binding for every slot
+    it declares, instead of a standalone body restating the behavior,
+  And the two earlier ACs are reported as convertible, naming their ids, and are
+    left unchanged until that conversion is approved,
+  And the authoring run does not end with the behavior specified standalone in
+    three places.
+depends_on: [ACS-500g, ACS-500g-2, ACS-500g-3]
+doc_links:
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "GAP RESOLUTION (agent assignment): reassigned from workflow-architect to llm-expert. The deliverable is a new in-run promotion step inside templates/agents/business-analyst.md §3a — llm-expert's owned surface and its explicit selection trigger. workflow-architect is is_ticket_phase:false and cannot be dispatched as a ticket phase."
+  - "Insertion point is precise: templates/agents/business-analyst.md §3a step 3 ('If no matching pattern is found'). Today that branch writes a standalone AC and merely FLAGS a reuse candidate to the user after the fact. This AC converts the flag into an in-run promotion decision. Do not add a fifth branch — extend step 3."
+  - "The threshold that fires the promotion (3) is read from templates/skills/authoring-patterns/SKILL.md. The BA template must not state the number — ACS-500g-3-i's gate rejects it, and ACS-500g-3 is concurrently deleting the existing 'two or more pages' copy from this same step."
+  - "Counting rule must be explicit about what the third occurrence is: the two already-stored ACs plus the AC currently under authoring. The in-run count therefore includes an AC that does not yet exist on disk — state that, or an implementer will count only committed files and never reach 3."
+  - "ORDERING IS LOAD-BEARING: the pattern record is written BEFORE the new AC. The new AC then sets implements_pattern to the pattern's id with one pattern_bindings key per declared slot. Writing the consuming AC first produces a commit that check_ac_pattern_refs rejects (implements_pattern referencing a non-existent id)."
+  - "The two earlier ACs are reported as convertible and left byte-for-byte unchanged until approval — the same no-rewrite invariant as ACS-500g-1-i. Report their ids in the BA's assumptions log; do not edit them in the authoring run."
+  - "The new pattern record must satisfy the both-places slot rule from ACS-500g-2-i (declared in pattern_slots AND present as a {word} placeholder in criteria) so the very next pattern-first check can see it."
+  - "The consuming AC's criteria must not restate the pattern body — check_ac_schema's validate_criteria_not_pattern_duplicate rejects a consuming AC that duplicates its pattern's criteria. Write only what is specific to this AC."
+  - "Editing templates/agents/business-analyst.md sits inside an eval trigger closure; run `python scripts/evals/eval_selector.py --check --changed-files templates/agents/business-analyst.md` and refresh the affected eval result, or check-eval-staleness blocks the commit."
+  - "Prompt-only AC: verified through the ACS-500g-3-i gate (no rule-value copy) and the ACS-500g-6/-7 agent evaluation, not by unit tests."
+delivers_to:
+  - agent: llm-expert
+    contract: "An in-run promotion step extending templates/agents/business-analyst.md §3a step 3: when the pattern-first check misses but the skill's recurrence rule is met counting the AC under authoring, write the pattern first, then write the AC with implements_pattern plus one binding per slot, and report the earlier occurrences as convertible without editing them."
+  - agent: business-analyst
+    contract: "A pattern record written mid-run that satisfies both detection predicates, so the next pattern-first check in the same or a later run matches it."
+expects_from:
+  - ac_id: ACS-500g-3
+    contract: "The single-source arrangement — the BA reads the recurrence threshold from the authoring-patterns skill, so the in-run promotion trigger uses the same value the store-wide scan uses."
+  - ac_id: ACS-500g-2
+    contract: "The slot naming and parameterised-criteria rules used to shape the pattern record produced mid-run."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500g-4-i]
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+test_required: false
+notes: |
+  Half (a) of the L1's two halves — ONGOING promotion. Keeps the inventory
+  growing as new requirements are written. Distinct from half (b), the
+  retrospective sweep (ACS-500g-5), and distinct from the consumer-side
+  detect-and-link behavior of ACS-500c.
