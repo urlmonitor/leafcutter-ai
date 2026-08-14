@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -68,7 +68,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BO-2500e-4-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260812-BO-2500e-4.md
 change_target: pipeline
 risk_surface: internal
 notes: |

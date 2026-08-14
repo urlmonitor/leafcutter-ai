@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 criteria: |
   Given an acceptance criterion referenced by two or more steps or branches in the same flow,
   When the feature-level "N/M ACs done" rollup is computed,

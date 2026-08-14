@@ -801,6 +801,10 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # fast-lane green+coverage gate; it MUST deploy or the (required) CI
         # done-proof check crashes with ModuleNotFoundError in the deployed layout.
         (ac_store_src / "done_proof.py",                "done_proof.py"),
+        # test_enforcement.py is imported by done_proof.py (shared COVERS_TAG_RE seam,
+        # BO-2500e-1).  It MUST deploy alongside done_proof.py — if absent, the
+        # deployed check_done_proof hook crashes with ModuleNotFoundError at runtime.
+        (ac_store_src / "test_enforcement.py",          "test_enforcement.py"),
         # ac_parent_id.py provides derive_parent_id, imported at module scope by
         # scripts/build_orchestration/fast_lane.py. Without it the deployed
         # fast_lane.py exists but dies at import with ModuleNotFoundError, so

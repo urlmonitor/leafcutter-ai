@@ -71,7 +71,14 @@ try:
     if str(_ac_store) not in sys.path:
         sys.path.insert(0, str(_ac_store))
     from done_proof import verify_done_eligible
+    # Import the shared covers-tag seam (BO-2500e-1) — handles both
+    # Python "# covers:" and JavaScript/TypeScript "// covers:".
+    from test_enforcement import COVERS_TAG_RE
 except (ImportError, ModuleNotFoundError):
+    # Fallback: define the unified regex locally when test_enforcement is absent
+    # (e.g. in a templates/ source layout with no deployed ac_store neighbour).
+    COVERS_TAG_RE = re.compile(r"(?:#|//)\s*covers:\s*(\S+)")
+
     def verify_done_eligible(*args, **kwargs):
         """Lazy shim used when done_proof is not importable at module load.
 
@@ -104,7 +111,19 @@ def _load_verify_done_eligible():
 
     return verify_done_eligible
 
-_COVERS_TAG_RE = re.compile(r"#\s*covers:\s*(\S+)")
+# Directory names excluded from all test-file scanning (both .py and .ts/.tsx).
+# Prevents traversal into node_modules and other non-test subtrees.
+_EXCLUDED_SCAN_DIRS: frozenset[str] = frozenset(
+    {
+        "node_modules",
+        ".next",
+        "dist",
+        "coverage",
+        ".git",
+        "__pycache__",
+        ".venv",
+    }
+)
 
 # Default paths relative to the project root (used in main() when no explicit
 # --ac-root / --test-root argument is supplied).
@@ -120,35 +139,52 @@ _DEFAULT_TEST_ROOT = "unit_tests"
 def _collect_all_covered_ids(test_root: Path) -> set[str]:
     """Scan *test_root* recursively and return all AC ids referenced in covers tags.
 
-    Reads every ``*.py`` file under *test_root* and extracts the id from every
-    ``# covers: <id>`` comment line.  Unreadable files are logged and skipped.
+    Reads every ``*.py``, ``*.ts``, and ``*.tsx`` file under *test_root``, extracting
+    the id from every ``# covers: <id>`` (Python) or ``// covers: <id>``
+    (TypeScript/JavaScript) comment line.  Uses the shared :data:`COVERS_TAG_RE`
+    seam (BO-2500e-1) so both syntax forms are recognised.
+
+    Directories named ``node_modules``, ``.next``, ``dist``, ``coverage``,
+    ``.git``, ``__pycache__``, and ``.venv`` are excluded from traversal.
+
+    This is a STATIC presence-only scan — no tests are run.  Unreadable files
+    are logged to stderr and skipped.
 
     Args:
-        test_root: Root directory to search recursively for ``*.py`` files.
+        test_root: Root directory to search recursively for test files.
 
     Returns:
-        Set of AC id strings found in ``# covers:`` comments.  Empty set when
-        *test_root* does not exist or contains no readable Python files.
+        Set of AC id strings found in ``covers:`` comments.  Empty set when
+        *test_root* does not exist or contains no readable test files.
     """
     covered: set[str] = set()
     try:
         py_files = sorted(test_root.rglob("*.py"))
+        ts_files = sorted(test_root.rglob("*.ts"))
+        tsx_files = sorted(test_root.rglob("*.tsx"))
     except OSError as exc:
         print(
             f"WARNING: check_done_proof: cannot scan {test_root}: {exc}",
             file=sys.stderr,
         )
         return covered
-    for py_file in py_files:
+
+    all_test_files = (
+        [f for f in py_files if not any(p in _EXCLUDED_SCAN_DIRS for p in f.parts)]
+        + [f for f in ts_files if not any(p in _EXCLUDED_SCAN_DIRS for p in f.parts)]
+        + [f for f in tsx_files if not any(p in _EXCLUDED_SCAN_DIRS for p in f.parts)]
+    )
+
+    for test_file in all_test_files:
         try:
-            text = py_file.read_text(encoding="utf-8")
+            text = test_file.read_text(encoding="utf-8")
         except OSError as exc:
             print(
-                f"WARNING: check_done_proof: cannot read {py_file}: {exc}",
+                f"WARNING: check_done_proof: cannot read {test_file}: {exc}",
                 file=sys.stderr,
             )
             continue
-        for match in _COVERS_TAG_RE.finditer(text):
+        for match in COVERS_TAG_RE.finditer(text):
             covered.add(match.group(1))
     return covered
 
@@ -198,8 +234,62 @@ def _get_staged_ac_yaml_paths(project_root: Path) -> list[Path]:
             file=sys.stderr,
         )
         return []
+
+    staged_lines = proc.stdout.splitlines()
+
+    # Merge commits: a merge stages the ENTIRE incoming branch, so this
+    # PRE-COMMIT presence check would demand a covers tag for every done AC the
+    # other side carries — including ones already marked done there without a
+    # discoverable tag. The merge inherits those byte-for-byte and can neither
+    # improve nor worsen them, so blocking here only makes merging impossible.
+    # Narrow to files whose result differs from BOTH parents.
+    #
+    # This does NOT weaken the phantom-done guarantee. This function feeds only
+    # check_staged_done_proofs (the fast, static, staged-only tag-presence
+    # check). The authoritative whole-store sweep is check_all_done_acs, which
+    # walks ac_root recursively for EVERY done AC and runs verify_done_eligible
+    # on each; it never consults the staged set and is untouched by this scope.
+    # Same fix as check_ac_limits / check_ac_parent_covered_by / check_ac_schema.
+    try:
+        merge_probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        in_merge = merge_probe.returncode == 0
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"WARNING: check_done_proof: MERGE_HEAD probe failed: {exc}",
+            file=sys.stderr,
+        )
+        in_merge = False
+
+    if in_merge:
+        try:
+            other = subprocess.run(
+                [
+                    "git", "diff", "--cached", "--name-only",
+                    "--diff-filter=ACM", "MERGE_HEAD",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(
+                f"WARNING: check_done_proof: MERGE_HEAD diff failed: {exc}",
+                file=sys.stderr,
+            )
+        else:
+            if other.returncode == 0:
+                vs_other = {
+                    ln.strip() for ln in other.stdout.splitlines() if ln.strip()
+                }
+                staged_lines = [ln for ln in staged_lines if ln.strip() in vs_other]
+
     result: list[Path] = []
-    for line in proc.stdout.splitlines():
+    for line in staged_lines:
         rel = Path(line.strip())
         if not _is_gated_ac_yaml(rel):
             continue
@@ -302,7 +392,8 @@ def check_staged_done_proofs(
                 {
                     "ac_id": ac_id_str,
                     "reason": (
-                        f"no '# covers: {ac_id_str}' tag found anywhere under {test_root}"
+                        f"no '# covers: {ac_id_str}' or '// covers: {ac_id_str}' "
+                        f"tag found anywhere under {test_root}"
                     ),
                 }
             )

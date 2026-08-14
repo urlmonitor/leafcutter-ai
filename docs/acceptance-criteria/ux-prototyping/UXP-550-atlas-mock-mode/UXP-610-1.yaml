@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a production deployment of the Atlas,
   When a client sends a request to /api/drift-guard or /api/mock-toggle-check,
