@@ -1,0 +1,67 @@
+id: ACS-200g-2
+components:
+  - ac_store
+title: "A pull request is not failed for pre-existing problems it did not introduce"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the requirements store already contains acceptance-criterion records
+    that break one or more of the store's rules,
+  And a pull request that leaves every one of those records untouched and
+    changes a different acceptance-criterion record which satisfies every rule,
+  When the acceptance-criteria check runs on that pull request,
+  Then the check reports a passing result,
+  And none of the pre-existing problems in the untouched records is reported as
+    a failure of this pull request.
+
+  Given the same already-broken records,
+  And a pull request that edits one of them without fixing the rule it breaks,
+  When the acceptance-criteria check runs on that pull request,
+  Then the check reports a failing result naming that record,
+  Because the pull request now touches it — the exemption covers records the
+    change leaves alone, not records the change adopts.
+
+  And the symptom ("the check fails every pull request on day one for problems
+    nobody in that pull request introduced, so the check gets switched off")
+    must not occur.
+depends_on:
+  - ACS-200g
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200g.yaml
+    relationship: parent
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+    relevance: "The component-vocabulary check already applies the changed-files-on-a-pull-request / whole-tree-on-a-push split this case requires; reuse that pattern rather than inventing a second one."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-200g
+  contract: "The pull-request-time verdict whose scoping boundary this case pins down — the same check, exercised on records the change does and does not touch."
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  This is the guard that keeps the gate adoptable AND keeps it honest. The store
+  has a substantial pre-existing violation baseline — a store-wide scan in this
+  worktree on 2026-08-14 reported 57 records whose parent omits them from its
+  back-link — so a gate scoped to the whole store on every pull request would
+  fail every contributor immediately and be disabled within a day. The second
+  scenario is the paired constraint: the cheapest way to satisfy the first
+  scenario is to stop failing anything, and that would silently turn the gate
+  into a rubber stamp. Touch-it-and-you-own-it is the boundary between the two.
+  Note the deliberate asymmetry with ACS-200h: the whole-store rule set is not
+  waived, only deferred to the protected-branch run.

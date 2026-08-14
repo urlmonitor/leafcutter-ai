@@ -1,0 +1,57 @@
+id: ACS-200g-1
+components:
+  - ac_store
+title: "A pull request introducing a malformed acceptance criterion is blocked from merging"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request whose changes add an acceptance-criterion record that is
+    deliberately invalid — for example a record with a required field removed,
+    a record whose identifier does not fit the store's identifier format, or a
+    record whose parent does not list it back,
+  When the acceptance-criteria check runs on that pull request,
+  Then the check reports a failing result,
+  And the failure names the offending record and states which rule it breaks,
+  And the pull request is reported as not mergeable while that check is failing,
+  And the deliberately invalid record is a throwaway used to exercise the
+    failing path — it is not left behind in the store as a standing violation.
+depends_on:
+  - ACS-200g
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200g.yaml
+    relationship: parent
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-200g
+  contract: "The blocking acceptance-criteria check whose failing path this case exercises."
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Negative acceptance scenario for ACS-200g, mirroring BP-1200b-1-i. Three
+  concrete invalid shapes are named rather than "an invalid record" so the case
+  is testable and so it exercises more than one of the six rule families: a
+  missing required field (schema), a malformed identifier (identifier format),
+  and a broken parent back-link (relational). Merge-blocking itself is provided
+  by the required-status-check wiring, which is out of scope for this family;
+  the outcome THIS case owns is the check reporting failure.
