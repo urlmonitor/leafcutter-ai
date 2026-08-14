@@ -1,0 +1,80 @@
+id: BP-900g-4
+components:
+  - build_pipeline
+title: "The deploy-reachability guard sees script references written in the deployed-path template form"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given extract_script_path_refs in scripts/build_referential_integrity.py, which
+    feeds the broken-reference guard (_check_script_reference_guard) that build.py
+    runs as a preflight,
+  And that agent templates address deployed scripts through the output-root
+    template variable, i.e. `python3 {{config.output_root}}/scripts/<subdir>/<name>.py`,
+    which renders to `.leafcutter/scripts/<subdir>/<name>.py` in a consumer install,
+  When the extractor scans the source templates,
+  Then a reference written in that output-root form is extracted and normalised to
+    its `scripts/<subdir>/<name>.py` deploy-namespace key, exactly as a bare
+    `python3 scripts/<subdir>/<name>.py` reference already is,
+  And the guard therefore fails the build when such a reference names a script that
+    no build phase deploys, naming the offending template and the missing path,
+  And as the first instance of that class, scripts/build_orchestration/fast_lane.py —
+    invoked by the build-ac agent at Step 2b.1 — is deployed to the consumer tree
+    and EXECUTES there, which additionally requires every module it imports at
+    module scope (notably scripts/ac_store/ac_parent_id.py) to be deployed
+    alongside it: presence of the entry-point file alone is not reachability,
+  And the `--ac-root` argument on that same invocation addresses the consumer's own
+    AC store (`docs/acceptance-criteria`) rather than a path under the output root,
+    matching the form the same template already uses at its other call sites,
+  Because the guard's pattern required whitespace immediately before `scripts/`, so
+    every output-root-prefixed reference was silently skipped: the guard reported a
+    clean package, its positive-control test passed, and build.py exited zero while
+    the deployed build-ac agent died at its first command with
+    "can't open file .../fast_lane.py".
+depends_on:
+  - BP-900g
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: templates/agents/build-ac.md
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Extend the extraction patterns in scripts/build_referential_integrity.py so an optional output-root prefix is accepted before `scripts/`, and the captured value is normalised to the bare `scripts/...` deploy-namespace key the guard already compares against. Accept both the literal `{{config.output_root}}/` template form and an already-rendered `.leafcutter/` prefix, since templates are scanned pre-render but the same text may appear rendered. Do NOT widen the pattern to arbitrary prefixes — an unanchored match would capture unrelated paths and produce false-positive build failures, which is the defect class EPIC-BuildGuardFalsePositive already fixed once."
+  - "Add a build phase that deploys scripts/build_orchestration/ to the consumer tree, mirroring build_knowledge_scripts (which closed the same Class B deploy gap for harvest_learnings.py in EPIC-BuildGuardFalsePositive/03). Register a matching _manifest_build_orchestration_scripts entry so the stale-file sweep does not delete the newly deployed files, and extend _get_source_paths_for_guard in lockstep — test_guard_source_paths_match_deployable_set asserts those two sets stay 1:1 and will fail otherwise."
+  - "Correct templates/agents/build-ac.md Step 2b.1 so its --ac-root argument is `docs/acceptance-criteria`, matching the form the same template already uses at its other call sites, rather than an output-root-prefixed path that exists in no layout."
+  - "Verify behaviorally: assert the EXTRACTOR returns the normalised key for an output-root-form reference (the unit-level blind spot), AND assert against a real build.py --target-dir run into a temp root that every script referenced by a deployed agent template exists in that deployed tree. A test that only calls the guard on the real package is INSUFFICIENT — test_guard_exits_0_on_clean_package already did exactly that and passed green while the bug was live (CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-14"
+    reason: "Amended after the behavioral end-to-end run caught a second defect the original criteria would have passed: with scripts/build_orchestration/ deployed, fast_lane.py was PRESENT in the consumer tree but still died at its first import because scripts/ac_store/ac_parent_id.py was absent from build_ac_store's deploy_map. The criteria now require the entry point to EXECUTE, not merely exist, and the covering test runs the deployed script as a subprocess and asserts the GE-113c-3 result rather than asserting file presence."
+superseded_by: null
+covered_by:
+  - unit_tests/test_bp_900g_4.py
+implemented_by:
+  - scripts/build_referential_integrity.py
+  - scripts/build_phases.py
+  - scripts/build.py
+  - scripts/build_propagation_audit.py
+  - templates/agents/build-ac.md

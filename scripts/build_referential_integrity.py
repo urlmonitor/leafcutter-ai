@@ -36,14 +36,32 @@ _log = logging.getLogger(__name__)
 # Matches:
 #   python3 scripts/<path>          (inline invocation)
 #   python scripts/<path>           (inline invocation)
+#   python3 {{config.output_root}}/scripts/<path>   (output-root template form)
+#   python3 .leafcutter/scripts/<path>              (rendered output-root form)
 #   sys.path.insert(<N>, 'scripts/<path>')   (single-quoted)
 #   sys.path.insert(<N>, "scripts/<path>")   (double-quoted)
 #
-# All patterns capture only the ``scripts/<path>`` portion (group 1).
-# The path component is everything up to the first whitespace or quote.
+# All patterns capture only the ``scripts/<path>`` portion (group 1), so an
+# output-root-prefixed reference normalises to the same deploy-namespace key as
+# a bare one and can be compared against the deployable manifest directly.
+#
+# The optional prefix is deliberately bounded to ONE path segment (or the literal
+# ``{{config.output_root}}/`` token).  An unbounded prefix such as ``.*/`` would
+# capture ``scripts/other.py`` out of an unrelated vendor path like
+# ``/usr/lib/vendor/nested/scripts/other.py`` and fail the build on a script that
+# was never ours to deploy — the false-positive failure mode that
+# EPIC-BuildGuardFalsePositive already had to fix once.
+#
+# NOTE: the two ``sys.path.insert`` patterns below are intentionally NOT widened.
+# They capture ``(scripts/[^']+)`` with no ``.py`` anchor, and the only
+# output-root-form occurrence in the templates is a DIRECTORY
+# (``sys.path.insert(0, '{{config.output_root}}/scripts/ac_store')``).  Widening
+# them would extract ``scripts/ac_store``, which is absent from the ``.py``-only
+# deployable manifest, and abort every build with a phantom broken reference.
+# Undeployed directories added via sys.path therefore remain outside this guard.
 
 _PYTHON_INVOKE_RE = re.compile(
-    r"""(?:python3?)\s+(scripts/[\w./\-]+\.py)"""
+    r"""(?:python3?)\s+(?:\{\{config\.output_root\}\}/|[\w.\-]+/)?(scripts/[\w./\-]+\.py)"""
 )
 
 _SYSPATH_SINGLE_RE = re.compile(
