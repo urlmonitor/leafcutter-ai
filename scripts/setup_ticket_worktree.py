@@ -711,7 +711,10 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     Steps performed in order:
 
-    1. **``.env`` symlink** (copy fallback): symlinks the main repo's ``.env``
+    1. **``.env`` symlink** (copy fallback): removes any pre-existing ``.env``
+       entry at the worktree root first (``.env`` is a tracked file, often
+       committed as a symlink, so a fresh worktree checkout can already have
+       one before this step runs), then symlinks the main repo's ``.env``
        into the worktree so that environment-variable changes are immediately
        visible without re-copy.  Falls back to ``shutil.copy`` on Windows or
        NTFS mounts where ``os.symlink`` is not available.
@@ -782,6 +785,22 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
     env_dst = worktree_path / ".env"
+    # `.env` is a TRACKED file in this repo, historically committed as a
+    # symlink to the main repo's absolute `.env` path — so a freshly-created
+    # worktree checkout can already have a `.env` entry at its root before
+    # this function ever runs.  `is_symlink()` is checked first because it
+    # does NOT follow the link, so it is safe against a broken or
+    # self-referential symlink (for which `exists()` reports False, wrongly
+    # implying nothing is there to remove).
+    if env_dst.is_symlink() or env_dst.exists():
+        try:
+            env_dst.unlink()
+        except OSError as exc:
+            print(
+                f"WARNING: could not remove pre-existing .env entry at "
+                f"{env_dst} ({exc}); .env provisioning may fail.",
+                file=sys.stderr,
+            )
     try:
         os.symlink(env_src, env_dst)
     except FileNotFoundError:
@@ -800,7 +819,7 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         )
         try:
             shutil.copy(env_src, env_dst)
-        except FileNotFoundError:
+        except (FileNotFoundError, shutil.SameFileError):
             pass
 
     # --- .mcp.json: always copy ---
