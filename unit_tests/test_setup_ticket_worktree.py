@@ -27,6 +27,7 @@ DECISION HISTORY
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 from pathlib import Path
@@ -274,10 +275,70 @@ def test_ac_bp015_template_bootstrap_env_preexisting_tracked_symlink_replaced(
 # to above), so these two tests load that file directly via its own importlib
 # shim rather than reusing `_bootstrap`/`_BootstrapError`. They still reuse
 # this file's `_setup_worktree` and `_make_fake_run` helpers and import style.
+#
+# IMPORTANT — the canonical copy's `_bootstrap()` ends with a create-time gate
+# (step 7) that shells out to `scripts/commit_guardian/verify_precommit_active.py
+# --json` and raises BootstrapError unless the probe exits 0 with an empty
+# `failing_checks`. Locally, `scripts/commit_guardian` is often a broken/absent
+# symlink, so `verify_script.exists()` is False and the gate is a graceful
+# WARNING no-op — but in CI (after `build.py` runs and recreates that symlink)
+# the gate actually executes. `_make_fake_run` alone supplies no valid probe
+# JSON, so `_bootstrap()` raises BootstrapError there — a false-green trap:
+# these tests must supply a passing probe response so they exercise the gate
+# for real in BOTH environments, mirroring the approach already used by
+# unit_tests/setup/test_setup_ticket_worktree.py's `_make_subprocess_side_effect`.
 # ---------------------------------------------------------------------------
 
 _SCRIPTS_PATH = _REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
 _SCRIPTS_MODULE_NAME = "setup_ticket_worktree_scripts_bp015"
+_PROBE_SCRIPT_STEM = "verify_precommit_active"
+
+
+def _is_probe_call(cmd) -> bool:
+    """Return True when cmd looks like an invocation of verify_precommit_active.py."""
+    try:
+        return any(_PROBE_SCRIPT_STEM in str(part) for part in cmd)
+    except TypeError:
+        return False
+
+
+def _make_probe_aware_fake_run(recorded: list) -> object:
+    """Like `_make_fake_run`, but supplies a PASSING verify_precommit_active.py
+    --json response for the probe call so `_bootstrap()`'s create-time gate
+    (step 7) does not raise BootstrapError.
+
+    Every other call (submodule update, dep install, build.py) still gets the
+    generic success MagicMock that `_make_fake_run` returns. This is required
+    so the canonical-copy BP-015 tests below pass the gate whether or not
+    `scripts/commit_guardian/verify_precommit_active.py` happens to resolve
+    on disk (it does in CI after build.py runs; it may not locally).
+
+    Args:
+        recorded: Mutable list to which each call's command is appended.
+
+    Returns:
+        A callable with the same signature subset as subprocess.run.
+    """
+    def _fake_run(cmd, **kwargs):  # noqa: ANN001,ANN202
+        recorded.append(list(cmd) if isinstance(cmd, (list, tuple)) else [str(cmd)])
+        result = MagicMock()
+        if _is_probe_call(cmd):
+            result.returncode = 0
+            result.stdout = json.dumps({
+                "binary": True,
+                "config": True,
+                "git_hook": True,
+                "canary": True,
+                "failing_checks": [],
+            })
+            result.stderr = ""
+        else:
+            result.returncode = 0
+            result.stdout = ""
+            result.stderr = ""
+        return result
+
+    return _fake_run
 
 
 def _load_scripts_setup_module():
@@ -322,7 +383,7 @@ def test_bootstrap_env_preexisting_tracked_symlink_replaced_with_working_env(
     os.symlink(main_env, worktree_env)
 
     recorded: list = []
-    with patch("subprocess.run", side_effect=_make_fake_run(recorded)):
+    with patch("subprocess.run", side_effect=_make_probe_aware_fake_run(recorded)):
         scripts_mod._bootstrap(main_repo, worktree)
 
     assert worktree_env.exists(), (
@@ -359,7 +420,7 @@ def test_bootstrap_env_preexisting_self_referential_symlink_removed_without_foll
     os.symlink(worktree_env, worktree_env)
 
     recorded: list = []
-    with patch("subprocess.run", side_effect=_make_fake_run(recorded)):
+    with patch("subprocess.run", side_effect=_make_probe_aware_fake_run(recorded)):
         scripts_mod._bootstrap(main_repo, worktree)
 
     assert worktree_env.exists(), (
