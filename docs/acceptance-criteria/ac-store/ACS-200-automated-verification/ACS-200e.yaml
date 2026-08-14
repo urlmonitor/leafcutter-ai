@@ -1,0 +1,47 @@
+id: ACS-200e
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "The standalone AC validator enforces the same schema as the commit-time gate"
+component: ac-store
+level: L2
+scope: standing
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given an AC YAML file that violates config/ac_store_schema.json
+    (for example a package-surface AC — assigned_agent python-coder in a
+    build_pipeline or build-orchestration component — whose it_requirements
+    is a plain list instead of the required structured object),
+  When the standalone AC validator is run against that file,
+  Then it reports the schema violation and exits non-zero,
+  And its verdict agrees with the commit-time AC-schema gate: no file may
+    pass the standalone validator and then be rejected by the commit hook,
+  And a schema-valid AC file still passes the standalone validator,
+  And the symptom ("the validator prints OK for a file the commit hook
+    later rejects") must not occur.
+depends_on: []
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The standalone validator must load and apply config/ac_store_schema.json, not only hand-rolled field checks"
+  - "Both validators must resolve the same schema file so their verdicts cannot drift"
+  - "When jsonschema or the schema file is unavailable, the validator must say so explicitly rather than silently reporting success"
+  - "Must follow the repo error-handling policy: specific-exception try/except around file and schema I/O, log at WARNING or higher or re-raise; no bare or silent excepts"
+  - "Verify behaviorally — run the validator against a real on-disk AC file that the commit hook rejects, and assert a non-zero exit; do not grep the validator source"
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/ac_store/validate_ac_schema.py
+- unit_tests/ac_store/test_acs_200e_validator_schema_parity.py
+change_target: code
+risk_surface: contract_boundary
+notes: "Authored by /quick-fix. Root cause: scripts/ac_store/validate_ac_schema.py never loads config/ac_store_schema.json — it imports only sys, pathlib, yaml and _ac_components and performs hand-rolled field checks — despite its module docstring claiming it 'validates the full schema against config/ac_store_schema.json'. The commit-time hook templates/scripts/commit_guardian/check_ac_schema.py does load that schema (SCHEMA_PATH) and run validate_with_jsonschema, so authors get a false green from the standalone validator and only discover violations at commit time."

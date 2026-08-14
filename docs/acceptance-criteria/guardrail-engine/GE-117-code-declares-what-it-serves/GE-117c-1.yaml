@@ -41,7 +41,7 @@ doc_links:
   - path: "docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md"
     relationship: describes
     status: exists
-  - path: "docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md"
+  - path: "docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md"
     relationship: describes
     status: exists
 assigned_agent: python-coder
@@ -49,7 +49,7 @@ estimated_complexity: M
 it_requirements:
   - "EXTEND the existing DECISION HISTORY tail-tag validator (check_documentation.py plus doc_validators.py / docstring_validators.py) to carry an AC dimension on each NEW entry; do NOT re-specify or re-implement the existing ticket tail-tag — the ticket ref already exists, add the AC ref alongside it."
   - "Detect NEWLY ADDED decision-history entries from the staged diff (added lines only); pre-existing entries are never retrofitted (third criteria scenario) — the core of the tail-tag convention. Determine new-vs-existing from the staged diff, not a full-file rescan."
-  - "Resolve the entry's AC reference against the AC store via the SAME extracted _load_ac_by_id shared module used by GE-117b (the AC store is authoritative per ADR-010; id format per ADR-007); a reference is valid iff the resolver returns a record."
+  - "Resolve the entry's AC reference against the AC store via the SAME extracted _load_ac_by_id shared module used by GE-117b (the AC store is authoritative per ADR-010; id format per ADR-008); a reference is valid iff the resolver returns a record."
   - "Emit the per-entry verdict {file, entry_ref, surface: 'decision-history-ac', verdict: 'satisfied'|'missing'|'invalid', declared_ref, resolved: bool}; keep it structurally aligned with the module-component and symbol-ac verdicts for GE-117d-1 aggregation."
   - "The inheritance rule (an entry may inherit its enclosing symbol's resolved AC) is specified in GE-117c-1-i; this L2 owns happy/missing/diff-only-legacy paths — route both through the shared verdict emitter so inheritance is handled uniformly."
   - "Fail-open on INTERNAL hook error only (exit 0, stderr advisory, clean stdout). Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."

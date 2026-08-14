@@ -1,19 +1,19 @@
 ---
-title: "Agent Reference: how-to-author"
+title: 'Agent Reference: how-to-author'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/documentation/write-how-to.md"
-  - "docs/README.md"
-  - "tickets/09_done/EPIC-CodingAgents/21_how_to_author.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/documentation/write-how-to.md
+- docs/README.md
+- tickets/09_done/EPIC-CodingAgents/21_how_to_author.md
+description: 'Overview of Agent Reference: how-to-author.'
 ---
-
 # Agent Reference: `how-to-author`
 
 Implementing agent: `how-to-author` (Sonnet, internal).
@@ -191,7 +191,7 @@ invocation because it reads the how-to at runtime.
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   file layout (§2), visibility classes (§3), tool allowlists (§4.2 — strict-
   research-delegation).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   three-tier ladder (§2.1), strict-research-delegation rationale (§2.6).
 - [`docs/how-to/documentation/write-how-to.md`](../../how-to/documentation/write-how-to.md) —
   the how-to this agent loads at runtime. Single source of truth for the

@@ -1,0 +1,50 @@
+id: ACD-400b-6-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Multi-source AC keeps the fix file when a delegating helper is also linked"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given an AC whose doc_links reference two local source files — a delegating
+    helper listed first and the file where the behavior actually lives listed
+    second,
+  When the generator produces the ticket for that AC,
+  Then the generated ticket's files_touched contains the behavior's home file,
+  And files_touched also contains the delegating helper,
+  And files_touched is not reduced to only the delegating helper (the home file
+    is never dropped),
+  And the ordering of files_touched does not cause the home file to be excluded.
+depends_on: [ACD-400b-6]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File of record: scripts/ac_store/generate_ticket_from_ac.py — the files_touched derivation must be order-independent, so a helper listed before the home file cannot displace or truncate the home file."
+  - "No positional shortcut (e.g. take-first, last-wins, or single-value assignment) may govern which doc_links source paths reach files_touched."
+  - "Must follow the repo error-handling policy: specific-exception try/except around any file/YAML I/O, log at WARNING or higher (or re-raise); no bare or silent excepts."
+  - "Verify behaviorally — craft an AC with the helper listed first and the home file second, generate the ticket, and assert both appear in the emitted files_touched."
+test_spec:
+  - name: test_home_file_kept_when_delegating_helper_listed_first
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "With doc_links ordered [helper, home_file], the generated files_touched contains both entries and the home file is not dropped."
+    covers: [ACD-400b-6-i]
+delivers_to: null
+expects_from:
+  ac_id: ACD-400b-6
+  contract: "files_touched derivation that preserves every implementation source"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

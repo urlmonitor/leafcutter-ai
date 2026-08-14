@@ -92,8 +92,8 @@ relative to the project root.
 ## Test Commands
 
 Shell commands used by commit-agent pre-flight checks and the `test-runner`
-agent. Values here are project-specific; the defaults reflect the original
-Bybit-Trader project and must be overridden for any other project.
+agent. Values here are project-specific; the shipped defaults are placeholders
+and must be overridden for any real project.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -114,7 +114,7 @@ Controls how `build.py` and agents locate project-wide resources.
 | `changelog_folder` | string | `changelogs/` | Folder where per-entry changelog Markdown files are written. |
 | `changelog_categories_path` | string | `.claude/changelog_categories.md` | Path to a Markdown file containing project-specific commit categorization rules. Read by changelog-agent at runtime. If absent, changelog-agent falls back to conventional-commit prefix heuristics only. |
 | `precommit_autofix_config_path` | string | `.claude/precommit-autofix.json` | Path to the precommit-autofix routing config JSON used by the pre-commit autofix hook. |
-| `test_output_dir` | string | `%TEMP%/bybit-trader-tests/` | Directory for test output files. Must be outside the project root. The `%TEMP%` placeholder is expanded at runtime on Windows; use `/tmp/` on Linux/macOS. |
+| `test_output_dir` | string | `%TEMP%/leafcutter-tests/` | Directory for test output files. Must be outside the project root. The `%TEMP%` placeholder is expanded at runtime on Windows; use `/tmp/` on Linux/macOS. |
 
 ---
 
@@ -184,7 +184,7 @@ Controls which paths are excluded from glossary coverage scanning.
 
 A structured block shared by the `test-writer` and `test-runner` agents.
 Adopters customize this block to match their project's test layout; the
-defaults reflect the original Bybit-Trader project.
+shipped defaults are placeholders.
 
 The block is read at agent runtime, not at build time. Required sub-fields are
 marked below.

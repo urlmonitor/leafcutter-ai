@@ -11,7 +11,7 @@ Commits: ~40 (branch: EPIC-ACTraceabilityStore, PR #46)
 EPIC-ACTraceabilityStore promoted Acceptance Criteria from prose buried in
 ticket bodies to first-class, addressable, versionable YAML entities. The
 epic delivered a portable `docs/acceptance-criteria/` store (scaffolded by
-`build.py`), a JSON Schema validator (ADR-007), two bidirectional pre-commit
+`build.py`), a JSON Schema validator (ADR-008), two bidirectional pre-commit
 hooks, and AC-aware integrations in five agents (BA, test-writer,
 ticket-authoring, test-failure-triage, debug skill). The `origin_agent` field
 (ticket 10) and the debug-skill AC query step (ticket 11) were scope additions
@@ -29,7 +29,7 @@ follow-up commit on main.
 
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| 01 | AC YAML schema + JSON Schema validator + ADR-007 | done |
+| 01 | AC YAML schema + JSON Schema validator + ADR-008 | done |
 | 02 | build.py scaffold phase for docs/acceptance-criteria/ | done |
 | 03 | Pre-commit hook: test tagging (covers:) | done |
 | 04 | Pre-commit hook: AC coverage enforcement | done |
@@ -61,7 +61,7 @@ All 11 tickets completed. No blockers. No retries recorded.
 
 ## What Went Well
 
-- **ADR-007 authored first (ticket 01).** Writing the schema decision record
+- **ADR-008 authored first (ticket 01).** Writing the schema decision record
   before any YAML files were created gave tickets 02–11 a stable canonical
   reference. No schema churn occurred mid-epic — the ID format, field names,
   and status lifecycle were settled once and stayed settled.

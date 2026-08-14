@@ -183,7 +183,7 @@ feedback-id: fb_2026-06-04_abdf539a
 completion_manifest:
   branch_pushed: true
   pr_open: true
-Branch EPIC-ACTraceabilityStore pushed to origin. PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) is already open for this epic — per epic convention, one PR per epic. This ticket's commits (e6e8649, 16429bf) are now on the PR branch.
+Branch EPIC-ACTraceabilityStore pushed to origin. PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-008) is already open for this epic — per epic convention, one PR per epic. This ticket's commits (e6e8649, 16429bf) are now on the PR branch.
 
 ## Implementation Tasks
 

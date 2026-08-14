@@ -1,0 +1,67 @@
+id: BO-2900b
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Every capability the product offers is genuinely connected to something that uses it"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No advertised capability is left stranded with nothing that ever runs it.
+
+  Every operator-facing capability the product exposes is checked to be genuinely
+  reached by the automation that is supposed to run it, so a capability can never
+  be shipped, documented, and quietly never used.
+depends_on:
+  - BO-2900
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900b-1
+  - BO-2900b-2
+  - BO-2900b-3
+  - BO-2900b-4
+  - BO-2900b-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - component-diagram
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Regression evidence supplied by the user: this guarantee would have failed the
+  instant PR 411 landed. Decompose that as a concrete replay scenario at L2/L3 —
+  it is evidence for this L1, not a separate feature.
+
+  2026-08-13 (BA decomposition). Five L2s: -1 the forward check itself (a registered
+  capability nothing runs is reported and refuses the change, with the inventory taken
+  from the BUILT surface), -2 the three-state regression replay, -3 the
+  what-counts-as-a-caller rule defined once for both directions, -4 the how-to and -5
+  the component diagram satisfying the two documentation_triggers. One L3,
+  BO-2900b-1-i, covers the adoption case (capability and caller in the same change
+  passes; capability alone is refused with both ways forward named).
+
+  CALIBRATION CORRECTION TO THE REGRESSION EVIDENCE — recorded here because it changes
+  how this L1 must be tested. The forward check would NOT have fired on the state that
+  actually shipped: no capability was registered at all, so the inventory was empty and
+  the check passes vacuously. That state is refused by BO-2900a-3 (nothing reaches the
+  code, so no criterion over it may be marked done). This L1 bites in the state where a
+  capability exists and nothing calls it. Both are needed; the replay in BO-2900b-2 is
+  written as three states so the vacuous pass is a specified outcome rather than a
+  surprise that gets "fixed" by widening the check into source scanning.
+
+  BOUNDARY vs BO-2900c: the reverse direction (an invocation naming a capability that
+  does not exist) is BO-2900c. The shared what-counts-as-a-caller rule lives here at
+  BO-2900b-3 and is consumed there, not duplicated.

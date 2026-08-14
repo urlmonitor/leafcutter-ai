@@ -234,8 +234,62 @@ def _get_staged_ac_yaml_paths(project_root: Path) -> list[Path]:
             file=sys.stderr,
         )
         return []
+
+    staged_lines = proc.stdout.splitlines()
+
+    # Merge commits: a merge stages the ENTIRE incoming branch, so this
+    # PRE-COMMIT presence check would demand a covers tag for every done AC the
+    # other side carries — including ones already marked done there without a
+    # discoverable tag. The merge inherits those byte-for-byte and can neither
+    # improve nor worsen them, so blocking here only makes merging impossible.
+    # Narrow to files whose result differs from BOTH parents.
+    #
+    # This does NOT weaken the phantom-done guarantee. This function feeds only
+    # check_staged_done_proofs (the fast, static, staged-only tag-presence
+    # check). The authoritative whole-store sweep is check_all_done_acs, which
+    # walks ac_root recursively for EVERY done AC and runs verify_done_eligible
+    # on each; it never consults the staged set and is untouched by this scope.
+    # Same fix as check_ac_limits / check_ac_parent_covered_by / check_ac_schema.
+    try:
+        merge_probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        in_merge = merge_probe.returncode == 0
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"WARNING: check_done_proof: MERGE_HEAD probe failed: {exc}",
+            file=sys.stderr,
+        )
+        in_merge = False
+
+    if in_merge:
+        try:
+            other = subprocess.run(
+                [
+                    "git", "diff", "--cached", "--name-only",
+                    "--diff-filter=ACM", "MERGE_HEAD",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(
+                f"WARNING: check_done_proof: MERGE_HEAD diff failed: {exc}",
+                file=sys.stderr,
+            )
+        else:
+            if other.returncode == 0:
+                vs_other = {
+                    ln.strip() for ln in other.stdout.splitlines() if ln.strip()
+                }
+                staged_lines = [ln for ln in staged_lines if ln.strip() in vs_other]
+
     result: list[Path] = []
-    for line in proc.stdout.splitlines():
+    for line in staged_lines:
         rel = Path(line.strip())
         if not _is_gated_ac_yaml(rel):
             continue

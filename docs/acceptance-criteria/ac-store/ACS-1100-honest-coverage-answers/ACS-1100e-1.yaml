@@ -1,0 +1,114 @@
+id: ACS-1100e-1
+components:
+  - ac_store
+title: "One reference section defines the answer contract, the method record, the halt, and the verdict cap"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100e.yaml
+criteria: |
+  Given the answer contract of ACS-1100a, the method record of ACS-1100b, the halt of
+    ACS-1100c, and the propagation and verdict cap of ACS-1100d,
+  When an author of a tool that produces or consumes a store answer consults the
+    store's reference documentation,
+  Then one reference section states the three parts every answer carries — results,
+    total, and named method — the shape a caller may rely on, and that the total and
+    method are present even when the result set is empty, so an answer that matched
+    nothing still reads 0 of 180,
+  And it states that the total is derived without the query's own filter set, match
+    keys, or join keys, gives a filter-free enumeration over the store root as the
+    reference derivation, states that a single filter-free enumeration shared with the
+    result pass satisfies the rule because it has no blind spot to inherit, and
+    documents the declared exemption record — its fields, its single current entry for
+    the AC-tree child-limit counter, ACS-100h-7a as the mandate behind that entry, and
+    that an exemption withholds the independent total only and never authorises forking
+    the rule applied per record,
+  And it lists every field of the method record — the enumerated root, the inclusion
+    rule, and each exclusion as a count plus a stated ground — states the arithmetic the
+    record must satisfy (covered plus declared exclusions equals the total), lists the
+    grounds an exclusion may currently be recorded under including deprecated records,
+    superseded records, files that are not requirement records, and records outside the
+    requested scope, states that a ground not on that list must be added to the list
+    before it may be used, and states that a scoped answer reports both its scope total
+    and the store total,
+  And it states the reconciliation arithmetic and the halt: what a halt report contains
+    (the total, the covered count, the declared exclusion total, the number of records
+    unaccounted for, and the number of records the measurement could not classify), the
+    two ways to clear it — declare the missing exclusion with a ground, or repair the
+    query so it reaches the records it missed — that the answer is withheld on a halt
+    and a warning carrying the partial result is not an acceptable substitute, that a
+    record the measurement could not classify means an unreadable or unparseable record
+    only and never a record that merely fails schema validation, and the separation
+    between a real unreconciled gap, which always halts, and a failure of the
+    measurement itself, which degrades with a warning per the project error-handling
+    policy,
+  And it states what a consuming tool must carry through to its own result — the
+    inherited coverage figure and the upstream answer it came from — that dropping it
+    makes the tool's own result unaccounted for, the cap rule with a worked example
+    showing 40 of 180 and 180 of 180 producing a verdict of clear for 40 of 180, the
+    conditions under which an unqualified all-clear is available and that a halted or
+    unclassifiable input yields no pass verdict at all, and it distinguishes this
+    coverage guarantee from the phantom-done guarantees, which prove that work is done
+    rather than that a query was complete,
+  And a reader who has consulted only this one section can produce a conforming answer
+    and a conforming consumer without reading any of the ACS-1100 records themselves.
+depends_on:
+  - ACS-1100e
+  - ACS-1100a-1
+  - ACS-1100a-2
+  - ACS-1100a-3
+  - ACS-1100b-1
+  - ACS-1100b-2
+  - ACS-1100c-1
+  - ACS-1100c-2
+  - ACS-1100d-1
+  - ACS-1100d-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Existing store reference document; all four coverage sections land here as one contiguous section."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7a.yaml
+    relationship: related
+    status: exists
+    relevance: "The mandate the documented exemption record must name."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  CONSOLIDATION (2026-08-13, expert review). This AC replaces four separate reference-doc
+  ACs — ACS-1100a-4, ACS-1100b-3, ACS-1100c-3 and ACS-1100d-3 — which all wrote sections
+  of docs/reference/ac-schema.md. The build's file-touch parallelism gate would have
+  serialised them into four sequential tickets editing one file, and they made up a third
+  of the tree's leaves. One file, one agent, one ticket.
+
+  ACS-1100d-4 (component diagram) is deliberately NOT folded in: different artifact,
+  different target document, different agent.
+
+  Satisfies documentation_triggers: [reference-doc] on ACS-1100e, and is the AC named in
+  the documentation_rationale on ACS-1100a, ACS-1100b and ACS-1100c.
+
+  The closed-but-extensible list of exclusion grounds is the mechanism that stops
+  "excluded because the query did not reach it" being laundered into a legitimate ground.
+  "Outside the requested scope" IS on the list, and is what lets a staged-scope pre-commit
+  hook report honestly rather than halting on every commit.
+
+  The last clause is the acceptance test that matters: the section is not done if a tool
+  author still has to read the AC records to build a conforming answer.
+
+  Intended agent is documentation-expert; assigned_agent is deliberately left null in this
+  authoring pass per the run's constraints, for the IT PO to set at enrichment.

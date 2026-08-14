@@ -1,0 +1,154 @@
+id: BO-2900f-2-i
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A run that halts leaves later gates with no entry, and the halt itself is recorded so the shortfall is explained"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a work item requests four quality gates — gate A, gate B, gate C and
+    gate D, in that order,
+    And the run halts after gate B's decision point and before gate C's,
+  When the recorded gate results are read,
+  Then gate A and gate B each have exactly one entry,
+    And gate C and gate D have zero entries, because the run never reached their
+      decision points,
+    And the recorded results carry a halt entry naming the gate the run stopped
+      at and the reason it stopped,
+    And a reader of the record can tell, from the record alone, that gate C and
+      gate D are unreached rather than silently dropped.
+
+  Given the same four requested gates and a run that halts after gate B,
+    And no halt entry is written,
+  When the recorded gate results are read,
+  Then the missing entries for gate C and gate D are reported as a defect, not
+    excused, because zero entries is legitimate only when the halt is itself
+    recorded.
+depends_on:
+  - BO-2900f-2
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch loop that can terminate early — where the halt record has to be emitted."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The workflow-step analogue, where zero recorded outcomes are legitimate only on a full-workflow halt."
+  - path: scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: "Where the gap side of BO-2900f-2's cardinality relation is evaluated; the halt carve-out is a condition on that same evaluation, not a separate check."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The failed-path protocol — an agent that cannot complete records `failed` plus a (status: blocker) comment. A halt on the gate path is the same event seen from the record's side and should not invent a second vocabulary for it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    run_halt_record:
+      type: object
+      description: "A single entry per halted run, distinct from a gate entry: { halted_at: str (the requested-gate name whose decision point the run stopped at or before), reason: str (non-empty), unreached: [str] (the requested gates after halted_at that have no entry) }. Its presence is what makes zero entries legitimate for the gates it names; its absence makes those same zero entries a defect. A halt record with an empty reason does not license anything."
+  reference_file_path: "scripts/commit_guardian/_signoff_parity_checks.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "TWO RULES, AND THE SECOND IS THE ONE THAT MATTERS. Zero entries plus a halt record naming the stopping point is legitimate. Zero entries with no halt record is a DEFECT and must be reported as one. Implementing only the first turns the carve-out into an unbounded excuse: any missing entry becomes attributable to a halt nobody has to evidence, which reproduces the silence the parent L1 exists to end."
+    - "THE CARVE-OUT IS BOUNDED BY POSITION, NOT BY EXISTENCE. A halt record only licenses gaps at or after the gate it names, in the requested order. A run that halts at gate D must not have its missing gate B entry excused by the halt record. Without the ordering condition the carve-out degenerates back into 'a halt record was written somewhere, therefore all gaps are fine' — which is the same unbounded excuse in a different shape. The validator must compare the halt position against the position of the FIRST gap."
+    - "THE HALT RECORD MUST BE WRITTEN ON EVERY TERMINATION PATH, including the exceptional one. A halt record emitted only where the loop breaks cleanly leaves the crash path — the path that actually strands runs in practice — producing bare gaps that the validator will correctly report as defects, generating false failures until someone widens the carve-out to silence them. Wrap the dispatch loop so that an abnormal exit still records where it stopped and why, per the project error-handling policy (log at WARNING or higher, then re-raise or wrap; never swallow)."
+    - "REASON CONTENT: name what stopped the run, not that it stopped. 'halted' is not a reason; 'gate B failed and the run is fail-fast' or 'the supervisor was cancelled' is. This mirrors BO-2900f-1's requirement on skip reasons and should reuse the same reason-plus-source discipline."
+    - "DO NOT INVENT A SECOND HALT VOCABULARY. The signoff skill already has a failed-path protocol for an agent that cannot complete (status `failed` plus a (status: blocker) comment naming the blocker). A halt on the gate path is the same event viewed from the record side; derive the halt record from that existing signal where one exists rather than adding a parallel one that can disagree with it."
+    - "SURFACE-DEPENDENT: on the git-tracked ticket the halt record has an obvious home alongside the existing blocker comment, and the unreached gates are visibly the agents-map entries still sitting at `needed`. On a JSONL sink the halt entry is a new record kind in the same stream and must carry the run id so a reader can associate it with the gaps it licenses. The ordering condition above is required under both."
+delivers_to:
+  agent: python-coder
+  contract: "The run-halt record { halted_at, reason, unreached } and the bounded carve-out rule that consumes it: a gap at position P in the requested order is legitimate iff a halt record exists with halted_at at or before P. BO-2900f-3's roll-up reads this to distinguish 'not run because the run stopped' from 'requested and skipped', neither of which may be reported as a pass."
+expects_from:
+  ac_id: BO-2900f-2
+  contract: "The cardinality relation over the requested-gate record set and its 'gap' violation kind — { kind: 'gap', gate }. This AC supplies the condition under which a gap is legitimate; it does not change the relation itself, and it does not touch the 'duplicate' kind, which is never legitimate."
+test_spec:
+  - name: test_gates_before_the_halt_each_have_exactly_one_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Drives a real run that terminates after the second of four requested gates and asserts the two reached gates carry exactly one entry each — the halt must not disturb the cardinality of what did run."
+  - name: test_gates_after_the_halt_have_zero_entries
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the two unreached gates have no entries at all — not a placeholder entry, and specifically not an entry with outcome 'skipped', which would misreport an unreached gate as a requested-but-disabled one."
+  - name: test_halt_entry_names_the_stopping_gate_and_a_non_empty_reason
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts against the emitted record that the halt entry names the gate the run stopped at and carries a reason that says what stopped it, and that the unreached gates are recoverable from the record alone."
+  - name: test_gaps_with_no_halt_entry_are_reported_as_a_defect
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the validator over the same record set with the halt entry removed and asserts it reports the two missing gates as violations rather than passing — the second Given, and the clause that makes the parent's count invariant enforceable rather than advisory."
+  - name: test_a_halt_recorded_after_the_gap_does_not_excuse_the_gap
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Records a halt at the fourth gate while the second gate is missing and asserts the second gate is still reported as a gap. Establishes that the carve-out is bounded by position in the requested order, not satisfied by the mere existence of a halt record."
+  - name: test_halt_record_is_written_when_the_run_terminates_abnormally
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Terminates the dispatch loop via a raised failure rather than a clean break and asserts a halt record is still present naming the gate reached — the path that strands runs in practice and the one a clean-break-only implementation misses."
+test_rationale: "The AC is a conditional: zero entries mean one thing with a halt record and the opposite without it. That makes a direct-import unit test of a gap detector actively misleading — handed a record set, it asserts the detector's arithmetic, while the AC's content is whether the real run EMITS the halt record on the paths that really halt. Test six is the one a direct-import test structurally cannot express: it terminates the loop abnormally, which is the path that produces stranded runs in production and the path a clean-break-only implementation silently omits. Test five guards the failure mode the criteria describe but do not bound — a carve-out satisfied by the mere existence of a halt record anywhere becomes the excuse for every gap, so the legitimacy check is asserted positionally. The validator-side tests live in commit_guardian because that is where the gap verdict has to block; the emission-side tests live in build_orchestration because that is where the halt record is produced."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Split out of BO-2900f-2 on 2026-08-13 (expert review). In its parent the halt
+  case sat inside a Then block whose Given described a COMPLETED run, next to the
+  clause "no requested gate is left with zero entries" — a direct contradiction
+  that made neither clause testable.
+
+  WHY THE CARVE-OUT NEEDS ITS OWN NEGATIVE SCENARIO. Without the second scenario
+  the carve-out is an unbounded excuse: any missing entry can be attributed to a
+  halt nobody has to evidence, which reproduces the silence BO-2900f exists to
+  end. Pairing "no entry + halt recorded = legitimate" with "no entry + no halt
+  record = defect" is what makes the parent's count invariant enforceable rather
+  than advisory.
+
+  BOUNDARY vs the parent: BO-2900f-2 owns the completed run and asserts a COUNT.
+  This L3 owns the aborted run and asserts an EXPLANATION. An implementation that
+  satisfies one and not the other has not landed the guarantee.
+
+  2026-08-14 (IT PO enrichment). Two bounds added that the criteria imply but
+  leave open, both aimed at the same failure: a carve-out that grows into a
+  general excuse.
+
+  - POSITIONAL BOUND. The criteria pair "no entry + halt recorded" against "no
+    entry + no halt record", which leaves "no entry at gate B + halt recorded at
+    gate D" undecided. An implementer reaching for the carve-out will land there,
+    because it is the reading that makes their gap go away. The enrichment fixes
+    it: a halt record licenses gaps at or after the gate it names, in the
+    requested order, and the validator compares the halt position against the
+    first gap.
+  - ABNORMAL-TERMINATION BOUND. A halt record emitted only where the loop breaks
+    cleanly misses the crash path, which is the path that strands runs in
+    practice. The result is not a missing feature but a stream of false defect
+    reports, and the natural response to those is to widen the carve-out until
+    they stop — arriving back at the unbounded excuse from the other direction.
+    The halt record is therefore required on every termination path.
+
+  Both bounds are surface-agnostic and survive whichever record surface the user
+  chooses.

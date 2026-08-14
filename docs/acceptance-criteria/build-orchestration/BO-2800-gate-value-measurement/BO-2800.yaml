@@ -1,0 +1,139 @@
+id: BO-2800
+components:
+  - build_orchestration
+  - review_system
+title: "Know which of your own quality checks are earning their keep"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  See which checks catch real problems and which only cost you time.
+
+  Every build runs a set of checks, and right now nobody can say what any of them
+  is worth: the problems they catch exist only as prose, the times they are
+  overruled exist only as a passing remark, and the evidence already sitting in
+  your own records is never read. So no check can be justified and no check can
+  ever be retired — the set only grows. This goal makes the value of each check
+  visible: problems caught are counted, overrides are counted, and the record you
+  already keep starts being used, so keeping a check or dropping it becomes a
+  decision backed by numbers instead of a guess nobody wants to make.
+depends_on: []
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Carries the 'ok-with-false' downgrade and the absent-manifest 'proceed as if all-true' rule — two currently-uncounted signals this goal must mine and record."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "§2b defines the completion_manifest block whose result/reason/remediation triples BO-2800a reads."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+    relevance: "Its cross-agent branch is the automated path that proceeds past a blocking finding without re-raising it — the override chokepoint most likely to dominate the count."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: corrected the BO-2500d premise (the threshold-to-action rules were asserted to live in BO-2500d-1..4 and do not exist anywhere) and struck the recommended amendment that would have added BO-2800 to BO-2500d's depends_on."
+superseded_by: null
+covered_by:
+  - BO-2800a
+  - BO-2800b
+  - BO-2800c
+  - BO-2800d
+  - BO-2800e
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  New root L0 in build-orchestration, authored 2026-08-13. Next free hundred
+  (BO-2700 is the previous highest). Per the build-orchestration PROJECT_CONTEXT
+  component-choice rule, a drive-time gate concern belongs here — not in
+  build-pipeline (build.py / parity) and not in guardrail-engine.
+
+  FIVE L1s IN A DELIBERATE DEPENDENCY ORDER. Build them in this sequence; the
+  order is the plan, not a preference:
+    BO-2800a  mine the evidence that already exists  (cheapest, validates the schema)
+    BO-2800b  caught defects become countable        (needs a's schema)
+    BO-2800c  overrides become countable             (needs b's vocabulary)
+    BO-2800d  silent checks are spotted              (needs a + b; zero-yield is its
+                                                      own diagnosis, not an override)
+    BO-2800e  every check gets a verdict             (needs c + d; the decide layer)
+
+  a, b and c are pure MEASUREMENT and remain independently shippable — nothing in
+  them depends on d or e. The measure/decide boundary still holds; it now runs
+  BETWEEN L1s rather than around this L0. See the corrected note below.
+
+  ==========================================================================
+  THE BO-2500d PREMISE WAS WRONG. CORRECTED 2026-08-13. READ BEFORE WIRING.
+  ==========================================================================
+  Earlier revisions of this L0, of BO-2800c, and of BO-2800c-2 all asserted two
+  things about BO-2500d. Both are false, and a reviewer verified it by grepping
+  the entire BO-2500 tree for "override", "threshold" and "false positive" — zero
+  relevant hits (the single match is an unrelated remark in BO-2500c-1-i about a
+  check minimising its own false positives).
+
+    CLAIM 1, FALSE: "BO-2500d is unbuildable without this measurement."
+    BO-2500d ("Keep the rigor, drop the slow review overhead") is a static
+    fast-lane / heavy-lane agent split. Its four L2s are BO-2500d-1 (opinion-only
+    gate agents absent from the fast-lane phase order), BO-2500d-2 (those agents
+    remain present in the heavy pipeline), BO-2500d-3 (mechanical proof-of-done
+    gates stand in for them in the fast lane) and BO-2500d-4 (a component diagram
+    of the two phase orders). None of them needs a number. All four, and
+    BO-2500d-1-i, are already work_status: done.
+
+    CLAIM 2, FALSE: "the retirement / threshold-to-action rules live in
+    BO-2500d-1..4." They live nowhere. The four action rules the user described —
+    downgrade a blocker to a warning above a sustained override rate; retire a
+    gate that is almost always overridden with no downstream defects; promote a
+    rarely-overridden high-volume gate to a deterministic hook; re-prompt a single
+    problem kind rather than the whole gate when overrides cluster on it — are
+    unwritten. No AC in the store carries any of them.
+
+  THE "DECIDE" GAP IS NOW CLOSED — RESOLVED 2026-08-13, SAME DAY.
+  Earlier revisions of this note said "MEASURE ships here and DECIDE exists
+  nowhere", and instructed authors not to write threshold-to-action rules inside
+  BO-2800 at all. The first half was true when written; the second is now too
+  broad. The decide layer was authored as two sibling L1s under this same L0:
+
+    BO-2800d  "Spot the checks that have never once stopped anything"
+    BO-2800e  "Every check gets a verdict — keep it, soften it, replace it, or drop it"
+
+  A new L0 was considered and rejected: this L0's own criteria already promise
+  that "keeping a check or dropping it becomes a decision backed by numbers", so
+  a separate tree would leave BO-2800 permanently over-promising and split one
+  user-visible outcome across two trees.
+
+  THE BOUNDARY STILL HOLDS, AT A DIFFERENT SEAM. It now runs between L1s:
+    - BO-2800a / b / c are pure measurement. An L2 under any of them that names a
+      threshold for removing a gate, or names which gates to remove, is still OUT
+      OF SCOPE and must be rejected in review. That rule is unchanged.
+    - Every threshold-to-action rule belongs in BO-2800e, as its own separately
+      shippable unit of work.
+  Measurement and policy remain different units of work; they are now different
+  L1s rather than different trees.
+
+  NOTE ON NUMBERS: BO-2800e carries the four action rules as benefits with their
+  triggers, but deliberately NO numeric cut-offs. Choosing them is L2 work and
+  needs the real distributions from BO-2800c, which do not exist yet.
+
+  ==========================================================================
+  THE PREVIOUS "RECOMMENDED AMENDMENT" WAS STRUCK. DO NOT REINSTATE IT.
+  ==========================================================================
+  An earlier revision recommended adding `BO-2800` to BO-2500d's depends_on so the
+  store would carry a BO-2500d -> BO-2800 edge. That amendment must NOT be applied.
+  It rested on Claim 1 above, which is false: BO-2500d does not consume any figure
+  this goal produces. Applying it would make an already-complete, already-done
+  agent-split feature depend on twenty unbuilt measurement ACs, blocking buildable
+  work behind work that has not started, for an edge that does not describe a real
+  dependency. There is no dependency between BO-2500d and BO-2800 in either
+  direction, and none should be recorded.

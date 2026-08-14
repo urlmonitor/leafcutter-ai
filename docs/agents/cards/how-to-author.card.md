@@ -8,9 +8,9 @@ description: Writes a task-oriented how-to guide for this project following the 
   only)
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # how-to-author
 

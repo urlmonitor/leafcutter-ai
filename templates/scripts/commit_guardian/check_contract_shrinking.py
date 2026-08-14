@@ -44,25 +44,108 @@ _TEST_PATH_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Patterns for test-weakening changes (lines ADDED in the diff)
+# Patterns for test-weakening changes (lines ADDED in the diff).
+#
+# Deletion of a test function or a whole test file is NOT in this list — those
+# two cannot be decided from a single line. A body edit renders as a removed
+# `-    def test_x` AND an added `+    def test_x` for the same name, and an
+# ordinary modification of a test file still puts it on the `--- a/` side. Both
+# were reported as deletions, so every edited test and every merge commit was
+# blocked (GE-119). They are detected by _find_deleted_tests /
+# _find_deleted_test_files below, which correlate the two sides of the diff.
+# Each pattern anchors the token to the START of the added line (after the
+# diff's own "+" and the line's indentation) and requires real call/decorator
+# syntax. The previous `^\+.*<token>` form matched the token ANYWHERE in an
+# added line, so it fired on text that merely mentions these names:
+#
+#   +        \"\"\"A diff exercising pytest.skip, pytest.mark.xfail   <- docstring
+#   +            "pytest.mark.xfail                                    <- string literal
+#   +            +    @unittest.skip(                                  <- a diff INSIDE a
+#                                                                         fixture string, so
+#                                                                         the real line starts
+#                                                                         with a second "+"
+#   +description: "... check_contract_shrinking ... xfail ..."         <- changelog prose
+#
+# That made this guard unable to review its own test suite or any changelog
+# describing it, and it blocked merge commits that imported such files.
+# Anchoring keeps every genuine form (`+    @unittest.skip("flaky")`,
+# `+        pytest.skip("reason")`) while rejecting all of the above.
+#
+# Deliberate narrowing: a skip called mid-statement (`+  if x: pytest.skip(y)`)
+# is no longer flagged. Prose and fixtures mentioning these tokens are far more
+# common than mid-statement skips, and this guard is a backstop, not a parser —
+# a false block on every merge commit is worse than missing that rare form.
+#
+# `@unittest.skip\s*\(` does NOT match `@unittest.skipUnless(` / `skipIf(`,
+# because those have a letter, not `(` or whitespace, after "skip" — a
+# conditional guard is not a disabled test.
 _WEAKENING_PATTERNS: list[tuple[str, str]] = [
-    # Entire test file deleted (git shows it as deleted file)
-    (r"^--- a/(test_[^/]+\.py|[^/]+_test\.py)", "test file deleted"),
-    # Individual test function deleted (line removed from diff)
-    (r"^-\s*def test_", "test function deleted"),
-    # pytest.skip call added
-    (r"^\+.*pytest\.skip\s*\(", "pytest.skip added"),
-    # pytest.mark.xfail decorator added
-    (r"^\+.*pytest\.mark\.xfail", "pytest.mark.xfail added"),
-    # @unittest.skip decorator added
-    (r"^\+.*@unittest\.skip\s*\(", "@unittest.skip added"),
-    # @unittest.expectedFailure decorator added
-    (r"^\+.*@unittest\.expectedFailure", "@unittest.expectedFailure added"),
+    # pytest.skip call added as its own statement
+    (r"^\+\s*pytest\.skip\s*\(", "pytest.skip added"),
+    # pytest.mark.xfail added as a decorator or a module-level pytestmark
+    (
+        r"^\+\s*(?:@|pytestmark\s*=\s*)pytest\.mark\.xfail\b",
+        "pytest.mark.xfail added",
+    ),
+    # @unittest.skip decorator added (not skipUnless / skipIf)
+    (r"^\+\s*@unittest\.skip\s*\(", "@unittest.skip added"),
+    # @unittest.expectedFailure decorator alone on its line
+    (r"^\+\s*@unittest\.expectedFailure\s*$", "@unittest.expectedFailure added"),
 ]
 _COMPILED_WEAKENING_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(pattern, re.MULTILINE), label)
     for pattern, label in _WEAKENING_PATTERNS
 ]
+
+
+# Test-function definitions on each side of the diff, capturing the NAME so a
+# removal can be paired with its re-addition. The old pattern had no capture
+# group at all, so the guard could not even report which test it meant.
+_REMOVED_TEST_DEF_RE = re.compile(r"^-\s*(?:async\s+)?def\s+(test_\w+)", re.MULTILINE)
+_ADDED_TEST_DEF_RE = re.compile(r"^\+\s*(?:async\s+)?def\s+(test_\w+)", re.MULTILINE)
+
+# A file is only DELETED when its new-side header is /dev/null. Matching the
+# `--- a/...` side alone also matches every ordinary modification.
+_DELETED_FILE_RE = re.compile(
+    r"^--- a/(?P<path>.+)\n\+\+\+ /dev/null\s*$",
+    re.MULTILINE,
+)
+_TEST_FILE_RE = re.compile(r"(^|/)(test_[^/]+\.py|[^/]+_test\.py)$")
+
+
+def _find_deleted_tests(diff: str) -> list[str]:
+    """Return names of test functions removed and never re-added.
+
+    A test whose body is edited appears on BOTH sides of the diff with the same
+    name; that is a modification, not a deletion. Only a name that is removed
+    with no matching addition anywhere in the diff has actually gone away.
+
+    Args:
+        diff: The full text of the staged git diff.
+
+    Returns:
+        Sorted list of deleted test-function names (may be empty).
+    """
+    removed = set(_REMOVED_TEST_DEF_RE.findall(diff))
+    added = set(_ADDED_TEST_DEF_RE.findall(diff))
+    return sorted(removed - added)
+
+
+def _find_deleted_test_files(diff: str) -> list[str]:
+    """Return paths of test files the diff deletes outright.
+
+    Args:
+        diff: The full text of the staged git diff.
+
+    Returns:
+        Sorted list of deleted test-file paths (may be empty).
+    """
+    deleted = {
+        match.group("path")
+        for match in _DELETED_FILE_RE.finditer(diff)
+        if _TEST_FILE_RE.search(match.group("path"))
+    }
+    return sorted(deleted)
 
 
 @dataclass
@@ -123,12 +206,18 @@ def _scan_diff(diff: str) -> ScanResult:
             result.has_production_changes = True
             result.production_files.append(filepath)
 
-    # --- Test-weakening pattern detection ---
+    # --- Test-weakening pattern detection (single-line, additive) ---
     for pattern, label in _COMPILED_WEAKENING_PATTERNS:
         for match in pattern.finditer(diff):
             # Extract a short context snippet (first 120 chars of the matching line)
             line = match.group(0).rstrip("\n")[:120]
             result.violations.append((label, line))
+
+    # --- Deletion detection (needs both sides of the diff correlated) ---
+    for name in _find_deleted_tests(diff):
+        result.violations.append(("test function deleted", name))
+    for path in _find_deleted_test_files(diff):
+        result.violations.append(("test file deleted", path))
 
     return result
 

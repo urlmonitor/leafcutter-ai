@@ -20,21 +20,37 @@ import {
   MiniMap,
   ReactFlowProvider,
   MarkerType,
+  useNodesState,
   type Node,
   type Edge,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { buildFlowGraph } from "@/lib/data/graph";
+import { buildFlowGraph, buildArtifactGraph } from "@/lib/data/graph";
+import { layoutArtifactGraph } from "@/lib/data/artifact-layout";
+import {
+  renderGraphPng,
+  copyBlobToClipboard,
+  downloadBlob,
+  type PngNode,
+  type PngEdge,
+} from "@/lib/png-export";
 import { WORK_STATUS_TONE } from "@/lib/status";
 import { cn } from "@/lib/utils";
-import type { Flow, MockData, WorkStatus } from "@/lib/data/types";
+import type { Flow, GraphEdge, MockData, SelfRel, WorkStatus } from "@/lib/data/types";
 
 interface XY {
   x: number;
   y: number;
 }
 import { flowNodeTypes } from "./flow-nodes";
-import { edgeStyle } from "@/components/atlas/edges";
+import { artifactEdgeTypes } from "./self-loop-edge";
+import {
+  edgeStyle,
+  artifactEdgeStyle,
+  INGESTABILITY_LEGEND,
+  ARTIFACT_GROUP_HSL,
+  ARTIFACT_GROUP_LABEL,
+} from "@/components/atlas/edges";
 import { FlowDrawer, type StepView } from "./flow-drawer";
 
 const COL_GAP = 340;
@@ -49,6 +65,404 @@ const BRANCH_LANE = AC_DROP + 180;
 const STATUS_LEGEND: WorkStatus[] = ["done", "in_progress", "not_started"];
 const EDGE_LEGEND_ALL = ["flow", "implements"] as const;
 type EdgeLegendKind = (typeof EDGE_LEGEND_ALL)[number];
+
+// ---------------------------------------------------------------------------
+// ArtifactExplorerInner — React Flow canvas for the authored artifact graph.
+// Nodes are positioned by `rank` (column index) and `row` (index within rank).
+// Edge stroke/dash is keyed on enforcement level rather than GraphEdgeKind.
+// ---------------------------------------------------------------------------
+function ArtifactExplorerInner({ flow }: { flow: Flow }) {
+  const graph = React.useMemo(() => buildArtifactGraph(flow), [flow]);
+
+  // Crossing-reduced layered layout. Self-referencing edges (AC -> AC) are
+  // lifted out and badged on the card instead of drawn as degenerate loops.
+  const layout = React.useMemo(
+    () => layoutArtifactGraph(graph.nodes, graph.edges),
+    [graph],
+  );
+
+  // Nodes are stateful (useNodesState) so the user can DRAG them to refine the
+  // view; positions reset to the computed layout on flow change or Reset click.
+  const initialNodes = React.useMemo<Node[]>(
+    () =>
+      graph.nodes.map((n) => ({
+        id: n.id,
+        type: "artifactNode",
+        position: layout.positions.get(n.id) ?? { x: 0, y: 0 },
+        data: {
+          label: n.label,
+          group: n.group,
+          path: (n.meta?.path as string) ?? "",
+          key: (n.meta?.key as string) ?? "",
+          note: (n.meta?.note as string | undefined),
+          selfRels: layout.selfRels.get(n.id),
+        },
+        draggable: true,
+      })),
+    [graph, layout],
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  // Re-seed positions when the underlying graph changes (e.g. switching flows).
+  React.useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
+  const resetLayout = React.useCallback(() => setNodes(initialNodes), [initialNodes, setNodes]);
+
+  // Selected edge — surfaces `note` and `cardinality`, the caveats that make
+  // an "enforced" edge safe or unsafe to actually build on.
+  const [selectedEdge, setSelectedEdge] = React.useState<GraphEdge | null>(null);
+  const onEdgeClick = React.useCallback(
+    (_evt: React.MouseEvent, edge: Edge) => {
+      setSelectedEdge(layout.edges.find((e) => e.id === edge.id) ?? null);
+    },
+    [layout],
+  );
+
+  // --- PNG export -------------------------------------------------------
+  // Redraws from the CURRENT node positions, so the image matches what the
+  // user sees (including any dragging) rather than the pristine layout.
+  const [exportMsg, setExportMsg] = React.useState<string | null>(null);
+
+  const buildPng = React.useCallback(async () => {
+    const pngNodes: PngNode[] = nodes.map((n) => ({
+      id: n.id,
+      label: (n.data as { label: string }).label,
+      group: (n.data as { group: string }).group,
+      x: n.position.x,
+      y: n.position.y,
+      selfRels: (n.data as { selfRels?: SelfRel[] }).selfRels,
+    }));
+    // layout.edges (not graph.edges) so the PNG matches the canvas: self-edges
+    // are badged on their card, not drawn.
+    const pngEdges: PngEdge[] = layout.edges.map((e) => ({
+      source: e.source,
+      target: e.target,
+      rel: e.rel ?? e.label,
+      field: e.field,
+      enforcement: e.enforcement,
+      shape: e.shape,
+      status: e.status,
+    }));
+    const selfCount = Array.from(layout.selfRels.values()).reduce(
+      (sum, arr) => sum + arr.length,
+      0,
+    );
+    return await renderGraphPng(pngNodes, pngEdges, flow.name, {
+      sourceDoc: flow.filePath,
+      nodeCount: graph.nodes.length,
+      edgeCount: pngEdges.length,
+      selfCount,
+    });
+  }, [nodes, graph, layout, flow.name, flow.filePath]);
+
+  const flash = (msg: string) => {
+    setExportMsg(msg);
+    window.setTimeout(() => setExportMsg(null), 2600);
+  };
+
+  const handleCopyPng = React.useCallback(async () => {
+    try {
+      await copyBlobToClipboard(await buildPng());
+      flash("Copied PNG to clipboard");
+    } catch (err) {
+      // Clipboard image writes are Chromium-only — fall back to a download so
+      // the user still gets the image instead of a dead button.
+      try {
+        downloadBlob(await buildPng(), `${flow.id.replace(/\//g, "-")}.png`);
+        flash("Clipboard unavailable — downloaded instead");
+      } catch {
+        flash(err instanceof Error ? err.message : "PNG export failed");
+      }
+    }
+  }, [buildPng, flow.id]);
+
+  const handleDownloadPng = React.useCallback(async () => {
+    try {
+      downloadBlob(await buildPng(), `${flow.id.replace(/\//g, "-")}.png`);
+      flash("PNG downloaded");
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "PNG export failed");
+    }
+  }, [buildPng, flow.id]);
+
+  const edges = React.useMemo<Edge[]>(() => {
+    // Edges sharing a node pair land their labels at the same point and paint
+    // over each other — this previously erased TRACES_TO (enforced+clean)
+    // under TICKET_DEPENDS_ON (unenforced). Stagger each duplicate's label
+    // along the curve so every relationship stays readable.
+    const pairSeen = new Map<string, number>();
+
+    return layout.edges.map((e) => {
+      const enforcement = e.enforcement ?? "none";
+      const status = e.status ?? "present";
+      const spec = artifactEdgeStyle(enforcement, e.shape ?? "clean", status);
+      const pairKey = [e.source, e.target].sort().join("::");
+      const nth = pairSeen.get(pairKey) ?? 0;
+      pairSeen.set(pairKey, nth + 1);
+      // AC -> AC traversals (DEPENDS_ON, SUPERSEDED_BY) are promoted to drawn
+      // edges by the layout. A default bezier between two centred handles on
+      // the SAME card is a flat line through the card, so they get a custom
+      // arc renderer instead.
+      const isSelfLoop = e.source === e.target;
+
+      // Field first (what you grep for), relationship second (the abstraction).
+      // An absent edge has no field to grep, so it captions the relation it
+      // WOULD encode, marked as missing rather than as a weak link.
+      const caption = status === "absent"
+        ? `${spec.warnGlyph} ${e.rel ?? e.label ?? ""} — missing`
+        : e.field && e.field !== "—"
+          ? `${e.field}${spec.warnGlyph ? ` ${spec.warnGlyph}` : ""}`
+          : `${e.rel ?? e.label ?? ""}${spec.warnGlyph ? ` ${spec.warnGlyph}` : ""}`;
+
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        type: isSelfLoop ? "selfLoop" : undefined,
+        animated: false,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: `hsl(${spec.hsl})`,
+          width: 13,
+          height: 13,
+        },
+        style: {
+          stroke: `hsl(${spec.hsl})`,
+          strokeWidth: spec.ingestability === "ingestable" ? 1.7 : 1.3,
+          opacity: spec.ingestability === "untrusted" ? 0.55 : 0.85,
+          // A long open dash reads as "this line isn't really there" — a
+          // second, non-colour channel so the gap survives greyscale printing
+          // and the PNG export.
+          strokeDasharray: spec.ingestability === "absent"
+            ? "2 7"
+            : spec.dashed
+              ? "5 4"
+              : undefined,
+        },
+        label: caption,
+        labelShowBg: true,
+        labelStyle: {
+          fill: `hsl(${spec.hsl})`,
+          fontSize: 9,
+          fontWeight: 600,
+        },
+        labelBgStyle: {
+          fill: "hsl(158 12% 11%)",
+          // Semi-transparent so residual overlap is visible rather than
+          // silently destructive.
+          fillOpacity: 0.75,
+        },
+        labelBgPadding: [3, 4] as [number, number],
+        pathOptions: { curvature: 0.25 + nth * 0.22 },
+        data: {
+          rel: e.rel,
+          field: e.field,
+          enforcement,
+          shape: e.shape,
+          status,
+          cardinality: e.cardinality,
+          note: e.note,
+          ingestability: spec.ingestability,
+          // Stacks the second self-loop clear of the first.
+          nth,
+        },
+        labelBgBorderRadius: 3,
+        interactionWidth: 18,
+        selectable: true,
+      } as Edge;
+    });
+  }, [layout]);
+
+  return (
+    <div className="panel relative h-[calc(100svh-20rem)] min-h-[560px] overflow-hidden p-0">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgeClick={onEdgeClick}
+        onPaneClick={() => setSelectedEdge(null)}
+        nodeTypes={flowNodeTypes}
+        edgeTypes={artifactEdgeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.18, minZoom: 0.3 }}
+        minZoom={0.15}
+        maxZoom={2.5}
+        nodesDraggable
+        nodesConnectable={false}
+        proOptions={{ hideAttribution: true }}
+        className="bg-transparent"
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={26}
+          size={1}
+          color="hsl(156 16% 18%)"
+        />
+        <Controls showInteractive={false} className="!bottom-4 !left-4" />
+        <MiniMap
+          pannable
+          zoomable
+          className="!bottom-4 !right-4 !bg-card/80 !border !border-border/70"
+          maskColor="hsl(160 26% 6% / 0.7)"
+          nodeStrokeWidth={0}
+        />
+      </ReactFlow>
+
+      {/* Export / layout toolbar */}
+      <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleCopyPng}
+          className="rounded-lg border border-border/70 bg-card/90 px-2.5 py-1.5 text-[11px] font-medium text-foreground/90 backdrop-blur transition-colors hover:bg-card"
+          title="Copy the graph as a PNG image to your clipboard"
+        >
+          Copy PNG
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadPng}
+          className="rounded-lg border border-border/70 bg-card/90 px-2.5 py-1.5 text-[11px] font-medium text-foreground/90 backdrop-blur transition-colors hover:bg-card"
+          title="Download the graph as a PNG file"
+        >
+          Download
+        </button>
+        <button
+          type="button"
+          onClick={resetLayout}
+          className="rounded-lg border border-border/70 bg-card/90 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+          title="Restore the computed layout, discarding any dragging"
+        >
+          Reset layout
+        </button>
+        {exportMsg && (
+          <span className="rounded-md bg-card/90 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur">
+            {exportMsg}
+          </span>
+        )}
+      </div>
+
+      {/* Artifact graph legend */}
+      <div className="pointer-events-none absolute right-4 top-4 z-10">
+        <div className="pointer-events-auto panel max-w-xs p-3.5">
+          <div className="eyebrow mb-2">Legend</div>
+          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+            Node group
+          </div>
+          <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
+            {Object.entries(ARTIFACT_GROUP_LABEL).map(([group, label]) => (
+              <span
+                key={group}
+                className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+              >
+                <span
+                  className="h-2 w-[3px] rounded-full"
+                  style={{ background: `hsl(${ARTIFACT_GROUP_HSL[group]})` }}
+                />
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+            Edge trust
+          </div>
+          <div className="flex flex-col gap-1">
+            {INGESTABILITY_LEGEND.map((row) => (
+              <span
+                key={row.key}
+                className="inline-flex items-baseline gap-1.5 text-[11px] text-muted-foreground"
+              >
+                <svg width="20" height="6" className="shrink-0 overflow-visible">
+                  <line
+                    x1="0" y1="3" x2="20" y2="3"
+                    stroke={`hsl(${row.hsl})`}
+                    strokeWidth="2"
+                    strokeDasharray={
+                      row.key === "absent"
+                        ? "2 7"
+                        : row.key === "untrusted"
+                          ? "4 3"
+                          : undefined
+                    }
+                  />
+                </svg>
+                <span className="text-foreground/85">{row.label}</span>
+                <span className="text-[9px] text-muted-foreground/70">{row.hint}</span>
+              </span>
+            ))}
+          </div>
+          <p className="mt-2.5 text-[9px] leading-relaxed text-muted-foreground/70">
+            Labels show the <span className="font-mono">field</span> that encodes each edge.
+            ⚠ ambiguous · ~ freetext · ∅ often-empty — these need partitioning before
+            ingestion even when enforced. Dashes mark derived or untrusted links.
+            A red ✗ line is a relation the repo does NOT have — recorded so a gap
+            is distinguishable from an omission, never traversable.
+            Click an edge for its full trust record; ↺ on a card lists
+            self-referencing relationships.
+          </p>
+
+          {selectedEdge && (() => {
+            const spec = artifactEdgeStyle(
+              selectedEdge.enforcement ?? "none",
+              selectedEdge.shape ?? "clean",
+              selectedEdge.status ?? "present",
+            );
+            return (
+              <div className="mt-3 border-t border-border/40 pt-2.5">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span
+                    className="text-[11px] font-semibold"
+                    style={{ color: `hsl(${spec.hsl})` }}
+                  >
+                    {selectedEdge.rel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEdge(null)}
+                    className="text-[10px] text-muted-foreground hover:text-foreground"
+                  >
+                    close
+                  </button>
+                </div>
+                <dl className="space-y-1 text-[9.5px] leading-relaxed">
+                  <div>
+                    <dt className="inline text-muted-foreground/70">field </dt>
+                    <dd className="inline font-mono text-foreground/85">
+                      {selectedEdge.field ?? "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="inline text-muted-foreground/70">trust </dt>
+                    <dd className="inline text-foreground/85">
+                      {selectedEdge.status === "absent"
+                        ? "no such link"
+                        : `${selectedEdge.enforcement} · ${selectedEdge.shape}`}{" "}
+                      <span style={{ color: `hsl(${spec.hsl})` }}>
+                        ({spec.ingestability})
+                      </span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="inline text-muted-foreground/70">cardinality </dt>
+                    <dd className="inline text-foreground/85">
+                      {selectedEdge.cardinality ?? "—"}
+                    </dd>
+                  </div>
+                  {selectedEdge.note && (
+                    <div className="pt-0.5 text-muted-foreground">
+                      {selectedEdge.note}
+                    </div>
+                  )}
+                </dl>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ExplorerInner({
   flow,
@@ -457,15 +871,22 @@ export function FlowExplorer({
   screenTitles?: Record<string, string>;
   onDrill?: (childFlowId: string) => void;
 }) {
+  // Authored artifact graphs have graphNodes/graphEdges attached; use a dedicated
+  // renderer that lays out by rank/row instead of the step/branch/AC column layout.
+  const isArtifact = Boolean(flow.graphNodes && flow.graphNodes.length > 0);
   return (
     <ReactFlowProvider>
-      <ExplorerInner
-        flow={flow}
-        mock={mock}
-        flowNames={flowNames}
-        screenTitles={screenTitles}
-        onDrill={onDrill}
-      />
+      {isArtifact ? (
+        <ArtifactExplorerInner flow={flow} />
+      ) : (
+        <ExplorerInner
+          flow={flow}
+          mock={mock}
+          flowNames={flowNames}
+          screenTitles={screenTitles}
+          onDrill={onDrill}
+        />
+      )}
     </ReactFlowProvider>
   );
 }

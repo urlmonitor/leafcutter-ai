@@ -56,9 +56,6 @@ doc_links:
   - path: "scripts/selection_criteria_evaluator.py"
     relationship: describes
     status: exists
-  - path: "docs/architecture/adrs/ADR-018-selection-criteria-dsl.md"
-    relationship: describes
-    status: planned
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:

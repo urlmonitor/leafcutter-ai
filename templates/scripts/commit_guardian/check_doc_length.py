@@ -15,7 +15,7 @@ BUSINESS CONTEXT: Mirrors the complexity/line-length enforcement for Python and 
     files. Forces authors to decompose large docs into focused, interlinked pages.
 ARCHITECTURE: Not needed.
 DOC_LINKS:
-  - docs/architecture/adrs/ADR-006-agent-model-tiers.md
+  - docs/architecture/adrs/ADR-033-agent-model-tiers.md
 """
 
 import re

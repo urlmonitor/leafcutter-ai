@@ -25,7 +25,7 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
@@ -33,7 +33,7 @@ estimated_complexity: S
 it_requirements:
   - "Convention only -- implementation is documentation in docs/reference/ac-schema.md. No validation code required beyond ACS-500a-3"
   - "Must not introduce any new directory structure, catalog files, or registry files for patterns"
-  - "Pattern ACs must conform to the existing AC YAML schema and ID format per ADR-007"
+  - "Pattern ACs must conform to the existing AC YAML schema and ID format per ADR-008"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

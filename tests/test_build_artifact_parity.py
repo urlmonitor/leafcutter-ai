@@ -154,9 +154,19 @@ class TestSourceManifestsCoversAllCategories(unittest.TestCase):
 
 
 class TestOutputDriftCoversAllShimmedDirs(unittest.TestCase):
-    """check_output_drift.py _OUTPUT_DIRS must cover all shimmed directories."""
+    """check_output_drift.py must scan every shimmed directory for drift.
 
-    def test_drift_check_covers_shimmed_dirs(self):
+    This asserts BEHAVIOUR, not source shape: it runs the hook's ``main()``
+    with the manifest resolution stubbed out, captures the directory list the
+    hook actually hands to ``check_output_drift()``, and checks coverage. An
+    earlier version AST-scanned for a module-level ``_OUTPUT_DIRS`` constant
+    and broke when GE-118b made manifest resolution dynamic — a refactor that
+    changed no behaviour. A presence-scan cannot tell "the gate covers this
+    directory" from "a constant with that name exists", which is the
+    phantom-done pattern CLAUDE.md forbids for gate tests.
+    """
+
+    def _load_drift_module(self):
         drift_script = (
             _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
             / "check_output_drift.py"
@@ -164,21 +174,57 @@ class TestOutputDriftCoversAllShimmedDirs(unittest.TestCase):
         if not drift_script.exists():
             self.skipTest("check_output_drift.py not found")
 
-        source = drift_script.read_text(encoding="utf-8")
-        tree = ast.parse(source)
+        # The hook imports a sibling helper (_resolve_root); make that importable.
+        guardian_dir = drift_script.parent
+        if str(guardian_dir) not in sys.path:
+            sys.path.insert(0, str(guardian_dir))
 
-        # Extract path suffixes from _OUTPUT_DIRS list
-        drift_suffixes: set[str] = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target_node in node.targets:
-                    if isinstance(target_node, ast.Name) and target_node.id == "_OUTPUT_DIRS":
-                        if isinstance(node.value, ast.List):
-                            for elt in node.value.elts:
-                                # Each element is _REPO_ROOT / "x" / "y"
-                                parts = _extract_path_parts(elt)
-                                if parts:
-                                    drift_suffixes.add("/".join(parts))
+        spec_drift = importlib.util.spec_from_file_location(
+            "check_output_drift_under_test", drift_script
+        )
+        module = importlib.util.module_from_spec(spec_drift)
+        try:
+            spec_drift.loader.exec_module(module)
+        except ImportError as exc:  # pragma: no cover - environment-dependent
+            self.skipTest(f"check_output_drift.py not importable: {exc}")
+        return module
+
+    def test_drift_check_covers_shimmed_dirs(self):
+        module = self._load_drift_module()
+
+        fake_root = Path("/tmp/leafcutter-drift-parity-probe")
+        fake_manifest = fake_root / "pkg" / ".build_manifest.json"
+        captured: dict[str, list[Path]] = {}
+
+        def _fake_resolve(_hook_file):
+            return fake_manifest, []
+
+        def _fake_check(output_dirs, **_kwargs):
+            captured["output_dirs"] = list(output_dirs)
+            return 0
+
+        original_resolve = module._resolve_manifest_path
+        original_check = module.check_output_drift
+        module._resolve_manifest_path = _fake_resolve
+        module.check_output_drift = _fake_check
+        try:
+            module.main()
+        finally:
+            module._resolve_manifest_path = original_resolve
+            module.check_output_drift = original_check
+
+        self.assertIn(
+            "output_dirs",
+            captured,
+            "check_output_drift.py main() never reached check_output_drift(); "
+            "the drift gate would scan nothing.",
+        )
+
+        repo_root = fake_manifest.parent.parent
+        drift_suffixes = {
+            d.relative_to(repo_root).as_posix()
+            for d in captured["output_dirs"]
+        }
 
         all_categories = _USER_FACING_CATEGORIES + _INTERNAL_CATEGORIES
         for cat, shim_path, _ in all_categories:
@@ -186,8 +232,9 @@ class TestOutputDriftCoversAllShimmedDirs(unittest.TestCase):
                 self.assertIn(
                     shim_path,
                     drift_suffixes,
-                    f"check_output_drift.py _OUTPUT_DIRS is missing '{shim_path}' "
-                    f"for template category '{cat}'. Add it to the _OUTPUT_DIRS list.",
+                    f"check_output_drift.py does not scan '{shim_path}' for "
+                    f"template category '{cat}'. It scans: {sorted(drift_suffixes)}. "
+                    f"Add the directory to the output_dirs list built in main().",
                 )
 
 

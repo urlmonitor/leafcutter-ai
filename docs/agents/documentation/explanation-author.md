@@ -1,19 +1,19 @@
 ---
-title: "Agent Reference: explanation-author"
+title: 'Agent Reference: explanation-author'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/documentation/write-explanation.md"
-  - "docs/README.md"
-  - "tickets/09_done/EPIC-CodingAgents/25_explanation_author.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/documentation/write-explanation.md
+- docs/README.md
+- tickets/09_done/EPIC-CodingAgents/25_explanation_author.md
+description: 'Overview of Agent Reference: explanation-author.'
 ---
-
 # Agent Reference: `explanation-author`
 
 Internal identifier: `explanation-author` (Sonnet sub-agent).
@@ -126,7 +126,7 @@ tools: Bash, Read, Edit, Write, Agent
 ## 8. Cross-Links
 
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1), file layout (§2), visibility classes (§3), tool allowlists (§4).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) — upstream ADR: three-tier ladder, strict-research-delegation rule.
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — upstream ADR: three-tier ladder, strict-research-delegation rule.
 - [`docs/how-to/documentation/write-explanation.md`](../../how-to/documentation/write-explanation.md) — the how-to this agent loads at runtime. Single source of truth for explanation conventions.
 - [`docs/README.md`](../../README.md) — Diataxis index defining the "understand" genre.
 - [Ticket 25](../../../tickets/09_done/EPIC-CodingAgents/25_explanation_author.md) — the ticket that shipped this agent.

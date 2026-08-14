@@ -1,25 +1,25 @@
 ---
-title: "Agent Reference: brainstorm-lead (and brainstorm-worker)"
+title: 'Agent Reference: brainstorm-lead (and brainstorm-worker)'
 type: reference
 status: active
 created: 2026-05-08
 last_updated: 2026-05-08
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/agents/coding/epic-supervisor.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/superpowers/specs/2026-05-08-agent-supervisor-design.md"
-  - "tickets/09_done/EPIC-AgentSupervisor/Master_Plan.md"
+- docs/agents/conventions.md
+- docs/agents/coding/epic-supervisor.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/superpowers/specs/2026-05-08-agent-supervisor-design.md
+- tickets/09_done/EPIC-AgentSupervisor/Master_Plan.md
 related_code:
-  - ".claude/agents/brainstorm-lead.md"
-  - ".claude/agents/brainstorm-worker.md"
-  - ".claude/agents/ticket-supervisor.md"
-  - ".claude/skills/building-epics/SKILL.md"
-  - ".claude/commands/build-feature.md"
+- .claude/agents/brainstorm-lead.md
+- .claude/agents/brainstorm-worker.md
+- .claude/agents/ticket-supervisor.md
+- .claude/skills/building-epics/SKILL.md
+- .claude/commands/build-feature.md
+description: 'Overview of Agent Reference: brainstorm-lead (and brainstorm-worker).'
 ---
-
 # Agent Reference: `brainstorm-lead` (and `brainstorm-worker`)
 
 Implementing agents:

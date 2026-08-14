@@ -1,0 +1,154 @@
+id: INF-500d-1
+components:
+  - infrastructure
+  - feedback_collector
+title: "Who may file a report is derived from the live agent roster, never from a hand-kept copy of it"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the agents ac-validator, ac-fulfillment-gate, change-scope-reviewer and
+    live-surface-tester are entries in the live agent roster,
+  And none of the four is named in the permitted-writer list of the general-purpose
+    category they must write (knowledge-gap),
+  When each of the four submits a report to that category as an agent,
+  Then each report is accepted and stored,
+  And the writers permitted for a GENERAL-PURPOSE category are determined at
+    submission time by exactly one question — "is this submitter an entry in the live
+    agent roster?" — and not by consulting a separately maintained duplicate of the
+    roster, and not by any narrower roster attribute such as the entry's declared
+    phase, declared category, or tier.
+
+  Given the exact set of submitter identities that are permitted writers of each
+    category immediately before this behaviour ships,
+  When the derived writer set is in force,
+  Then every one of those identities is still a permitted writer of every category it
+    could write before,
+  And in particular the two supervisor identities that today write tooling-issue,
+    convention-ambiguity and blocker are still accepted for those three categories,
+    even though the roster does not mark them as ticket-phase agents and one of them
+    is marked deprecated,
+  So that replacing the hand-kept list with a derived one adds writers and revokes
+    none.
+
+  Given a newly registered agent that is added to the live agent roster after this
+    behaviour ships,
+  And no edit is made to the permitted-writer configuration,
+  When that agent submits a report to a general-purpose category,
+  Then the report is accepted,
+  So that adding an agent never requires a second, easily-forgotten edit elsewhere.
+
+  Given the single non-agent submitter identity that the commit-time guards use, which
+    is deliberately not an entry in the agent roster,
+  When a guard files its report to the category reserved for guards,
+  Then the report is accepted,
+  So that deriving the general-purpose writer sets from the roster does not strand the
+    one legitimate writer that is not an agent.
+
+  Given a submitter identity that is not an entry in the live agent roster (for example
+    "totally-made-up-agent"),
+  When it submits a report as an agent to a general-purpose category,
+  Then the report is rejected with an error that names the rejected submitter and the
+    category it attempted to write, and that does NOT enumerate the identities the
+    category permits,
+  And the derived writer set therefore never degenerates into "any caller is
+    permitted".
+depends_on:
+  - INF-500d
+doc_links:
+  - path: templates/config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "A completed one-time snapshot of the writers of its day. Not to be re-opened or re-enumerated — this AC replaces the snapshot mechanism, not its contents. Its it_requirement 'must not remove any existing allowed_writers entries' is what the no-revocation scenario above enforces."
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Approved but work_status: todo with covered_by: [] — the rejection behaviour it specifies is NOT yet built and cannot be treated as an existing guard to preserve. Its it_requirement #3 (do not leak the full permitted-writer list in the error) is currently violated by the shipped rejection message; the final scenario above restates the no-leak clause so a derived — and therefore larger — writer set does not widen that leak."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-500d-1-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  BOUNDARY vs INF-100c-3 (readiness: approved, work_status: done). INF-100c-3
+  enumerated the phase agents that existed on the day it was written. It is a
+  correct historical snapshot and it is genuinely done. Do NOT amend it, do NOT
+  re-open it, and do NOT satisfy this AC by hand-adding the four named agents to
+  the permitted-writer lists — that repeats the snapshot and goes stale again, as
+  the DECISION HISTORY in feedback_categories.yaml records happening on 2026-06-03,
+  2026-06-08 and 2026-07-17. The requirement here is STRUCTURAL: the permitted set
+  is derived from the live roster, so the four names are a symptom used as test
+  evidence, not the deliverable.
+
+  The four names are the observable evidence available on 2026-08-13; a test should
+  assert the derivation property, not freeze this particular quartet.
+
+  THE PREDICATE IS ROSTER MEMBERSHIP AND NOTHING NARROWER. An earlier draft of this
+  AC said "the live agent roster" while INF-500d-2 said "agents the roster marks as
+  a ticket-phase agent". Those are different predicates and the narrower one is
+  wrong. Measured on the roster on 2026-08-13: epic-supervisor and ticket-supervisor
+  both carry is_ticket_phase: false, yet both are permitted writers TODAY of
+  tooling-issue, convention-ambiguity and blocker. Deriving on is_ticket_phase would
+  add the four missing agents while silently revoking those two across three
+  categories each — six working writer permissions destroyed — which directly
+  violates INF-100c-3's it_requirement "Must not remove any existing allowed_writers
+  entries". The second scenario above exists solely to make that revocation a test
+  failure rather than a review-time judgement call.
+
+  DEPRECATED ROSTER ENTRIES — decide, do not assume. epic-supervisor is marked
+  deprecated: true in the roster (ADR-006). A predicate of "any NON-DEPRECATED roster
+  id" would still revoke it and still break the no-revocation scenario. The scenario
+  is written to be the binding constraint: whatever predicate is chosen, an identity
+  that could write a category yesterday must still be able to write it tomorrow.
+  Retiring a deprecated writer is a separate, deliberate decision for its own AC.
+
+  SCOPE — GENERAL-PURPOSE CATEGORIES ONLY. Derivation applies to the general-purpose
+  categories. The three deliberately restricted categories keep explicit, literally
+  enumerated writer lists; see INF-500d-1-i for why derivation cannot express them.
+
+  THE NON-AGENT WRITER. The guard-only category's sole permitted writer is a literal
+  identity string that is not an agent id and does not appear in the roster at all.
+  Roster derivation must not be applied to it, or the commit-time guards lose their
+  only writer. The fourth scenario pins this.
+
+  OBSERVED BYPASS, RECORDED NOT SPECIFIED. On 2026-08-13 the submission path performs
+  writer validation only when the submission declares itself agent-sourced; a
+  submission that declares a non-agent source skips writer validation entirely
+  regardless of the phase it names. That is why the scenarios above are scoped to
+  agent-source submissions — an unscoped "for any category, from any source" claim
+  would be false as written. Whether the non-agent source should also be validated is
+  a distinct defect and is deliberately NOT specified here.
+
+  PREREQUISITE FOR THE IT PO — THE ROSTER IS NOT DEPLOYED. On 2026-08-13 the build's
+  feedback deploy step ships feedback_categories.yaml to a consumer project's config/
+  directory but does NOT ship agent_registry.json; the deployed config directory
+  observed in this workspace contains only feedback_categories.yaml and the guard
+  config. A submission path that reads the roster at submission time is therefore
+  unbuildable in a consumer install until the roster is added to the deploy manifest.
+  Treat "the roster is present and readable in a consumer install" as a prerequisite
+  of this AC and size it accordingly. Do not treat it as licence to edit the build
+  phase from inside this AC's ticket without an accompanying AC.

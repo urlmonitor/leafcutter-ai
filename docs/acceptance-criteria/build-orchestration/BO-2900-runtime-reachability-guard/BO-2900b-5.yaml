@@ -1,0 +1,93 @@
+id: BO-2900b-5
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Component diagram: the capability surface, the automation that runs it, and the two checks between them"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the capability-to-automation connection checks are in place,
+  When a reader consults the architecture documentation for how operator-facing
+    capabilities reach the automation that runs them,
+  Then a component diagram shows the command surface, the automation that invokes it,
+    and the checks that connect them,
+    And it shows the two checks as separate arrows in opposite directions — registered
+      capability to caller, and caller to registered capability — rather than one
+      bidirectional link,
+    And it marks the source of each check's inventory: the built command surface for
+      the registered capabilities, and the automation's own invocations for the callers,
+    And it shows the recorded exemption as an input that removes an item from a
+      check's scope, with the item still visible rather than absent,
+    And it distinguishes this capability-to-caller connection from the byte-parity
+      check between a source script and its shipped copy, and from agent-registry
+      reciprocity, so a reader does not take the three for one mechanism.
+depends_on:
+  - BO-2900b
+  - BO-2900b-1
+  - BO-2900b-3
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page the diagram belongs on."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "The adjacent guarantee; the diagram must make the boundary legible rather than merging the two."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Place the diagram on docs/architecture/components/build-orchestration.md and satisfy the repository diagram gates: check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming and check-mermaid-complexity. Take the diagram id from scripts/next_diagram_seq.py rather than inventing one."
+  - "Draw TWO arrows in opposite directions, never one bidirectional link. The two checks have separate inventories, separate failure modes and separate remedies (wire a caller versus fix the call); a bidirectional link is the single most common way readers conclude that satisfying one direction satisfies the other."
+  - "Label each inventory's source on the diagram: 'built command surface (argparse subparser choices)' for registered capabilities and 'executed invocations in automation scripts' for callers. A node labelled 'reads the source files' will be treated as the specification and will produce the source-scanning implementation the whole tree forbids."
+  - "Show the recorded exemption as an input that removes an item from a check's scope with the item STILL VISIBLE (e.g. marked exempt), matching BO-2900d-2's requirement that exemptions are announced rather than absorbed."
+  - "Include an explicit anti-conflation note distinguishing this mechanism from BP-1000e source-to-shipped-script byte parity and from INF-600g agent-registry spawned_by reciprocity — all three are reciprocity checks over different registries and are routinely mistaken for one another."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900b-1
+  contract: "The two inventory sources the diagram must label — registered_capabilities from the built argparse parser, and collected_invocations from executed automation commands — plus the exemption input that removes an item from a check's scope."
+test_required: false
+test_rationale: "The artifact is a Mermaid component diagram on an architecture page with no executable surface; there is nothing for a test to drive. Its correctness is gated by the repository's diagram hooks (check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming, check-mermaid-complexity) at commit time, and the mechanisms it depicts are covered by the executing tests on BO-2900b-1, BO-2900b-3 and BO-2900c-1."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the parent L1's second `documentation_trigger` (`component-diagram`).
+
+  Intended agent is `architecture-diagram-author` — left null per this run's instruction.
+
+  THE TWO-ARROWS CLAUSE IS THE POINT OF THE DIAGRAM. Drawn as one bidirectional link,
+  the picture implies a single check with a single failure mode, and readers
+  consistently conclude that satisfying one direction satisfies the other. They are
+  separate checks with separate inventories, separate failure modes, and separate
+  remedies — a stranded capability is fixed by wiring a caller, a stale caller is fixed
+  by fixing the call. The diagram is the artifact most likely to erase that distinction,
+  so the criteria fix it.
+
+  MARKING THE INVENTORY SOURCES is what keeps the diagram honest. The single largest
+  implementation risk in this L1 is deriving either inventory from source text
+  (BO-2900b-1, BO-2900b-3); a diagram that shows "reads the source files" as the input
+  will be used as the specification. Showing the built surface as the forward inventory
+  makes the intended design visible at a glance.
+
+  THE LAST CLAUSE IS ANTI-CONFLATION, and it is drawn from the L0's own framing: source
+  to shipped-script byte parity and agent-registry reciprocity are separate registries
+  with the same reciprocity instinct. Every reader who meets this diagram cold asks
+  whether it is one of those; answering it in the diagram is cheaper than answering it
+  repeatedly in review.
+
+  2026-08-13 (IT PO enrichment). Assigned to architecture-diagram-author per the S7b
+  documentation-gate mapping for the `component-diagram` trigger and the BA's recorded
+  intent; this is the second of the two deliberate deviations from the task brief's
+  "all eight documentation ACs go to documentation-expert" (the other is BO-2900a-5).

@@ -212,7 +212,13 @@ export function FlowsView({
     <div className="flex flex-col">
       <PageHeader
         eyebrow={
-          flow?.product ? `Product truth · ${flow.product}` : "Product truth"
+          // An architecture-kind map is a cross-cutting schema, not product
+          // truth — labelling it so was a category error.
+          flow?.kind === "architecture"
+            ? "Architecture · type-level schema"
+            : flow?.product
+              ? `Product truth · ${flow.product}`
+              : "Product truth"
         }
         title={flow?.name ?? "Flows"}
         description={
@@ -220,7 +226,10 @@ export function FlowsView({
           "Interactive maps of how a product actually behaves, step by step."
         }
       >
-        {flow && s && (
+        {/* Step rollup is meaningless for a stepless architecture map — it
+            rendered "0 done · 0 in progress · 0 not started of 0 steps", a
+            fabricated progress claim. Suppress it for architecture kinds. */}
+        {flow && s && flow.kind !== "architecture" && (
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {flow.realization !== "built" && (
               <RealizationBadge realization={flow.realization} className="mr-1" />
@@ -241,8 +250,10 @@ export function FlowsView({
         )}
       </PageHeader>
 
-      {/* Realization banner — never let a reviewer read a spec/sample flow as a live map. */}
-      {flow && flow.realization !== "built" && (() => {
+      {/* Realization banner — never let a reviewer read a spec/sample flow as a live map.
+          Excluded for architecture maps: the banner asserts "the system it maps
+          does not exist yet", which is false for a schema of the live repo. */}
+      {flow && flow.realization !== "built" && flow.kind !== "architecture" && (() => {
         const meta = realizationMeta(flow.realization);
         if (!meta) return null;
         return (

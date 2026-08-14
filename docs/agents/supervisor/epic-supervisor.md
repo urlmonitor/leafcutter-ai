@@ -1,24 +1,24 @@
 ---
-title: "Agent Reference: epic-supervisor"
+title: 'Agent Reference: epic-supervisor'
 type: reference
 status: active
 created: 2026-05-08
 last_updated: 2026-05-12
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/superpowers/specs/2026-05-08-agent-supervisor-design.md"
-  - "tickets/09_done/EPIC-AgentSupervisor/Master_Plan.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/superpowers/specs/2026-05-08-agent-supervisor-design.md
+- tickets/09_done/EPIC-AgentSupervisor/Master_Plan.md
 related_code:
-  - ".claude/agents/epic-supervisor.md"
-  - ".claude/agents/ticket-supervisor.md"
-  - ".claude/skills/building-epics/SKILL.md"
-  - ".claude/skills/signoff/SKILL.md"
-  - ".claude/commands/epic-supervisor.md"
+- .claude/agents/epic-supervisor.md
+- .claude/agents/ticket-supervisor.md
+- .claude/skills/building-epics/SKILL.md
+- .claude/skills/signoff/SKILL.md
+- .claude/commands/epic-supervisor.md
+description: 'Overview of Agent Reference: epic-supervisor.'
 ---
-
 # Agent Reference: `epic-supervisor`
 
 Implementing agent: `epic-supervisor` (Sonnet, user-facing).

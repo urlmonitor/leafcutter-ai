@@ -9,9 +9,9 @@ description: 'Product Owner agent for the AC pipeline. Operates at the L0/L1 fli
   in benefit language so the BA can decompose L1s into testable L2/L3 Gherkin behaviors.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # product-owner
 

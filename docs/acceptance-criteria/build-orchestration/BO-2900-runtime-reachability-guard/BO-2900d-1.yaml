@@ -1,0 +1,179 @@
+id: BO-2900d-1
+components:
+  - build_orchestration
+  - testing_quality
+title: "Code with no way in passes only on a recorded exemption carrying a reason, never by convention"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a unit of code that exposes no runtime way in of its own and exists only to be
+    used by other units,
+    And no exemption is recorded for it,
+  When the reachability guard evaluates it,
+  Then it is reported as having no way in and the change is refused.
+
+  Given the same unit with an exemption recorded against it, stating a reason,
+  When the guard evaluates it,
+  Then it is not reported,
+    And the exemption, the unit it covers and its stated reason appear in the guard's
+      output as an accepted exemption rather than passing silently,
+    And a criterion whose implementing code is that unit becomes eligible to be marked
+      done, with no other change.
+
+  Given a unit with no way in and no recorded exemption, whose name, file extension
+    and containing folder all match those of exempted units,
+  When the guard evaluates it,
+  Then it is reported, because nothing other than a recorded exemption grants a pass.
+depends_on:
+  - BO-2900d
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The refusal this exemption releases: a criterion over code nothing reaches cannot be marked done. The two must agree on what a recorded exemption is."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The other refusal that names the exemption as a way forward — a registered capability deliberately not driven by automation."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Precedent for how this project records a reasoned, reviewable escape hatch on the record rather than in configuration."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Governs what a new config file must satisfy to be readable by a deployed hook — the exemption registry must deploy or the guard reads an empty set in the consumer layout."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    reachability_exemption:
+      type: object
+      description: "One entry in config/reachability_exemptions.yaml: { item: '<exact repo-relative module path or surface:capability id>', kind: 'unit'|'capability', reason: '<non-empty string>', recorded: '<YYYY-MM-DD>', recorded_by: '<who>' }. The file is a top-level list under the key `exemptions`. `item` is matched by exact string equality only — no globs, no prefixes, no regex."
+  reference_file_path: "scripts/build_phases.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "WHERE AN EXEMPTION IS RECORDED (IT PO decision, see notes): a project-level registry file config/reachability_exemptions.yaml, NOT an in-source marker comment and NOT an AC field. Create the file with an empty `exemptions: []` list and a header comment pointing at the BO-2900d-5 reference."
+    - "The registry MUST be added to the build deploy manifest in scripts/build_phases.py so the DEPLOYED hook reads the real file. An undeployed registry makes every exemption invisible at hook runtime — the guard would refuse work that is correctly exempted, which is how a guard gets switched off. Verify by running the deployed hook, not only the unit tests."
+    - "MATCHING IS EXACT AND ITEM-SCOPED. Nothing else may confer a pass: not the module's name, not its extension, not its folder, not a sibling's exemption, not a naming convention. Implement matching as equality against the recorded `item` string; do not add glob or prefix support, because the third criteria scenario exists precisely to fail any convention-based shortcut."
+    - "THE ACCEPTED EXEMPTION IS ANNOUNCED, NOT ABSORBED: a suppressed finding must still produce output naming the exemption, the item it covers and its reason. An exemption that produces no output is indistinguishable from a check that never ran."
+    - "THE RELEASE MUST BE END TO END. The same registry is read by the BO-2900a-3 branch of verify_done_eligible, so an exempted unit's criterion actually becomes eligible to be marked done. Suppressing the guard's report while the done-proof gate keeps refusing leaves the author with no route through at all and is a failed implementation of this AC."
+    - "The registry loader lives in the shared seam (scripts/commit_guardian/_reachability_inventory.py or a sibling module imported by both the hook and done_proof.py) so there is exactly one reader; a second parser will drift. Wrap the file read per the error-handling policy — a missing registry means zero exemptions, an unparseable registry is a fail-closed error naming the file."
+delivers_to:
+  agent: python-coder
+  contract: "load_exemptions() -> list[{ item: str, kind: str, reason: str, recorded: str, recorded_by: str }] from config/reachability_exemptions.yaml, plus an is_exempt(item) exact-match predicate. Consumed by the BO-2900a-3 branch of verify_done_eligible, by the BO-2900b-1 forward check, and by BO-2900d-2's inventory listing."
+expects_from:
+  ac_id: BO-2900a-3
+  contract: "The no-way-in refusal ({ eligible: false, refusal_cause: 'no_entry_point_reaches_code', unit: str }) that a recorded exemption releases — the exemption check is applied at that branch so the criterion genuinely becomes eligible."
+test_spec:
+  - name: test_unit_with_no_way_in_and_no_exemption_is_reported_and_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real guard over a fixture tree with an empty exemption registry; asserts a non-zero exit and a finding naming the unit."
+  - name: test_recorded_exemption_suppresses_the_finding_and_is_announced_in_the_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adds an exemption for that exact item to config/reachability_exemptions.yaml in the fixture tree and re-runs; asserts a zero exit, no finding, and that the output names the exemption, the item and the reason."
+  - name: test_exempted_units_criterion_becomes_eligible_to_be_marked_done
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With the same exemption in place, runs the real verify_done_eligible over a criterion whose implementing code is that unit and asserts eligible True with no other change — the end-to-end release, not just a suppressed report."
+  - name: test_sibling_matching_name_extension_and_folder_is_still_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A second unit sharing the exempted unit's name pattern, extension and folder, with no exemption of its own, is reported — any convention-based shortcut fails here."
+test_rationale: "Three of the four assertions are about a whole-system effect: that a record in a config file changes the verdict of a gate in a different package, and that nothing ELSE changes it. A direct-import unit test of an is_exempt() predicate would prove string equality and would pass unchanged on an implementation where the registry is never loaded at hook runtime — which is the live failure mode in this repository, since a hook runs from the deployed layout and an undeployed config file silently reads as empty. The tests therefore run the real guard and the real verify_done_eligible over a fixture tree containing a real registry file, and assert the released-criterion case in the ac_store suite so the cross-package release is genuinely exercised."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900d-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The exemption is not a convenience — without it this whole tree gets switched off
+  within a week, because most modules in this repository legitimately have no way in
+  of their own. Analytical decisions:
+
+  - THE THIRD SCENARIO IS THE ONE THAT MATTERS. Every implementation of an exemption
+    starts as a recorded list and drifts into a heuristic: helpers live in a certain
+    folder, or are named a certain way, or lack a certain marker, so let them all
+    through. The moment that happens the guard stops being a guard — code becomes
+    exempt by where someone put it, which is exactly how the stranded functions
+    survived review. The name/extension/folder scenario is written to be failed by any
+    convention-based shortcut, and it is cheap to test.
+
+  - THE EXEMPTION IS ANNOUNCED, NOT ABSORBED. An exemption that produces no output is
+    indistinguishable from a check that did not run. The parent L1's wording — allowed
+    "with a stated, visible reason", never "waved through silently" — is carried here
+    as an output requirement on the accepted case, not only on the refused case.
+
+  - IT RELEASES A SPECIFIC REFUSAL. The second scenario asserts the consequence
+    end-to-end: the exempted unit's criterion becomes eligible to be marked done. Without
+    that clause an implementer can satisfy this AC by suppressing a report while the
+    done-proof gate keeps refusing, leaving the author with no route through at all.
+
+  BOUNDARY: this AC is the MECHANISM (recorded, reasoned, no implicit pass). Whether
+  the accumulated set stays reviewable is BO-2900d-2; how narrowly an exemption applies
+  is BO-2900d-3; what an unusable reason is is BO-2900d-1-i. The wording of the refusal
+  is BO-2900e.
+
+  Deliberately left to the IT PO: WHERE the exemption is recorded. The criteria
+  constrain that it is explicit, attached to a named unit, carries a reason, and is
+  visible in the guard's output — not whether it lives beside the code, in the criterion
+  record, or in a project-level file. Note that BP-1100b-5 chose an in-source waiver
+  comment for its adjacent rule; consistency with that choice is worth considering but is
+  not required by this AC, and the two guards must not share one waiver namespace.
+
+  Verification must EXECUTE the guard over all three fixture states. A test that reads
+  the guard's source for exemption handling passes on a guard that ignores exemptions
+  entirely.
+
+  2026-08-13 — IT PO DECISION 1 OF 2: WHERE AN EXEMPTION IS RECORDED.
+
+  DECISION: a project-level registry file, config/reachability_exemptions.yaml.
+  Rejected: an in-source marker comment; an AC field.
+
+  Rationale, in the order the ACs force it:
+    1. BO-2900d-2 requires EVERY exemption in force, with its reason and a total, on
+       EVERY run including clean ones. With in-source markers that inventory can only
+       be produced by scanning the whole repository on every run — expensive, and,
+       worse, it means the exemption inventory is derived by text scanning, the one
+       method this entire tree forbids everywhere else. A declarative file makes the
+       inventory a single read.
+    2. BO-2900d-3 requires a STALE exemption (its named item no longer exists) to be
+       reported. An in-source marker cannot survive the deletion of the code it sits
+       in, so staleness is unrepresentable and that AC becomes vacuous. A central
+       registry makes staleness a first-class, detectable state.
+    3. BO-2900d-1's third scenario requires that name, extension and folder confer
+       nothing. An explicit registry of exact item ids makes convention-based leakage
+       structurally impossible rather than merely prohibited.
+    4. BO-2900d-5 requires this exemption to be distinguishable from BP-1100b-5's
+       in-source `# presence-only:` waiver. Choosing a DIFFERENT MEDIUM makes the two
+       vocabularies impossible to confuse at the point of use — a stronger guarantee
+       than a paragraph asking readers to keep them apart.
+    5. An AC field was rejected because BO-2900b's exemptions cover CAPABILITIES, which
+       are not ACs and have no AC record to carry a field; and because BO-2900d-2's
+       "seven exemptions across the project" inventory would otherwise require a scan
+       of the whole AC store on every run.
+
+  Cost accepted: the registry must be deployed (scripts/build_phases.py) or the hook
+  reads an empty set in the deployed layout. That trap is named explicitly in
+  it_requirements because it is the known failure mode for this class of change in this
+  repository.

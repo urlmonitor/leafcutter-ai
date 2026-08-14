@@ -1,0 +1,141 @@
+id: BO-2900c-4
+components:
+  - build_orchestration
+  - build_pipeline
+title: "Every automation script is checked because the set is derived, and an unreadable surface fails closed"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three automation scripts exist that drive builds, and each is checked for
+    invocations naming capabilities that do not exist,
+    And a fourth automation script is added that invokes an unregistered capability,
+    And nothing else changes — no list of scripts is edited anywhere,
+  When the connection from automation invocations to registered capabilities is checked,
+  Then the fourth script is reported,
+    And the set of scripts checked is the set of automation scripts that exist at the
+      time of the check.
+
+  Given the command surface cannot be built or interrogated when the check runs,
+  When the check runs,
+  Then it reports that the set of registered capabilities could not be established,
+    And the change is refused,
+    And no invocation is reported as naming a capability that does not exist,
+      because an empty inventory is not evidence that a capability is absent.
+depends_on:
+  - BO-2900c
+  - BO-2900c-1
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "One member of the derived set; the set must not be a hardcoded list that this file happens to be on."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: related
+    status: exists
+    relevance: "Defines where automation scripts live and what makes one — the basis for deriving the set."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700b.yaml
+    relationship: related
+    status: exists
+    relevance: "The project's existing fail-closed precedent for a gate that cannot establish its own preconditions; follow it rather than inventing a second convention."
+  - path: docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "The ADR behind that fail-closed precedent; the second scenario must be consistent with it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    inventory_unavailable_finding:
+      type: object
+      description: "{ kind: 'inventory_unavailable', surface: '<module path>', cause: str, clearing_action: 'restore the surface so its registered capabilities can be established' }. Emitted INSTEAD OF, never alongside, per-invocation stale findings for that surface."
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "DERIVE THE AUTOMATION-SCRIPT SET, NEVER LIST IT. The set is every automation script that exists at check time, resolved from the location rule in docs/reference/workflow-authoring-contract.md (in this repository: templates/workflows-js/*.js and its deployed twin). Register the same derivation as the hook's `files` pattern in commit_guardian.json AND its template twin, so adding a script needs no edit anywhere. A hardcoded list protects only the scripts someone remembered to add, and its gaps are invisible — the check reports zero findings and looks healthy."
+    - "FAIL CLOSED, BUT SUPPRESS THE DERIVED FINDINGS. When the surface cannot be built or interrogated, emit exactly one inventory_unavailable finding naming the surface and the cause, exit non-zero, and emit ZERO per-invocation stale findings for that surface. Reporting every invocation in the repository as stale is a wall of false findings that discredits the guard on its first bad day and gets it switched off."
+    - "DO NOT UNIFY THE TWO EMPTY-INVENTORY BRANCHES. On an empty inventory the FORWARD check correctly reports nothing and passes vacuously (BO-2900b-2 state one); the REVERSE check must refuse and suppress. Same condition, opposite correct responses. A single shared 'empty inventory' branch gets one of them wrong — and note that a genuinely empty built parser is NOT the same condition as a surface that failed to build; distinguish them explicitly."
+    - "Follow the existing fail-closed convention established by BO-1700b / ADR-017 rather than inventing a second one; a gate that cannot establish its own preconditions refuses and says why."
+    - "Import of a surface module must be sandboxed enough that an ImportError, a SyntaxError or a raising module-level statement yields inventory_unavailable with the cause, not a hook crash. Per the repository error-handling policy the exception must be caught by type, logged at WARNING or higher, and converted — never swallowed."
+delivers_to:
+  agent: python-coder
+  contract: "The derived automation-script set (list[Path]) consumed by BO-2900b-3's collected_invocations, plus the inventory_unavailable finding consumed by BO-2900e-1/-2. Guarantees that adding an automation script requires no registration edit anywhere."
+expects_from:
+  ac_id: BO-2900b-1
+  contract: "registered_capabilities(surface) and its failure mode — the seam must signal 'could not be established' as a distinct outcome from 'established and empty', because this AC's two branches turn on exactly that distinction."
+test_spec:
+  - name: test_a_newly_added_automation_script_is_checked_without_editing_any_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Runs check_reachability.main() over a fixture tree with three clean automation scripts, then drops a fourth script invoking an unregistered capability into the same location and re-runs with no other edit; asserts the fourth script is reported. A list-based implementation fails this by construction."
+  - name: test_uninterrogable_surface_refuses_and_names_the_cause
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Makes the fixture surface raise on import, runs the real check, and asserts a non-zero exit with exactly one inventory_unavailable finding naming the surface and the cause."
+  - name: test_uninterrogable_surface_produces_no_per_invocation_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Same run, with several valid-looking invocations present: asserts zero stale_invocation findings, so the fail-closed refusal does not come with a wall of derived false positives."
+  - name: test_empty_but_buildable_surface_is_not_treated_as_unavailable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A surface that builds successfully but registers no capabilities produces the forward check's vacuous pass, not inventory_unavailable — the asymmetry with BO-2900b-2 state one is preserved."
+test_rationale: "Both invariants here are about what the check DOES rather than what it computes. Derived coverage can only be demonstrated by adding a file to a real tree and re-running the real entry point with no other edit — a direct-import test of a discovery helper would be handed the paths it was supposed to discover. The fail-closed pairing is likewise a property of one whole run: an implementation that refuses but also emits the derived findings, or that suppresses the findings but exits zero, satisfies any test that checks only one half. The fourth test guards the asymmetry against the natural refactor that unifies both empty-inventory branches, which the criteria explicitly forbid."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Two invariants that share one root cause — the check is only as good as the two sets
+  it compares — kept in one AC because testing either requires the same fixture
+  scaffolding, and separating them would produce two ACs neither of which stands alone.
+
+  - DERIVED COVERAGE, NOT A REGISTERED LIST. A guard that walks a hardcoded list of
+    automation scripts protects exactly the scripts someone remembered to add. The new
+    script — the one written by someone who has not read this tree — is the one that
+    goes unchecked, and its absence is invisible: the check reports zero findings and
+    looks healthy. The scenario is written as "add a script, edit no list" precisely so
+    a list-based implementation fails the test.
+
+  - FAIL CLOSED ON AN UNREADABLE SURFACE, AND FAIL QUIETLY IN THE RIGHT WAY. If the
+    command surface cannot be interrogated, the registered-capability inventory is
+    empty. A naive reverse check then reports EVERY invocation in the repository as
+    naming a nonexistent capability — a wall of false findings that discredits the
+    guard on its first bad day, and which an operator clears by disabling it. The
+    correct behaviour is the opposite pairing: refuse the change (do not pass silently
+    on an inventory you could not build) but report the cause, not the symptoms. That
+    pairing — refuse, and suppress the derived findings — is the whole content of the
+    second scenario, and it is easy to get half right.
+
+  Note the deliberate asymmetry with BO-2900b: the forward check on an empty inventory
+  reports nothing and passes vacuously (see BO-2900b-2), which is safe because there is
+  genuinely nothing to strand. The reverse check on an empty inventory would report
+  everything, which is not safe. Same empty inventory, opposite correct responses. An
+  implementer who unifies the two behind one "empty inventory" branch will get one of
+  them wrong.
+
+  Verification must EXECUTE the check with the surface made uninterrogable, and assert
+  both that the change is refused and that no per-invocation findings were produced.
+
+  2026-08-13 (IT PO enrichment). One distinction added that the criteria imply but do
+  not name: "the surface could not be established" and "the surface was established and
+  is empty" are DIFFERENT conditions with different correct responses, and the seam must
+  return them as different outcomes. Collapsing them into a single empty set is the
+  mechanism by which the forbidden unification happens in practice.

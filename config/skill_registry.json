@@ -1,6 +1,6 @@
 {
   "$schema": "./skill_registry.schema.json",
-  "_comment": "Single source of truth for all skills in the leafcutter ecosystem. Portability decisions made during the agent-skill audit (2026-05-14). Portable skills have a template_path in leafcutter/templates/skills/. Domain-specific skills have portable: false and domain: 'bybit-trader'. The 'dependencies' field captures skill-to-skill invocation relationships; left [] for the initial pass where dependency mapping is non-trivial.",
+  "_comment": "Single source of truth for all skills in the leafcutter ecosystem. Portability decisions made during the agent-skill audit (2026-05-14). Portable skills have a template_path in leafcutter/templates/skills/. Domain-specific skills have portable: false and a domain tag. The 'dependencies' field captures skill-to-skill invocation relationships; left [] for the initial pass where dependency mapping is non-trivial.",
   "skills": [
     {
       "id": "add-agent-to-package",

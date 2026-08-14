@@ -19,7 +19,7 @@ ADR filenames follow the pattern `ADR-NNN-<slug>.md`:
 
 - `NNN` is a zero-padded three-digit sequence number (ADR-001, ADR-002, …).
 - `<slug>` is a lowercase, hyphen-separated 3–6 word summary of the decision.
-- Example: `ADR-001-use-timescaledb-for-time-series.md`
+- Example: `ADR-001-<your-decision-slug>.md`
 
 The sequence number is monotonically increasing and never reused. When an ADR is
 superseded, the old ADR is marked `status: Superseded` and cross-links to the new

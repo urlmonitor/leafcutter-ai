@@ -1,0 +1,93 @@
+id: BO-2800b-3
+components:
+  - build_orchestration
+  - review_system
+title: "Every recorded identity states how it was derived, from a closed set of three methods"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three recorded findings — (a) one emitted by an owned gate carrying a rule
+    identifier drawn from that gate's declared vocabulary, (b) one mined from the frozen
+    historical corpus carrying only English prose and no rule identifier and emitted by no
+    gate that still declares a vocabulary, and (c) one emitted live by a gate whose rule
+    identifier is absent from, or not present in, that gate's declared vocabulary,
+  When each finding's identity is derived,
+  Then the signature method recorded on each is drawn from a closed set of exactly three
+    values — "declared" for (a), "heuristic" for (b), and "unclassified" for (c) — and no
+    fourth value is written,
+  And (b)'s identity is derived by normalising its prose, while (a)'s and (c)'s are not,
+  And a finding that carries a declared rule identifier never has its identity re-derived
+    from prose.
+
+  Given an aggregate reporting occurrence counts over findings of all three methods,
+  When the aggregate is produced,
+  Then the declared, heuristic, and unclassified contributions are reported as three
+    separate figures rather than one blended total,
+  And a report that would present a heuristic-derived count as if it were exact is not
+    produced,
+  And an unclassified count is not presented as heuristic and is not discounted as
+    approximate, because its occurrences were counted from a rule identifier rather than
+    guessed from prose.
+depends_on:
+  - BO-2800b
+  - BO-2800b-2
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2800-gate-value-measurement/BO-2800a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The mined historical corpus is exactly the prose-only population the heuristic method applies to."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2800-gate-value-measurement/BO-2800b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the unclassified namespace whose records carry the third signature_method value established here."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 expert-review remediation: added 'unclassified' as a third signature_method value. The previous two-value set (declared / heuristic) had no label for BO-2800b-4's trigger — a live finding whose rule identifier is absent or unrecognised — which is neither declared nor prose-derived."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  DECIDED DESIGN POINT, and the rationale is load-bearing: prose normalisation is a
+  FALLBACK ONLY and must be visibly stamped, because a heuristic denominator that LOOKS
+  exact is precisely the failure mode this goal exists to eliminate. This AC does not
+  contradict the "no free-text clustering as the dedup mechanism" rule in the BO-2800b
+  notes — clustering is barred as the PRIMARY key; here it is a marked, discountable
+  fallback for records that predate the vocabulary.
+
+  THREE STATES, THREE LABELS. The original pairing of two labels with three states was a
+  real defect: BO-2800b-4's trigger (rule identifier absent or unrecognised on a live
+  finding) fell outside both labels, yet b-4's promotion clause claimed to move a record
+  "from heuristic to declared". Under the corrected set, promotion moves a record from
+  "unclassified" to "declared" and the heuristic label never enters that path.
+
+  WHY THIS IS STILL A SEPARATE AC FROM BO-2800b-4, against the reviewer's suggestion to
+  merge them. They look alike — both handle "no declared rule identifier" — but they act
+  on disjoint populations and have different outputs. This AC governs the FROZEN
+  historical corpus, where no gate remains to promote into and the only available output
+  is a stamped, discountable identity. BO-2800b-4 governs LIVE findings from a gate that
+  is still running, where the output is a promotion queue and an eventual vocabulary
+  change. Merging them would put a corpus-migration rule and a live intake mechanism in
+  one AC and blur which population the discount applies to — exactly the confusion the
+  two-label set produced. The shared vocabulary lives here; the intake mechanism lives
+  in b-4.
+
+  THE DISCOUNT APPLIES TO "heuristic" ONLY. This matters because the pull-request review
+  gate is permanently exempt from declaring a vocabulary (BO-2800b-1) and produced about
+  65% of recorded blockers. Its live findings are "unclassified", not "heuristic", so they
+  are counted at full weight. Discounting them would discard most of the signal.

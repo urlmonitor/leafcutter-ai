@@ -15,7 +15,7 @@ related_docs:
   - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
   - docs/acceptance-criteria/index.yaml
   - docs/architecture/adrs/ADR-007-contract-driven-acs.md
-  - docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
   - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md
 ---
 
@@ -41,7 +41,7 @@ requirement artefacts:
    map, `files_touched`, and `## Acceptance Criteria`.
 
 2. **The AC YAML store** (`docs/acceptance-criteria/`) — a hierarchical store
-   of structured YAML files introduced by ADR-007b. Each YAML file encodes a
+   of structured YAML files introduced by ADR-008. Each YAML file encodes a
    single acceptance criterion with fields including `id`, `level` (L0–L3),
    `work_status` (todo/done), `assigned_agent`, `depends_on`, `doc_links`, and
    `criteria` (Gherkin). The store currently holds 100+ structured requirements
@@ -155,7 +155,7 @@ created. The component diagram for this pipeline is at
 ### Neutral
 
 - The `create-ticket` orchestrator and `business-analyst` / IT PO pipeline
-  (ADR-007) are unchanged. Hand-written tickets created through that pipeline
+  (ADR-008) are unchanged. Hand-written tickets created through that pipeline
   remain valid and coexist with generated tickets in `tickets/00_inbox/`.
   Generated tickets carry `source_ac:` in their frontmatter; hand-written
   tickets do not. No downstream component distinguishes between them.
@@ -215,14 +215,14 @@ stable audit surface that is not tied to the lifecycle of any individual ticket.
 Collapsing this structure into ticket frontmatter would sacrifice the
 hierarchical relationship between ACs (parent/child coverage) and the
 requirement-level audit trail. The store was introduced precisely because
-flat ticket frontmatter was insufficient (ADR-007b).
+flat ticket frontmatter was insufficient (ADR-008).
 
 ## Pattern Propagation and the Authoritative Backlog (AC ACS-500d-1)
 
 When the AC store contains pattern ACs, amending a pattern AC's `criteria`
 propagates to all consuming ACs at read time — no migration tickets, no
 fan-out writes, and no `work_status` resets are required (AC ACS-500d-1,
-documented in detail in ADR-007-ac-store-schema-id-format-enforcement.md).
+documented in detail in ADR-008-ac-store-schema-id-format-enforcement.md).
 
 **Impact on `scan_ac_store.py`:**
 
@@ -281,8 +281,8 @@ This recovery behaviour is defined in full in
 
 ## References
 
-- [ADR-007 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — establishes the per-agent AC format and two-phase ticket creation pipeline that this ADR's generated tickets must comply with.
-- [ADR-007b — AC Store Schema and ID Format Enforcement](ADR-007-ac-store-schema-id-format-enforcement.md) — defines the YAML schema and field semantics (`level`, `work_status`, `depends_on`, `doc_links`, `implemented_by`) that `scan_ac_store.py` and `generate_ticket_from_ac.py` consume.
+- [ADR-008 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — establishes the per-agent AC format and two-phase ticket creation pipeline that this ADR's generated tickets must comply with.
+- [ADR-008 — AC Store Schema and ID Format Enforcement](ADR-008-ac-store-schema-id-format-enforcement.md) — defines the YAML schema and field semantics (`level`, `work_status`, `depends_on`, `doc_links`, `implemented_by`) that `scan_ac_store.py` and `generate_ticket_from_ac.py` consume.
 - [Component diagram: AC-Driven Ticket Generation Pipeline](../diagrams/c2-001-ac-driven-pipeline.md) — shows the data flow from AC store through scanner and generator to ticket file and back-write.
 - [docs/acceptance-criteria/index.yaml](../../acceptance-criteria/index.yaml) — component registry enumerating the namespaces (`ac-driven-dev`, `ac-store`, `build-orchestration`, etc.) that the scanner walks.
 - EPIC-ACDrivenDevelopment ticket 01 — the commissioning ticket for this ADR and the two scripts it covers.

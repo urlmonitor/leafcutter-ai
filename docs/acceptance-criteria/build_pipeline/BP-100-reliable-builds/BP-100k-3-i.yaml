@@ -1,0 +1,61 @@
+id: BP-100k-3-i
+components:
+  - build_pipeline
+title: "A freshly built, unmodified tree yields zero uncomparable artifacts and a clean drift run — the stricter reporting raises no false alarms"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a checkout in which the build has just run and no file has been
+    modified since,
+  When both drift gates run over the full set of artifacts they inspect,
+  Then the count of artifacts reported as neither recorded nor declared exempt
+    is zero,
+  And no artifact is reported as drifted,
+  And each gate reports the run as clean and exits zero,
+  And the stricter reporting introduced for uncomparable artifacts produces no
+    failure on a tree that matches exactly what the build just produced.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    drift_gate_clean_run_verdict:
+      type: object
+      description: "Clean-run verdict emitted when every inspected artifact is either compared-and-matched or declared exempt, with an uncomparable count of zero; guards the stricter uncomparable-artifact reporting against false alarms on a freshly built tree."
+  reference_file_path: "templates/scripts/commit_guardian/check_output_drift.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "This is the regression guard for BP-100k-1, BP-100k-2 and BP-100k-3 taken together: it fails if manifest coverage is incomplete AND if the stricter reporting over-fires."
+    - "The check must run over the real freshly built tree, not a synthesized subset, because the omitted artifacts are exactly the ones a hand-picked fixture would leave out."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-3
+  contract: "The per-artifact verdict vocabulary and run summary whose zero-uncomparable, clean-exit case this edge case pins down."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: "Paired negative case for the Gap A fix. Without it, the cheapest way to satisfy BP-100k-3 is to make every uncomparable artifact fail, which would block every commit on the current tree; and the cheapest way to satisfy BP-100k-1/2 is to record fingerprints that no gate actually consults. Running both gates end to end over a freshly built tree is the only check that catches either shortcut."

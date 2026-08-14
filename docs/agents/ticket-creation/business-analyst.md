@@ -1,20 +1,20 @@
 ---
-title: "Agent Reference: business-analyst"
+title: 'Agent Reference: business-analyst'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-13
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/Master_Plan.md"
-  - "tickets/09_done/EPIC-CodingAgents/01_business_analyst_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/Master_Plan.md
+- tickets/09_done/EPIC-CodingAgents/01_business_analyst_agent.md
 related_code:
-  - ".claude/agents/business-analyst.md"
+- .claude/agents/business-analyst.md
+description: 'Overview of Agent Reference: business-analyst.'
 ---
-
 # Agent Reference: `business-analyst`
 
 Implementing agent: `business-analyst` (internal, Sonnet).
@@ -232,7 +232,7 @@ scope?"). After user answers:
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   file layout (§2), internal visibility class (§3.3), tool allowlists (§4),
   strict research-delegation rule (§4.2).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream ADR: three-tier ladder (§2.1), tool allowlist + strict-research-
   delegation (§2.6).
 - [`tickets/09_done/EPIC-CodingAgents/Master_Plan.md`](../../../tickets/09_done/EPIC-CodingAgents/Master_Plan.md) —

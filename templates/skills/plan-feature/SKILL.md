@@ -544,7 +544,7 @@ the branch detection succeeding.
 - `/build-ac` — downstream command: scanner + ticket generator from existing ACs.
 - `docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md` —
   documents the recovery behaviour and the staged-commit model for the authoring pipeline.
-- `docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md` —
+- `docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md` —
   defines the `origin_agent` and `readiness` fields used to qualify orphaned ACs.
 - `docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md` — the authoring
   pipeline sequence diagram, updated to reflect the Partial-Run Recovery step.

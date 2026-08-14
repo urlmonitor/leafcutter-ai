@@ -309,7 +309,7 @@ def _extract_mutates(text: str, fm: dict) -> list[dict]:
 def _extract_knowledge_channels(text: str, fm: dict) -> list[dict]:
     """Extract knowledge_channels from template.
 
-    Channels are per ADR-029 Agent Knowledge Plane (channels 1-11):
+    Channels are per docs/architecture/agent_knowledge_plane.md (channels 1-11):
     1=system-prompt, 2=slash-command-invocation, 3=agent-tool-input,
     4=pre-flight-reads, 5=config-injection, 6=file-read-in-task,
     7=bash-output, 8=project-context, 9=memory-store, 10=signoff-comment,

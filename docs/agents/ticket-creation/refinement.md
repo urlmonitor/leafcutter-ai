@@ -1,21 +1,21 @@
 ---
-title: "Agent Reference: refinement"
+title: 'Agent Reference: refinement'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/Master_Plan.md"
-  - "tickets/09_done/EPIC-CodingAgents/02_refinement_agent.md"
-  - "docs/agents/coding/create-ticket.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/Master_Plan.md
+- tickets/09_done/EPIC-CodingAgents/02_refinement_agent.md
+- docs/agents/coding/create-ticket.md
 related_code:
-  - ".claude/agents/refinement.md"
+- .claude/agents/refinement.md
+description: 'Overview of Agent Reference: refinement.'
 ---
-
 # Agent Reference: `refinement`
 
 Implementing agent: `refinement` (Sonnet, internal).
@@ -177,7 +177,7 @@ then finalises the ticket with the concrete tasks already in place.
 
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   tool allowlists + strict-research-delegation rule (§4.2), visibility classes (§3).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream policy: tool allowlist (§2.6), visibility classes (§2.5).
 - [`docs/agents/coding/create-ticket.md`](create-ticket.md) —
   the orchestrator that spawns `refinement`.

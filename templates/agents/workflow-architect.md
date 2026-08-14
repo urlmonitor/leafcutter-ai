@@ -101,11 +101,11 @@ runs `package_audit.py` to surface drift.
 **PROJECT_CONTEXT injection** — `leafcutter/docs/how-to/inject-project-knowledge-into-agents.md`  
 When a new project adopts a portable agent, it provides project-specific knowledge via a
 `PROJECT_CONTEXT.md` file at `.agents/agents/<agent-name>/PROJECT_CONTEXT.md`. Agents read
-this file at startup (runtime discovery per ADR-025 decision 3 — NOT build-time inlining).
+this file at startup (runtime discovery — NOT build-time inlining).
 See the how-to above for the 5-step adoption procedure and sample content. If a project
 maintainer asks "how do I add PROJECT_CONTEXT.md for agent X?", point them at this how-to.
 Convention reference: `leafcutter/docs/conventions/PROJECT_CONTEXT-injection.md`.
-Architectural decision: [ADR-025](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md).
+Convention: [PROJECT_CONTEXT Injection](../../docs/conventions/PROJECT_CONTEXT-injection.md).
 **Agent topology with PROJECT_CONTEXT edges**: `leafcutter/docs/agents/README.md §4`
 — shows all portable agents, their spawn relationships, and the runtime-discovery convention
 legend (including which SQL agents have PROJECT_CONTEXT companions and the edge labelling rules).

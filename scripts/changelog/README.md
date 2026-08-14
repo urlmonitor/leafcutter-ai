@@ -39,4 +39,5 @@ package only creates new files in the configured `changelog_folder`.
 - Tests live at `leafcutter/tests/test_emit_entry.py` (19 tests,
   all using `tempfile.TemporaryDirectory` for isolation).
 - Run with: `python -m unittest leafcutter/tests/test_emit_entry.py`
-- ADR: `docs/architecture/adrs/ADR-019-changelog-entry-format.md`
+- Entry format: one file per entry under `changelogs/`, named
+  `YYYY-MM-DD-HHMM-<slug>.md` with YAML frontmatter. See `emit_entry.py`.

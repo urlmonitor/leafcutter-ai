@@ -698,6 +698,17 @@ def verify_green_and_coverage(
     semantics identical to the done-proof gate.  Commit staging is gated on BOTH
     conditions; neither alone is sufficient.  Idempotent.
 
+    Coverage is decided from the STRUCTURED ``eligible``/``failing_tests``
+    fields of the verdict, never from substring-matching ``reason`` prose
+    (H-1 fix): an AC is uncovered when its verdict is ineligible AND it has
+    no failing_tests of its own — i.e. no covering test exists at all
+    (whether the AC is a leaf with zero linked tests, or a composite with no
+    coverable children / an uncovered child, per done_proof's composite
+    path). An ineligible verdict that DOES carry failing_tests means a
+    covering test exists but is not passing — that is a green/pass-fail
+    concern (handled below), not a coverage concern, so it is intentionally
+    NOT added to uncovered_ac_ids.
+
     Args:
         ac_ids: Batch of AC ids to verify.
         test_root: Root directory to scan for ``*.py`` test files.
@@ -732,12 +743,17 @@ def verify_green_and_coverage(
             test_root=test_root,
         )
 
-        reason: str = verdict.get("reason", "")
-        if "no linked test found" in reason:
+        verdict_failing_tests: list[str] = verdict.get("failing_tests", [])
+        if not verdict.get("eligible", False) and not verdict_failing_tests:
+            # Ineligible with no failing_tests means no covering test exists
+            # at all (leaf: "no linked test found"; composite: "no coverable
+            # children" / "uncovered children: ..." — see done_proof).  An
+            # ineligible verdict WITH failing_tests means a covering test
+            # exists but failed — a green concern, not a coverage concern.
             uncovered_ac_ids.append(ac_id)
             coverage_ok = False
 
-        for nodeid in verdict.get("failing_tests", []):
+        for nodeid in verdict_failing_tests:
             if nodeid not in seen_failing:
                 seen_failing.add(nodeid)
                 failing_tests.append(nodeid)
@@ -760,8 +776,9 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     """Return the argument parser for the fast_lane CLI.
 
     Returns:
-        Configured ArgumentParser with select_batch, verify_red_baseline,
-        and verify_green_and_coverage subcommands.
+        Configured ArgumentParser with select_batch, select_connected,
+        verify_red_baseline, verify_green_and_coverage, claim, release,
+        and mark_done subcommands.
     """
     parser = argparse.ArgumentParser(
         description=(
@@ -829,23 +846,103 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     vgc.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
     vgc.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
 
+    # --- claim ---
+    claim_p = subparsers.add_parser(
+        "claim",
+        help=(
+            "Claim the connected build set: partition ac-ids by work_status, "
+            "flip todo ACs to in_progress, refuse if the whole set is already "
+            "in_progress. Prints JSON {claimed, excluded_claimed, target_refused}."
+        ),
+    )
+    claim_p.add_argument(
+        "--ac-ids",
+        required=True,
+        metavar="IDS",
+        help="Comma-separated AC ids to claim.",
+    )
+    claim_p.add_argument(
+        "--ac-root",
+        required=True,
+        metavar="DIR",
+        help="Root of AC YAML store.",
+    )
+
+    # --- release ---
+    release_p = subparsers.add_parser(
+        "release",
+        help=(
+            "Release claimed ACs back to work_status: todo. "
+            "Idempotent — a todo AC is a no-op. "
+            "Prints JSON {released}."
+        ),
+    )
+    release_p.add_argument(
+        "--ac-ids",
+        required=True,
+        metavar="IDS",
+        help="Comma-separated AC ids to release.",
+    )
+    release_p.add_argument(
+        "--ac-root",
+        required=True,
+        metavar="DIR",
+        help="Root of AC YAML store.",
+    )
+
+    # --- mark_done ---
+    md_p = subparsers.add_parser(
+        "mark_done",
+        help=(
+            "Coverage-gated mark-done: flip each in_progress AC to done only "
+            "when it has a passing covers-tagged test, then run the stale-todo "
+            "guard. Prints JSON {marked_done, all_done, stale}. "
+            "Exits 0 when all_done, 1 otherwise."
+        ),
+    )
+    md_p.add_argument(
+        "--ac-ids",
+        required=True,
+        metavar="IDS",
+        help="Comma-separated AC ids to mark done.",
+    )
+    md_p.add_argument(
+        "--ac-root",
+        required=True,
+        metavar="DIR",
+        help="Root of AC YAML store.",
+    )
+    md_p.add_argument(
+        "--test-root",
+        required=True,
+        metavar="DIR",
+        help="Root of test tree to scan for covers-tagged tests.",
+    )
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for the fast-lane pipeline gates.
 
-    Dispatches to select_batch, verify_red_baseline, or
-    verify_green_and_coverage based on the subcommand, prints the result as
-    JSON to stdout, and returns an exit code matching the gate outcome.
+    Dispatches to select_batch, select_connected, verify_red_baseline,
+    verify_green_and_coverage, claim, release, or mark_done based on the
+    subcommand, prints the result as JSON to stdout, and returns an exit
+    code matching the gate outcome.
 
     Exit codes:
 
     * ``select_batch``: always 0 (an empty list is a valid result).
+    * ``select_connected``: always 0; 1 when the AC id is not found.
     * ``verify_red_baseline``: 0 when all_red is True (gate passes); 1
       otherwise (at least one test already passes — coder must not run).
     * ``verify_green_and_coverage``: 0 when both green and coverage_ok are
       True; 1 when either condition fails.
+    * ``claim``: 0 when ACs are claimed successfully; 1 when target_refused
+      (whole set already in_progress) or an I/O error occurs.
+    * ``release``: always 0 (idempotent; releasing a todo AC is a no-op).
+    * ``mark_done``: 0 when all ACs are done (all_done=True); 1 when any
+      AC in the set is still not done (stale-todo guard).
 
     Args:
         argv: Argument list.  Defaults to ``sys.argv[1:]`` when ``None``.
@@ -889,6 +986,56 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps(result))
         return 0 if (result["green"] and result["coverage_ok"]) else 1
+
+    if args.subcommand == "claim":
+        ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+        ac_root = Path(args.ac_root)
+        filter_result = filter_already_claimed(ac_ids, ac_root=ac_root)
+        to_build = filter_result["to_build"]
+        excluded_claimed = filter_result["excluded_claimed"]
+        target_refused = filter_result["target_refused"]
+        if target_refused:
+            refused_payload = {
+                "claimed": [],
+                "excluded_claimed": excluded_claimed,
+                "target_refused": True,
+            }
+            print(json.dumps(refused_payload))
+            return 1
+        claim_result = claim_build_set(to_build, ac_root=ac_root)
+        claim_payload = {
+            "claimed": claim_result["claimed"],
+            "excluded_claimed": excluded_claimed,
+            "target_refused": False,
+        }
+        print(json.dumps(claim_payload))
+        return 0
+
+    if args.subcommand == "release":
+        ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+        ac_root = Path(args.ac_root)
+        release_result = release_claim(ac_ids, [], ac_root=ac_root)
+        print(json.dumps({"released": release_result["released"]}))
+        return 0
+
+    if args.subcommand == "mark_done":
+        ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+        ac_root = Path(args.ac_root)
+        test_root = Path(args.test_root)
+        covered_ac_ids: list[str] = []
+        for ac_id in ac_ids:
+            verdict = verify_done_eligible(ac_id, ac_root=ac_root, test_root=test_root)
+            if verdict["eligible"]:
+                covered_ac_ids.append(ac_id)
+        mark_result = mark_done_built_acs(ac_ids, covered_ac_ids, ac_root=ac_root)
+        stale_result = check_no_stale_todo(ac_ids, ac_root=ac_root)
+        mark_done_payload = {
+            "marked_done": mark_result["marked_done"],
+            "all_done": stale_result["all_done"],
+            "stale": stale_result["stale"],
+        }
+        print(json.dumps(mark_done_payload))
+        return 0 if stale_result["all_done"] else 1
 
     return 1  # unreachable with argparse required=True, but satisfies mypy
 

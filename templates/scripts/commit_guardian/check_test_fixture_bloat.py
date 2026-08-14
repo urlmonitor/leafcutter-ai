@@ -4,7 +4,7 @@ GOAL: Pre-commit hook that scans staged test_*.py files for oversized inline
     data and warns (or blocks) authors when fixture convention thresholds are
     exceeded.
 BUSINESS CONTEXT: Prevents test files from bloating past maintainability
-    thresholds and nudges authors toward the fixture convention (ADR-007).
+    thresholds and nudges authors toward the fixture convention (ADR-028).
     The hook ships ``enabled: false`` (warn-only) so it can be merged without
     immediately breaking the existing codebase.
 ARCHITECTURE: Uses Python's ``ast`` module to walk each staged test file.

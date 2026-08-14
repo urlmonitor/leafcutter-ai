@@ -4,24 +4,34 @@ title: 'Agent Card: mockup-author'
 description: 'Mockup authoring agent for the product-truth store. Given drafted mock
   data and a request that involves one or more screens, it drafts (or extends in place)
   a mockup for each screen — a *.mockup.json plus a self-contained HTML rendering
-  — populated from the mock data records, not placeholder text. Each mockup registers
-  a screen id that a flow''s steps can resolve. Output conforms to mockup.schema.json.  Use
-  when: the product-truth classifier (pt-classifier) returns needs_mockup (outcomes
-  full-set / mockup+data / mockup-only) and the pipeline needs the screens drafted
-  from the canonical mock data before the flow is assembled or the UI is built.'
+  — populated from the mock data records (not placeholder text) AND styled from the
+  host app''s REAL design system, which it reaches through a single HUMAN-CURATED
+  "UI context" pointer file (docs/ui-context.md). That file holds no token values
+  — it points to the app''s live CSS/theme/token files, design-principle docs, component
+  library, and fonts — so the mockup renders from the real, current sources and never
+  from an invented look. Each mockup registers a screen id that a flow''s steps can
+  resolve. Output conforms to mockup.schema.json.  Use when: the product-truth classifier
+  (pt-classifier) returns needs_mockup (outcomes full-set / mockup+data / mockup-only)
+  and the pipeline needs the screens drafted from the canonical mock data before the
+  flow is assembled or the UI is built.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # mockup-author
 
 **Mockup authoring agent for the product-truth store. Given drafted mock data and a
 request that involves one or more screens, it drafts (or extends in place) a mockup
 for each screen — a *.mockup.json plus a self-contained HTML rendering — populated
-from the mock data records, not placeholder text. Each mockup registers a screen id
-that a flow's steps can resolve. Output conforms to mockup.schema.json.
+from the mock data records (not placeholder text) AND styled from the host app's
+REAL design system, which it reaches through a single HUMAN-CURATED "UI context"
+pointer file (docs/ui-context.md). That file holds no token values — it points to
+the app's live CSS/theme/token files, design-principle docs, component library, and
+fonts — so the mockup renders from the real, current sources and never from an
+invented look. Each mockup registers a screen id that a flow's steps can resolve.
+Output conforms to mockup.schema.json.
 
 Use when: the product-truth classifier (pt-classifier) returns needs_mockup
 (outcomes full-set / mockup+data / mockup-only) and the pipeline needs the screens
@@ -101,7 +111,9 @@ flowchart TD
 
 ## Configuration
 
-*No configuration keys declared.*
+| Key | Required | Description |
+|-----|----------|-------------|
+| `ui_context_path` | No | Path to the UI context pointer file (default: docs/ui-context.md). Injected at build time so projects that place the file elsewhere can override without editing this template. |
 ---
 
 ## Contributor Notes
@@ -112,6 +124,7 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | a screen id already exists for the request | extend the existing screen in place rather than create a duplicate | `None` |
 | Conditional Behavior | a store file is missing | absent, unreadable, or oversized | `None` |
+| Conditional Behavior | docs/ui-context.md is absent or unfilled | emit a clearly-labelled unstyled placeholder, flag it, and tell the user to fill docs/ui-context.md via /onboard — never invent a look | `None` |
 ---
 
 ## AC Assignments

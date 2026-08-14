@@ -164,7 +164,7 @@ feedback-id: fb_2026-06-04_168f40ae
 completion_manifest:
   commits_pushed: true
   pr_available: true
-Pushed commit b0feef5 to remote EPIC-ACTraceabilityStore branch. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) updated with ticket-04 implementation. PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/46
+Pushed commit b0feef5 to remote EPIC-ACTraceabilityStore branch. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-008) updated with ticket-04 implementation. PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/46
 
 ## Implementation Tasks
 

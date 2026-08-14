@@ -770,13 +770,13 @@ DECISION HISTORY
   absent key as a hard block ("agent must set true, false, or null") while accepting True, False,
   and None (YAML null) as valid. _check_bool_field itself is unchanged (used by other optional
   bool fields). Backfill script (scripts/backfill_requires_diagram_adr.py) must run before this
-  change is committed. See ADR-026-requires-diagram-adr-tri-state.md.
+  change is committed.
 - 2026-05-18 00:00 [EPIC-DocTraceability/05]: Verification pass — _check_required_tristate at
   line 221 already handles requires_adr as a tri-state field (true/false/null), enforced by the
   wiring at lines 398-399 in validate(). No code changes required; this entry records the
   explicit confirmation that the guard is forward-compatible with the adr-author dispatch logic
   introduced in building-epics §2.1 and ticket-wiring skill.
-  (#EPIC-DocTraceability/05) (ADR-033)
+  (#EPIC-DocTraceability/05)
 - 2026-07-01 00:00 [EPIC-ComputedQualityGates/02]: Added ALLOWED_CHANGE_TARGETS (10 values)
   and ALLOWED_RISK_SURFACES (6 values) constants. Added _check_change_target() and
   _check_risk_surface() validators; both wired into validate(). Both fields are OPTIONAL

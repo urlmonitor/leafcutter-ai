@@ -1,0 +1,98 @@
+id: ACS-1100d-1
+components:
+  - ac_store
+  - testing_quality
+title: "Coverage travels with the answer across every hop that consumes it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100d.yaml
+criteria: |
+  Given a verifier whose only input is an earlier answer that covered 40 records
+    against a total of 180,
+  When the verifier produces its own result,
+  Then that result carries the coverage it inherited — 40 of 180 — alongside its own
+    verdict, and names the upstream answer the figure came from,
+  And a verifier that consumes two answers, one covering 40 of 180 and one covering
+    180 of 180, carries both figures through rather than reporting only the larger,
+  And the figure survives the store's two real consumption hops unchanged: the store
+    scan's answer is consumed as JSON by the prioritiser across a subprocess boundary,
+    and the prioritiser's merged output is consumed by the AC build selector, so the
+    selector acts on a figure that still reads 40 of 180,
+  And crossing a serialisation boundary does not drop the figure: an answer handed over
+    as JSON carries its total, its covered count and its method in that payload, so a
+    consumer that only ever sees the serialised form can still read what it inherited,
+  And a verifier result that states a verdict with no inherited coverage figure is
+    itself withheld and reported as a dropped-coverage halt that names the upstream
+    answer whose figure was lost — the same withhold-rather-than-pass posture as
+    ACS-1100c-1, raised by this criterion on a MISSING figure, which is not a trigger
+    ACS-1100c-1 recognises (its only trigger is an arithmetic shortfall).
+depends_on:
+  - ACS-1100d
+  - ACS-1100a-1
+  - ACS-1100b-1
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "First participant in the real chain — the store query whose coverage figure the downstream hops must carry."
+  - path: scripts/ac_store/ac_prioritizer.py
+    relationship: related
+    status: exists
+    relevance: "The real second participant, verified 2026-08-13: it invokes scan_ac_store.py as a subprocess with --json and parses the ready-AC list, then merges it with a second source. This subprocess/JSON boundary is the concrete hop where a coverage figure would be lost today."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Reporting a total at the source achieves nothing if the next tool drops it. The defect
+  is not one verifier failing to print a number, it is the figure evaporating at a hop
+  and every later tool confirming a number nobody computed.
+
+  ==========================================================================
+  TWO HOPS, NOT THREE (2026-08-13, expert review).
+  ==========================================================================
+  The original text required the figure to survive "a chain of three verifiers". Only
+  TWO real hops exist in the store today: scan_ac_store.py produces the answer,
+  ac_prioritizer.py consumes it as JSON over a subprocess boundary and merges it with
+  prioritize.py's output, and the AC build selector consumes that. Naming a third hop
+  would have made the AC unimplementable against the real system and invited a synthetic
+  third verifier written only to satisfy the test. The criterion now names the two real
+  hops and, separately, the property that actually matters — survival across a
+  SERIALISATION boundary, which is where the figure is really at risk.
+
+  ==========================================================================
+  THIS AC RAISES ITS OWN HALT (2026-08-13, expert review).
+  ==========================================================================
+  The original clause said a verdict with no inherited coverage figure "halts under
+  ACS-1100c-1". It does not type-check: ACS-1100c-1's only halt trigger is an arithmetic
+  shortfall (covered + declared exclusions != total), and a missing figure is not a
+  shortfall — there is no arithmetic to fail. Rather than widening ACS-1100c-1's trigger
+  set (which would blur the reconciliation contract that ACS-1100c-2 mirrors), this AC
+  now defines its own dropped-coverage halt with the same withhold-rather-than-pass
+  posture. Two distinct triggers, one posture.
+
+  Distinct from ACS-1100d-2: this AC governs PROPAGATION (the figure survives the hop),
+  d-2 governs the CAP (what the verdict may claim given that figure).
+
+  OPEN — NOT DECIDED HERE: nothing in this AC fixes a persistence surface for the
+  carried figure. "Carries the figure" is satisfied by an in-process return value or by
+  a serialised payload; whether a durable sink is also required is the pending
+  write-surface question (ticket "## Comments" versus a durable JSONL sink) and is
+  deliberately left open for the IT PO.

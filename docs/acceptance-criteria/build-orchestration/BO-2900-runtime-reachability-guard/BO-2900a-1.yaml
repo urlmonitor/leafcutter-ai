@@ -1,0 +1,161 @@
+id: BO-2900a-1
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A proof that reached the code by direct import does not make a criterion done when the code has a real way in"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion whose implementing code lives in a unit that exposes
+    a runtime way in — an operator-invocable command surface that accepts a named
+    action and its arguments,
+    And the criterion's proof-of-done test is present, executes real code, and passes,
+    And that test reaches the implementing function by importing it directly and
+      calling it, so the unit's way in is never entered while the test runs,
+  When the criterion is evaluated for eligibility to be marked done,
+  Then the criterion is rejected as not eligible,
+    And the rejection names the unit, the way in that was never entered, and the test
+      that reached the code by import instead,
+    And with no other change to the code and no additional assertion, the same
+      criterion becomes eligible once a proof test drives the same behaviour by
+      invoking the way in with the action and arguments an operator would use,
+    And a criterion whose implementing unit exposes no runtime way in at all is not
+      judged by this rule — that case is decided separately.
+depends_on:
+  - BO-2900a
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The eligibility gate this AC extends. Today it asks only (1) is there a covers-tagged test and (2) does it pass; it has no notion of what the test reached."
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: "The published contract for what makes a criterion eligible — must be read before changing the eligibility rule."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The incumbent rule 'present and passing linked test implies eligible'. This AC narrows it; the two must be read together, and BO-2500a-3 must not be restated here."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Adjacent, NOT overlapping: BP-1100b-5 rejects a newly added assertion whose SHAPE is presence-only over a fixed workflow/commit-guardian glob set; this AC rejects a genuinely-executing proof by what it REACHED, at done time, for any unit with a way in."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns the proof-of-done honesty axes; the third axis introduced here belongs on it."
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+    relevance: "The standing constraint that the test is the source of truth for done — this AC adds a condition on what that test reached, and must not weaken the ADR."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    reachability_verdict:
+      type: object
+      description: "Extension of the verify_done_eligible() verdict dict with the third eligibility condition: { eligible: bool, reason: str, refusal_cause: 'proof_not_through_entry_point'|'no_entry_point_reaches_code'|'observation_unavailable'|null, unit: str|null, entry_point: str|null, offending_test: str|null } merged into the existing keys. refusal_cause null preserves today's two-condition behaviour verbatim."
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "Extend verify_done_eligible() in scripts/ac_store/done_proof.py — do NOT create a second eligibility oracle. The two incumbent conditions (at least one '# covers:<id>' test exists; every such test PASSES) run first and are unchanged; reachability is evaluated only after both pass, so today's failure messages are untouched."
+    - "'The unit exposes a runtime way in' is decided mechanically: the module holding the implementing code, or a module that imports it, defines a module-level callable main(argv) — the same surface `python <module> <action> ...` reaches (cf. fast_lane.main, scripts/build_orchestration/fast_lane.py:925). Record the resolved entry point as '<module path>:main' in the verdict. Never infer an entry point from filename, folder, docstring, or an `if __name__` text match."
+    - "THE SCOPE FENCE IS MECHANICAL: when no entry point resolves, this rule returns no verdict at all and hands off to the BO-2900a-3 no-way-in rule. Two disjoint refusal_cause values, never one merged 'unreachable' verdict — BO-2900e-1 specifies two different messages with two different clearing actions."
+    - "The reached-through fact is CONSUMED from the BO-2900a-2 observation record. This AC must not re-derive it and must not fall back to any source-text signal (import-statement scan, subprocess-string search, entry-point-name grep) when the observation is missing. A missing observation fails closed with refusal_cause 'observation_unavailable', distinct from both real refusals."
+    - "The verdict must carry the unit, the un-entered entry point and the offending test nodeid so BO-2900e-1's first message is composable without re-deriving anything, and must be idempotent for a given tree plus test-run result."
+    - "done_proof.py is deployed via build_ac_store's deploy_map (scripts/build_phases.py:794). Any NEW module it imports (the BO-2900a-2 observer) MUST be added to that deploy_map in the same change or the deployed check_done_proof hook and the REQUIRED CI done-proof job crash with ModuleNotFoundError — see CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'."
+delivers_to:
+  agent: python-coder
+  contract: "Extended verify_done_eligible() return dict: { eligible: bool, reason: str, refusal_cause: str|null, unit: str|null, entry_point: str|null, offending_test: str|null, passing_tests: [str], failing_tests: [str], dangling_tags: [dict] }. Consumed by scripts/commit_guardian/check_done_proof.py in all three modes (precommit, ci, ci-changed) and by the BO-2900e-1 message layer."
+expects_from:
+  ac_id: BO-2900a-2
+  contract: "Run-observation record, one per (proof test, code under proof): { test_nodeid: str, target: '<module>:<callable>', entry_point: '<module>:main'|null, entered_entry_point: bool, reached_through: bool, observation_ok: bool }, derived by watching the proof test execute — never from its source text."
+test_spec:
+  - name: test_direct_import_proof_is_refused_when_unit_has_an_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Calls the real verify_done_eligible() over a fixture AC store plus a fixture unit with a genuine argparse main(), whose only covers-tagged proof imports the implementing function directly; asserts eligible is False and the reason names the unit, the un-entered entry point and the offending test nodeid."
+  - name: test_same_criterion_becomes_eligible_once_the_proof_drives_the_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Identical fixture unit and identical implementing code, with only the proof rewritten to invoke main(['<action>', ...]); asserts eligible flips to True with no code change and no added assertion."
+  - name: test_unit_with_no_entry_point_is_not_judged_by_this_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A fixture unit exposing no main() never yields refusal_cause 'proof_not_through_entry_point' — the scope fence holds and the case falls through to the BO-2900a-3 rule."
+test_rationale: "A direct-import unit test over a new helper predicate would prove the rule's arithmetic while leaving unproven the only thing that matters — that verify_done_eligible actually REACHES the new condition on a real evaluation. That is precisely the defect this tree exists to close: the fast-lane functions had passing direct-import tests and were reached by nothing. Each test therefore drives the real verify_done_eligible() over a fixture AC store and a fixture unit with a genuine argparse main(), and asserts the verdict the oracle returned. The eligible and ineligible cases are asserted in the same run so a reject-everything implementation cannot pass."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900a-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The core positive rule of BO-2900a. Analytical decisions recorded for the IT PO and
+  the implementer:
+
+  - THE CALIBRATING FACT. When the five fast-lane AC-lifecycle functions were marked
+    done, every statement the incumbent gate checks was TRUE: a covers-tagged test
+    existed, it executed real code, and it passed. What was false is that no test in
+    the repository entered the module's way in — every test direct-imported an inner
+    function. "The test passes" and "the code is reachable" were independently true
+    and false at the same time. That is the gap this AC closes, and it is why the
+    third condition must be about what the run REACHED, not about the test's quality.
+
+  - THE FINAL CLAUSE IS A SCOPE FENCE, NOT AN ESCAPE HATCH. A unit with no way in is
+    deliberately excluded here so this rule stays decidable (compare the entered way
+    in against the run). The no-way-in case is a harder judgement and is decided by
+    BO-2900a-3, which routes it to the recorded exemption in BO-2900d. Without the
+    fence an implementer will either block every helper module under this AC or
+    quietly pass it — both are wrong.
+
+  - MANDATORY TWO-WAY BOUNDARY vs BP-1100b-5 (build-pipeline, authored concurrently).
+    Neither absorbs the other:
+      * BP-1100b-5 is a DIFF-TIME LINT ON ASSERTION SHAPE. It fires on staged hunks
+        that add an assertion whose only check is "this symbol's name appears in this
+        file's text", over a fixed glob set (workflow JS and commit-guardian Python),
+        and it has a `# presence-only: <reason>` waiver.
+      * THIS AC is a DONE-PROOF ELIGIBILITY RULE ON WHAT THE ASSERTION REACHED. It
+        fires when a criterion is being marked done, applies to any unit with a
+        runtime way in, and rejects a genuinely-executing proof that got there by
+        direct import.
+    Decisive calibration: BP-1100b-5 WOULD NOT HAVE CAUGHT the fast-lane regression —
+    the module is not in its glob set, and those tests were not presence-only, they
+    executed real code. Only this AC catches it. Conversely this AC does not catch a
+    presence-only assertion over a workflow JavaScript file, because that file has no
+    entry point of its own to be entered. Implementers of either must not widen into
+    the other's territory; if the two ever appear to collide, the correct move is to
+    re-read this paragraph, not to merge the rules.
+
+  - The BP-1100b-5 doc_link is recorded as `status: exists` because that AC was
+    authored in the mainline store during the same session. It is not present in this
+    worktree's checkout; resolve the link against the merged store, not this branch.
+
+  - Verification must EXECUTE the eligibility evaluation over a fixture pair (one
+    proof that goes through the way in, one that imports directly) and compare the two
+    verdicts. A test that reads the gate's source for the new condition passes on a
+    gate that never applies it — the exact failure this tree exists to prevent.
+
+  2026-08-13 (IT PO enrichment). Enforcement surface for the BO-2900a family is the
+  DONE-PROOF PATH, not a new hook: these are per-criterion eligibility rules, and
+  verify_done_eligible is already consumed by both the check-done-proof pre-commit hook
+  and the required CI done-proof job, so extending it inherits both enforcement points
+  for free. The change-refusal surface (BO-2900b/c) is a separate new hook; see
+  BO-2900b-1's notes for that decision and its rationale.

@@ -70,7 +70,7 @@ def bootstrap() -> None:
     """Generates a draft doc_compliance.json by scanning the project.
 
     Project-specific values (scan paths, component sources, project name) are
-    read from scripts/doc_compliance/doc_compliance.json via _get(). Bybit-Trader
+    read from scripts/doc_compliance/doc_compliance.json via _get(). Package
     defaults are used as fallbacks so existing behaviour is fully preserved.
     Adopters customise those values in doc_compliance.json without touching this file.
     """
@@ -78,7 +78,7 @@ def bootstrap() -> None:
 
     draft_config = {
         "$schema": "doc-compliance-config-v1",
-        "project": _get("bootstrap_project_name", "bybit-trader"),
+        "project": _get("bootstrap_project_name", "my-project"),
         "scan_paths": _get("bootstrap_scan_paths", {
             "python": ["collector/", "models/", "trading/", "live_trader/", "utils/"],
             "sql": ["sql_functions/"],
@@ -192,7 +192,7 @@ DECISION HISTORY
 ====================================================================
 - 2026-05-13 09:20 [EPIC-PortableDevWorkflow/12]: Updated bootstrap() to call _get() for
   all project-specific values (project name, scan_paths, component_sources, standalone_components,
-  ignore list). Bybit-Trader values remain as JSON defaults in doc_compliance.json.
+  ignore list). Default values remain as JSON defaults in doc_compliance.json.
   Adopters override them without touching Python source.
 - 2026-05-12 10:30 [Agent]: Added init_config() function providing a blank project-agnostic
   doc_compliance.json skeleton (--init mode). Unlike bootstrap(), init_config() makes no

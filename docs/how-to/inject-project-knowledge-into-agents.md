@@ -1,18 +1,17 @@
 ---
-title: "How to inject project knowledge into a portable agent"
+title: How to inject project knowledge into a portable agent
 type: how-to
 status: active
 created: 2026-05-15
 last_updated: 2026-05-15
 components:
-  - infrastructure
+- infrastructure
 related_docs:
-  - docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md
-  - leafcutter/docs/conventions/PROJECT_CONTEXT-injection.md
-  - leafcutter/templates/agents/README.md
-  - .agents/agents/README.md
+- docs/conventions/PROJECT_CONTEXT-injection.md
+- leafcutter/templates/agents/README.md
+- .agents/agents/README.md
+description: Overview of How to inject project knowledge into a portable agent.
 ---
-
 # How to inject project knowledge into a portable agent
 
 This guide walks you through adopting an existing portable agent (from
@@ -94,10 +93,10 @@ The file is free-form Markdown. Use it to answer the questions the agent will ha
 <Any authorization gates that must not be bypassed>
 ```
 
-**Real-world example** (bybit-trader `sql-coder`):
+**Worked example** (a `sql-coder` in a project that keeps its SQL under `sql_functions/`):
 
 ```markdown
-# PROJECT_CONTEXT: sql-coder (bybit-trader)
+# PROJECT_CONTEXT: sql-coder (my-project)
 
 ## Where SQL lives
 - Procedures: `sql_functions/procedures/`
@@ -115,7 +114,7 @@ The file is free-form Markdown. Use it to answer the questions the agent will ha
 `poetry run python -c "from database_manager import DatabaseManager; DatabaseManager().create_procedures()"`
 
 ## Authorization requirement
-Never deploy SQL to `brain.vierhenze.de` without explicit user authorization in this session.
+Never deploy SQL to `db.example.com` without explicit user authorization in this session.
 ```
 
 ### Step 4 — Verify discovery via the agent's Pre-Flight read
@@ -152,7 +151,7 @@ version and consider filing a ticket to add the Pre-Flight step.
 
 ## Sample `PROJECT_CONTEXT.md` content
 
-Below is the pattern used by the bybit-trader project for its SQL agents.
+Below is the pattern used for SQL agents.
 Use this as your reference model when authoring context files for other agents.
 
 ```markdown
@@ -179,8 +178,7 @@ Use this as your reference model when authoring context files for other agents.
 
 ## See Also
 
-- [ADR-025: Portable Agent PROJECT_CONTEXT Layout](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md) — architectural rationale and rejected alternatives
-- [Convention: PROJECT_CONTEXT Injection](../conventions/PROJECT_CONTEXT-injection.md) — canonical convention reference
+- [Convention: PROJECT_CONTEXT Injection](../conventions/PROJECT_CONTEXT-injection.md) — the layout rules, runtime-discovery contract, and rejected alternatives
 - `leafcutter/templates/agents/README.md` — template directory, asymmetry explainer
 - `.agents/agents/README.md` — project-side directory explainer
 - `leafcutter/scripts/project_context_discovery.py` — `find_project_contexts()` helper used by build.py

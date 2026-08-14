@@ -253,6 +253,56 @@ if (acIds.length === 0) {
 }
 
 const batchIds = acIds.join(" ");
+const batchIdsCsv = acIds.join(",");
+
+// ---------------------------------------------------------------------------
+// Lifecycle: claim the connected set (flip todo → in_progress)
+// ---------------------------------------------------------------------------
+const claimResult = await agent(
+  `You are the claim-phase agent for a fast-lane build.\n\n` +
+  `Run this single Bash command and parse its JSON stdout:\n` +
+  `   python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}\n\n` +
+  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}.\n` +
+  `If the command exits non-zero or target_refused is true, the connected set is\n` +
+  `already in_progress (owned by a concurrent run) — return the JSON plus "message".\n` +
+  `Otherwise return the parsed JSON with message "claimed <N> ACs".`,
+  {
+    agentType: "status-checker",
+    schema: {
+      type: "object",
+      required: ["claimed", "target_refused"],
+      properties: {
+        claimed: { type: "array", items: { type: "string" } },
+        excluded_claimed: { type: "array", items: { type: "string" } },
+        target_refused: { type: "boolean" },
+        message: { type: "string" },
+      },
+    },
+    label: "claim-connected",
+    phase: "Resolve",
+  }
+);
+
+if (!claimResult || claimResult.target_refused) {
+  return {
+    status: "halt",
+    classification: "halt",
+    message:
+      "connected set already claimed / in progress — a concurrent fast-lane run " +
+      "owns these ACs. Wait for that run to complete or release stuck claims. " +
+      `Detail: ${JSON.stringify(claimResult)}`,
+    worktree_path: worktreePath,
+    branch,
+    ac_ids: acIds,
+  };
+}
+
+// Only the ACs THIS run actually flipped to in_progress may be released on a
+// later failure. Releasing the full resolved set would reset a concurrent run's
+// claims (its ACs land in excluded_claimed here, NOT in claimResult.claimed).
+const claimedIdsCsv = (claimResult.claimed || []).join(",");
+const releaseInvocation =
+  `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
 
 // ---------------------------------------------------------------------------
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
@@ -294,6 +344,13 @@ const testWriterResult = await agent(
 );
 
 if (!testWriterResult || testWriterResult.status !== "ok") {
+  await agent(
+    `You are the release-phase agent. The test-writer phase failed after claiming.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-test-writer-fail", phase: "Test Writer" }
+  );
   return {
     status: "blocked",
     message:
@@ -306,6 +363,13 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
 }
 
 if (!testWriterResult.all_red) {
+  await agent(
+    `You are the release-phase agent. The red-baseline gate failed after claiming.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-red-baseline-fail", phase: "Test Writer" }
+  );
   return {
     status: "blocked",
     message:
@@ -349,6 +413,13 @@ const coderResult = await agent(
 );
 
 if (!coderResult || coderResult.status !== "ok") {
+  await agent(
+    `You are the release-phase agent. The coder phase failed after claiming.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-coder-fail", phase: "Coder" }
+  );
   return {
     status: "blocked",
     message:
@@ -362,6 +433,13 @@ if (!coderResult || coderResult.status !== "ok") {
 
 // Gate is the arbiter: no commit, no PR unless green AND coverage hold (BO-2400f-4).
 if (!coderResult.green || !coderResult.coverage_ok) {
+  await agent(
+    `You are the release-phase agent. The green+coverage gate failed after claiming.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-coverage-fail", phase: "Coder" }
+  );
   return {
     status: "blocked",
     message:
@@ -383,13 +461,9 @@ if (!coderResult.green || !coderResult.coverage_ok) {
 
 phase("Commit");
 
-const markDoneLines = acIds
-  .map(
-    (id) =>
-      `   python3 ${worktreePath}/scripts/ac_store/mark_ac_done.py --ac ${id}` +
-      ` --ac-root ${acStoreRoot} --test-root ${worktreePath}`
-  )
-  .join("\n");
+const markDoneInvocation =
+  `python3 ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
+  ` --ac-root ${acStoreRoot} --test-root ${worktreePath}`;
 
 const commitResult = await agent(
   `You are the commit phase agent for a fast-lane build. The gates have passed ` +
@@ -398,10 +472,11 @@ const commitResult = await agent(
   `Worktree: ${worktreePath}\n` +
   `Branch: ${branch}\n` +
   `Built ACs (dependency order): ${batchIds}\n\n` +
-  `Step 1 — Mark each built AC done (coverage-gated; run each, single Bash calls):\n` +
-  `${markDoneLines}\n` +
-  `Each exits 3 if the AC has no passing covers test — if any does, STOP and return ` +
-  `{ "status": "error", "message": "coverage gate blocked <id>" }.\n\n` +
+  `Step 1 — Mark all built ACs done (coverage-gated; single Bash call):\n` +
+  `   ${markDoneInvocation}\n` +
+  `Parse the JSON: { "marked_done": [...], "all_done": <bool>, "stale": [...] }.\n` +
+  `If it exits non-zero or all_done is false, STOP and return ` +
+  `{ "status": "error", "message": "mark_done stale: <stale ids>" }.\n\n` +
   `Step 2 — Stage everything on the worktree:\n` +
   `   git -C "${worktreePath}" add -A\n\n` +
   `Step 3 — Commit (set the COMMIT_AGENT_MODE token so the guardian allows it):\n` +
@@ -419,6 +494,18 @@ const commitResult = await agent(
 );
 
 if (!commitResult || commitResult.status !== "ok") {
+  // The commit phase can fail AFTER mark_done flipped some/all claimed ACs to
+  // done on disk (e.g. a stale-todo mark_done, or a pre-commit hook rejecting
+  // the commit). Nothing was committed, so roll the whole run's claims back to
+  // todo — releasing done_ids=[] resets even already-done claims (BO-2400f-10).
+  await agent(
+    `You are the release-phase agent. The commit phase failed after claiming and ` +
+    `marking done, but nothing was committed.\n\n` +
+    `Roll all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-commit-fail", phase: "Commit" }
+  );
   return {
     status: "blocked",
     message:

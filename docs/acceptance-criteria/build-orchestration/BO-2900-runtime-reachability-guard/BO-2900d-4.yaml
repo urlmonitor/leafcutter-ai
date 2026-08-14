@@ -1,0 +1,85 @@
+id: BO-2900d-4
+components:
+  - build_orchestration
+  - testing_quality
+title: "How-to: decide whether to wire code in or exempt it, and record the exemption"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the exemption mechanism is in place,
+  When an author whose code has been reported as having no way in consults the
+    project's task-oriented documentation,
+  Then a how-to guide gives the decision first — wire the code in, or exempt it — and
+    states that exempting is correct only when the code is genuinely used by other
+    code and will never be reached on its own,
+    And it shows how to record an exemption, including where it goes and what the
+      reason must say,
+    And it states that the exemption covers only the item it names, so a sibling needs
+      its own decision and its own reason,
+    And it shows how to see every exemption currently in force,
+    And it states that an exemption is not the route past a stale automation call or
+      an uncalled capability, naming the guides for those instead.
+depends_on:
+  - BO-2900d
+  - BO-2900d-1
+  - BO-2900d-2
+  - BO-2900d-3
+doc_links:
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: related
+    status: exists
+    relevance: "Where the refusal that sends an author here is documented; the two must cross-link."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The reference companion. This guide states the decision and the procedure; the reference states the contract. Neither may absorb the other."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Create docs/how-to/reachability-exemptions.md. Open with the DECISION (wire it in, or exempt it) and put the recording procedure after it; a guide that opens with 'how to record an exemption' teaches people to exempt, and the exemption is the fallback, not the workflow."
+  - "State the concrete recording procedure against the real registry chosen by the IT PO: add an entry to config/reachability_exemptions.yaml with `item` (the exact repo-relative path or surface:capability id), `kind`, `reason`, `recorded` and `recorded_by`. Show a real entry, not a placeholder."
+  - "State that the reason must be non-empty and that a blank reason does not exempt (BO-2900d-1-i), and be explicit that the reason is judged by review, not by the tool — so the reason must be written for the reviewer who will read the inventory, not for the check."
+  - "State the exact-item scope rule from BO-2900d-3: a sibling in the same folder needs its own entry and its own reason; there is no folder or glob form."
+  - "Show how to see the exemptions in force — the guard prints the full inventory and the total on every run, including clean ones — so an author can check the set without reading the registry file."
+  - "CONTAINMENT FENCE (the last criteria clause): state that an exemption is NOT the route past a stale automation call (fix the call — see the capability-automation-connection guide) or past an uncalled capability (wire it, or exempt it deliberately under the BO-2900b-1-i terms). Link both, do not restate."
+  - "Register the page in docs/INDEX.md, cross-link it from docs/how-to/done-proof-enforcement.md, and satisfy check-doc-frontmatter, check-doc-length and check-doc-index."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900d-1
+  contract: "The recorded-exemption shape and location as decided by the IT PO: config/reachability_exemptions.yaml with entries { item, kind, reason, recorded, recorded_by } matched by exact item equality."
+test_required: false
+test_rationale: "The artifact is a prose how-to page; it adds no executable surface, so no test can drive it. The mechanism it documents is covered by the executing tests on BO-2900d-1, BO-2900d-1-i, BO-2900d-2 and BO-2900d-3. Recorded explicitly so test-writer skips with an accurate reason rather than silently, per the CLAUDE.md note on the absent-test-block auto-skip."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies one of the parent L1's two `documentation_triggers` (`how-to`).
+
+  Intended agent is `documentation-expert` — left null per this run's instruction.
+
+  THE DECISION COMES BEFORE THE PROCEDURE, and the criteria order it that way on
+  purpose. A guide that opens with "how to record an exemption" is a guide that teaches
+  people to exempt; the exemption is the fallback, not the workflow. An author reading
+  this page has just been refused and wants the fastest exit — if the fastest exit is
+  the first thing on the page, the guard's usage statistics will show it.
+
+  THE LAST CLAUSE IS A CONTAINMENT FENCE. Once an exemption exists, it becomes the
+  default answer to every refusal this tree produces, including the two it was never
+  meant for: a stale automation call (fix the call) and an uncalled capability (wire it,
+  or exempt it deliberately under BO-2900b-1-i's terms). Saying so here is cheaper than
+  auditing exemptions later to find out which refusal each one was actually dodging.
+
+  2026-08-13 (IT PO enrichment). The registry location the guide must document is now
+  decided: config/reachability_exemptions.yaml (see BO-2900d-1's notes for the full
+  rationale). The writer does not need to resolve that question.

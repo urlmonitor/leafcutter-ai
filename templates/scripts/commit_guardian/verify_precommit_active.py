@@ -349,12 +349,20 @@ def resolve_hooks_path(cwd: Path) -> Path:
         OSError: When .git/config exists but cannot be read (fail-closed; caller
             must handle).
     """
-    git_config_path = cwd / ".git" / "config"
+    # Resolve the SHARED git directory before reading config. In a git worktree
+    # ``.git`` is a FILE (containing "gitdir: <path>"), so ``cwd/".git"/"config"``
+    # raises NotADirectoryError — which previously propagated as a generic OSError
+    # and made check C report git_hook: false for EVERY worktree, even though the
+    # hook was installed and firing. _resolve_git_commondir handles both shapes:
+    # for a main working tree it returns .git itself, for a worktree it follows
+    # gitdir: -> commondir. The config and the shared hooks both live there.
+    commondir = _resolve_git_commondir(cwd)
+    git_config_path = commondir / "config"
 
     try:
         config_text = git_config_path.read_text(encoding="utf-8")
     except OSError as exc:
-        _log.warning("resolve_hooks_path: cannot read .git/config at %s: %s", git_config_path, exc)
+        _log.warning("resolve_hooks_path: cannot read git config at %s: %s", git_config_path, exc)
         raise
 
     parser = configparser.ConfigParser()
@@ -370,7 +378,6 @@ def resolve_hooks_path(cwd: Path) -> Path:
             return hooks_path
         return (cwd / hooks_path_str).resolve()
 
-    commondir = _resolve_git_commondir(cwd)
     return commondir / "hooks"
 
 

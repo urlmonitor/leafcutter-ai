@@ -1,0 +1,106 @@
+id: BO-2800e
+components:
+  - build_orchestration
+  - review_system
+title: "Every check gets a verdict — keep it, soften it, replace it, or drop it"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The numbers turn into a recommendation, so the set of checks can finally shrink.
+
+  Once the counts exist, each check is measured against them and comes back with one
+  plain recommendation — leave it alone, stop it blocking and let it advise, replace
+  it with something cheap and mechanical that catches the same thing every time, or
+  fix just the one rule that keeps being waved through rather than the whole check.
+  Nothing is weakened or removed on its own: the recommendation is put in front of a
+  person, with the evidence that produced it, and a person decides.
+depends_on:
+  - BO-2800
+  - BO-2800c
+  - BO-2800d
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500d.yaml
+    relationship: related
+    status: exists
+    relevance: "The already-shipped, STATIC precedent for retiring review overhead — a hand-decided fast-lane / heavy-lane agent split (BO-2500d-1..4, all work_status: done). This L1 is its data-driven successor: the same kind of decision, taken from the record instead of by hand. There is NO dependency between BO-2500d and BO-2800 in either direction; do not add one to BO-2500d's depends_on."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Carries the phase order and the blocking/advisory routing a downgrade recommendation would ultimately change — the surface a keep/soften verdict is about."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+change_target:
+  - pipeline
+  - config
+risk_surface: internal
+notes: |
+  THE GAP THIS CLOSES. BO-2800a/b/c produce figures and deliberately stop short of the
+  threshold. Nothing anywhere says what to DO with them — two reviewers independently
+  confirmed it by grepping the whole BO-2500 tree for "override", "threshold" and "false
+  positive" and finding no relevant hit. Measuring without deciding is worthless: the set of
+  checks only ever grows. This L1 is the decide layer.
+
+  FOUR KINDS OF ACTION — THE NATURAL L2 SET. Each is a distinct recommendation with a
+  distinct trigger and a distinct remedy; do not collapse them into one "score":
+    1. RETIRE     — the check consistently blocks nothing real, or is almost always
+                    overruled and no matching defect ever showed up afterwards.
+    2. DOWNGRADE  — the check is right often enough to be worth reading but not often
+                    enough to be worth stopping for. It advises instead of blocking.
+    3. PROMOTE    — one problem kind is caught over and over by a judgement-based check.
+                    The same thing can be caught mechanically, every time, for almost
+                    nothing. Recommend replacing that one finding with the cheap check.
+    4. RE-PROMPT  — the overrides all cluster on ONE problem kind, not the whole check.
+                    Fix that one rule; leave the rest of the check alone.
+  With a fifth L2 for the human-decision guarantee below, that is exactly the five-L2 cap.
+  If a sixth candidate appears, split the L1 rather than dropping one of the four.
+
+  THE RECOMMENDATION IS ADVISORY, ALWAYS. No check is retired, downgraded, or rewritten by
+  this capability itself. It recommends; a person decides; the decision and its evidence are
+  recorded. Auto-applying a retirement would let a measurement bug silently switch off a
+  guard — the exact failure this whole tree exists to make visible rather than to cause.
+
+  EVERY RECOMMENDATION CARRIES ITS EVIDENCE AND ITS WINDOW. A verdict with no numbers behind
+  it is an opinion. Each recommendation must show the counts that produced it, over the same
+  parameterised window BO-2800c defines — a rate over "all history" and a rate over "the last
+  N" can disagree, and the recommendation is only as good as the window it names.
+
+  ZERO-YIELD IS ROUTED DIFFERENTLY — THAT IS WHY THIS DEPENDS ON BO-2800d. A check that never
+  fired is not the same as a check that fires and is overruled, and it must not be fed into
+  the retire rule as though it were. Its likely causes are misconfiguration or
+  unreachability, so its recommendation is "find out why it is silent", not "drop it".
+
+  DEPENDENCY DIRECTION, STATED EXPLICITLY BECAUSE THE TREE PREVIOUSLY HAD IT BACKWARDS.
+  This L1 CONSUMES the rates BO-2800c produces, so it depends on BO-2800c. Nothing in
+  BO-2800a/b/c may be made to depend on this L1 — that would block three shippable
+  measurement L1s behind a policy decision. And per the struck amendment recorded in the
+  BO-2800 L0 notes, BO-2500d must NOT gain a depends_on edge to anything in this tree:
+  BO-2500d is a finished, static agent split that consumes no figure produced here. The
+  BO-2500d reference above is doc_links / related only, and must stay that way.
+
+  RECONCILIATION WITH THE L0 BOUNDARY NOTE — READ BEFORE DECOMPOSING. The BO-2800 L0 notes
+  say "do not author threshold-to-action rules inside BO-2800", and also say the missing
+  decide layer needs "a new L1, most likely under this L0". Both hold once the boundary is
+  read as running BETWEEN L1s rather than around the L0: the measurement L1s (BO-2800a/b/c)
+  and their L2s stay pure — an L2 under any of them that names a threshold or names which
+  gates to remove is still out of scope and must still be rejected — and every
+  threshold-to-action rule lives here instead, as its own unit of work, shippable and
+  reviewable separately. The L0 note's wording still reads as though no such L1 exists; it
+  needs a one-line amendment to point here, which was deliberately NOT applied during this
+  authoring pass and is flagged to the user for approval.

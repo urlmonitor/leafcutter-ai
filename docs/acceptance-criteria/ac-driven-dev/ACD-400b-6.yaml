@@ -1,0 +1,63 @@
+id: ACD-400b-6
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Generated files_touched includes every implementation source the AC points at, never dropping the behavior's home file"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given an AC whose doc_links reference more than one local source file
+    (for example a primary file where the behavior lives plus a second file
+    that only delegates to it),
+  When the generator is invoked with that AC's identifier and writes the ticket,
+  Then the generated ticket's files_touched lists every implementation-relevant
+    local source path referenced by the AC — not a subset,
+  And the file where the AC's behavior actually lives (the primary target)
+    is always present in files_touched,
+  And no referenced implementation source path is silently omitted.
+depends_on: [ACD-400b]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File of record: the fix lives in scripts/ac_store/generate_ticket_from_ac.py, in the logic that derives the ticket's files_touched from the source AC's doc_links."
+  - "files_touched derivation must be union-preserving over the AC's implementation-relevant local source doc_links — never a first-wins or single-element reduction that silently drops a referenced path."
+  - "Non-source doc_links (e.g. docs/**.md reference pages, architecture docs) may be excluded from files_touched, but no local implementation source path may be dropped."
+  - "Must accept a doc_links entry in either supported shape (plain path string or {path, relationship, status} object) without raising, per the AC-store doc_links schema."
+  - "Must follow the repo error-handling policy: wrap file/YAML I/O in try/except with a specific exception type and log at WARNING or higher (or re-raise); no bare or silent excepts."
+  - "Verify behaviorally — generate a ticket from a crafted AC and assert the resulting frontmatter's files_touched, not by grepping the generator source."
+test_spec:
+  - name: test_files_touched_includes_every_impl_source
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "Generating a ticket from an AC whose doc_links reference two local source files yields a files_touched containing both paths (not a subset)."
+    covers: [ACD-400b-6]
+  - name: test_files_touched_always_contains_primary_home_file
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    description: "The file where the AC's behavior lives (primary target) is present in the generated files_touched regardless of doc_links ordering."
+    covers: [ACD-400b-6]
+delivers_to:
+  agent: python-coder
+  contract: "A ticket whose files_touched sends the coder to the real implementation target(s), not a partial set"
+expects_from:
+  ac_id: ACD-400b-1
+  contract: "Ticket generation logic that derives files_touched from the AC's doc_links"
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400b-6-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260813-ACD-400b-6.md
+- scripts/ac_store/generate_ticket_from_ac.py
+- unit_tests/ac_store/test_generator_frontmatter_gaps.py
+change_target: code
+risk_surface: contract_boundary

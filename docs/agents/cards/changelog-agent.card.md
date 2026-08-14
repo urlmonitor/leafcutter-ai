@@ -11,9 +11,9 @@ description: 'Automated changelog entry agent. Reads git log since the last depl
   epic-supervisor Step 2.)'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # changelog-agent
 

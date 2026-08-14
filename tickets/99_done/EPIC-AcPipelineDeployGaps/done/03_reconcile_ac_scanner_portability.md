@@ -292,7 +292,7 @@ Neither finding is a blocker. Opus also identified that ADR-013's binding rule d
 
 - [x] Create docs/how-to/ac-driven-build-loop.md documenting the AC-driven build loop as a consumer-facing capability
   - Explain the purpose: AC store as authoritative backlog, ticket generation, and automated work dispatch
-  - Link to ADR-010 and ADR-007b
+  - Link to ADR-010 and ADR-008
   - Show an end-to-end example: creating an AC, running /build-ac, and completing the generated ticket on a consumer install
   - Document the relationship between /ac-scanner, /build-ac, and the AC store
   - Note: /build-ac requires /plan-feature deployment (see EPIC-AcPipelineDeployGaps ticket 02)

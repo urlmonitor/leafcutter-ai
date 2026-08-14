@@ -126,7 +126,7 @@ by a prior crashed session and presents the user with a three-way choice before
 any new authoring begins.
 
 Detection uses `git status --porcelain docs/acceptance-criteria/` and qualifies
-candidates by two fields defined in ADR-007:
+candidates by two fields defined in ADR-008:
 
 | Field | Qualifying value |
 |---|---|

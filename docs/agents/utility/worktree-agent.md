@@ -1,21 +1,21 @@
 ---
-title: "Agent Reference: worktree-agent"
+title: 'Agent Reference: worktree-agent'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
 related_code:
-  - ".claude/agents/worktree-agent.md"
-  - ".claude/commands/worktree.md"
-  - ".claude/skills/feature/SKILL.md"
-  - ".claude/commands/close-worktree.md"
+- .claude/agents/worktree-agent.md
+- .claude/commands/worktree.md
+- .claude/skills/feature/SKILL.md
+- .claude/commands/close-worktree.md
+description: 'Overview of Agent Reference: worktree-agent.'
 ---
-
 # Agent Reference: `worktree-agent`
 
 Implementing agent: `worktree-agent` (Haiku, confirmation-gated user-facing).
@@ -99,7 +99,7 @@ No sub-step re-prompts.
 
 ## 5. Tool Allowlist
 
-`Bash, Read` — the Haiku floor per [ADR-006 §2.6](../../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
+`Bash, Read` — the Haiku floor per [ADR-006 §2.6](../../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
 No `Grep`, `Glob`, or MCP tools.
 
 The agent reads skill and workflow files by absolute path; no open-ended search
@@ -120,4 +120,4 @@ is needed for any worktree operation.
 
 - [`.claude/agents/worktree-agent.md`](../../../.claude/agents/worktree-agent.md)
 - [`docs/agents/conventions.md`](../conventions.md) — Haiku tier, tool allowlist, visibility classes.
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) — Haiku tier policy.
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — Haiku tier policy.

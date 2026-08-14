@@ -1,0 +1,70 @@
+id: ACS-1100a
+components:
+  - ac_store
+title: "Every result comes with the total it was measured against"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Results never arrive without a denominator.
+
+  Any answer about your requirements reports both what it found and how many
+  records were in scope to begin with, and that total is established independently
+  of the pass that produced the results — so a run that quietly saw a fraction of
+  the store can no longer present itself as a complete picture.
+depends_on:
+  - ACS-1100
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7a.yaml
+    relationship: related
+    status: exists
+    relevance: "Exempt surface — the tree-limit counter keeps its single shared implementation. See ACS-1100 notes."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100a-1
+  - ACS-1100a-2
+  - ACS-1100a-3
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  The reference documentation for this L1's answer contract and independence rule is
+  written by ACS-1100e-1, a single consolidated reference-doc AC covering all four
+  behavioural L1s. Four separate per-L1 reference-doc ACs (the former ACS-1100a-4,
+  ACS-1100b-3, ACS-1100c-3 and ACS-1100d-3) all wrote sections of the same file,
+  docs/reference/ac-schema.md, and would have been serialised by the build's file-touch
+  parallelism gate into four sequential tickets editing one file. Documentation is
+  required and is delivered — by ACS-1100e-1, not by a child of this L1.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The load-bearing word is INDEPENDENTLY, and it means independent of the query's
+  FILTERS and JOIN KEYS — not independent of the traversal. A denominator derived by
+  applying the result pass's own filters is worthless: if the filter missed 140
+  records, so does the total, and the answer reports 40 of 40. A single filter-free
+  enumeration of the store root that yields both the total and the results is
+  correct and preferred, because a filter-free enumeration has no blind spot to
+  inherit and a second traversal is pure waste. See ACS-1100a-2.
+
+  EXEMPTION (do not re-derive it here — it is settled at the L0): the AC-tree
+  child-limit counter is out of scope for the independent-second-source rule,
+  because ACS-100h-7a (approved) mandates exactly one implementation of that
+  traversal. Do NOT write a second traversal for it. Its coverage honesty is
+  satisfied through ACS-1100b instead (the one callable states what it examined
+  and excluded).
+
+  Independence applies to the DENOMINATOR, not to the rule applied per record.

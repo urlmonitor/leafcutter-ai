@@ -131,7 +131,7 @@ completion_manifest:
   adr_file_created: true
   all_sections_present: true
   status_set: true
-ADR-007 authored at docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md. Covers: rationale for AC store separation, required/optional YAML fields, ID format regex ^[A-Z]{2,6}-[0-9]{3}$, status lifecycle (active/deprecated/superseded_by), stdlib-first enforcement model via check_ac_schema.py, and warning-first migration strategy for existing test files. All five ADR sections present and status set to Accepted.
+ADR-008 authored at docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md. Covers: rationale for AC store separation, required/optional YAML fields, ID format regex ^[A-Z]{2,6}-[0-9]{3}$, status lifecycle (active/deprecated/superseded_by), stdlib-first enforcement model via check_ac_schema.py, and warning-first migration strategy for existing test files. All five ADR sections present and status set to Accepted.
 
 ### 2026-06-04 10:05 — architect-review (status: ok)
 feedback-id: fb_2026-06-04_b8e582ee
@@ -166,7 +166,7 @@ completion_manifest:
   diff_reviewed: true
   no_high_findings: true
   scope_verified: true
-Reviewed 6-file diff (821 insertions). No high-confidence findings. Schema fields match ADR-007 spec; validator script passes ruff E722/BLE001/TRY; hook entry in commit_guardian.json follows established pattern; ADR-007 present with all required sections; 6/6 tests green. config/agent_registry.json listed in files_touched but no update required — hook registration is in commit_guardian.json per project convention. Approved for commit.
+Reviewed 6-file diff (821 insertions). No high-confidence findings. Schema fields match ADR-008 spec; validator script passes ruff E722/BLE001/TRY; hook entry in commit_guardian.json follows established pattern; ADR-008 present with all required sections; 6/6 tests green. config/agent_registry.json listed in files_touched but no update required — hook registration is in commit_guardian.json per project convention. Approved for commit.
 
 ### 2026-06-04 10:30 — commit (status: ok)
 feedback-id: fb_2026-06-04_1585d006
@@ -182,7 +182,7 @@ completion_manifest:
   pr_opened: true
   branch_pushed: true
   pr_url_captured: true
-PR #46 opened: https://github.com/urlmonitor/leafcutter-ai/pull/46. Branch EPIC-ACTraceabilityStore pushed to origin. PR targets main with title "feat(ac-store): AC YAML schema, validator hook, and ADR-007".
+PR #46 opened: https://github.com/urlmonitor/leafcutter-ai/pull/46. Branch EPIC-ACTraceabilityStore pushed to origin. PR targets main with title "feat(ac-store): AC YAML schema, validator hook, and ADR-008".
 
 ## Implementation Tasks
 

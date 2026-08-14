@@ -12,9 +12,9 @@ description: 'Conditional phase agent that starts a development server, issues H
   at priority 11.8 for a ticket whose live_surface_test field is true.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # live-surface-tester
 

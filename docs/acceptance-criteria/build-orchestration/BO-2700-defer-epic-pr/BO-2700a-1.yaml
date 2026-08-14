@@ -1,0 +1,65 @@
+id: BO-2700a-1
+components:
+  - build_orchestration
+title: "selectDispatchPhases removes the pull-request phase when isEpicMember is true"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the pure helper selectDispatchPhases(orderedPhases, isEpicMember) exported
+    from templates/workflows-js/build-feature.js,
+  And orderedPhases is the list of per-ticket phase objects
+    [{agent: "test-writer"}, {agent: "python-coder"}, {agent: "commit"}, {agent: "pull-request"}],
+  When selectDispatchPhases(orderedPhases, true) is executed,
+  Then the returned list contains no phase whose agent equals "pull-request",
+  And the returned list has exactly one fewer element than orderedPhases (the
+    pull-request phase is the only phase removed).
+notes: |
+  Testability: build-feature.js is a Workflow-engine script that uses injected
+  globals (agent()/parallel()) and is not importable as a plain module, so the
+  per-ticket driver itself cannot be executed in a unit test. The filtering
+  decision, however, is extracted into the PURE helper selectDispatchPhases,
+  which takes plain data (orderedPhases, isEpicMember) and returns plain data.
+  This AC is behavioral, not grep-only: a test EXECUTES selectDispatchPhases
+  (e.g. via `node`) with the concrete orderedPhases above and asserts the
+  returned list. The pre-commit hooks that run during the commit phase are the
+  reason pull-request — not commit — is the phase deferred for epic members.
+depends_on: [BO-2700a]
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  notes: |
+    The pure helper selectDispatchPhases(orderedPhases, isEpicMember) is extracted
+    from driveTicketPhases in build-feature.js. Because build-feature.js uses injected
+    globals (agent()/parallel()), it cannot be imported as a plain module; however,
+    selectDispatchPhases is a pure data->data function and can be invoked directly via
+    `node` with a thin eval harness. Behavioral coverage: execute
+    selectDispatchPhases(orderedPhases, true) and assert the pull-request phase is absent.
+origin_agent: business-analyst-v3
+created: 2026-08-12
+amended_by: [business-analyst-v3]
+superseded_by: null
+covered_by:
+- BO-2700a-1-i
+- unit_tests/workflows/test_bo_2700_defer_epic_pr.py
+implemented_by:
+- templates/workflows-js/build-feature.js
+change_target: pipeline
+risk_surface: internal

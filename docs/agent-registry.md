@@ -1,13 +1,13 @@
 ---
-title: "Agent Registry Reference"
+title: Agent Registry Reference
 type: reference
 status: active
 created: 2026-05-13
 last_updated: 2026-05-13
 components:
-  - "infrastructure"
+- infrastructure
+description: Overview of Agent Registry Reference.
 ---
-
 # Agent Registry Reference
 
 `leafcutter/config/agent_registry.json` is the single source of truth
@@ -25,7 +25,7 @@ Each agent entry requires these fields:
 | `tier` | `supervisor\|phase\|utility` | Tier determines execution context |
 | `role` | string | Functional role (`orchestration`, `coding`, `review`, etc.) |
 | `portable` | boolean | `true` = domain-agnostic; `false` = domain-specific |
-| `domain` | string or null | Domain tag (e.g. `"bybit-trader"`) for domain agents |
+| `domain` | string or null | Domain tag (e.g. `"billing"`) for domain agents |
 | `spawn_allowlist` | array | Agent IDs this agent may spawn |
 | `spawned_by` | array | Agent IDs or `"user"` that invoke this agent |
 | `is_ticket_phase` | boolean | `true` = appears in ticket `agents:` maps |
@@ -112,20 +112,16 @@ a build directive, not a runtime key.
 
 ## Domain Agents Section
 
-The following domain-specific agents are registered for the `bybit-trader` project:
+No domain agents ship with this package — every agent in `agent_registry.json`
+carries `"portable": true` and `"domain": null`.
+
+A consumer project registers its own domain agents in the same file, using its
+own domain tag. They are listed alongside the portable agents and are reported
+as INFO (not compiled) by `build.py --validate`:
 
 | Agent | Role | Skills Used |
 |---|---|---|
-| `sql-coder` | SQL orchestrator (spawns SQL specialists + sql-query) | `signoff` |
-| `sql-table-creator` | SQLAlchemy model + Alembic migration | `alembic-migration` |
-| `sql-procedure-creator` | Stored procedures | — |
-| `sql-function-creator` | SQL functions | — |
-| `sql-index-creator` | File-based indexes | — |
-| `sql-view-creator` | Regular + materialized views | — |
-| `database-agent` | Migration, SQL reload, schema-check | `db` |
-| `prod-deploy` | Full prod-deploy choreography | `fetch-prod-logs` |
-| `reporting-agent` | Multi-skill dispatcher (analytics) | `db`, `fetch-prod-logs` |
-| `strategy-builder` | Strategy mining + analysis | `db`, `find-context-candle` |
+| `<your-agent-id>` | What the agent does in your domain | Skills that exist in your project |
 
 ## Diagram Generation
 

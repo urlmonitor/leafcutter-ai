@@ -239,4 +239,4 @@ If you were invoked with a `ticket_path` argument:
 
 DECISION HISTORY
 ================================================================================
-- 2026-05-18 14:00 [documentation-expert]: Created change-scope-reviewer agent template implementing the JUDGMENT tier of ADR-033 three-tier scope-disagreement model. (#EPIC-DocTraceability/04) (ADR-033)
+- 2026-05-18 14:00 [documentation-expert]: Created change-scope-reviewer agent template implementing the JUDGMENT tier of the three-tier scope-disagreement model. (#EPIC-DocTraceability/04)

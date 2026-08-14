@@ -1,0 +1,70 @@
+id: BO-2900d
+components:
+  - build_orchestration
+  - testing_quality
+title: "Work that genuinely has no way in is handled honestly, not falsely blamed"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Legitimate exceptions are recorded on the record, never waved through silently.
+
+  Some work is only ever used by other work and has no way in of its own. That case
+  is recognised and allowed with a stated, visible reason, so the guard stays
+  trustworthy instead of crying wolf until somebody turns it off.
+depends_on:
+  - BO-2900
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900d-1
+  - BO-2900d-2
+  - BO-2900d-3
+  - BO-2900d-4
+  - BO-2900d-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Added by the product owner, not requested explicitly. Without a scoped, reviewable
+  exemption the reachability guard blocks every library/helper module and will be
+  disabled in practice. The exemption must be explicit and visible on the record —
+  never an implicit pass.
+
+  2026-08-13 (BA decomposition). Five L2s: -1 the mechanism (recorded, reasoned, and
+  never granted by convention), -2 the reviewable inventory listed with its total on
+  EVERY run including clean ones, -3 the scope limits in both breadth (names one item,
+  covers only that item) and time (a stale exemption is reported and not counted), -4
+  the how-to and -5 the reference satisfying the two documentation_triggers. One L3,
+  BO-2900d-1-i, refuses a reasonless exemption while distinguishing it from an absent one.
+
+  THE PAIRING THAT MAKES THIS TRUSTWORTHY — do not implement one half. BO-2900d-1-i
+  deliberately declines to judge reason QUALITY mechanically (every mechanical version
+  is an evadable blacklist that also fails honest reasons). BO-2900d-2 is the
+  compensating control: all reasons in one place, on every run, with a count, so a human
+  can judge them and a growing set is noticed. Mechanism without inventory produces an
+  invisible rubber stamp; inventory without the no-implicit-pass rule of BO-2900d-1
+  produces an accurate list of a guard that is not running.
+
+  BOUNDARY vs siblings: BO-2900e governs the WORDING of a refusal that is emitted;
+  BO-2900f governs the ABSENCE of any record for a gate that never ran. This L1 governs
+  the legitimate PASS and its visibility. Keep the three distinct at implementation.
+
+  DELIBERATELY LEFT OPEN for the IT PO: where an exemption is recorded, and whether a
+  stale exemption refuses or only reports. Both are recorded as open in the relevant L2
+  notes with the arguments on each side.

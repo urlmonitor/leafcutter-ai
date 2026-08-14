@@ -35,7 +35,7 @@ the deterministic dispatcher `templates/workflows-js/build-ticket.js` emits a th
 prompt (phase name + ticket_path + files_touched only), so the missing task-specific
 detail was hand-typed off-channel, drifted, and produced the defects.
 
-The fix reuses the **ADR-004 pattern** (schema-validated section authored once by a
+The fix reuses the **ADR-027 pattern** (schema-validated section authored once by a
 planning agent, enforced by hook/supervisor/template) applied to two channels:
 
 - **Channel 6 (agent template/skill)** owns portable HOW-knowledge — Layer A.

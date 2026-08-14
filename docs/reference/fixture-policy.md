@@ -10,7 +10,7 @@ components:
   - testing_quality
 related_docs:
   - docs/how-to/real-artifact-fixtures.md
-  - docs/architecture/adrs/ADR-007-test-fixture-convention.md
+  - docs/architecture/adrs/ADR-028-test-fixture-convention.md
   - templates/agents/test-writer.md
 ---
 
@@ -184,14 +184,14 @@ The defect was invisible to the test suite because the fixtures reproduced the s
 
 ---
 
-## Relationship to load_fixture() (ADR-007)
+## Relationship to load_fixture() (ADR-028)
 
-`load_fixture('<module>/<name>')`, defined in `tests/conftest.py` per [ADR-007](../architecture/adrs/ADR-007-test-fixture-convention.md), handles the **storage and retrieval** of fixtures whose data blob would push a test file past the 500-line ceiling.
+`load_fixture('<module>/<name>')`, defined in `tests/conftest.py` per [ADR-028](../architecture/adrs/ADR-028-test-fixture-convention.md), handles the **storage and retrieval** of fixtures whose data blob would push a test file past the 500-line ceiling.
 
 The Fixture Authenticity Rule governs how the fixture **content is produced**. Both rules apply together:
 
 1. Build fixture bytes with `yaml.safe_dump` / `json.dumps` (this document — Fixture Authenticity Rule).
-2. If the data is large enough to push the test file over 500 lines, write it to `tests/fixtures/<module>/<name>.json` and load it with `load_fixture()` (ADR-007).
+2. If the data is large enough to push the test file over 500 lines, write it to `tests/fixtures/<module>/<name>.json` and load it with `load_fixture()` (ADR-028).
 3. For parser/validator tests, always round-trip through a temporary file even when also using `load_fixture()` for the raw data.
 
 ---
@@ -199,5 +199,5 @@ The Fixture Authenticity Rule governs how the fixture **content is produced**. B
 ## See Also
 
 - `docs/how-to/real-artifact-fixtures.md` — task guide for authoring real-producer fixtures and round-trip tests, with step-by-step instructions.
-- `docs/architecture/adrs/ADR-007-test-fixture-convention.md` — architectural decision for the `load_fixture()` helper and `tests/fixtures/` directory layout.
+- `docs/architecture/adrs/ADR-028-test-fixture-convention.md` — architectural decision for the `load_fixture()` helper and `tests/fixtures/` directory layout.
 - `templates/agents/test-writer.md` §2h.2 — the authoritative rule enforced in every `test-writer` invocation.

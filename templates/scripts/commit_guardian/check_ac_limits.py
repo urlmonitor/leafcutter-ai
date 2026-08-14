@@ -340,11 +340,77 @@ def _load_ac_store(ac_store_dir: Path) -> list[AcNode]:
 # ---------------------------------------------------------------------------
 
 
+def _git_name_only(args: list[str]) -> set[str] | None:
+    """Run ``git diff --cached --name-only`` with *args* and return the paths.
+
+    Args:
+        args: Extra arguments appended to the diff command (e.g. a revision).
+
+    Returns:
+        Set of path strings, or None when git could not be run.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=AM", *args],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"[check-ac-limits] WARNING: could not run git diff: {exc}",
+            file=sys.stderr,
+        )
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
+def _merge_in_progress() -> bool:
+    """Return True when a merge is in progress (MERGE_HEAD exists).
+
+    Returns:
+        True if git reports a MERGE_HEAD, False otherwise (including on error).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"[check-ac-limits] WARNING: could not check MERGE_HEAD: {exc}",
+            file=sys.stderr,
+        )
+        return False
+
+    return result.returncode == 0
+
+
 def _get_staged_ac_paths() -> list[str]:
     """Return staged .yaml file paths that live under docs/acceptance-criteria/.
 
     Uses HOOK_TEST_FILES env var (newline-separated path list) when set, so
     unit tests can inject a staged file list without running git.
+
+    Merge commits (ACS-100c-1 scoping): a merge stages the ENTIRE incoming
+    branch, so a plain ``git diff --cached`` reports every AC file the other
+    side ever touched. That made this gate block a merge on tree-shape
+    violations that already exist on the target branch and that the merging
+    branch neither authored nor modified — the merge author cannot fix
+    someone else's AC tree, so the only way out was to bypass the hook, which
+    is how a real violation later slips through.
+
+    When a merge is in progress the scope is therefore narrowed to files whose
+    merge result differs from BOTH parents — the content the merge itself
+    introduces (conflict resolutions). A file taken verbatim from either side
+    is excluded: it was already gated when it was committed on that side.
+    Non-merge commits are unaffected.
 
     Returns:
         List of relative path strings (relative to repo root).
@@ -357,28 +423,20 @@ def _get_staged_ac_paths() -> list[str]:
             if p.strip() and _AC_STORE_DIR in p and p.strip().endswith(".yaml")
         ]
 
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=AM"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
-        print(
-            f"[check-ac-limits] WARNING: could not run git diff: {exc}",
-            file=sys.stderr,
-        )
+    changed = _git_name_only([])
+    if changed is None:
         return []
 
-    if result.returncode != 0:
-        return []
+    if _merge_in_progress():
+        vs_other_parent = _git_name_only(["MERGE_HEAD"])
+        if vs_other_parent is not None:
+            changed &= vs_other_parent
 
-    return [
-        line.strip()
-        for line in result.stdout.splitlines()
-        if line.strip() and _AC_STORE_DIR in line and line.strip().endswith(".yaml")
-    ]
+    return sorted(
+        path
+        for path in changed
+        if _AC_STORE_DIR in path and path.endswith(".yaml")
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -1,24 +1,24 @@
 ---
-title: "Agent Reference: sql-procedure-creator"
+title: 'Agent Reference: sql-procedure-creator'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
-  - infrastructure
+- infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/database/create-procedure.md"
-  - "docs/database-domain.md"
-  - "tickets/09_done/EPIC-CodingAgents/17_sql_procedure_creator.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/database/create-procedure.md
+- docs/database-domain.md
+- tickets/09_done/EPIC-CodingAgents/17_sql_procedure_creator.md
 related_code:
-  - ".claude/agents/sql-procedure-creator.md"
-  - "sql_functions/procedures/"
-  - "unit_tests/sql_functions/"
+- .claude/agents/sql-procedure-creator.md
+- sql_functions/procedures/
+- unit_tests/sql_functions/
+description: 'Overview of Agent Reference: sql-procedure-creator.'
 ---
-
 # Agent Reference: `sql-procedure-creator`
 
 Visibility class: **Internal** — only invoked by `sql-coder`.
@@ -113,7 +113,7 @@ Both patterns are safe to re-run against a running database. Running workers (co
 
 ## 6. Tool Allowlist and Research Delegation
 
-Per [ADR-006 §2.6](../../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation) and the strict-research-delegation rule:
+Per [ADR-006 §2.6](../../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation) and the strict-research-delegation rule:
 
 - `sql-procedure-creator` carries: `Bash, Read, Edit, Write, Agent`.
 - `Grep`, `Glob`, and all MCP search tools are **removed**.
@@ -149,7 +149,7 @@ To update the procedure authoring rules (e.g. a new required header field or a n
 - [docs/how-to/database/create-procedure.md](../../how-to/database/create-procedure.md) — canonical authoring rules loaded by this agent on every run.
 - [docs/database-domain.md](../../database-domain.md) — hybrid schema management, reload commands, observability surface.
 - [docs/agents/conventions.md](../conventions.md) — frontmatter schema (§1), tool allowlists (§4), strict-research-delegation (§4.2).
-- [docs/architecture/adrs/ADR-006-agent-model-tiers.md](../../architecture/ADR-006-agent-model-tiers.md) — model tier policy; Sonnet rationale.
+- [docs/architecture/adrs/ADR-033-agent-model-tiers.md](../../architecture/adrs/ADR-033-agent-model-tiers.md) — model tier policy; Sonnet rationale.
 - [.claude/agents/sql-procedure-creator.md](../../../.claude/agents/sql-procedure-creator.md) — the agent file itself.
 - [tickets/09_done/EPIC-CodingAgents/17_sql_procedure_creator.md](../../../tickets/09_done/EPIC-CodingAgents/17_sql_procedure_creator.md) — the ticket that shipped this agent.
 - [tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md](../../../tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md) — the orchestrator that dispatches here.

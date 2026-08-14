@@ -26,13 +26,13 @@ criteria: |
   batch of defects that were all avoidable. This sits at the assembly of a phase
   agent's prompt -- distinct from BO-1900 (which checks a ticket is fit to dispatch
   at the spawn moment) and BO-100 (which only decides dispatch ORDER). It applies
-  the ADR-004 pattern (schema-validated section authored by a planning agent, with
+  the ADR-027 pattern (schema-validated section authored by a planning agent, with
   hook / supervisor / template enforcement) to the Agent Knowledge Plane's
   Channel 6 (agent template/skill) and Channel 8 (ticket body).
 depends_on: []
 doc_links:
   - docs/architecture/agent_knowledge_plane.md
-  - docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
   - docs/architecture/agent_delivery_workflows.md
 assigned_agent: null
 estimated_complexity: null
@@ -40,7 +40,7 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by: [BrainCandy]
 superseded_by: null
 covered_by: [BO-2000a, BO-2000b, BO-2000c, BO-2000d, BO-2000e, BO-2000f]
 implemented_by: []

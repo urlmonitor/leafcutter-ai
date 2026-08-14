@@ -1,0 +1,61 @@
+id: ACS-1100a-1
+components:
+  - ac_store
+title: "An answer is returned as results, total, and method together — never results alone"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100a.yaml
+criteria: |
+  Given a query over the requirements store that matches 40 records out of a store
+    holding 180 records,
+  When the answer is handed to a caller,
+  Then the answer carries three parts together — the 40 result records, the total of
+    180 records the query was measured against, and a named method describing how
+    that total was established,
+  And an answer that carries results but no total, or a total with no named method,
+    is refused by the caller as an incomplete answer rather than read as a complete
+    picture,
+  And the total and method are present even when the result set is empty: an answer
+    that matched nothing still reads 0 of 180 with its method named,
+  And the total is reported as a count of records, not as a count of the results
+    themselves, so 40 of 40 is only reportable when the store truly holds 40 records.
+depends_on:
+  - ACS-1100a
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "The store query surface whose answers must carry the results/total/method triple."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  The shape ACS-1100 asks for: (results, denominator, method). This AC fixes the
+  SHAPE only — that all three parts are present and travel together, including on an
+  empty result set. HOW the total is established independently of the result pass is
+  ACS-1100a-2; WHAT the method must say is ACS-1100b-1; what happens when the numbers
+  do not add up is ACS-1100c-1.
+
+  The empty-result clause is load-bearing: today an answer of "nothing found" is
+  indistinguishable from "nothing looked at". A run that joined none of the available
+  records must say 0 of N, and N is what makes it loud.

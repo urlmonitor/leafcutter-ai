@@ -161,7 +161,7 @@ completion_manifest:
   impact_classified: true
   architectural_note_written: true
   requires_adr_evaluated: true
-Small ticket (4 files, 1 component: build_orchestration). No always-large trigger fired. Key design concerns: (1) `remove_canary_from_manifest` must NOT be wired into `run_checks()` as it mutates state — call it separately; (2) `graceful_skip_if_incomplete` fail-closed flip needs a defined return schema (e.g., add `incomplete_build` key to result dict); (3) both `commit.md` Step 0a and `building-epics/SKILL.md` §1.0.1 JSON parse blocks must be updated atomically to use `failing_checks` instead of `all_pass`/`results`. No ADR required — correctness fix within existing ADR-017-worktree-quality-gate-guard.md scope.
+Small ticket (4 files, 1 component: build_orchestration). No always-large trigger fired. Key design concerns: (1) `remove_canary_from_manifest` must NOT be wired into `run_checks()` as it mutates state — call it separately; (2) `graceful_skip_if_incomplete` fail-closed flip needs a defined return schema (e.g., add `incomplete_build` key to result dict); (3) both `commit.md` Step 0a and `building-epics/SKILL.md` §1.0.1 JSON parse blocks must be updated atomically to use `failing_checks` instead of `all_pass`/`results`. No ADR required — correctness fix within existing ADR-031-worktree-quality-gate-guard.md scope.
 ### 2026-07-14 14:25 — test-runner (status: ok)
 feedback-id: fb_2026-07-14_8033a1a1
 completion_manifest:

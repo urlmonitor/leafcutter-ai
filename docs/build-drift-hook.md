@@ -1,14 +1,14 @@
 ---
-title: "Build-Drift Pre-Commit Hooks (Direction A + Direction B)"
+title: Build-Drift Pre-Commit Hooks (Direction A + Direction B)
 type: how-to
 status: active
 created: 2026-05-13
 last_updated: 2026-05-15
 components:
-  - commit_guardian
-  - infrastructure
+- commit_guardian
+- infrastructure
+description: Overview of Build-Drift Pre-Commit Hooks (Direction A + Direction B).
 ---
-
 # Build-Drift Pre-Commit Hooks
 
 This document explains why template-output drift is dangerous in the
@@ -26,8 +26,8 @@ There are two complementary hooks:
 
 ## 1. Problem Statement
 
-The `leafcutter/` package lives **inside** its consumer project
-(`bybit-trader/`). This means the compiled agent outputs (`.claude/agents/*.md`)
+The `leafcutter/` package lives **inside** its consumer project's repository.
+This means the compiled agent outputs (`.claude/agents/*.md`)
 share the same working tree as the source-of-truth templates
 (`leafcutter/templates/agents/*.md`).
 

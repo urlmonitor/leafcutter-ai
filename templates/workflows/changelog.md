@@ -108,4 +108,4 @@ is validated in production.
 - `epic-supervisor` Post-Completion Chain Step 2 — Call site 2 (`type: epic_completion`)
 - `/prod-deploy` — creates deployment tags (called by that workflow, not by this one)
 - `emit_entry.py` — the shared Python write path at `leafcutter/scripts/changelog/emit_entry.py`
-- `ADR-019-changelog-entry-format.md` — decision record for the file-per-entry format
+- `scripts/changelog/README.md` — the file-per-entry format and naming convention

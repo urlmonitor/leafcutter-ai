@@ -1,0 +1,73 @@
+id: ACS-1100c
+components:
+  - ac_store
+title: "An unexplained gap stops the answer instead of passing it on"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  When the numbers do not reconcile, the answer halts rather than passing.
+
+  If what was covered does not add up to what was in scope, and the difference is
+  not accounted for by a declared exclusion, the result is withheld and the
+  shortfall is reported — so an incomplete answer can never be handed on as though
+  it were a complete one.
+depends_on:
+  - ACS-1100
+  - ACS-1100a
+  - ACS-1100b
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100c-1
+  - ACS-1100c-2
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  The reference documentation for this L1's reconciliation arithmetic, halt contents and
+  halt-versus-fail-open separation is written by ACS-1100e-1, a single consolidated
+  reference-doc AC covering all four behavioural L1s. Four separate per-L1 reference-doc
+  ACs (the former ACS-1100a-4, ACS-1100b-3, ACS-1100c-3 and ACS-1100d-3) all wrote
+  sections of the same file, docs/reference/ac-schema.md, and would have been serialised
+  by the build's file-touch parallelism gate into four sequential tickets editing one
+  file. Documentation is required and is delivered — by ACS-1100e-1, not by a child of
+  this L1.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  HALT, not warn. A warning on an unreconciled gap is functionally identical to
+  today's behaviour, because the partial answer still flows downstream and the
+  next verifier still confirms it. This is the same product posture recorded for
+  ACS-900 in the ac-store PROJECT_CONTEXT: always-block-on-a-REAL-violation.
+
+  Keep it orthogonal to the standard fail-open-on-INTERNAL-ERROR convention: a
+  crash, unreadable file, or parse failure in the coverage machinery itself still
+  degrades gracefully with a warning per the project error-handling policy. Do not
+  let that convention be collapsed into "warn instead of halt on a real gap".
+
+  The halt must name the shortfall (how many records were unaccounted for), not
+  merely assert that one exists — otherwise the halt is as opaque as the silent
+  pass it replaces.
+
+  SCOPE IS NOT A SHORTFALL (added 2026-08-13 on expert review). A caller that asks
+  about a subset — every AC pre-commit hook resolves its work set from git diff
+  --cached — is not producing a partial answer, it is producing a scoped one.
+  Records outside the requested scope are a DECLARED EXCLUSION with a ground
+  (ACS-1100b), so the arithmetic still reconciles against the store total and no
+  halt fires. Had this not been settled, the halt would have fired on every single
+  commit against ~2,783 out-of-scope records.
