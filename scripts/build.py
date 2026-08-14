@@ -54,6 +54,7 @@ from build_phases import (
     clean_stale_artifacts,
     build_workflow_tools,
     build_knowledge_scripts,
+    build_build_orchestration_scripts,
     build_template_standalone_scripts,
     build_product_truth,
     detect_deploy_collisions,
@@ -439,6 +440,31 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
     return result
 
 
+def _manifest_build_orchestration_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/build_orchestration/<name>`` entries for all source ``.py`` files.
+
+    Scans ``package_root/scripts/build_orchestration/`` and returns one manifest
+    entry per Python file, matching what ``build_build_orchestration_scripts``
+    deploys to the target project.  The scan is dynamic (rather than a hardcoded
+    file list) so a module added to that directory cannot silently drop out of the
+    deployable set and reintroduce the BP-900g-4 gap.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/build_orchestration/<name>`` strings, or empty set when
+        the directory is absent.
+    """
+    result: set[str] = set()
+    src = package_root / "scripts" / "build_orchestration"
+    if src.is_dir():
+        for f in src.glob("*.py"):
+            if f.is_file():
+                result.add(f"scripts/build_orchestration/{f.name}")
+    return result
+
+
 def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/<name>`` entries for standalone scripts from ``templates/scripts/``.
 
@@ -464,7 +490,7 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
 def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     """Compute the set of script paths that build.py will deploy from package source.
 
-    Delegates to per-phase helper functions and unions their results.  Seven
+    Delegates to per-phase helper functions and unions their results.  Eight
     deployment locations are covered:
 
     * ``scripts/ac_store/`` — from ``_manifest_ac_store_scripts``.
@@ -472,6 +498,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     * ``scripts/feedback/`` — from ``_manifest_feedback_scripts``.
     * ``scripts/<name>`` — workflow-tool scripts from ``_manifest_workflow_tool_scripts``.
     * ``scripts/knowledge/`` — knowledge scripts from ``_manifest_knowledge_scripts``.
+    * ``scripts/build_orchestration/`` — from ``_manifest_build_orchestration_scripts``.
     * ``scripts/<name>`` — standalone Python files from ``templates/scripts/``
       (includes ``setup_ticket_worktree.py``).
     * ``scripts/<name>`` — two named AC-pipeline scripts from ``templates/scripts/``.
@@ -495,13 +522,26 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         | _manifest_feedback_scripts(package_root)
         | _manifest_workflow_tool_scripts(package_root)
         | _manifest_knowledge_scripts(package_root)
+        | _manifest_build_orchestration_scripts(package_root)
         | _manifest_template_standalone_scripts(package_root)
     )
 
-    # Standalone scripts (build_standalone_scripts) — two named scripts only
-    # NOTE: goal_to_epic.py and build_ac_mode_detection.py may also appear in
-    # _manifest_template_standalone_scripts if they exist under templates/scripts/,
-    # so this check is a belt-and-suspenders guard for backward compatibility.
+    # goal_to_epic.py and build_ac_mode_detection.py are sourced from the package
+    # ``scripts/`` directory but build_ac_store deploys them INTO ``scripts/ac_store/``
+    # (see the deploy_map in build_phases.build_ac_store). The manifest must record
+    # the DEPLOY path, because that is the namespace template references resolve in.
+    #
+    # This previously registered ``scripts/<name>`` and only when the file was found
+    # under ``templates/scripts/`` — where neither script has ever lived — so the
+    # block was a silent no-op and both scripts were absent from the deployable set.
+    # Nothing noticed, because the guard could not see the ``{{config.output_root}}/``
+    # form these are referenced in either (BP-900g-4).
+    scripts_src = package_root / "scripts"
+    for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
+        if (scripts_src / fname).is_file():
+            manifest.add(f"scripts/ac_store/{fname}")
+
+    # Backward-compatibility: honour a templates/scripts/ mirror if one is ever added.
     templates_scripts = package_root / "templates" / "scripts"
     for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
         if (templates_scripts / fname).is_file():
@@ -594,6 +634,23 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
     for fname in ("harvest_learnings.py",):
         if (knowledge_src / fname).is_file():
             source_paths.add(f"scripts/knowledge/{fname}")
+
+    # build_orchestration scripts: source namespace equals deploy namespace.
+    # Must stay in lockstep with _manifest_build_orchestration_scripts —
+    # test_guard_source_paths_match_deployable_set asserts the two sets are 1:1.
+    bo_src = package_root / "scripts" / "build_orchestration"
+    if bo_src.is_dir():
+        for f in bo_src.glob("*.py"):
+            if f.is_file():
+                source_paths.add(f"scripts/build_orchestration/{f.name}")
+
+    # goal_to_epic.py / build_ac_mode_detection.py: source is scripts/<name>, but
+    # build_ac_store deploys them to scripts/ac_store/<name>. The deploy-namespace
+    # counterparts are added in _get_source_deployable_scripts; both must be
+    # registered or test_guard_source_paths_match_deployable_set fails on cardinality.
+    for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
+        if (package_root / "scripts" / fname).is_file():
+            source_paths.add(f"scripts/{fname}")
 
     # template-standalone scripts: source is under templates/scripts/ (top-level .py).
     templates_scripts = package_root / "templates" / "scripts"
@@ -1036,6 +1093,7 @@ def _run_phases(
         ("Sync platforms", build_sync_platforms),
         ("Workflow tools", build_workflow_tools),
         ("Knowledge scripts", build_knowledge_scripts),
+        ("Build orchestration scripts", build_build_orchestration_scripts),
         ("Template standalone scripts", build_template_standalone_scripts),
     ]
 

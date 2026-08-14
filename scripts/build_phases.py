@@ -801,6 +801,12 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # fast-lane green+coverage gate; it MUST deploy or the (required) CI
         # done-proof check crashes with ModuleNotFoundError in the deployed layout.
         (ac_store_src / "done_proof.py",                "done_proof.py"),
+        # ac_parent_id.py provides derive_parent_id, imported at module scope by
+        # scripts/build_orchestration/fast_lane.py. Without it the deployed
+        # fast_lane.py exists but dies at import with ModuleNotFoundError, so
+        # /build-ac Step 2b.1 fails even though the file is present — a
+        # file-presence check cannot catch this, only executing it can (BP-900g-4).
+        (ac_store_src / "ac_parent_id.py",              "ac_parent_id.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
@@ -2204,6 +2210,90 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
                 )
                 raise
             print(f"  scripts/knowledge/{script_name}")
+            written += 1
+
+    return written
+
+
+def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
+                                      dry_run: bool, force: bool) -> int:
+    """Deploy build-orchestration scripts to ``<target_root>/scripts/build_orchestration/``.
+
+    Copies every ``.py`` file from the package's ``scripts/build_orchestration/``
+    to the consumer project.  ``fast_lane.py`` is invoked directly by the build-ac
+    agent at Step 2b.1 (``select_connected``); before this phase existed no build
+    phase deployed the directory, so the deployed agent died at that command with
+    "can't open file" while build.py itself exited 0 (Class B deploy gap, the same
+    shape ``build_knowledge_scripts`` closed for ``harvest_learnings.py``).
+
+    The whole directory is deployed rather than just ``fast_lane.py`` so that
+    sibling-module imports keep resolving.  ``fast_lane.py`` reaches its
+    ``ac_store`` helpers via ``Path(__file__).parent.parent / "ac_store"``, which
+    resolves correctly in the deployed tree because ``build_ac_store`` deploys
+    ``scripts/ac_store/`` alongside it.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-08-14 [BrainCandy/BP-900g-4]:
+    #   Added build_build_orchestration_scripts() phase. Deploys .py files from
+    #   scripts/build_orchestration/ to consumer scripts/build_orchestration/.
+    #   Closes the deploy gap that made /build-ac fail at Step 2b.1 in every
+    #   consumer install. Scans the directory dynamically rather than using a
+    #   hardcoded file list, so a new module added there cannot silently go
+    #   undeployed. (#BP-900g-4)
+    """
+    src_dir = PACKAGE_ROOT / "scripts" / "build_orchestration"
+    output_dir = target_root / "scripts" / "build_orchestration"
+    written = 0
+
+    if not src_dir.is_dir():
+        _log.warning(
+            "build_build_orchestration_scripts: source directory not found, skipping: %s",
+            src_dir,
+        )
+        return 0
+
+    for src_file in sorted(src_dir.glob("*.py")):
+        if not src_file.is_file():
+            continue
+
+        output_path = output_dir / src_file.name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/build_orchestration/{src_file.name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_build_orchestration_scripts: failed to copy %s → %s: %s",
+                    src_file,
+                    output_path,
+                    exc,
+                )
+                raise
+            print(f"  scripts/build_orchestration/{src_file.name}")
             written += 1
 
     return written
