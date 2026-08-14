@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the set-up command cannot locate the script that verifies the commit-time checks are
@@ -40,15 +40,64 @@ doc_links:
   - path: docs/how-to/managing-pre-commit-hooks.md
     relationship: related
     status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/verify_precommit_active.py
+    relationship: related
+    status: exists
+    relevance: "One of the two scripts observed reported as 'not found ... graceful no-op'; verified present in the package."
+  - path: templates/scripts/commit_guardian/install_pre_commit_shims.py
+    relationship: related
+    status: exists
+    relevance: "The second observed no-op target; verified present in the package."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "TARGET: templates/scripts/setup_ticket_worktree.py, the create-ac-worktree path, which today warns 'not found ... graceful no-op' for verify_precommit_active.py and install_pre_commit_shims.py and then reports a successfully created working copy. VERIFIED 2026-08-14 that both scripts DO exist at templates/scripts/commit_guardian/ — the failure is resolution, not absence, which is why GE-119d-3 is the paired fix."
+  - "BLOCK IS THE RECORDED DISPOSITION for this case per GE-119a-2, with the stated reason: the artifact handed over is otherwise unprotected and is then used for hours by someone who was not watching set-up run. Record it WHERE GE-119a-2 records dispositions, not only in prose on this AC — a disposition that lives only in an AC note is not reviewable as a set."
+  - "FAIL THE SET-UP MEANS THE CALLER MUST SEE IT: non-zero exit AND the callers (worktree-agent, the /feature path, build-epic.js) must not treat the copy as prepared. Verify the caller-visible contract, not just the exit code — a refusal the caller ignores is the same no-op one layer up, which is precisely the shape of this defect."
+  - "ANY WORKING COPY LEFT BEHIND must be reported as unprotected in the failure output, naming its path, so it cannot be mistaken for a prepared one. Decide EXPLICITLY whether it is removed or left with a marker, and state which — leaving that question to the reader recreates the ambiguity the AC closes. If it is left, leaving it in a state a later run can detect is preferable to silent removal of someone's checkout."
+  - "REPRODUCE WITHOUT CONTRIVANCE: this exact condition was observed live while creating the working copy this tree was authored in. Make the scripts genuinely unreachable rather than stubbing the not-found branch — a stub tests the branch the author wrote, not the resolution failure that occurred."
+  - "ADR-001 deployed/template parity across all three copies of setup_ticket_worktree.py (templates/scripts/, scripts/, .leafcutter/scripts/): edit the template, run 'python scripts/build.py --target-dir .', confirm all three match. Callers run the deployed copy."
+  - "Error-handling policy: the not-found condition is a caught specific exception (OSError / FileNotFoundError) logged at WARNING and escalated to a refusal — never swallowed into a no-op, which is the behaviour being removed."
+test_spec:
+  - name: test_ge119d2_missing_protection_scripts_fail_the_setup
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: behavioral
+    description: "Real set-up command run where verify_precommit_active.py and install_pre_commit_shims.py are genuinely unreachable: the set-up fails."
+  - name: test_ge119d2_graceful_no_op_outcome_no_longer_produced
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: behavioral
+    description: "The observed not-found graceful-no-op warning followed by a successfully created working copy is no longer the outcome."
+  - name: test_ge119d2_failure_names_scripts_and_the_protection_they_establish
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: behavioral
+    description: "The failure output names the missing scripts and states the protection they would have established."
+  - name: test_ge119d2_leftover_copy_reported_as_unprotected
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: behavioral
+    description: "Any working copy left behind is reported as unprotected with its path, so the caller cannot mistake it for a prepared one."
+  - name: test_ge119d2_caller_does_not_treat_the_copy_as_prepared
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: behavioral
+    description: "The caller-visible contract reflects the refusal — a non-zero result the caller acts on, not just an exit code nothing reads."
+test_rationale: "Stubbing the not-found branch would test the branch the author wrote rather than the resolution failure that was actually observed, and would pass on a set-up that still no-ops when the scripts are genuinely unreachable. The caller-visible clause needs its own test because the whole defect class is a signal that is emitted and then ignored one layer up — an exit code nothing reads is the same silent pass."
 delivers_to: null
 expects_from:
   ac_id: GE-119d-1
   contract: "The per-step protection outcome record this criterion escalates on."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by:
   - GE-119d-2-i
@@ -71,3 +120,9 @@ notes: |
   working copy this tree was authored in. As the PO put it: a set-up step named "verify
   protection is active" that no-ops when it cannot find itself is the worst case of the whole
   goal — the one check whose job is to catch this failure is itself subject to it.
+
+  IT-PO (2026-08-14): both scripts are verified PRESENT at templates/scripts/commit_guardian/,
+  so the observed not-found was a resolution failure, not a missing artifact — which is why
+  GE-119d-3 (adopt the shared resolver) is the paired fix and why this AC alone would leave
+  the underlying cause in place. The block disposition must be recorded where GE-119a-2
+  records dispositions, not only in this note.

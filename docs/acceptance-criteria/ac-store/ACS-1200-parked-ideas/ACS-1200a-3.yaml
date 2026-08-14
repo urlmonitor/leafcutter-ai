@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
 criteria: |
   Given docs/reference/ac-schema.md, which today states that a missing parent
@@ -34,20 +34,54 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
-    relevance: "The document this AC amends. Sections affected: the YAML field table, and the check_ac_parent_covered_by hook description."
+    relevance: "The document this AC amends. Sections affected: the YAML field table (the covered_by row at line 41), the status-semantics table (line 225), and the section 'Authoring agents — parent covered_by update (mandatory)' beginning at line 492 — whose 'Why this matters' paragraph at lines 518-521 is the unconditional statement the final clause targets."
   - path: docs/how-to/ac-traceability-store.md
     relationship: related
     status: exists
     relevance: "Target of the un-park cross-link; its procedure is authored by ACS-1200d-4."
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Scope is exactly docs/reference/ac-schema.md. The specific regions to reconcile: the YAML field table (covered_by row, line 41) which gains the parked and parked_reason rows; the status-semantics table (line 225); and the section 'Authoring agents — parent covered_by update (mandatory)' at line 492, whose 'Why this matters' paragraph at lines 518-521 states that the check_ac_parent_covered_by.py hook blocks the commit — that is the unconditional sentence the final clause requires be removed or qualified."
+  - "The new field rows must state the same types and the same conditional rule that config/ac_store_schema.json enforces after ACS-1200a-1 lands, and must be written from the implemented schema rather than from this AC's prose — a reference that describes an intended rule the schema does not enforce recreates the exact drift this AC exists to close."
+  - "OUT OF SCOPE BUT MUST BE FLAGGED, NOT SILENTLY WIDENED: the same parent covered_by protocol is restated in prompt surfaces — templates/agents/it-po.md, templates/agents/business-analyst.md and templates/skills/ac-tree-split/SKILL.md all instruct authoring agents to append the child id to the parent's covered_by, unconditionally. Those are llm-expert surfaces, not documentation-expert's, and they are outside this AC's declared document. Amending the reference alone leaves the agents that WRITE ac-store records still following the uncorrected rule. Raise this as a follow-up AC rather than editing template bodies under this one."
+  - "Documentation conventions apply: the check-doc-frontmatter hook validates frontmatter and dates on staged docs, so any frontmatter touched must remain valid; the change must not introduce a broken relative link (the un-park cross-link target docs/how-to/ac-traceability-store.md must exist at the time of the commit)."
+test_spec:
+  - name: test_ac_schema_reference_documents_parked_field_pair
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "docs/reference/ac-schema.md contains field-table rows for parked and parked_reason giving type, required-ness, and the non-empty-reason rule."
+  - name: test_ac_schema_reference_states_the_single_exemption_condition
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The document states that the exemption is granted by a marker on the derived parent, and states in the same place that an empty covered_by alone is not that condition."
+  - name: test_ac_schema_reference_states_marker_is_not_inherited
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The document states the marker applies only to the record carrying it and is not inherited by its children."
+  - name: test_no_unconditional_backlink_statement_remains
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "No sentence anywhere in docs/reference/ac-schema.md asserts that a missing back-link always or unconditionally blocks the commit — the removal clause, which is what silently rots if only additions are made."
+  - name: test_reference_links_to_unpark_howto
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The document links to docs/how-to/ac-traceability-store.md for the un-park transition and the link target exists."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200a-1
   contract: "The final field names, types and validity rule for parked / parked_reason as implemented"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -63,3 +97,11 @@ notes: |
   The last clause is the checkable one. An addition that describes the exemption
   while leaving the old absolute statement in place elsewhere in the document
   does not satisfy this AC.
+
+  IT-PO ENRICHMENT (2026-08-14). A test_spec is set rather than
+  test_required: false: three of the five clauses are removal or
+  presence-of-a-link assertions, which are precisely the kind that regress
+  silently when the document is next edited. The prompt-surface restatements
+  (templates/agents/*.md, templates/skills/ac-tree-split/SKILL.md) are recorded
+  as an out-of-scope flag, not folded into this AC — they belong to llm-expert
+  and need their own criterion.

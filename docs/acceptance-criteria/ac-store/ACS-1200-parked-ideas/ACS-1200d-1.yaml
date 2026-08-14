@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
 criteria: |
   Given KM-200.yaml carries parked: true with a non-empty parked_reason and an
@@ -36,8 +36,44 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Its notes already state the intended transition in prose — restoring the parent's child list is the act that turns a stub into a real backlog item, and it must be paired with breaking the idea down."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "'The AC-store checks' must resolve to a definite set, not a judgement call: the commit-guardian hooks wired for docs/acceptance-criteria/ in .pre-commit-config.yaml (check-ac-parent-covered-by at line 294 and check-ac-schema at line 326 among them) plus the enumerated surfaces from ACS-1200b-1. The evidence run must name which checks were executed, so 'every one of them exits 0' is a checkable claim rather than an unbounded one."
+  - "Atomicity here is a CHECK-LEVEL property, not a git property: the two halves must be present in the same staged diff when the checks run. Do not implement it as a commit-message or multi-commit rule — the gate sees a staged set, and that is where the pairing must be enforced."
+  - "The transition must be verifiable with no SKIP variable set, no --no-verify, and no PRE_COMMIT_ALLOW_NO_CONFIG — the acceptance evidence is that the transition lands through the gates, which is the entire point of the goal."
+  - "The staged set must be established through a real git index in a temporary repository, since the hooks read their input from git. The evidence should be produced against the deployed .leafcutter/ copies after python3 scripts/build.py, for the deployment reasons recorded on ACS-1200a-2."
+  - "The post-transition orphan-scan assertion depends on the report classification owned by ACS-1200b-2: KM-200 must appear in neither the orphan nor the parked state, and its children must be classified as normally linked. Assert state membership through that classification rather than by scraping prose."
+  - "The real KM-200 records must not be mutated by the test; operate on a copy and assert the committed records are unchanged afterwards."
+test_spec:
+  - name: test_atomic_unpark_passes_every_ac_store_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A single staged change removing the marker and adding all six child ids passes every wired AC-store check, each executed as a process, with exit 0 and the executed check set recorded."
+  - name: test_unparked_parent_in_neither_orphan_nor_parked_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The orphan scan run afterwards places KM-200 in neither the orphan list nor the parked section."
+  - name: test_children_reported_as_normally_linked
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "All six children are classified as normally linked to their parent after the transition."
+  - name: test_transition_lands_with_no_skip_and_no_bypass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The passing run is performed with no SKIP variable, no --no-verify and no PRE_COMMIT_ALLOW_NO_CONFIG set — asserted on the environment of the run, not just assumed."
+  - name: test_real_km200_records_unmodified_by_the_test
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The committed KM-200 records are byte-identical after the test run."
 delivers_to:
   agent: python-coder
   contract: "The un-park transition as a single atomic change, whose two halves ACS-1200d-2 forbids landing separately"
@@ -46,7 +82,10 @@ expects_from:
   contract: "The parked / parked_reason field pair whose removal is one half of this transition"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by:
   - ACS-1200d-1-i

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the report that 26 schema-violating AC files looked clean under the reduced manual
@@ -45,15 +45,57 @@ doc_links:
   - path: templates/scripts/commit_guardian/check_ac_schema.py
     relationship: related
     status: exists
+  - path: docs/how-to/real-artifact-fixtures.md
+    relationship: context
+    status: exists
+    relevance: "The repo rule requiring the real on-disk artifact rather than a hand-authored fixture, which this AC's coverage note invokes."
 assigned_agent: test-writer
 estimated_complexity: M
+it_requirements:
+  - "RUN BOTH VALIDATIONS AGAINST THE REAL ON-DISK AC STORE (docs/acceptance-criteria/), never a synthetic fixture. A fixture authored by someone who already knows which rules the manual fallback omits reproduces their assumptions and cannot surprise them — the exact bias that let the phantom-done parser pass on indented fixtures while being a no-op on every real ticket."
+  - "The two modes are: authoritative jsonschema validation against config/ac_store_schema.json, and the reduced manual field validation at templates/scripts/commit_guardian/check_ac_schema.py ~line 623, selected via the same GE-112 schema_validated path (DECISION HISTORY ~lines 29-37). Run both FROM ONE WORKING COPY so the only variable is the validation mode — varying the copy as well would confound this measurement with GE-119b-3's."
+  - "OUTPUT IS THREE THINGS, not one: the count, the file paths, and per file WHICH authoritative rule it violates. A bare number is not the deliverable and is not actionable."
+  - "A MEASURED ZERO IS THE FINDING, reported as such — not a broken measurement, not a reason to re-run against different inputs until a more alarming number appears. State that a zero means the reduced validation happens to cover the rules the current store exercises, which weakens the urgency argument for GE-119a-3 while leaving its correctness untouched, because the divergence is a property of the store on the day it was measured, not of the check."
+  - "REPEATABLE ON DEMAND against the store as it stands. Do not write the number into a document as a static value — a number in a doc is stale the next day; a measurement that can be re-run answers the question again after the store grows. This is a harness capability, not an investigation."
+  - "EVIDENCE DISCIPLINE, which is the actual subject of this AC: until this runs, the figure 26 is cited only with its label (REPORTED BY A PARALLEL SESSION, NOT VERIFIED). After it runs, the measured number is cited. Do not retro-edit the label out of the sibling ACs in this tree — supersede the figure with the measurement and say when it was measured."
+  - "SCALE AND SCOPE: the real store is large (the guardrail-engine GE-119 folder alone holds 32 files, and the store spans many components), so a naive double validation is slow. This is a marked-slow, on-demand measurement, never a per-commit gate."
+test_spec:
+  - name: test_ge119c4_measures_divergence_against_the_real_ac_store
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Both validation modes execute against the real on-disk docs/acceptance-criteria/ tree and produce a divergence count."
+  - name: test_ge119c4_lists_diverging_files_by_path
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Files accepted by the reduced validation and rejected by the authoritative one are listed by path, not summarised as a number."
+  - name: test_ge119c4_names_the_violated_authoritative_rule_per_file
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Each listed file is reported with the authoritative rule it violates."
+  - name: test_ge119c4_zero_divergence_reported_as_a_finding
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A measured result of zero is reported as the finding rather than treated as a broken measurement."
+  - name: test_ge119c4_measurement_is_repeatable_on_demand
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The measurement can be re-run against the store as it stands and re-reports against current content, not a captured constant."
+test_rationale: "A synthetic fixture is disqualified by the criteria themselves: it would be authored by someone who already knows which rules the reduced validation omits, so it can only confirm their assumptions. The measurement is only evidence if both modes run over the real store. The zero case needs its own test because the natural reflex on a zero is to assume the measurement is broken and keep adjusting inputs until a more alarming number appears."
 delivers_to: null
 expects_from:
   ac_id: GE-119c-1
   contract: "Execution of the AC-schema check from a controlled working copy under each validation mode."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -77,3 +119,7 @@ notes: |
   The repeatability clause is what makes this a harness capability rather than an
   investigation. A number written into a document is stale the next day; a measurement that
   can be re-run answers the question again after the store grows.
+
+  IT-PO (2026-08-14): both modes must run FROM ONE working copy so this measurement is not
+  confounded with GE-119b-3's cross-copy comparison. Marked-slow, on-demand; never a
+  per-commit gate.

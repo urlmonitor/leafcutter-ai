@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
 criteria: |
   Given docs/how-to/ac-traceability-store.md,
@@ -40,15 +40,59 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Holds the field definitions (ACS-1200a-3); the how-to gives the procedure and links to it rather than restating the schema."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the store-health report states this how-to must describe to the reader; the descriptions must match the classification as implemented, not this AC's prose."
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "The report-state descriptions must be written from the classification as IMPLEMENTED by ACS-1200b-2, ACS-1200c-4-i and ACS-1200d-1-i — four states: orphan, parked, approved-with-nothing-under-it, un-parked-but-not-decomposed. A how-to describing states the scan does not emit is the same reference-versus-enforcement drift ACS-1200a-3 exists to close, one document over."
+  - "The removal clause targets INSTRUCTIONAL text only. Sweep docs/how-to/ and docs/reference/ for text telling a reader to set SKIP=check-ac-parent-covered-by (or any equivalent bypass) in order to record an idea, and remove it rather than leaving it beside the new procedure."
+  - "EXPLICIT NON-TARGET: docs/acceptance-criteria/ac-store/PROJECT_CONTEXT.md records at line 156 that the KM-200 commit 'only landed with SKIP=check-ac-parent-covered-by'. That is a PO-authored factual account of the defect this goal fixes, not an instruction to anyone. It must not be edited by this AC — deleting the evidence for the goal while implementing the goal is a real risk of a broad grep-and-remove pass."
+  - "The two procedures must link to docs/reference/ac-schema.md for the field definitions rather than restating types and validity rules, so the two documents cannot drift apart. Verify the link target exists at commit time."
+  - "Standard doc conventions apply: the check-doc-frontmatter hook validates frontmatter on staged docs, and it is known to false-fail on path resolution when committing from a worktree — that is a known hook quirk, not a reason to alter the document."
+test_spec:
+  - name: test_howto_documents_the_park_procedure
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "docs/how-to/ac-traceability-store.md contains a park procedure naming both fields, requiring the reason to be written, and stating that no check is to be skipped to record it."
+  - name: test_howto_documents_both_halves_of_the_unpark_procedure
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The un-park procedure states that removing the marker and restoring the child list land in the same change, and that the idea should be broken down as part of that decision."
+  - name: test_howto_states_the_thing_not_to_do
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The document states that a parked record's child list must not be repaired without a decision to un-park the tree."
+  - name: test_howto_describes_each_store_health_report_state
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "Every state the orphan scan can emit is described, so a parked tree and a broken one can be told apart from the report alone."
+  - name: test_no_skip_the_backlink_check_instruction_remains_in_docs
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "No instructional text in docs/how-to/ or docs/reference/ tells a reader to skip the parent-back-link check to record an idea — the removal clause, asserted separately from the additions so it cannot be quietly skipped."
+  - name: test_howto_links_to_the_schema_reference
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The how-to links to docs/reference/ac-schema.md for field definitions instead of restating them, and the link target exists."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200d-1
   contract: "The un-park transition as implemented, including which halves must land together"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -64,3 +108,9 @@ notes: |
   Scope line: the fields and their validity rules are documented once in the
   reference (ACS-1200a-3); this how-to is the procedure and the decision, and
   links to the reference rather than duplicating it.
+
+  IT-PO ENRICHMENT (2026-08-14). A test_spec is set rather than
+  test_required: false because the load-bearing clause is a REMOVAL, and removal
+  clauses are what silently rot. The one real risk of that clause is
+  over-application: PROJECT_CONTEXT.md's account of the historical bypass is
+  evidence, not instruction, and is named as an explicit non-target.

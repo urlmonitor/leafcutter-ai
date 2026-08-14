@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d-1.yaml
 criteria: |
   Given a tree that has completed the un-park transition — marker removed and
@@ -34,13 +34,48 @@ doc_links:
     relevance: "The report whose sections this state must be distinguishable within."
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "This is the FOURTH state on the report classification owned by ACS-1200b-2 (orphan / parked / approved-with-nothing-under-it / un-parked-but-not-decomposed). Add it to that structure; do not add a fourth independent branch to scripts/ac_store/scan_ac_orphans.py. States must remain a partition — the tree lands in exactly one."
+  - "The state is derived from data properties only: back-links present, no marker, and no descendant at level L2 or below. Descendant discovery must reuse derive_parent_id, the same function ACS-1200c-4 uses, so the two states cannot disagree about what a descendant is."
+  - "The buildable-queue guarantee is currently an ACCIDENT of scan selection and must be pinned as intent: scripts/ac_store/scan_ac_store.py's _is_leaf (line 145) matches only L2/L3 and _is_approved (line 189) requires the literal string 'approved'. This AC's value is that a future change to that selection cannot quietly promote every undecomposed stub into the backlog, so the assertion must execute the scan and compare returned sets, not assert the current implementation's shape."
+  - "NO SILENT REVERSION: nothing in the implementation may re-apply the marker based on inferred state. The marker is only ever set by an author writing it into the record — a state the system re-applies on your behalf is not a decision anyone made, which is the same reason the marker is positive rather than inferred in ACS-1200a-1."
+  - "No duration, age or population field may be introduced here — how long a tree has sat in this state is KM-200c's remit."
+test_spec:
+  - name: test_unparked_undecomposed_tree_reported_as_its_own_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Orphan scan executed as a process reports the tree as un-parked and not yet broken down, naming the root record."
+  - name: test_not_reported_in_parked_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The tree does not appear in the parked section — the marker is gone."
+  - name: test_not_reported_as_orphan
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The tree does not appear in the orphan list — its back-links are present."
+  - name: test_buildable_scan_returns_no_record_from_the_tree
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "scan_ac_store.py executed as a process returns a ready set containing no record from the tree, asserted by set comparison rather than by inspecting the leaf predicate."
+  - name: test_marker_is_never_restored_automatically
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Re-running every surface over the unchanged tree leaves the record without a marker — nothing re-applies parked on the author's behalf."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200d-1
   contract: "The completed un-park transition, here without the decomposition that is supposed to accompany it"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

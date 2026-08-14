@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a set of staged AC YAML files that violate the parent covered_by rule in 6 places,
@@ -45,15 +45,61 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Opposite-direction change to the same check — see the sequencing hazard in notes."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-2.yaml
+    relationship: context
+    status: exists
+    relevance: "Carries the reciprocal half of the ordering contract in its delivers_to: the parked-aware check must land before, or in the same release as, this AC."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1403.yaml
+    relationship: context
+    status: exists
+    relevance: "PREREQUISITE RECONCILIATION. ACD-1403 is active and reviewed but all three of its premises are false; if built as written it deletes coverage this AC depends on."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "Target: templates/scripts/commit_guardian/check_ac_parent_covered_by.py. VERIFIED 2026-08-14: it does NOT use the shared templates/scripts/commit_guardian/_resolve_root.py (which 27 other files in the family already import). It rolls a private _get_derive_parent_id() with its own graceful fail-open fallback at ~line 377. The fix is to consume GE-119b-2's shared facility and DELETE that private fallback — not to add a fourth resolution path beside it. A shared facility installed alongside a surviving private fallback changes nothing, because the private path still wins on failure."
+  - "RECIPROCAL ORDERING CONTRACT with the ac-store tree. ACS-1200a — specifically ACS-1200a-2, which makes the check parked-aware — MUST land before, or in the same release as, this AC. This AC makes the check run reliably from every working copy; ACS-1200a changes WHICH RULE it enforces. Landing this one first makes the uncorrected rule fire more consistently and blocks every parked idea stub: a net regression in usable behaviour even though the fix itself is correct. ACS-1200a-2's delivers_to carries the matching half of this contract (its wording: must land before, or in the same release as, GE-119b). ACS-1200a is recorded in this AC's depends_on so the build sequencer can read it — it is a SCHEDULING dependency; the structural parent remains GE-119b."
+  - "PREREQUISITE RECONCILIATION — ACD-1403 IS A LIVE LANDMINE. ACD-1403 (status: active, readiness: reviewed, level: null, work_status: null) asserts that check_ac_parent_covered_by.py 'was removed as part of ACD-1100' and requires that unit_tests/commit_guardian/test_check_ac_parent_covered_by.py be DELETED. All three premises are false as verified on 2026-08-14: the hook exists at templates/scripts/commit_guardian/check_ac_parent_covered_by.py, the test exists at unit_tests/commit_guardian/test_check_ac_parent_covered_by.py, and the hook is wired at .pre-commit-config.yaml:294 (it blocked a commit during this planning session). If ACD-1403 is built as written it deletes coverage this AC depends on. Reconcile or supersede ACD-1403 BEFORE scheduling this AC. Do not attempt to fix ACD-1403 from this tree — it belongs to the ac-driven-dev component."
+  - "The verdict must be determined by staged content alone: no branch, path, environment variable, or value derived from the identity of the working copy may reach the result. The two runs must be byte-comparable on their violation list."
+  - "Main-checkout behaviour unchanged: the same 6 violations, same names, same ordering (the GE-118a-1 backward-compatibility precedent)."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ (canonical), then run 'python scripts/build.py --target-dir .' so scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ match; check_hook_parity enforces all four locations. The hook is invoked from the deployed layout — .pre-commit-config.yaml:294 runs '.leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ac_parent_covered_by.py' — so a template-only fix is a literal no-op for this AC."
+  - "Any shared module this check gains a dependency on must be present in deploy_map in scripts/build_phases.py, or the deployed hook raises ModuleNotFoundError and blocks every commit."
+test_spec:
+  - name: test_ge119b1_same_verdict_with_and_without_deployed_layout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Identical staged set, two working copies at the same commit (one with the deployed layout, one without): both runs report blocked."
+  - name: test_ge119b1_both_runs_name_the_same_six_violations
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The two runs' violation lists are identical — same 6 files, same reasons."
+  - name: test_ge119b1_failopen_skip_line_not_emitted_from_either_copy
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Neither run reproduces the observed cannot-import-derive_parent_id fail-open line followed by a successful exit."
+  - name: test_ge119b1_verdict_independent_of_working_copy_identity
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "No path, branch name, or other working-copy identifier appears in the reported result."
+test_rationale: "A test that imports the check module from the source tree runs in the one layout in which this defect cannot reproduce — which is precisely what masked it. Coverage requires the GE-119c-1 harness: a real second working copy, the deployed check invoked as a separate process, and the source tree off that process's import path. Grep-only coverage is excluded by repo convention because it passes on dead code."
+delivers_to:
+  agent: python-coder
+  contract: "A parent-back-link check that reaches an identical verdict from any working copy, with its private _get_derive_parent_id() fallback removed. ORDERING CONTRACT (reciprocal to ACS-1200a-2's delivers_to): ACS-1200a must land BEFORE, or in the SAME RELEASE as, this AC. This AC increases how reliably the check runs; ACS-1200a corrects which rule it enforces. Shipping this first amplifies the uncorrected rule and blocks every parked idea stub."
 expects_from:
   ac_id: GE-119c-1
   contract: "A harness that stands up a second working copy and executes the deployed check out of process."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by:
   - GE-119b-1-i
@@ -80,3 +126,24 @@ notes: |
   reproduction of the whole GE-119 defect class and is labelled DIRECTLY OBSERVED AND
   REPRODUCIBLE — same check, same repo, same staged files, opposite verdicts decided purely
   by workspace layout.
+
+  RECIPROCAL ORDERING NOTE (IT-PO, 2026-08-14) — this is the half the BA could not write,
+  because the two trees were authored by concurrent agents.
+    ACS-1200a-2 ("The commit-time back-link check passes a parked tree with nothing
+    skipped", component ac-store) carries in its delivers_to: "ORDERING CONTRACT: must land
+    before, or in the same release as, GE-119b — GE-119b increases how reliably this check
+    runs, so shipping it first amplifies the wrong rule." Its notes explicitly ask that the
+    matching note be added here.
+    The reciprocal is now recorded on this AC in three machine-visible places: depends_on
+    already lists ACS-1200a; delivers_to now carries the ORDERING CONTRACT in the same
+    words; and it_requirements states it as a scheduling constraint. Both halves of the
+    contract now agree: ACS-1200a lands first, or both land together. Neither tree may be
+    scheduled against the other's absence.
+
+  PREREQUISITE RECONCILIATION (IT-PO, 2026-08-14) — ACD-1403 is a live landmine and is
+  recorded here as a RISK, not as work for this tree. ACD-1403 requires deleting
+  unit_tests/commit_guardian/test_check_ac_parent_covered_by.py on the premise that the hook
+  was removed. The hook exists, the test exists, and the hook is wired at
+  .pre-commit-config.yaml:294. Building ACD-1403 as written deletes coverage this AC
+  depends on. It also carries level: null and work_status: null. Reconcile or supersede it
+  in the ac-driven-dev component before this AC is scheduled.

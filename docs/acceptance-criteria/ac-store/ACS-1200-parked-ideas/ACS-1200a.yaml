@@ -8,8 +8,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 criteria: |
   Saving a parked idea passes the safeguards first time, nothing skipped.
 

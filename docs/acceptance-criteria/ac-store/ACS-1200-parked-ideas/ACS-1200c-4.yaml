@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
 criteria: |
   Given a record that carries parked: true and a non-empty parked_reason while
@@ -37,15 +37,60 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "The validity rule for the marker documented alongside the fields by ACS-1200a-3."
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes how store-wide structural rules that a flat JSON Schema cannot express are enforced at the validator layer instead."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "SPLIT THE RULES BY WHAT EACH GATE CAN SEE. 'parked implies a non-empty parked_reason' and 'parked cannot coexist with readiness: approved' are single-record rules expressible in config/ac_store_schema.json and must be enforced there, where both validator entry points inherit them. 'A parked record must have no descendant at L2 or below' requires a store-wide walk and is NOT expressible in the schema — it belongs to the validator layer (scripts/ac_store/validate_ac_schema.py and the commit-time check), which already has store access."
+  - "Descendant discovery must reuse derive_parent_id (scripts/ac_store/ac_parent_id.py) rather than inferring descendants from id string patterns — an independent second parser is how the two surfaces come to disagree about what a descendant is."
+  - "Both validator entry points must reach the same verdict, and the degraded manual-validation fallback in templates/scripts/commit_guardian/_ac_schema_validators.py must not silently accept a record the schema path rejects (see ACS-1200a-1). Name which gate is load-bearing for each of the three rules in the implementation notes."
+  - "The ACCEPTED case must be tested as explicitly as the refused ones, so the rule cannot be implemented as a blanket refusal that also blocks legitimate parking. A parked record whose descendants are all at the feature level and whose readiness is draft or reviewed must pass with exit 0."
+  - "When the validator refuses the marker, the hook must correspondingly NOT grant the exemption — the two must not disagree about whether the record is validly parked. Derive both from the same predicate rather than encoding the validity conditions twice."
+  - "The store-wide descendant walk runs inside a commit-time path; it must reuse the existing store index (templates/scripts/commit_guardian/_ac_store_index.py) and must not introduce a second full walk per staged record."
+test_spec:
+  - name: test_parked_record_with_l2_descendant_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Validator executed as a process exits non-zero, naming the record id, the L2 descendants found, and the no-descendant-below-feature-level rule."
+  - name: test_exemption_not_granted_for_invalidly_parked_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With that record and its children staged, the back-link check reports every missing back-link as a violation — the invalid marker grants nothing."
+  - name: test_parked_at_readiness_approved_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A record with parked: true at readiness: approved is rejected, naming the record id, its readiness, and the rule that an approved requirement cannot be parked."
+  - name: test_valid_parked_record_accepted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A parked record whose descendants are all at feature level and whose readiness is draft or reviewed exits 0 — the rule is not a blanket refusal."
+  - name: test_validator_and_hook_agree_on_marker_validity
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "For each of the refused and accepted cases, the validator verdict and the hook's exemption decision are consistent — the validity conditions are evaluated once, not encoded twice."
+  - name: test_descendant_walk_adds_no_second_store_traversal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The descendant check reuses the existing store index; the single-walk invariant for the hook still holds."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200a-1
   contract: "The parked / parked_reason field pair, whose validity conditions this criterion constrains"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by:
   - ACS-1200c-4-i

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the set-up command must locate the scripts that verify commit-time protection is
@@ -42,16 +42,54 @@ doc_links:
   - path: templates/scripts/commit_guardian/_resolve_root.py
     relationship: related
     status: exists
-    relevance: "Candidate shared facility — see the open question recorded on GE-119b-2."
+    relevance: "IT-PO answered the open question on GE-119b-2: this IS the shared facility, already adopted by 27 files. Consume it; do not build a second one."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "CONSUME GE-119b-2's FACILITY: templates/scripts/commit_guardian/_resolve_root.py, the existing shared resolver already imported by 27 files in the check family (verified 2026-08-14). Do not build a second resolver for the set-up path, and do not leave a private root walk behind after adoption — a shared facility beside a surviving private search changes nothing, because the private path still wins on failure."
+  - "IMPORT-BOUNDARY CONSTRAINT — the specific technical risk here. setup_ticket_worktree.py lives at templates/scripts/ (deployed to .leafcutter/scripts/), one directory ABOVE the commit_guardian package that owns the resolver. Confirm the shared resolver is importable from that location in the DEPLOYED layout, and extend the deploy manifest reach if it is not. An undeployed dependency raises ModuleNotFoundError at set-up time, which is a louder version of the very bug being fixed (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "SCHEDULE WITH GE-119b-2. This AC cannot land first — it consumes b-2's facility. And landing GE-119b-2 without it leaves the set-up path as the LAST private root walk in the codebase, which is the position from which the pattern regrows."
+  - "ENUMERATE THE LAYOUTS, do not assume them. At minimum: (1) the package's own dev workspace — the leafcutter/ parent holding .leafcutter/ and scripts/ build outputs alongside the leafcutter-ai/ git root; (2) a consumer project with leafcutter-ai/ as a subdirectory, built with 'python leafcutter-ai/scripts/build.py --target-dir .'; (3) a git worktree created off origin/main. RUN set-up in each. A call-site assertion cannot see a resolution that returns the WRONG location, which is exactly the observed defect."
+  - "The never-built case falls through to GE-119d-2-i's message, not to a silent no-op — this AC removes the REASON resolution fails; GE-119d-2 and GE-119d-2-i govern what happens when it still does."
+  - "ADR-001 deployed/template parity across all three copies of setup_ticket_worktree.py (templates/scripts/, scripts/, .leafcutter/scripts/): edit the template, run 'python scripts/build.py --target-dir .', confirm all three match. Callers run the deployed copy, so a template-only change is a no-op."
+test_spec:
+  - name: test_ge119d3_setup_locates_helper_scripts_in_each_built_layout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Set-up is RUN in each layout the build produces (package dev workspace, consumer subdirectory install, git worktree) and the helper scripts are observed to be found in each."
+  - name: test_ge119d3_not_found_condition_does_not_arise_in_a_built_workspace
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The observed not-found condition for verify_precommit_active.py and install_pre_commit_shims.py does not occur in any built workspace."
+  - name: test_ge119d3_no_private_root_walk_remains_in_the_setup_path
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: unit
+    description: "Scan of setup_ticket_worktree.py finds no surviving private root-walking search for these scripts — the anti-regrowth guard supplementing the executed clauses."
+  - name: test_ge119d3_never_built_workspace_produces_the_d2i_failure
+    target_dir: unit_tests/setup/
+    framework: unittest
+    type: behavioral
+    description: "In a genuinely never-built workspace the outcome is GE-119d-2-i's named failure, not a silent no-op."
+test_rationale: "The observed defect was a resolution that returned the WRONG location, so an assertion that the set-up path calls the shared facility passes on the broken behaviour — the call happens either way. Only running set-up in each real layout and observing the scripts were found can distinguish them. The source scan is included as a supplement, not a substitute: it catches the private walk regrowing after the migration, which execution in the currently-working layouts would not."
 delivers_to: null
 expects_from:
   ac_id: GE-119b-2
   contract: "The single shared prerequisite-resolution facility, reused here rather than duplicated for the set-up path."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -78,3 +116,9 @@ notes: |
   IT-PO: this AC and GE-119b-2 must be scheduled together — this one cannot land first, and
   landing GE-119b-2 without it leaves the set-up path as the last private root-walk in the
   codebase, which is the position from which the pattern regrows.
+
+  IT-PO (2026-08-14): the specific technical risk is the IMPORT BOUNDARY —
+  setup_ticket_worktree.py sits one directory above the commit_guardian package that owns
+  _resolve_root.py, so the resolver must be reachable from .leafcutter/scripts/ in the
+  deployed layout or set-up trades a silent no-op for a ModuleNotFoundError. The three
+  layouts to run set-up in are enumerated in it_requirements.

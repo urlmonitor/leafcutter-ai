@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the AC store schema validator is invoked with one explicit argument naming a
@@ -45,16 +45,57 @@ doc_links:
     status: exists
     relevance: "Describes validate_ac_schema.py as the agent-side validator that checks a subset independently."
   - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "The AC-store hygiene pre-flight instructs a bulk directory-argument invocation — the exact call that silently inspects nothing. It must be corrected in the same change."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
     relationship: context
     status: exists
-    relevance: "The AC-store hygiene pre-flight instructs a bulk directory-argument invocation — the exact call that silently inspects nothing."
+    relevance: "This validator is source-only (no templates/scripts mirror, not in the deploy set) and is therefore package-internal and exempt from the ADR-001 round-trip that governs the hook ACs in this tree."
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Target: scripts/ac_store/validate_ac_schema.py. Reproduction confirmed in-session: given a DIRECTORY argument it prints 'No YAML files to validate' and exits 0."
+  - "CORRECT THE INSTRUCTION IN THE SAME CHANGE. CLAUDE.md's 'AC-store hygiene — bulk pre-flight before a finalization drive' section instructs operators to invoke this validator with exactly that directory-argument form. That documented pre-flight therefore currently inspects nothing and reports success — the pre-flight designed to surface AC violations in bulk is itself a silent pass. Fixing the validator while leaving the instruction in place leaves the operator with a green pre-flight they should not trust. Sweep for the same instruction in templates/ copies of CLAUDE.md and in docs/how-to/ac-traceability-store.md."
+  - "THE RULE FIRES ON TARGETS NAMED BUT NOT RESOLVED, never on an empty scope. A run with no targets at all — for example a commit-time invocation where no matching file is staged — must still report an ordinary pass. A fix that makes empty-scope runs fail breaks every pre-commit invocation of the AC hooks; this is the boundary the criteria call out and the most likely way the fix regresses."
+  - "Even if directory-argument expansion is added as a convenience, an argument form the validator still cannot resolve must produce the reported failure. The criterion is not satisfied by teaching it to expand directories alone."
+  - "SCOPE PRECISION — VERIFIED 2026-08-14: scripts/ac_store/validate_ac_schema.py is SOURCE-ONLY. There is no templates/scripts/ac_store/ directory at all, and the file is absent from the deployed set at .leafcutter/scripts/ac_store/ (which contains ac_prioritizer.py, build_ac_mode_detection.py, done_proof.py, generate_ticket_from_ac.py, goal_to_epic.py, mark_ac_done.py, scan_ac_orphans.py, scan_ac_store.py). It is a package-internal dev tool per ADR-013. Do NOT create a template mirror and do NOT add it to deploy_map — the ADR-001 build.py round-trip that governs every hook AC in this tree does not apply to this one file. Getting this wrong would add a spurious parity obligation."
+  - "Error-handling policy: the unresolved-target condition is a reported failure with a specific message and a non-zero exit, not an exception escaping the CLI."
+test_spec:
+  - name: test_ge119a4_directory_argument_against_populated_dir_reports_failure
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Validator invoked with a directory argument naming a directory that genuinely contains AC YAML files: it reports a failure instead of the observed no-files success."
+  - name: test_ge119a4_failure_names_the_unresolved_argument
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The failure message states that nothing was inspected and names the argument that could not be resolved into files."
+  - name: test_ge119a4_resolving_file_arguments_unaffected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "An invocation whose explicit file paths do resolve reports exactly as before."
+  - name: test_ge119a4_no_targets_empty_scope_still_passes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "An invocation with no targets at all, in a context where nothing is in scope, still reports an ordinary pass — the regression boundary."
+  - name: test_ge119a4_unresolvable_argument_form_still_fails_after_expansion
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "After any directory-expansion convenience is added, an argument form still unresolvable produces the reported failure."
+test_rationale: "Both boundary invocations must be executed against a real populated directory, because the two failure modes are symmetric: a validator that never fails leaves the documented pre-flight a silent pass, and a validator that fails on empty scope breaks every commit-time run where no AC file is staged. A test that exercises only one side will ship one of the two defects."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -79,3 +120,10 @@ notes: |
   success — the pre-flight designed to surface AC violations in bulk is itself a silent
   pass. Fixing this AC without also correcting or removing that instruction leaves the
   operator with a green pre-flight they should not trust.
+
+  IT-PO (2026-08-14): the CLAUDE.md correction is folded into this AC's it_requirements
+  rather than split into a documentation AC — the criteria describe only the validator
+  surface, and a split would require inventing criteria the BA did not write. The docs
+  edit is a one-paragraph correction on the same change; python-coder owns markdown.
+  Also recorded: this validator is source-only and ADR-013-exempt, so it carries NO
+  template-parity obligation unlike every other code AC in this tree.

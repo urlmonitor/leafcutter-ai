@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the full set of checks registered in the guardrail engine's hook manifest,
@@ -37,15 +37,62 @@ doc_links:
   - path: docs/how-to/managing-pre-commit-hooks.md
     relationship: related
     status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "hooks_manifest.hooks[] is the expected set — 54 entries today (48 judgment, 6 transform), read at run time, never hard-coded."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "The sweep must run the DEPLOYED checks; running the template copies measures a layout no commit uses."
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "The expected set is templates/scripts/commit_guardian/commit_guardian.json -> hooks_manifest.hooks[], READ AT RUN TIME. 54 entries today: 48 tier=judgment, 6 tier=transform. Never a hand-maintained list and never a hard-coded count — a new check must enter the sweep by being registered, not by being remembered."
+  - "HANDLE BOTH INVOCATION SHAPES present in the manifest: the run_hook.py wrapper form used by most entries ('python <root>/scripts/commit_guardian/run_hook.py <root>/scripts/commit_guardian/<check>.py'), and the direct-script form used by precommit-canary. Handle the five checks that live under templates/scripts/commit_guardian/hooks/. A sweep that silently drops a hook because its entry shape is unfamiliar is the uncovered-check case this AC must REPORT, not skip."
+  - "THE FIXTURE IS THE HARD PART and is a criterion, not an implementation detail: it must provoke a genuine violation for EVERY manifest check. A clean fixture makes the sweep pass trivially — every check agrees because every check finds nothing, including one that has stopped running. SHARED WITH GE-119b-2-i: build it once, own it in one place."
+  - "Report per disagreeing check: the check id AND both verdicts. A boolean pass/fail is not actionable and cannot be triaged."
+  - "An uncovered check is a FAILURE of the sweep, not an omission from it. Consume GE-119c-3's manifest-to-harness coverage comparison as the completeness guarantee; do not reimplement it here — two independent completeness rules will disagree, and the sweep's own completeness is the property a silent-pass culture erodes first."
+  - "The sweep executes the DEPLOYED checks OUT OF PROCESS through the GE-119c-1 harness. It must not import any check module: importing from the source tree reintroduces the blindness the harness exists to remove (ADR-001 — the deployed layout is what pre-commit runs)."
+  - "ORDER-INDEPENDENCE: transform-tier hooks mutate files. Run each copy from an identical fixture state and do not let one check's mutation change a later check's input, or the two copies will disagree for reasons unrelated to layout and the sweep will report false positives."
+  - "RUNTIME BUDGET: one process per manifest check per copy is 108 subprocesses today. Build each working copy ONCE per sweep, not once per check, and mark the sweep slow rather than letting it quietly narrow its subject list to stay fast — a shrinking subject list is the exact decay GE-119c-1-i's exercised-count clause exists to catch."
+test_spec:
+  - name: test_ge119b4_all_manifest_checks_agree_across_both_copies
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Every check in hooks_manifest.hooks[] reports the same verdict from the main checkout and from a separate working copy, against the violation-provoking fixture."
+  - name: test_ge119b4_disagreeing_check_reported_by_name_with_both_verdicts
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A deliberately layout-sensitive check fixture is reported by name together with both of its verdicts."
+  - name: test_ge119b4_uncovered_manifest_check_reported_as_a_gap
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A manifest entry the sweep did not exercise is reported as a gap rather than counted as agreeing."
+  - name: test_ge119b4_sweep_fails_on_disagreement_or_gap
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The sweep returns a failure when any check disagrees or any check is uncovered."
+  - name: test_ge119b4_fixture_provokes_a_violation_for_every_manifest_check
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The shared fixture produces a genuine violation from every manifest check in the main checkout, so agreement carries information."
+test_rationale: "A per-check unit test that imports from the source tree runs in the single layout where the defect cannot reproduce, so it cannot cover this criterion at all. Worse, the sweep itself can pass vacuously: against a clean fixture every check agrees, including one that has silently stopped running. Coverage therefore needs both the out-of-process harness AND a fixture proven to provoke a violation per check — the fixture assertion is a test in its own right for that reason."
 delivers_to: null
 expects_from:
   ac_id: GE-119c-1
   contract: "Out-of-process execution of a deployed check from a second working copy, returning its observable result and output."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -66,3 +113,8 @@ notes: |
   owns the MANIFEST-COVERAGE assertion (no check may opt out by omission). They are stated
   from both directions on purpose — the sweep's own completeness is exactly the property that
   a silent-pass culture erodes first.
+
+  IT-PO (2026-08-14): the manifest set is 54 entries, not 18 — the 18 figure counts the
+  root-walk instances, not the registered checks. Two invocation shapes and a hooks/
+  subdirectory must both be handled. Runtime is ~108 subprocesses per sweep; build each copy
+  once and mark the sweep slow rather than narrowing the subject list.

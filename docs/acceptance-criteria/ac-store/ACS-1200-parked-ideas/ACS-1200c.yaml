@@ -8,8 +8,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 criteria: |
   The exemption is narrow — real, decomposed work is still held to the rule.
 

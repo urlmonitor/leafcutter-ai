@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
 criteria: |
   Given KM-200.yaml carries parked: true with a non-empty parked_reason and an
@@ -39,15 +39,58 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Shares the message-quality shape: name the record, the rule, and the remedy that actually applies."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "The two halves are refused by DIFFERENT rules and the implementation must say which gate owns each. Half one (marker removed, child list still empty) is an ordinary back-link violation with an added explanation, and is owned by the back-link hook. Half two (children listed while parked is still true) SATISFIES the back-link rule, so no existing gate catches it — it needs an explicit contradiction rule, and that rule must live on a gate that actually runs at commit time for docs/acceptance-criteria/ files, not only in the standalone validator someone may never invoke."
+  - "The contradiction rule for half two is a single-record rule (parked true AND covered_by non-empty) and is therefore expressible in config/ac_store_schema.json, where both validator entry points inherit it — with the corresponding degraded-path coverage required by ACS-1200a-1. Choose one authoritative home and state it; the failure mode to avoid is adding it only to an inert gate."
+  - "scripts/ac_store/fix_ac_orphans.py auto-repairs missing back-links. Left unpatched it will produce exactly the half-two state — child list restored while the marker is still set — without any human deciding to un-park. It is in ACS-1200b-1's enumeration for this reason, and this AC's contradiction rule is what makes its output detectable if it does."
+  - "Each message must name the specific missing half, not just the rule: for half one, that the record is no longer marked parked and its child list has not been restored; for half two, that a record marked parked must not list children. Reuse the message block shape from ACS-1200c-2 (record id, file path, rule, applicable remedy) so a developer meets one consistent format, and reuse its prohibition on naming the skip as a remedy."
+  - "Both verdicts must be produced by executing the gates as processes against a real staged git index, with exit codes and message content asserted."
+test_spec:
+  - name: test_marker_removed_without_restoring_children_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Staged change removing parked and parked_reason while covered_by stays empty exits non-zero and reports the six children as missing back-links."
+  - name: test_message_states_marker_gone_and_child_list_not_restored
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "That message names the specific missing half rather than emitting a generic back-link error."
+  - name: test_children_listed_while_still_parked_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Staged change adding the six child ids while parked: true remains exits non-zero, names KM-200, and states that a record marked parked must not list children — the case that otherwise passes silently because the back-link rule is satisfied."
+  - name: test_contradiction_rule_enforced_by_the_gate_that_runs_on_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The half-two refusal is produced by a gate wired for docs/acceptance-criteria/ staged files, not only by a standalone validator invoked by hand."
+  - name: test_neither_message_offers_skipping_the_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Neither refusal message names a SKIP variable, --no-verify, or any other bypass."
+  - name: test_auto_repair_cannot_produce_the_half_parked_state_undetected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "If fix_ac_orphans.py restores a parked parent's child list, the resulting record is refused by the contradiction rule rather than landing silently."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200d-1
   contract: "The definition of the two halves of the un-park transition"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -63,3 +106,9 @@ notes: |
   would otherwise pass silently: the back-link rule is satisfied, so without an
   explicit contradiction check the tree would sit in the parked section of the
   health report while looking decomposed everywhere else.
+
+  IT-PO ENRICHMENT (2026-08-14). The mechanism for the PO's "accidental
+  un-parking" failure mode has a name: scripts/ac_store/fix_ac_orphans.py, an
+  auto-repair writer that restores missing back-links. It would produce the
+  half-two state with no human decision at all. Recorded in it_requirements and
+  in ACS-1200b-1's enumeration.

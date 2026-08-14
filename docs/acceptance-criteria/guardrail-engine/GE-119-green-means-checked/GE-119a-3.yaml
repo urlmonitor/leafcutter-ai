@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the AC-schema pre-commit check is invoked on staged AC YAML files,
@@ -47,15 +47,58 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The schema document whose unreachability triggers the silent degrade."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Template-is-canonical; a fix that lands only in templates/ never reaches the layout the hook runs from."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Target is concrete: templates/scripts/commit_guardian/check_ac_schema.py — the manual-validation fallback at ~line 623, plus the schema_validated flag introduced by GE-112 (see that file's DECISION HISTORY, ~lines 29-37). The three-state model of GE-119a-1-ii maps onto that EXISTING flag: derive the degraded-but-ran outcome from it rather than introducing a second, parallel indicator."
+  - "The document the check must name when it cannot reach it is config/ac_store_schema.json. VERIFIED 2026-08-14: check_ac_schema.py does NOT import the shared templates/scripts/commit_guardian/_resolve_root.py; it carries its own private root walk, which is why the lookup fails from a separate working copy."
+  - "SEPARATION OF DELIVERABLES: announcing the degrade is THIS AC; making the document resolvable is GE-119b-3. Neither closes the other. An implementation that makes the path resolve and deletes the announce path fails this AC; an implementation that announces and leaves resolution broken fails GE-119b-3."
+  - "A change confined to this one file has met the letter of the AC and missed its point. This is the SECOND defect in this file in this area (GE-112 was the first, on the same fallback). Satisfy it through the shared vocabulary of GE-119a-1-ii, and flag at review any implementation that would not also have prevented the neighbouring instances."
+  - "The non-authoritative label must be on the CLOSING line and must appear even when the reduced validation reports nothing at all — an empty-findings degraded run is indistinguishable from a real pass without it."
+  - "EVIDENCE DISCIPLINE: do NOT assert or cite the unverified 26-files figure anywhere in the implementation, its output, or its tests. Producing a measured number is GE-119c-4's job; until it runs, the figure carries the label REPORTED BY A PARALLEL SESSION, NOT VERIFIED."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ then run 'python scripts/build.py --target-dir .' so scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ match (check_hook_parity enforces all four locations). Any new shared module the check imports must be added to deploy_map in scripts/build_phases.py."
+  - "Error-handling policy: the unreachable-schema path catches a specific exception (OSError / FileNotFoundError / json decode error), logs at WARNING, and returns the degraded-but-ran outcome. No bare except, no silent swallow."
+test_spec:
+  - name: test_ge119a3_unreachable_schema_document_named_in_output
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Check executed from a working copy where config/ac_store_schema.json is genuinely unresolvable: the output states authoritative validation did not happen and names the document."
+  - name: test_ge119a3_reduced_clean_finding_labelled_not_authoritative
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A clean finding from the reduced manual field validation is labelled as reduced and not authoritative."
+  - name: test_ge119a3_reduced_and_authoritative_result_values_differ
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Identical staged files: the result value of the reduced run differs from the value of a run that loaded and satisfied the authoritative schema."
+  - name: test_ge119a3_label_present_when_reduced_validation_reports_nothing
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A reduced run with zero findings still carries the non-authoritative label on its closing line."
+  - name: test_ge119a3_file_authoritative_validation_rejects_never_clean_unlabelled
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A staged AC file the authoritative schema rejects is never reported clean without the non-authoritative label."
+test_rationale: "The criteria's coverage note rules out both weaker shapes explicitly: a source-text assertion that the fallback branch exists passes on dead code, and making the schema unreachable by monkey-patching an import inside the same process exercises a different failure from the observed path-resolution failure. Coverage therefore requires the GE-119c-1 harness running the deployed check from a second working copy where the document is genuinely unreachable."
 delivers_to: null
 expects_from:
   ac_id: GE-119a-1-ii
   contract: "The degraded-but-ran result value and its non-authoritative label."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -82,3 +125,8 @@ notes: |
   NOTE the visibility/parity split: making the check ANNOUNCE the degrade is this AC.
   Making the schema document actually resolvable from a worktree is GE-119b-3. Both are
   needed; neither substitutes for the other.
+
+  IT-PO (2026-08-14): the GE-112 schema_validated flag (DECISION HISTORY ~lines 29-37) is
+  the existing field the three-state model maps onto — reuse it rather than adding a
+  parallel indicator. check_ac_schema.py is confirmed to be in the un-migrated set that
+  still carries a private root walk.

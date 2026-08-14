@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
 criteria: |
   Given a decomposed parent record whose covered_by lists two of its three
@@ -37,15 +37,52 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Defines the back-link protocol whose strength this criterion holds constant for non-parked trees."
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+    relevance: "Tests mirror production contracts; a before/after comparison is how this AC proves the contract did not shrink when the exemption landed."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+it_requirements:
+  - "The pre-change implementation must be obtained REPRODUCIBLY, not hand-copied. Extract the hook at a pinned git revision (the merge-base with origin/main, or the last commit before the exemption landed) into a temporary path at test time. A snapshot pasted into the test tree rots on the first unrelated edit and then silently compares the new code against itself."
+  - "Both invocations must run as processes against a byte-identical staged set in the same temporary git repository, with the staged set established through the git index — the hook reads its input from git, not from argv."
+  - "The comparison is on the VIOLATION SET, not only the exit code: both runs must report the same child/parent pairs. Two runs that both exit 1 for different reasons satisfy an exit-code-only assertion while proving nothing about enforcement strength."
+  - "The tree used here must carry no parked or parked_reason field on any record, and the test must assert that precondition explicitly — otherwise a future edit that adds a marker to the fixture turns this negative test green for the wrong reason."
+  - "Evidence must come from the deployed hook after python3 scripts/build.py where the harness allows it, for the same reason as ACS-1200a-2: the source-tree run cannot observe a fail-open module-resolution path taken only in the deployed layout."
+test_spec:
+  - name: test_decomposed_tree_with_missing_backlink_exits_nonzero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Post-change hook executed as a process against the staged unmarked tree exits non-zero."
+  - name: test_exactly_one_violation_naming_child_and_parent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Exactly one violation is reported, naming the unlisted child and the parent that does not list it; the two listed children are not reported."
+  - name: test_pre_change_implementation_produces_identical_verdict_and_violation_set
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The hook extracted from the pinned pre-change revision, run against the identical staged set, returns the same exit code and the same violation set — enforcement was measurably not weakened."
+  - name: test_fixture_carries_no_parked_marker
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The fixture precondition is asserted: no record in the tree carries parked or parked_reason, so the negative result cannot come from an accidental exemption."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200a-2
   contract: "The parked-aware parent-back-link check, exercised here on a tree that carries no marker"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -63,3 +100,9 @@ notes: |
   The unmarked CHILDLESS tree — a stub minus the marker, which looks identical
   to a parked one — is ACS-1200c-3. This AC deliberately covers the decomposed
   case only.
+
+  IT-PO ENRICHMENT (2026-08-14). Complexity raised S -> M. The assertion itself
+  is small, but "execute the pre-change implementation" requires a reproducible
+  pinned-revision extraction harness — the naive implementation (paste a copy of
+  the old hook into the test tree) rots immediately and then compares the new
+  code against itself while staying green.

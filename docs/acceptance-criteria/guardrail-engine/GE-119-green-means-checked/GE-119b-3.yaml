@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the AC-schema check, whose unresolvable prerequisite is a schema document rather than
@@ -45,15 +45,56 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Warns that the manual fallback is what actually gates in some environments."
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: modifies
+    status: exists
+    relevance: "The shared facility to extend for data and configuration prerequisites, rather than adding a sibling module."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "Candidate second prerequisite kind: the runtime configuration document nearly every check reads via config.py."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Target: templates/scripts/commit_guardian/check_ac_schema.py; the prerequisite is a DATA FILE, config/ac_store_schema.json, not an importable module. VERIFIED 2026-08-14: this check carries a private root walk and does not import the shared _resolve_root.py, which is why the lookup fails from a separate working copy."
+  - "Consume GE-119b-2's facility EXTENDED for data and configuration prerequisites. Do not special-case the one schema path: the criteria explicitly require a second, different prerequisite kind — a configuration document read at runtime. templates/scripts/commit_guardian/commit_guardian.json, read by nearly every check through config.py, is the natural second case and exercises the same resolution path from a different consumer."
+  - "The success condition is that BOTH runs LOAD the authoritative schema and report the IDENTICAL violating-file set — not merely that both exit the same way. Compare the sets, file by file. Two runs that both exit 0 for different reasons satisfy an exit-code assertion and fail this AC."
+  - "A resolved-to-non-empty-string assertion does NOT satisfy this: the observed defect produced a WRONG path, not an empty one. That distinction is the criterion's own coverage note."
+  - "The manual field-validation fallback must not be substituted in either run. Assert on the GE-112 schema_validated flag (see check_ac_schema.py DECISION HISTORY ~lines 29-37 and the fallback at ~line 623) so 'authoritative validation actually ran' is observable rather than inferred."
+  - "COMPLEMENTARY WITH GE-119a-3, NOT REDUNDANT: this AC makes the schema REACHABLE; GE-119a-3 makes the check ANNOUNCE when it is not. An implementation that makes the path resolve and removes the announce path fails GE-119a-3. Neither closes the other, because no resolution fix covers every future environment."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ then run 'python scripts/build.py --target-dir .' so scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ match (check_hook_parity enforces all four locations). The data file resolution must work from the DEPLOYED layout, which is the layout .pre-commit-config.yaml invokes — resolving correctly only from the source tree is the defect, not the fix."
+test_spec:
+  - name: test_ge119b3_authoritative_schema_loaded_from_both_working_copies
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Main checkout and a separate working copy both load config/ac_store_schema.json — the schema_validated path is taken in both runs."
+  - name: test_ge119b3_identical_violating_file_sets_from_both_copies
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Against a fixture with a known number of schema-violating staged AC files, both runs report the identical set of violating files."
+  - name: test_ge119b3_manual_field_validation_not_substituted_in_either_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Neither run falls back to the reduced manual field validation; the degradation observed today no longer occurs."
+  - name: test_ge119b3_second_config_prerequisite_also_resolves_from_both_copies
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A second, different prerequisite kind — a runtime configuration document — resolves identically from both copies, showing the facility handles data files generally."
+test_rationale: "The observed defect produced a WRONG path, not an empty one, so any assertion about the resolved path being non-empty, or about the resolution function being called, passes on the broken behaviour. The only assertion that separates fixed from broken is comparing the two runs' reported violation SETS, which requires executing the deployed check from a real second working copy via the GE-119c-1 harness."
 delivers_to: null
 expects_from:
   ac_id: GE-119b-2
   contract: "The shared resolution facility, covering data and configuration prerequisites as well as helper modules."
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -75,3 +116,8 @@ notes: |
   makes the check announce it when it is not. Both are needed — GE-119b-3 cannot cover every
   future environment, and GE-119a-3 alone leaves the check honestly reporting that it did
   nothing.
+
+  IT-PO (2026-08-14): the recommended second prerequisite kind is
+  templates/scripts/commit_guardian/commit_guardian.json read via config.py — a real runtime
+  configuration document with many consumers, not a contrived second path. Assert on the
+  GE-112 schema_validated flag so "authoritative validation ran" is observable.

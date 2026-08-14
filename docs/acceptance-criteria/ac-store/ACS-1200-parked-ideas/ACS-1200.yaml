@@ -8,8 +8,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 criteria: |
   Park an idea in seconds — with nothing switched off to allow it.
 

@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
 criteria: |
   Given the real AC store, over which the store-wide orphan scan reports a
@@ -31,19 +31,54 @@ doc_links:
   - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
     relationship: context
     status: exists
-    relevance: "The six records that are expected to leave the orphan list; the other 54 must not."
+    relevance: "The six records that are expected to leave the orphan list; the other pre-existing ones must not."
   - path: docs/reference/ac-schema.md
     relationship: related
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "SET ASSERTION, NEVER A COUNT ASSERTION. The 60/54 figures in the criteria are a dated calibration, not a contract: a live run of scripts/ac_store/scan_ac_orphans.py on 2026-08-14 reported 61 orphans store-wide and exited 1, and the number moves with every concurrent authoring branch. The test must capture the before-set at runtime and compare sets; any literal count hard-coded in a test will go red on unrelated work and will be 'fixed' by editing the number, which destroys the guarantee."
+  - "Both runs must be taken over the SAME store state at the same commit — pre-change scan and post-change scan differ only in the code plus the marker added to KM-200.yaml. A before-set captured from a different working tree makes the set difference meaningless."
+  - "The assertion is a two-way set difference: records that left the report must be exactly those with a marker on their derived parent, and no record may have joined the report. A one-way check (all pre-existing still present) passes when six unrelated records are newly reported."
+  - "The test must not mutate the real store. Operate on a copy, or add and remove the marker within a temporary checkout, and assert the committed records are unchanged afterwards."
+  - "Genuine orphan cleanup is explicitly out of scope. This AC must not add, retire or repair any pre-existing orphan record — its whole value is that the residual set is left intact so the remaining count means something again."
+test_spec:
+  - name: test_pre_existing_orphans_all_still_reported_by_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Every record in the runtime-captured before-set that has no marker on its derived parent is still present in the after-set, asserted by id."
+  - name: test_only_marker_excused_records_leave_the_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The set difference before-minus-after contains exactly the records whose derived parent carries a marker, and nothing else."
+  - name: test_no_record_joins_the_orphan_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The set difference after-minus-before is empty — an equal total made of a different set of records fails."
+  - name: test_comparison_is_by_record_set_not_by_total
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The test derives both baselines at runtime and asserts no hard-coded orphan count anywhere, so concurrent authoring cannot make it falsely red or falsely green."
+  - name: test_real_store_records_unmodified_by_the_comparison
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "After both runs, the committed store records are byte-identical to their pre-test content."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200b-2
   contract: "The parked-aware orphan scan, exercised here against the real store rather than a fixture"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -63,3 +98,7 @@ notes: |
   The 60/54 figures are the measured baseline on 2026-08-14, cited so the
   implementer starts from a real number; the assertion that must hold is the
   before/after set difference, not those literals.
+
+  IT-PO ENRICHMENT (2026-08-14). A live run the same day reported 61 orphans,
+  not 60 — the drift the BA anticipated, observed within hours. That is recorded
+  in it_requirements as the reason the literals must never enter a test.

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
 criteria: |
   Given the parent-back-link check has blocked a commit because ACS-1200a-3 is
@@ -38,15 +38,60 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: related
     status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "run_hook.py is the wrapper the message passes through; its stream handling determines whether stdout survives to the developer's terminal."
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The message must reach the developer through the wrapper that actually runs it: .pre-commit-config.yaml:294 invokes the hook via run_hook.py. Confirm the wrapper does not buffer or discard stdout — a message written to stdout that run_hook.py swallows satisfies the code and fails the developer. Assert the message from the deployed invocation path, not only from a direct call to the check."
+  - "The message must be produced as one stable, formatted block per violation rather than assembled from scattered prints, because both this AC and ACS-1200d-2 assert its content; scattered prints make the assertions order-dependent and brittle."
+  - "The message must name the parent record's FILE PATH, not just its id — the developer's next action is to open that file. Paths must be repo-root-relative so they are copy-pasteable from any working directory."
+  - "It must not name the skip as a remedy anywhere: no SKIP=<hook-id>, no --no-verify, no PRE_COMMIT_ALLOW_NO_CONFIG. This is an explicit negative assertion, because the surrounding hook family does mention skip variables and the phrasing is easy to copy in."
+  - "The two-remedy phrasing must condition the parked remedy on the tree genuinely not having been broken down yet. Without that condition the message reads as offering a mute button, which is the exact outcome ACS-1200c-4's placement rules exist to refuse."
+  - "Follow the project error-handling policy: the message is a normal blocking verdict, not an exception trace — the developer must not have to read a stack trace to find the two remedies."
+test_spec:
+  - name: test_message_names_child_parent_path_and_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The blocked run's message names the child id, the parent id, the repo-relative file path of the parent record, and the rule violated."
+  - name: test_message_states_both_remedies
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same message states both remedies — add the child id to covered_by, or set parked: true with a parked_reason."
+  - name: test_parked_remedy_is_conditioned_on_not_yet_decomposed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The message states the parked remedy applies only when the tree has deliberately not been broken down yet."
+  - name: test_message_never_offers_skipping_the_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "No SKIP variable, --no-verify, or equivalent bypass is named anywhere in the message."
+  - name: test_message_written_to_stdout_and_survives_run_hook_wrapper
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The message appears on stdout of the run_hook.py-wrapped invocation, not only on stderr and not swallowed by the wrapper."
+  - name: test_rule_only_message_fails_the_contract
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A message naming only the rule and the offending record is rejected by the assertion set — both remedies are required."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200c-1
   contract: "The block decision this message explains"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

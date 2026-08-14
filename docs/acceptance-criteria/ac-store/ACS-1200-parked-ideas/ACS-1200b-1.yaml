@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
 criteria: |
   Given an enumeration recorded in the repository of every AC-store surface that
@@ -43,8 +43,60 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Defines the marker every enumerated surface must recognise."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The AC-store surface family — scans, validators and hooks — this enumeration must cover."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-time half of the discovered set; the hooks_manifest is the existing registry precedent for how a set of surfaces is declared in this repo."
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
+it_requirements:
+  - "The enumeration must be a machine-readable artifact under version control that BOTH readers consult — the per-surface test and the discovery-reconciliation check — from one file. Its natural home is alongside the repo's other declared registries in config/ (peers: agent_registry.json, skill_registry.json, paths.json, commit_guardian.json's hooks_manifest). Two lists that must be kept in step by hand is the defect this AC exists to prevent, one level up."
+  - "The discovered set must be derived by scanning the repository for surfaces that read covered_by or call derive_parent_id, not by hard-coding names. As measured on 2026-08-14, that scan finds: templates/scripts/commit_guardian/check_ac_parent_covered_by.py, templates/scripts/commit_guardian/check_ac_governance.py, templates/scripts/commit_guardian/check_ac_limits.py, templates/scripts/commit_guardian/_ac_store_index.py, templates/scripts/commit_guardian/_ac_schema_validators.py, scripts/ac_store/scan_ac_orphans.py, scripts/ac_store/scan_ac_store.py, scripts/ac_store/fix_ac_orphans.py, scripts/ac_store/ac_parent_id.py, scripts/ac_store/done_proof.py, scripts/ac_store/approve_acs.py, scripts/build_orchestration/fast_lane.py, scripts/build_orchestration/build_dataflow.py, scripts/build_ac_mode_detection.py, scripts/goal_to_epic.py, scripts/knowledge_query.py, scripts/render_effective_prompt.py. Treat that list as the starting point to triage, not as the answer to hard-code."
+  - "scripts/ac_store/fix_ac_orphans.py must be triaged explicitly and cannot be dropped on the grounds that it is not a report. It is a WRITER that repairs missing back-links, which is precisely the half-transition ACS-1200d-2 forbids — an auto-repair tool that is not parked-aware will silently un-park a tree by restoring its child list while the marker is still set."
+  - "Any surface excluded from the enumeration must be excluded by a recorded data property (for example: it reads covered_by only to write it, or it never renders a broken/missing verdict), never by name. A by-name exclusion does not generalise to the next surface added."
+  - "Count-agnostic: no assertion anywhere may fix the number of surfaces. The contract is set equality between the enumeration and the discovered set, so a new reader added later fails the reconciliation rather than passing unnoticed. This follows the ACS-800 count-agnostic precedent, and also keeps this AC out of KM-200c's population-reporting remit."
+  - "DEPLOYMENT: enumerated surfaces span two build phases with different deployment models. templates/scripts/commit_guardian/ deploys by directory walk (scripts/build_phases.py:1298); scripts/ac_store/ deploys through the explicit eight-entry deploy_map (scripts/build_phases.py:794-806) which today does NOT include ac_parent_id.py, validate_ac_schema.py, fix_ac_orphans.py or approve_acs.py. Any enumerated surface or shared helper that must run from the deployed .leafcutter/ layout has to be in that deploy_map, or the reconciliation passes in the source tree while the deployed layout is unpatched."
+  - "Each per-surface assertion must execute the surface as a process against the fixture and compare its exit status to the status it returns for a fully linked tree. A surface whose only observable difference is its stdout must have that stdout asserted; source inspection does not satisfy any entry."
+test_spec:
+  - name: test_enumeration_artifact_is_parseable_and_non_empty
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The enumeration file loads, and every entry names a surface path that exists in the repository."
+  - name: test_enumeration_matches_discovered_backlink_readers
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The discovery scan over the repo and the enumeration are compared as sets; the test fails naming any surface present in one and absent from the other."
+  - name: test_planted_unenumerated_reader_fails_reconciliation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A newly added surface that reads covered_by, absent from the enumeration, makes the reconciliation fail and names it — a reader cannot join silently."
+  - name: test_every_enumeration_entry_has_an_executed_parked_assertion
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The test reads the enumeration and fails naming any entry that has no executed parked-tree assertion bound to it."
+  - name: test_each_surface_does_not_classify_parked_fixture_as_broken
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Every enumerated surface executed as a process against the parked fixture reports it as neither broken, missing, orphaned, unlinked nor incomplete."
+  - name: test_each_surface_exit_status_matches_linked_tree_baseline
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "For every enumerated surface, the exit status over the parked fixture equals the exit status over an equivalent fully linked tree."
+  - name: test_fix_ac_orphans_is_enumerated_and_parked_aware
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The auto-repair writer is present in the enumeration and, executed against the parked fixture, does not restore the parent's child list — it would otherwise perform half an un-park automatically."
 delivers_to:
   agent: python-coder
   contract: "The enumeration of back-link-reading health surfaces, and the per-surface parked-tree assertion it drives"
@@ -53,7 +105,10 @@ expects_from:
   contract: "The parked / parked_reason field pair, read identically by every enumerated surface"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -74,3 +129,11 @@ notes: |
 
   The named-surface behaviour for the orphan scan specifically — including what
   it must show instead of hiding the tree — is ACS-1200b-2.
+
+  IT-PO ENRICHMENT (2026-08-14). Complexity raised M -> L: the discovery scan
+  found seventeen candidate back-link readers spanning three directories and two
+  build phases. Even after triage this is a new registry artifact, a
+  reconciliation check, and one executed assertion per surviving surface — well
+  beyond a two-or-three-file change. The single highest-value finding is
+  scripts/ac_store/fix_ac_orphans.py: an auto-repair WRITER that would perform
+  ACS-1200d-2's forbidden half-un-park without anyone deciding to.

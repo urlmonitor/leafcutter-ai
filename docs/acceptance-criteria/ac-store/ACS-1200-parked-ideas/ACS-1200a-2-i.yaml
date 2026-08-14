@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-2.yaml
 criteria: |
   Given KM-200.yaml carries parked: true with a non-empty parked_reason and an
@@ -33,15 +33,48 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Parent-derivation algorithm the exemption lookup must reuse — the marker is checked on the derived parent only, not walked up the ancestry."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "Hook execution model: one process per staged set, all violations collected in a single run."
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The exemption predicate is evaluated per staged child against the id returned by derive_parent_id for THAT child (scripts/ac_store/ac_parent_id.py). It must never walk further up the ancestry, and must never cache a marker found on one parent and apply it to a different parent in the same run."
+  - "The run must not short-circuit on the first exemption or the first violation: the hook collects and reports every violation for the whole staged set, so a mixed tree yields one exempted link and one enforced link from a single process invocation."
+  - "The exemption is granted by a marker found on an existing derived PARENT record only. A marker a record carries about itself grants that record nothing (the reciprocal rule ACS-1200b-2-i states for the orphan scan); both surfaces must apply the same directionality so they cannot disagree."
+  - "Coverage must execute the hook as a process against a real staged git index and assert the exact violation set, not only the exit code — a check that silences the whole staged set still exits non-zero here if any one violation survives."
+test_spec:
+  - name: test_mixed_tree_exits_nonzero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Hook executed as a process over the three staged records exits non-zero."
+  - name: test_exactly_one_violation_naming_child_and_its_parent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Exactly one violation is reported, naming KM-200a-1 as the child and KM-200a as the parent that does not list it."
+  - name: test_no_violation_for_child_of_marked_parent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "KM-200a is not reported, because its own derived parent KM-200 carries the marker."
+  - name: test_marker_not_inherited_by_intermediate_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The marker on the root grants KM-200a no exemption for its own missing back-link — one exempted link and one enforced link in the same run."
 delivers_to: null
 expects_from:
   ac_id: ACS-1200a-2
   contract: "The per-record exemption lookup, applied to the derived parent of each staged child"
 origin_agent: BrainCandy
 created: 2026-08-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
