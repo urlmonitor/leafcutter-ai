@@ -45,12 +45,20 @@ _log = logging.getLogger(__name__)
 # output-root-prefixed reference normalises to the same deploy-namespace key as
 # a bare one and can be compared against the deployable manifest directly.
 #
-# The optional prefix is deliberately bounded to ONE path segment (or the literal
-# ``{{config.output_root}}/`` token).  An unbounded prefix such as ``.*/`` would
-# capture ``scripts/other.py`` out of an unrelated vendor path like
-# ``/usr/lib/vendor/nested/scripts/other.py`` and fail the build on a script that
-# was never ours to deploy — the false-positive failure mode that
-# EPIC-BuildGuardFalsePositive already had to fix once.
+# The optional prefix accepts ONLY an output root: the literal
+# ``{{config.output_root}}/`` token, or a rendered dot-prefixed root such as
+# ``.leafcutter/``.  It is not a general "any one segment" allowance.
+#
+# Requiring the leading dot is the discriminator that keeps this honest. Templates
+# also reference HOST-project paths that merely contain a ``scripts/`` component —
+# ``python debugging/scripts/check/prod_status_check.py`` in status-checker.md,
+# ``python leafcutter/scripts/build.py`` in package-developer prose. Those are not
+# leafcutter deliverables and must never be normalised into ``scripts/...`` deploy
+# keys, or the guard demands a deploy phase for a script that belongs to the user's
+# own project. An unbounded ``.*/`` prefix is worse still: it would capture
+# ``scripts/other.py`` out of ``/usr/lib/vendor/nested/scripts/other.py``. Both are
+# the false-positive failure mode EPIC-BuildGuardFalsePositive already had to fix
+# once, so both are excluded and pinned by negative-control tests.
 #
 # NOTE: the two ``sys.path.insert`` patterns below are intentionally NOT widened.
 # They capture ``(scripts/[^']+)`` with no ``.py`` anchor, and the only
@@ -61,7 +69,7 @@ _log = logging.getLogger(__name__)
 # Undeployed directories added via sys.path therefore remain outside this guard.
 
 _PYTHON_INVOKE_RE = re.compile(
-    r"""(?:python3?)\s+(?:\{\{config\.output_root\}\}/|[\w.\-]+/)?(scripts/[\w./\-]+\.py)"""
+    r"""(?:python3?)\s+(?:\{\{config\.output_root\}\}/|\.[\w.\-]+/)?(scripts/[\w./\-]+\.py)"""
 )
 
 _SYSPATH_SINGLE_RE = re.compile(

@@ -118,49 +118,28 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
 ])
 
 # ---------------------------------------------------------------------------
-# Known-undeployed allowlist (AC BP-900g-4) — TEMPORARY, BURN THIS DOWN
+# Known-undeployed allowlist (AC BP-900g-4, emptied by BP-900g-5) — KEEP EMPTY
 # ---------------------------------------------------------------------------
-# These are NOT external dependencies. Every entry is a leafcutter script that
+# These are NOT external dependencies. An entry here is a leafcutter script that
 # exists in the package source, is referenced by a deployed agent or skill, and
 # has no deploy phase — so the capability is silently dead in a consumer install.
 #
-# They are listed separately from EXTERNAL_DEPENDENCY_ALLOWLIST precisely so the
-# distinction stays legible: that set means "legitimately not ours to deploy",
-# this set means "our bug, seen, not yet fixed".
+# It is kept separate from EXTERNAL_DEPENDENCY_ALLOWLIST so the distinction stays
+# legible: that set means "legitimately not ours to deploy", this one means
+# "our bug, seen, not yet fixed".
 #
-# All of them predate BP-900g-4 and were INVISIBLE until the extraction pattern in
-# build_referential_integrity was widened to see the ``{{config.output_root}}/``
-# reference form. Widening the pattern surfaced them all at once; fixing them all
-# in the same change would have made that change unreviewable, so they are parked
-# here with the build green and the gap explicit rather than silent.
+# BP-900g-4 populated it with the references that widening the extraction pattern
+# made visible. BP-900g-5 emptied it: six of those now deploy via
+# build_agent_support_scripts(), and the seventh
+# (debugging/scripts/check/prod_status_check.py in status-checker.md) turned out
+# not to be a leafcutter script at all — it is a HOST-project path that the
+# then-too-permissive prefix had mis-normalised into a scripts/... deploy key. The
+# prefix now requires a dot-prefixed output root, so it is no longer captured.
 #
-# This set must shrink to empty. Adding a NEW entry is a regression, not a fix.
+# This set is empty and must stay empty. Adding an entry is a regression, not a
+# fix: it means shipping an agent that cannot run. Deploy the script instead.
 
-KNOWN_UNDEPLOYED_ALLOWLIST: frozenset[str] = frozenset([
-    # Referenced by changelog-agent.md, epic-supervisor.md, build-single-ticket/SKILL.md.
-    # Source exists at scripts/changelog/emit_entry.py; no deploy phase.
-    "scripts/changelog/emit_entry.py",
-    # Referenced by architect-review.md, architecture-diagram-author.md.
-    # Source exists at scripts/next_diagram_seq.py; no deploy phase.
-    "scripts/next_diagram_seq.py",
-    # Referenced by retrospective-agent.md.
-    # Source exists at scripts/retrospective/extract_epic_facts.py; no deploy phase.
-    "scripts/retrospective/extract_epic_facts.py",
-    # Referenced by retrospective-agent.md.
-    # Source exists at scripts/agent-health/generate_health_report.py; no deploy phase.
-    "scripts/agent-health/generate_health_report.py",
-    # Referenced by roadmap-query/SKILL.md and roadmap-steward/SKILL.md.
-    # Source exists at scripts/roadmap_query.py; no deploy phase.
-    "scripts/roadmap_query.py",
-    # Referenced by package-audit/SKILL.md.
-    # Source exists at scripts/package_audit.py; no deploy phase.
-    "scripts/package_audit.py",
-    # Referenced by status-checker.md. UNLIKE the entries above there is NO source
-    # anywhere in the package — this is a dangling reference to a script that was
-    # never written. It needs either an implementation or the removal of the
-    # reference from status-checker.md; it cannot be closed by a deploy phase.
-    "scripts/check/prod_status_check.py",
-])
+KNOWN_UNDEPLOYED_ALLOWLIST: frozenset[str] = frozenset()
 
 # The guard treats both sets as resolved. They are unioned rather than merged so
 # that emptying KNOWN_UNDEPLOYED_ALLOWLIST is a self-contained change.

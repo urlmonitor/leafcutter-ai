@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
 criteria: |
   Given KNOWN_UNDEPLOYED_ALLOWLIST in scripts/build_propagation_audit.py, which
@@ -22,10 +22,16 @@ criteria: |
     scripts/package_audit.py) are deployed to the consumer tree by a build phase,
     each registered in both _get_source_deployable_scripts and
     _get_source_paths_for_guard so the two sets stay 1:1,
-  And scripts/check/prod_status_check.py — which has NO source anywhere in the
-    package — is resolved by either authoring the script or removing the
-    invocation from templates/agents/status-checker.md; it cannot be closed by a
-    deploy phase,
+  And scripts/check/prod_status_check.py is resolved correctly once identified for
+    what it is: status-checker.md invokes
+    `python debugging/scripts/check/prod_status_check.py`, a HOST-project path
+    belonging to the consumer's own repository, not a leafcutter deliverable. It
+    appeared in the allowlist only because BP-900g-4's prefix allowance accepted any
+    single leading segment and so mis-normalised `debugging/` into a
+    `scripts/...` deploy key. The prefix is therefore narrowed to accept only an
+    output root — the `{{config.output_root}}/` token or a dot-prefixed root such
+    as `.leafcutter/` — after which the reference is not captured at all, and no
+    deploy phase, allowlist entry, or template edit is needed,
   And KNOWN_UNDEPLOYED_ALLOWLIST is then empty, so any future reference of this
     class fails the build instead of being parked,
   And each newly deployed script is verified to actually run from the deployed
@@ -57,7 +63,7 @@ estimated_complexity: M
 it_requirements:
   - "Work through KNOWN_UNDEPLOYED_ALLOWLIST one entry at a time, removing each from the frozenset as its deploy phase lands. The set shrinking to empty IS the completion signal."
   - "Deploy targets must be verified by running the script from the deployed tree, not by asserting file presence. Several of these scripts import siblings (e.g. scripts/agent-health/agent_telemetry.py next to generate_health_report.py), so a single-file deploy can produce a file that exists and still fails at import."
-  - "scripts/check/prod_status_check.py is a dangling reference with no source. Decide explicitly between authoring it and deleting the reference from status-checker.md — do not park it again."
+  - "scripts/check/prod_status_check.py needs no deploy phase: it is a host-project path (debugging/scripts/...) that BP-900g-4's over-permissive prefix mis-captured. Narrow the prefix to output roots only and add a negative-control test covering both it and the package-dev form (leafcutter/scripts/build.py), so neither is ever normalised into a deploy key again."
   - "Extend unit_tests/test_bp_900g_4.py's deployed-tree assertion, or add a sibling test, so the emptied allowlist is enforced going forward: a test asserting KNOWN_UNDEPLOYED_ALLOWLIST == frozenset() makes re-parking a visible regression."
   - "Separately, _manifest_ac_store_scripts OVERSTATES deployment: it scans all ~23 files in scripts/ac_store/ while build_ac_store deploys only an explicit 9-entry deploy_map. Any reference to an ac_store script outside that map passes the guard and fails at runtime — the same defect shape as BP-900g-4, one level down. (BP-900g-4 hit this via ac_parent_id.py and fixed that one instance by adding it to the map.) Make the manifest derive FROM the deploy_map so the two cannot diverge. Audit for newly-surfaced references before landing; today's referenced ac_store scripts all happen to be in the map, so this is expected to be behaviour-neutral."
 delivers_to: null
@@ -68,5 +74,10 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/test_bp_900g_4.py
+implemented_by:
+  - scripts/build_phases.py
+  - scripts/build.py
+  - scripts/build_propagation_audit.py
+  - scripts/build_referential_integrity.py

@@ -55,6 +55,9 @@ from build_phases import (
     build_workflow_tools,
     build_knowledge_scripts,
     build_build_orchestration_scripts,
+    build_agent_support_scripts,
+    AGENT_SUPPORT_SCRIPT_DIRS,
+    AGENT_SUPPORT_SCRIPT_FILES,
     build_template_standalone_scripts,
     build_product_truth,
     detect_deploy_collisions,
@@ -465,6 +468,38 @@ def _manifest_build_orchestration_scripts(package_root: Path) -> set[str]:
     return result
 
 
+def _manifest_agent_support_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/<rel>`` entries for the scripts ``build_agent_support_scripts`` deploys.
+
+    Derived from the SAME module-level spec the deploy phase iterates
+    (``AGENT_SUPPORT_SCRIPT_DIRS`` / ``AGENT_SUPPORT_SCRIPT_FILES`` in
+    build_phases), so the declared set and the deployed set cannot drift apart.
+    A manifest that disagrees with what is actually deployed is the BP-900g-4
+    defect; deriving both from one spec removes the opportunity.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<rel>`` strings, or empty set when the sources are absent.
+    """
+    result: set[str] = set()
+    scripts_src = package_root / "scripts"
+
+    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
+        src_dir = scripts_src / dir_name
+        if src_dir.is_dir():
+            for f in src_dir.rglob("*.py"):
+                if f.is_file():
+                    result.add(f"scripts/{f.relative_to(scripts_src).as_posix()}")
+
+    for file_name in AGENT_SUPPORT_SCRIPT_FILES:
+        if (scripts_src / file_name).is_file():
+            result.add(f"scripts/{file_name}")
+
+    return result
+
+
 def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/<name>`` entries for standalone scripts from ``templates/scripts/``.
 
@@ -523,6 +558,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         | _manifest_workflow_tool_scripts(package_root)
         | _manifest_knowledge_scripts(package_root)
         | _manifest_build_orchestration_scripts(package_root)
+        | _manifest_agent_support_scripts(package_root)
         | _manifest_template_standalone_scripts(package_root)
     )
 
@@ -643,6 +679,21 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         for f in bo_src.glob("*.py"):
             if f.is_file():
                 source_paths.add(f"scripts/build_orchestration/{f.name}")
+
+    # agent-support scripts: source namespace equals deploy namespace. Derived from
+    # the same spec as _manifest_agent_support_scripts so the two stay 1:1
+    # (test_guard_source_paths_match_deployable_set asserts equal cardinality).
+    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
+        src_dir = package_root / "scripts" / dir_name
+        if src_dir.is_dir():
+            for f in src_dir.rglob("*.py"):
+                if f.is_file():
+                    source_paths.add(
+                        f"scripts/{f.relative_to(package_root / 'scripts').as_posix()}"
+                    )
+    for file_name in AGENT_SUPPORT_SCRIPT_FILES:
+        if (package_root / "scripts" / file_name).is_file():
+            source_paths.add(f"scripts/{file_name}")
 
     # goal_to_epic.py / build_ac_mode_detection.py: source is scripts/<name>, but
     # build_ac_store deploys them to scripts/ac_store/<name>. The deploy-namespace
@@ -1094,6 +1145,7 @@ def _run_phases(
         ("Workflow tools", build_workflow_tools),
         ("Knowledge scripts", build_knowledge_scripts),
         ("Build orchestration scripts", build_build_orchestration_scripts),
+        ("Agent support scripts", build_agent_support_scripts),
         ("Template standalone scripts", build_template_standalone_scripts),
     ]
 
