@@ -27,8 +27,13 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 
+// "CI" is part of the production signal: a production DEPLOYMENT is
+// NODE_ENV=production with CI unset (CI runs the app as a production BUILD).
+// Managing it here keeps every scenario's signal explicit rather than
+// inheriting the ambient CI variable.
 const ENV_KEYS = [
   "NODE_ENV",
+  "CI",
   "LEAFCUTTER_MOCK",
   "LEAFCUTTER_MOCK_LOCK",
   "LEAFCUTTER_MOCK_ALLOW_OVERRIDE",

@@ -69,6 +69,7 @@ _AC_STORE_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
 sys.path.insert(0, str(_AC_STORE_DIR))
 
+import check_done_proof as _cdp  # noqa: E402
 from check_done_proof import check_staged_done_proofs  # noqa: E402
 from check_done_proof import check_all_done_acs  # noqa: E402
 from check_done_proof import main as _check_done_proof_main  # noqa: E402
@@ -235,8 +236,16 @@ class TestPreCommitHookJsIntegration(unittest.TestCase):
             "failing_tests": [],
             "dangling_tags": [],
         }
-        with patch(
-            "check_done_proof.verify_done_eligible",
+        # patch.object on the SAME module object we imported check_all_done_acs
+        # from — a string target ("check_done_proof.verify_done_eligible") can
+        # resolve to a different module instance depending on sys.path order and
+        # which copy (templates/ vs the deployed shim) got imported first. When
+        # it resolves elsewhere the real function runs, finds no vitest in the
+        # temp dir, and correctly fails closed — which looked like a product bug
+        # but was only a mis-targeted patch. This form cannot drift.
+        with patch.object(
+            _cdp,
+            "verify_done_eligible",
             return_value=passing_verdict,
         ):
             violations_ci = check_all_done_acs(

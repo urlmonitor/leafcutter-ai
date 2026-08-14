@@ -45,6 +45,11 @@ import { NextResponse } from "next/server";
 import { isMockActive, FIXTURE_ROOT } from "@/lib/data/mock";
 import { isProductionRuntime } from "@/lib/data/runtime";
 
+// MUST be dynamic — see the identical note in app/api/drift-guard/route.ts.
+// Static prerendering would freeze this handler's production/CI decision at
+// build time and serve it regardless of the runtime environment.
+export const dynamic = "force-dynamic";
+
 /**
  * Flow id that exists ONLY in the fixture store (leafcutter-web/fixtures/).
  * If this id is ever added to the real repo's product-truth flows, update this

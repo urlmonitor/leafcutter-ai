@@ -43,6 +43,15 @@ import { NextResponse } from "next/server";
 import { isMockActive, FIXTURE_ROOT } from "@/lib/data/mock";
 import { isProductionRuntime } from "@/lib/data/runtime";
 
+// MUST be dynamic. Without this Next.js statically prerenders the handler at
+// BUILD time and serves that frozen response forever — so the production gate
+// below was evaluated once during `next build` (where CI is unset, hence
+// "production") and the resulting 404 was baked into the artifact. CI then got
+// a 404 no matter what its runtime environment said, breaking the fixture
+// parse-through check. This handler's answer depends on runtime env and
+// request scope, so it can never be prerendered.
+export const dynamic = "force-dynamic";
+
 interface CheckResult {
   label: string;
   count: number;

@@ -23,8 +23,14 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+// "CI" is managed here on purpose: a production DEPLOYMENT is NODE_ENV=production
+// with CI unset, because CI itself runs the app as a production BUILD. applyEnv
+// deletes every managed key a scenario does not set, so each case below states
+// the full signal and never inherits the ambient CI variable — otherwise these
+// tests would pass locally and fail inside CI (or vice versa).
 const ENV_KEYS = [
   "NODE_ENV",
+  "CI",
   "LEAFCUTTER_MOCK",
   "LEAFCUTTER_MOCK_LOCK",
   "LEAFCUTTER_MOCK_ALLOW_OVERRIDE",
