@@ -794,7 +794,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy AC pipeline scripts to ``<output_root>/scripts/ac_store/``.
 
-    Copies the seven AC-pipeline Python scripts from their source locations in
+    Copies the AC-pipeline Python scripts from their source locations in
     the package tree and deploys them to ``<output_root>/scripts/ac_store/``
     (i.e. ``.leafcutter/scripts/ac_store/`` on a default consumer build).
     This makes the ``portable: true`` skills ``ac-scanner`` and ``build-ac``
@@ -808,7 +808,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     script paths like ``{{config.output_root}}/scripts/ac_store/<name>.py``
     correctly reference the deployed scripts on consumer installs.
 
-    The seven source → destination mappings are:
+    The source → destination mappings are:
 
     - ``scripts/ac_store/scan_ac_store.py``
       → ``<output_root>/scripts/ac_store/scan_ac_store.py``
@@ -820,6 +820,26 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
       → ``<output_root>/scripts/ac_store/mark_ac_done.py``
     - ``scripts/ac_store/scan_ac_orphans.py``
       → ``<output_root>/scripts/ac_store/scan_ac_orphans.py``
+    - ``scripts/ac_store/validate_ac_schema.py``
+      → ``<output_root>/scripts/ac_store/validate_ac_schema.py``
+    - ``scripts/ac_store/ac_triage.py``
+      → ``<output_root>/scripts/ac_store/ac_triage.py``
+    - ``scripts/ac_store/create_ac_workflow.py``
+      → ``<output_root>/scripts/ac_store/create_ac_workflow.py``
+    - ``scripts/ac_store/cross_reference_audit.py``
+      → ``<output_root>/scripts/ac_store/cross_reference_audit.py``
+    - ``scripts/ac_store/backfill_readiness.py``
+      → ``<output_root>/scripts/ac_store/backfill_readiness.py``
+    - ``scripts/ac_store/fix_ac_orphans.py``
+      → ``<output_root>/scripts/ac_store/fix_ac_orphans.py``
+    - ``scripts/ac_store/__init__.py``
+      → ``<output_root>/scripts/ac_store/__init__.py``
+    - ``scripts/ac_store/done_proof.py``
+      → ``<output_root>/scripts/ac_store/done_proof.py``
+    - ``scripts/ac_store/test_enforcement.py``
+      → ``<output_root>/scripts/ac_store/test_enforcement.py``
+    - ``scripts/ac_store/ac_parent_id.py``
+      → ``<output_root>/scripts/ac_store/ac_parent_id.py``
     - ``scripts/build_ac_mode_detection.py``
       → ``<output_root>/scripts/ac_store/build_ac_mode_detection.py``
     - ``scripts/goal_to_epic.py``
@@ -843,6 +863,13 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     #   Added build_ac_store() phase per ADR-013 (Option a). Closes the
     #   portable-skill/missing-script gap for ac-scanner and build-ac.
     #   (#EPIC-AcPipelineDeployGaps/03)
+    # - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/BP-900a-1]:
+    #   Added validate_ac_schema.py, ac_triage.py, create_ac_workflow.py,
+    #   cross_reference_audit.py, backfill_readiness.py, fix_ac_orphans.py, and
+    #   __init__.py to deploy_map, closing a deploy_map completeness gap — all
+    #   seven source files already existed in scripts/ac_store/ but were never
+    #   wired into the deploy list, so consumer installs were missing 7 of the
+    #   13 AC-store scripts the AC requires. (#BP-900a-1)
     """
     ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
     scripts_src = PACKAGE_ROOT / "scripts"
@@ -868,6 +895,18 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # /build-ac Step 2b.1 fails even though the file is present — a
         # file-presence check cannot catch this, only executing it can (BP-900g-4).
         (ac_store_src / "ac_parent_id.py",              "ac_parent_id.py"),
+        # The following seven were added per BP-900a-1: all seven source files
+        # already existed in scripts/ac_store/ but were never wired into this
+        # deploy_map, so consumer installs were missing 7 of the 13 AC-store
+        # scripts the AC requires (deploy_map completeness gap, not a
+        # missing-source gap).
+        (ac_store_src / "validate_ac_schema.py",        "validate_ac_schema.py"),
+        (ac_store_src / "ac_triage.py",                 "ac_triage.py"),
+        (ac_store_src / "create_ac_workflow.py",        "create_ac_workflow.py"),
+        (ac_store_src / "cross_reference_audit.py",     "cross_reference_audit.py"),
+        (ac_store_src / "backfill_readiness.py",        "backfill_readiness.py"),
+        (ac_store_src / "fix_ac_orphans.py",            "fix_ac_orphans.py"),
+        (ac_store_src / "__init__.py",                  "__init__.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
