@@ -54,6 +54,12 @@ const PLANNER_SCHEMA = {
     // Used by the Test Requirements guard (BO-2000e-2) to block coder
     // dispatch for code tickets that lack populated Test Requirements.
     has_test_requirements: { type: 'boolean' },
+    // existing_test_files: test files a PREVIOUS drive already wrote for this
+    // ticket and that still exist on disk. Third satisfaction route for the
+    // coder guard — without it, resuming a ticket whose test-writer is already
+    // signed_off would re-block the coder forever, because test-writer is no
+    // longer in the needed set and cannot re-supply its evidence.
+    existing_test_files: { type: 'array', items: { type: 'string' } },
     ordered_phases: {
       type: 'array',
       items: {
@@ -74,6 +80,19 @@ const PHASE_RESULT_SCHEMA = {
     status: { type: 'string', enum: ['ok', 'blocker', 'failed', 'question', 'handoff'] },
     result_status: { type: 'string' },
     message: { type: 'string' },
+    // Test-evidence fields (BO-2000e-2 second satisfaction route). Populated by
+    // the test-writer phase; ignored for every other phase. Both are optional so
+    // that a phase agent which omits them leaves the coder guard CLOSED — absent
+    // evidence must never read as satisfied evidence.
+    tests_written: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Paths of test files this phase created or extended. Non-empty is the evidence that tests exist for the ticket.',
+    },
+    red_baseline_verified: {
+      type: 'boolean',
+      description: 'True when the phase ran the new tests and confirmed they fail (non-zero exit) before any implementation work.',
+    },
   },
   required: ['status'],
 }
@@ -312,7 +331,7 @@ if (!callerWorktreePath) {
 phase('Planner')
 
 const plannerResult = await agent(
-  `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
+  `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
 )
 
@@ -324,10 +343,30 @@ const title = plan.title || ticketPath;
 // -------------------------------------------------------------------------
 // Test Requirements Guard — extracted from planner data (BO-2000e-2)
 // -------------------------------------------------------------------------
-// has_test_requirements is true only when the ticket's ## Test Requirements
-// section contains at least one "- name:" entry in the tests: YAML array.
-// When absent or false, coder phases are refused with a structured blocker.
-const hasTestRequirements = plan.has_test_requirements === true;
+// Three satisfaction routes, any of which proves tests exist before a coder runs:
+//   1. the ticket ships a populated ## Test Requirements section (at least one
+//      "- name:" entry in the tests: YAML array), OR
+//   2. the test-writer phase runs earlier in this same drive and returns evidence
+//      of test files it wrote (see the test-writer branch in the phase loop), OR
+//   3. a previous drive already wrote test files that still exist on disk.
+//
+// Route 3 covers RESUME. Once test-writer is signed_off it drops out of the needed
+// set, so on a re-run it can never re-supply route 2's evidence — the ticket would
+// deadlock permanently on the second drive. The planner verifies these paths exist
+// on disk, so this is evidence, not a status flag.
+//
+// Route 2 exists because test-writer has a mandatory AC-derivation fallback: when
+// ## Test Requirements is absent it resolves the ticket's source_ac and derives the
+// tests from the AC store instead. Reading the planner's pre-drive snapshot as an
+// immutable fact ignored that fallback entirely and deadlocked every AC-generated
+// ticket (no surface has emitted ## Test Requirements since v2.0.0), so this must
+// stay a `let` that route 2 can flip. When neither route produces evidence, coder
+// phases are refused with a structured blocker.
+const existingTestFiles = Array.isArray(plan.existing_test_files)
+  ? plan.existing_test_files.filter((p) => typeof p === 'string' && p.trim())
+  : []
+let hasTestRequirements =
+  plan.has_test_requirements === true || existingTestFiles.length > 0;
 
 // Agents that produce production code — must NOT run without Test Requirements.
 const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
@@ -367,24 +406,35 @@ for (const currentPhase of neededPhases) {
 
   // -----------------------------------------------------------------------
   // Test Requirements guard (BO-2000e-2): refuse to dispatch a coder phase
-  // when the ticket's ## Test Requirements section is empty or absent.
-  // Surfacing a structured blocker here prevents the phantom-test failure
-  // mode where test-writer self-skips and the coder writes its own tests.
+  // unless tests are known to exist — either declared in the ticket's
+  // ## Test Requirements section, or written by test-writer earlier in this
+  // drive. Fail-closed: if neither route produced evidence, block. This still
+  // catches the phantom-test failure mode where test-writer self-skips and the
+  // coder would otherwise write its own tests.
   // -----------------------------------------------------------------------
   if (CODER_PHASES.has(phaseName) && !hasTestRequirements) {
+    const testWriterRan = neededPhases.some((p) => p.agent === "test-writer");
     return {
       status: "blocked",
       message:
         `Structured blocker: the coder phase '${phaseName}' cannot be ` +
-        `dispatched because the ticket's ## Test Requirements section is ` +
-        `empty or absent (BO-2000e-2). ` +
-        `Add at least one test to the tests: array before re-running.`,
+        `dispatched because no tests exist for this ticket (BO-2000e-2). ` +
+        `The ticket's ## Test Requirements section is empty or absent` +
+        (testWriterRan
+          ? `, and the test-writer phase did not report any test files it wrote.`
+          : `, and no test-writer phase is scheduled for this ticket.`),
       ticket_path: ticketPath,
       failing_phase: phaseName,
       classification: "halt",
-      suggested_action:
-        "Populate ## Test Requirements in the ticket with at least one " +
-        "'- name: ...' entry, then re-run /build-feature.",
+      suggested_action: testWriterRan
+        ? "test-writer ran but returned no 'tests_written' evidence. Inspect its " +
+          "sign-off in the ticket's ## Comments: if it genuinely wrote tests, the " +
+          "evidence field is missing from its result; if it self-skipped, populate " +
+          "## Test Requirements or fix the ticket's source_ac so the AC-derivation " +
+          "fallback can resolve."
+        : "Populate ## Test Requirements in the ticket with at least one " +
+          "'- name: ...' entry, or mark test-writer as needed so it can derive " +
+          "tests from the ticket's source_ac, then re-run /build-feature.",
     };
   }
 
@@ -392,7 +442,10 @@ for (const currentPhase of neededPhases) {
     retryLoop = false;
 
     phaseResult = await agent(
-      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.`,
+      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.` +
+      (phaseName === 'test-writer'
+        ? ` You MUST also return "tests_written": a list of the test file paths you created or extended, and "red_baseline_verified": true only if you ran those tests and confirmed they fail. Return "tests_written": [] if you wrote no tests (for example if you self-skipped) — an empty list is the correct, honest answer and will stop the coder phase rather than let it run untested. Do not list a file you did not actually write.`
+        : ''),
       { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch' }
     )
 
@@ -462,6 +515,24 @@ for (const currentPhase of neededPhases) {
           blocker_detail: phaseResult,
           classification: classification || "unknown",
         };
+      }
+    }
+
+    // Satisfaction route 2 for the coder guard (BO-2000e-2): test-writer
+    // succeeded AND named at least one test file it wrote. Evidence must be
+    // explicit — a bare `status: ok` is NOT enough, because test-writer signs
+    // off ok when it self-skips too. Only a non-empty tests_written list opens
+    // the gate for the coder phases that follow (test-writer is priority 5,
+    // every coder is 6+, so this always lands before the guard is consulted).
+    if (phaseName === 'test-writer') {
+      const testsWritten = Array.isArray(phaseResult.tests_written)
+        ? phaseResult.tests_written.filter((p) => typeof p === 'string' && p.trim())
+        : []
+      if (testsWritten.length > 0) {
+        hasTestRequirements = true
+        log(`test-writer wrote ${testsWritten.length} test file(s) (red baseline ${phaseResult.red_baseline_verified === true ? 'verified' : 'NOT verified'}) — coder phases unblocked.`)
+      } else {
+        log('test-writer returned no tests_written evidence — coder phases remain blocked.')
       }
     }
 

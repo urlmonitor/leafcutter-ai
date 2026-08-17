@@ -1,0 +1,63 @@
+id: BO-2000e-2-iii
+components:
+  - build_orchestration
+title: "The coder stays held back when the evidence that tests exist is missing, empty or stale"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a code ticket whose Test Requirements section is absent,
+    and no usable evidence that tests exist is available for it -- the test-writer phase
+    reported that it wrote no test files, or reported no test-writing outcome at all, or
+    no test-writer phase is scheduled for the ticket, or the test files recorded by an
+    earlier drive are no longer on disk,
+  When the supervisor reaches the point where it would spawn the coder phase,
+  Then it does not spawn the coder,
+  And it holds the ticket back with a reason stating that tests must exist first,
+  So missing, empty or stale evidence never counts as tests existing and the guard fails closed.
+depends_on:
+  - BO-2000e-2
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "2 -- the pre-coder gate in build-ticket.js and its twin in build-feature.js, which must stay identical"
+  required_skills:
+    - python-coder
+    - test-writer
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_test_requirements_guard.py"
+  notes: |
+    Widening the gate with additional satisfaction routes must not weaken it. A
+    test-writer phase that self-skipped, and one running an older template that reports
+    no test-writing outcome at all, must both read as "no evidence" rather than as
+    permission to proceed.
+    Test coverage: one negative case per non-evidence condition (no files written, no
+    outcome reported, no test-writer phase scheduled, recorded files gone from disk),
+    each asserting behaviorally that the coder phase is NOT dispatched. A grep of the
+    workflow source for the blocker string does not satisfy this AC -- such a test
+    passes on both the broken and the fixed workflow.
+delivers_to: null
+expects_from:
+  ac_id: BO-2000e-2
+  contract: "The pre-coder gate whose fail-closed path this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/prompt_assembly/test_test_requirements_guard.py
+implemented_by: []
