@@ -1,0 +1,74 @@
+id: BO-1500g
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "What you write and what you deliver belongs to your session alone"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  What lands is exactly what you authored and approved -- nothing rides along.
+
+  Every requirement your session writes goes into your own workspace and nowhere
+  else, and what is handed over for review is checked item by item against the list
+  you approved before any of it leaves. Whether you take the quick route for a
+  criterion or two or the full planning walkthrough, you get the same guarantee,
+  because both follow the same path.
+depends_on: [BO-1500]
+documentation_triggers: [how-to]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. covered_by populated by the business-analyst with the three renamed L2s: BO-1500a-6 -> BO-1500g-1 (leaf BO-1500a-6-i -> BO-1500g-1-i), BO-1500a-7 -> BO-1500g-2 (leaf BO-1500a-7-i -> BO-1500g-2-i), BO-1500a-11 -> BO-1500g-3 (leaves BO-1500a-11-i -> BO-1500g-3-i and BO-1500a-11-ii -> BO-1500g-3-ii). Criteria text unchanged."
+superseded_by: null
+covered_by:
+  - BO-1500g-1
+  - BO-1500g-2
+  - BO-1500g-3
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Authored as the L1 half of a Pattern C intermediate split of BO-1500a, which had
+  accumulated 11 L2 children against the cap of 5. This L1 is the destination the
+  business-analyst identified for the write-scoping and delivery-scoping cluster:
+  everything written and everything delivered belongs to this session only. The rename
+  and re-parent was completed on 2026-08-14: its children are now BO-1500g-1 (was
+  BO-1500a-6, with leaf BO-1500g-1-i), BO-1500g-2 (was BO-1500a-7, with leaf
+  BO-1500g-2-i) and BO-1500g-3 (was BO-1500a-11, with leaves BO-1500g-3-i and
+  BO-1500g-3-ii), and covered_by above is populated accordingly.
+
+  Headroom warning -- acknowledged at authoring time: BO-1500 held 5 L1 children
+  against an L0 cap of 7 before this file. BO-1500f and BO-1500g together consume
+  ALL remaining headroom, taking BO-1500 to exactly 7 of 7. Any future BO-1500 L1
+  forces a full L0 split (Pattern A), not another sibling.
+
+  documentation_triggers is how-to because the lean single-criterion entry point is
+  a new user-facing command that a person has to know how to reach. The
+  sequence-diagram need covering both entry points converging on one shared setup
+  path is already discharged by BO-1500a-8, which stays under BO-1500a, so it is
+  deliberately not repeated here.
+
+  Cross-tree constraint respected: BO-1500a-5 stays under BO-1500a. BO-1500g-2's
+  criteria text hard-codes the phrase "specified in BO-1500a-5", and criteria text
+  may not be edited -- so BO-1500g-2 (formerly BO-1500a-7) sitting under this L1
+  while BO-1500a-5 stays put is intentional, and the reference remains valid because
+  -5 is not renamed. BO-1500g-1 and BO-1500g-2 both keep their depends_on /
+  expects_from pair with BO-1500a-5 intact across the g/a boundary.
+
+  Priority inherited (high) from BO-1500 and from every L2 being redistributed here,
+  rather than defaulted to medium -- a medium L1 parenting high children would
+  misstate the urgency. Flagged for correction if that inheritance is not wanted.
+
+  Cross-boundary links retained after the move: BO-1500g-3 depends on and expects_from
+  BO-1500f-2 (the per-run identity, formerly BO-1500a-9) and still depends on
+  BO-1500c-1; BO-1500g-2-i carries the narrowing obligation recorded against it by
+  BO-1500f-2.

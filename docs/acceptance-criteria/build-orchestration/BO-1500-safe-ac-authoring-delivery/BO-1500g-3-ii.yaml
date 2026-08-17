@@ -1,0 +1,67 @@
+id: BO-1500g-3-ii
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Another run's work never rides along with this run's delivery"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given a second authoring run has already recorded three of its own acceptance criteria on
+    the line of work this run would deliver from, and has further drafts still in flight,
+  When this run delivers the two criteria it authored and the user approved,
+  Then what is delivered contains only those two criteria,
+  And none of the second run's three recorded criteria, and none of its in-flight drafts,
+    are part of what is delivered,
+  And when the second run's work cannot be separated out from what would be delivered,
+    delivery is refused and the refusal names the second run and lists the items that would
+    have ridden along,
+  And the second run's recorded criteria and in-flight drafts are left exactly as they were,
+  And the second run can still deliver its own criteria afterwards.
+depends_on:
+  - BO-1500g-3
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    foreign_run_content:
+      type: object
+      description: "{ owning_run_id: '<the other run>', items: ['<criterion id>', ...], state: recorded | in_flight, delivered: [] }. Items attributable to a run other than the delivering run are excluded from the delivered set; when exclusion is not possible, delivery is refused and these items are named."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "The reported incident was a delivery that carried a whole line of work, including another session's recorded criteria, rather than only the items this run authored. Scoping delivery to the run's own items is the fix; a warning that still delivers is not."
+    - "Exercise both outcomes: the separable case must deliver only this run's two criteria, and the inseparable case must refuse and name the other run."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500g-3
+  contract: "The approved-list comparison whose unexpected-items branch this case must reach"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-11-ii; moved with its parent L2 (BO-1500a-11 -> BO-1500g-3)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Complements BO-1500g-3-i: that leaf covers unrelated content that was already sitting in
+  the workspace, this one covers content belonging to another authoring run. Both must hold
+  for "only what this run authored" to be true.
+
+  Re-homed 2026-08-14 from BO-1500a-11-ii to BO-1500g-3-ii by the Pattern C intermediate
+  split of BO-1500a. Criteria text is unchanged.

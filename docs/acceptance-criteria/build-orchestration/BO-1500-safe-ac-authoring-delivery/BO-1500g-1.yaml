@@ -1,0 +1,76 @@
+id: BO-1500g-1
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Every authored file and repository action targets the confirmed workspace by its absolute location"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given isolation has been positively confirmed for an authoring run and the confirmed
+    workspace has an absolute location,
+  When any authoring stage writes an acceptance-criteria file, and when the workflow
+    performs any repository action for that run,
+  Then the target of the write and of every repository action is the confirmed workspace,
+    addressed by its absolute location,
+  And no target is derived from the directory the run happens to be executing in,
+  And when no confirmed absolute location is available for the run, no acceptance-criteria
+    file is written and no repository action is performed anywhere.
+depends_on:
+  - BO-1500g
+  - BO-1500a-5
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    store_target:
+      type: object
+      description: "{ store_dir: '<absolute path under the confirmed workspace>' }. Derived only from the confirmed workspace_path. There is no default and no working-directory-relative fallback; when the confirmation is absent this value is undefined and every write and repository action is skipped."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Every git invocation for the run must carry an explicit workspace anchor (git -C <absolute workspace>); a call that relies on the process working directory is the defect being fixed."
+    - "Remove the relative-path fallback for the store directory entirely rather than guarding it — a guarded fallback re-introduces the same failure mode on the next edit."
+delivers_to:
+  agent: python-coder
+  contract: "A single absolute store location handed to every authoring agent and every repository action for the run"
+expects_from:
+  ac_id: BO-1500a-5
+  contract: "The confirmed absolute workspace location, or a halt"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-6; re-parented to BO-1500g."
+superseded_by: null
+covered_by:
+  - BO-1500g-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Regression origin: when the workspace location came back empty, the store location
+  silently degraded to a location relative to the running directory, and repository
+  actions lost their explicit workspace anchor -- so authoring landed in whichever
+  checkout the run happened to start from. The fix is an absolute-or-nothing rule:
+  there is no relative fallback.
+
+  Re-homed 2026-08-14 from BO-1500a-6 to BO-1500g-1 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged. The depends_on / expects_from pair with
+  BO-1500a-5 is deliberately kept intact across the g/a boundary: BO-1500a-5 stays under
+  BO-1500a.

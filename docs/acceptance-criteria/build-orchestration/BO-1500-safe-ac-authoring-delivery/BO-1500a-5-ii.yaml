@@ -1,0 +1,61 @@
+id: BO-1500a-5-ii
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "A confirmation naming the invoking checkout, or a directory that is not a separate working copy, is rejected"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given the isolated-workspace setup step returns a confirmation that names a directory,
+  When the workflow validates that confirmation before dispatching the first authoring agent,
+  Then it accepts the confirmation only when all three of these hold: the named directory
+    exists, the repository lists it as a separate working copy, and it is not the directory
+    the run was invoked from,
+  And when the named directory is the directory the run was invoked from, the workflow halts,
+  And when the named directory exists but the repository does not list it as a separate
+    working copy, the workflow halts,
+  And when the named directory does not exist, the workflow halts,
+  And each halt message names which of the three checks failed.
+depends_on:
+  - BO-1500a-5
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    workspace_validation:
+      type: object
+      description: "{ exists: bool, registered_as_worktree: bool, differs_from_invoking_checkout: bool }. All three must be true for the confirmation to be accepted; the failing key is named in the halt message."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Compare resolved absolute paths (symlinks and relative segments resolved) when deciding differs_from_invoking_checkout; a textual comparison can be defeated by an equivalent spelling of the same directory."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-5
+  contract: "The named workspace directory and branch this validation is applied to"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Guards the case where a setup step reports success while the "workspace" it names is
+  really the checkout the workflow already runs in -- the exact shape of the collision
+  incident, where two sessions authored into one checkout.

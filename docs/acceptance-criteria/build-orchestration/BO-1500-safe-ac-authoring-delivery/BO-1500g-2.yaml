@@ -1,0 +1,86 @@
+id: BO-1500g-2
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "The lean single-AC entry point and the full planning pipeline run one shared isolation, store-writing, and delivery implementation"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given two entry points for authoring acceptance criteria exist -- a lean entry point for
+    writing one or two criteria without the full planning stages, and the full planning
+    pipeline,
+  When either entry point is invoked,
+  Then both obtain their isolated authoring workspace through the same setup-and-confirmation
+    behavior specified in BO-1500a-5, including its halt-on-unconfirmed outcome,
+  And both write their criteria through the same store-writing behavior and deliver them
+    through the same commit behavior,
+  And a change to that shared setup-and-confirmation behavior is observable through both
+    entry points without any further change to either entry point,
+  And the lean entry point dispatches the same authoring agents the full pipeline uses,
+    running only the subset of stages the lean path calls for.
+depends_on:
+  - BO-1500g
+  - BO-1500a-5
+  - BO-1500g-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: creates
+    status: planned
+  - path: templates/commands/create-ac.md
+    relationship: creates
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    authoring_entry_point:
+      type: object
+      description: "{ name: 'lean' | 'full', stages: ['<authoring agent id>', ...] }. Both entry points call one shared bootstrap/store-write/commit implementation and differ only in the stages list; neither carries its own copy of that implementation."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "one per authoring entry point"
+  required_skills:
+    - python-coder
+    - llm-expert
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "The lean entry point's skill and command prose (templates/skills/create-ac/SKILL.md, templates/commands/create-ac.md) is an llm-expert follow-on within the same unit of work, mirroring the split already recorded on BO-1500a-1; the prose must reference the shared implementation, never restate its rules."
+    - "A second, parallel copy of the bootstrap, store-writing, or commit logic for the lean path is a defect regardless of how closely it currently matches."
+delivers_to:
+  agent: llm-expert
+  contract: "A shared isolation + store-writing + commit implementation that the lean entry point's skill and command prose describe rather than restate"
+expects_from:
+  ac_id: BO-1500a-5
+  contract: "The fail-closed setup-and-confirmation behavior that both entry points must call, not copy"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-7; re-parented to BO-1500g."
+superseded_by: null
+covered_by:
+  - BO-1500g-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The lean entry point's skill and command files do not currently exist in the package
+  (verified 2026-08-14: templates/skills/create-ac/SKILL.md and templates/commands/create-ac.md
+  are absent), so this is a restore, not an edit. The behavioral requirement is the single
+  shared implementation; a parallel fork that can drift is an explicit non-goal.
+
+  Re-homed 2026-08-14 from BO-1500a-7 to BO-1500g-2 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged -- including its hard-coded reference to
+  "specified in BO-1500a-5". That reference remains valid because BO-1500a-5 stays under
+  BO-1500a and was deliberately NOT renamed by this split.

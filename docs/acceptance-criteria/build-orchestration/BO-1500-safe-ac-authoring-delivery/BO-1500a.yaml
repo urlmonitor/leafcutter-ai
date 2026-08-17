@@ -25,9 +25,10 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-24
-amended_by: []
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Six L2s renamed and re-parented: BO-1500a-4 -> BO-1500f-1, BO-1500a-9 -> BO-1500f-2, BO-1500a-10 -> BO-1500f-3, BO-1500a-6 -> BO-1500g-1, BO-1500a-7 -> BO-1500g-2, BO-1500a-11 -> BO-1500g-3, each with its L3 leaves. BO-1500a retains -1, -2, -3, -5, -8 and is now exactly at the cap of 5. Criteria text unchanged -- re-homing only; narrowing this L1's criteria to its reduced scope is a PO decision and is deliberately left to the PO."
 superseded_by: null
-covered_by: [BO-1500a-1, BO-1500a-2, BO-1500a-3]
+covered_by: [BO-1500a-1, BO-1500a-2, BO-1500a-3, BO-1500a-5, BO-1500a-8]
 implemented_by: []
 change_target: infrastructure
 risk_surface: safety

@@ -1,0 +1,57 @@
+id: BO-1500a-8
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Sequence diagram shows the fail-closed isolation gate and both authoring entry points"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given the fail-closed isolation gate and the two authoring entry points are implemented,
+  When a contributor opens the build-orchestration architecture documentation,
+  Then the isolated-authoring sequence diagram shows both the lean entry point and the full
+    planning pipeline entering the same workspace setup-and-confirmation step,
+  And it shows which participant performs the workspace setup and that this participant is
+    permitted to run repository commands,
+  And it shows the confirmation decision with both outcomes -- confirmed isolation
+    continuing to the first authoring stage, and unconfirmed isolation halting the run
+    before any authoring agent is dispatched,
+  And it shows that after a halt no interaction reaches the invoking checkout.
+depends_on:
+  - BO-1500a
+  - BO-1500f-1
+  - BO-1500a-5
+  - BO-1500g-2
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: extends
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-5
+  contract: "The implemented confirmation gate and its two outcomes, which this diagram documents"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. This AC stays under BO-1500a and was NOT renamed, but it referenced two movers: depends_on BO-1500a-4 was re-pointed to BO-1500f-1 and depends_on BO-1500a-7 was re-pointed to BO-1500g-2. Its BO-1500a-5 dependency and expects_from are unchanged. Criteria text unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the sequence-diagram documentation trigger on BO-1500a for the new fail-closed
+  behavior. Extends the existing diagram delivered by BO-1500a-3 rather than adding a
+  second, competing diagram of the same lifecycle.
+
+  This AC is the documentation surface for behavior that now lives in three trees: the
+  dispatch-charter step (BO-1500f-1), the confirmation gate (BO-1500a-5) and the two
+  entry points (BO-1500g-2). It deliberately stays under BO-1500a, which is why the
+  sequence-diagram trigger is not repeated on BO-1500f or BO-1500g.

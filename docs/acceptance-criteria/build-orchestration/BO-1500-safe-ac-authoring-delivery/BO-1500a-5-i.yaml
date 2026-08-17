@@ -1,0 +1,57 @@
+id: BO-1500a-5-i
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "A refusal, an out-of-scope reply, or an uninterpretable reply is treated as a failed setup"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given the isolated-workspace setup step returns one of these four outcomes:
+    (1) a reply declining the work as outside the responder's scope,
+    (2) a reply the workflow cannot interpret as a setup outcome at all,
+    (3) an outcome shaped like a success but naming no workspace directory,
+    (4) an outcome that reports no failure and names neither a directory nor a branch,
+  When the workflow evaluates that outcome,
+  Then it classifies each of the four as a failed setup,
+  And it halts the run before the first authoring agent is dispatched in all four cases,
+  And the message for each case names which of the four it was, so the user can tell a
+    refusal apart from an uninterpretable reply.
+depends_on:
+  - BO-1500a-5
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    setup_failure_kind:
+      type: string
+      description: "One of refused | uninterpretable | no_workspace_named | silent_success. Recorded on the halt so the four non-confirming outcome shapes are distinguishable in the message and in tests."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Cover all four shapes with behavioral tests that drive the real result-handler path; a test that only asserts a string is present in the source cannot distinguish a wired gate from a dead one."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-5
+  contract: "The confirmation gate whose negative branch these four outcomes must all reach"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

@@ -1,0 +1,69 @@
+id: BO-1500f-3-i
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Ownership evidence outlives the run that recorded it, so a crashed run's workspace is still identifiable"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given an authoring run claimed a workspace, authored two criteria into it, and then ended
+    abruptly without finishing -- its session was killed or the machine restarted -- leaving
+    those two criteria unfinished in that workspace,
+  When a different authoring run later resolves that same workspace,
+  Then the evidence identifying the owning run is still readable by the later run, even
+    though the owning run no longer exists anywhere,
+  And the later run identifies the owner as a run other than itself, and as no longer going,
+  And the later run reports the workspace, the owning run, and the two unfinished criteria
+    to the user, and halts without taking the workspace over,
+  And the two unfinished criteria are neither modified nor deleted by the later run,
+  And when the owning run is itself started again and resolves that workspace, the evidence
+    identifies it as the same run and it continues there with its two criteria intact.
+depends_on:
+  - BO-1500f-3
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    ownership_evidence_durability:
+      type: object
+      description: "{ survives_owner_exit: true, survives_machine_restart: true, readable_by: 'any later run resolving the same workspace' }. The evidence must be persisted where it outlives the owning session, and owner liveness must be decidable from it after the owner is gone."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Evidence held only in the owning run's memory, or liveness inferred only from something the owning process holds open, both evaporate on a crash — that is precisely the case this leaf exists to cover."
+    - "Simulate the crash by killing the owning run's process (not by ending it cleanly) and then resolving the workspace from a fresh process; a clean-shutdown test cannot distinguish durable evidence from evidence written on the way out."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500f-3
+  contract: "The ownership resolution whose evidence this leaf requires to survive the owning run's death"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-10-i; moved with its parent L2 (BO-1500a-10 -> BO-1500f-3)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The crashed-owner case is where a naive ownership check silently degrades back into the
+  old adopt-anything behavior: the owner is gone, so the workspace looks unowned, so the
+  next run walks into its drafts. Distinct from BO-1500b-2, which covers the owning run
+  resuming its own committed work; this covers a DIFFERENT run meeting that wreckage.
+
+  Re-homed 2026-08-14 from BO-1500a-10-i to BO-1500f-3-i by the Pattern C intermediate
+  split of BO-1500a. Criteria text is unchanged.

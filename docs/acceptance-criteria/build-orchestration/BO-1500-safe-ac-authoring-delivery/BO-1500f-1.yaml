@@ -1,0 +1,75 @@
+id: BO-1500f-1
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "The isolated-workspace setup step is dispatched only to an agent permitted to run repository commands"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given an AC-authoring run reaches the step that sets up its isolated authoring workspace,
+  And that step must run repository commands (fetch, create a branch from the tip of the
+    shared main line, and add a separate working copy),
+  When the workflow dispatches the step,
+  Then it dispatches it to an agent whose registered charter permits running repository
+    and shell commands,
+  And it does not dispatch it to a read-only reporting agent whose charter excludes
+    running commands,
+  And when the configured target for that step is an agent whose charter excludes running
+    repository commands, the run stops before any authoring agent is dispatched and reports
+    the mis-assignment, naming both the step and the agent it was pointed at.
+depends_on:
+  - BO-1500f
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: reads
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    workspace_setup_dispatch:
+      type: object
+      description: "{ agent: '<registry agent id>', permits_shell: bool }. The dispatch target for the isolated-workspace setup step, resolved against the agent registry before spawn; permits_shell false must halt the run."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "The permitted-agent decision must be resolved from config/agent_registry.json, not from a hardcoded agent name, so the guarantee survives an agent rename."
+delivers_to:
+  agent: python-coder
+  contract: "A workspace-setup dispatch whose target agent is charter-verified to run repository commands, so its result can be trusted as a real setup attempt rather than a refusal"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-4; re-parented to BO-1500f."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Regression origin: the setup step was dispatched to a status-reporting agent that
+  refused it as out of scope. The refusal was not an execution failure, so the run
+  continued with no workspace. Adjacent-but-distinct: BO-1900c covers charter-vs-task
+  matching for TICKET dispatch; this AC covers a workflow-internal step dispatch and
+  must not be folded into that tree.
+
+  Re-homed 2026-08-14 from BO-1500a-4 to BO-1500f-1 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged. BO-1500a-5 and BO-1500a-8 remain under
+  BO-1500a and now depend on this AC across the f/a boundary.
