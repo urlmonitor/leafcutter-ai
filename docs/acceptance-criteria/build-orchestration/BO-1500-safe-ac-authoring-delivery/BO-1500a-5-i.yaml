@@ -1,7 +1,7 @@
 id: BO-1500a-5-i
 components:
   - build_orchestration
-readiness: draft
+readiness: approved
 priority: high
 title: "A refusal, an out-of-scope reply, or an uninterpretable reply is treated as a failed setup"
 component: build-orchestration
@@ -47,6 +47,18 @@ delivers_to: null
 expects_from:
   ac_id: BO-1500a-5
   contract: "The confirmation gate whose negative branch these four outcomes must all reach"
+test_spec:
+  - name: test_each_of_the_four_non_confirming_shapes_halts_before_authoring
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Parametrized over all four outcome shapes — a scope refusal, an uninterpretable reply, a success-shaped outcome naming no directory, and a silent no-failure outcome naming neither directory nor branch. For each, runs plan-feature under the E2 harness and asserts the run halts and no authoring agent label appears in agent_calls. All four are asserted in one parametrized test so a partial implementation covering only the refusal case cannot pass."
+  - name: test_halt_records_which_of_the_four_shapes_occurred
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "For each of the four shapes, asserts the halt carries the matching setup_failure_kind value (refused / uninterpretable / no_workspace_named / silent_success) and that the four values are pairwise distinct across the runs. Distinctness is asserted explicitly so an implementation that hardcodes one kind for every failure is rejected."
+test_rationale: "The parent AC's constraint is explicit that a source-string test cannot distinguish a wired gate from a dead one, so both tests drive the real result-handler through the harness. The four shapes are parametrized rather than written as four independent tests because the failure mode being guarded is partial coverage — the original handler recognised one shape (a non-zero exit) and let the other three through, and four separate tests make it easy for three to be skipped or deleted without the omission being visible. Asserting the four kinds are pairwise distinct is what makes the message requirement testable at all; without it, 'names which of the four it was' is satisfied by any constant string."
 origin_agent: business-analyst
 created: 2026-08-14
 amended_by: []

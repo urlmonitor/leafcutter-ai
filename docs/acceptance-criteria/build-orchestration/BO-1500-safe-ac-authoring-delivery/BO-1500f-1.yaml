@@ -1,7 +1,7 @@
 id: BO-1500f-1
 components:
   - build_orchestration
-readiness: draft
+readiness: approved
 priority: high
 title: "The isolated-workspace setup step is dispatched only to an agent permitted to run repository commands"
 component: build-orchestration
@@ -54,6 +54,28 @@ delivers_to:
   agent: python-coder
   contract: "A workspace-setup dispatch whose target agent is charter-verified to run repository commands, so its result can be trusted as a real setup attempt rather than a refusal"
 expects_from: null
+test_spec:
+  - name: test_workspace_setup_dispatches_to_a_shell_permitted_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Runs plan-feature under the E2 workflow harness and captures the agent the workspace-setup step is actually dispatched to; resolves that agent id against config/agent_registry.json and asserts its registered charter permits shell/repository commands. Asserts on the dispatch the run really made, not on a name found in the source."
+  - name: test_setup_dispatch_to_a_read_only_agent_halts_before_any_authoring_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Points the workspace-setup step at a registry agent whose charter excludes running commands (the status-reporting agent of the original incident), runs the workflow, and asserts the run halts AND that no authoring agent label (product-owner / business-analyst / it-po) appears anywhere in the harness agent_calls. Absence of the authoring dispatch is the assertion that matters — a halt message alone does not prove nothing was authored."
+  - name: test_mis_assignment_halt_names_both_the_step_and_the_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "On the read-only-agent halt above, asserts the user-visible output contains both the name of the workspace-setup step and the id of the agent it was pointed at, so a person reading the run can see what was mis-wired without opening the source."
+  - name: test_permitted_agent_is_resolved_from_the_registry_not_a_hardcoded_name
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Drives the same code path twice against two fixture registries that differ only in which agent id carries the shell permission; asserts the accept/halt verdict follows the registry in both runs. A hardcoded agent name passes the first run and fails the second, so this test distinguishes registry lookup from a name literal."
+test_rationale: "The regression was a dispatch that succeeded at the workflow level while the receiving agent refused the work, so every test here must observe a real dispatch under the harness rather than a string in plan-feature.js. The critical assertion is the negative one — that no authoring agent ran — because the incident's damage came from authoring proceeding, not from the refusal itself. The two-registry test exists because the constraint explicitly forbids a hardcoded agent name, and only a test that varies the registry can tell the two implementations apart."
 origin_agent: business-analyst
 created: 2026-08-14
 amended_by:

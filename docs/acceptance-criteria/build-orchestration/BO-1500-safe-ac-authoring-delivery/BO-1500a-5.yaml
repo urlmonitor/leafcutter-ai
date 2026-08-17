@@ -1,7 +1,7 @@
 id: BO-1500a-5
 components:
   - build_orchestration
-readiness: draft
+readiness: approved
 priority: high
 title: "Authoring begins only on a positive confirmation of isolation; every other outcome halts the run"
 component: build-orchestration
@@ -57,6 +57,28 @@ delivers_to:
 expects_from:
   ac_id: BO-1500f-1
   contract: "A setup outcome produced by an agent actually permitted to run repository commands"
+test_spec:
+  - name: test_authoring_proceeds_only_on_a_confirmation_naming_directory_and_branch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Stubs the workspace-setup step to return a confirmation naming an existing directory and a branch, runs plan-feature under the E2 harness, and asserts the first authoring agent IS dispatched. This is the positive control: without it, an implementation that halts unconditionally would pass every other test in this block."
+  - name: test_outcome_reporting_no_failure_but_confirming_nothing_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Stubs the setup step to return the exact shape of the regression — no failure indication, no workspace directory, no branch — and asserts the run halts with no authoring agent dispatched. This is the case the old exit-code-keyed handler let through."
+  - name: test_halt_is_visible_to_the_user_and_quotes_the_received_outcome
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "On the halt above, asserts the run's user-visible output states that isolation could not be confirmed and contains the received outcome verbatim, so the user can see what the workflow was given rather than only that it stopped."
+  - name: test_internal_error_in_the_confirmation_logic_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Forces the confirmation evaluation itself to raise, and asserts the run halts rather than falling through to authoring. Encodes the constraint that this gate is deliberately exempt from the project's fail-open-on-INTERNAL-ERROR convention, because continuing means authoring into an unknown checkout."
+test_rationale: "Every test drives the real setup-result handler through the E2 harness and asserts on whether the first authoring agent was dispatched, because 'did authoring start' is the only observable that distinguishes the fixed gate from the broken one — a halt message can be present in source and never reached. The positive-control test is mandatory here: this AC inverts a default, and an implementation that simply refuses everything would satisfy the three negative cases while breaking the workflow entirely. The internal-error case is tested separately because it is the one place the project's usual fail-open convention is intentionally overridden, and a future maintainer applying that convention uniformly would silently reopen the hole."
 origin_agent: business-analyst
 created: 2026-08-14
 amended_by:
