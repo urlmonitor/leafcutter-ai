@@ -171,7 +171,7 @@ def _make_worktree(tmp_root: Path, base_files: dict[str, str]) -> Path:
     return work_dir
 
 
-def _find_entry(entries: object, func_name: str) -> dict | None:
+def _find_entry(entries: list[dict] | None, func_name: str) -> dict | None:
     """Find the entry in *entries* whose nodeid ends with '::<func_name>'."""
     for entry in entries or []:
         if str(entry.get("nodeid", "")).endswith(f"::{func_name}"):
@@ -179,7 +179,7 @@ def _find_entry(entries: object, func_name: str) -> dict | None:
     return None
 
 
-def _names(entries: object) -> set[str]:
+def _names(entries: list[dict] | None) -> set[str]:
     """Return the set of trailing '::func_name' suffixes present in *entries*."""
     out: set[str] = set()
     for entry in entries or []:

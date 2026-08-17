@@ -279,7 +279,7 @@ def _make_git_worktree(tmp_root: Path) -> Path:
     return work_dir
 
 
-def _tag_names(entries: object) -> set[str]:
+def _tag_names(entries: list[dict] | None) -> set[str]:
     """Return the set of trailing '::func_name' suffixes present in *entries*."""
     out: set[str] = set()
     for entry in entries or []:
@@ -441,7 +441,7 @@ class TestSelectBatch(unittest.TestCase):
         # A draft AC — not approved; must be excluded.
         draft_subdir = self.ac_root / "test-component"
         draft_subdir.mkdir(parents=True, exist_ok=True)
-        draft_data = {
+        draft_data: dict = {
             "id": "BO-FL-FILT-DRAFT",
             "title": "Draft AC — must be excluded",
             "component": "build-orchestration",
