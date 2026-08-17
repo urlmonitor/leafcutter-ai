@@ -42,31 +42,51 @@ Location: scripts/build_orchestration/fast_lane.py
         *,
         ac_ids: list[str],
         test_root: Path,
+        base_ref: str | None = None,
     ) -> dict
 
-        Find all test files under `test_root` whose functions carry a
-        "# covers: <id>" tag for any id in `ac_ids`, run them via pytest, and
-        verify every such test FAILS (batch test run exits non-zero).
+        AMENDED 2026-08-17 (BO-2400a-3, decomposed into BO-2400a-3-i..viii —
+        see unit_tests/build_orchestration/test_bo2400a_3_amended_red_baseline.py
+        for the full amended contract).  Find all test files under `test_root`
+        whose functions carry a "# covers: <id>" tag for any id in `ac_ids`,
+        partition them into newly-added and pre-existing using git at
+        test-function granularity against the worktree's merge-base with
+        origin/main (or `base_ref` when supplied), run them via pytest, and
+        pass when at least one NEWLY-ADDED test is red — not when ALL of them
+        are (the pre-amendment rule, replaced because a partially-implemented
+        AC legitimately has some already-green covering tests).
 
         The pass/fail signal is derived from the pytest process exit code AND
         per-test "-v" output — not from agent judgment.  The function is
-        idempotent: re-running against the same tree yields the same verdict.
+        idempotent: re-running against the same unchanged worktree yields the
+        same verdict and performs no git writes (no fetch, no ref update).
 
         Returns a dict with ALL of the following keys:
 
-            "all_red" (bool)
-                True iff every test linked to any id in `ac_ids` fails;
-                False if any such test passes (blocking coder dispatch).
+            "gate_passed" (bool)
+                True iff at least one newly-added covering test is red.
 
-            "offender" (str | None)
-                The pytest nodeid of the first test that passed (i.e., was NOT
-                red).  None when all_red is True.
+            "reason" (str | None)
+                None when gate_passed is True; otherwise exactly one of
+                "no_new_covering_tests", "all_new_tests_green_at_baseline",
+                "no_red_outcome_among_new_tests", or
+                "baseline_partition_unavailable" (the fail-closed case when
+                the git partition cannot be resolved).
 
-            "offender_ac_id" (str | None)
-                The AC id from the covers tag of the offending test.  None when
-                all_red is True.
+            "red", "green_at_baseline", "inconclusive" (list[dict])
+                Newly-added tests classified red / green / inconclusive
+                (FAILED+XFAIL red; PASSED+XPASS green; SKIPPED+ERROR+
+                unrecognised inconclusive).  Each entry is
+                {"nodeid": str, "ac_id": str, "outcome": str}.
 
-        The coder agent must NOT be dispatched unless all_red is True.
+            "preexisting" (list[dict])
+                Pre-existing covering tests in the same entry shape — reported
+                but excluded from the verdict entirely.
+
+        The coder agent must NOT be dispatched unless gate_passed is True.
+        The pre-amendment keys "all_red", "offender", and "offender_ac_id" are
+        REMOVED — a version-skewed caller reading a missing key as falsy must
+        fail closed, not silently pass.
 
     -----------------------------------------------------------------------
 
@@ -119,6 +139,7 @@ Location: scripts/build_orchestration/fast_lane.py
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -210,6 +231,62 @@ def _write_test_file(test_root: Path, filename: str, content: str) -> Path:
     path = test_root / filename
     path.write_text(textwrap.dedent(content), encoding="utf-8")
     return path
+
+
+def _run_git(args: list[str], cwd: Path) -> None:
+    """Run a git subcommand in *cwd*, raising AssertionError on failure."""
+    result = subprocess.run(
+        ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=15
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"git {' '.join(args)} failed in {cwd} (exit {result.returncode}): "
+            f"{result.stderr}"
+        )
+
+
+def _make_git_worktree(tmp_root: Path) -> Path:
+    """Create an origin repo with a placeholder commit, clone it, return the clone.
+
+    verify_red_baseline (amended 2026-08-17) requires its test_root to be
+    inside a git worktree with an ``origin/main`` remote-tracking ref so it
+    can resolve the default ``git merge-base HEAD origin/main`` baseline — a
+    bare tempdir, or a repo with no origin, now fails closed with
+    baseline_partition_unavailable. The clone mirrors the real fast-lane
+    worktree (always freshly cloned off origin/main): any file written into
+    the clone afterwards and left uncommitted is, by construction, absent
+    from the merge-base and classified newly-added.
+
+    Args:
+        tmp_root: Parent directory to create "origin" and "work" subdirs in.
+
+    Returns:
+        Path to the cloned "work" worktree.
+    """
+    origin_dir = tmp_root / "origin"
+    origin_dir.mkdir(parents=True, exist_ok=True)
+    _run_git(["init", "-b", "main", "-q"], cwd=origin_dir)
+    _run_git(["config", "user.email", "test-writer@example.com"], cwd=origin_dir)
+    _run_git(["config", "user.name", "Test Writer"], cwd=origin_dir)
+    (origin_dir / "README.md").write_text("placeholder\n", encoding="utf-8")
+    _run_git(["add", "-A"], cwd=origin_dir)
+    _run_git(["commit", "-q", "-m", "base"], cwd=origin_dir)
+
+    work_dir = tmp_root / "work"
+    _run_git(["clone", "-q", str(origin_dir), str(work_dir)], cwd=tmp_root)
+    _run_git(["config", "user.email", "test-writer@example.com"], cwd=work_dir)
+    _run_git(["config", "user.name", "Test Writer"], cwd=work_dir)
+    return work_dir
+
+
+def _tag_names(entries: object) -> set[str]:
+    """Return the set of trailing '::func_name' suffixes present in *entries*."""
+    out: set[str] = set()
+    for entry in entries or []:
+        nodeid = str(entry.get("nodeid", ""))
+        if "::" in nodeid:
+            out.add(nodeid.rsplit("::", 1)[-1])
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -404,23 +481,35 @@ class TestSelectBatch(unittest.TestCase):
 
 
 class TestVerifyRedBaseline(unittest.TestCase):
-    """Tests for verify_red_baseline() — gate that checks all batch tests fail.
+    """Tests for verify_red_baseline() — gate that checks the red baseline.
 
-    AC scope: BO-2400a-3 (script gate verifies tests are red),
-              BO-2400a-3-i (halts with offender info when a test passes).
+    AC scope: BO-2400a-3 (script gate confirms a red baseline before the
+    coder runs), BO-2400a-3-i (halts with a named reason and the offending
+    tests when no newly-added test is red).
+
+    AMENDED 2026-08-17: verify_red_baseline now requires a real git worktree
+    with an origin/main remote-tracking ref to resolve its newly-added /
+    pre-existing partition (BO-2400a-3-ii), so every fixture here writes its
+    test files inside a real cloned git worktree (see _make_git_worktree)
+    rather than a bare tempdir.  The pass rule also changed from "every batch
+    test must be red" to "at least one NEWLY-ADDED test must be red"
+    (BO-2400a-3-v) — see test_bo2400a_3_amended_red_baseline.py for the full
+    amended contract (16 additional tests covering the git partition, outcome
+    classification, fail-closed behavior, and idempotency in depth).
     """
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.test_root = root / "tests"
+        tmp_root = Path(self._tmp.name)
+        work_dir = _make_git_worktree(tmp_root)
+        self.test_root = work_dir / "tests"
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def test_ac3_all_red_when_all_batch_tests_fail(self) -> None:
+    def test_ac3_gate_passes_when_a_new_batch_test_is_red(self) -> None:
         # covers: BO-2400a-3
-        """When all batch tests fail, verify_red_baseline returns all_red=True.
+        """When a newly-added batch test fails, verify_red_baseline passes the gate.
 
         The test fixture is a real .py file whose test asserts False — it
         genuinely fails under pytest.  No mocking.  The pass/fail signal is
@@ -428,9 +517,9 @@ class TestVerifyRedBaseline(unittest.TestCase):
 
         To make this green, verify_red_baseline must:
         - Scan test_root for tests tagged '# covers: <ac_id>'
-        - Run them via pytest as a subprocess
-        - Confirm all exited non-zero (failed)
-        - Return {"all_red": True, "offender": None, "offender_ac_id": None}
+        - Classify the test newly-added (absent from the git base commit)
+        - Run it via pytest as a subprocess and observe FAILED
+        - Return gate_passed=True, reason=None
         """
         ac_id = "BO-FL-RED-001"
         _write_test_file(
@@ -446,25 +535,22 @@ class TestVerifyRedBaseline(unittest.TestCase):
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=self.test_root)
 
         self.assertTrue(
-            verdict["all_red"],
-            "verify_red_baseline must return all_red=True when every batch test fails "
-            "(BO-2400a-3).",
+            verdict.get("gate_passed") is True,
+            "verify_red_baseline must return gate_passed=True when a newly-added "
+            f"batch test is red (BO-2400a-3); got {verdict!r}.",
         )
         self.assertIsNone(
-            verdict.get("offender"),
-            "offender must be None when all tests are red.",
-        )
-        self.assertIsNone(
-            verdict.get("offender_ac_id"),
-            "offender_ac_id must be None when all tests are red.",
+            verdict.get("reason"),
+            "reason must be None when the gate passes.",
         )
 
-    def test_ac3_multiple_failing_tests_are_all_red(self) -> None:
+    def test_ac3_multiple_failing_new_tests_pass_the_gate(self) -> None:
         # covers: BO-2400a-3
-        """Two batch tests that both fail must yield all_red=True.
+        """Two newly-added batch tests that both fail must pass the gate.
 
         Covers the N>=2 batch case from the AC (the test-writer writes one set
-        of stubs for the entire batch; all must be red before the coder runs).
+        of stubs for the entire batch; at least one must be red before the
+        coder runs).
         """
         ac_id_a = "BO-FL-RED-002a"
         ac_id_b = "BO-FL-RED-002b"
@@ -487,18 +573,24 @@ class TestVerifyRedBaseline(unittest.TestCase):
         )
 
         self.assertTrue(
-            verdict["all_red"],
-            "All-failing batch (N=2) must yield all_red=True (BO-2400a-3).",
+            verdict.get("gate_passed") is True,
+            "An all-red newly-added batch (N=2) must pass the gate (BO-2400a-3); "
+            f"got {verdict!r}.",
+        )
+        self.assertEqual(
+            _tag_names(verdict.get("red")),
+            {"test_fails_for_ac_a", "test_fails_for_ac_b"},
         )
 
-    def test_ac3i_halts_when_a_batch_test_passes(self) -> None:
+    def test_ac3i_halts_when_the_only_new_batch_test_passes(self) -> None:
         # covers: BO-2400a-3-i
-        """When any batch test passes, verify_red_baseline returns all_red=False.
+        """When the only newly-added batch test passes, the gate halts.
 
-        A passing test before implementation is a green-at-baseline error —
-        it means either the production code already exists or the test is
-        under-specified.  The gate must detect this and return all_red=False
-        so the coder is NOT dispatched.
+        A passing newly-added test before implementation is a
+        green-at-baseline signal — it means either the production code
+        already exists or the test is under-specified.  With no other
+        newly-added test to establish a red baseline, the gate must halt
+        (gate_passed=False) so the coder is NOT dispatched.
 
         The test fixture is a real .py file whose test just passes (`pass`).
         """
@@ -516,21 +608,22 @@ class TestVerifyRedBaseline(unittest.TestCase):
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=self.test_root)
 
         self.assertFalse(
-            verdict["all_red"],
-            "verify_red_baseline must return all_red=False when any batch test already "
-            "passes before implementation (BO-2400a-3-i).",
+            verdict.get("gate_passed"),
+            "verify_red_baseline must halt (gate_passed=False) when the only "
+            f"newly-added batch test already passes (BO-2400a-3-i); got {verdict!r}.",
         )
+        self.assertEqual(verdict.get("reason"), "all_new_tests_green_at_baseline")
 
-    def test_ac3i_halt_names_offending_test(self) -> None:
+    def test_ac3i_halt_names_offending_test_in_green_at_baseline(self) -> None:
         # covers: BO-2400a-3-i
-        """The verdict must name the offending test (the one that passed) when not all_red.
+        """The halt report must name the offending (green) test and its AC id.
 
-        The halt report must name the offending test so the operator can see
-        which test failed to establish a red baseline.
+        The halt report must name every newly-added covering test with its
+        observed outcome so the operator can see why no red baseline was
+        established (BO-2400a-3-i).
 
-        To make this green, verify_red_baseline must:
-        - Set offender to the pytest nodeid (or function name) of the passing test
-        - The offender string must contain the test function name
+        To make this green, verify_red_baseline must report the passing test
+        in `green_at_baseline` with its nodeid and ac_id.
         """
         ac_id = "BO-FL-RED-004"
         _write_test_file(
@@ -545,62 +638,35 @@ class TestVerifyRedBaseline(unittest.TestCase):
 
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=self.test_root)
 
-        self.assertFalse(verdict["all_red"], "Must be all_red=False when a test passes.")
-        offender = verdict.get("offender")
-        self.assertIsNotNone(
-            offender,
-            "offender must be set (non-None) when a batch test passes (BO-2400a-3-i).",
+        self.assertFalse(
+            verdict.get("gate_passed"), "Must halt when the only new test passes."
         )
+        green_entries = verdict.get("green_at_baseline")
         self.assertIn(
             "test_green_at_baseline_offender",
-            str(offender),
-            "The offender field must name the offending test function so the halt "
-            "report is actionable (BO-2400a-3-i).",
+            _tag_names(green_entries),
+            "The green_at_baseline entries must name the offending test function so "
+            f"the halt report is actionable (BO-2400a-3-i); got {green_entries!r}.",
         )
-
-    def test_ac3i_halt_names_offending_ac_id(self) -> None:
-        # covers: BO-2400a-3-i
-        """The verdict must name the AC id associated with the offending test.
-
-        The operator must be able to see WHICH AC's test failed to go red so
-        they can trace back to the specific behavior under test.
-
-        To make this green, verify_red_baseline must:
-        - Extract the covers tag from the passing test
-        - Set offender_ac_id to that tag's AC id
-        """
-        ac_id = "BO-FL-RED-005"
-        _write_test_file(
-            self.test_root,
-            "test_offender_ac_identification.py",
-            f"""\
-            def test_passes_for_ac_id():
-                # covers: {ac_id}
-                pass  # passes — offender_ac_id must be '{ac_id}'
-            """,
-        )
-
-        verdict = verify_red_baseline(ac_ids=[ac_id], test_root=self.test_root)
-
-        self.assertFalse(verdict["all_red"])
-        offender_ac_id = verdict.get("offender_ac_id")
-        self.assertIsNotNone(
-            offender_ac_id,
-            "offender_ac_id must be set when a batch test passes (BO-2400a-3-i).",
-        )
-        self.assertEqual(
-            offender_ac_id,
-            ac_id,
-            "offender_ac_id must match the covers tag of the passing test so the "
-            "halt report names the specific AC (BO-2400a-3-i).",
-        )
+        for entry in green_entries or []:
+            self.assertEqual(
+                entry.get("ac_id"),
+                ac_id,
+                "Each green_at_baseline entry must name the AC id of the offending "
+                "test so the operator can trace back to the specific behavior "
+                "under test (BO-2400a-3-i).",
+            )
 
     def test_ac3_verdict_has_required_keys(self) -> None:
         # covers: BO-2400a-3
-        """The verdict dict must contain all_red, offender, and offender_ac_id keys.
+        """The verdict dict must contain the pinned amended-contract keys.
 
-        To make this green, verify_red_baseline must return a dict with all
-        three keys present regardless of the verdict (all_red=True or False).
+        To make this green, verify_red_baseline must return a dict with
+        gate_passed, reason, red, green_at_baseline, inconclusive, and
+        preexisting present regardless of the verdict.  The pre-amendment
+        keys (all_red, offender, offender_ac_id) are REMOVED — a
+        version-skewed caller reading a missing key as falsy must fail
+        closed, not silently pass.
         """
         ac_id = "BO-FL-RED-006"
         _write_test_file(
@@ -615,13 +681,28 @@ class TestVerifyRedBaseline(unittest.TestCase):
 
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=self.test_root)
 
-        for key in ("all_red", "offender", "offender_ac_id"):
+        for key in (
+            "gate_passed",
+            "reason",
+            "red",
+            "green_at_baseline",
+            "inconclusive",
+            "preexisting",
+        ):
             self.assertIn(
                 key,
                 verdict,
                 f"verify_red_baseline verdict must contain key '{key}' (BO-2400a-3).",
             )
-        self.assertIsInstance(verdict["all_red"], bool, "all_red must be a bool.")
+        self.assertIsInstance(verdict["gate_passed"], bool, "gate_passed must be a bool.")
+        for removed_key in ("all_red", "offender", "offender_ac_id"):
+            self.assertNotIn(
+                removed_key,
+                verdict,
+                f"The pre-amendment key '{removed_key}' must be removed, not kept as "
+                "an alias — a version-skewed caller reading a missing key as falsy "
+                "must fail closed rather than silently pass.",
+            )
 
 
 # ---------------------------------------------------------------------------

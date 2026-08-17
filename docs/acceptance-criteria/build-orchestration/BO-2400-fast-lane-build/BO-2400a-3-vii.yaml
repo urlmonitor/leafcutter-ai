@@ -1,0 +1,75 @@
+id: BO-2400a-3-vii
+components:
+  - build_orchestration
+  - testing_quality
+title: "Unavailable git metadata fails the red-baseline gate closed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the red-baseline gate cannot determine the worktree's merge-base with origin/main
+    — the origin/main reference is missing, the directory is not a git worktree, or the
+    git query fails,
+  When the gate runs for the batch,
+  Then it does not fall back to treating every covering test as newly-added, and does not
+    fall back to any agent-reported list of written test files,
+  And it returns a halt verdict whose reason is baseline_partition_unavailable and which
+    names the git query that could not be answered,
+  And the coder agent is not dispatched.
+depends_on: [BO-2400a-3, BO-2400a-3-ii]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_partition_unavailable:
+      type: object
+      description: "Fail-closed degradation: when the merge-base cannot be resolved the gate halts with reason baseline_partition_unavailable naming the failed git query, and never substitutes a permissive fallback."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Fail CLOSED, deliberately against the repository's fail-open convention for pre-commit hooks: this gate's output is a claim that the coder's work is constrained, and an underivable partition cannot support that claim."
+    - "The git failure must be caught at its own boundary and re-surfaced as the structured halt result — not swallowed, and not allowed to propagate as an unhandled traceback (error-handling policy Rules 1 and 3)."
+    - "The halt reason must be the named token baseline_partition_unavailable so callers can distinguish an environment failure from the no-red-baseline halts in BO-2400a-3-i."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-ii
+  contract: "The git-derived partition, whose unavailability is the condition this criterion governs."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Fails closed, against the repository's general fail-open convention for pre-commit
+  hooks, and the difference is deliberate. A pre-commit hook fails open so a script bug
+  never blocks unrelated work. This gate is the opposite kind of object: its entire
+  output is a claim that the coder's work is constrained by a failing test. When the
+  partition cannot be derived, no such claim can be made, and a permissive fallback
+  would silently readmit the unconstrained-implementation state the gate exists to
+  prevent — a phantom red baseline is worse than no run.
+
+  The practical cost is near zero: the fast lane always opens a fresh worktree off the
+  latest origin/main, so the merge-base is available in every intended invocation. A
+  halt here signals a broken environment, not a normal case.

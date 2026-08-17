@@ -1,0 +1,83 @@
+id: BO-2400a-3-vi
+components:
+  - build_orchestration
+  - testing_quality
+title: "Test outcomes are classified red / green / inconclusive, with xfail counted as red"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the batch's covering tests have been executed before any implementation change,
+    and each test has one reported outcome drawn from passed, failed, xfailed, xpassed,
+    skipped and errored,
+  And the repository's acceptance-criterion test-enforcement plugin reports a failing test
+    as xfailed whenever the acceptance criterion that test covers is not yet work_status
+    done — which is the state of every acceptance criterion during a fast-lane run,
+  When the red-baseline gate classifies each executed test,
+  Then an outcome of failed or xfailed is classified red,
+  And an outcome of passed or xpassed is classified green,
+  And an outcome of skipped or errored is classified inconclusive, counting as neither red
+    nor green,
+  And every inconclusive test is reported by test id together with its raw reported
+    outcome, so a test that never executed is never read as evidence of a red baseline.
+depends_on: [BO-2400a-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_outcome_classification:
+      type: object
+      description: "Three-way classification of each executed covering test: red (failed, xfailed), green (passed, xpassed), inconclusive (skipped, errored); inconclusive entries reported with their raw outcome."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "xfailed MUST count as red. Every AC in a fast-lane batch is not-yet-done, so the AC test-enforcement plugin converts its failures to xfail; a classifier that recognises only 'failed' sees zero red tests in every real run and makes the gate vacuous."
+    - "The classification must be total over the outcome vocabulary the pytest parse layer emits (PASSED, FAILED, XFAIL, XPASS, SKIPPED, ERROR) — an unrecognised outcome must be treated as inconclusive and reported, never silently dropped."
+    - "RESOLVED (verified against scripts/ac_store/pytest_ac_enforcement.py, 2026-08-17): the plugin does NOT use strict xfail. It adds no xfail marker; its pytest_runtest_makereport hookwrapper rewrites report.outcome to 'xfailed' only when report.when == 'call' AND report.outcome == 'failed'. A passing test is never touched, so the plugin cannot produce XPASS and the strict-xfail hazard does not exist. XPASS can arise only from an explicit @pytest.mark.xfail in a test, where classifying it green is correct. Note also that the plugin downgrades ONLY AssertionError failures — ImportError/TypeError and other non-assertion failures stay FAILED — so both FAILED and XFAIL genuinely occur in a real run and both must count as red."
+    - "The covering test must exercise the xfail path against the real enforcement-plugin behaviour, not a hand-built fixture that only emits PASSED/FAILED — the bug being fixed is precisely a binary-outcome assumption."
+delivers_to:
+  agent: python-coder
+  contract: "A red / green / inconclusive classification per executed covering test, consumed by BO-2400a-3-v for the verdict and BO-2400a-3-i for the halt reasons."
+expects_from:
+  ac_id: BO-2400a-3-ii
+  contract: "The set of covering tests to execute and their newly-added / pre-existing classification."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Outcomes here are not binary, and treating them as such makes the gate vacuous in the
+  exact conditions under which it runs. Because the acceptance criteria in a fast-lane
+  batch are by definition not yet done, the enforcement plugin converts their failures
+  into xfail — so in the live TKT-600a-1 run the genuinely red tests reported as xfailed,
+  not failed. A gate that recognises only "failed" as red sees zero red tests in every
+  real run.
+
+  skipped and errored are inconclusive rather than red: a test skipped by a marker or
+  broken at collection/fixture time proves nothing about whether the implementation is
+  constrained, and counting it red would let a typo satisfy the gate. BO-2400a-3-i
+  carries the halt reason for the case where the newly-added tests are only green and
+  inconclusive.
