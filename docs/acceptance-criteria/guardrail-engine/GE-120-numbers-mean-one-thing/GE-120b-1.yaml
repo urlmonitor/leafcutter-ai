@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a declared enrolment rule that names, per namespace, the locations where an artifact is
@@ -48,15 +48,85 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Today the only thing that asks for a sequence number is prose instruction in this agent template. Nothing verifies it. Prompt-only enrolment is precisely the opt-out this AC closes."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The declared enrolment rule is package-managed data: it must live in the templates/ source and reach the deployed layout through build.py, or the gate reads a rule the consumer install does not have."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The registration and operation surface for the commit-time stage this check runs at."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "The enrolment rule is DATA, and the data file is a new dependency of the check — so it must be added to the build deploy path alongside the check itself. `scripts/next_diagram_seq.py` is already deployed via `AGENT_SUPPORT_SCRIPT_FILES` in `scripts/build_phases.py`; a new rule file and any new shared module must be given the same treatment. A rule file that is not deployed makes the check read an empty rule in the consumer layout, which the criteria's last clause is specifically written to catch."
+  - "The next-free-number in the message MUST come from `scripts/next_diagram_seq.py`, not from a second max+1 implementation. Two allocators disagreeing about the next free number is a way to mint the collision GE-120a-1 then reports, and the allocator already encodes the never-reuse-a-retired-number rule that a naive max+1 does not."
+  - "The classification regex must be the allocator's own `^c([1-4])-(\\d{3})-`, sourced from the allocator rather than restated. GE-120b-1-i exists because a looser pattern accepts five of the eleven current unnumbered artifacts as enrolled — a restated regex is exactly how that divergence arises."
+  - "Registration target is `hooks_manifest.hooks` in `templates/scripts/commit_guardian/commit_guardian.json`, followed by a build.py run that regenerates `.pre-commit-config.yaml`. `.pre-commit-config.yaml` is a build output whose `@package-managed` blocks are stripped and re-rendered on every build; a hand-added entry there survives locally and vanishes in CI."
+  - "The applied-rule statement on every run is a GE-119 inheritance and must name the rule SOURCE (the resolved path plus the enrolled and exempt location counts), not merely the string 'enrolment rule applied'. A message that does not identify what was loaded cannot distinguish a loaded rule from an empty one, which is the whole point of the clause."
+  - "The rule must be keyed by LOCATION and namespace, never by a list of exempt filenames. A name-based exemption does not extend to a future artifact and reintroduces the opt-out by the back door; GE-120e-3 additionally asserts that no known-bad or allowlist configuration exists anywhere."
+  - "The exempt set for the diagram namespace is derived from the fact that an allocator exists for the diagrams location and for nothing else — NOT from the current file listing, which is the drifted state being corrected. Encode that basis in the rule data as a comment or reason field so GE-120b-4 can quote it rather than re-derive it."
+  - "Error handling per CLAUDE.md Rules 1-4. An unreadable or unparsable enrolment rule is a cannot-establish condition under GE-120d-3, not a silent pass."
+test_spec:
+  - name: test_unnumbered_addition_to_enrolled_location_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adding a file named self-heal-sequence.md to the enrolled diagrams location of a real on-disk tree makes the check return a failing outcome that names that file and states it carries no sequence number."
+  - name: test_failing_output_states_the_next_free_sequence_for_the_level
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The failing output carries the next free sequence number for the artifact's level, and that value equals what scripts/next_diagram_seq.py returns for the same tree — one allocator, not two."
+  - name: test_addition_to_exempt_location_passes_silently
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adding a component-description document to an exempt location yields a passing outcome and no finding for it."
+  - name: test_valid_numbered_addition_passes_silently
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adding a file to the enrolled location whose name carries a valid unclaimed level-and-sequence prefix yields a passing outcome and no finding for it."
+  - name: test_every_run_states_the_applied_enrolment_rule_source
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "All four runs above emit the resolved enrolment-rule source and its enrolled/exempt location counts, so a pass produced by an empty or unloaded rule is distinguishable from a real pass."
+  - name: test_enrolment_rule_resolves_in_the_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "After build.py, the deployed check resolves the deployed enrolment-rule data and the deployed allocator without ModuleNotFoundError or an empty rule — the failure a source-tree test cannot see."
+test_rationale: |
+  Four of the descriptors execute the check against a tree with the file genuinely added,
+  because the coverage note rules out asserting that an enrolment table is defined — a defined
+  table is exactly what a dead check also has. The applied-rule descriptor is the anti-inert
+  clause and must be asserted on all four runs, not one, since an empty rule passes every
+  positive case silently. The deployed-layout descriptor exists because the rule is new data
+  whose deploy path is the most likely thing to be forgotten, and an undeployed rule presents as
+  a silently-passing gate rather than as an error.
 delivers_to:
   agent: python-coder
   contract: "A per-artifact enrolment verdict — artifact path, enrolled/exempt, numbered/unnumbered, and the next free number when unnumbered — consumed by GE-120c-2 for the message."
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added it_requirements: the enrolment rule is deployed data and must enter
+    the build deploy path (an undeployed rule presents as a silent pass, which the
+    criteria''s applied-rule clause exists to catch); the next-free number and the
+    classification regex must both be sourced from scripts/next_diagram_seq.py rather
+    than reimplemented; registration target is hooks_manifest.hooks in templates/scripts/commit_guardian/commit_guardian.json
+    followed by a build.py regeneration; the applied-rule statement must name the
+    resolved rule source and counts; the rule is keyed by location, never by exempt
+    filename. Added test_spec, test_rationale and two doc_links. criteria, title,
+    agent, complexity and delivers_to unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by:
   - GE-120b-1-i
@@ -84,3 +154,9 @@ notes: |
 
   NEXT-FREE-NUMBER IN THE MESSAGE is what makes this a remediation rather than an obstruction,
   and it is cheap here because the allocator already exists.
+
+  IT PO NOTE (2026-08-17): the declared rule is also where GE-120a-2's work-item IDENTIFIER rule
+  belongs — that AC found that the work-item identifier is not self-evident (bare basenames over
+  the real tickets/ tree produce dozens of spurious duplicates from shared epic sub-item
+  prefixes). One declared rule per namespace covering both enrolment and identifier shape keeps
+  the two from being stated in two places.

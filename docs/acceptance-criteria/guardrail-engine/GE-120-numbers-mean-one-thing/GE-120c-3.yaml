@@ -3,12 +3,13 @@ title: "A person blocked where nobody can be brought in has a procedure to follo
 component: guardrail-engine
 components:
   - commit_guardian
+  - documentation_system
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a person whose commit has been stopped, or whose shared build has failed, on a numbering
@@ -37,15 +38,58 @@ doc_links:
   - path: docs/how-to/managing-pre-commit-hooks.md
     relationship: related
     status: exists
+  - path: docs/conventions/adr-numbering.md
+    relationship: context
+    status: exists
+    relevance: "Records the 2026-08-13 decision-number repair in worked detail — six renames, roughly 430 citation rewrites across about 200 files, one gap filled. It is the only existing account in this repository of what a renumbering actually costs, and the guide should draw its procedure from it."
+  - path: docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+    relationship: context
+    status: exists
+    relevance: "Carries the free-number rule the guide must state: a number is free only when it has neither a file nor a citation. Reusing a number that text still cites turns a dangling reference into a confidently wrong one."
+  - path: docs/how-to/numbering-a-new-artifact.md
+    relationship: related
+    status: planned
+    relevance: "GE-120b-3's guide, which covers obtaining a number for a NEW artifact. This one covers resolving a clash on an EXISTING one; the two must cross-link rather than each grow a copy of the other's allocation section."
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Write the reference-repair half FROM THE REPAIR GE-120e-1 ACTUALLY PERFORMS, not from first principles. That repair moves a record cited by nine coverage tags in one test module, by a guard source file and by a release note, while a second release note cites the same identifier meaning the other claimant — the full three-way citation problem in one worked case. Sequence this AC after GE-120e-1 so the procedure is a transcript rather than a guess."
+  - "The which-claimant-moves criterion must be the same one GE-120a-3's reference document states and the same one GE-120c-2's block message emits. Three surfaces, one rule; if the guide invents a fourth answer the blocked author is worse off than with no guide."
+  - "The dated-historical-record clause must reproduce the existing decision rather than restate it loosely: `scripts/adr_refs.py` already refuses to repoint citations in closed records on the grounds that doing so would make the record claim something that did not happen. Name that behaviour and its rationale; the guide's reader needs to know it is a rule, not an omission."
+  - "The find-every-citation step must warn that a bare identifier can be genuinely ambiguous while the collision is unresolved — a search for the contested identifier returns citations meaning BOTH artifacts, and rewriting them uniformly is how a repair creates a worse problem than it fixes. GE-120e-1's case is exactly this."
+  - "The end-to-end claim ('a person following the guide reaches a state where the gate passes') must be verified by executing the guide's steps against a real clash and then running the gate, not by review. This is the documentation-verifier phase's job and it needs a real clash to run against — sequencing after GE-120e-1 supplies one."
+  - "Doc frontmatter, description and length are mechanically enforced on `docs/**/*.md`; index reachability comes from the regenerated `docs/INDEX.md` after build.py, not from a hand-added link."
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is prose; there is no executable behaviour of its
+  own to assert. The guide's one falsifiable claim — that following it end to end reaches a
+  state where the numbering gate passes — is verified by the documentation-verifier phase
+  executing the steps against the real clash GE-120e-1 repairs and then running the gate, which
+  is a workflow verification rather than a unit test. The rule-consistency claims are pinned
+  from the code side by GE-120c-2's output assertions, so asserting them again here would create
+  a second definition of the message that could drift from the first.
 delivers_to: null
 expects_from:
   ac_id: GE-120c-2
   contract: "The wording and content of the block message, so the guide begins where the reader actually is."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: Added it_requirements sequencing this guide after GE-120e-1 so the reference-repair
+    procedure is written from the repair actually performed rather than from first
+    principles, and so the documentation-verifier phase has a real clash to execute
+    the end-to-end claim against. Required the which-claimant-moves criterion to be
+    the same rule the reference document states and the block message emits, required
+    the dated-historical-record clause to reproduce adr_refs.py's existing refusal
+    and its rationale, and added the warning that a bare contested identifier returns
+    citations meaning BOTH artifacts while the collision is unresolved. Set test_required
+    false with a rationale. Added documentation_system component and three doc_links.
+    criteria, title, agent, complexity and expects_from unchanged.
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -66,3 +110,8 @@ notes: |
   repository rather than invented: the decision-number auditor deliberately refuses to repoint
   citations in closed records, on the grounds that doing so would make the record claim
   something that did not happen.
+
+  IT PO NOTE (2026-08-17): there is a second worked precedent the guide should draw on —
+  docs/conventions/adr-numbering.md records the 2026-08-13 decision-number repair in detail (six
+  renames, ~430 citation rewrites across ~200 files). Between that account and GE-120e-1's
+  repair, the procedure can be written entirely from observed work.

@@ -3,12 +3,13 @@ title: "Which locations must carry a number, and which need not, is written down
 component: guardrail-engine
 components:
   - commit_guardian
+  - documentation_system
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a reader who wants to know whether a kind of artifact they are about to add is expected
@@ -35,15 +36,51 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Carries the user's binding scope decision at the PO gate that the unnumbered artifacts are NOT retro-numbered, and the reasoning. This document is where that decision becomes findable by someone who was not in the room."
+  - path: docs/reference/artifact-numbering.md
+    relationship: modifies
+    status: planned
+    relevance: "The same document GE-120a-3 creates. This AC adds the enrolment section to it; GE-120d-5 adds the bypass section. Three ACs, three sections, one file."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "The section is written into `docs/reference/artifact-numbering.md`, the file GE-120a-3 creates. This AC does not create a document and must not start one — a second numbering document is the drift the whole tree exists to prevent."
+  - "The table must be GENERATED FROM, or verbatim quoted from, the declared enrolment rule data GE-120b-1 introduces — not retyped. 'Matches the rule the check actually applies' is only durable if there is one source; a retyped table is correct on the day it is written and wrong at the first rule change. If a generated table is impractical, quote the rule file's own content in a fenced block and name the file, so a reader can see which is authoritative."
+  - "The WHY for each exemption must be the basis GE-120b-1 records in the rule data — an allocator exists for the diagrams location and for nothing else — not a post-hoc rationalisation derived from which files happen to be unnumbered today. The latter documents the drift as if it were a decision, which is exactly the failure the clause guards against."
+  - "The scope-trim record must state the decision, its author (BrainCandy), its date (2026-08-17) and the reason, and must state that re-expanding it is new work under its own requirement. A future reader who finds eleven unnumbered diagrams and assumes an oversight is the specific reader this section is written for."
+  - "Doc frontmatter and length are mechanically enforced (`check-doc-frontmatter`, `check-description-field`, `check-doc-length`) and `transform-doc-index` regenerates the index. If the combined three-section document exceeds the doc-length gate, split by section into linked documents rather than trimming the reasoning — the reasoning is the deliverable."
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is prose. The one clause with mechanical content —
+  that the documented table matches the rule the check applies — is best satisfied structurally,
+  by generating or quoting from GE-120b-1's rule data rather than by a test that compares two
+  independently-maintained copies; a test that compares two copies legitimises having two. If
+  the implementer chooses to retype the table rather than quote it, a parity test becomes
+  mandatory and this field must be replaced by a test_spec asserting the documented table equals
+  the rule file's content.
 delivers_to: null
 expects_from:
   ac_id: GE-120b-1
   contract: "The declared enrolment rule the check reads, so the documented table and the enforced rule are the same data rather than two statements of it."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Bound the section to the docs/reference/artifact-numbering.md file GE-120a-3
+    creates. Added it_requirements: the table must be generated from or verbatim quoted
+    from GE-120b-1''s declared rule data rather than retyped (with a conditional test
+    obligation if it is retyped); the WHY must be the recorded basis, not a rationalisation
+    from the current file listing; the scope-trim record must name its author, date
+    and reason; a doc-length overflow is resolved by splitting, not by trimming the
+    reasoning. Set test_required false with a rationale that states the condition
+    under which a test_spec becomes mandatory. Added documentation_system component
+    and two doc_links. criteria, title, agent, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -62,3 +99,8 @@ notes: |
   This is also where the user's scope trim is preserved against a future reader who finds 11
   unnumbered diagrams and assumes they were overlooked. Recording the reasoning is what stops
   that reader re-opening a decision that was made deliberately.
+
+  IT PO NOTE (2026-08-17): the enrolment rule is also the natural home for GE-120a-2's work-item
+  IDENTIFIER rule, which that AC found is not self-evident. If the identifier rule is declared in
+  the same data, this section should present it too — a reader asking "is this expected to carry
+  a number" and a reader asking "what counts as the same work item" are the same reader.

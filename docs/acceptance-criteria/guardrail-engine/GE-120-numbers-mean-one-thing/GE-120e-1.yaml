@@ -3,12 +3,13 @@ title: "The one contested requirement number is resolved without breaking what c
 component: guardrail-engine
 components:
   - commit_guardian
+  - ac_store
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the requirement collection contains two records claiming the identifier "GE-119": a
@@ -52,13 +53,92 @@ doc_links:
     relationship: context
     status: exists
     relevance: "A worked precedent for the reference half of a renumbering: it rewrites slug-qualified citations mechanically, refuses to rewrite bare ambiguous ones, and deliberately excludes dated historical records. The same three-way treatment applies here."
+  - path: docs/conventions/adr-numbering.md
+    relationship: context
+    status: exists
+    relevance: "The only written account in this repository of what a renumbering actually costs — the 2026-08-13 decision-number repair: six renames, roughly 430 citation rewrites across about 200 files, one gap filled, two records written retroactively. Read it before estimating this one."
+  - path: docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+    relationship: context
+    status: exists
+    relevance: "Carries the operative free-number rule this repair must obey: a number is free only when it has NEITHER a file NOR a citation. GE-121 must be checked against both."
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "The identifier format, the allocation algorithm and the never-reuse-a-retired-slot rule for this namespace, plus the parent back-link requirement the moved record must satisfy."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "The nine coverage tags are the mechanically load-bearing part and they are in ONE file: `unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py`, as nine `# covers: GE-119` comments. The done-proof oracle resolves these tags, so leaving them pointing at the old identifier after the move silently re-points nine passing tests at the goal record — turning a repair into a false coverage claim for a tree the tests do not exercise."
+  - "The identifier chosen must satisfy ADR-029's operative rule as applied to this namespace: free means NEITHER a file NOR a citation, not merely 'no file exists'. Reusing a number that text still cites converts a dangling reference into a confidently wrong one, which is worse than the ambiguity being repaired."
+  - "WHEN LISTING TAKEN IDENTIFIERS, scan the loose files as well as the folders. Verified 2026-08-17: `GE-114-1.yaml` through `GE-114-4.yaml`, `GE-115.yaml` and the `GE-119.yaml` being moved all sit at the namespace root alongside the feature folders, so a folder-only listing under-reports what is taken and is a plausible way to mint a second collision while repairing the first. GE-121 is free by both tests as of 2026-08-17."
+  - "The AC-store gates will police the move and must be satisfied, not bypassed: `check-ac-schema`, `check-ac-parent-covered-by` (the new parent must list the moved record in `covered_by`), `check-ac-tree-limits` (the chosen parent must have room under the child cap), `check-ac-circular-deps` and `check-done-proof` all run on `docs/acceptance-criteria/**/*.yaml` at commit time and again in the `AC store valid` CI job. Choosing a parent that is already at its child cap turns a one-file move into a tree restructure."
+  - "Rewrite citations with the three-way treatment `scripts/adr_refs.py` already implements rather than a blanket search-and-replace: qualified citations are rewritten mechanically, bare ambiguous ones are examined individually because a bare 'GE-119' today returns citations meaning BOTH records, and dated historical records are deliberately left alone because repointing them would make the record claim something that did not happen. A blanket replace across the repository would rewrite the release note that legitimately means the goal record."
+  - "Changelog entries and release notes are dated historical records. The one meaning the moved record gets a clarifying note stating the new identifier rather than a rewritten citation; the one meaning the goal record is untouched."
+  - "Idempotency: re-running any scripted portion of this repair over the already-repaired tree must make no further change and must not re-rewrite an already-rewritten citation. Verify by running twice and diffing."
+  - "Do not delete either claimant. Both describe real, wanted work — the goal record is an active five-child tree, the parentless record documents a live defect covered by nine passing tests."
+  - "This AC's ONLY prerequisite is GE-120e; it does not depend on the pass being built. Doing it first makes GE-120a-1's own store clean, and it supplies GE-120c-3 with a real repair to write its procedure from."
+test_spec:
+  - name: test_old_identifier_has_exactly_one_claimant_after_repair
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Over the repaired tree, exactly one record claims GE-119 and it is the goal-level record; the whole-collection uniqueness pass reports no finding for that identifier."
+  - name: test_moved_record_claims_a_free_identifier_with_a_real_parent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The moved record claims an identifier no other artifact claims and that no citation refers to, declares a parent that exists, and appears in that parent's covered_by list."
+  - name: test_goal_records_thirty_three_files_are_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Every file in the goal record's folder is byte-identical to its pre-repair content — the cheap direction was actually taken."
+  - name: test_all_nine_coverage_tags_resolve_to_exactly_one_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Each of the nine covers tags in test_ge_119_contract_shrinking_rename_aware.py names the moved record's new identifier, and each resolves to exactly one record in the store."
+  - name: test_no_citation_of_either_identifier_resolves_to_zero_or_many
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A repository-wide citation resolution over both identifiers finds no citation resolving to zero records and none resolving to more than one — the assertion the coverage note says a rename alone does not satisfy."
+  - name: test_dated_historical_records_are_not_repointed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The release note that legitimately means the goal record is unchanged, and the one meaning the moved record carries a clarifying statement rather than a rewritten citation — so a blanket search-and-replace fails this test."
+test_rationale: |
+  The coverage note is explicit that asserting the rename does not cover this AC, because the
+  references are where a renumbering does its damage — so five of the six descriptors assert on
+  citations rather than on files. The nine-coverage-tags descriptor is the highest-value one:
+  those tags are machine-resolved by the done-proof oracle, so leaving them behind does not merely
+  mislead a reader, it silently re-points nine passing tests at a tree they do not exercise,
+  manufacturing exactly the false coverage claim this repository's guardrails exist to prevent.
+  The dated-historical-records descriptor is written to FAIL on a blanket search-and-replace,
+  which is the fast implementation and the one that would rewrite the release note that
+  legitimately means the goal record.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added ac_store to components. Added it_requirements naming the concrete
+    surfaces: the nine covers tags are in one file (unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py)
+    and are machine-resolved by the done-proof oracle, so leaving them behind re-points
+    nine passing tests at the wrong tree; the free-identifier test is ADR-029''s neither-a-file-nor-a-citation
+    rule; the taken-identifier listing must include the loose namespace-root files
+    (GE-114-1..4, GE-115 and the record being moved), with GE-121 verified free by
+    both tests as of 2026-08-17; the AC-store gates that will police the move, including
+    the child cap on whichever parent is chosen; the three-way citation treatment
+    from adr_refs.py, which a blanket search-and-replace fails; run-twice idempotency.
+    Added test_spec, test_rationale and three doc_links. criteria, title, agent and
+    complexity unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -91,3 +171,8 @@ notes: |
   THE MOVED RECORD IS PARENTLESS TODAY and would be reported by an orphan scan regardless. Giving
   it a parent is required by the criterion because a record with a new identifier and no parent
   simply relocates the problem, and because the store's own back-link gate would reject it.
+
+  IT PO CONFIRMATION (2026-08-17): all of the BA's measured facts verified independently. The nine
+  covers tags are in unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py;
+  the loose namespace-root files are GE-114-1..4, GE-115 and GE-119; GE-121 owns no file and is
+  cited by nothing. This AC depends only on GE-120e and is the cheapest first move in the tree.

@@ -3,12 +3,13 @@ title: "An author with no prior knowledge can find out how to get a number"
 component: guardrail-engine
 components:
   - commit_guardian
+  - documentation_system
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given an author who is adding a new artifact of one of the four numbered kinds and does not
@@ -36,15 +37,56 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Contains the acceptance-criterion allocation algorithm (scan the namespace for the highest occupied slot, add one, never reuse a retired slot). The how-to should point here rather than restate it."
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: context
+    status: exists
+    relevance: "The existing how-to shape and tone for this repository's guides — follow it rather than inventing a new layout."
+  - path: docs/conventions/adr-numbering.md
+    relationship: context
+    status: exists
+    relevance: "The decision namespace's existing allocation procedure and its free-number rule. The guide points here for that namespace rather than restating the rule a third time."
+  - path: docs/how-to/numbering-a-new-artifact.md
+    relationship: modifies
+    status: planned
+    relevance: "IT PO 2026-08-17 — the concrete home for this guide, in the established docs/how-to/ surface. Distinct from the docs/reference/artifact-numbering.md that GE-120a-3, GE-120b-4 and GE-120d-5 write: this one is the procedure a person follows, that one is the rule a person looks up."
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "The guide is `docs/how-to/numbering-a-new-artifact.md` — a how-to, deliberately separate from the `docs/reference/artifact-numbering.md` reference that GE-120a-3, GE-120b-4 and GE-120d-5 write. Procedure and lookup are different documents in this repository's documentation model; the guide links to the reference for the rules and does not restate them."
+  - "The quoted block wording must be copied from the check's actual emitted output, captured by running it — not paraphrased from this AC or from GE-120b-1's criteria. A paraphrase is how the guide and the guard end up describing the same situation in two vocabularies, which is the specific failure this clause exists to prevent. Re-verify the quote after GE-120b-1 is implemented; authoring the guide before the message exists means quoting something that does not."
+  - "The 'succeeds when followed literally from a clean checkout' clause is only true for the diagram namespace if the guide accounts for the allocator's deployed location: `scripts/next_diagram_seq.py` reaches a consumer install via `AGENT_SUPPORT_SCRIPT_FILES` in `scripts/build_phases.py`, so the invocation differs between this repository and an installed consumer. State the invocation for both layouts or the step fails literally for one of them."
+  - "The acceptance-criterion section must warn that the taken-identifier listing includes loose files at the namespace root, not only folders — `GE-114-*.yaml`, `GE-115.yaml` and the GE-119 record all sit loose, and a folder-only scan is a documented way to mint the very collision this tree repairs."
+  - "Doc frontmatter and index reachability are mechanically enforced (`check-doc-frontmatter`, `check-description-field`, `check-doc-length`, `transform-doc-index`). Reachability is satisfied by the regenerated `docs/INDEX.md`, verified by running build.py, not by a hand-added link."
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is prose; there is no executable behaviour to
+  assert. The one mechanically checkable claim — that the guide quotes the wording the check
+  actually emits — is asserted from the code side by GE-120b-1's output tests, which pin that
+  wording; duplicating it here would create a second definition of the message that could drift
+  from the first. The literal-from-a-clean-checkout claim is verified by the documentation-verifier
+  phase executing the quoted commands, which is that phase's purpose.
 delivers_to: null
 expects_from:
   ac_id: GE-120b-1
   contract: "The wording of the enrolment check's block message, so the guide can quote it verbatim."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Named the concrete document path docs/how-to/numbering-a-new-artifact.md
+    and drew the boundary against the docs/reference/artifact-numbering.md that GE-120a-3,
+    GE-120b-4 and GE-120d-5 write (procedure versus lookup are separate surfaces here).
+    Added it_requirements: the quoted wording must be captured by running the check
+    rather than paraphrased, and re-verified after GE-120b-1 lands; the diagram allocator''s
+    invocation differs between this repository and a consumer install, so ''succeeds
+    literally from a clean checkout'' needs both; the taken-identifier listing must
+    include loose namespace-root files. Set test_required false with a rationale.
+    Added documentation_system component and three doc_links. criteria, title, agent,
+    complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -62,3 +104,7 @@ notes: |
   QUOTING THE ACTUAL BLOCK WORDING is deliberate and is the clause most likely to be dropped as
   fussy. It is what prevents the common failure where the guide and the guard describe the same
   situation in two vocabularies and the blocked author cannot tell they are related.
+
+  IT PO SEQUENCING NOTE (2026-08-17): this AC cannot be completed before GE-120b-1, because the
+  wording it must quote does not exist until then. It can be drafted in parallel, but the quote
+  has to be captured from a real run before sign-off.

@@ -3,12 +3,13 @@ title: "Each work item that exists twice is reduced to the one copy that is righ
 component: guardrail-engine
 components:
   - commit_guardian
+  - ticket_lifecycle
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the work-item collection holds five identifiers that each exist as a file in two
@@ -39,15 +40,97 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Its _check_status_folder rule is the criterion for deciding which copy survives: the declared state and the folder must agree. Using the guard's own rule means the repaired collection passes the guard rather than merely looking tidy."
+  - path: tickets/ticket_lifecycle.json
+    relationship: context
+    status: exists
+    relevance: "The allowed-status-per-folder mapping that _check_status_folder reads. The survivor decision must be computed from this data rather than from an assumption about which folder is 'more final'."
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+    relevance: "The lifecycle model and the declared-state-is-authoritative convention the survivor rule rests on."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-numbers-mean-one-thing/GE-120a-2.yaml
+    relationship: context
+    status: exists
+    relevance: "The detection half. Its report supplies the folders and both declared states this repair chooses a survivor from, and its it_requirements record the identifier-rule question that decides whether the five is the whole set."
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The survivor is chosen by computing declared-state-versus-folder agreement from `tickets/ticket_lifecycle.json`, the same data `_check_status_folder` reads — not by a rule of thumb that the completed folder wins. Four of the five will very likely resolve to the completed copy, but that is an outcome to be arrived at per pair, not an assumption to implement; assuming it is precisely how the wrong copy gets deleted."
+  - "THIS IS A DELETION AND IT IS NOT REVERSIBLE FROM THE STORE. Before deleting either copy, diff the two and record the diff on the surviving file. Two copies that have drifted may each hold something the other lacks — sign-off comments, a status history, a comment stream — and the point of the repair is that one identifier means one thing, not that half the record disappears."
+  - "SCOPE IS THE FIVE THE CRITERIA NAME. GE-120a-2's whole-collection pass will also surface `EPIC-MoveOnMainOnly`, which is held by BOTH `tickets/99_done/` and `tickets/99_rejected/` — one identifier in two TERMINAL folders that flatly disagree, with Master_Plan.md and four sub-items duplicated inside. It is not in the five and it is NOT repaired under this AC. Report it and stop; expanding scope silently is the mirror image of the re-expansion GE-120e-3 fails an implementer for."
+  - "Sixteen loose `TICKET-*.md` files sit at `tickets/` root outside any lifecycle folder. They are not twice-held and are out of scope here; do not tidy them while in the area."
+  - "ORDERING: this repair must land before the work-item stage of the uniqueness guard becomes blocking, or every commit is stopped by five pre-existing conditions the author did not create. GE-120e-3 is the check that the ordering worked."
+  - "Use `git mv` / `git rm` so the deletions and moves are tracked; a ticket file removed with a plain filesystem delete loses the history that would let the decision be reviewed. Note that `templates/hooks/check_ticket_no_branch_move.py` blocks `git mv` of ticket files on non-main branches — it is currently registered nowhere, so it will not fire today, but if it is wired during this tree's work this repair collides with it. Perform the repair on a branch with that interaction understood, not discovered."
+  - "Idempotency: re-running the repair over the repaired collection makes no further change."
+test_spec:
+  - name: test_each_of_the_five_identifiers_exists_exactly_once
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "After the repair, each of the five named identifiers is held by exactly one file in the whole work-item collection."
+  - name: test_surviving_copy_folder_agrees_with_its_declared_state
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "For each of the five, the surviving file's lifecycle folder is the one ticket_lifecycle.json permits for the state declared in its own content — the assertion that distinguishes keeping the right copy from merely keeping one."
+  - name: test_divergent_pair_records_the_resolution_and_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Where the two copies declared different states, the surviving file carries the resolution taken and the reason, so no copy was deleted silently."
+  - name: test_no_content_lost_from_the_deleted_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "For any pair whose copies differed beyond their declared state, content present only in the deleted copy and recording later work is present on the survivor."
+  - name: test_work_item_uniqueness_pass_reports_zero_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "GE-120a-2's pass, run unmodified over the repaired collection, reports no identifier held by more than one lifecycle folder."
+  - name: test_references_to_the_five_resolve_to_the_surviving_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Every reference to any of the five identifiers anywhere in the repository resolves to the surviving file and to no other."
+  - name: test_out_of_scope_duplicates_are_untouched
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "EPIC-MoveOnMainOnly is still present in both tickets/99_done/ and tickets/99_rejected/, and the sixteen loose root tickets are unmoved — the repair stayed inside the five, exactly as GE-120e-3 requires of the unnumbered diagrams."
+test_rationale: |
+  Counting files is the obvious test and the coverage note rules it out, because deleting the
+  correct copy also yields one file — so the load-bearing descriptor is the folder-versus-declared-state
+  one, computed from ticket_lifecycle.json rather than from the assumption that the completed
+  folder wins. The no-content-lost descriptor exists because this is an irreversible deletion of
+  records that may each hold sign-off history the other lacks. The out-of-scope descriptor is the
+  same shape as GE-120e-3's negative assertion about the unnumbered diagrams, applied to the
+  duplicates this repair deliberately does not touch: an implementer who tidies EPIC-MoveOnMainOnly
+  while in the area fails rather than quietly widening a scope the user set.
 delivers_to: null
 expects_from:
   ac_id: GE-120a-2
   contract: "The per-identifier multi-location verdict — every holding folder and each copy's declared state — which identifies the five and supplies the evidence for choosing a survivor."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added ticket_lifecycle to components. Added it_requirements: compute the
+    survivor from tickets/ticket_lifecycle.json rather than assuming the completed
+    folder wins; diff the two copies and record the diff before an irreversible deletion;
+    hold scope to the five and REPORT rather than repair the EPIC-MoveOnMainOnly pair
+    that GE-120a-2''s whole-collection pass will surface (held by both 99_done and
+    99_rejected — one identifier in two terminal folders that disagree), and leave
+    the sixteen loose root tickets alone; use git mv/git rm and understand the interaction
+    with check_ticket_no_branch_move.py, which blocks ticket renames on non-main branches
+    and is currently registered nowhere; run-twice idempotency. Added test_spec including
+    an out-of-scope-untouched descriptor mirroring GE-120e-3''s negative assertion,
+    plus test_rationale and three doc_links. criteria, title, agent, complexity and
+    expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -74,3 +157,10 @@ notes: |
   ORDER MATTERS: run this repair BEFORE the work-item stage of the uniqueness guard becomes
   blocking, or every commit is stopped by five pre-existing conditions the author did not create.
   GE-120e-3 is the check that the ordering worked.
+
+  IT PO ADDENDUM (2026-08-17): the BA's five are correct for a TICKET-*.md basename identifier
+  rule, which is the rule GE-120a-2 must now declare explicitly. A whole-collection pass under an
+  epic-qualified rule surfaces one further case — EPIC-MoveOnMainOnly held by both 99_done and
+  99_rejected. It is deliberately NOT added to this repair's scope: widening a user-set repair
+  scope from inside an implementation is the same error as re-expanding the diagram trim, and
+  GE-120e-3 exists to fail exactly that. It is reported instead.

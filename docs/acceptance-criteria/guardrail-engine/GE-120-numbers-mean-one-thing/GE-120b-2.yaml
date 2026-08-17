@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the enrolled diagrams location holds 11 artifacts that carry no sequence number and
@@ -47,15 +47,81 @@ doc_links:
     relationship: context
     status: exists
     relevance: "The 'AC store valid' job records the identical trade-off and its resolution: a whole-collection rule applied to a collection with 57 pre-existing violations 'would fail every contributor on day one and get switched off'. Its answer — scope the ATTRIBUTION to the change set while leaving the rule whole — is the pattern this criterion requires."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-time stage this attribution rule runs at, and the bypass affordance that makes a permanently-red gate self-defeating rather than merely annoying."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "ADD-OR-RENAME MUST BE DETECTED FROM RENAME-AWARE GIT STATUS, not from a name-set difference. `git diff --cached --name-status -M` reports a rename as a single `R<score>` entry with source and destination; without `-M` the same change reads as one delete plus one add, and the criteria's third and fourth cases become indistinguishable. `templates/hooks/check_ticket_no_branch_move.py` already parses exactly this format and is the shape to follow."
+  - "A content-only modification must be classified from the same rename-aware status (`M`), never inferred from the file being present in the diff — an artifact appearing in the diff is precisely the condition the second criterion says must NOT flag."
+  - "The pre-existing population must be DERIVED at run time from the collection minus the change set, never recorded as a hard-coded list of eleven paths or a count constant. A hard-coded list is an allowlist by another name and would fail GE-120e-3's no-known-bad-entries clause; it also silently stops matching as the tree moves."
+  - "The observed-and-not-flagged count must be printed on EVERY run including passing ones, and must be the real count for the tree the check just walked. A count that is only printed on failure makes the exemption invisible on exactly the runs where it is growing."
+  - "This is the same attribution-versus-inspection asymmetry GE-120a-1-i settles for uniqueness, applied in the opposite direction and for a stated reason: enrolment is a property of one artifact with no second party to find, so whole-collection inspection buys nothing and costs a permanently red gate. Implement both from one shared change-set resolution helper so the two rules cannot drift on what counts as added or renamed."
+  - "Must not renumber, rename or move any of the eleven. GE-120e-3 asserts they are unchanged in name and location, and the user's scope trim in GE-120e's notes is binding."
+  - "Error handling per CLAUDE.md Rules 1-4. A git invocation that fails to produce a change set is a cannot-establish condition under GE-120d-3, not an empty change set — treating a failed `git diff` as 'nothing was added' passes every case silently and is the most likely false-green here."
+test_spec:
+  - name: test_untouched_pre_existing_unnumbered_population_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Against a tree that really holds the eleven pre-existing unnumbered artifacts, with a change set touching none of them, the check passes and flags none of the eleven."
+  - name: test_content_modification_without_rename_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Modifying the content of one of the eleven without renaming it still passes and produces no violation for it."
+  - name: test_twelfth_unnumbered_addition_fails_and_names_only_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adding a twelfth unnumbered artifact fails the check and names that artifact and no other — the eleven pre-existing ones must not appear in the finding list."
+  - name: test_rename_of_pre_existing_to_another_unnumbered_name_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Renaming one of the eleven to another unnumbered name fails the check and names it, exercised through a real staged git rename so the R-status path is the one under test."
+  - name: test_exemption_count_printed_on_every_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "All four runs print the number of pre-existing unnumbered artifacts observed and not flagged, and the number equals the population the tree actually holds."
+  - name: test_pre_existing_population_is_derived_not_hard_coded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Against a tree whose unnumbered population differs from eleven, the reported count tracks that tree — proving the exemption is derived from the collection rather than from a constant or an allowlist."
+test_rationale: |
+  Every descriptor runs against a tree that genuinely contains the pre-existing unnumbered
+  population, because the coverage note is explicit that a tree without one cannot distinguish
+  this behaviour from a check that flags everything. The rename descriptor must stage a real git
+  rename rather than simulate one: without `-M` a rename reads as delete-plus-add, and the third
+  and fourth criteria then produce the same verdict for different reasons — the defect is
+  invisible to any test that constructs the change set by hand. The derived-not-hard-coded
+  descriptor is what makes the exemption survive the tree moving, and it is the executable form
+  of GE-120e-3's no-allowlist assertion at this layer.
 delivers_to: null
 expects_from:
   ac_id: GE-120b-1
   contract: "The per-artifact enrolment verdict, which this criterion filters by whether the artifact is new or renamed in the change set."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added it_requirements pinning the mechanism the criteria''s third and fourth
+    cases depend on: add-versus-rename must come from rename-aware `git diff --cached
+    --name-status -M` (without -M a rename reads as delete-plus-add and the two cases
+    become indistinguishable), with templates/hooks/check_ticket_no_branch_move.py
+    as the existing parser precedent; the pre-existing population must be derived
+    per run, never a hard-coded list or count (which would be an allowlist and fail
+    GE-120e-3); the exemption count must print on passing runs; a failed git invocation
+    is a cannot-establish condition, not an empty change set. Added test_spec, test_rationale
+    and a doc_link. criteria, title, agent, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []

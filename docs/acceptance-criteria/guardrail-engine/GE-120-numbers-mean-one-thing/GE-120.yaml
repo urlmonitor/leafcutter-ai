@@ -8,8 +8,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   The number you cite means one thing — and it keeps meaning that one thing.

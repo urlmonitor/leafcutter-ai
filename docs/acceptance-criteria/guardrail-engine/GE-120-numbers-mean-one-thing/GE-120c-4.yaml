@@ -3,12 +3,13 @@ title: "The remediation flow is drawn once per stage, showing who can act at eac
 component: guardrail-engine
 components:
   - commit_guardian
+  - documentation_system
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a reader trying to understand what happens after a numbering clash is detected,
@@ -37,15 +38,54 @@ doc_links:
     relationship: context
     status: exists
     relevance: "The allocator that must be used for this diagram's sequence number. This AC is the tree's own first opportunity to comply with GE-120b rather than add a twelfth unnumbered diagram."
+  - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    relationship: context
+    status: exists
+    relevance: "An existing correctly-numbered c3 sequence diagram in the enrolled location — the shape, level and naming convention to follow."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The hook contract that supplies the stated reason for the asymmetry: only the PostToolUse channel returns output into a live session, so only that stage can reach anything able to act."
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "The sequence number MUST come from `python scripts/next_diagram_seq.py` at authoring time, not from reading the directory and adding one. The allocator encodes never-reusing a retired number, which a max+1 scan does not, and this AC is the tree's own first chance to comply with the rule it is writing."
+  - "The file goes in `docs/architecture/diagrams/` — the location the enrolment rule declares enrolled — at level c3 (an interaction over time), so the name takes the form `c3-NNN-<slug>.md`. A c2 level would place it with the container views and misrepresent what it shows."
+  - "The stated reason for the asymmetry must be the mechanical one, not a policy one: a pre-commit hook is a subprocess and a build job is a container, and neither has a channel back into a live session; only the PostToolUse Edit|Write hook's output is returned into the running agent's context. A reason phrased as a choice invites a future contributor to un-choose it."
+  - "The specialist participant must be absent from the commit-time and build-time flows, not present-and-unused. A greyed-out or unlabelled participant reads as an omission and is what a later contributor 'fixes' by adding the missing arrows."
+  - "`check-mermaid-parent-link` enforces bidirectional links between architecture documents and `check-mermaid-complexity` caps diagram size, both at commit time on `docs/architecture/**`. Add the back-link in `docs/architecture/components/commit-guardian.md` in the same change; a one-directional link fails the gate."
+  - "Must agree with GE-120d-4's component diagram on which stage engages the specialist. The two are drawn from the same arrangement — this one the interaction, that one the structure — and a disagreement between them is a documented contradiction in the architecture surface."
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is a Mermaid diagram; there is no executable
+  behaviour to assert. The mechanically checkable properties are already gated at commit time:
+  check-mermaid-parent-link enforces the bidirectional link this AC's last clause requires, and
+  check-mermaid-complexity caps the diagram. The numbered-and-placed clause is verified by the
+  enrolment check GE-120b-1 builds — this diagram is deliberately the first artifact that gate
+  will see, so a separate test here would only duplicate it.
 delivers_to: null
 expects_from:
   ac_id: GE-120c-1
   contract: "Which stage engages the specialist and which do not, so the diagram states the arrangement that is actually built."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added it_requirements: allocate the sequence number by running scripts/next_diagram_seq.py
+    rather than scanning the directory (the allocator encodes never-reuse, a max+1
+    scan does not); place at docs/architecture/diagrams/ at level c3 as c3-NNN-<slug>.md;
+    state the mechanical reason for the asymmetry (no channel back into a live session
+    from a subprocess or a container) rather than a policy reason; omit the specialist
+    participant entirely from the two non-interactive flows rather than showing it
+    unused; add the back-link in the same change because check-mermaid-parent-link
+    enforces bidirectionality; agree with GE-120d-4. Set test_required false with
+    a rationale naming the commit-time gates that already cover the mechanical clauses.
+    Added documentation_system component and two doc_links. criteria, title, agent,
+    complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -63,3 +103,7 @@ notes: |
   THE NUMBERED-AND-PLACED CLAUSE is deliberate: this tree adds a diagram to the very location
   whose unnumbered population motivated GE-120b. Producing an unnumbered one here would be a
   small but perfect failure.
+
+  IT PO NOTE (2026-08-17): this diagram and GE-120d-4's are the two artifacts in this tree that
+  the enrolment gate will itself inspect. They are the cheapest available end-to-end proof that
+  GE-120b-1 works on a real addition rather than on a fixture, so sequence them after it.

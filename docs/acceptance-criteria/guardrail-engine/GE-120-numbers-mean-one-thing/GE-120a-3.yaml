@@ -3,12 +3,13 @@ title: "The numbering rules for all four namespaces are written down in one plac
 component: guardrail-engine
 components:
   - commit_guardian
+  - documentation_system
 level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a contributor who is about to create a new acceptance criterion, decision record, work
@@ -42,15 +43,56 @@ doc_links:
     relationship: context
     status: exists
     relevance: "The diagram allocator. Its own docstring calls itself 'the canonical source of truth for sequence allocation', but no user-facing document points a contributor to it — which is a large part of why the unnumbered diagram population exists."
+  - path: docs/reference/artifact-numbering.md
+    relationship: modifies
+    status: planned
+    relevance: "IT PO 2026-08-17 — the concrete home for the one document GE-120a-3, GE-120b-4 and GE-120d-5 all write sections of. docs/reference/ is the established surface for lookup-shaped rules, and a new file avoids expanding either single-namespace incumbent into a four-namespace authority."
+  - path: docs/conventions/adr-numbering.md
+    relationship: modifies
+    status: exists
+    relevance: "The existing single-namespace numbering convention. It must be re-pointed at the new four-namespace reference for the shared rule rather than left as a competing statement of it — two documents stating the same rule is the drift this AC exists to prevent."
+  - path: docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+    relationship: context
+    status: exists
+    relevance: "Carries the free-number rule the never-reuse clause must reproduce exactly: a number is free only when it has neither a file nor a citation. Reusing a number that text still cites converts a dangling reference into a confidently wrong one."
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "The document is `docs/reference/artifact-numbering.md` — one new file, three sections written by three ACs (this one the rules, GE-120b-4 the enrolment table, GE-120d-5 the bypass rules). Do not create three documents and do not expand `docs/reference/ac-schema.md` or `docs/conventions/adr-numbering.md` into a four-namespace authority; both are single-namespace documents whose scope would then contradict their own titles."
+  - "`docs/conventions/adr-numbering.md` and `docs/reference/ac-schema.md` must be re-pointed at the new document for the shared one-number-one-artifact rule rather than continuing to state it independently. A rule stated in two documents is a rule that will drift, which is the failure this AC exists to prevent."
+  - "The never-reuse clause must reproduce ADR-029's operative definition rather than a looser paraphrase: a number is free only when it has NEITHER a file NOR a citation. 'No file exists at this number' is the wrong test and converts dangling references into confidently wrong ones."
+  - "Doc frontmatter is mechanically enforced: `check-doc-frontmatter`, `check-description-field` and `check-doc-length` all gate `docs/**/*.md` at commit time, and `transform-doc-index` regenerates `docs/INDEX.md`. Index reachability is satisfied by that regeneration, not by a hand-added link — verify by running build.py and confirming the entry appears."
+  - "The per-namespace 'where the authoritative list of already-claimed numbers lives' must name the real surfaces and must include the loose files, not only the folders: `GE-114-*.yaml`, `GE-115.yaml` and the GE-119 record sit at the namespace root, so a folder-only listing under-reports what is taken and is itself a way to mint a second collision."
+  - "The which-artifact-moves rule per namespace must match the rule the gate's own message emits (GE-120c-2) — the document and the block message are read together by a blocked author, and a divergence between them is worse than either alone."
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is prose; there is no executable behaviour to
+  assert. Verification is the documentation-verifier phase plus the mechanically-enforced
+  frontmatter and index gates (check-doc-frontmatter, check-description-field, check-doc-length,
+  transform-doc-index). The one substantive consistency claim — that the documented
+  which-artifact-moves rule matches the wording the gate emits — is asserted from the code side
+  by GE-120c-2's output tests and by GE-120b-3's quote-the-real-wording requirement, so it does
+  not need a duplicate assertion here.
 delivers_to: null
 expects_from:
   ac_id: GE-120a-1
   contract: "The set of namespaces the uniqueness pass covers and the number shape it recognises per namespace, so the document describes the rule that is actually enforced."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: Named the concrete document path docs/reference/artifact-numbering.md as
+    the single home for the three sections GE-120a-3, GE-120b-4 and GE-120d-5 write,
+    and required the two existing single-namespace documents (docs/conventions/adr-numbering.md,
+    docs/reference/ac-schema.md) to be re-pointed rather than left as competing statements.
+    Added it_requirements for the ADR-029 free-number definition, the mechanically-enforced
+    doc frontmatter and index gates, and the loose-file listing hazard. Set test_required
+    false with a rationale. Added documentation_system component and doc_links. criteria,
+    title, agent and complexity unchanged.
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -69,3 +111,8 @@ notes: |
   expected to carry a number and which are exempt) to this SAME document as its own section,
   rather than creating a competing numbering document. The final clause above exists so the two
   ACs cannot both write the same content.
+
+  IT PO NOTE (2026-08-17): the document is docs/reference/artifact-numbering.md, and it is three
+  sections written by three ACs — this one, GE-120b-4 and GE-120d-5. A partial pre-existing
+  authority already exists for one namespace (docs/conventions/adr-numbering.md); it is
+  re-pointed at the new document, not extended, so the four-namespace rule has exactly one home.
