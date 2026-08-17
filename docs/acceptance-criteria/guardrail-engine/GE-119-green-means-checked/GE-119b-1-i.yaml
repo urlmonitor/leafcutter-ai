@@ -1,0 +1,97 @@
+id: GE-119b-1-i
+title: "A working copy with no deployed layout at all still does not pass silently"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy that exposes neither the deployed layout nor any built layout it
+    could be resolved from, because the package has never been built in that workspace,
+  When the AC-parent-covered-by check is executed there against staged files that violate the
+    parent covered_by rule in 6 places,
+  Then the check either reaches the same blocked verdict as the main checkout, or reports the
+    could-not-check outcome defined by GE-119a-1,
+  And in neither case does it report an ordinary clean pass,
+  And its output names the missing prerequisite in terms the reader can act on — that the
+    workspace has not been built — rather than naming an internal module that failed to
+    import,
+  And which of the two outcomes occurs is a stated, reviewable consequence of the check's
+    recorded cannot-run disposition (GE-119a-2), not an accident of where resolution
+    happened to fail.
+
+  Coverage note: exercise this against a working copy in which the deployed layout genuinely
+  does not exist. Simulating it by deleting one file from an otherwise built layout tests a
+  different condition.
+depends_on:
+  - GE-119b-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "Defines the built workspace this AC's never-built case is the absence of."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Define the bare case precisely: a workspace where 'python scripts/build.py --target-dir .' has never run — no .leafcutter/ directory and no scripts/commit_guardian/ deployed copy, only templates/scripts/commit_guardian/. This is DISTINCT from a built-but-incomplete workspace where the layout exists and one artifact is absent; the classifier must discriminate on the presence of the LAYOUT, not on the absence of whichever single file was looked up first."
+  - "Message wording is a criterion, not polish. It names the actionable cause — the workspace has not been built, and the single command that fixes it ('python scripts/build.py --target-dir <workspace>', or ./build-self.sh in the package's own workspace) — instead of the internal symptom 'ac_parent_id.py not found via package import, script-relative, or project-root walk'."
+  - "Which of the two acceptable outcomes occurs must be READ FROM the recorded cannot-run disposition for check-ac-parent-covered-by (GE-119a-2), not decided by where resolution happened to fail. Two different resolution failures under the same disposition must produce the same outcome; if they do not, the disposition is decoration."
+  - "An ordinary clean pass is FORBIDDEN in this state under either disposition. This is the seam between the two L1s: without this clause an implementer can satisfy GE-119b-1 by making resolution succeed in the linked and buildable cases while leaving the bare case exiting 0 exactly as before, with both parent ACs' letter met."
+  - "Share the cause-detection helper with GE-119d-2-i, which draws the same never-built vs built-but-incomplete line on the set-up side. Two independent classifiers for one distinction will drift."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ then run 'python scripts/build.py --target-dir .'; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ must match afterwards."
+test_spec:
+  - name: test_ge119b1i_never_built_copy_does_not_report_clean_pass
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Working copy with no deployed and no built layout, 6 violating staged files: the result is blocked or could-not-check, never an ordinary clean pass."
+  - name: test_ge119b1i_outcome_follows_the_recorded_disposition
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Which of the two acceptable outcomes occurs changes when the recorded cannot-run disposition changes, and not otherwise."
+  - name: test_ge119b1i_message_names_unbuilt_workspace_not_missing_module
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The output names the unbuilt workspace and the resolving command rather than an internal module import failure."
+test_rationale: "The condition must be a genuinely never-built working copy. Deleting one file from an otherwise built layout exercises the built-but-incomplete case, which this AC exists to distinguish FROM — a test built that way would pass while the never-built path still exits 0. The run must also be out of process so the source tree cannot silently supply the missing prerequisite."
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-2
+  contract: "The recorded cannot-run disposition for this check, which selects between the two acceptable outcomes."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the seam between the two L1s, made explicit. GE-119b removes the REASON a check
+  could not run; GE-119a governs what happens when it still cannot. There is a case that
+  GE-119b cannot fix by resolution alone — a workspace with nothing to resolve TO — and this
+  AC pins that the case falls through to GE-119a rather than through a crack between them.
+
+  Without this AC, an implementer could satisfy GE-119b-1 by making resolution succeed in the
+  linked and buildable cases and leave the bare case exiting 0 exactly as before, with both
+  parent ACs' letter met.
+
+  IT-PO (2026-08-14): the never-built vs built-but-incomplete classifier is shared with
+  GE-119d-2-i, which draws the same line on the set-up side. Build it once.

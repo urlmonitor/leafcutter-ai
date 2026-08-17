@@ -1,0 +1,129 @@
+id: GE-119b-2
+title: "Checks obtain their prerequisites through one shared resolution path, not one private copy each"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the family of checks under the guardrail engine that today each carry their own
+    project-root walk to locate the helpers, configuration, and data files they need,
+  When a check needs to locate any such prerequisite,
+  Then it obtains it from a single shared resolution facility rather than from its own
+    private search,
+  And a check from which the private search has been removed entirely still resolves every
+    prerequisite it declares when executed from a separate working copy — demonstrated by
+    executing that check, not by inspecting it,
+  And every check registered in the hook manifest, executed from a separate working copy,
+    resolves the prerequisites it declares or reports a could-not-check outcome per
+    GE-119a-1; none of them silently reports success,
+  And a newly added check resolves its prerequisites from a separate working copy without
+    contributing any new root-walking logic of its own.
+
+  Coverage note: the load-bearing clauses are the two that begin "executed from a separate
+  working copy" — they are covered by running the checks through the GE-119c-1 harness. A
+  test that counts occurrences of a resolution function name across the check sources
+  measures tidiness, not behaviour, and does not cover this criterion on its own.
+depends_on:
+  - GE-119b
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO verified: this IS the shared facility, already adopted by 27 files in the family. The work is an adoption sweep over the 19 files that still bypass it, not a build."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "hooks_manifest.hooks[] is the authoritative set the criteria mean by 'every check registered in the hook manifest' — 54 entries today."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "SCOPE RESOLVED — THIS IS AN ADOPTION SWEEP, NOT A BUILD. VERIFIED 2026-08-14: templates/scripts/commit_guardian/_resolve_root.py EXISTS and 27 files under templates/scripts/commit_guardian/ already reference it. It is answer (a) to the open question the BA recorded: the shared facility this AC asks for, already present but not universally adopted. Do NOT build a second facility."
+  - "THE UN-MIGRATED SET IS THE ACTUAL WORK, and it is measurable: 19 files under templates/scripts/commit_guardian/ still carry a private _find_project_root / parents[] walk — doc_type_validators.py, diagram_type_validators.py, check_components_integrity.py, check_structural_change.py, transform_doc_index.py, check_mermaid_parent_link.py, check_build_drift.py, check_ac_pattern_refs.py, ensure_precommit_config.py, check_ac_governance.py, check_workflow_meta.py, check_surface_components_e2.py, check_surface_components_e3.py, check_ac_circular_deps.py, check_output_drift.py, check_adr_cross_reference.py, hooks/check_ac_limits.py, and BOTH observed-failing checks: check_ac_parent_covered_by.py and check_ac_schema.py. Derive the working list by scanning, not from this snapshot — the count will move."
+  - "THE FINDING, stated plainly so it is not lost: the facility exists and is widely adopted, and the two hooks that broke are precisely the ones that bypass it. The failure is non-adoption, not absence."
+  - "Migration is REMOVE-THEN-ADOPT, not add-beside. Each migrated check DELETES its private root walk AND its private graceful fail-open fallback (for example check_ac_parent_covered_by.py's _get_derive_parent_id() fallback at ~line 377). A shared facility installed while a private fallback survives changes nothing, because the private path still wins on failure. A duplicated resolution source is a defect the criteria imply but never name."
+  - "If _resolve_root.py does not today cover DATA and CONFIGURATION prerequisites — GE-119b-3 requires a schema document plus a second, different configuration document — EXTEND the existing facility rather than adding a sibling module. One facility is the criterion."
+  - "The authoritative set is templates/scripts/commit_guardian/commit_guardian.json -> hooks_manifest.hooks[], read at run time: 54 entries today (48 tier=judgment, 6 tier=transform). Do NOT hard-code 18 or 54. Two invocation shapes exist — most entries run via run_hook.py, precommit-canary invokes its script directly — and five checks live under templates/scripts/commit_guardian/hooks/. The sweep must handle all of these or report them as gaps, never skip them."
+  - "The no-new-private-walk rule for a newly added check must be DATA-DRIVEN (a scan of the family for private root-walk patterns), never a named-file exemption list, so a new check inherits the rule by existing rather than by being remembered."
+  - "BEHAVIOUR-PRESERVING SWEEP: do not migrate and change behaviour in the same edit. GE-119b-2-i's before/after baseline is only meaningful if this sweep changes nothing in the main checkout."
+  - "ADR-001 deployed/template parity across every migrated file: edit templates/scripts/commit_guardian/ (canonical), then run 'python scripts/build.py --target-dir .' so scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ match. check_hook_parity compares all four locations (runtime, canonical template, legacy templates/commit-guardian, deployed .leafcutter). This AC touches the largest number of files in the tree, so a partial rebuild is the most likely way it half-lands."
+  - "Confirm _resolve_root.py itself is in deploy_map in scripts/build_phases.py and lands at .leafcutter/scripts/commit_guardian/_resolve_root.py after a build. Making 19 more hooks depend on a module that is not deployed converts a silent skip into a ModuleNotFoundError on every commit."
+test_spec:
+  - name: test_ge119b2_migrated_check_resolves_all_prerequisites_from_second_copy
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A check whose private search has been removed entirely still resolves every prerequisite it declares when executed out of process from a separate working copy."
+  - name: test_ge119b2_every_manifest_check_resolves_or_reports_could_not_check
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Sweep over hooks_manifest.hooks[] from a separate working copy: each check either resolves its declared prerequisites or reports could-not-check; none silently reports success."
+  - name: test_ge119b2_no_private_root_walk_remains_in_registered_checks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Data-driven scan of the check family finds no surviving private root-walk or private resolution fallback in any manifest-registered check — the anti-regrowth guard, supplementing the executed clauses."
+  - name: test_ge119b2_new_check_resolves_without_its_own_root_walk
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A newly added check fixture with no root-walking logic of its own resolves its prerequisites through the shared facility."
+test_rationale: "The two load-bearing clauses are the ones that begin executed-from-a-separate-working-copy, so they need the GE-119c-1 harness. The source scan is included deliberately but only as a SUPPLEMENT: counting occurrences of a resolution function name measures tidiness, and on its own would pass on a migration that adopted the facility while leaving the private fallback in place — which is the exact partial fix this AC must prevent. Neither shape substitutes for the other."
+delivers_to:
+  agent: python-coder
+  contract: "One shared prerequisite-resolution facility, consumed by every check and by the set-up path (GE-119d-3)."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by:
+  - GE-119b-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE STRUCTURAL AC. The PO's instruction: treat the shared root-walking pattern as ONE
+  defect with 18 instances, not 18 defects. GE-112, GE-118a-1 and GE-118b are three prior
+  point patches in this same area; a fourth point patch is the failure mode to avoid.
+
+  EVIDENCE LABEL: "18 checks share the _find_project_root / parents[] pattern, many
+  explicitly documented fail-open" is OBSERVED. The criteria deliberately say "every check
+  registered in the hook manifest" rather than hardcoding 18, because the manifest is the
+  authoritative set and the count will move; the 18 figure is the provenance of the finding,
+  not the acceptance threshold.
+
+  OPEN FOR THE IT-PO, do not pre-decide: templates/scripts/commit_guardian/_resolve_root.py
+  already exists in this family. Determine whether it is (a) the shared facility this AC
+  asks for, already present but not universally adopted, or (b) a partial earlier attempt
+  that itself has the defect. The two answers imply very different work — adoption sweep
+  versus build-then-adopt — and the difference is not visible from the AC store.
+
+  SCOPE: this AC removes the REASON a check cannot run. It says nothing about what a check
+  does when it still cannot — that is GE-119a, and GE-119b-1-i pins the seam between them.
+
+  IT-PO ANSWER (2026-08-14): (a) — ADOPTION SWEEP. _resolve_root.py exists and 27 files in
+  the family already reference it; 19 files still carry a private root walk, including both
+  observed-failing checks. The enumerated un-migrated list is in it_requirements. The
+  estimate stays L: 19 files is a large migration even though nothing is being invented.
+  The OBSERVED "18 checks" figure measures at 19 files today; the manifest set is 54
+  entries. Neither number is an acceptance threshold.

@@ -1,0 +1,104 @@
+id: GE-119a-2-i
+title: "A check registered without a cannot-run disposition is named as a gap, never silently defaulted"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a check is added to the registry with no cannot-run disposition recorded,
+  When the guardrail engine validates its own registry,
+  Then it names the newly added check and states that its cannot-run disposition is
+    missing,
+  And it does not assign a disposition on that check's behalf,
+  And the validation result is a failure, not a warning that scrolls past among other
+    output,
+  And the same result is produced whether the registry is validated from the main
+    checkout or from a separate working copy.
+
+  Coverage note: exercise this by adding a disposition-less entry to a registry fixture and
+  running the validation, asserting on the observed failure and the named check. A test
+  that only asserts every current check has a disposition passes forever and catches
+  nothing on the day check nineteen is added.
+depends_on:
+  - GE-119a-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_hook_parity.py
+    relationship: related
+    status: exists
+    relevance: "Candidate enforcement home: its files pattern already matches templates/scripts/commit_guardian/, so it fires on any manifest edit."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "The registry being validated (hooks_manifest.hooks[])."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "ENFORCE ON THE GATE THAT ACTUALLY RUNS. Name every enforcement point and identify which one is load-bearing; a rule added only to an inert validator is a no-op. Verified candidate: check_hook_parity (manifest id check-hook-parity) already has files patterns covering scripts/commit_guardian/, templates/scripts/commit_guardian/ and templates/commit-guardian/, so it fires on any edit to the manifest. If the disposition rule is placed elsewhere, state in the implementation notes which gate was chosen, that it fires on a manifest-only commit, and why."
+  - "The expected set is derived from hooks_manifest.hooks[] itself, never from a hand-maintained list of check ids — the same rule as GE-119c-3, and the reason both ACs exist."
+  - "The failure is a HARD failure (non-zero) naming the offending check id. A warning line among other output does not satisfy the criterion; coverage that only warns decays one addition at a time."
+  - "No disposition may be assigned on the check's behalf anywhere in the path — not in the validator, not in the reader (see GE-119a-2's no-default rule). Absence is an error state."
+  - "FIXTURE-DRIVEN, not store-driven: the test adds a disposition-less entry to a MANIFEST FIXTURE. A test asserting that all 54 current hooks have a disposition passes forever and catches nothing on the day check 55 is added, which is the day this AC exists for."
+  - "The registry validator is itself a check and therefore subject to GE-119b: it must produce the same result from a separate working copy. Cover that through the GE-119c-1 harness, not with an in-process import — a validator that cannot read the manifest from a worktree and passes anyway is the same bug one level up."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ then run 'python scripts/build.py --target-dir .'; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ must match afterwards."
+test_spec:
+  - name: test_ge119a2i_missing_disposition_named_and_validation_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A manifest fixture entry with no cannot-run disposition: the validation names that check id and returns a failure."
+  - name: test_ge119a2i_no_disposition_assigned_on_the_checks_behalf
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The disposition-less entry is not silently given a value by the validator or the read path."
+  - name: test_ge119a2i_result_is_a_failure_not_a_warning
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The validation exits non-zero rather than emitting a warning among other output."
+  - name: test_ge119a2i_same_result_from_a_separate_working_copy
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The registry validation produces the identical result when executed out of process from a second working copy."
+test_rationale: "Two distinct traps. First, a test asserting the current manifest is fully covered passes forever and cannot fail on the day a new check omits the field — so the fixture must contain the omission. Second, the validator is itself a check subject to the layout defect this tree closes, so the last criterion clause needs out-of-process execution from a real second copy rather than an in-process call."
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-2
+  contract: "The registry field that records each check's cannot-run disposition."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: internal
+notes: |
+  The anti-regression clause for GE-119a-2. Without it, the disposition field is a
+  convention rather than a rule, and check nineteen inherits the silent-pass behaviour by
+  omission — which is precisely how the current family of 18 arrived at the same defect
+  independently.
+
+  Note the last clause: the registry validation is itself a check, so it is subject to the
+  parity requirement of GE-119b. A registry validator that cannot read the registry from a
+  worktree and passes anyway would be the same bug one level up.
+
+  IT-PO (2026-08-14): check_hook_parity is the verified candidate enforcement home — its
+  files patterns already fire on manifest edits. See it_requirements for the
+  enforce-on-the-live-gate rule.

@@ -1,0 +1,109 @@
+id: GE-119c-2
+title: "The harness is shown to fail against the behaviour that was actually observed"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the harness case for the AC-parent-covered-by check,
+  When it is run against the behaviour observed before this feature — the check exiting
+    successfully after printing "cannot import derive_parent_id: ac_parent_id.py not found via
+    package import, script-relative, or project-root walk.; skipping check (fail-open)" from a
+    working copy without the deployed layout,
+  Then the harness case fails,
+  And when it is run against the corrected behaviour, it passes,
+  And the failing result is captured and recorded before the corrected behaviour is
+    implemented, so the harness is demonstrated capable of catching the defect rather than
+    assumed to be,
+  And the same red-then-green evidence exists for the AC-schema degradation case of GE-119b-3,
+  And a harness case for which no failing result was ever observed is reported as unproven
+    rather than counted as coverage.
+
+  Coverage note: the recorded red result is the deliverable here, not a passing test. A green
+  harness proves the harness runs; only the red result proves it constrains anything.
+depends_on:
+  - GE-119c
+  - GE-119c-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: context
+    status: exists
+    relevance: "TDD Order — a suite already green before the implementation phase is an ordering violation, not a pass."
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: context
+    status: exists
+    relevance: "The repo-level red-before-green rule this AC operationalises for verification apparatus."
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "THE DELIVERABLE IS THE RECORDED RED RESULT, not a passing test. Capture it as a durable artifact — the harness's own output, together with the commit SHA of the pre-fix tree — BEFORE any GE-119b implementation begins, and reference it from this AC's sign-off. A green harness proves the harness runs; only the red result proves it constrains anything."
+  - "TWO RED BASELINES ARE REQUIRED, not one: (a) check_ac_parent_covered_by exiting 0 after printing the cannot-import-derive_parent_id fail-open line from a copy without the deployed layout; (b) the check_ac_schema degradation to manual field validation, which is GE-119b-3's case. One red result does not license the other case."
+  - "SEQUENCING IS THE SUBSTANCE OF THIS AC: GE-119c-1 and this AC land FIRST, red is recorded, THEN GE-119b is implemented. If the harness is written after the fix, or by the same agent in the same pass, the evidence is worth much less. Per CLAUDE.md 'TDD Order — test-writer Must Precede python-coder', a harness found already green before the coder phase is an ORDERING VIOLATION to be documented, not a pass."
+  - "A harness case with no observed red result must be REPORTED AS UNPROVEN — a distinct, machine-readable state, not an ordinary green. Reuse the shared outcome vocabulary from GE-119a-1 rather than inventing a second three-state model for the test layer; this is the same distinction GE-119a draws for the checks themselves."
+  - "The pre-fix behaviour must be reproduced from the REAL pre-fix code at a real commit, never from a hand-written stub that imitates it. A stub reproduces the author's belief about the defect, which is how this defect class survived a full suite of passing tests for its entire life."
+  - "This AC's own value is destroyed if it is scheduled after GE-119b. Record the ordering constraint wherever the build sequencer reads it, not only here."
+test_spec:
+  - name: test_ge119c2_parent_covered_by_case_fails_against_prefix_behaviour
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Run against the real pre-fix code at its commit, the AC-parent-covered-by harness case FAILS."
+  - name: test_ge119c2_parent_covered_by_case_passes_against_corrected_behaviour
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The same harness case passes once the corrected behaviour is in place."
+  - name: test_ge119c2_schema_degradation_case_has_recorded_red_and_green
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The AC-schema degradation case of GE-119b-3 has both a recorded red result and a passing green result."
+  - name: test_ge119c2_case_without_observed_red_is_reported_as_unproven
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A harness case for which no failing result was ever observed is reported in the unproven state, distinguishable from an ordinary green."
+test_rationale: "This AC exists because the GE-119 defect class was invisible to a full suite of passing tests for its entire life: the suite was green and the checks were not running. A test that only asserts the harness passes today would repeat that outcome exactly. The evidence is therefore procedural — a red result captured against the real pre-fix code before the fix exists — and the unproven-state assertion is what stops an un-reddened case from being silently counted as coverage."
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "Out-of-process execution of a deployed check from a second working copy."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  This AC exists because the GE-119 defect class was invisible to a full suite of passing
+  tests for its entire life. The suite was green and the checks were not running. Repeating
+  that outcome with a new harness is the single most likely way this tree fails while
+  appearing to succeed.
+
+  The repo rule this operationalises: "If test-writer runs and finds the target suite already
+  green, that is a TDD-order violation, not a pass." Here the rule needs its own AC because
+  the subject under test is verification apparatus, where the temptation to write the harness
+  after the fix is strongest and the loss is greatest.
+
+  The last clause is the enforcement edge — it makes an unproven harness case a reportable
+  state rather than an indistinguishable green one, which is the same distinction GE-119a
+  draws for the checks themselves.
+
+  IT-PO (2026-08-14): the unproven state must reuse the GE-119a-1 outcome vocabulary rather
+  than being a second three-state model. The red baseline artifact must carry the pre-fix
+  commit SHA so it can be re-verified rather than trusted.

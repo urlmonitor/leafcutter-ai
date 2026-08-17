@@ -1,0 +1,147 @@
+id: ACS-1200a-1
+components:
+  - ac_store
+  - commit_guardian
+title: "A parked tree is marked by a field its author sets on purpose, never by an empty child list"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given an AC YAML record KM-200.yaml at readiness: draft whose covered_by is an
+    empty list, and which carries the two fields parked: true and
+    parked_reason: "captured as an outline; not decomposed yet",
+  When the AC schema validator is executed as a process against that file,
+  Then it exits 0 and reports the record as valid,
+  And the same record with parked: true and parked_reason absent exits non-zero
+    with a message naming KM-200, the field parked_reason, and the rule that a
+    parked record must state its reason,
+  And the same record with parked: true and parked_reason set to the empty
+    string "" exits non-zero with that same message,
+  And a record carrying neither field validates exactly as it did before this
+    change, so both fields are optional for every record that is not parked,
+  And both fields are read from the AC record itself: no separate registry,
+    ignore-list, allow-list, or configuration file is consulted to learn that
+    KM-200 is parked, so a reader of the record can see the state and the stated
+    reason without opening a second file,
+  And a record whose covered_by is empty and which carries no parked field is
+    reported by the validator as NOT parked, so the absence of children is never
+    by itself the signal.
+depends_on:
+  - ACS-1200a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "The field table this criterion adds parked and parked_reason to. ACS-1200a-3 amends the prose that currently states the back-link rule is unconditional."
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The real record this criterion is written against — a childless L0 at readiness draft whose covered_by is deliberately empty."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Source-vs-deployed boundary. A shared marker-reading helper must exist in the source tree AND be deployed by build.py, or the deployed validators never see it."
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes the AC record as the authoritative backlog object — the reason the marker lives on the record rather than in a side registry."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The field pair enters the store schema at config/ac_store_schema.json, whose top-level object sets additionalProperties: false (line 15). BOTH parked and parked_reason must be declared in the top-level properties block; declaring one without the other rejects every record that carries the pair."
+  - "Both fields must be optional at the schema level (absent from any required list) so that every record already in the store validates identically before and after. The conditional rule — parked_reason present and non-empty whenever parked is true — is the only new way a record may fail."
+  - "Two validator entry points read that one schema file and both must return the same verdict: the standalone scripts/ac_store/validate_ac_schema.py (load_ac_store_schema(), _SCHEMA_REL at line 48) and the commit-time templates/scripts/commit_guardian/check_ac_schema.py (SCHEMA_PATH at line 90). Leaving either behind means the store and the commit gate disagree about what is valid."
+  - "Enforce on the gate that actually runs when the authoritative one degrades. check_ac_schema.py runs validate_manually() from templates/scripts/commit_guardian/_ac_schema_validators.py only as a fallback when jsonschema, PyYAML or the schema file are unavailable (its DECISION HISTORY, GE-112, lines 33-37). validate_manually() today checks REQUIRED_FIELDS presence only (_ac_schema_validators.py:44), so in the degraded path a parked: true record with an empty parked_reason passes silently. The degraded path must reach the same parked verdict as the schema path, or the rule holds only while the environment is healthy."
+  - "The marker must be read from the AC record by ONE shared reader that every consumer uses — the back-link hook, the orphan scan, the buildable-work scan, both validators — rather than re-implemented per surface. A duplicated predicate is what lets the surfaces disagree, which is the inconsistency ACS-1200b exists to remove."
+  - "DEPLOYMENT (ADR-001, and the CLAUDE.md rule 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'): templates/scripts/commit_guardian/ deploys by directory walk (build_commit_guardian, scripts/build_phases.py:1298) so a new module there ships automatically, but scripts/ac_store/ deploys through an explicit eight-entry deploy_map (scripts/build_phases.py:794-806). A shared helper added under scripts/ac_store/ and NOT added to that deploy_map is absent from the deployed .leafcutter/ layout — the exact condition that leaves ac_parent_id.py undeployed today and forced the fail-open _get_derive_parent_id() fallback in check_ac_parent_covered_by.py. Any new module must be added to deploy_map and proven present after python3 scripts/build.py."
+  - "Validation evidence must be produced with explicit file-path arguments: python3 scripts/ac_store/validate_ac_schema.py <paths>. A directory argument silently no-ops and exits 0, so a green run over a directory is not evidence."
+test_spec:
+  - name: test_parked_record_with_reason_validates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The validator executed as a process against a draft record with empty covered_by, parked: true and a non-empty parked_reason exits 0 and reports the record valid."
+  - name: test_parked_without_reason_rejected_naming_field_and_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The same record with parked_reason absent exits non-zero and the message names the record id, the field parked_reason, and the rule that a parked record must state its reason."
+  - name: test_parked_with_empty_reason_rejected_with_same_message
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "parked_reason set to the empty string produces the same non-zero verdict and the same message as the absent case."
+  - name: test_unmarked_records_validate_exactly_as_before
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A corpus of existing store records carrying neither field yields an identical verdict set before and after the schema change — both fields are optional for every non-parked record."
+  - name: test_parked_state_read_from_record_not_from_side_registry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With no allow-list, ignore-list or additional config file present, the validator still recognises the record as parked — the state is read from the record itself."
+  - name: test_empty_covered_by_without_marker_reported_not_parked
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A record with an empty covered_by and no parked field is reported as NOT parked, so absence of children is never by itself the signal."
+  - name: test_degraded_manual_validation_still_enforces_parked_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With jsonschema unavailable so validate_manually() is the executing gate, a parked record with an empty parked_reason is still rejected — the fallback is not a silent hole."
+  - name: test_shared_marker_helper_present_in_deployed_layout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    description: "After build.py runs, every module the marker predicate depends on resolves from the deployed .leafcutter/ layout — no ModuleNotFoundError and no fail-open fallback taken."
+delivers_to:
+  agent: python-coder
+  contract: "The parked / parked_reason field pair and its validity rule, consumed by the back-link check (ACS-1200a-2) and by every health surface enumerated in ACS-1200b-1."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  RECOGNITION, NOT SUPPRESSION — this is the AC where that constraint becomes
+  mechanical. The exemption granted in ACS-1200a-2 keys off this positive field,
+  never off "covered_by is empty". The final clause is the load-bearing one: a
+  childless record with no marker is reported as not-parked, which is what keeps
+  a genuinely half-broken tree distinguishable from a deliberately parked one.
+  The matching negative — that such a tree is still blocked and still reported —
+  is ACS-1200c-3, deliberately placed under the enforcement L1 so the guarantee
+  cannot be dropped by relaxing this one.
+
+  WHY A REASON IS REQUIRED, not just a boolean: the PO's constraint is that the
+  signal be something an author sets ON PURPOSE and a reader can SEE. A bare
+  boolean can be pasted in reflexively; a required non-empty reason makes the
+  act deliberate and makes the decision legible later. It also gives ACS-1200d
+  something to show at the un-park decision.
+
+  DELIBERATELY NOT INCLUDED: any duration or population field (parked_since, a
+  count of parked trees, an age threshold). Reporting how many trees are parked
+  and for how long is KM-200c's remit; this tree defines and enforces the state
+  only. KM-200c is itself parked, so nothing here depends on it.
+
+  IT-PO ENRICHMENT (2026-08-14). Complexity raised S -> M: the field pair is not
+  a one-file schema addition. It lands in config/ac_store_schema.json AND must be
+  honoured by two validator entry points AND by the degraded manual-validation
+  fallback, and the shared marker reader it introduces is subject to the
+  scripts/ac_store/ deploy_map constraint. That is three to four files plus a
+  build-manifest edit.

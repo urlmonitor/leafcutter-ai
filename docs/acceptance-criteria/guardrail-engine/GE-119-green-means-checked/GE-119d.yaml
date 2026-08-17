@@ -1,0 +1,59 @@
+id: GE-119d
+title: "A new working copy arrives with its protection switched on"
+component: guardrail-engine
+components:
+  - worktree_manager
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Set-up finishes your protection, or tells you exactly what it could not do.
+
+  When a fresh working copy is prepared for you, the checks are fully in place
+  — and if any part of that cannot be established, set-up names the missing
+  part instead of carrying on quietly and handing you an unprotected copy.
+depends_on:
+  - GE-119
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119d-1
+  - GE-119d-2
+  - GE-119d-3
+  - GE-119d-4
+  - GE-119d-5
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The same degrade-quietly reflex, one layer up — in the code that PREPARES a
+  working copy rather than in the checks themselves. Included as its own L1
+  because the surface is different (the set-up path, not the check family), so
+  fixing GE-119a/b would leave it standing.
+
+  OBSERVED: setup_ticket_worktree.py create-ac-worktree warned that
+  verify_precommit_active.py and install_pre_commit_shims.py were "not found ...
+  graceful no-op" while creating the very working copy this tree was authored
+  in. A set-up step named "verify protection is active" that no-ops when it
+  cannot find itself is the worst case of the whole goal: the one check whose
+  job is to catch this failure is itself subject to it.
+
+  BA LATITUDE: if decomposition shows the set-up no-op and the check-side
+  resolution failure are literally the same root cause, this L1 may be folded
+  into GE-119b — but say so explicitly rather than dropping it. Do not fold it
+  on the assumption alone; the two live in different scripts today.

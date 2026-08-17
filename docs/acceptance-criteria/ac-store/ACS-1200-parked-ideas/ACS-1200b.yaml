@@ -1,0 +1,61 @@
+id: ACS-1200b
+title: "Parked ideas stop showing up as problems to fix"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+criteria: |
+  Health reports count a parked idea as parked, not as something broken.
+
+  Every surface that reports on the health of the requirement store agrees with
+  the commit-time rule, so a deliberate decision never lands in a list of
+  defects for someone to "fix" by undoing it.
+depends_on:
+  - ACS-1200
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: "Consistency fix to existing health reports — the state and its rules are documented once under ACS-1200a; no new user-facing surface is introduced here."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1200b-1
+  - ACS-1200b-2
+  - ACS-1200b-3
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The consistency L1. Known surface: scan_ac_orphans.py, which reports the six
+  KM-200 children as orphans. The BA should ENUMERATE the readers rather than
+  fixing only the one named here — any surface that infers breakage from a
+  missing parent-child link has the same blind spot, and a single unpatched
+  reader is enough to keep sending people to "repair" a parked tree.
+
+  NOT IN SCOPE — the pre-existing backlog. The same scan reports 60 orphans
+  store-wide, of which 54 pre-date this convention. Those are a real hygiene
+  problem and must NOT be swept up by this exemption; granting the exemption and
+  cleaning up genuine orphans are separate pieces of work. If anything, the point
+  of this L1 is that after it lands the remaining orphan count MEANS something
+  again.
+
+  BA DECOMPOSITION (2026-08-14). The enumeration is made executable rather than
+  documentary in ACS-1200b-1: a list the tests read, reconciled against the
+  surfaces actually discovered to read covered_by or derive a parent id, so a
+  reader added later cannot join silently. ACS-1200b-2 pins the orphan scan
+  specifically and — against the cheap "filter it out" implementation — requires
+  the parked tree to remain VISIBLE in its own report section. ACS-1200b-3 holds
+  the 54-orphan boundary by a record-by-record before/after comparison rather
+  than a totals check. No AC in this branch counts or ages parked trees; that
+  remains KM-200c's remit, and nothing here depends on KM-200c.

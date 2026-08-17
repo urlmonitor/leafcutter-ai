@@ -1,0 +1,100 @@
+id: GE-119c-1-i
+title: "The harness reports its own setup failure instead of passing vacuously"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the harness cannot complete the creation of its separate working copy — for example
+    the copy is created but the deployed layout it needs was never built,
+  When the harness runs,
+  Then it states that no check was exercised and names the setup step that did not complete,
+  And it reports a failure rather than reporting that every check passed,
+  And a run in which zero checks were exercised is never reported as a successful sweep, even
+    when no assertion failed,
+  And the count of checks actually exercised appears in the harness output, so a reader can
+    see that the number is not zero without reading the assertions.
+
+  Coverage note: exercise this by running the harness against a deliberately incomplete setup
+  and asserting on the observed failure and message. This case must be run, not reasoned
+  about — the whole point is that the vacuous path produces no failing assertion of its own.
+depends_on:
+  - GE-119c-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: context
+    status: exists
+    relevance: "The green-sweep-over-nothing failure mode this AC interlocks against, documented at component level."
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "VACUOUS SUCCESS IS THE TARGET STATE. Zero checks exercised with zero failing assertions must be a FAILURE. Assert on the exercised COUNT, not on the absence of assertion failures — the whole defect is that the vacuous path produces no failing assertion of its own, so a test that waits for one will never fire."
+  - "The exercised-check count must appear in the harness output on EVERY run, including successful ones. A hard failure catches a harness that breaks loudly; the printed count catches a harness that silently narrows its own subject list, which is the slower and more common decay. Compare the count against the manifest set (GE-119c-3) rather than against a constant."
+  - "The setup step that did not complete must be named SPECIFICALLY — for example 'build.py did not produce .leafcutter/scripts/commit_guardian in <copy>' — not reported as a generic setup error. A generic message sends the reader to the wrong layer."
+  - "Exercise this against a DELIBERATELY INCOMPLETE SETUP: a second copy created but never built. Do not simulate it by stubbing the harness's own counter or by raising a synthetic exception — a stub reproduces the author's belief about how setup half-fails, and a harness that stands up infrastructure has far more ways to half-fail than a check does."
+  - "PRECEDENT TO ENCODE, not merely to remember: this project has shipped this exact shape twice. fast-lane-build.js passed its grep-only structural tests while never executing its red/green gates, and the phantom-done files_touched hook passed its unit tests while being a no-op on every real ticket. Both were green sweeps over nothing. The interlock must be mechanical."
+  - "The harness is itself subject to GE-119a: a harness that cannot run reports a could-not-check outcome, distinguishable from a clean sweep. Reuse the shared outcome vocabulary rather than inventing a second one for the test layer."
+test_spec:
+  - name: test_ge119c1i_incomplete_setup_reports_failure_not_all_passed
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Harness run against a second copy that was created but never built: it reports a failure rather than reporting that every check passed."
+  - name: test_ge119c1i_names_the_setup_step_that_did_not_complete
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The failure message names the specific setup step and artifact that did not complete."
+  - name: test_ge119c1i_zero_exercised_checks_is_never_a_successful_sweep
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A run in which zero checks were exercised is a failure even though no assertion failed."
+  - name: test_ge119c1i_exercised_check_count_present_in_output
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The count of checks actually exercised appears in the harness output on every run, and is compared against the manifest set."
+test_rationale: "The vacuous path produces no failing assertion, so the only thing that can detect it is a positive assertion on the exercised count — reasoning about the code cannot substitute, and neither can a stubbed counter, because the failure modes of real infrastructure setup are what is being caught. The setup must therefore be genuinely incomplete, not simulated."
+delivers_to: null
+expects_from:
+  ac_id: GE-119c-1
+  contract: "The harness's per-check execution loop and its reported exercised-check count."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE HARNESS IS ITSELF SUBJECT TO GE-119a. A verification surface built to catch "reported
+  success without checking anything" that can itself report success without checking anything
+  is the same defect one level up — and it is the most likely place for it to recur, because
+  a harness that stands up infrastructure has far more ways to half-fail than a check does.
+
+  The project has already been bitten by exactly this shape: a green sweep over zero real
+  subjects. The fast-lane runner passed its structural tests while never executing its
+  red/green gates, and the phantom-done hook passed its unit tests while being a no-op on
+  every real ticket. Both were green sweeps over nothing. This AC is the interlock.
+
+  The exercised-count clause matters more than it looks. A failure assertion catches a harness
+  that breaks loudly; the reported count catches a harness that silently narrows its own
+  subject list — the slower and more common decay.
+
+  IT-PO (2026-08-14): the exercised count must be compared against the manifest set from
+  GE-119c-3, not against a constant, or the count itself becomes a number nobody checks.

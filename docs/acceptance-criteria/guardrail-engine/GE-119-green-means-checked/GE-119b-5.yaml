@@ -1,0 +1,104 @@
+id: GE-119b-5
+title: "The manual link-the-layout workaround is deleted, not left standing beside the fix"
+component: guardrail-engine
+components:
+  - documentation_system
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the project's pre-drive instructions currently direct the reader to link the deployed
+    layout into a fresh working copy by hand, and warn that all package checks are otherwise
+    silently skipped for the entire drive,
+  When the parity behaviour of GE-119b-1 through GE-119b-4 is in place,
+  Then that manual instruction is removed from the pre-drive instructions rather than left in
+    place alongside the fix,
+  And the how-to states instead what a reader should now expect — that the checks reach the
+    same verdict from any working copy — and gives the one command that confirms it for the
+    copy in front of them,
+  And no remaining instruction anywhere in the documentation set tells a reader to create the
+    layout link by hand as a prerequisite for the checks to run,
+  And the related latent-hazard note about a suppression file resolving through the layout
+    link is either removed with it or rewritten to describe the behaviour that now holds,
+  And the removal is verified by searching the documentation set for the instruction and
+    finding no surviving occurrence.
+depends_on:
+  - GE-119b
+  - GE-119b-4
+doc_links:
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "Pre-Drive Checklist -> 'Worktree pre-commit config (MANDATORY)' is the manual workaround to delete."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/verify-precommit-active.md
+    relationship: related
+    status: exists
+    relevance: "Existing home for the confirm command the replacement text points at; keep it consistent with GE-119d-5."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "THE INSTRUCTION TO DELETE is CLAUDE.md -> 'Pre-Drive Checklist' -> 'Worktree pre-commit config (MANDATORY for worktree-based drives)', including its Option A symlink recipe and its Option B copy recipe for NTFS/WSL2. Delete the section, do not soften it."
+  - "The LATENT HAZARD paragraph in that same section — .security-allowlist resolving via the .leafcutter symlink target rather than the worktree root, with the dual-update rule — must be removed with it or rewritten to describe the behaviour that now holds. Leaving it orphaned re-teaches the workaround by implication, because a reader cannot follow a suppression rule about a link they were never told to create."
+  - "SWEEP THE WHOLE DOCUMENTATION SET, not just the two named files: docs/how-to/managing-pre-commit-hooks.md, docs/how-to/verify-precommit-active.md, docs/how-to/drive-epic-manually.md, BOOTSTRAP.md, SETUP.md, and any templates/ copy of these. The criterion is NO SURVIVING OCCURRENCE anywhere. Verify by an explicit repo-wide search and record the command and its empty result in the sign-off."
+  - "The replacement text states the guarantee (the checks reach the same verdict from any working copy) and gives ONE confirm command. Use the SAME command GE-119d-5 documents — docs/how-to/verify-precommit-active.md and templates/scripts/commit_guardian/verify_precommit_active.py already exist and are the natural home — so the two how-to edits agree rather than offering a reader two different commands."
+  - "ORDERING — HARD CONSTRAINT: this AC lands only after GE-119b-4 demonstrates family-wide parity AND after GE-119d-4 demonstrates it end-to-end on a working copy nobody repaired by hand. Deleting the workaround while the defect is still live removes the only thing protecting drives from it."
+  - "CLAUDE.md and the how-to files are tracked documents subject to check_doc_frontmatter, check_doc_length and check_doc_links; edit in place and keep them passing in the same commit."
+test_spec:
+  - name: test_ge119b5_no_manual_layout_link_instruction_survives
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "Repo-wide scan of the documentation set finds no surviving instruction to create the deployed-layout link by hand as a prerequisite for the checks to run, in any wording including the NTFS copy variant."
+test_rationale: "change_target is docs, and normally that means test_required: false. The exception here is that the final criterion clause IS a textual-absence property — 'no surviving occurrence' — so a search is not a proxy for the behaviour, it is the behaviour. The guard is also the only mechanism that stops GE-119d-5, which edits the same document immediately afterwards, from reintroducing the deleted text; that hazard is named explicitly in both ACs' notes and cannot be enforced by review alone."
+delivers_to: null
+expects_from:
+  ac_id: GE-119b-4
+  contract: "Demonstrated family-wide parity — the precondition that makes the manual instruction obsolete rather than merely inconvenient."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in GE-119b's documentation_triggers. The PO was explicit that
+  this trigger is a REPLACEMENT, not an addition: "that instruction must be deleted rather
+  than left to rot beside the fix."
+
+  Why deletion is the criterion rather than an update: a documented manual workaround for a
+  defect that no longer exists is worse than no documentation. It teaches every future reader
+  that the checks cannot be trusted from a worktree, so they keep applying the workaround, and
+  the day it stops being applied nobody knows whether the resulting behaviour is the fix
+  working or the workaround missing. The store already carries an instance of this rot: the
+  memory note for GE-118a-1 has to say "FIXED at source 2026-08-13 — stop applying the old
+  per-worktree workaround," which is only necessary because the workaround outlived its cause.
+
+  ORDERING: this AC must land AFTER GE-119b-4 demonstrates parity, never before. Deleting the
+  workaround while the defect is still live removes the only thing protecting drives from it.
+
+  DISTINCT FROM GE-119d-5, which is also a how-to AC on the same document. This one REMOVES
+  the obsolete manual step for the check family; GE-119d-5 ADDS what a prepared working copy
+  now guarantees and how to confirm it. Sequence d-5 after b-5 so the two edits do not
+  reintroduce each other's text.
+
+  IT-PO (2026-08-14): ordering tightened to also require GE-119d-4 (the end-to-end
+  no-manual-repair proof) before deletion, per GE-119d-4's own closing note. Named the exact
+  CLAUDE.md section, the orphaned .security-allowlist hazard paragraph, and the wider sweep
+  set. Added a single mechanical absence guard as test_spec — see test_rationale for why this
+  docs AC is not test_required: false.

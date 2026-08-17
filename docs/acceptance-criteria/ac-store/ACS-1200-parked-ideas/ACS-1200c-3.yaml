@@ -1,0 +1,102 @@
+id: ACS-1200c-3
+components:
+  - ac_store
+  - commit_guardian
+title: "A childless tree with no marker is still caught, because absence is not a decision"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml
+criteria: |
+  Given a tree with the exact shape of a parked stub except for the marker: a
+    root record at readiness: draft whose covered_by is an empty list, and two
+    child records that it does not list, with no record in the tree carrying
+    parked or parked_reason,
+  And all three files staged for commit,
+  When the parent-back-link check is executed as a process against that staged
+    set,
+  Then the process exits non-zero and reports a violation for each of the two
+    children, naming each child and the root as its parent,
+  And when the store-wide orphan scan is executed over a store containing that
+    tree, both children are reported as orphans and the root is absent from the
+    parked section,
+  And neither surface treats an empty covered_by, a readiness of draft, a
+    childless root, or any combination of the three as evidence of a deliberate
+    decision,
+  And adding the marker to the root — and nothing else — flips both verdicts,
+    which is the only difference between this tree and a parked one.
+depends_on:
+  - ACS-1200c
+  - ACS-1200a-2
+  - ACS-1200b-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the positive marker whose presence is the sole difference between this tree and an exempt one."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The exemption predicate must read the marker field and nothing else. covered_by emptiness, readiness value, level, and child count must not appear in it in any form — not as a guard, not as a short-circuit, not as an optimisation. An implementation that reads them 'only to skip work faster' reintroduces the coupling this AC exists to forbid, and will be caught by the flip assertion only if the shortcut happens to change a verdict."
+  - "Both surfaces must be exercised in the same test against the same tree, because agreement between them IS the criterion: the hook (templates/scripts/commit_guardian/check_ac_parent_covered_by.py, run from the deployed path) and the store scan (scripts/ac_store/scan_ac_orphans.py). A commit that blocks while the health report shows the tree as parked is the inconsistency ACS-1200b was written to remove."
+  - "The flip assertion must mutate the marker and nothing else — assert a byte-level diff between the two tree states that touches only the marker lines. Otherwise the flip proves that something changed, not that the marker is the discriminator."
+  - "Both surfaces must be executed as processes with exit codes and outputs asserted; source inspection satisfies neither half."
+test_spec:
+  - name: test_unmarked_childless_tree_blocked_by_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Hook executed as a process over the three staged records exits non-zero and reports one violation per child, naming each child and the root as its parent."
+  - name: test_unmarked_childless_tree_reported_by_orphan_scan
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Orphan scan executed over a store containing the tree reports both children as orphans and does not list the root in the parked section."
+  - name: test_empty_covered_by_and_draft_readiness_are_not_treated_as_a_decision
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Varying covered_by emptiness, readiness draft, and childlessness in every combination, with the marker absent, never produces an exempt verdict on either surface."
+  - name: test_adding_marker_alone_flips_both_verdicts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Adding the marker to the root and changing nothing else flips both surfaces, with a byte-level diff confirming the marker lines are the only difference."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The parked marker, absent here — the criterion is that its absence changes nothing about the verdict"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE recognition-not-suppression test. A half-finished, abandoned or
+  interrupted tree is byte-for-byte indistinguishable from a parked one except
+  for the marker; an exemption keyed off the empty child list would silence
+  every one of them. This AC is what makes that distinction mechanically
+  observable, and the final clause — marker added, nothing else changed, both
+  verdicts flip — is what proves the marker is the actual discriminator rather
+  than an incidental field.
+
+  Placed under ACS-1200c rather than ACS-1200a on purpose: it is the guarantee
+  that must survive any future relaxation of the exemption, so it belongs with
+  the enforcement L1 that exists to prevent exactly that.
+
+  Both surfaces are asserted in one criterion because they must agree; a commit
+  that blocks while the health report shows the tree as parked (or the reverse)
+  is the inconsistency ACS-1200b was written to remove.

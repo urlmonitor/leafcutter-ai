@@ -1,3 +1,14 @@
+---
+title: "ac-store — AC store context"
+description: Cross-agent conventions and standing notes for PO v3 / BA v3 / IT PO v3 authoring
+  and decomposing ACs in the ac-store component (prefix ACS).
+created: '2026-08-14'
+last_updated: '2026-08-14'
+type: tutorial
+status: active
+components:
+  - ac_store
+---
 # ac-store component — PROJECT_CONTEXT
 
 Cross-agent context for PO v3 / BA v3 / IT PO v3 working in the ac-store component.
@@ -75,12 +86,22 @@ THREE NON-OVERLAPPING GOVERNANCE L0s IN ac-store (reuse this map; do NOT cross-w
   genuinely empty quadrant; that emptiness is why it earned a sibling L0 (next free
   hundred = ACS-900; ACS-200/400 are also at/over child cap) rather than an L1 graft.
 
+> **Superseded 2026-08-14 — the map is now FOUR quadrants.** See the ACS-1200 note
+> at the end of this file; ACS-1200 owns the PRE-decomposition (parked) state.
+
 BLOCKING vs FAIL-OPEN distinction (load-bearing — carry into L2/L3 it_requirements):
 the always-block-on-a-REAL-violation posture is a USER-CONFIRMED product decision and
 must NOT be relaxed to warn. SEPARATELY, the standard fail-open-on-INTERNAL-ERROR
 convention still applies (hook crash / parse error / git failure -> exit 0 + stderr
 warning). These are orthogonal: do not let the IT-PO collapse "fail open on script
 bug" into "warn instead of block on violation".
+
+> **Refinement 2026-08-14 (GE-119).** A third case sits between these two and was
+> previously unnamed: a hook that could not RUN AT ALL (its dependency, config, or
+> schema was unreachable) currently takes the fail-open path and reports SUCCESS,
+> making "green" indistinguishable from "did not run". GE-119 governs that case.
+> Fail-open on one bad input while the check still ran remains correct; reporting
+> success for a check that never executed does not.
 
 DECOMPOSITION guidance baked into the L1 split (decompose each into L2; do NOT re-cut
 at L1):
@@ -101,3 +122,78 @@ Agent-assignment line for the IT-PO: all five L1s decompose to .py work in
 scripts/commit_guardian/ (a new check_*.py hook joining the existing check_ac_*.py
 family) plus config wiring in commit_guardian.json => python-coder. No prose/template
 surface here, so unlike ACS-800f there is NO llm-expert child.
+
+## ACS-1200 parked-ideas: framing note for the BA/IT-PO (2026-08-14, PO)
+
+ACS-1200 ("Capture a half-formed idea without bypassing your own safeguards") is
+a NEW root L0 in ac-store, slug folder `ACS-1200-parked-ideas/`, four L1 children
+ACS-1200a..d, origin_agent BrainCandy, readiness draft, priority medium, NO
+roadmap_phase claimed. It makes "deliberately parked, not yet decomposed" a state
+the guardrails recognise, instead of a rule you must skip in order to record an
+idea.
+
+THE GOVERNANCE MAP IS NOW FOUR QUADRANTS (supersedes the three-quadrant map
+above; reuse it, do NOT cross-wire):
+- ACS-200 (automated-verification) = test COVERAGE of LIVE ACs.
+- ACS-400 (ac-governance) = WHO may edit a requirement DEFINITION.
+- ACS-900 (deprecation-hygiene) = code-side lifecycle of a RETIRED AC.
+- ACS-1200 (parked-ideas) = lifecycle state of a PRE-decomposition AC. This was
+  the remaining empty quadrant; that emptiness is what earned a sibling L0 (next
+  free hundred; ACS-400 already carries five L1s, and the ACS-800/ACS-900
+  precedent is to mint a sibling rather than overload).
+
+GE-113 was also considered and rejected: it covers work landing in the WRONG
+PLACE with a clear explanation. Here the work is in the right place and the
+message is already clear — the RULE needs a recognised exception. Correct
+message, wrong verdict. GE-118 was rejected too: dependency resolution, not
+rule correctness.
+
+MOTIVATING EVIDENCE: the KM-200 tree (merged 2026-08-14, PR #433) was authored
+under the cheap-capture convention — L0 + L1 only, parent `covered_by`
+deliberately empty so the tree is visible in the store but structurally outside
+the buildable backlog (`scan_ac_store.py` `_is_leaf` matches only L2/L3).
+`check_ac_parent_covered_by` demanded the back-link on all six children; the
+commit only landed with `SKIP=check-ac-parent-covered-by`. `scan_ac_orphans.py`
+reports the same six as orphans (60 store-wide, 54 pre-existing).
+
+L1 split (decompose each into L2; do NOT re-cut at L1):
+
+- **ACS-1200a** — record a parked idea with nothing skipped. Surface:
+  `check_ac_parent_covered_by.py`. **RECOGNITION, NOT SUPPRESSION**: the
+  exemption must key off a positive, deliberate "this is parked" signal, never
+  off the ABSENCE of children — absence is also exactly what a half-broken tree
+  looks like, and an absence-keyed exemption silences real breakage. What the
+  signal IS (field, readiness value, level+state combination) is an L2 decision.
+  `[reference-doc]` is mandatory: `ac-schema.md` currently documents the
+  back-link protocol as unconditional ("missing links block the commit"), so
+  shipping without amending it leaves the written rule contradicting the
+  enforced one.
+- **ACS-1200b** — the health surfaces agree (`scan_ac_orphans.py`, plus any
+  other reader that infers breakage from a missing link — ENUMERATE them; one
+  unpatched reader keeps sending people to "repair" parked trees). The 54
+  pre-existing orphans are NOT in scope and must not be swept up by the
+  exemption.
+- **ACS-1200c** — enforcement stays full-strength for decomposed trees. The
+  guard-on-the-guard: without it, the cheapest implementation of ACS-1200a
+  (just relax the rule) passes and the safeguard is gone rather than corrected.
+  Its evidence must be in the NEGATIVE — a decomposed tree with a genuinely
+  missing link is STILL blocked after the change.
+- **ACS-1200d** — un-parking is deliberate and visible. Two failure modes:
+  accidental un-parking (a "fix" silently promotes an undecomposed tree into the
+  backlog) and parked-forever.
+
+DO NOT DUPLICATE KM-200c: counting parked vs queued vs authoring-WIP populations
+is KM-200c's remit. ACS-1200 defines and enforces the state; KM-200c reports on
+it. KM-200c is itself parked, so ACS-1200 must not take a dependency on it.
+
+CROSS-COMPONENT SEQUENCING: ACS-1200a and GE-119b (guardrail-engine) touch the
+same file for opposite-direction reasons — ACS-1200a fixes WHICH rule
+`check_ac_parent_covered_by` enforces; GE-119b fixes WHETHER it runs at all in a
+given working copy. Landing GE-119b alone makes the wrong rule fire more
+reliably. Sequence ACS-1200a with or before GE-119b, or ship them together.
+
+ROADMAP FLAG (unresolved, for the user at the final gate): no `roadmap_phase` is
+claimed. Phase 1's exit criteria are about clean installs and build idempotency;
+store-convention health does not advance them. Either a phase claims this tree or
+it stays unphased backlog. No roadmap or vision file was modified while authoring
+it.

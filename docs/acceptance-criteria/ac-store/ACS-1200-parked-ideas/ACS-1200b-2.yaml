@@ -1,0 +1,114 @@
+id: ACS-1200b-2
+components:
+  - ac_store
+title: "The orphan scan reports a parked tree as parked instead of as an orphan, and does not hide it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+criteria: |
+  Given the store contains KM-200.yaml carrying parked: true with the reason
+    "captured as an outline; not decomposed yet" and an empty covered_by,
+  And its six children KM-200a.yaml through KM-200f.yaml,
+  When the store-wide orphan scan is executed as a process over the store,
+  Then none of KM-200a through KM-200f appears in its orphan list,
+  And KM-200 appears in a separate parked section of the same report, naming the
+    six records it holds and the reason recorded on it,
+  And the tree is therefore still visible in the report: a report in which
+    KM-200 and its six children appear nowhere at all does not satisfy this
+    criterion,
+  And the scan's exit status is the same as it is for a store containing no
+    parked tree,
+  And a test that inspects the scan's source for a parked branch does not
+    satisfy this criterion: coverage requires executing the scan and asserting
+    the contents of the two sections of its report.
+depends_on:
+  - ACS-1200b
+  - ACS-1200a-1
+  - ACS-1200b-1
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The six records this scan currently reports as orphans."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Where the store-health scans sit relative to the build queue and the commit gates."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The surface is scripts/ac_store/scan_ac_orphans.py, which IS in the build deploy_map (scripts/build_phases.py:799) so changes to the script itself reach the deployed layout automatically — but any new shared helper it imports does not, and must be added to that deploy_map."
+  - "THIS AC OWNS THE REPORT CLASSIFICATION, and three ACs depend on it. The scan currently emits one verdict category (orphan). By the end of this tree it must emit four distinct states: orphan (broken back-link, no marker); parked (marker on an existing derived parent); approved-with-nothing-under-it (ACS-1200c-4-i); un-parked-but-not-decomposed (ACS-1200d-1-i). Introduce ONE shared classification structure here that the later two ACs extend by adding a state, not four ad-hoc branches bolted on in sequence. A record must fall into exactly one state per run."
+  - "RECOGNITION, NOT SUPPRESSION: filtering parked trees out of the scan's input is explicitly not an acceptable implementation. The parked tree must be classified and rendered, with the parent id, the ids of the records it holds, and the reason string recorded on the parent."
+  - "Exit status must be unchanged by the presence of a parked tree — the scan's status must be a function of the genuinely broken set only. Baseline for calibration: as measured on 2026-08-14 the live scan reports 61 orphans store-wide and exits 1; that number drifts with concurrent authoring and must not be asserted."
+  - "The report must be machine-readable enough for the tests to assert section membership per record id without regex-scraping prose. If the human-readable output stays prose, provide a structured mode (or a stable, documented line format) the tests consume, so the assertions do not break on a wording change."
+  - "Coverage must execute the scan as a process over a store containing the fixture and assert the contents of both sections. Source inspection for a parked branch does not satisfy this criterion — it passes on dead code."
+test_spec:
+  - name: test_children_of_parked_parent_absent_from_orphan_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Scan executed as a process over the store reports none of KM-200a..KM-200f in its orphan list."
+  - name: test_parked_parent_listed_in_parked_section_with_children_and_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "KM-200 appears in a separate parked section naming the six records it holds and the parked_reason recorded on it."
+  - name: test_parked_tree_remains_visible_in_the_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A report in which KM-200 and its six children appear nowhere at all fails — suppression is not an acceptable implementation of the exemption."
+  - name: test_exit_status_unchanged_by_presence_of_parked_tree
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The scan's exit status over a store with a parked tree equals its status over an otherwise identical store with none."
+  - name: test_each_record_classified_into_exactly_one_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "No record appears in more than one report section in a single run — the classification is a partition, which is what lets ACS-1200c-4-i and ACS-1200d-1-i extend it safely."
+delivers_to:
+  agent: python-coder
+  contract: "The orphan scan's report classification — one shared structure with a state per record, extended by ACS-1200c-4-i (approved with nothing under it) and ACS-1200d-1-i (un-parked but not decomposed) rather than re-branched by each."
+expects_from:
+  ac_id: ACS-1200b-1
+  contract: "The enumeration entry for the orphan scan, and the shared marker-reading rule applied to it"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by:
+  - ACS-1200b-2-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  RECOGNITION, NOT SUPPRESSION at the reporting layer. The cheap implementation
+  — filter parked trees out of the scan entirely — satisfies "stops showing up
+  as a problem" while destroying the visibility that makes parking safe. The
+  L0's whole framing is that a parked idea stays VISIBLE in the store and merely
+  sits outside the buildable backlog, so the report must show it, in its own
+  section, with its reason.
+
+  The separate section is also what keeps ACS-1200d's un-park decision possible
+  without borrowing KM-200c's counting remit: it lists the parked trees; it does
+  not tally them or age them.
+
+  IT-PO ENRICHMENT (2026-08-14). A delivers_to contract was added: three ACs in
+  this tree each add a report state to the same scan (this one, ACS-1200c-4-i,
+  ACS-1200d-1-i). Naming the classification as a deliverable here is what stops
+  the scan accumulating four independently-written branches whose states can
+  overlap.

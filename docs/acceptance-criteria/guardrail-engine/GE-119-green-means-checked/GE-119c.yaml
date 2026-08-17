@@ -1,0 +1,62 @@
+id: GE-119c
+title: "The sameness is proven, not assumed"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Proven by running the real checks the way people actually run them.
+
+  The guarantee is backed by exercising the actual checks from a separate
+  working copy, so if the gap ever reopens it is caught immediately instead of
+  discovered months later by someone whose commit was never really checked.
+depends_on:
+  - GE-119
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - component-diagram
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119c-1
+  - GE-119c-2
+  - GE-119c-3
+  - GE-119c-4
+  - GE-119c-5
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The anti-regression L1, and the reason the other three do not quietly come
+  back. Without it, GE-119a and GE-119b are one refactor away from undone.
+
+  WHY THE EXISTING TESTS DO NOT COUNT: today's unit tests for these checks
+  import from the source tree, which is precisely the layout in which the bug
+  does not reproduce. A test that cannot fail on the observed defect is not
+  evidence. This L1 is only satisfied by executing the checks as deployed, from
+  a working copy that does not have the source tree on its path — the "verify
+  behaviorally, not by grep" rule the project already applies to gates and
+  workflows.
+
+  The component-diagram trigger is for the new verification surface itself
+  (a harness / fixture that stands up a separate working copy and runs the real
+  checks against it) — it is a new architectural piece, not a change to an
+  existing one.
+
+  This L1 is what makes the UNVERIFIED "26 schema-violating files looked clean"
+  report checkable. The BA should have it produce that number honestly rather
+  than inheriting it as an assumption.

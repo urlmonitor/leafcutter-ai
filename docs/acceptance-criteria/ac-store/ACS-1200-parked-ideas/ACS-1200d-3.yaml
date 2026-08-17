@@ -1,0 +1,106 @@
+id: ACS-1200d-3
+components:
+  - ac_store
+title: "Parking a tree never adds work to the buildable queue, and un-parking alone does not either"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml
+criteria: |
+  Given the real store, over which the buildable-work scan returns a baseline
+    ready set that contains no KM-200 record — 436 ready records when measured
+    on 2026-08-14,
+  When the parked marker and a reason are added to KM-200.yaml and the scan is
+    executed again as a process over the same store,
+  Then the ready set it returns is identical to the baseline, record for record,
+    so marking a tree parked adds nothing to the queue and removes nothing from
+    it,
+  And when KM-200 is un-parked per ACS-1200d-1 while no record below the feature
+    level has been authored under it, the scan still returns no KM-200 record,
+  And once a record at level L2 exists under KM-200 and reaches readiness
+    approved, that record — and only that record — appears in the ready set,
+  And each of the three states is measured by executing the scan and comparing
+    the returned sets, not by inspecting its source.
+depends_on:
+  - ACS-1200d
+  - ACS-1200a-1
+  - ACS-1200d-1
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "Verified 2026-08-14: a store scan returned 436 ready records with zero KM-200 records among them, which is the baseline this criterion holds constant."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+    relevance: "The buildable-work scan IS the backlog under this ADR, which is why what does and does not enter its ready set is a contract rather than an implementation detail."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The surface is scripts/ac_store/scan_ac_store.py, which is in the build deploy_map (scripts/build_phases.py:795). Verified behaviour to pin, not to re-derive: _is_leaf at line 145 matches only L2/L3, and _is_approved at line 189 requires the literal string 'approved'. Those two predicates are why a parked stub is absent from the queue today — by accident of selection rather than by declared intent, which is exactly what this AC converts into a guarantee."
+  - "SET IDENTITY, NEVER A COUNT. The 436 figure is a dated calibration; a live scan on 2026-08-14 returned 436 ready records and the number moves with every merge. The test must capture the baseline ready set at runtime and compare sets across the three states; a hard-coded count will be red on unrelated work and will be 'fixed' by editing the number."
+  - "All three states must be measured in one run over the SAME store snapshot, so the comparisons are meaningful. Operate on a temporary copy of the real store; the committed records must be unchanged afterwards."
+  - "The third state must assert exclusivity, not just presence: when a decomposed, approved L2 exists under KM-200, exactly that record joins the ready set and no other record from the tree does. A presence-only assertion passes when the whole tree floods the queue."
+  - "Coverage must execute the scan as a process and compare returned sets; asserting the shape of _is_leaf or _is_approved in source satisfies nothing, and would in fact defeat the purpose — the point is to detect a future change to those predicates by its effect."
+test_spec:
+  - name: test_parked_state_ready_set_identical_to_baseline
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With the marker and reason added to KM-200.yaml, the scan executed as a process returns a ready set identical, record for record, to the runtime-captured baseline."
+  - name: test_unparked_undecomposed_adds_no_record_to_ready_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "After the un-park transition with no record below feature level authored, the ready set still contains no KM-200 record."
+  - name: test_approved_l2_leaf_is_the_only_record_that_joins
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Once an L2 under KM-200 reaches readiness approved, exactly that record appears in the ready set and no other record from the tree does."
+  - name: test_no_hard_coded_ready_count_in_the_assertions
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "All three comparisons derive their baseline at runtime; no literal ready-record count appears in the test, so concurrent authoring cannot make it falsely red or green."
+  - name: test_real_store_unmodified_by_the_three_state_measurement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The committed store records are byte-identical after the run."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200d-1
+  contract: "The un-parked state, whose effect on the ready set this criterion measures"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  "Nothing drifts into the work queue by accident", made measurable in three
+  steps: parked adds nothing, un-parked-but-undecomposed still adds nothing, and
+  only a real decomposed and approved leaf arrives. The exclusion holds today as
+  a side effect of how the scan selects leaves; this AC pins it as an intended
+  guarantee so a future change to that selection cannot quietly promote every
+  parked stub into the backlog.
+
+  The 436 figure is the measured baseline on 2026-08-14, cited so the
+  implementer starts from a real number; the assertion that must hold is that
+  the two ready sets are identical, not that the count is 436.
+
+  Set comparison, not count comparison — an unchanged total made of a different
+  set of records is the failure this would otherwise miss.

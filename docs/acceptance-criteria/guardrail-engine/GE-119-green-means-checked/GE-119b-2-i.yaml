@@ -1,0 +1,106 @@
+id: GE-119b-2-i
+title: "Main-checkout verdicts are unchanged by the shared resolution path"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the main checkout, in which every check already resolves its prerequisites today,
+  And a recorded baseline of the verdict each check produces there against a fixed fixture of
+    staged changes, captured before the shared resolution facility is adopted,
+  When each check is executed in the main checkout after adoption against that same fixture,
+  Then each check produces the same verdict as its recorded baseline,
+  And no check that previously located its prerequisites now fails to locate them,
+  And no check that previously reported a violation now reports a clean result,
+  And the only observable difference between before and after is confined to working copies
+    in which resolution previously failed.
+
+  Coverage note: the baseline must be captured by execution before the change, not asserted
+  from memory or from the check sources afterwards. A comparison against a baseline recorded
+  after the change proves nothing.
+depends_on:
+  - GE-119b-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "hooks_manifest.hooks[] defines the per-check set the baseline must cover — 54 entries today."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "Precedent: carries the same main-checkout-unchanged clause on a change one eighteenth this size."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE BASELINE IS AN ARTIFACT, captured by EXECUTION before the first line of GE-119b-2 is written, and stored so the after-run is diffed against it mechanically. Record the commit SHA of the pre-sweep tree alongside it. A baseline recorded after the change, or reconstructed from the check sources, proves nothing — that is the criterion's own coverage note and it is the single way this AC is most likely to be faked."
+  - "CAPTURE IT WITH THE GE-119c-1 HARNESS, not with an ad-hoc script written by the agent performing the migration. An implementer's own before/after apparatus is the failure mode GE-119c-2 exists to prevent, and this AC has the same exposure at smaller scale."
+  - "THE FIXTURE MUST PROVOKE A REAL VIOLATION FOR EVERY CHECK in hooks_manifest.hooks[] (54 entries today, 48 judgment + 6 transform). A clean fixture makes every check agree trivially — including a check that has silently stopped running altogether. This fixture is SHARED WITH GE-119b-4: build it once and own it in one place; two fixtures will diverge and the family-wide claims will stop meaning the same thing."
+  - "The third clause is the load-bearing one: no check that previously reported a violation now reports clean. Assert PER CHECK BY ID, never in aggregate — an aggregate pass rate hides exactly one check going quiet, which is the consolidation bug this AC guards against."
+  - "Transform-tier hooks (6 today) mutate files. Run each baseline and each after-run from an identical fixture state so one check's mutation cannot change a later check's input; otherwise the diff reports order effects as regressions."
+  - "SCOPE OF PERMITTED DIFFERENCE: only working copies in which resolution previously FAILED. Any main-checkout difference is a regression, not an improvement, and fails this AC."
+  - "Capture the baseline against the DEPLOYED copies (.leafcutter/scripts/commit_guardian/), because that is what pre-commit actually runs. A baseline taken against templates/ measures a layout no commit uses (ADR-001)."
+test_spec:
+  - name: test_ge119b2i_main_checkout_verdicts_match_recorded_baseline
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Every check executed in the main checkout after adoption produces the verdict recorded in the pre-adoption baseline, compared per check id."
+  - name: test_ge119b2i_no_check_loses_prerequisite_resolution
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "No check that previously located its prerequisites now fails to locate them."
+  - name: test_ge119b2i_no_check_downgrades_violation_to_clean
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "No check that previously reported a violation against the provoking fixture now reports clean — asserted per check id, not in aggregate."
+  - name: test_ge119b2i_differences_confined_to_previously_failing_copies
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The only before/after differences observed are in working copies where resolution previously failed."
+test_rationale: "A consolidation bug that makes a check stop finding things is invisible against a clean fixture, so the fixture must provoke a real violation for every check in the manifest. And the baseline is only evidence if it was captured by execution BEFORE the sweep — a post-hoc baseline reconstructed from the sources would agree with the change by construction. Both properties are procedural, so they are stated as requirements on how the test is produced, not only on what it asserts."
+delivers_to: null
+expects_from:
+  ac_id: GE-119b-2
+  contract: "The shared prerequisite-resolution facility, adopted across the check family."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GE-119b-2 touches every check in the family at once. That is the right shape of fix and
+  also the largest blast radius in this tree — the failure mode is a consolidation that
+  quietly changes what one check finds in the layout where it already worked.
+
+  The precedent is explicit in the store: GE-118a-1 carries "And the main-checkout behavior
+  is unchanged (backward compatible)" as a criterion clause for exactly this reason, on a
+  change one eighteenth this size.
+
+  The third clause — no check that previously reported a violation now reports clean — is
+  the one that matters most. A consolidation bug that makes a check stop finding things is
+  invisible against a clean fixture, so the fixture must provoke a real violation for every
+  check. That fixture is shared with GE-119b-4; build it once.
+
+  IT-PO (2026-08-14): estimate raised S -> M. The deliverable is not a single assertion but
+  a per-check baseline over 54 manifest entries, captured by execution before the sweep,
+  plus the shared provoking fixture. Also pinned: capture via the GE-119c-1 harness rather
+  than an implementer-authored script, and take the baseline against the DEPLOYED copies.

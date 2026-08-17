@@ -1,0 +1,135 @@
+id: GE-119a-2
+title: "Each check declares, for itself, whether a cannot-run condition blocks or only announces"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the registry of pre-commit checks that the guardrail engine installs,
+  When a check is registered,
+  Then its registration records an explicit cannot-run disposition with exactly one of two
+    values — "block", meaning a could-not-check outcome fails the commit, or "announce",
+    meaning a could-not-check outcome is reported unmissably and the commit proceeds,
+  And no value is inferred on the check's behalf when the field is absent,
+  And when a check reaches a could-not-check outcome, the disposition recorded for that
+    check is what determines whether the commit fails — demonstrated by running one check
+    under a genuine cannot-run condition once with each disposition and observing two
+    different commit results,
+  And at least the two checks whose cannot-run behaviour was observed carry a recorded,
+    reviewable decision with a stated reason: the AC-parent-covered-by check and the
+    AC-schema check,
+  And the recorded disposition is readable without running anything, so the decision for
+    every check can be reviewed as a set.
+
+  Coverage note: the determining clause is covered by executing the check under both
+  dispositions and comparing the commit results. Asserting that the disposition field is
+  present in the registry does not cover it — a field that is read by nothing passes that
+  assertion.
+depends_on:
+  - GE-119a
+  - GE-119a-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Documents the current per-hook attributes (mode: error/warn) that a disposition sits alongside."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO verified: hooks_manifest.hooks[] is the registry. 54 entries; keys are id, tier, name, entry, language, stages, pass_filenames (+ files, _comment, enabled, types, always_run, fail_open on subsets). There is no mode field."
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: related
+    status: exists
+    relevance: "The authoring path a new check follows; a new manifest key must be documented where a check author will meet it."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "OPEN QUESTION RESOLVED — there is no 'mode: error/warn' field to extend. VERIFIED 2026-08-14 against templates/scripts/commit_guardian/commit_guardian.json: hooks_manifest.hooks[] holds 54 entries whose keys are only id, tier, name, entry, language, stages, pass_filenames, plus files on 45, _comment on 39, enabled on 6, types on 5, always_run on 3, and fail_open on exactly ONE (check-glossary-coverage). tier is judgment (48) or transform (6). The nearest per-check severity axis is the strict boolean inside per-check config sections (duplicate_code, diff_coverage). The cannot-run disposition is therefore a NEW, DISTINCT manifest key — not a second axis of an existing field."
+  - "Name it so it cannot be confused with the existing fail_open boolean or the tier field, and state in the entry _comment that it governs what the check does when it cannot LOOK, not what it does when it FINDS a violation. Decide explicitly what happens to the single existing fail_open: true entry (check-glossary-coverage) — leave it, or express it as a disposition — and state the decision; two overlapping fields is the ambiguity this AC exists to remove."
+  - "Every one of the 54 hooks_manifest entries carries an explicit value. No inferred default anywhere in the read path: a code-side .get(key, 'announce') would silently defeat both this AC and GE-119a-2-i and must not exist. Absence is an error condition, not a value."
+  - "The disposition must be DATA-DRIVEN from the manifest — never a per-check code branch and never a hard-coded id list. A new check inherits the rule by being registered, not by being named. Any exemption must derive from a property of the entry (for example tier), never from an id."
+  - "Record the reason for each decision beside the value; the manifest already uses per-entry _comment for exactly this. At minimum check-ac-parent-covered-by and check-ac-schema carry a stated reason."
+  - "CANONICAL SOURCE: templates/scripts/commit_guardian/commit_guardian.json. templates/commit-guardian/commit_guardian.json is the legacy mirror and the config/ copy is a build output; check_hook_parity compares both manifests. Edit the canonical file, then run 'python scripts/build.py --target-dir .' — never edit a build output (ADR-001)."
+  - "The review surface is the manifest JSON itself, read without executing anything. Do not introduce a generated index or report as the reviewable surface; a derived artifact can go stale relative to the field that actually governs."
+  - "The determining clause requires a real two-disposition execution: run one check under a genuine cannot-run condition with disposition block and again with announce, and observe two different commit results. A unit test over the read path alone does not demonstrate that the manifest value governs the commit."
+test_spec:
+  - name: test_ge119a2_every_manifest_hook_declares_a_cannot_run_disposition
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Every entry in hooks_manifest.hooks[] carries an explicit cannot-run disposition; the expected set is read from the manifest, not a hard-coded list."
+  - name: test_ge119a2_disposition_values_restricted_to_block_or_announce
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Only the two permitted values are accepted; any third value is rejected."
+  - name: test_ge119a2_absent_disposition_is_never_defaulted_in_the_read_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A manifest fixture entry with no disposition produces an error from the read path rather than an assumed value."
+  - name: test_ge119a2_block_disposition_fails_the_commit_on_could_not_check
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "One check executed under a genuine cannot-run condition with disposition block: the commit fails."
+  - name: test_ge119a2_announce_disposition_proceeds_on_could_not_check
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The same check, same cannot-run condition, disposition announce: the outcome is reported unmissably and the commit proceeds — a different commit result from the block run."
+  - name: test_ge119a2_observed_checks_carry_a_stated_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "check-ac-parent-covered-by and check-ac-schema each carry a recorded disposition with a non-empty stated reason."
+test_rationale: "A presence assertion over the manifest passes on a field that nothing reads — the exact shape of dead configuration this tree exists to catch. The determining clause is only covered by executing the same check under both dispositions and observing two different commit results, which requires the out-of-process harness because the cannot-run condition itself must be genuine rather than simulated in-process."
+delivers_to: null
+expects_from:
+  ac_id: GE-119a-1
+  contract: "The could-not-check outcome value this disposition is applied to."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by:
+  - GE-119a-2-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THIS is where the PO's explicit instruction lands: "Whether a cannot-run condition
+  should also BLOCK is a per-check L2 decision — there is no blanket default." This AC
+  does not pick an answer for the family; it requires that an answer exist, per check,
+  recorded, with a reason, and that it actually govern behaviour.
+
+  Why a recorded field rather than a code branch per check: the failure mode this tree
+  addresses is 18 checks each quietly making the same wrong choice in private. A recorded
+  set of dispositions makes the choices reviewable side by side, which is the only way
+  the "18 instances of one defect" framing (GE-119b notes) stays true after the fix.
+
+  IT-PO: an existing per-hook "mode" concept (error / warn) already exists in the hook
+  manifest. Determine whether the cannot-run disposition is a second axis of that field or
+  a distinct one — they are not the same question. "mode: warn" describes what the check
+  does when it FINDS a violation; the disposition describes what it does when it cannot
+  LOOK. A check can legitimately be warn-on-violation and block-on-cannot-run.
+
+  IT-PO ANSWER (2026-08-14): there is NO mode field in the hook manifest. Verified key
+  inventory across all 54 hooks_manifest.hooks[] entries is in it_requirements. The
+  disposition is therefore a NEW distinct key, and the scope is all 54 entries — which is
+  why the estimate was raised from M to L.

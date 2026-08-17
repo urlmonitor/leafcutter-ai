@@ -1,0 +1,61 @@
+id: GE-119a
+title: "A check that cannot do its job says so instead of passing"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  No silent pass — a check that could not run says so, loudly.
+
+  When a safety check cannot reach what it needs in order to inspect your work,
+  it reports that in plain language instead of finishing quietly as though
+  everything was fine. You can always tell "nothing wrong here" apart from
+  "I never looked".
+depends_on:
+  - GE-119
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-119a-1
+  - GE-119a-2
+  - GE-119a-3
+  - GE-119a-4
+  - GE-119a-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the policy L1 — one rule, applied across the whole family of checks,
+  not a per-check patch. The reference-doc trigger exists because a rule that 18
+  checks must obey has to be written down somewhere a future author will find it;
+  today the opposite rule (fail open quietly) is the one that is documented.
+
+  SCOPE BOUNDARY the BA must preserve (see GE-119 notes for the full argument):
+  this is NOT "never fail open". Fail-open on one bad input while the check still
+  ran remains correct and is an approved behaviour elsewhere (GE-116a-1-iii).
+  What must stop is reporting SUCCESS for a check that never executed. Whether a
+  cannot-run condition also BLOCKS the commit, or only announces itself
+  unmissably, is a per-check decision to be made explicitly at L2 — do not
+  assume one answer for all 18.
+
+  Known surfaces (illustrative, not exhaustive — the BA should enumerate from
+  the manifest rather than from this list): check_ac_parent_covered_by.py
+  (observed skipping on a failed helper import), check_ac_schema.py (observed
+  degrading to manual field validation when the schema file is unreachable).
