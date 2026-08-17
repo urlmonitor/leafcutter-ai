@@ -53,10 +53,78 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The verdict-layer prohibition this AC must not cross. Nothing here may be offered as evidence that any work IS reached — this AC only settles what is asked for."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po 2026-08-17. fast-lane-ship.js is a workflow, not an agent template, so the prompt renderer cannot cover it. This harness is how the emitted instruction payload is observed — by asserting on the CAPTURED DISPATCH SEQUENCE, never on meta.phases, which is a declaration consumed by the progress UI and not the executed order."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: false
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ unit_tests/workflows/ unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The test-writing instruction payload the lane emits for a run. Produced by a single new lane-side surface on fast_lane.py; consumed by the workflow when it composes the Test Writer prompt currently hard-coded at fast-lane-ship.js:333."
+    required:
+      - ac_id
+      - test_spec
+    properties:
+      ac_id:
+        type: string
+      test_spec:
+        type: array
+        description: "Authored descriptors first, in their authored order and byte-identical, followed by the reachability request. Never re-derived or normalised."
+        items:
+          type: object
+          required:
+            - name
+            - file
+            - covers
+            - angle
+            - asserts
+          properties:
+            name:
+              type: string
+            file:
+              type: string
+            covers:
+              type: array
+              items:
+                type: string
+            angle:
+              type: string
+              enum:
+                - criterion
+                - reachability
+                - seam
+                - real_artifact
+                - deployed
+                - boundary
+                - failure
+            asserts:
+              type: string
+  constraints:
+    - "SINGLE SOURCE, NOT A SECOND COPY. The reachability request text must be obtained from the one attachment point BO-2900g-1 establishes inside scripts/ac_store/generate_ticket_from_ac.py — imported and called, not re-authored. The discriminating check is byte-identity with what the thorough path emits for the same AC, so that editing the single source changes both lanes. A sentence pasted into fast_lane.py or into the workflow satisfies the first Then clause and violates the third; that is what n_location_rule '1' means here."
+    - "DO NOT LOOSEN test-writer.md's line 188 agent-map skip rule, and do not add the demand to templates/agents/test-writer.md at all. Relaxing that condition changes the THOROUGH lane's behaviour as a side-effect and puts the floor back inside an LLM template where no test can execute it. The demand must reach the lane as DATA the lane hands to the test-writer."
+    - "MIXED SURFACE — the non-Python half must not be dropped. The Python half (this AC's reference_file_path) is the instruction emitter and its command surface. The remaining change is in templates/workflows-js/fast-lane-ship.js, where the Test Writer prompt at line 333 must stop being an ad-hoc string and instead carry the emitted payload. `.js` is owned by no agent's owns_file_extensions in config/agent_registry.json; the empirical convention in this tree (BO-2400a-1, a-3, a-5) assigns workflow-js work to llm-expert. If the implementing agent cannot modify the .js file, this AC is NOT done — the emitter would exist and the lane would still send its ad-hoc line, which is precisely what the reachability test below is written to fail."
+    - "AUTHORED PROOFS SURVIVE. An AC that states its own test_spec keeps every entry, byte-identical, in authored order, with the request added alongside. Re-deriving or normalising an authored plan discards a human test contract to satisfy a mechanical rule and is a worse defect than the one being fixed."
+    - "PLANNING-TIME ONLY. Nothing this AC emits may be consumed as evidence that any work IS reached (BO-2900a-2, inherited via BO-2900g). The emitter must not read a test file, a test result or a coverage record, and must produce no verdict, gate, block or done-state consequence."
+    - "The floor is exactly two named kinds (criterion + reachability) and no more. Do not promote the lane's instructions to the full seven-value taxonomy."
+    - "Must be idempotent: emitting the instruction payload twice for the same AC produces byte-identical output, and the request is added exactly once (see BO-2400g-1-i for the per-member duplicate case)."
+    - "TESTS MUST NOT BE GREP-ONLY. This is a workflow surface, and CLAUDE.md records that the fast lane itself once shipped a phantom-done runner which passed grep-only structural tests while never executing its gates. Observe the emitted payload behaviourally through unit_tests/_workflow_engine_harness.py by asserting on the CAPTURED DISPATCH SEQUENCE — never on meta.phases, which is a declaration read by the progress UI and stays correct on a workflow whose real dispatch is wrong."
+    - "Emitting the payload for a single AC must stay under 2 seconds on a cold process and must not add a second read of the AC store beyond the one the lane already performs."
+delivers_to:
+  - agent: test-writer
+    contract: "The instruction payload in config_schema_fragment, handed to the Test Writer phase in place of the ad-hoc prompt at fast-lane-ship.js:333. It always contains exactly one descriptor with angle: reachability whose `asserts` string is byte-identical to the one the thorough path emits for the same AC, preceded by any authored descriptors in their authored order."
+expects_from:
+  - ac_id: BO-2900g-1
+    contract: "The single attachment point in scripts/ac_store/generate_ticket_from_ac.py where the reachability floor is applied to a finalised plan, exposed so a second consumer can obtain the identical request text rather than copying it. Descriptor shape: {name: str, file: str, covers: list[str], angle: str, asserts: str}. This edge is load-bearing, not decorative — landing this AC first would force the lane to hard-code its own wording, the exact outcome the third Then clause forbids."
 test_spec:
   - name: test_fast_lane_test_instruction_carries_the_reachability_request
     target_dir: unit_tests/build_orchestration/
@@ -75,7 +143,7 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: reachability
-    description: "PRODUCTION ENTRY POINT: drive the fast lane's own command surface against a temp store and read the instruction payload the Test Writer phase was actually given, rather than importing any internal helper. A wiring that exists but is never reached on the real path fails here and passes every other test in this list."
+    description: "PRODUCTION ENTRY POINT: drive the fast lane's own command surface against a temp store and read the instruction payload the Test Writer phase was actually given, rather than importing any internal helper. A wiring that exists but is never reached on the real path fails here and passes every other test in this list. Observe via unit_tests/_workflow_engine_harness.py and assert on the captured dispatch sequence, never on meta.phases."
   - name: test_ac_that_states_its_own_proofs_keeps_them_in_order
     target_dir: unit_tests/build_orchestration/
     framework: unittest
@@ -85,7 +153,11 @@ test_spec:
 test_rationale: "The obvious test — assert that the lane's prompt string mentions reachability — passes on a hard-coded sentence pasted into the workflow, which is exactly the outcome the third Then clause forbids and which re-creates the two-sources divergence the moment the floor's wording changes. The discriminating assertions are therefore (a) the byte-identity test against the thorough lane's request, which only a single-source implementation can pass, and (b) the entry-point test that reads what the Test Writer phase was really handed, because a helper that composes the request correctly while the lane keeps sending its ad-hoc line at fast-lane-ship.js:333 would satisfy a direct unit test and change nothing in production. The order-preservation case is included because the natural way to guarantee the floor is to rebuild the plan, which silently discards an author's stated proofs — a worse defect than the one being fixed."
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by the schema's root if/then; policy constraints under `constraints`, including an explicit MIXED-SURFACE flag for the templates/workflows-js/fast-lane-ship.js half), delivers_to and expects_from pairing to BO-2900g-1, plus one doc_link to the workflow test harness. test_spec entries unchanged except that the reachability entry's description now names the harness and the meta.phases prohibition. criteria and title untouched."
 superseded_by: null
 covered_by:
   - BO-2400g-1-i
@@ -152,3 +224,22 @@ notes: |
   so "the work" is routinely several requirements. That case is BO-2400g-1-i, kept
   separate because an implementation that asks only for the AC named on the command
   line satisfies every clause above.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17) — MIXED SURFACE, RECORDED RATHER THAN HIDDEN.
+  The design hazard above is accepted as written: the demand arrives as DATA. That
+  makes the Python half (a lane-side emitter on fast_lane.py that calls BO-2900g-1's
+  single attachment point) the load-bearing, test-coverable half, which is why
+  assigned_agent is python-coder and why reference_file_path names fast_lane.py rather
+  than the workflow. But the AC is NOT complete without a change to
+  templates/workflows-js/fast-lane-ship.js:333, and `.js` is owned by no agent in
+  config/agent_registry.json — python-coder owns .py, frontend-coder owns
+  .tsx/.jsx/.vue/.svelte/.html/.css/.scss, and llm-expert's trigger names
+  templates/workflows/*.md, not templates/workflows-js/*.js. The empirical convention in
+  this very tree is llm-expert (BO-2400a-1, a-3, a-5 all touch workflows-js and are
+  assigned llm-expert). The AC was NOT split, because the byte-identity and entry-point
+  criteria span both halves and a split would require inventing criteria and would leave
+  the .js child with no registry owner — recreating the exact gap ACD-1800g exists to
+  close. The mixed surface is instead stated as a constraint so no implementer can
+  deliver the emitter and call it done. declares_side_effect is false: the observable is
+  a transient instruction payload, not a durable artifact, and the planning-time
+  prohibition means it must never be persisted as evidence.

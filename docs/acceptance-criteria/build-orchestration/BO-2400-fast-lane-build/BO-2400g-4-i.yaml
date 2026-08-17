@@ -34,10 +34,21 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Returns findings rather than writing a file — so unless something carries them onward deliberately, advisory findings are lost by construction the moment the run ends."
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: llm-expert
+estimated_complexity: S
+declares_side_effect: true
+it_requirements:
+  - "DO NOT INVENT A SECOND PR CONVENTION. BO-800 ('self-describing PRs') already owns what a pull request must tell its reader. Read BO-800's leaves first and extend that convention; a fast-lane-only body format means two renderers, and the one that drifts is the one that fires least."
+  - "The assertion surface is the pull-request body the lane ACTUALLY SUBMITS, not any intermediate value the run computed on the way there. Both smell readers RETURN their findings rather than writing them anywhere, so 'computed and then dropped' is a silent and entirely plausible outcome that an intermediate-value assertion would call a pass."
+  - "Every rendered finding must carry the requirement id and the file path it relates to, drawn from the {ac_id, file, severity, text} shape defined by BO-2400g-2. A bulleted list of bare sentences does not satisfy the second Then clause."
+  - "A clean run must add NO section at all — not an empty heading. An always-render implementation leaves an empty 'Findings' heading on every clean pull request, which trains readers to ignore it and is how a real signal becomes noise. The positive and clean cases must be asserted in the same suite."
+  - "Scope is findings that did NOT stop the run. Findings that stopped the run never reach a pull request, because BO-2400g-4 requires that no pull request exists in that case; the operator-facing message for a stop is that AC's fourth clause, not this one's."
+  - "TESTS MUST NOT BE GREP-ONLY. Drive the real lane through unit_tests/_workflow_engine_harness.py and capture the pull-request body the Pull Request phase (fast-lane-ship.js:539) submits; assert on the captured dispatch payload, never on meta.phases."
+  - "Workflow changes take effect only in the deployed layout, so `python scripts/build.py --target-dir .` must run before any test exercising the deployed lane."
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: BO-2400g-4
+    contract: "The advisory subset of the review-result `findings` list — every finding in the riding-along band that did not stop the run — each retaining {ac_id, file, severity, text}. Empty when the reading found nothing, in which case no findings section is rendered at all."
 test_spec:
   - name: test_three_advisory_findings_appear_on_the_pull_request
     target_dir: unit_tests/build_orchestration/
@@ -60,7 +71,11 @@ test_spec:
 test_rationale: "The natural implementation prints the advisory findings in the run's output and moves on, which satisfies BO-2400g-4 completely — that AC only requires such findings not to stop the run. The findings then vanish with the session, and since both smell readers RETURN their findings rather than writing them anywhere, the loss is silent and total. The discriminating assertion is therefore against the pull-request body the lane actually submits, not against any value the run computed on the way there. The clean-run case is asserted in the same suite because the obvious repair — always render the section — leaves an empty 'Findings' heading on every clean pull request, which trains readers to ignore it and is how a real signal becomes noise."
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect (true — the observable is the submitted pull-request body), list-form it_requirements and expects_from pairing to BO-2400g-4. delivers_to left null: this is the end of the findings chain. test_spec unchanged. criteria and title untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -91,3 +106,14 @@ notes: |
   it never reach a pull request, because BO-2400g-4 requires that no pull request
   exists in that case — the operator-facing message for a stop is that AC's fourth
   clause, not this one's.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). declares_side_effect is TRUE: the observable is a
+  pull-request body submitted to a durable, user-facing surface outside the process —
+  the only durable artifact this lane produces. Standing caveat from BO-2400g's notes:
+  the fast lane does not dispatch user-surface-smoker today, so the flag records the
+  claim correctly but produces no routing on this lane. Complexity is S rather than M
+  because the change is confined to the Pull Request phase's body composition
+  (fast-lane-ship.js:539) and the two upstream contracts already exist — but that is
+  conditional on BO-800's existing renderer being extensible; if BO-800's leaves turn out
+  to mandate a renderer this lane does not use, re-estimate to M. Assigned llm-expert on
+  the same workflow-js convention as its siblings.

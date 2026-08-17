@@ -38,10 +38,47 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Post-condition contract of a progress update, stated as a property of the record's TEXT rather than of its parsed value. This is the shape the durable writer from BO-2400e-3 must additionally satisfy."
+    required:
+      - changed_lines
+      - preserved
+    properties:
+      changed_lines:
+        type: array
+        description: "Exactly the line(s) carrying the work_status value. No other line in the file may differ, including whitespace and blank lines."
+        items:
+          type: string
+      preserved:
+        type: array
+        description: "Everything else: key order, block-scalar style, quoting style, indentation, comments and trailing newline, all byte-identical to the pre-update file."
+        items:
+          type: string
+  constraints:
+    - "The guarantee is TEXTUAL, not structural. yaml.safe_dump sorts keys by default and normalises quoting and block scalars, so any design that loads-and-re-dumps the record fails the criteria even when the parsed mapping is equal. A round-trip-preserving loader or a targeted in-place edit of the single value are both acceptable; a plain safe_dump with sort_keys=False is NOT sufficient, because it still normalises block scalars, quoting and comments."
+    - "Must preserve the store's real record features, not just simple ones: multi-line block scalars (the `criteria` and `notes` fields), blank lines inside those blocks, mixed quoting styles, unicode, and the file's trailing newline. These are the features a hand-written fixture lacks and a re-serialising writer mangles."
+    - "This behaviour lands on the SAME writer BO-2400e-3 introduces, at all three call sites (fast_lane.py:203, :261, :376). Do not build a second, shape-preserving writer alongside the durable one: two writers will drift and one of them will stop preserving. That is why this AC depends_on BO-2400e-3 rather than the other way round."
+    - "Fixtures must be REAL records copied from docs/acceptance-criteria/ into a temp tree, per CLAUDE.md's real-artifact rule. A short, uniformly-quoted hand-written record survives re-serialisation almost unchanged, so a synthetic fixture reproduces the bug-hiding bias and will false-green this AC — the store's actual records, with block-scalar notes and mixed quoting, are what expose the defect."
+    - "Comparing parsed records is explicitly insufficient evidence for this AC and must not be accepted as coverage: a re-keyed record parses to an equal mapping, so a parsed-value assertion passes on the current defective behaviour."
+    - "An eleven-member build performs about thirty writes; the preserving write must not make a single update more than marginally slower than the current whole-file dump."
+delivers_to:
+  - agent: python-coder
+    contract: "The durable record-update entry point from BO-2400e-3, additionally guaranteeing that a progress update alters only the work_status line and leaves every other byte of the record — key order, block scalars, quoting, blank lines, trailing newline — unchanged. BO-2400e-2's 'claims verifiable in the commit diff' guarantee depends on this property holding for every progress commit the lane produces."
+expects_from:
+  - ac_id: BO-2400e-3
+    contract: "The single durable record-update entry point in scripts/build_orchestration/, used by all three call sites. This AC constrains the serialisation that writer performs; it must not introduce a second writer alongside it."
 test_spec:
   - name: test_only_the_progress_value_differs_after_an_update
     target_dir: unit_tests/build_orchestration/
@@ -70,7 +107,11 @@ test_spec:
 test_rationale: "The test an implementer will reach for first — load the record after the update and assert its values are correct — passes on the current, defective behaviour, because a re-keyed record parses to exactly the same mapping. The defect is invisible at the parsed level and visible only in the file's text, so every assertion here is textual. The real-records case matters for the same reason the project's real-artifact rule exists: hand-written fixtures are short, uniformly quoted and free of block scalars, which is precisely the shape that hides serialisation differences; the store's actual records carry long notes blocks, mixed quoting and multi-line criteria, and those are what a re-serialising writer mangles. The entry-point test is separate because adding a preserving writer while leaving one of the three call sites on the old path is the most likely partial implementation, and it would be undetectable from the other three tests."
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by the schema's root if/then; policy constraints under `constraints`), delivers_to and expects_from pairing to BO-2400e-3. test_spec unchanged. criteria and title untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -118,3 +159,13 @@ notes: |
   bias. A short, uniformly-quoted hand-written record survives re-serialisation almost
   unchanged; the store's actual records, with their block-scalar notes and mixed
   quoting, do not.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The IT PO's call the notes invite, recorded
+  explicitly: `safe_dump(..., sort_keys=False)` is NOT an acceptable answer. It fixes the
+  alphabetical re-keying — the most visible symptom — while still normalising block
+  scalars, quoting and comments, so it would pass a key-order assertion and fail the real
+  records in the eleven-member case. The acceptable designs are a round-trip-preserving
+  loader or a targeted in-place edit of the single value; the constraint is written that
+  way rather than naming one, because both satisfy the criteria. Assigned python-coder
+  (single surface, no mixed-surface caveat); object-form it_requirements is mandated by
+  the schema's root if/then for python-coder + build-orchestration.

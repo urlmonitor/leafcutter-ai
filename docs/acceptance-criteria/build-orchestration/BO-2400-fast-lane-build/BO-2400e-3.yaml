@@ -43,9 +43,44 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Call contract of the single durable record-update entry point that replaces the truncating write in _update_ac_work_status (fast_lane.py:98-125). Every progress write in the lane goes through this one function."
+    required:
+      - yaml_path
+      - work_status
+    properties:
+      yaml_path:
+        type: string
+        description: "Path to the requirement record being updated."
+      work_status:
+        type: string
+        enum:
+          - todo
+          - in_progress
+          - done
+  constraints:
+    - "All THREE existing call sites must route through the new durable entry point: fast_lane.py:203 (in_progress), :261 (todo), :376 (done). That is what n_location_rule 'all' means here. Leaving one call site on the truncating path is the specific partial implementation the AC's entry-point test exists to catch, and it is invisible to the other three tests."
+    - "The record must never be observable in a truncated or partially-written state, including when the process is killed between the open and the end of the write. The current `yaml_path.open('w')` truncates at open, so any design that keeps a truncate-then-write against the live path fails the criteria regardless of how the write is otherwise guarded."
+    - "A concurrent reader must always parse a complete record — the whole old content or the whole new content. This is a property of the file the reader opens, not of a lock the writer holds: the store is read by hooks, CI gates and humans that hold no lock, so a design relying on reader cooperation does not satisfy the third Then clause."
+    - "Any new helper module MUST live in scripts/build_orchestration/. That directory is deployed wholesale by build_build_orchestration_scripts (scripts/build_phases.py:2446-2524, which copies every .py in the directory), so a sibling module there is auto-deployed. A helper placed in scripts/ac_store/ or elsewhere needs an explicit hardcoded deploy_map edit and will otherwise raise ModuleNotFoundError in the deployed layout while source-tree unit tests stay green."
+    - "Tests must induce a REAL failure against a REAL file on disk in a temp store. A filesystem double or a patched open() is not acceptable evidence for this AC: the entire question is what the filesystem is left holding, and a double is free to model an atomic replacement the code does not perform."
+    - "Must not change the observable content of a successful update beyond the work_status value. The shape-preservation guarantee is BO-2400e-4 and lands on this same writer; a durable write that re-serialises the whole record satisfies this AC while making e-4 strictly worse."
+    - "Must add no more than a single additional filesystem metadata operation to a successful update; the lane performs three writes per requirement per run and an eleven-member build performs about thirty."
+delivers_to:
+  - agent: python-coder
+    contract: "A single durable record-update entry point in scripts/build_orchestration/ with the call contract in config_schema_fragment: succeeds and leaves a complete record, or fails leaving the previous record byte-identical. It is the shared write that BO-2400e-3-i (unwritable-store announcement and refusal to proceed) and BO-2400e-4 (shape preservation) attach their guarantees to, and that BO-2400f-7 / BO-2400f-9 / BO-2400f-10 inherit as callers."
 expects_from: null
 test_spec:
   - name: test_record_survives_a_write_that_fails_partway
@@ -72,10 +107,20 @@ test_spec:
     type: behavioral
     angle: reachability
     description: "PRODUCTION ENTRY POINT: drive the lane's real progress-recording surface over a temp store of several requirements, interrupt it, then read every record back and assert all parse and none is empty. A durable write helper that the lane does not actually use passes every other test here."
-test_rationale: "The obvious test — update a record and assert the new value is there — passes today and says nothing, because the current behaviour works perfectly whenever nothing goes wrong. The defect only exists on the failure path, so every test here induces a real failure against a real file on disk. A test using a filesystem double is worthless for this AC: the whole question is what the filesystem is left holding, and a double is free to model an atomic replacement that the real code does not perform. The zero-length assertion is called out separately from byte-identity because an empty file is the actual observed failure mode and an implementation that leaves a short-but-parseable stub would slip past a looser check. The entry-point test exists because the natural implementation adds a safe-write helper, and the natural omission is leaving one of the three call sites (build start, release, build finish) still writing the old way."
+  - name: test_durable_writer_is_present_in_the_deployed_layout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "Added by it-po 2026-08-17. After a build into a temp target dir, the durable-write helper resolves and the deployed fast_lane.py imports it without ModuleNotFoundError. The lane runs from the deployed layout, so a helper that only exists in the source tree leaves the deployed lane still truncating while every source-tree test above passes."
+test_rationale: "The obvious test — update a record and assert the new value is there — passes today and says nothing, because the current behaviour works perfectly whenever nothing goes wrong. The defect only exists on the failure path, so every test here induces a real failure against a real file on disk. A test using a filesystem double is worthless for this AC: the whole question is what the filesystem is left holding, and a double is free to model an atomic replacement that the real code does not perform. The zero-length assertion is called out separately from byte-identity because an empty file is the actual observed failure mode and an implementation that leaves a short-but-parseable stub would slip past a looser check. The entry-point test exists because the natural implementation adds a safe-write helper, and the natural omission is leaving one of the three call sites (build start, release, build finish) still writing the old way. The deployed-layout test was added during technical enrichment for the reason recorded in CLAUDE.md: a new module under scripts/ is invisible to the deployed lane unless it is deployed, and the source-tree tests above cannot see that gap."
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by config/ac_store_schema.json's root if/then for python-coder + build-orchestration; policy constraints ride the schema-permitted `constraints` key), and delivers_to. Extended test_spec by one deployed-angle entry; the BA's four entries are unchanged. criteria and title untouched."
 superseded_by: null
 covered_by:
   - BO-2400e-3-i
@@ -128,3 +173,19 @@ notes: |
   synthetic-fixture bias recorded in CLAUDE.md's "Real-artifact behavioral spot-check"
   section, where hand-authored fixtures reproduced the bug-hiding bias and a hook that
   was a complete no-op passed every test.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Assigned python-coder: the entire surface is
+  scripts/build_orchestration/fast_lane.py, so this AC has no mixed-surface problem —
+  unlike its BO-2400g siblings. it_requirements uses the package-surface OBJECT form
+  because config/ac_store_schema.json's root if/then makes it mandatory for
+  assigned_agent: python-coder + component: build-orchestration; a list of strings would
+  fail validation. n_location_rule is "all" rather than "1" because the hazard is not a
+  single registration point but the three existing call sites, one of which will be left
+  behind. declares_side_effect is true: the observable IS the requirement record on disk.
+  Note the standing irony recorded in BO-2400g's notes — the fast lane does not dispatch
+  user-surface-smoker at all today, so setting this flag correctly records the durable
+  side-effect but does NOT produce smoker routing on this lane; it will route only if and
+  when a ticket is generated for this AC through generate_ticket_from_ac.py.
+  Deployment: a new helper must go in scripts/build_orchestration/, which build.py
+  deploys wholesale, so no deploy_map edit is needed — but the deployed-angle test was
+  added because that is only true for that directory.

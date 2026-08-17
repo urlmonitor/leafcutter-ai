@@ -37,10 +37,41 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The lane's established precedent for this shape of requirement — 'An unreachable telemetry sink is surfaced loudly, never silently'. Match its operator-facing behaviour rather than inventing a second convention for an unwritable destination."
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Shape of the announcement emitted when a progress write cannot be made at all. Both fields are mandatory — a generic failure line does not satisfy the first Then clause."
+    required:
+      - ac_id
+      - reason
+    properties:
+      ac_id:
+        type: string
+        description: "The requirement whose progress was being recorded."
+      reason:
+        type: string
+        description: "The underlying reason the write could not be made, carried through from the operating-system level error rather than replaced with a generic message."
+  constraints:
+    - "The load-bearing requirement is control flow, not logging: after an unwritable-store failure the run must NOT reach the step that follows progress-recording. The project error-handling policy is satisfied by 'log at WARNING and return', and that compliant-looking implementation is exactly the defect — the run then claims work it never claimed, builds it, and marks it done against records that were never touched. Per CLAUDE.md Rule 3 the failure must be re-raised (or wrapped in a typed exception), not logged-and-returned."
+    - "Applies at ALL THREE call sites (fast_lane.py:203 in_progress, :261 todo, :376 done), matching BO-2400e-3's n_location_rule. A refusal wired into the claim path only leaves the release and mark-done paths continuing past a failed write."
+    - "No leftover fragment may remain in the store directory after a failed attempt: the set of files present after must equal the set present before. This constraint becomes newly reachable only once BO-2400e-3's durable write lands — a design that stages a companion file and then fails turns a failed attempt into debris in a directory the build system scans and whose contents are its source of truth. Cleanup must itself be failure-safe."
+    - "The announcement must reach the operator on the lane's existing surfacing path — match the established convention in BO-2400d-1-i ('an unreachable telemetry sink is surfaced loudly, never silently') rather than introducing a second convention for an unwritable destination."
+    - "Tests must use a genuinely read-only temp directory (real permission bits), not a patched open() that raises. A double proves the code handles a raised exception; it does not prove the code handles the filesystem state a real read-only store leaves behind, which is what the no-debris clause is about."
+    - "The failure path must not itself attempt a further store write (for example, trying to record 'failed' into the same unwritable store), which would recurse into the same failure and mask the original reason."
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: BO-2400e-3
+    contract: "The single durable record-update entry point in scripts/build_orchestration/. This AC constrains what that entry point does when the write can never succeed: announce with {ac_id, reason}, leave the store byte-identical and free of debris, and raise rather than return so the caller cannot proceed."
 test_spec:
   - name: test_unwritable_store_failure_is_announced_with_requirement_and_reason
     target_dir: unit_tests/build_orchestration/
@@ -69,7 +100,11 @@ test_spec:
 test_rationale: "The dangerous outcome here is not the failure, it is the build continuing past it: a run that could not record a claim and then builds anyway is operating on a state nobody holds, which is the same class of defect BO-2400f-7-i was written for. That is why the fourth test asserts control flow rather than a returned value — the project's error-handling policy forbids swallowing, but 'log and return' technically complies with logging while still swallowing the consequence. The leftover-fragment assertion is included because it becomes newly possible only once BO-2400e-3 is implemented: a design that writes a replacement alongside the original and then swaps it turns a failed attempt into stray debris in a directory whose contents are themselves the build system's source of truth."
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by the schema's root if/then; policy constraints under `constraints`), and expects_from pairing to BO-2400e-3. test_spec unchanged. criteria and title untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -100,3 +135,13 @@ notes: |
   and then failed to reach the mainline — a merge/publication failure. This one covers
   a write that never happened. Neither implies the other, and an implementer who reads
   one as covering the other will leave the store-side hole open.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Same single surface as its parent
+  (scripts/build_orchestration/fast_lane.py), so python-coder with no mixed-surface
+  caveat. The object form of it_requirements is mandatory here for the same schema
+  reason as the parent. The constraints deliberately spell out the CLAUDE.md Rule 3
+  reading, because "log at WARNING and return" is a policy-compliant implementation that
+  fails the fourth Then clause, and that is the single most likely way this AC ships
+  broken. declares_side_effect is true (the observable is the on-disk store), with the
+  same caveat recorded on BO-2400e-3: the fast lane does not dispatch user-surface-smoker
+  today, so the flag records the claim without producing routing on this lane.

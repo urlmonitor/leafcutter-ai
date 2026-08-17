@@ -36,10 +36,54 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Owns the resolution behaviour itself ('Resolve one AC id to its connected build set, in dependency order'). This L3 consumes that set and must not re-specify how it is computed."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ unit_tests/workflows/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The run-level instruction payload: the per-AC payload from BO-2400g-1 emitted once for every member of the resolved connected set, keyed by member id."
+    required:
+      - members
+    properties:
+      members:
+        type: array
+        description: "One entry per resolved member id, in the resolver's dependency order. Every entry carries the identical reachability request; membership is whatever resolve_connected_build_set returned, never a filtered subset."
+        items:
+          type: object
+          required:
+            - ac_id
+            - test_spec
+          properties:
+            ac_id:
+              type: string
+            test_spec:
+              type: array
+              items:
+                type: object
+  constraints:
+    - "The set asked is exactly the set resolved. Bind to the resolved connected set the lane already holds (resolve_connected_build_set, fast_lane.py:498, surfaced to the workflow as batchIds) — do not re-resolve, re-filter, or drop members by readiness. How the set is computed belongs to BO-2400f-1 / BO-2400f-2 and must not be restated or reimplemented here."
+    - "EXACTLY ONCE PER MEMBER — the duplicate-request hazard is the point of the third Then clause. The obvious repair for the five-member gap is to append the request once per member; the obvious existing behaviour is to append it once per run. Implementing the first WITHOUT removing the second double-asks on every single-member run. This is the 'skip-branch side-effect: conditionalize, don't add' defect recorded in CLAUDE.md, which duplicated an entry on every skipped step and stayed green because the structural test only checked presence. Emit at exactly one place in the composition path — that is what n_location_rule '1' means here."
+    - "The request attached to a pulled-in member must be the SAME text as the one attached to the named member — no truncated summary, no 'see above', no weaker note. Assert per member id rather than by counting occurrences: an implementation that emits the request once for the whole run passes a count-based check while leaving four members unasked."
+    - "PLANNING-TIME ONLY, INHERITED FROM THE PARENT. This AC says nothing about whether any of the members was actually reached, and nothing it emits may be offered as evidence of that (BO-2900a-2)."
+    - "MIXED SURFACE, INHERITED FROM THE PARENT. The Python half composes the per-member payload; the consuming change is in templates/workflows-js/fast-lane-ship.js, whose Test Writer prompt at line 333 must carry it. `.js` is owned by no agent in config/agent_registry.json; the tree's convention (BO-2400a-1, a-3, a-5) is llm-expert. Do not mark this AC done with the emitter alone."
+    - "Payload composition must stay a single pass over the already-resolved set: no additional read of the AC store per member, and the five-member case must add no measurable latency over the one-member case beyond the per-member serialisation itself."
+    - "TESTS MUST NOT BE GREP-ONLY. Observe the emitted payload behaviourally through unit_tests/_workflow_engine_harness.py by asserting on the CAPTURED DISPATCH SEQUENCE, never on meta.phases."
+delivers_to:
+  - agent: test-writer
+    contract: "The run-level instruction payload in config_schema_fragment: one entry per resolved member id, each carrying the identical reachability request text defined by BO-2400g-1, in the resolver's dependency order, with no member asked twice."
+expects_from:
+  - ac_id: BO-2400g-1
+    contract: "The per-AC instruction payload and the single-source reachability request text. This L3 extends its emission from the named id to every member of the resolved set; it must reuse that request verbatim rather than composing a second one."
+  - ac_id: BO-2400f-1
+    contract: "The resolved connected build set for the run — the named id's subtree plus unmet prerequisites, readiness-agnostic, in dependency order — as produced by resolve_connected_build_set (fast_lane.py:498) and surfaced to the workflow as batchIds. Consumed as given; this AC does not re-specify or re-compute it."
 test_spec:
   - name: test_all_five_resolved_requirements_are_asked_for_the_proof
     target_dir: unit_tests/build_orchestration/
@@ -62,7 +106,11 @@ test_spec:
 test_rationale: "Asking only about the id typed on the command line satisfies BO-2400g-1 completely: that AC speaks of 'one piece of work', and in the single-member case the two implementations are indistinguishable. The connected set is the normal case for this lane, not an exotic one, so the gap would ship silently. The per-id assertion matters more than a count, because an implementation that emits the request once for the whole run passes a count-based check while leaving four requirements unasked; and the single-member case is asserted in the same suite because the natural over-correction — append per member and once per run — double-asks and is invisible when only the five-member case is tested."
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by the schema's root if/then; policy constraints under `constraints`, inheriting the parent's MIXED-SURFACE flag), delivers_to and a two-entry expects_from pairing to BO-2400g-1 and BO-2400f-1. test_spec unchanged. criteria and title untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -93,3 +141,12 @@ notes: |
   conditionalize don't add" defect recorded in CLAUDE.md, which duplicated an entry on
   every skipped step and stayed green because the structural test only checked for
   presence.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Same surface and same agent as the parent, so the
+  parent's mixed-surface caveat is inherited verbatim rather than restated as a new
+  problem. n_location_rule is "1" for a reason specific to this L3: the failure mode is
+  emitting at TWO places (per member and per run), so the requirement is a single
+  emission point in the composition path, not merely a single file. The expects_from is a
+  two-entry list because this AC genuinely consumes two upstream contracts — the request
+  text from BO-2400g-1 and the resolved set from BO-2400f-1 — and conflating them is how
+  an implementer ends up re-resolving the set locally.
