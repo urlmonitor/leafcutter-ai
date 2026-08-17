@@ -27,7 +27,7 @@
  *   assemble_context_bundle — injection_builders.py: layered context for agents
  *   emit_agent_telemetry  — agent_telemetry.py: per-phase telemetry record
  *
- * Gate script: scripts/build_orchestration/fast_lane.py
+ * Gate script: {{config.output_root}}/scripts/build_orchestration/fast_lane.py
  *
  * E2 canonical form: top-level body, agent(prompt, opts), args global.
  * No export async function run() — E2 executes the top-level body directly.
@@ -91,7 +91,7 @@ phase("Select Batch");
 const worktree_path = (args && args.worktree_path) || null;
 const batchSize = (args && args.batch_size) || 5;
 const acStoreRoot = (args && args.ac_store_root) || "docs/acceptance-criteria";
-const gateScript = "scripts/build_orchestration/fast_lane.py";
+const gateScript = "{{config.output_root}}/scripts/build_orchestration/fast_lane.py";
 
 // ---------------------------------------------------------------------------
 // Supporting integration invocations (BO-2400b-3, BO-2400c-1, BO-2400d-1)
@@ -104,21 +104,21 @@ const gateScript = "scripts/build_orchestration/fast_lane.py";
 // fall back to the heavy path (build-feature.js). Agents invoke this at the
 // start of a session to confirm fast-lane eligibility.
 const chooseLaneInvocation =
-  `python3 ${worktree_path}/scripts/build_orchestration/path_selection.py choose_lane` +
+  `python3 ${worktree_path}/{{config.output_root}}/scripts/build_orchestration/path_selection.py choose_lane` +
   ` --ac-root ${worktree_path}/${acStoreRoot} --limit ${batchSize}`;
 
 // c: assemble_context_bundle — builds the layered context bundle for agents
 // (BO-2400c-1). Enables stable-prefix cache optimisation. Each agent dispatch
 // is preceded by a context build so agents receive optimised context.
 const assembleContextBundleInvocation =
-  `python3 ${worktree_path}/scripts/injection_builders.py assemble_context_bundle` +
+  `python3 ${worktree_path}/{{config.output_root}}/scripts/injection_builders.py assemble_context_bundle` +
   ` --worktree ${worktree_path} --ac-root ${worktree_path}/${acStoreRoot}`;
 
 // d: emit_agent_telemetry — records each phase dispatch for the
 // retrospective-agent lane comparison (BO-2400d-1). Agents call this after
 // completing their phase so telemetry is captured on every fast-lane run.
 const emitTelemetryBase =
-  `python3 ${worktree_path}/scripts/agent-health/agent_telemetry.py emit_agent_telemetry`;
+  `python3 ${worktree_path}/{{config.output_root}}/scripts/agent-health/agent_telemetry.py emit_agent_telemetry`;
 
 // ---------------------------------------------------------------------------
 // Gate: select_batch — deterministic AC batch selection (BO-2400a-2)
