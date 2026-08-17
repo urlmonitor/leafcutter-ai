@@ -1,0 +1,67 @@
+id: BO-1500f
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "You always get a workspace of your own and never walk into someone else's"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A workspace that is unmistakably yours -- never shared, never taken over.
+
+  Starting to author requirements reliably gets you a space of your own, even when
+  you or a colleague start several sessions on the same day or on the same part of
+  the product. If a space is already there, it is continued only when it is yours;
+  work someone else left in progress is reported to you and left alone, never
+  quietly absorbed into your session.
+depends_on: [BO-1500]
+documentation_triggers: [state-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. covered_by populated by the business-analyst with the three renamed L2s: BO-1500a-4 -> BO-1500f-1, BO-1500a-9 -> BO-1500f-2 (leaf BO-1500a-9-i -> BO-1500f-2-i), BO-1500a-10 -> BO-1500f-3 (leaf BO-1500a-10-i -> BO-1500f-3-i). Criteria text unchanged."
+superseded_by: null
+covered_by:
+  - BO-1500f-1
+  - BO-1500f-2
+  - BO-1500f-3
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Authored as the L1 half of a Pattern C intermediate split of BO-1500a, which had
+  accumulated 11 L2 children against the cap of 5. This L1 is the destination the
+  business-analyst identified for the workspace-identity and workspace-ownership
+  cluster: obtaining a workspace that is provably this session's own. The rename and
+  re-parent was completed on 2026-08-14: its children are now BO-1500f-1 (was
+  BO-1500a-4), BO-1500f-2 (was BO-1500a-9, with leaf BO-1500f-2-i) and BO-1500f-3
+  (was BO-1500a-10, with leaf BO-1500f-3-i), and covered_by above is populated
+  accordingly.
+
+  Headroom warning -- acknowledged at authoring time: BO-1500 held 5 L1 children
+  against an L0 cap of 7 before this file. BO-1500f and BO-1500g together consume
+  ALL remaining headroom, taking BO-1500 to exactly 7 of 7. Any future BO-1500 L1
+  forces a full L0 split (Pattern A), not another sibling.
+
+  documentation_triggers is state-diagram because workspace resolution is a genuine
+  state machine: granted / already-claimed, and owner active / owner ended / owner
+  unknown, each with a distinct outcome. The sequence-diagram need for the isolation
+  gate is already discharged by BO-1500a-8, which stays under BO-1500a.
+
+  Priority inherited (high) from BO-1500 and from every L2 being redistributed here,
+  rather than defaulted to medium -- a medium L1 parenting high children would
+  misstate the urgency. Flagged for correction if that inheritance is not wanted.
+
+  Cross-boundary links retained after the move: BO-1500f-2 still depends on BO-1500a-1
+  (dedicated workspace-and-branch setup, stays under BO-1500a); BO-1500f-2's narrowing
+  obligation against the feature_key notion now points at BO-1500g-2-i; BO-1500f-3's
+  flagged amendment still targets BO-1500a-1-i, which stays under BO-1500a. BO-1500a-5
+  and BO-1500a-8 both depend on BO-1500f-1 across the a/f boundary.

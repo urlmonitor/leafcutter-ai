@@ -1,0 +1,84 @@
+id: BO-1500g-3
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "What is delivered for review is exactly the criteria this run authored and the user approved"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given an authoring run has authored acceptance criteria and the user has approved a
+    specific list of them,
+  When the run delivers its criteria for review,
+  Then it compares what it is about to deliver against the approved list before delivering
+    anything,
+  And it delivers only when the two match exactly -- every approved criterion present, and
+    nothing else at all,
+  And when they differ, delivery is refused and the message names every item that would
+    have been delivered but is not on the approved list, and every approved item that is
+    missing,
+  And no criterion authored by any other run is part of what is delivered,
+  And no content that this run did not author is part of what is delivered,
+  And a refused delivery leaves this run's authored criteria and the user's approved list
+    unchanged, so the person can resolve the difference and deliver again.
+depends_on:
+  - BO-1500g
+  - BO-1500f-2
+  - BO-1500c-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    delivery_manifest:
+      type: object
+      description: "{ run_id: '<authoring run>', approved: ['<criterion id>', ...], delivered: ['<criterion id>', ...], unexpected: ['<item present but not approved>', ...], missing: ['<approved item absent>', ...] }. approved is accumulated at the user's approval gates; delivered is computed from what is actually about to be sent, not from what the run intended to send. Delivery proceeds only when unexpected and missing are both empty."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "The delivered set must be computed by inspecting the change that is actually about to be sent. Deriving it from the run's own intent means the check can never fail, which is the same as not having it."
+    - "Selection of what to deliver must be an explicit per-item list scoped to this run; any sweep-everything selection is the defect being fixed."
+    - "Verify against a workspace that also contains items this run did not author, so the check is exercised in the failing direction as well as the passing one."
+delivers_to:
+  agent: python-coder
+  contract: "A delivered change verified item-for-item against the user's approved list, or a refusal naming exactly how the two differ"
+expects_from:
+  ac_id: BO-1500f-2
+  contract: "The per-run identity that says which authored criteria belong to this run"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-11; re-parented to BO-1500g."
+superseded_by: null
+covered_by:
+  - BO-1500g-3-i
+  - BO-1500g-3-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Design-review gap 3. BO-1500c-1 specifies that approved criteria are routed into the
+  standard reviewed delivery path; this AC specifies what may be inside that delivery.
+  Broader than BO-1500g-2-i, which asserts the same property only for the two-concurrent-runs
+  scenario: here the approved list is the authority for every delivery, and a mismatch in
+  either direction refuses rather than warns.
+
+  Re-homed 2026-08-14 from BO-1500a-11 to BO-1500g-3 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged. Its depends_on / expects_from pair with the
+  per-run identity AC is kept intact and now points across the g/f boundary at BO-1500f-2
+  (formerly BO-1500a-9).

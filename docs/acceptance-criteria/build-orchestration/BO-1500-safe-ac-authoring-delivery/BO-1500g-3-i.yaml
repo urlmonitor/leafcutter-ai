@@ -1,0 +1,63 @@
+id: BO-1500g-3-i
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Content already sitting in the workspace before authoring began is never delivered"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given an authoring run's workspace already holds around sixty changed files that nobody
+    authored in this run, present from the moment the workspace was prepared and before any
+    criterion was written,
+  And the run then authors two acceptance criteria and the user approves both,
+  When the run delivers,
+  Then what is delivered contains those two criteria and nothing else,
+  And none of the pre-existing changed files are part of what is delivered,
+  And this holds regardless of how many pre-existing changed files there are,
+  And the pre-existing changed files are left in the workspace exactly as they were.
+depends_on:
+  - BO-1500g-3
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    pre_existing_content:
+      type: object
+      description: "{ present_at_workspace_ready: ['<path>', ...], delivered: [] }. Anything already changed in the workspace at the moment it becomes ready is recorded as not-authored-by-this-run and must never appear in the delivered set."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Reproduce the real starting condition: a freshly prepared authoring workspace currently comes with roughly sixty already-changed files before any criterion exists. A test on a clean workspace cannot detect a sweep-everything delivery, because there is nothing extra to sweep."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500g-3
+  contract: "The approved-list comparison this case must fail closed against"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-11-i; moved with its parent L2 (BO-1500a-11 -> BO-1500g-3)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The workspace is not clean when authoring starts, so "deliver everything that changed"
+  and "deliver what this run authored" are not the same set. This leaf pins the difference.
+
+  Re-homed 2026-08-14 from BO-1500a-11-i to BO-1500g-3-i by the Pattern C intermediate
+  split of BO-1500a. Criteria text is unchanged.
