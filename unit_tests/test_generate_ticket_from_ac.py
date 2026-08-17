@@ -1627,16 +1627,24 @@ class TestTestRequirementsDerivedFromAC:
             "criteria": "Given a store\nWhen scanned\nThen it returns ready ACs\nThen it sorts by priority",
         }
         descriptors = _derive_tests_from_criteria(ac, "BP-811")
-        # one descriptor per Then clause
-        assert len(descriptors) == 2
+        # one angle: criterion descriptor per Then clause, PLUS the mandatory
+        # angle: reachability floor appended by _derive_tests_from_criteria.
+        criterion = [d for d in descriptors if d.get("angle") == "criterion"]
+        reachability = [d for d in descriptors if d.get("angle") == "reachability"]
+        assert len(criterion) == 2
+        assert len(reachability) == 1
+        assert len(descriptors) == 3
         assert all(d["name"].startswith("test_bp_811_") for d in descriptors)
         assert all(d["covers"] == ["BP-811"] for d in descriptors)
 
     def test_no_then_clause_yields_one_generic_stub(self):
         ac = {"assigned_agent": "python-coder", "criteria": "A prose criterion with no gherkin."}
         descriptors = _derive_tests_from_criteria(ac, "BP-900")
-        assert len(descriptors) == 1
+        # generic criterion stub + the mandatory reachability floor
+        assert len(descriptors) == 2
         assert descriptors[0]["name"] == "test_bp_900_satisfies_criteria"
+        assert descriptors[0]["angle"] == "criterion"
+        assert descriptors[1]["angle"] == "reachability"
 
     def test_colliding_then_clauses_yield_unique_names(self):
         # Slugs that collide after the disambiguation suffix must not silently
