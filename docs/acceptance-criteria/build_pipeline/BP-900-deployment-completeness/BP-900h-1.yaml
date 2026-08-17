@@ -1,0 +1,83 @@
+id: BP-900h-1
+components:
+  - build_pipeline
+title: "CI installs the package into an empty project and the build succeeds"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given a scratch directory containing no files other than a minimal
+    skills_config.json,
+  And the package checked out into leafcutter-ai/ beneath it, simulating a
+    consumer install,
+  When CI runs "python leafcutter-ai/scripts/build.py --target-dir ." from that
+    directory,
+  Then the build exits 0
+  And the deployed output root exists and contains scripts/ and agents/
+  And every script path referenced by a compiled agent template or skill file
+    resolves to a file that exists in the deployed tree
+  And the job fails with the unresolved paths named on stderr if any does not
+depends_on:
+  - BP-900h
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: .github/workflows/ci.yml
+  n_location_rule: "1 — a new consumer-simulation job"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The scratch project must be built from an empty directory, NOT from a copy of this repository — copying the repo reintroduces the source-tree bias that hides every missing-deploy defect."
+    - "Assert against the DEPLOYED tree only; the job must never add the package source directory to sys.path when checking that references resolve."
+    - "The job must run on pull_request so it gates before merge, not only on push to main."
+    - "Failure output must name each unresolved path and the template that references it, so the failure is actionable without re-running locally."
+  notes: |
+    This is phase_1 exit criterion 1 ("clean install succeeds on a blank project
+    with only skills_config.json present"), which today has no automated check.
+
+    Reuse the existing reference-resolution logic rather than reimplementing it —
+    BP-900b-1/-2 build exactly this reference set inside the build. The new value
+    here is the empty-project execution context, not a second copy of the
+    matching rules.
+
+    Verify behaviorally: the job must be shown to FAIL on a deliberately broken
+    install (delete one deployed script, confirm non-zero exit) before it is
+    accepted as passing. A green job that would stay green on a broken install
+    is the phantom-done failure this repo exists to prevent.
+test_spec:
+  - name: test_consumer_simulation_build_succeeds_in_empty_project
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    description: "Runs the real build.py --target-dir into an empty tmp_path holding only a minimal skills_config.json and asserts exit 0 with scripts/ and agents/ present in the deployed output root."
+  - name: test_consumer_simulation_detects_unresolved_reference
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    description: "Negative case — removes one deployed script after the build and asserts the reference check reports a non-zero result naming that path, proving the gate can fail."
+delivers_to:
+  agent: python-coder
+  contract: "A CI job that performs a real consumer install into an empty directory and exits non-zero when the deployed tree is incomplete."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
