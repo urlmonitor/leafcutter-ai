@@ -1,0 +1,146 @@
+id: ACD-2000a-2-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The escalation a person receives states the actual reason, taken from the trail"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose latest recorded attempt failed because a dependency
+    it needed does not exist yet,
+  And whose budget for that stage is now spent,
+  When the effort stops and asks a person,
+  Then what the person is shown states that reason, in one short sentence drawn
+    from the latest entry in the requirement's trail,
+  And it names the requirement the effort stopped on,
+  And a requirement that stops with a trail entry carrying no reason text
+    produces a message saying the reason is missing, rather than an empty
+    message,
+  And no escalation reaches a person with a blank reason.
+depends_on: [ACD-2000a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Section 6 holds the user-escalation payload: the blocker_summary key is emitted at line 1053 and defined at line 1062 as a single sentence of at most 120 characters lifted or distilled from the latest ## Comments body. That definition has exactly one input and ACD-1800c-1 removes it."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The page describing how the ladder shields the user and what finally reaches them; the escalation payload is the observable output of that flow."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "REPOINT THE PAYLOAD DERIVATION IN THE SAME CHANGE AS THE TRAIL, NOT AFTERWARDS. Verified: templates/skills/building-epics/SKILL.md section 6 emits `blocker_summary` at line 1053 and defines it at line 1062 as 'a single sentence (<=120 chars) lifted or distilled from the latest `## Comments` body'. That derivation has exactly ONE input and ACD-1800c-1 removes it. The moment the grouping container stops carrying ## Comments, the payload builder reads nothing and produces nothing -- and the failure surfaces to the USER as an unexplained halt, which reads as 'no reason given' rather than as a defect."
+  - "PRESERVE THE EXISTING PAYLOAD CONTRACT UNLESS THE SAME CHANGE UPDATES SECTION 6. The key name `blocker_summary` and the 120-character ceiling are the runbook's current choices, and the key is already emitted from at least three other halt paths (SKILL.md lines 67, 110 and 472). A rename or a length change made only at the new derivation point leaves those three emitting the old shape, and nothing will fail loudly."
+  - "AN ABSENT REASON MUST PRODUCE A DISTINGUISHABLE MESSAGE, NEVER AN EMPTY STRING. The defect is one line long -- reading the latest entry's reason with an empty-string default -- and empty string is precisely the silent degradation this AC guards. The missing case must say that the reason is missing and must still name the requirement, so the operator can tell 'the build could not explain itself' from 'the build had nothing to say'. This is the same distinction ACD-1600g-4 draws for an absent boundary and ACD-1800f-3 for an empty proof set: nothing-to-read must never be presented as nothing-wrong."
+  - "ENFORCE THE NO-BLANK-SUMMARY RULE AT THE EMIT POINT, NOT IN THE CALLER. If any code path can construct the payload without going through the check, the guarantee is advisory. Name in the implementation which function is the single emit point for this payload and route every halt path through it."
+  - "THE PAYLOAD MUST NAME THE REQUIREMENT (the AC id) IT STOPPED ON. Under ACD-1800c a ticket groups N requirements, so 'the build stopped' without the AC id is not actionable -- the operator cannot tell which of N requirements is blocked, which is the same container-grain conflation ACD-2000a exists to remove, resurfacing at the user interface."
+  - "TRUNCATION MUST BE LOSSLESS AT THE BOUNDARY. When the trail's reason text exceeds the summary ceiling it is shortened FOR THE SUMMARY only; the full text stays readable in the trail entry. Never truncate or rewrite the trail entry to fit the payload -- that would violate ACD-2000a-1's append-only guarantee via the escalation path, which is the least-watched writer in the system."
+  - "Must log the emitted summary at INFO, and log at WARNING when the missing-reason branch fires, so a run of empty reasons is visible as a defect signal rather than only as user confusion."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2000a-2
+    contract: "The escalation verdict { verdict: 'escalate', ac_id: str, stage: str, attempts_counted: int, budget_in_force: int, scope: str, reason: str } -- the `reason` field being the text this AC distils into blocker_summary, and `ac_id` the requirement the message must name."
+  - ac_id: ACD-2000a-1
+    contract: "The trail entry shape, specifically that the latest entry's `reason` is optional and may be absent or null -- which is the case the third and fourth criteria are written about."
+test_spec:
+  - name: test_escalation_message_states_the_reason_from_the_latest_trail_entry
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Drives a real escalation from a real AC file whose latest trail entry records a missing-dependency failure; asserts the emitted payload's blocker_summary conveys that reason rather than a generic halt string."
+  - name: test_escalation_message_names_the_requirement_it_stopped_on
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Escalates from a bundle of three requirements where only one is blocked; asserts the payload names that AC id and not the container."
+  - name: test_missing_reason_produces_an_explicit_missing_reason_message
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Escalates from a real AC whose latest entry carries no reason text; asserts the payload says the reason is missing, still names the requirement, and is not the empty string -- the exact output an empty-string default would produce."
+  - name: test_no_emit_path_can_produce_a_blank_summary
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Exercises every escalation entry point in the module against reason-present, reason-empty and reason-null trails; asserts none of them emits a blank or whitespace-only blocker_summary."
+  - name: test_an_over_long_reason_is_shortened_only_in_the_summary
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Escalates from a trail entry whose reason exceeds the summary ceiling; asserts the payload is within the ceiling AND that the trail entry on disk still holds the full untruncated text."
+test_rationale: "The degradation this AC prevents is invisible to every test that checks the payload builder in isolation. A direct-import test hands the builder a well-formed record with a populated reason and asserts the sentence comes out -- and it passes on the broken implementation, because the broken implementation reads the field correctly when the field is there. The defect only appears on the input the unit test never constructs: a latest entry whose reason is absent or null, where a one-line empty-string default yields a technically-successful escalation carrying nothing. Equally, a test that asserts the payload builder REFERENCES the trail field is a grep test and passes on a reference whose result is discarded. So each test drives a real escalation end to end from a real on-disk requirement, and the reason-present and reason-missing cases are asserted in the same run -- because the two messages must be DIFFERENT, and neither assertion alone can show that. The bundle test exists for the same reason: a payload naming the container passes any assertion about the summary text while being unactionable, and only a multi-requirement fixture distinguishes it."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE LOCKSTEP LEAF. ACD-2000a's hazard 3: "CHANGE THE ESCALATION PAYLOAD IN
+  LOCKSTEP. The §6 payload builder distils `blocker_summary` from the latest
+  `## Comments` body. If the trail becomes structured on the AC, that derivation
+  must be repointed in the same change -- otherwise escalations silently degrade
+  to empty summaries, which reads to the user as 'no reason given' rather than as
+  a defect."
+
+  VERIFIED SOURCE (do not re-investigate):
+  templates/skills/building-epics/SKILL.md §6, `blocker_summary` (~line 1062), is
+  "a single sentence (<=120 chars) lifted or distilled from the latest
+  `## Comments` body". That derivation has exactly one input, and ACD-1800c-1
+  removes it. This is not a nice-to-have follow-up: the moment the container
+  stops carrying `## Comments`, the payload builder reads nothing and produces
+  nothing, and the failure surfaces to the USER as an unexplained halt.
+
+  WHY THIS IS AN L3 UNDER THE STOP CONDITION rather than a peer L2: the stop
+  condition (ACD-2000a-2) is the behaviour; the quality of what the person then
+  sees is a property of that same behaviour's output. Splitting it out keeps
+  ACD-2000a-2's criteria focused on retry-vs-escalate while making the
+  degradation mode independently testable -- an escalation that fires with an
+  empty reason passes ACD-2000a-2 completely.
+
+  THE THIRD AND FOURTH THEN CLAUSES ARE THE WHOLE POINT. It is trivially easy to
+  satisfy "the summary comes from the trail" with a lookup that returns empty
+  string when the field is absent -- and empty string is precisely the silent
+  degradation being guarded against. So the criteria demand that the MISSING case
+  produce a distinguishable message. This is the same distinction ACD-1600g-4
+  draws for an absent boundary and ACD-1800f-3 draws for an empty proof set: in
+  all three, "nothing to read" must never be presented as "nothing wrong".
+
+  WHAT IS NOT SPECIFIED HERE: the 120-character limit, the payload's field names,
+  and whether the sentence is lifted verbatim or distilled. Those are the
+  runbook's current choices and belong in it_requirements; the criteria constrain
+  what reaches the person.
+
+  TESTABILITY. Drive a real escalation from a real requirement whose trail has a
+  reason, and again from one whose latest entry has none, and assert on the two
+  messages produced. A test that asserts the payload builder references the trail
+  field is a grep test -- it passes on a reference whose result is discarded.
+
+  2026-08-17 (IT PO enrichment). Assigned python-coder, complexity M, same
+  reasoning as ACD-2000a-2: the payload builder must be executable for the
+  criteria to be testable, and the SKILL.md §6 wording change rides along in the
+  same commit. The BA's "what is not specified here" list is taken up verbatim as
+  it_requirements -- the 120-character ceiling, the key name `blocker_summary` and
+  the lift-or-distil choice are all now recorded as constraints to PRESERVE rather
+  than as choices to make.
+
+  ONE FINDING ADDED BY THIS PASS. `blocker_summary` is not emitted only from §6.
+  SKILL.md also emits it at line 67 (feedback sink unreachable), line 110
+  (pre-commit hook probe failed) and line 472 (ac_coverage incomplete). Those three
+  halt paths construct the key directly and do not read the comment log at all, so
+  they survive the cutover unchanged -- which is precisely the risk: repointing
+  only the §6 derivation leaves four emitters of one key with two different
+  provenances and no single enforcement point for the no-blank rule. Hence the
+  it_requirement that the no-blank check live at a single emit point that every
+  halt path routes through, rather than at the new derivation alone.

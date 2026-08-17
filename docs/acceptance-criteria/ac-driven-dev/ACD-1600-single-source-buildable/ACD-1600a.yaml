@@ -9,7 +9,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Thin tickets that reference the spec -- never duplicate it.
 
@@ -17,7 +17,7 @@ criteria: |
   does not restate the criteria, technical requirements, or contracts. The store
   stays the one authoritative copy, so a requirement can never say two different
   things in two places.
-depends_on: [ACD-1600]
+depends_on: [ACD-1600, ACD-1600b, ACD-1900b-5, ACD-1800b]
 doc_links:
   - docs/reference/ac-schema.md
 assigned_agent: null
@@ -25,7 +25,10 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - "2026-08-14 sequencing pass — THE MOST LOAD-BEARING EDGE IN THE MIGRATION. Added depends_on ACD-1900b-5, ACD-1600b, ACD-1800b. ACD-1900b-5 is the critical one and it was declared nowhere: its own title is 'the fulfillment gate resolves coverage by dual-read, SO A THIN TICKET IS ALWAYS VERIFIED' — it exists solely to make this L1 safe, and until now neither file referenced the other."
+  - "2026-08-14 WHY THIS ORDER IS NOT NEGOTIABLE. Thinning the ticket before the gates dual-read does not produce a loud failure, it produces a QUIET one. Verified in the code: templates/agents/ac-fulfillment-gate.md Step 1 signs off '(status: ok)' immediately and reads no YAML at all when ac_traceability is absent; templates/agents/ac-validator.md sources its AC Coverage table, Agent Contracts and sign-offs from the TICKET BODY, which ACD-1600a-2 removes, so it finds an empty coverage table and reports zero unmet criteria. Both go green having checked nothing. Ship ACD-1900b-5 first and the gate verifies the thin ticket instead."
+  - "2026-08-14 CORRECTION to a claim repeated in ADR-026 and in sibling notes: done_proof is NOT at risk from thinning. scripts/ac_store/done_proof.py contains no ticket reference — verify_done_eligible(ac_id, *, ac_root, test_root) anchors on the AC store and on `# covers:` test tags, neither of which a thin ticket touches. It is the reference design for AC-anchored evidence, not a hazard. Do not spend migration effort defending it."
 superseded_by: null
 covered_by:
   - ACD-1600a-1

@@ -9,7 +9,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2a_unit_of_work
 criteria: |
   Done means every deliverable signed off -- recorded on the requirement itself.
 
@@ -38,7 +38,7 @@ covered_by:
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
-child_limit_override: 6
+child_limit_override: 7
 documentation_triggers:
   - reference-doc
   - sequence-diagram

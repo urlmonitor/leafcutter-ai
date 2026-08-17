@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given the thin-ticket behaviour (ticket references its AC; agents resolve the spec from the store),
   When the sequence diagram for this flow is authored,

@@ -1,0 +1,145 @@
+id: ACD-2000b
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Two builds can run at once without standing on each other"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  A requirement being worked on is visibly taken -- and never stuck that way.
+
+  While one effort is building a requirement, anything else that comes looking
+  can see it is already taken and picks up different work instead, so two
+  efforts never land on the same thing at the same time. If an effort is
+  interrupted, the requirement is handed back and becomes available again rather
+  than sitting indefinitely as somebody else's unfinished business.
+depends_on: [ACD-2000]
+doc_links:
+  - docs/reference/ac-schema.md
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000b-1
+  - ACD-2000b-2
+  - ACD-2000b-3
+  - ACD-2000b-4
+  - ACD-2000b-5
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+  - state-diagram
+notes: |
+  GAP ANALYSIS ORIGIN (2026-08-17, BrainCandy): one of five ticket-carried
+  responsibilities with NO successor in the AC-as-unit-of-work model (ADR-026 /
+  ACD-1800). This is the parallel-safety gap: `files_touched`-based batching.
+
+  VERIFIED AGAINST CODE (do not re-investigate -- verified 2026-08-17):
+    - COLLISION AVOIDANCE IS TICKET-TO-TICKET ONLY.
+      templates/skills/building-epics/SKILL.md builds the parallelism graph from
+      pairwise ticket overlap: `physical_edges = { (a, b) | a.files_touched INTERSECT
+      b.files_touched != EMPTY }` (line ~137); a batch is a maximal antichain such
+      that "for all a, b in batch: a.files_touched INTERSECT b.files_touched = EMPTY"
+      (line ~145); step 3a (lines ~150-153) re-verifies disjointness before
+      dispatch and serialises anything that overlaps. §2 restates it as two
+      conditions (line ~229). Crucially, line ~232: "If a ticket's `files_touched`
+      is missing or empty, /build-feature MUST treat that ticket as conflicting
+      with EVERY other ticket and run it serially (default-conservative)."
+    - ACs HAVE NO COLLISION NOTION. An AC record carries `depends_on` (logical
+      ordering) and nothing that expresses physical contention. `files_touched`
+      itself IS already derived AC-side -- `_build_files_touched()` in
+      scripts/ac_store/generate_ticket_from_ac.py (~line 497), see ACD-1600g's
+      verified notes -- so the INGREDIENT exists; the pairwise-collision RULE is
+      what lives only in the ticket layer.
+    - THE PRIMITIVE ALREADY EXISTS -- DO NOT INVENT A SECOND ONE. scripts/
+      build_orchestration/fast_lane.py implements an AC-LEVEL claim today:
+        `claim_build_set()` (~line 128) flips every named AC whose work_status is
+          `todo` to `in_progress`, detects an already-`in_progress` AC (~line 193)
+          and reports it via `error` without double-flipping;
+        `release_claim()` (~line 224) returns claimed-but-not-done ACs to `todo`
+          "on a non-success run exit so no AC is permanently stuck in in_progress
+          blocking future runs (BO-2400f-10)".
+      This L1 GENERALISES that primitive from the fast lane to the general build
+      path. Any L2 that proposes a lockfile, a separate registry, or a second
+      status vocabulary is the wrong answer -- extend claim_build_set /
+      release_claim.
+
+  WHY CLAIMS MUST BE PER-REQUIREMENT (the load-bearing argument):
+    Under ACD-1800c a ticket is a grouping container whose scope is the UNION of
+    its members' footprints. Ticket-level `files_touched` batching therefore gets
+    strictly COARSER after the cutover: two bundles that share one file serialise
+    entirely, even when the actual requirements in flight are disjoint -- so the
+    migration makes parallelism worse, not better, unless contention is judged at
+    the requirement grain. And the fast lane already builds a single AC with no
+    ticket at all, so today two concurrent drives (fast lane + supervisor) have NO
+    shared notion of who owns what: the fast lane claims, the supervisor does not
+    look. One mechanism, at AC grain, is the only arrangement where both callers
+    can see each other.
+
+  DESIGN HAZARDS FOR THE BA:
+    1. THE CLAIM HAS NO OWNER AND NO TIMESTAMP -- this is the real gap, not the
+       claim itself. `work_status: in_progress` records THAT a requirement is
+       taken but not BY WHOM or SINCE WHEN. `release_claim()` only runs on a
+       graceful non-success exit; a hard kill (SIGKILL, crashed worktree, lost
+       shell) never calls it, and nothing can then distinguish a live claim from
+       an abandoned one -- the AC is stuck as someone else's forever, which is
+       exactly the outcome this L1's criteria forbids. Specify owner identity, a
+       claim timestamp, and an explicit staleness/reclaim rule. A reclaim rule
+       that a second process can apply is what makes the promise true; graceful
+       release alone does not.
+    2. THE CLAIM IS NOT ATOMIC. `claim_build_set` reads the YAML (~line 181),
+       tests `current_status == "in_progress"` (~line 193), then writes
+       (~line 203). Two runs can both read `todo` and both flip -- each believing
+       it owns the AC. Specify the atomicity requirement explicitly (compare-and-
+       set, exclusive file create, or an equivalent) and cover it with a test that
+       runs two claimers CONCURRENTLY; a sequential test cannot observe this bug.
+    3. PARTIAL CLAIMS. The loop is per-AC sequential and returns
+       `success=False` with a PARTIALLY populated `claimed` list on failure --
+       the caller is obliged to release. State whether a build set is
+       all-or-nothing or explicitly partial, and make the contract testable; an
+       unstated contract here leaks half-claimed sets on every failed run.
+    4. OVERLOADING `work_status` IS THE SUBTLE ONE. `in_progress` currently
+       doubles as a human-facing lifecycle value AND as the lock. Every other
+       writer of work_status (mark-done flows, scanners, reconciliation passes,
+       hand edits) can therefore steal or silently drop a lock, and the readiness
+       scanner cannot distinguish "machine has claimed this" from "a person is
+       working on it". Decide deliberately: separate claim field, or keep the
+       overload and enumerate every writer. Do not leave it implied.
+    5. EMPTY FOOTPRINT MUST MEAN "CONFLICTS WITH EVERYTHING". When generalising
+       the `files_touched` intersection rule to ACs, preserve SKILL.md line ~232's
+       default-conservative behaviour. Docs-only and prose ACs frequently derive
+       an EMPTY files_touched (see ACD-1600g on `_build_files_touched`), and
+       treating empty as "collides with nothing" would make precisely the ACs with
+       the least analysable footprint the ones that run most freely in parallel.
+       This is the single most likely defect in this L1.
+
+  ORDERING (ADR-026 "read-side before write-side"):
+    `depends_on` deliberately lists only ACD-2000. This L1 is a PREREQUISITE of
+    ACD-1800c (ticket demoted to container): AC-grain claiming must work BEFORE
+    ticket-grain batching stops being meaningful, or the cutover window has no
+    contention control at all. Adding ACD-1800c would invert the safe migration
+    order. Related but NOT a dependency: ACD-1600g / the `files_touched`
+    derivation is already live AC-side today, so no edge is required for the
+    footprint input; any new field lands under ACD-1900a's additive-first rule
+    (config/ac_store_schema.json enforces additionalProperties:false today --
+    empirically confirmed, see ACD-1800f notes).
+
+  BA DECOMPOSITION NOTE (2026-08-17, business-analyst): the L2 cap is 5 and both
+  declared documentation_triggers had to be honoured. Four behavioural L2s plus
+  the reference-doc L2 (ACD-2000b-5) fill the cap exactly, so the state-diagram
+  deliverable is authored as ACD-2000b-3-i, an L3 under the reclaim behaviour it
+  depicts. Both documentation types are delivered; only the tree position
+  differs. Hazards 1-5 above map to: 1 -> ACD-2000b-1 + ACD-2000b-3;
+  2 -> ACD-2000b-2; 3 -> ACD-2000b-2-i; 4 -> ACD-2000b-1-i; 5 -> ACD-2000b-4.

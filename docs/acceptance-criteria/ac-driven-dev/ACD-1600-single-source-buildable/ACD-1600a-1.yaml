@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given a leaf AC ACS-100a-1 with a non-empty Gherkin criteria block exists in the store,
   When the ticket generator produces the ticket for ACS-100a-1,
@@ -35,7 +35,7 @@ it_requirements:
   - "The ticket body must NOT reproduce the AC's Gherkin criteria text verbatim; the store record remains the single copy of that criteria."
   - "The ticket must direct a reader to the store record path docs/acceptance-criteria/{component}/<feature-folder>/{id}.yaml for the authoritative criteria."
   - "Single-source invariant: after generation the criteria text exists in exactly one place (the store), never duplicated in the ticket body."
-  - "GOVERNANCE CAVEAT: reverses ADR-400b / ADR-400b-1 (verbatim criteria in ticket body); gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2_cutover, and the flag-off path must still produce a valid ticket."
+  - "GOVERNANCE CAVEAT: reverses ADR-400b / ADR-400b-1 (verbatim criteria in ticket body); gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2b_ticket_demotion, and the flag-off path must still produce a valid ticket."
 delivers_to:
   agent: python-coder
   contract: "Thin generated ticket carrying source_ac frontmatter pointer to the store record and NO verbatim criteria copy; consumed by the phase-agent spec resolver (ACD-1600b-1) and constrained by the unresolvable-source edge case (ACD-1600a-1-i)."

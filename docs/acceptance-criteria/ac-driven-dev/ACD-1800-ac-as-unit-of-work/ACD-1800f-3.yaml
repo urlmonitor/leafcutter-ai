@@ -1,0 +1,186 @@
+id: ACD-1800f-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "An observable promise with no proof is reported as unproven, never as passed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement that declares it has an observable effect,
+  And the requirement states no proof of that effect at all,
+  When the observable promise is checked,
+  Then the outcome is that the promise is unproven, and the requirement is named
+    in it,
+  And the outcome is not a pass,
+  And the requirement cannot be counted as complete on the strength of that
+    check,
+  And a run that executed three proofs and observed all three reports an outcome
+    that a reader can distinguish from a run that executed none.
+depends_on: [ACD-1800f, ACD-1800f-1, ACD-1800f-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where the unproven outcome and its vocabulary must be documented for authors (ACD-1800f-5)."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "Rule 3 (advisory before required, diff-scoped done-accounting gates) governs how hard this refusal lands during the cutover window; rule 4 governs the legacy case it must NOT catch."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The component that owns the proof-of-done honesty axes. 'A check that never ran read as a check that passed' is the axis this AC adds for observable surfaces."
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: related
+    status: exists
+    relevance: "The published contract for what makes a criterion eligible to be marked done -- the third Then clause adds a condition to it and must not silently contradict it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Same failure class, adjacent surface: a proof that ran but reached nothing. Extend verify_done_eligible's verdict rather than building a second eligibility oracle beside it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE EMPTY CASE MUST BE DECIDED BEFORE THE LOOP, NOT BY IT. The defect being corrected is an all-must-pass aggregation over a possibly-empty collection: user-surface-smoker.md's algorithm is 'for each stanza in the block' (~line 111) and its aggregation is 'If ALL stanzas PASS: emit (status: ok)' (~line 171), so zero stanzas emits ok having verified nothing. Resolve the proof set first, refuse when it is empty and the requirement declared an observable effect, and only then iterate."
+  - "THE OUTCOME MUST CARRY COUNTS, NOT JUST A VERDICT. Emit `proofs_declared`, `proofs_executed` and `proofs_observed` alongside the status. A bare pass/fail does not satisfy the fourth Then clause, and the count is what stops the defect reappearing the next time an aggregation is written over a possibly-empty collection. The verdict must name the requirement id (and, in a bundle, the member id) -- not merely the work item."
+  - "THE AGGREGATION IS COMPUTED IN PYTHON AND ONLY REPORTED BY THE CRAFT. Expose the verdict from canonical source under scripts/ac_store/ so the pass/fail decision, the empty-set refusal and the counts are executable and directly testable. An agent template that re-derives the aggregation in prose is a second, untested implementation of the exact rule that failed -- and 'If ALL stanzas PASS: emit ok' living only in a Markdown template is how the current defect shipped."
+  - "THREE DISTINGUISHABLE OUTCOMES, NOT TWO. `proven` (declared, proofs resolved, all observed), `unproven` (declared, zero proofs resolved -- an incomplete requirement) and `refuted` (a proof ran and its assertion failed, or its placeholder_signature matched). Never collapse unproven into refuted: the clearing action differs (author a proof vs fix the surface), and ACD-1800f-5 documents them separately."
+  - "DO NOT CATCH THE LEGACY CASE. A requirement that declares NO observable effect is legacy mode and must return no verdict at all -- not `unproven` (ADR-026 rule 4, and ACD-1800f-1's third Then clause). The scope fence is mechanical: the declaration is present and non-empty. Never infer an observable promise from criteria text, change_target, files_touched or component."
+  - "WIRE THE 'CANNOT BE COUNTED AS COMPLETE' CLAUSE INTO THE EXISTING DONE PATH, NOT A NEW ONE. `unproven` must make the requirement ineligible via scripts/ac_store/done_proof.py's verify_done_eligible, which is already consumed by both the check_done_proof pre-commit hook and the required CI done-proof job -- extending it inherits both enforcement points. Do not create a second eligibility oracle beside it (the BO-2900a-1 precedent)."
+  - "DEPLOY-MANIFEST FIRST: the new verdict module imported by done_proof.py MUST be added to build_ac_store's deploy_map (scripts/build_phases.py ~line 794) in the same change, or the deployed check_done_proof hook and the required CI done-proof job crash with ModuleNotFoundError. Verify by running the deployed hook after ./build-self.sh, not only the source-tree unit tests, which import from the source tree and mask the gap."
+  - "ADVISORY BEFORE REQUIRED AND DIFF-SCOPED (ADR-026 rule 3). During the cutover window the store will hold requirements that declared an effect under ACD-1800f-1 before anyone authored proofs under ACD-1800f-2; the refusal must make that backfill queue measurable rather than block every commit. Ship enabled and non-strict, promote only after a green self-host window, and scope done-accounting to the diff so pre-existing ACs never retroactively fail."
+  - "MIXED SURFACE -- PARTIAL FLAG (S2.8). The verdict, counts, refusal and done-eligibility wiring are Python and are python-coder's. Changing templates/agents/user-surface-smoker.md Step 6 to report the computed verdict instead of re-deriving 'if ALL stanzas PASS' is a `.md` edit outside python-coder's surface and needs an llm-expert pass; see the caveat in notes. The Python verdict must not be signed off as if the craft had been repointed."
+delivers_to:
+  agent: python-coder
+  contract: "Observation verdict, emitted from scripts/ac_store/: { status: 'proven'|'unproven'|'refuted'|null, proofs_declared: int, proofs_executed: int, proofs_observed: int, per_requirement: [{ac_id: str, status: str, proof_index: int|null, reason: str}], reason: str }. status null means the requirement declared no observable effect and this rule did not apply (legacy mode). Consumed by scripts/ac_store/done_proof.py's verify_done_eligible as a further eligibility condition, by ACD-1800f-4's bundle aggregation and attribution, and by templates/agents/user-surface-smoker.md as the outcome it reports rather than re-derives."
+expects_from:
+  ac_id: ACD-1800f-2
+  contract: "The store-only resolver `resolve_observation_proofs(ac_ids, *, ac_root)` returning the ordered proof list per requirement, with an empty result for a requirement that authored none. The empty result is the input this AC turns into `unproven`, so the resolver must distinguish 'declared and resolved zero' from 'did not declare'."
+test_spec:
+  - name: test_declared_effect_with_no_proof_reports_unproven_and_names_the_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real verdict function over a real on-disk AC that declares observable_effect and carries no observation_proofs; asserts status is 'unproven', that it is not a pass, and that the AC id appears in the emitted reason. This is the assertion that fails today: the equivalent path emits ok."
+  - name: test_declared_effect_with_three_observed_proofs_reports_proven_with_a_count_of_three
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Executes three real proofs that are all observed and asserts status 'proven' with proofs_executed == 3, asserted in the same suite as the empty case so a refuse-everything implementation cannot pass."
+  - name: test_an_executed_none_run_is_distinguishable_from_an_all_observed_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Compares the emitted outcomes of the two runs above and asserts they differ in proofs_executed, not only in status -- the fourth Then clause. A bare pass/fail pair would satisfy the first three descriptors and fail this one."
+  - name: test_unproven_requirement_is_refused_by_the_real_done_eligibility_gate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Calls the real verify_done_eligible in scripts/ac_store/done_proof.py for an unproven requirement that has a passing covers-tagged test, and asserts eligible is False with a reason naming the unproven observable promise. Proves the refusal is consumed in control flow, not merely emitted."
+  - name: test_requirement_declaring_no_observable_effect_is_not_judged_by_this_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A legacy AC with no declaration yields no verdict and stays eligible -- the ADR-026 rule 4 scope fence holds and the migration cannot mass-refuse the existing store."
+  - name: test_a_failed_assertion_reports_refuted_not_unproven
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A requirement with one proof whose assertion does not match reports 'refuted' with the proof index, distinct from 'unproven' -- the two have different clearing actions and must not be collapsed."
+test_rationale: "This AC exists because a mandatory gate has been emitting a pass while verifying nothing, so the one shape of test that must not be written is the shape that would have missed it: asserting the source contains an `if not proofs:` branch passes on a branch that is never reached, exactly as the current 'for each stanza' loop passes on a block nobody writes. Every descriptor therefore drives the real verdict function over a real on-disk requirement and asserts the emitted outcome. The empty-set and all-observed cases are asserted in the same suite so a refuse-everything implementation cannot pass the first descriptor alone, and the counts comparison is separated out because a bare pass/fail verdict satisfies the refusal clauses while leaving the durable half of the fix -- distinguishability -- unbuilt. The done-eligibility descriptor is what proves the refusal is consumed rather than merely logged."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE MANDATORY LEAF. ACD-1800f's notes require it verbatim: "Whatever L2s come
+  out of this L1, at least one MUST assert that an observable-effect requirement
+  with no declared proof FAILS -- an empty proof set must never be a pass."
+
+  THE DEFECT IS LIVE TODAY, BEFORE ANY MIGRATION (verified, do not
+  re-investigate):
+    - The gate is DISPATCHED and NON-OVERRIDABLE. generate_ticket_from_ac.py
+      ~line 903: `if declares_side_effect: all_needed.add("user-surface-smoker")`,
+      and ~line 920 `_SIDE_EFFECT_MANDATORY = frozenset({"user-surface-smoker"})`
+      makes it immune to a `not_needed` override (same protection shape as
+      `_TDD_MANDATORY`).
+    - The gate's algorithm is "For each stanza in the `## Smoke Fixture` block"
+      (user-surface-smoker.md ~line 111) and its aggregation is "If ALL stanzas
+      PASS: emit (status: ok)" (~line 171).
+    - Nothing writes the block: ZERO occurrences of "Smoke Fixture" in the
+      generator.
+    - NET: zero stanzas means the loop body never runs and the vacuous-truth
+      aggregation emits `ok`. A mandatory gate reports a pass having verified
+      nothing. This is the BO-2900 failure shape exactly, and it is the reason
+      CLAUDE.md carries the "Gate / Workflow ACs -- Verify Behaviorally, Not by
+      Grep" rule.
+
+  THE FOURTH THEN CLAUSE IS THE DURABLE FIX, and it is separate from the first
+  three on purpose. Making the empty case FAIL fixes today's requirement; making
+  the two cases DISTINGUISHABLE in the emitted outcome is what stops the failure
+  reappearing the next time an aggregation is written over a possibly-empty
+  collection. An emitted count of proofs executed satisfies it; a bare
+  pass/fail does not.
+
+  INTERACTION WITH THE MIGRATION -- why this leaf must land EARLY, not late.
+  During the cutover window the store will hold requirements that declare an
+  observable effect under ACD-1800f-1 before anyone has authored proofs under
+  ACD-1800f-2. If the empty case passes, every one of them reports green and the
+  backfill queue is invisible. If it reports unproven, the queue is measurable.
+  That is the same argument ACD-1600g-4 makes for the boundary.
+
+  TENSION WITH ADR-026 RULE 4 (tolerant readers), RESOLVED DELIBERATELY. Absence
+  of the DECLARATION is legacy mode and must never fail -- ACD-1800f-1's third
+  Then clause. This AC is about the different case where the requirement DID
+  declare an observable effect and then proved nothing; that is an incomplete
+  requirement, not a legacy one, and the criteria say "unproven", not
+  "validation error", so ADR-026 rule 3 (advisory before required) still governs
+  how hard it lands.
+
+  TESTABILITY. Run the observation craft against a real requirement that declares
+  an effect and carries no proof, and assert the emitted outcome. A test that
+  asserts the source contains an `if not stanzas:` branch would pass on a branch
+  that is never reached.
+
+  2026-08-17 (IT PO enrichment).
+
+  WHERE THE AGGREGATION LIVES IS THE LOAD-BEARING DECISION. Today the entire
+  aggregation rule exists as one sentence of Markdown inside an agent template
+  ("If ALL stanzas PASS: emit (status: ok)", user-surface-smoker.md ~171). That
+  is why the defect was unobservable: there is nothing to execute and nothing to
+  assert against. The fix moves the decision -- empty-set refusal, counts, three
+  outcomes, attribution -- into executable Python under scripts/ac_store/, and
+  reduces the craft to reporting what the verdict said. Leaving the aggregation
+  in prose and merely adding a sentence about the empty case would reproduce the
+  original failure with a longer template.
+
+  THREE OUTCOMES, NOT TWO, and the third is not in the criteria by accident.
+  `refuted` (a proof ran and its assertion failed or its placeholder_signature
+  matched) already exists implicitly in the craft's blocker path. Naming it
+  beside `unproven` is what keeps the clearing actions distinct -- author a proof
+  versus fix the surface -- and stops an implementer collapsing the new refusal
+  into the existing blocker, which would make the backfill queue invisible again.
+
+  ENFORCEMENT SURFACE CHOSEN: the DONE-PROOF PATH, not a new hook. verify_done_
+  eligible in scripts/ac_store/done_proof.py is already consumed by the
+  check_done_proof pre-commit hook AND the required CI done-proof job, so the
+  third Then clause ("cannot be counted as complete") inherits both enforcement
+  points for free. This mirrors the BO-2900a family decision and avoids a second
+  eligibility oracle. Note the deploy-manifest consequence recorded in
+  it_requirements -- done_proof.py's imports are the precedent that produced a
+  ModuleNotFoundError in the deployed layout.
+
+  MIXED SURFACE -- PARTIAL FLAG (S2.8, BP-1100f-3-i). Matched portion
+  (python-coder / pytest): scripts/ac_store/*.py, scripts/build_phases.py.
+  Unmatched portion: templates/agents/user-surface-smoker.md Step 6, a prose
+  template edit. Flagged, not split -- ACD-1800f is at its 5-L2 cap. Recorded as
+  a recommended companion llm-expert AC for the user's decision.

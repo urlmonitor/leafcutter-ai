@@ -1,0 +1,160 @@
+id: ACD-1600g-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A bundle's boundary is the members' exclusions minus every member's change surface, never their union"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a feature that bundles three requirements,
+  And the first requirement excludes the build-orchestration runbook and the
+    release workflow,
+  And the second requirement excludes the release workflow,
+  And the third requirement names the build-orchestration runbook as part of the
+    surface it changes,
+  When the boundary of the bundle as a whole is computed,
+  Then the bundle's boundary contains the release workflow, because at least one
+    member excludes it and no member changes it,
+  And the bundle's boundary does NOT contain the build-orchestration runbook,
+    because a member changes it even though another member excludes it,
+  And a bundle whose members declare no exclusions at all yields an empty
+    boundary rather than a boundary of every path any member did not name.
+depends_on: [ACD-1600g, ACD-1600g-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Holds `_build_files_touched()` (~line 497), the AC-side change-surface derivation that is the MINUEND of this difference. Verified 2026-08-17: it unions (1) reference_file_path / prose path tokens scraped from it_requirements and (2) doc_links whose relationship is in _EDIT_SURFACE_RELATIONSHIPS (constrains/creates/implements/modifies/specifies; describes and related excluded). Must be reused, never re-implemented."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement the composition in scripts/ac_store/scope_boundary.py as an explicit set DIFFERENCE: bundle_boundary = union(members' declared exclusions) MINUS union(members' derived change surfaces). A union of the members' exclusions is the single most likely defect in this L1 and produces a false blocker on essentially every real bundle."
+  - "REUSE `_build_files_touched()` from scripts/ac_store/generate_ticket_from_ac.py for the minuend -- do not re-derive the change surface. If reuse requires promoting it out of the generator module, EXTRACT it (single definition, both callers import it); do not copy it. Two derivations of the change surface will drift, and the drift shows up only as an intermittent false blocker."
+  - "KNOWN DEGENERACY, MUST BE STATED IN THE MODULE DOCSTRING RATHER THAN HIDDEN: a member whose it_requirements is still null derives an EMPTY change surface, so for an un-enriched bundle the difference degenerates to the union. This is correct behaviour, not a bug, but a reviewer who meets it cold will read it as the union defect this AC forbids."
+  - "The empty case must be an empty boundary, never a complement. Forbid any derivation of the form 'every path no member named' -- with no declared exclusions the boundary is the empty set."
+  - "Deterministic and order-independent: the same members supplied in any order must produce a byte-identical sorted result, so the composition can be diffed across runs and cached."
+  - "Read every member's exclusions through the ACD-1600g-1 three-state seam. A member with an ABSENT boundary contributes nothing to the union AND must stay individually distinguishable in the composed result, because ACD-1600g-4 needs to name which members had none."
+  - "Carry per-path provenance through the composition: for each path in the result, retain the set of member AC ids that excluded it. A bare set of paths loses this irrecoverably and makes ACD-1600g-3-i unimplementable without redoing the composition."
+  - "Route every path comparison through a SINGLE normalisation seam so ACD-1600g-2-i can implement mixed-grain matching in one place. Scattering the comparison across the union and the subtraction guarantees the two halves normalise differently."
+  - "Performance budget: composition over a 50-member bundle completes in under 100 ms. This runs on a pre-commit / phase-agent path, not in a batch job."
+  - "Canonical source only -- scripts/ac_store/ in the source tree, never a deployed .claude/ copy (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "compose_boundary(members) -> { paths: { <normalised path or prefix>: { excluded_by: [ac_id] } }, undeclared_members: [ac_id] } from scripts/ac_store/scope_boundary.py. `paths` is the difference (excluded by at least one member, changed by none) with provenance retained per path; `undeclared_members` lists members whose boundary was absent rather than empty. Consumed by ACD-1600g-3 (adjudication), ACD-1600g-3-i (attribution) and ACD-1600g-4 (absence announcement)."
+expects_from:
+  ac_id: ACD-1600g-1
+  contract: "read_boundary(ac_record) -> { declared: bool, paths: list[str] } -- the three-state per-requirement boundary read. The `declared` flag must survive into the composition; collapsing absent into empty at this seam makes ACD-1600g-4 unimplementable."
+test_spec:
+  - name: test_release_workflow_stays_in_the_bundle_boundary_because_no_member_changes_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Composes the boundary over three real on-disk AC records matching the criteria's Given clauses and asserts the release workflow is present in the result."
+  - name: test_runbook_excluded_by_one_member_is_cancelled_by_another_members_change_surface
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Same three real records: asserts the build-orchestration runbook is ABSENT from the composed boundary because the third member's derived change surface names it. This is the only test a naive-union implementation fails, so the failure is diagnosable from the test name alone."
+  - name: test_bundle_with_no_declared_exclusions_yields_an_empty_boundary
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Three real records none of which declare a boundary: asserts the composed boundary is empty and is NOT the complement of the members' change surfaces."
+  - name: test_composition_is_order_independent_and_byte_stable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Composes the same three members in several permutations and asserts identical serialised output each time."
+  - name: test_change_surface_comes_from_the_shared_derivation_not_a_local_copy
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Adds a path token to one member's it_requirements prose and re-composes with no other edit; asserts the newly derived path now cancels a matching exclusion. A second, divergent copy of the change-surface derivation fails this."
+test_rationale: "The composition rule is a statement about the RESULT, so the tests must assert the result of a real run. A test that inspects the implementation for a difference operation rather than a union is a grep test in disguise -- it passes on code that computes the difference and then discards it, and it fails on a correct implementation written with a comprehension. A direct-import unit test handed two pre-built Python sets is worse: the minuend is the part most likely to be wrong, because it comes from `_build_files_touched()` scraping prose path tokens out of it_requirements, and a test that supplies the sets itself bypasses exactly that derivation. So every fixture is a real AC YAML record on disk composed through the real entry point. The second test is constructed so that only it fails under a naive union, and the last test exists because a copied change-surface derivation passes every other test in this list on the day it is written and diverges silently afterwards."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1600g-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE COMPOSITION RULE -- the single most likely defect in this L1, called out
+  explicitly in ACD-1600g's notes and again in the component PROJECT_CONTEXT.md.
+
+  THE RULE, STATED AS SET ALGEBRA:
+    bundle.boundary = (UNION over members of member.out_of_scope)
+                      MINUS (UNION over members of member.files_touched)
+  It is a DIFFERENCE. `bundle.out_of_scope = union(members' out_of_scope)` is
+  WRONG and produces a false blocker on essentially every real bundle, because
+  one member's exclusion is routinely another member's change surface -- that is
+  precisely what a bundle is for. The three Given clauses above are constructed
+  so that a naive-union implementation fails the second Then and only the second
+  Then, which makes the defect diagnosable from the test name alone.
+
+  WHY THE RULE IS NEEDED AT ALL. Under ACD-1800c the ticket becomes a grouping
+  container whose scope is the union of its member ACs, so a per-ticket
+  `out_of_scope` becomes undefinable -- there is no single author of the bundle's
+  exclusions and any value written at container level is an assertion nobody
+  owns. Composition therefore has to be DERIVED from the members, and the
+  derivation rule is this one.
+
+  THE INPUTS ALREADY EXIST ON ONE SIDE. `files_touched` is already derived
+  AC-side by `_build_files_touched()` (scripts/ac_store/generate_ticket_from_ac.py
+  ~line 497) as the union of (1) it_requirements reference_file_path / path
+  tokens scraped from prose bullets and (2) doc_links whose `relationship` is in
+  `_EDIT_SURFACE_RELATIONSHIPS` (constrains / creates / implements / modifies /
+  specifies; `describes` and `related` are excluded). That derivation is the
+  minuend of the difference and must not be re-implemented here. Note the
+  practical consequence: a member whose it_requirements are still null (every AC
+  this pass authored, pre-IT-PO) derives an EMPTY files_touched, so before
+  enrichment the difference degenerates to the union. State that in the
+  implementation; do not let it surprise a reviewer.
+
+  MATCHING GRAIN IS AN OPEN IMPLEMENTATION QUESTION FOR THE IT PO, NOT A GAP IN
+  THIS AC. change-scope-reviewer's Tier 2 rule matches on "the file's top-level
+  directory or component is listed in out_of_scope", i.e. prefix/component grain,
+  while `files_touched` is exact paths. The subtraction must compare like with
+  like or an exact-path change will fail to cancel a directory-grain exclusion.
+  ACD-1600g-2-i covers the behaviour; the chosen normalisation is a technical
+  decision.
+
+  TESTABILITY. Execute the composition against three real on-disk AC records and
+  assert the resulting set. A test that asserts "the code calls difference() and
+  not union()" is a grep test in disguise and proves nothing about the result.
+
+  2026-08-17 (IT PO enrichment). Three technical decisions, one of which the BA
+  explicitly deferred here.
+
+  - THE GRAIN QUESTION IS ANSWERED IN ACD-1600g-2-i, NOT HERE. What this AC owes
+    that leaf is a SINGLE normalisation seam. The realistic failure is not picking
+    the wrong normalisation -- it is normalising in two places (once when unioning
+    the exclusions, once when subtracting the change surfaces) and having the two
+    disagree. That defect passes every test in this AC's own list and only shows
+    up as an intermittent false blocker on directory-grain exclusions.
+
+  - PROVENANCE IS A REQUIREMENT OF THIS AC, EVEN THOUGH ITS CONSUMER IS
+    ACD-1600g-3-i. A set of paths is lossy: once the members' exclusions are
+    merged, the identity of the excluding member is unrecoverable without redoing
+    the composition. Retrofitting provenance later means rewriting this function,
+    so the composed result carries `excluded_by` per path from the first commit.
+
+  - REUSE OF `_build_files_touched()` IS PROMOTED FROM A NOTE TO A CONSTRAINT,
+    with a test of its own. The BA's note says it "must not be re-implemented
+    here"; nothing in the criteria makes that observable, so a copy would ship
+    green. The added test mutates one member's it_requirements prose and asserts
+    the composed result changes, which only holds if both sides share one
+    derivation.
