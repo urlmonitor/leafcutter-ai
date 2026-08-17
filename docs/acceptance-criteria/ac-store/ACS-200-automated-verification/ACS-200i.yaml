@@ -1,0 +1,69 @@
+id: ACS-200i
+components:
+  - ac_store
+title: "The rules applied before merge and the rules applied locally are one and the same set"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of structural and schema rules the commit-time guardrails apply
+    to an acceptance-criterion record,
+  When the merge-time acceptance-criteria check evaluates that same record,
+  Then it applies that same set of rules, resolved from the same single
+    definition of each rule,
+  And no record can satisfy the local guardrails and then be failed at merge
+    time for a rule the local guardrails never applied,
+  And no record can satisfy the merge-time check and then be failed by the
+    local guardrails,
+  And when a rule is added, changed, or removed, the change takes effect on
+    both sides at once — neither side holds a private copy of a rule the other
+    does not have,
+  And the symptom ("it passed on my machine and failed at merge, or passed at
+    merge and blocked my next commit") must not occur.
+depends_on:
+  - ACS-200g
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200e.yaml
+    relationship: describes
+    status: exists
+    relevance: "The same parity guarantee, already established for one rule family (the standalone validator versus the commit-time schema gate). This AC generalises it to the whole rule set and to the merge-time check."
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-200g
+  contract: "The merge-time check whose rule set must be the same set the local guardrails apply."
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: safety
+notes: |
+  Without this, the store acquires two divergent definitions of "valid" and the
+  gate becomes a source of friction instead of confidence. There is direct
+  precedent for the failure mode in this very folder: ACS-200e was raised
+  because the standalone validator reported OK for records the commit-time gate
+  then rejected. That was one rule family drifting from one other surface; this
+  AC extends the same guarantee across all six rule families and the new
+  merge-time surface.
+  Deliberately expressed as a property of the rules, not of any one mechanism —
+  a single shared definition consumed by both surfaces is the obvious way to
+  satisfy it, but the AC asserts the observable agreement, not the technique.
+  Changing the local guardrails themselves is OUT OF SCOPE; this AC constrains
+  what the merge-time check may apply, not how the local guardrails are built.
