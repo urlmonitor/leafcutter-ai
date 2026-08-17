@@ -32,7 +32,11 @@ origin_agent: BrainCandy
 created: 2026-08-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-120c-1
+  - GE-120c-2
+  - GE-120c-3
+  - GE-120c-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -73,3 +77,21 @@ notes: |
   specialist that does the renumbering) and the fact that the flow differs by
   stage; the how-to covers what a person does when they hit a clash at a stage
   where nobody can be brought in for them.
+
+  BA DECOMPOSITION NOTE (2026-08-17) — where each promise landed, and why the
+  two non-interactive stages share ONE L2.
+  GE-120c-1 is the only child that may promise a dispatch, and it is written
+  against the PostToolUse Edit|Write hook point — verified as the only layer
+  whose output is returned into the live session, with ticket_frontmatter_guard.py
+  as the working precedent at exactly that point. Its coverage note names the
+  anti-precedent explicitly (check_glossary_coverage.py: docstring "Always 0
+  (fail-open contract)", remediation via _dispatch_triage_standalone, which
+  blacklists every novel term with reason "standalone-mode placeholder") and sets
+  the evidence bar at observing the dispatch itself, since every weaker assertion
+  passes on that dead guard.
+  GE-120c-2 covers commit time AND the shared build in one record, because what
+  those two stages OWE the author is identical — the number, every claimant path,
+  and author-performed remediation — and writing it twice would guarantee the two
+  copies drift. It carries an explicit NEGATIVE clause: the output must make no
+  statement that any agent will renumber on the author's behalf. That negative is
+  the honesty constraint turned into something a test can fail on.

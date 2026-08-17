@@ -32,7 +32,10 @@ origin_agent: BrainCandy
 created: 2026-08-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-120a-1
+  - GE-120a-2
+  - GE-120a-3
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -63,3 +66,14 @@ notes: |
   exists because the numbering rules for all four kinds of work are currently
   scattered or unwritten, and a rule that four namespaces must obey has to live
   somewhere a future author will find it.
+
+  BA DECOMPOSITION NOTE (2026-08-17) — how the two failure shapes were split.
+  GE-120a-1 carries the collision shape and covers the three namespaces where it
+  is possible: requirement identifiers, decision numbers and diagram sequence
+  numbers. GE-120a-2 carries the two-copies shape and covers the work-item
+  namespace. The split is not by namespace for its own sake — it is because the
+  collision shape is structurally impossible for work items, whose identifier IS
+  the filename, so two different work items cannot share one in a folder. The two
+  L2s together discharge this L1's four-namespace scope; neither alone does.
+  GE-120a-1-i (L3) pins the whole-collection inspection scope against a
+  changed-files implementation.

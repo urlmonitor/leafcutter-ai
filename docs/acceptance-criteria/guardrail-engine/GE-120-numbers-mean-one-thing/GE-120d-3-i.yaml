@@ -1,0 +1,78 @@
+id: GE-120d-3-i
+title: "A defect in the guard itself is announced but does not hold an unrelated commit hostage"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the uniqueness pass raises an internal error that is NOT a failure to read the
+    collection — a defect in its own reporting code, raised after every artifact in every
+    namespace has been successfully read and compared,
+  When the pass runs at the commit-time stage,
+  Then it does not report an ordinary clean success,
+  And its output states that the check terminated abnormally and names the point it reached,
+  And the commit is nonetheless permitted to complete, because a defect in the guard must not
+    hold an unrelated change hostage,
+
+  And when the same internal error occurs at the shared-build stage, the build fails, because
+    there the guard's own health is in scope and no author is waiting on it,
+
+  And given instead the condition described in GE-120d-3 — an artifact in the collection that
+    could not be read — the commit-time stage BLOCKS, and this criterion's permission to proceed
+    does not apply to it.
+
+  The line this criterion draws: the pass either did or did not manage to inspect the whole
+  collection. If it did and then fell over on the way to reporting, the collection has been
+  examined and the author may proceed. If it did not, nothing has been established and the author
+  may not. Both cases are announced; only the second blocks at commit time.
+
+  Coverage note: covered only by a test that induces each of the two conditions distinctly and
+  asserts the two different dispositions at the commit-time stage. A test that induces only one
+  cannot show the boundary holds, and a boundary is what this criterion is.
+depends_on:
+  - GE-120d-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119a.yaml
+    relationship: context
+    status: exists
+    relevance: "The policy that a cannot-run condition must be visible. This criterion honours it on both sides of the boundary — both conditions are announced — while differing only on whether the commit proceeds."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120d-3
+  contract: "The could-not-establish outcome value, which this criterion distinguishes from a terminated-abnormally outcome."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE PLACE WHERE TWO STANDING RULES OF THIS COMPONENT MEET, and it exists as its own
+  record because leaving the meeting-point implicit is how one of them ends up swallowing the
+  other.
+
+  The component holds a deliberate, approved fail-open convention: a guard hitting an internal
+  error should not hard-block an unrelated commit. A sibling goal holds that a check which cannot
+  run must SAY so rather than report success. Neither is repealed here. Read together they give
+  exactly the disposition above — announce always, block only when the subject was not inspected.
+
+  THE RISK IF THIS L3 IS DROPPED runs in both directions and both are real. Drop it and lean
+  fail-open, and an implementer applies "internal error, therefore proceed" to the unreadable-file
+  case too, which reproduces the whole defect GE-120d-3 exists to prevent. Drop it and lean
+  fail-closed, and any bug in a brand-new whole-collection guard blocks every commit in the
+  repository until someone fixes the guard — which is how guards get deleted.
+
+  THE DISTINCTION IS DECIDABLE IN PRACTICE, which is what makes it a fair thing to ask for: the
+  pass knows whether it completed reading every namespace before the error occurred, because
+  GE-120d-3 already requires it to track and report that count.

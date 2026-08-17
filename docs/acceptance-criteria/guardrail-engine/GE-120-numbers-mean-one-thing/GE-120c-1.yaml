@@ -1,0 +1,83 @@
+id: GE-120c-1
+title: "While you are still writing, a specialist is actually brought in to renumber"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an authoring session in which an agent writes a new record declaring an identifier that
+    another record already in the collection claims,
+  When the write completes and the authoring-time guard runs on it,
+  Then the guard's output is returned into the running session, so the working agent receives it
+    rather than it going only to a terminal nobody is reading,
+  And that output states the contested identifier, the path of every artifact claiming it, and a
+    free identifier the author can move to,
+  And a business-analyst is DISPATCHED to perform the renumbering — observable as a
+    business-analyst invocation that actually occurs after that write and before the session
+    proceeds to unrelated work,
+  And when the same guard runs on a write that introduces no contested identifier, NO
+    business-analyst is dispatched and the session proceeds unimpeded.
+
+  Coverage note — this criterion is satisfied ONLY by a test that observes the dispatch actually
+  happening. It is NOT satisfied by a test asserting that the guard's output contains the words
+  "business-analyst", nor by one asserting that a dispatch function is defined, nor by one
+  asserting the guard is registered at the right hook point. Every one of those passes on a
+  guard that never dispatches anything. That is not a hypothetical: an existing guard in this
+  repository is documented as automatically dispatching a triage specialist, returns success
+  unconditionally, and routes its remediation through a placeholder that stamps every input with
+  the reason "standalone-mode placeholder". A documented-but-dead dispatch is the specific
+  outcome this criterion exists to prevent, so the evidence bar is the dispatch itself.
+depends_on:
+  - GE-120c
+  - GE-120a-1
+doc_links:
+  - path: templates/settings.json
+    relationship: modifies
+    status: exists
+    relevance: "The registration point. Its PostToolUse Edit|Write matcher is the ONLY layer whose output is returned into the live session, and therefore the only layer at which this criterion is achievable."
+  - path: templates/hooks/ticket_frontmatter_guard.py
+    relationship: context
+    status: exists
+    relevance: "The working precedent at exactly this hook point — a PostToolUse Edit|Write guard that inspects what was just written and emits a decision back into the session. The mechanism is proven, not speculative."
+  - path: templates/scripts/commit_guardian/check_glossary_coverage.py
+    relationship: context
+    status: exists
+    relevance: "THE ANTI-PRECEDENT. Documented in CLAUDE.md as dispatching the glossary-triage agent automatically; its own docstring states 'Always 0 (fail-open contract)' and its default dispatch path, _dispatch_triage_standalone, blacklists every novel term with the reason 'standalone-mode placeholder'. Read it before implementing this AC."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The collection-wide uniqueness verdict — contested identifier, every claimant path, and a free identifier — which this guard renders and acts on."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ONLY AC IN THE TREE THAT MAY PROMISE A DISPATCH, and the mechanical reason is
+  absolute: a git pre-commit hook is a subprocess at commit time — it can block and print, it
+  cannot spawn an agent. A shared-build job can fail and print — it cannot spawn an agent
+  either. A PostToolUse hook on Edit|Write runs inside the live session and its output is
+  returned into the running agent's context. That is the whole difference, and it is why
+  GE-120c-2 promises strictly less.
+
+  THE NEGATIVE CLAUSE — no dispatch on a clean write — is not symmetry for its own sake. The
+  anti-precedent guard dispatches its placeholder for EVERY novel term it sees, which is how it
+  came to rubber-stamp everything. A dispatch that fires unconditionally is indistinguishable
+  from no guard at all, and is more expensive.
+
+  OPEN FOR THE IT PO, deliberately not decided at L2: whether the guard blocks the write or
+  permits it and dispatches alongside. The criterion requires the dispatch and the message; it
+  does not require the write to be reverted. GE-120d-3 separately establishes that the
+  authoring-time stage announces rather than reverts on a cannot-run condition, which suggests
+  the same disposition here, but it is a technical judgement.

@@ -1,0 +1,81 @@
+id: GE-120b-2
+title: "The artifacts that were never numbered do not block unrelated work"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the enrolled diagrams location holds 11 artifacts that carry no sequence number and
+    predate the enrolment rule,
+  And the current change set adds no artifact to that location,
+  When the enrolment check runs,
+  Then it terminates with a passing result,
+  And it reports none of the 11 as a violation,
+
+  And when the change set MODIFIES the content of one of the 11 without renaming it,
+  Then the check still terminates with a passing result and reports no violation for it,
+
+  And when the change set ADDS a twelfth unnumbered artifact to the same location,
+  Then the check terminates with a failing result and names only that twelfth artifact,
+
+  And when the change set RENAMES one of the 11 to another unnumbered name,
+  Then the check terminates with a failing result and names it, because a rename is the moment
+    its name is being chosen again,
+
+  And in every one of these runs the check states how many pre-existing unnumbered artifacts it
+    observed and did not flag, so the size of the exemption is visible on every run rather than
+    silently absorbed.
+
+  Coverage note: covered only by a test that executes the check with each of these four change
+  sets against a tree that really contains the pre-existing unnumbered population, asserting the
+  result value and exactly which paths are named. A test run against a tree with no pre-existing
+  unnumbered artifacts cannot distinguish this behaviour from one that flags everything.
+depends_on:
+  - GE-120b
+  - GE-120b-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: context
+    status: exists
+    relevance: "The 'AC store valid' job records the identical trade-off and its resolution: a whole-collection rule applied to a collection with 57 pre-existing violations 'would fail every contributor on day one and get switched off'. Its answer — scope the ATTRIBUTION to the change set while leaving the rule whole — is the pattern this criterion requires."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-120b-1
+  contract: "The per-artifact enrolment verdict, which this criterion filters by whether the artifact is new or renamed in the change set."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS AC IS WHAT MAKES THE USER'S SCOPE TRIM IMPLEMENTABLE. GE-120e's binding scope decision
+  puts the 11 unnumbered diagrams OUT of repair scope: they are not ambiguous, they break no
+  reference, and renaming them to add numbers would risk exactly the dangling-reference damage
+  the repair is meant to avoid. But an enrolment check with no notion of "pre-existing" would
+  then fail on every single commit until someone renamed them anyway — which would either force
+  the retro-numbering the user rejected, or get the check disabled. Without this AC, GE-120b and
+  GE-120e contradict each other in practice.
+
+  NOTE THE DIRECTION OF SCOPING HERE VERSUS GE-120a-1-i, which look opposed but are not.
+  Uniqueness is inspected over the WHOLE collection, because a collision's second claimant may
+  be anywhere. Enrolment is ATTRIBUTED to the change set, because enrolment is a property of a
+  single artifact and there is no second party to find. Whole-collection inspection buys nothing
+  for enrolment and costs a permanently red gate.
+
+  THE VISIBLE EXEMPTION COUNT is the safeguard against this becoming permanent invisible drift.
+  If the count grows, someone sees it grow. A silent exemption is how the current population
+  reached 11 in the first place.

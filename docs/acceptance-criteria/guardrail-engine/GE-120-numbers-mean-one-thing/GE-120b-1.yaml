@@ -1,0 +1,86 @@
+id: GE-120b-1
+title: "A new artifact added where numbers are expected is reported when it takes none"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a declared enrolment rule that names, per namespace, the locations where an artifact is
+    expected to carry a number and the locations that are exempt — for the diagram namespace,
+    the diagrams location is enrolled while component-description documents, decision records
+    and index files in the same tree are exempt,
+  When a change set ADDS a file named "self-heal-sequence.md" to the enrolled diagrams location,
+  Then the enrolment check terminates with a failing result,
+  And its output names that file, states that it carries no sequence number, and states the
+    next free sequence number for its level,
+
+  And when a change set instead ADDS a component-description document to an exempt location,
+  Then the enrolment check terminates with a passing result and reports nothing for it,
+
+  And when a change set ADDS a file to the enrolled diagrams location whose name carries a valid
+    level-and-sequence prefix that no other artifact claims,
+  Then the enrolment check terminates with a passing result and reports nothing for it,
+
+  And in every one of these runs the check states which enrolment rule it applied, so a passing
+    result cannot be produced by an empty or unloaded rule.
+
+  Coverage note: covered only by a test that executes the check against a real on-disk tree with
+  each of these files actually added, and asserts on the result value and the file paths and
+  next-free number named in the output. A test asserting that an enrolment table is defined does
+  not cover it.
+depends_on:
+  - GE-120b
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: scripts/next_diagram_seq.py
+    relationship: context
+    status: exists
+    relevance: "The existing allocator that returns the next free sequence number for a level. It already exists and is already correct — this AC requires that an author be TOLD to use it at the moment they skip it, which is the missing half."
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: context
+    status: exists
+    relevance: "Today the only thing that asks for a sequence number is prose instruction in this agent template. Nothing verifies it. Prompt-only enrolment is precisely the opt-out this AC closes."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-artifact enrolment verdict — artifact path, enrolled/exempt, numbered/unnumbered, and the next free number when unnumbered — consumed by GE-120c-2 for the message."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120b-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  "SUPPOSED TO CARRY A NUMBER" IS DECIDED HERE, AS THE L1 REQUIRED, and deliberately decided as
+  DATA (a declared enrolment rule the check reads) rather than as logic. Two reasons: a fifth
+  namespace must be enrollable without changing the check, and the rule has to be quotable in
+  the reference document GE-120b-4 writes. If the rule lived only in code, the document would be
+  a second source of truth that could drift from it.
+
+  THE ENROLMENT DECISION FOR THE DIAGRAM NAMESPACE — the only namespace with a live opt-out
+  population — is: files under the diagrams location are enrolled; component-description
+  documents, decision records, index and README files are exempt. This is NOT inferred from the
+  current file listing, which is the drifted state being corrected: it is inferred from the fact
+  that an allocator exists for exactly the diagrams location and for nothing else.
+
+  THE OTHER THREE NAMESPACES HAVE NO OPT-OUT TODAY and their enrolment rule is trivially
+  satisfied — an acceptance criterion, a decision record and a work item cannot exist without a
+  filename or identifier. The rule must still be DECLARED for them so the reference document can
+  state it and so a future artifact type cannot arrive unenrolled by default. Declaring it costs
+  nothing; the check will simply never fire for them.
+
+  NEXT-FREE-NUMBER IN THE MESSAGE is what makes this a remediation rather than an obstruction,
+  and it is cheap here because the allocator already exists.

@@ -1,0 +1,83 @@
+id: GE-120a-1-i
+title: "A collision is found even when only one claimant is in the current change set"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the collection contains two acceptance-criterion records that both declare the
+    identifier "GE-119",
+  And the current change set contains ONLY ONE of the two — the other has sat unmodified on
+    the shared branch for weeks and appears in no diff,
+  When the uniqueness pass runs,
+  Then it reports the contested identifier and names BOTH claimant paths, including the one
+    absent from the change set.
+
+  And Given a change set that touches NEITHER claimant while the collision is still present in
+    the collection,
+  When the pass runs,
+  Then it still reports the contested identifier and both claimant paths.
+
+  And Given a change set that adds a record claiming an identifier no other record claims,
+  When the pass runs,
+  Then it reports nothing for that record.
+
+  The property this criterion pins: the change set may be used to decide which findings are
+  ATTRIBUTED to the current author, but it must never bound WHAT IS INSPECTED. A check whose
+  input set is the changed files cannot observe a collision whose second claimant is not in the
+  diff — and in the collision actually observed in this repository, the two claimants were
+  authored weeks apart from different working copies, so they were never in one diff together.
+
+  Coverage note: covered only by a test that stages exactly one claimant, executes the pass, and
+  asserts the absent claimant's path appears in the output. A test that stages both claimants
+  cannot distinguish a whole-collection pass from a changed-files pass and therefore does not
+  cover this criterion.
+depends_on:
+  - GE-120a-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: context
+    status: exists
+    relevance: "Reads its file set from `git diff --cached --name-only` (_get_staged_ac_paths). This is the changed-files scoping that makes the incumbent validator blind to the condition in this criterion."
+  - path: templates/scripts/commit_guardian/check_ac_circular_deps.py
+    relationship: context
+    status: exists
+    relevance: "Existing precedent for the required shape: it builds an adjacency list from the WHOLE on-disk store and then overlays the staged changes. The whole-collection load mechanism already exists in the hook family and should be reused rather than reinvented."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The collection-wide uniqueness pass whose inspection scope this criterion constrains."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the single most important edge case in the tree and the reason the L1 insists the
+  UNIT OF INSPECTION is the point. It is kept as its own record rather than folded into
+  GE-120a-1 because it is the one condition under which a plausible, well-written, well-tested
+  implementation of GE-120a-1 still fails to catch the defect the goal exists to prevent.
+
+  It is also the condition that reproduces the actual incident: the parentless GE-119 record was
+  minted by /quick-fix from a different working copy than the GE-119 goal tree. The two files
+  have never appeared in a single change set, so every diff-scoped gate in the repository saw a
+  clean change.
+
+  OPEN FOR THE IT PO — not a behavioural question, so deliberately not decided here: whether a
+  pre-existing collision in which NEITHER claimant is in the change set should BLOCK the current
+  author or only be reported to them. The criterion above requires only that it be REPORTED.
+  Blocking on it is safe only once GE-120e has repaired the store; before that it would stop
+  every unrelated commit. Note the ci.yml "AC store valid" job already documents this exact
+  trade-off for the 57 pre-existing orphans and resolved it by diff-scoping the ATTRIBUTION
+  while leaving the rule itself intact.

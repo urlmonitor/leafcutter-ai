@@ -1,0 +1,95 @@
+id: GE-120a-1
+title: "A whole-collection pass reports every number claimed by two artifacts"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a collection fixture that contains, across three numbered namespaces:
+    - two acceptance-criterion records that both declare the identifier "GE-119" — one a
+      goal-level record owning a folder of children, the other a parentless detail-level
+      record at the namespace root,
+    - two decision records whose filenames both claim the integer 029,
+    - two architecture diagrams whose filenames both claim the level-and-sequence "c2-003",
+  And several thousand further artifacts across those same namespaces that each claim a
+    number no other artifact claims,
+  When the uniqueness pass runs over the whole collection,
+  Then it terminates with a failing result,
+  And it reports exactly three findings — one per contested number, not one per claimant
+    file,
+  And each finding states the contested number and the path of EVERY artifact claiming it,
+    so a reader can identify both sides of the collision without searching the collection,
+  And no artifact whose number is claimed only once appears in the report.
+
+  And Given the same collection with those three contested numbers resolved so that every
+    number is claimed once,
+  When the same pass runs,
+  Then it terminates with a passing result,
+  And it states, per namespace, how many artifacts it inspected — so a passing result is
+    distinguishable from a pass produced by inspecting nothing.
+
+  Coverage note: this criterion is covered only by a test that EXECUTES the pass over a real
+  on-disk collection and asserts on the result value, the number of findings, and the paths
+  named in the emitted output. A test that searches the implementation for a function name,
+  a constant, or a message string does not cover it — a grep-only test passes on dead code
+  (CLAUDE.md, "Gate / Workflow ACs — Verify Behaviorally, Not by Grep").
+depends_on:
+  - GE-120a
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: context
+    status: exists
+    relevance: "The incumbent acceptance-criterion validator. It is PER-FILE — it reads its file set from the staged diff and judges each record alone — so it is structurally incapable of satisfying this criterion. This AC requires a new unit of inspection, not another rule inside this script."
+  - path: templates/scripts/commit_guardian/check_adr_collision.py
+    relationship: context
+    status: exists
+    relevance: "An existing staged-vs-committed decision-number collision check that is NOT registered in .pre-commit-config.yaml, so it never runs. Its comparison logic is reusable; its registration gap is why the decision namespace is currently unguarded in practice."
+  - path: scripts/adr_refs.py
+    relationship: context
+    status: exists
+    relevance: "The read-side whole-collection auditor for decision numbers — an existing precedent for the collection-wide pass this AC requires, but it is a manually-invoked CLI, not a gate."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A collection-wide uniqueness verdict — per namespace, the set of contested numbers and every claimant path — consumed by GE-120c-2 to render the message and by GE-120d-1 to drive all three stages."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120a-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THREE NAMESPACES HERE, THE FOURTH IN GE-120a-2. This criterion covers the collision shape —
+  two unrelated artifacts claiming one number — which is possible for acceptance-criterion
+  identifiers, decision numbers and diagram sequence numbers. It is NOT possible for work-item
+  identifiers, whose identifier is the filename: two different work items cannot share a
+  filename in one folder. The work-item namespace's only observed shape is one item held in two
+  lifecycle folders, which is GE-120a-2. Together the two L2s discharge the L1's four-namespace
+  scope; neither alone does.
+
+  ONE FINDING PER CONTESTED NUMBER, NOT PER FILE, is a deliberate discrimination and is what
+  makes the output usable: a per-file report tells the author their file is a duplicate without
+  telling them of what.
+
+  THE PER-NAMESPACE INSPECTED COUNT on the passing path is inherited from GE-119 ("a check that
+  cannot run says so"). Without it, a pass that inspected zero artifacts is indistinguishable
+  from a pass that inspected the whole collection — which is the exact defect GE-120d-3 forbids.
+
+  MOTIVE DIFFERS BY NAMESPACE (carry this through, per the L1 note): the acceptance-criterion
+  namespace is being REPAIRED (one live collision, GE-119). The decision-number namespace is
+  measured CLEAN — 33 records, contiguous 1..33, no duplicates, no gaps — so guarding it LOCKS
+  IN a good state. Do not write the decision namespace up as though a defect existed.

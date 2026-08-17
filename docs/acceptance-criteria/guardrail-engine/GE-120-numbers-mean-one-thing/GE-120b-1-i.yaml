@@ -1,0 +1,66 @@
+id: GE-120b-1-i
+title: "A name that carries the prefix but no sequence number counts as unnumbered"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the enrolled diagrams location already holds artifacts named
+    "c2-fast-vs-heavy-lane-phases.md" and "c3-done-proof-evaluation-sequence.md" — names that
+    carry the level prefix but no sequence number,
+  And it holds "df-001-dual-engine-workflow-build-transform.md", which carries a number under a
+    scheme the numbering convention does not define,
+  And it holds "gates-sequence.md", which carries neither a prefix nor a number,
+  When the enrolment check evaluates each of these four as if newly added,
+  Then each of the four is reported as carrying no valid sequence number,
+  And none of them is accepted as numbered on the strength of its prefix alone,
+  And the report distinguishes "prefix present, sequence number missing" from "no recognised
+    numbering scheme", because the remediation differs — the first needs a sequence inserted at
+    a known level, the second needs a level decided first,
+  And an artifact named with a valid level-and-sequence prefix is still accepted as numbered.
+
+  Coverage note: covered only by a test that runs the check against these four real name shapes
+  and asserts each is classified unnumbered and that the two shapes are reported distinctly. A
+  test using only a single all-or-nothing name shape cannot distinguish a correct implementation
+  from one that accepts any name beginning with a level letter.
+depends_on:
+  - GE-120b-1
+doc_links:
+  - path: scripts/next_diagram_seq.py
+    relationship: context
+    status: exists
+    relevance: "Its allocator regex `^c([1-4])-(\\d{3})-` already requires the sequence digits, so the correct classification is available; the hazard is an enrolment check written with a looser pattern than the allocator's."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120b-1
+  contract: "The enrolment verdict whose numbered/unnumbered classification this criterion constrains."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  NOT PADDING — this is a measured condition, not a hypothetical. Of the 11 unnumbered artifacts
+  in the diagrams location (BA re-measurement, 2026-08-17), FOUR carry a level prefix with no
+  sequence number (two c2-, two c3-) and ONE uses an entirely different scheme (df-001-). A
+  naive enrolment check that asks "does the name start with a level letter" would accept five of
+  the eleven as enrolled, so the guard would report a smaller problem than exists and would let
+  a sixth such name through unchallenged in future.
+
+  This condition is also the most likely one to be reintroduced, because a half-enrolled name
+  LOOKS conventional to a reviewer. It is kept as its own record so the classification rule
+  survives any later rewrite of GE-120b-1.
+
+  These four artifacts are NOT retro-numbered — see GE-120b-2 and the binding scope decision in
+  GE-120e's notes. This criterion governs how they are CLASSIFIED, not whether they are changed.

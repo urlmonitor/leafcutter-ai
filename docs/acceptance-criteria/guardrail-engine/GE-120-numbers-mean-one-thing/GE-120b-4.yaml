@@ -1,0 +1,64 @@
+id: GE-120b-4
+title: "Which locations must carry a number, and which need not, is written down"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to know whether a kind of artifact they are about to add is expected
+    to carry a number,
+  When they read the enrolment section of the numbering reference document,
+  Then it lists, per namespace, every location that is enrolled and every location that is
+    exempt,
+  And for each exempt location it states WHY it is exempt, so the list reads as a decision
+    rather than as an inventory of what happens not to be numbered today,
+  And it states that the exemption granted to the artifacts that were never numbered applies
+    only to those artifacts as they stand, and does not extend to new artifacts added beside
+    them,
+  And it records that those artifacts are deliberately not being numbered retrospectively, and
+    the reason — that an absent number is not ambiguous and breaks no reference, while renaming
+    published files would break references that resolve today,
+  And the section lives in the same document as GE-120a-3's numbering rules, not in a separate
+    competing document,
+  And the enrolment table it presents matches the enrolment rule the check actually applies.
+depends_on:
+  - GE-120b
+  - GE-120a-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-numbers-mean-one-thing/GE-120e.yaml
+    relationship: context
+    status: exists
+    relevance: "Carries the user's binding scope decision at the PO gate that the unnumbered artifacts are NOT retro-numbered, and the reasoning. This document is where that decision becomes findable by someone who was not in the room."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120b-1
+  contract: "The declared enrolment rule the check reads, so the documented table and the enforced rule are the same data rather than two statements of it."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies GE-120b's documentation_triggers: [reference-doc].
+
+  The L1 made this load-bearing: "'Supposed to carry a number' is the load-bearing phrase and it
+  is not self-evident — some documents legitimately have no number. Decide the enrolment rule
+  per kind of work explicitly at L2 and write it down; do not infer it from the current file
+  listing, which is exactly the drifted state being corrected." GE-120b-1 makes the decision;
+  this AC is the writing-down half, and the "state WHY each exemption exists" clause is what
+  forces it to be a decision rather than a transcription of the drift.
+
+  This is also where the user's scope trim is preserved against a future reader who finds 11
+  unnumbered diagrams and assumes they were overlooked. Recording the reasoning is what stops
+  that reader re-opening a decision that was made deliberately.

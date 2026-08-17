@@ -34,7 +34,10 @@ origin_agent: BrainCandy
 created: 2026-08-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-120e-1
+  - GE-120e-2
+  - GE-120e-3
 implemented_by: []
 change_target: docs
 risk_surface: internal
@@ -89,3 +92,33 @@ notes: |
   restructure in the requirements-store component. That work replaces the
   numbering scheme wholesale and is unbuilt; this repair fixes today's records
   under today's scheme. Nothing in that tree may be edited by this work.
+
+  BA DECOMPOSITION NOTE (2026-08-17) — re-measurement, blast radius, scope guard.
+  Counts re-measured independently and all four confirmed: 2,975 requirement
+  files / 2,974 distinct identifiers (the six GE-120 files committed at the PO
+  stage account for the difference from the PO's 2,969/2,968), exactly one
+  duplicate — GE-119; decision numbers 1..33 contiguous, zero duplicates, zero
+  gaps; 12 numbered diagrams with no collisions beside 11 unnumbered ones; 333
+  work-item files with 328 distinct names, 5 held in two lifecycle folders.
+
+  THE BLAST RADIUS OF THE ONE COLLISION IS LARGER THAN IT LOOKS, and GE-120e-1 is
+  written against the measured citations rather than an assumption: the
+  parentless claimant is cited by NINE `# covers: GE-119` tags in one test module,
+  by check_contract_shrinking.py, and by one release note; the goal claimant is
+  cited by its own 33 files and a second release note. So a bare "GE-119" citation
+  is genuinely ambiguous today — the goal's own thesis, demonstrated on its own
+  worked example. Any tool resolving that coverage tag currently gets two answers.
+  Expected resolution: move the parentless record to GE-121 (verified free) and
+  give it a parent, leaving the 33-file tree untouched. GE-120e-1's criteria are
+  written against "an identifier no other artifact claims" rather than the literal
+  GE-121, so a concurrent mint elsewhere cannot invalidate the acceptance test.
+
+  GE-120e-3 IS THE SCOPE GUARD. It requires the repaired collection to pass the
+  real uniqueness pass with no exemption list, no allowlist and no known-bad
+  entries — turning "configure it to tolerate the known-bad entries" from a
+  pragmatic shortcut into a test failure. It also carries a negative assertion
+  that the unnumbered artifacts are unchanged in name and location, so an
+  implementer who tidies them up while in there FAILS rather than quietly
+  re-expanding the user's binding trim. Its final clause reintroduces a contested
+  number and re-runs the pass, because a passing result over a clean collection
+  is otherwise indistinguishable from an inert check.

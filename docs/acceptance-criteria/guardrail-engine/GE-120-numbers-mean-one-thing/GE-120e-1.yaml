@@ -1,0 +1,93 @@
+id: GE-120e-1
+title: "The one contested requirement number is resolved without breaking what cites it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the requirement collection contains two records claiming the identifier "GE-119": a
+    goal-level record owning a folder of 33 files, and a single parentless detail-level record at
+    the namespace root whose subject is the contract-shrinking guard,
+  And nine test functions carry a coverage tag naming "GE-119", all of them written for the
+    parentless record,
+  And a guard source file and two release notes cite "GE-119" — one release note meaning the
+    parentless record, the other meaning the goal record,
+  When the repair is complete,
+  Then exactly one record in the collection claims "GE-119", and it is the goal record,
+  And every one of the 33 files in that goal record's folder is unchanged,
+  And the parentless record claims an identifier in the same namespace that no other artifact
+    claims, and that was not previously claimed by any retired artifact,
+  And it declares a parent that exists, and that parent lists it among its children,
+  And all nine coverage tags name the identifier the moved record now claims, so each tag
+    resolves to exactly one record,
+  And the guard source citation names the moved record's new identifier,
+  And each remaining citation of "GE-119" in a dated historical record either genuinely refers to
+    the goal record, or states the identifier the moved record now carries, so no reader is left
+    holding a citation that resolves to the wrong work,
+  And no citation of either identifier anywhere in the repository resolves to zero records or to
+    more than one.
+
+  Coverage note: covered by executing the whole-collection uniqueness pass and a repository-wide
+  citation resolution over the repaired tree, asserting one claimant for the old identifier, one
+  for the new, and no unresolved or multiply-resolved citation of either. Asserting only that the
+  file was renamed does not cover it — the references are where a renumbering does its damage.
+depends_on:
+  - GE-120e
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-119.yaml
+    relationship: modifies
+    status: exists
+    relevance: "The parentless detail-level claimant — the artifact that moves. Single file, no children, authored by /quick-fix from a different working copy."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119.yaml
+    relationship: context
+    status: exists
+    relevance: "The goal-level claimant — the artifact that keeps the identifier. Its 33-file tree must not be touched."
+  - path: scripts/adr_refs.py
+    relationship: context
+    status: exists
+    relevance: "A worked precedent for the reference half of a renumbering: it rewrites slug-qualified citations mechanically, refuses to rewrite bare ambiguous ones, and deliberately excludes dated historical records. The same three-way treatment applies here."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  EXPECTED RESOLUTION, stated as guidance and consistent with the criterion above: move the
+  parentless record to GE-121 — verified free at authoring time, since GE-120 was taken by this
+  tree — and give it a parent. That is the cheap direction: one file with no children moves,
+  while the 33-file tree stays put. The criterion is deliberately written against "an identifier
+  no other artifact claims" rather than against the literal GE-121, so that a later mint of
+  GE-121 by another session does not invalidate the acceptance test.
+
+  WHEN LISTING TAKEN IDENTIFIERS IN THIS NAMESPACE, scan the loose files as well as the folders.
+  GE-114-*, GE-115 and the GE-119 record being moved all sit at the namespace root, so a
+  folder-only listing under-reports what is taken. That listing error is a plausible way to
+  produce a second collision while repairing the first.
+
+  REPAIR IS NOT FREE, AND THIS CASE PROVES IT. The parentless record looks isolated, but it is
+  cited from nine coverage tags in one test module, from a guard source file, and from a release
+  note — and the same bare identifier is cited by 33 requirement files and a second release note
+  meaning the OTHER record. So a bare "GE-119" citation is genuinely ambiguous today, which is
+  the goal's own thesis demonstrated on its own worked example. Any tool resolving a coverage tag
+  named GE-119 currently gets two answers.
+
+  DELETING EITHER CLAIMANT IS NOT THE ANSWER. Both describe real, wanted work: the goal record is
+  an active five-child tree, and the parentless record documents a live defect in the
+  contract-shrinking guard that is covered by nine passing tests.
+
+  THE MOVED RECORD IS PARENTLESS TODAY and would be reported by an orphan scan regardless. Giving
+  it a parent is required by the criterion because a record with a new identifier and no parent
+  simply relocates the problem, and because the store's own back-link gate would reject it.

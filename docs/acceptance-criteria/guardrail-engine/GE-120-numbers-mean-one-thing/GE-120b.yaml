@@ -32,7 +32,11 @@ origin_agent: BrainCandy
 created: 2026-08-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-120b-1
+  - GE-120b-2
+  - GE-120b-3
+  - GE-120b-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -58,3 +62,22 @@ notes: |
   state being corrected. The how-to trigger covers "how do I get a number for a
   new X" — today an author who does not already know the mechanism has no path to
   discover it, which is a large part of why the opt-out population exists.
+
+  BA DECOMPOSITION NOTE (2026-08-17) — the enrolment rule as decided at L2.
+  GE-120b-1 decides it as DATA rather than logic: a declared rule naming, per
+  namespace, which locations are enrolled and which are exempt. For the diagram
+  namespace — the only one with a live opt-out population — the diagrams location
+  is enrolled and component-description documents, decision records and index
+  files are exempt; the basis is that an allocator exists for the diagrams
+  location and for nothing else, NOT the current file listing. The other three
+  namespaces are declared enrolled but are trivially satisfied, since an
+  identifier is their filename.
+
+  GE-120b-2 IS LOAD-BEARING AND MUST NOT BE DROPPED AS AN OPTIMISATION. It scopes
+  enrolment ATTRIBUTION to artifacts newly added or renamed in the change set,
+  which is what lets the 11 pre-existing unnumbered diagrams stay unnumbered
+  without turning the gate permanently red. Without it, this L1 and GE-120e's
+  binding scope trim contradict each other in practice. Note the deliberate
+  asymmetry with GE-120a: uniqueness is INSPECTED over the whole collection
+  because a collision's second claimant may be anywhere, while enrolment is
+  attributed to the change set because there is no second party to find.

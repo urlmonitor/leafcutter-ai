@@ -1,0 +1,82 @@
+id: GE-120e-3
+title: "The repaired collection passes the guard itself, with nothing excused"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the contested requirement identifier and the five twice-held work items have been
+    repaired,
+  When the whole-collection uniqueness pass is run over the repaired collection with no
+    exemption list, no allowlist, and no known-bad entries configured for any namespace,
+  Then it terminates with a passing result for all four namespaces,
+  And it states, per namespace, the number of artifacts it inspected, and each count equals the
+    number of artifacts actually present in that namespace,
+  And no configuration exists anywhere that would cause a contested number to be reported as
+    acceptable,
+
+  And the artifacts that carry no number at all are unchanged in name and in location — they are
+    not ambiguous, they break no reference, and they are deliberately outside the repair,
+
+  And when a contested number is then reintroduced into any one of the four namespaces, the same
+    pass over the same collection terminates with a failing result naming it — so the passing
+    result above is evidence that the collection is clean, not evidence that the pass is inert.
+
+  Coverage note: the final clause is the load-bearing one and must be executed, not reasoned
+  about. A pass that reports success over the repaired collection proves nothing on its own,
+  because a pass that inspects nothing reports the same thing. Only the reintroduce-and-re-run
+  pair distinguishes a clean collection from a dead check.
+depends_on:
+  - GE-120e
+  - GE-120e-1
+  - GE-120e-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-numbers-mean-one-thing/GE-120a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The pass this criterion runs. Using the real guard rather than a bespoke audit script is the point — the repair is verified by the thing that will hold the line afterwards."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-numbers-mean-one-thing/GE-120a-2.yaml
+    relationship: context
+    status: exists
+    relevance: "The work-item half of the same pass."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The whole-collection uniqueness pass, run unmodified and unconfigured, as the acceptance instrument for the repair."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  THIS IS THE AC THAT CLOSES THE L1'S CENTRAL HAZARD: a guard switched on over a collection that
+  already contains a clash will either block every unrelated change until someone happens to fix
+  it, or be configured to tolerate the known-bad entries and thereby certify a broken state as
+  clean. The "no exemption list, no allowlist, no known-bad entries" clause is what makes the
+  second outcome a test failure rather than a pragmatic decision someone makes quietly under
+  delivery pressure.
+
+  THE REINTRODUCE-AND-RE-RUN CLAUSE is the mutation check. Without it this AC would be satisfied
+  by a guard that always passes, which is precisely the failure mode the whole GE-120 tree and
+  its sibling GE-119 exist to prevent. It costs one extra test and it is the only clause here
+  that cannot be satisfied by a broken implementation.
+
+  THE UNNUMBERED-ARTIFACTS CLAUSE IS A NEGATIVE ASSERTION PROTECTING THE USER'S SCOPE DECISION.
+  Repair scope was trimmed at the PO gate to the ambiguous cases only, and the 11 unnumbered
+  diagrams were explicitly excluded — an absent number is not ambiguous and breaks no reference,
+  while renaming published files would risk the dangling references this work exists to prevent.
+  Stating it as an acceptance clause means an implementer who "tidies them up while in there"
+  fails the test rather than quietly re-expanding a decision the user made deliberately. If a
+  later reader believes those diagrams should be numbered retrospectively, that is new work under
+  its own requirement, not a reinterpretation of this one.

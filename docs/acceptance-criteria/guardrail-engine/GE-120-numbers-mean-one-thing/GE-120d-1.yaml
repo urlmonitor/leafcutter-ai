@@ -1,0 +1,81 @@
+id: GE-120d-1
+title: "One rule, evaluated at three stages, cannot give three different answers"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a collection containing exactly one contested number,
+  When the numbering rule is evaluated at the authoring-time stage, at the commit-time stage,
+    and at the shared-build stage, each over that same collection,
+  Then all three stages identify the same contested number and name the same set of claimant
+    paths,
+
+  And given the rule is then extended so that a number shape previously accepted is now
+    contested, with that extension made in ONE place,
+  When all three stages are evaluated again, with no edit made to any second or third definition
+    of the rule,
+  Then all three stages report the newly contested case,
+
+  And there is no collection for which one stage reports a clean result while another stage
+    reports a contested one.
+
+  Coverage note: covered only by a test that actually invokes all three stages against one
+  fixture collection and compares their verdicts, plus a test that makes a single rule change and
+  re-invokes all three. A test asserting that three registrations point at the same script name
+  does not cover it — identical registration does not establish identical evaluation, and it
+  passes on three stages that all silently no-op.
+depends_on:
+  - GE-120d
+  - GE-120a-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: context
+    status: exists
+    relevance: "The 'AC store valid' job already implements this principle for the acceptance-criterion guards: it runs them THROUGH pre-commit rather than invoking the scripts directly, explicitly 'so the merge-time and commit-time rule sets are literally the same config and cannot drift apart'. Reuse that reasoning."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "The template-is-canonical, build-deploys rule. A rule edited only in the template is a no-op in the layout the stages actually run from, which would present as exactly the three-way disagreement this criterion forbids."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A single rule evaluation invoked identically by all three stage entry points."
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The collection-wide uniqueness pass that the three stages each invoke."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE SINGLE-RULE REQUIREMENT IS EXPRESSED BEHAVIOURALLY ON PURPOSE. "The three stages share one
+  implementation" is a structural claim and would invite a grep test. "Change the rule once and
+  all three stages change behaviour" is the same requirement stated as something only a running
+  system can satisfy, and it fails on three copied implementations without anyone having to
+  inspect the source.
+
+  THIS IS ALSO WHAT MAKES GE-120c-2's single message contract implementable: two stages can only
+  owe the author the same message if they are computing the same verdict.
+
+  DEPLOYMENT HAZARD FOR THE IT PO, worth flagging because this repository has been bitten by it:
+  a hook that gains a new shared dependency must have that dependency added to the build deploy
+  manifest, or the deployed hook raises an import error at runtime while the source-tree unit
+  tests pass. Once the shared-build gate is a required check, that failure blocks every merge.

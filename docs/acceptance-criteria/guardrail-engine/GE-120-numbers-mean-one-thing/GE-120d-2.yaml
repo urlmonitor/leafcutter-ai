@@ -1,0 +1,81 @@
+id: GE-120d-2
+title: "A clash that slipped past the commit check is still stopped before it reaches everyone"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author commits a record claiming a contested number with the commit-time guards
+    bypassed, so the commit-time stage never ran at all,
+  And the resulting change is proposed for merge into the shared branch,
+  When the shared build's numbering gate runs on that proposed change,
+  Then the gate fails,
+  And its output names the contested number and every claimant path,
+  And the gate's name appears in the set of checks the shared branch requires to pass before a
+    merge is permitted, so the failing gate actually prevents the merge rather than merely
+    reporting on it,
+
+  And given a proposed change that contests no number,
+  Then the gate passes and states, per namespace, how many artifacts it inspected.
+
+  Coverage note: covered by executing the gate's own command against a checkout that really
+  contains the contested pair and asserting the failing result and the named paths — plus a check
+  that the gate's name is present in the shared branch's required-check set. A gate that fails
+  correctly but is not required is a report, not a backstop, and this criterion is not met by
+  either half alone.
+depends_on:
+  - GE-120d
+  - GE-120d-1
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Where the gate is defined. Note the comment on the existing test job: the job NAME is the stable contract referenced by the required-status-check list, so it must not be renamed once required."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: context
+    status: exists
+    relevance: "Documents the commit-time bypass this criterion assumes an author can perform. The bypass is a deliberate affordance, not a defect — which is exactly why an unskippable backstop is needed."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-120d-1
+  contract: "The shared rule evaluation the gate invokes, so the gate cannot hold a different rule from the commit-time stage."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE L1 IS EXPLICIT THAT THIS STAGE IS THE ONE THAT MAKES THE GUARANTEE REAL: the commit-time
+  stage is skippable on purpose by anyone who chooses to bypass the commit checks, so the shared
+  build is the only unskippable one. That framing is what makes the required-check clause part
+  of the criterion rather than a deployment detail — an optional gate leaves the guarantee
+  exactly as strong as the commit-time stage, which is to say voluntary.
+
+  THE OBSERVED PRECEDENT FOR THE FAILURE MODE THIS CLOSES is in this repository already: an
+  existing decision-number collision check is written, tested and deployed, but is not registered
+  in the commit-time configuration, so it has never run. A guard that exists and is not wired is
+  the same as no guard, and is worse because it appears in inventories as coverage.
+
+  A SECOND, SUBTLER TRAP THE IMPLEMENTER MUST AVOID, visible in the existing shared-build
+  configuration: the acceptance-criterion guards read their file set from the staged index, and
+  in a build checkout the proposed change's files are committed rather than staged — so invoking
+  them naively validates nothing and passes. The existing job solves this by moving the branch
+  pointer back to the base so the change's files appear staged. Any gate reusing a staged-index
+  reader inherits this trap, and a false pass here defeats the entire backstop.
+
+  ON THE INHERITED FAIL-OPEN CONVENTION: this criterion concerns a gate that RAN and found a
+  contested number. The cannot-run case is GE-120d-3 and is not weakened by anything here.

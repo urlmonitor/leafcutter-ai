@@ -1,0 +1,68 @@
+id: GE-120c-3
+title: "A person blocked where nobody can be brought in has a procedure to follow"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person whose commit has been stopped, or whose shared build has failed, on a numbering
+    clash, and who has only the printed output in front of them,
+  When they follow the how-to guide,
+  Then it tells them how to decide WHICH of the two claimants moves, giving the criterion this
+    project uses rather than leaving it to preference,
+  And it tells them how to find a free number for the artifact that moves,
+  And it tells them how to find and update the existing references to the number being vacated,
+    so the move does not leave a citation resolving to nothing or to the wrong artifact,
+  And it states which references are deliberately NOT rewritten — dated historical records that
+    describe what happened at the time — and what to do instead for those,
+  And it states plainly that at these two stages nobody is dispatched to do this for them, and
+    names the one stage where that does happen, so the difference is understood rather than
+    discovered,
+  And a person following the guide end to end on a real clash reaches a state where the
+    numbering gate passes.
+depends_on:
+  - GE-120c
+  - GE-120c-2
+doc_links:
+  - path: scripts/adr_refs.py
+    relationship: context
+    status: exists
+    relevance: "An existing worked implementation of the reference-repair procedure this guide must describe, including the qualified-versus-bare citation distinction and its IGNORED_SLUGS treatment of dated historical records that must not be repointed."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120c-2
+  contract: "The wording and content of the block message, so the guide begins where the reader actually is."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies GE-120c's documentation_triggers: [how-to]. The L1 scopes it precisely: "the how-to
+  covers what a person does when they hit a clash at a stage where nobody can be brought in for
+  them."
+
+  THE REFERENCE-REPAIR HALF IS THE PART THAT WILL BE UNDER-WRITTEN. Choosing a free number is
+  easy and obvious; finding every citation of the vacated number is neither, and getting it
+  wrong is what turns a renumbering into a set of broken links. GE-120e-1 has to do exactly this
+  work for the live collision and is the natural source of the procedure — write the guide from
+  what that repair actually required.
+
+  The clause about dated historical records is drawn from an existing decision in this
+  repository rather than invented: the decision-number auditor deliberately refuses to repoint
+  citations in closed records, on the grounds that doing so would make the record claim
+  something that did not happen.

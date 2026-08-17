@@ -1,0 +1,87 @@
+id: GE-120d-3
+title: "A pass that could not see the whole collection never reports success"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the collection contains an artifact belonging to a namespace the uniqueness pass is
+    responsible for, which the pass cannot read or cannot parse — a record whose content is not
+    well-formed, or a file the process is not permitted to open,
+  When the pass runs at the commit-time stage,
+  Then it does NOT report success,
+  And its output names the artifact it could not read,
+  And it states that uniqueness for that namespace was therefore not established,
+  And it states how many artifacts in that namespace it did read, so the size of the blind spot
+    is visible rather than implied,
+  And the commit does not complete,
+
+  And when the same condition occurs at the shared-build stage, the build fails carrying the same
+    three statements,
+
+  And when the same condition occurs at the authoring-time stage, the author is told the same
+    three statements in-session, and the write they just made is not reverted,
+
+  And in all three cases the reported outcome is distinguishable by a caller from an ordinary
+    clean pass without parsing prose — a could-not-establish result, not the value a clean run
+    produces.
+
+  Coverage note: covered only by a test that creates the genuine unreadable or unparsable
+  condition on disk and executes the pass against it, asserting the outcome value, the named
+  artifact, and the read count. Simulating the condition by patching the pass's own return value
+  tests the caller, not the pass, and does not cover this criterion.
+depends_on:
+  - GE-120d
+  - GE-120a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The sibling policy this criterion inherits: a check that could not perform its inspection reports a degraded outcome, not a clean pass, and the outcome must be machine-distinguishable from success independently of the exit code. This AC applies that policy to the numbering pass; it does not restate or replace it."
+  - path: templates/scripts/commit_guardian/check_glossary_coverage.py
+    relationship: context
+    status: exists
+    relevance: "The trap in its purest form — a guard whose documented contract is 'Always 0 (fail-open contract)'. Read it before implementing this AC."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The collection-wide uniqueness pass, whose outcome vocabulary this criterion extends with a could-not-establish value."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120d-3-i
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE PER-STAGE DECISION THE L1 DEMANDED IS MADE HERE, EXPLICITLY, AND IT IS NOT UNIFORM:
+    - commit time — BLOCKS. A whole-collection check that could not see the whole collection has
+      established nothing, so allowing the commit would be certifying an unexamined state.
+    - shared build — FAILS, for the same reason and because it is the backstop.
+    - authoring time — ANNOUNCES and does not revert the write. Reverting an author's work over
+      an unreadable file elsewhere in the collection punishes the wrong person, and the two later
+      stages still hold the line.
+
+  WHY A WHOLE-COLLECTION CHECK NEEDS THIS MORE THAN A PER-FILE ONE, which is the L1's point: a
+  per-file check that cannot read its one input has plainly not checked that input, and it is
+  obvious. A whole-collection check that reads 2,974 of 2,975 records looks like it worked. "I
+  could not read everything, therefore everything is fine" is the exact reasoning this criterion
+  forbids, and it is invisible without the read count.
+
+  THE INHERITED FAIL-OPEN CONVENTION IS NOT REPEALED AND NOT CONTRADICTED. That convention holds
+  that a guard's own internal error should not hard-block an unrelated commit; it says nothing
+  about a guard that ran and could not see its subject. The boundary between the two is drawn
+  explicitly in GE-120d-3-i, which is why that L3 exists.

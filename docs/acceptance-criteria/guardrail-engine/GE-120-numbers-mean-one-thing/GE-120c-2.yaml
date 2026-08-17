@@ -1,0 +1,90 @@
+id: GE-120c-2
+title: "At commit and in the shared build you are told both claimants and what to do yourself"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a commit whose changes introduce a record claiming an identifier that another artifact
+    in the collection already claims,
+  When the commit-time guard runs,
+  Then the commit does not complete,
+  And the printed output states the contested identifier, the path of EVERY artifact claiming
+    it, and the remediation the author must carry out themselves — which artifact is expected to
+    move, and how to obtain a free identifier,
+  And the printed output makes NO statement that any agent, specialist, or automated process
+    will perform the renumbering on the author's behalf,
+
+  And given the same contested identifier reaching the shared build,
+  When the build's numbering gate runs,
+  Then the build fails,
+  And its printed output carries the same three elements — contested identifier, every claimant
+    path, author-performed remediation — and likewise promises no automated renumbering,
+
+  And a reader holding only that printed output, with no access to the collection and no further
+    commands run, has every fact needed to act: they can name the other claimant and state which
+    identifier the moving artifact will take.
+
+  Coverage note: covered only by a test that executes each stage against a real contested
+  collection and asserts on the captured output text — that both claimant paths appear, that a
+  free identifier appears, and that no dispatch or automated-fix promise appears. Asserting that
+  a message template contains placeholders does not cover it.
+depends_on:
+  - GE-120c
+  - GE-120a-1
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: context
+    status: exists
+  - path: .pre-commit-config.yaml
+    relationship: modifies
+    status: exists
+    relevance: "Where the commit-time stage is registered. Note that check_adr_collision.py is absent from this file today, which is why the decision-number namespace has an unregistered guard rather than an enforced one."
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Where the shared-build stage is registered. The 'AC store valid' job is the closest structural precedent, including its reset --soft technique for making a pull request's files visible to guards that read the index."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The collection-wide uniqueness verdict this criterion renders into a self-contained message."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  TWO STAGES, ONE PROMISE — deliberately not split. The commit-time stage and the shared-build
+  stage differ in what they stop (a local commit versus a merge), and that difference is
+  GE-120d's subject. What they OWE the author is identical, and writing it twice would guarantee
+  the two copies drift. GE-120d-1 separately requires that all three stages evaluate one shared
+  rule, which is what makes a single message contract implementable.
+
+  THE EXPLICIT NEGATIVE — "makes no statement that any agent will perform the renumbering" — is
+  the honesty constraint from the L1 turned into a testable assertion, and it is the reason this
+  AC exists separately from GE-120c-1. The user's original request was for the gates to say a
+  specialist should be brought in. At these two stages that is not possible: a pre-commit hook
+  is a subprocess and a build job is a container, and neither can spawn an agent. An AC that
+  promised it here would be unbuildable, and an implementer trying to satisfy it would produce
+  exactly the documented-but-dead remediation path that already exists elsewhere in this
+  repository. Promising less, truthfully, is the point.
+
+  "SELF-CONTAINED" IS THE ACCEPTANCE SHAPE, and it is testable as written: capture the output,
+  and check that the other claimant's path and the target identifier are literally present in
+  it. At the moment of the block the author typically does not know which other artifact claims
+  the number — that is the whole complaint the L1 records — so an output that omits it converts
+  a block into an investigation.

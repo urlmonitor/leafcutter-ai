@@ -1,0 +1,78 @@
+id: GE-120a-2
+title: "One work item cannot exist as two copies free to disagree about its state"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the work-item collection holds the identifier "TICKET-20260629-BP-1200a-1-ii" as a file
+    in the intake lifecycle folder AND as a file in the active lifecycle folder,
+  And it holds "TICKET-20260603-ConfigDrivenBuildPaths" as a file in the intake folder AND as a
+    file in the completed folder,
+  And the two copies of that second identifier declare different lifecycle states in their own
+    content,
+  When the uniqueness pass runs over the whole work-item collection,
+  Then it terminates with a failing result,
+  And it reports one finding per contested identifier, naming every lifecycle folder that holds
+    a copy of it,
+  And for the identifier whose two copies declare different lifecycle states, the finding also
+    states both declared states, so the reader can see which copy is stale without opening
+    either file,
+  And an identifier held in exactly one lifecycle folder produces no finding, whichever folder
+    that is,
+  And the pass states how many work-item identifiers it inspected.
+
+  Coverage note: covered only by a test that executes the pass over a real on-disk work-item
+  collection containing the two-folder condition and asserts on the result value, the folders
+  named, and the declared states reported. Asserting that a comparison helper exists does not
+  cover it.
+depends_on:
+  - GE-120a
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/hooks/ticket_frontmatter_guard.py
+    relationship: context
+    status: exists
+    relevance: "The incumbent work-item validator. It is PER-FILE and runs on one written file at a time; it validates that a work item's declared state agrees with its own folder (_check_status_folder) but has no way to observe that a second copy of the same identifier exists in another folder."
+  - path: templates/scripts/commit_guardian/check_ticket_ac_status_parity.py
+    relationship: context
+    status: exists
+    relevance: "The other work-item gate. Also per-file and scoped to staged work items; it reconciles a work item against the criteria it cites, not against another copy of itself."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-identifier multi-location verdict — identifier, every holding lifecycle folder, and each copy's declared state — consumed by GE-120c-2 for the message and by GE-120e-2 for the repair."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FOURTH NAMESPACE, AND THE SECOND FAILURE SHAPE. GE-120a-1 covers "two unrelated artifacts
+  claim one number". This covers "one artifact exists as two copies". The L1 deliberately holds
+  both under one promise — "this number identifies one thing" — because a reader who follows a
+  work-item identifier and lands on two files that disagree has suffered the same loss of trust
+  as one who lands on two unrelated records. The mechanics differ, so they are separate L2s.
+
+  WHY THE DECLARED STATE IS PART OF THE FINDING, not just the folder list: this repository's own
+  convention (ticket-prioritizer, finalize-feature-archive-check) is that the declared state is
+  authoritative and folder position is not. A finding that lists only folders leaves the reader
+  to work out which copy is real; a finding that lists the declared states answers it. This also
+  supplies exactly the input GE-120e-2's repair needs to pick a survivor.
+
+  MEASURED 2026-08-17 (BA, independently): 333 work-item files, 328 distinct filenames, 5
+  identifiers held twice — four as intake + completed, one as intake + active. Matches the count
+  recorded at the PO stage.

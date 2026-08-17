@@ -1,0 +1,65 @@
+id: GE-120c-4
+title: "The remediation flow is drawn once per stage, showing who can act at each"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand what happens after a numbering clash is detected,
+  When they read the sequence diagram,
+  Then it shows three participants — the author, the guard, and the specialist that performs the
+    renumbering,
+  And it shows the authoring-time flow in which the guard's response reaches the author's live
+    session and the specialist is brought in,
+  And it shows the commit-time and shared-build flows in which the specialist participant is
+    NOT engaged, and the flow terminates at the author with a message,
+  And the reason the specialist cannot be engaged at those two stages is stated on the diagram
+    rather than left as an unexplained asymmetry,
+  And the diagram carries a sequence number allocated by the project's own allocator, and is
+    placed where the enrolment rule expects a numbered diagram,
+  And it is linked from its parent architecture document in both directions.
+depends_on:
+  - GE-120c
+  - GE-120c-1
+  - GE-120c-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "The parent architecture document this diagram must link to and from."
+  - path: scripts/next_diagram_seq.py
+    relationship: context
+    status: exists
+    relevance: "The allocator that must be used for this diagram's sequence number. This AC is the tree's own first opportunity to comply with GE-120b rather than add a twelfth unnumbered diagram."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120c-1
+  contract: "Which stage engages the specialist and which do not, so the diagram states the arrangement that is actually built."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies GE-120c's documentation_triggers: [sequence-diagram]. The L1 names both reasons for
+  the trigger: three participants, and a flow that differs by stage.
+
+  THE ASYMMETRY IS THE CONTENT. A diagram that shows the specialist at all three stages would be
+  a drawing of the thing this tree exists to prevent. Requiring the reason to appear ON the
+  diagram is what stops a later reader "fixing" the apparent inconsistency by adding the missing
+  arrows.
+
+  THE NUMBERED-AND-PLACED CLAUSE is deliberate: this tree adds a diagram to the very location
+  whose unnumbered population motivated GE-120b. Producing an unnumbered one here would be a
+  small but perfect failure.

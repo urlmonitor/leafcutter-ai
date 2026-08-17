@@ -1,0 +1,67 @@
+id: GE-120d-4
+title: "The three-stage arrangement is drawn, showing which stage owns which promise"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand where the numbering rule is enforced and what each stage
+    guarantees,
+  When they read the component diagram,
+  Then it shows the three stages, the single shared rule evaluation all three invoke, and the
+    collection each reads,
+  And each stage is annotated with what it can do when a clash is found — bring in a specialist,
+    stop a commit, or fail a build — so the differing strength of the three promises is visible
+    on the drawing,
+  And each stage is annotated with whether it can be bypassed, and the shared build is
+    identified as the one that cannot,
+  And it shows the rule evaluation as a single element the three stages share, not as three
+    parallel copies,
+  And the diagram carries a sequence number allocated by the project's own allocator and is
+    placed where the enrolment rule expects a numbered diagram,
+  And it is linked from its parent architecture document in both directions.
+depends_on:
+  - GE-120d
+  - GE-120d-1
+  - GE-120d-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "The parent architecture document this diagram must link to and from."
+  - path: scripts/next_diagram_seq.py
+    relationship: context
+    status: exists
+    relevance: "The allocator that must supply this diagram's sequence number."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120d-1
+  contract: "Which element the three stages actually share, so the diagram depicts the arrangement that was built rather than the one that was intended."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies GE-120d's documentation_triggers: [component-diagram]. The L1 scopes it as "the
+  three-stage arrangement and which stage owns which promise".
+
+  DRAWING THE SHARED RULE AS ONE ELEMENT is not a stylistic choice — it is the diagram's main
+  assertion, and it is the thing a future contributor is most likely to break by adding a
+  stage-specific special case. If the drawing shows three copies, three copies is what the next
+  person will build.
+
+  Companion to GE-120c-4, which draws the remediation sequence. This one draws the structure;
+  that one draws the interaction. They must agree on which stage engages the specialist.

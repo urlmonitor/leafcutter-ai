@@ -1,0 +1,76 @@
+id: GE-120e-2
+title: "Each work item that exists twice is reduced to the one copy that is right"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the work-item collection holds five identifiers that each exist as a file in two
+    lifecycle folders — four of them as a copy in the intake folder alongside a copy in the
+    completed folder, and one as a copy in the intake folder alongside a copy in the active
+    folder,
+  When the repair is complete,
+  Then each of those five identifiers exists as exactly one file,
+  And the surviving file sits in the lifecycle folder that matches the lifecycle state declared
+    in that work item's own content, so folder position and declared state agree,
+  And where the two copies declared different states, the resolution taken and the reason are
+    recorded on the surviving file, rather than one copy being deleted silently,
+  And where the two copies differ in content beyond their declared state, the surviving file
+    retains the content of whichever copy records the later work, so no completed work is
+    discarded by the repair,
+  And no work-item identifier anywhere in the collection is held by more than one lifecycle
+    folder,
+  And every reference to any of the five identifiers resolves to the surviving file.
+
+  Coverage note: covered by executing the work-item uniqueness pass over the repaired collection
+  and asserting zero findings, plus asserting for each of the five that exactly one file exists
+  and that its folder agrees with its declared state. Counting files alone does not cover it —
+  deleting the correct copy also yields one file.
+depends_on:
+  - GE-120e
+doc_links:
+  - path: templates/hooks/ticket_frontmatter_guard.py
+    relationship: context
+    status: exists
+    relevance: "Its _check_status_folder rule is the criterion for deciding which copy survives: the declared state and the folder must agree. Using the guard's own rule means the repaired collection passes the guard rather than merely looking tidy."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-2
+  contract: "The per-identifier multi-location verdict — every holding folder and each copy's declared state — which identifies the five and supplies the evidence for choosing a survivor."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  MEASURED 2026-08-17 (BA, independently, matching the PO's count): 333 work-item files, 328
+  distinct identifiers, 5 held twice. Four are intake + completed
+  (TICKET-20260603-ConfigDrivenBuildPaths, TICKET-20260603-FeedbackAnalysisPipeline,
+  TICKET-20260604-PullRequestAgentProjectContext, TICKET-20260605-ContractShrinkingSelfExclusion);
+  one is intake + active (TICKET-20260629-BP-1200a-1-ii).
+
+  THE SURVIVOR RULE IS TAKEN FROM THIS PROJECT'S EXISTING CONVENTION rather than invented: the
+  declared state is authoritative and folder position is not. Four of the five pairs almost
+  certainly resolve to the completed copy — the work is done and an intake copy was left behind —
+  but the criterion is written to be decided by the declared state in each case rather than by
+  that assumption, because assuming it is how the wrong copy gets deleted.
+
+  THE CONTENT CLAUSE EXISTS BECAUSE THIS IS A DELETION. Two copies of a work item that have
+  drifted may each hold something the other lacks — sign-off comments, a status history. The
+  point of the repair is that one identifier means one thing, not that half the record
+  disappears.
+
+  ORDER MATTERS: run this repair BEFORE the work-item stage of the uniqueness guard becomes
+  blocking, or every commit is stopped by five pre-existing conditions the author did not create.
+  GE-120e-3 is the check that the ordering worked.
