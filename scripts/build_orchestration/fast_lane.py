@@ -1361,23 +1361,23 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.subcommand == "verify_red_baseline":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
-        result = verify_red_baseline(
+        red_verdict = verify_red_baseline(
             ac_ids=ac_ids,
             test_root=Path(args.test_root),
             base_ref=args.base_ref,
         )
-        print(json.dumps(result))
-        return 0 if result["gate_passed"] else 1
+        print(json.dumps(red_verdict))
+        return 0 if red_verdict["gate_passed"] else 1
 
     if args.subcommand == "verify_green_and_coverage":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
-        result = verify_green_and_coverage(
+        green_verdict = verify_green_and_coverage(
             ac_ids=ac_ids,
             test_root=Path(args.test_root),
             ac_root=Path(args.ac_root),
         )
-        print(json.dumps(result))
-        return 0 if (result["green"] and result["coverage_ok"]) else 1
+        print(json.dumps(green_verdict))
+        return 0 if (green_verdict["green"] and green_verdict["coverage_ok"]) else 1
 
     if args.subcommand == "claim":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
