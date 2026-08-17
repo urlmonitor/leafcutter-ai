@@ -28,10 +28,18 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "All error output must go to stderr only — stdout must remain clean for piped build output"
-  - "JSONL format must be machine-parseable — one valid JSON object per line"
-  - "Each JSON object must contain exactly the keys: missing_path, referencing_template, suggested_action"
-  - "Must integrate with the existing build.py exit code conventions"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — emit_broken_ref_report_jsonl"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "All error output must go to stderr only — stdout must remain clean for piped build output"
+    - "JSONL format must be machine-parseable — one valid JSON object per line"
+    - "Each JSON object must contain exactly the keys: missing_path, referencing_template, suggested_action"
+    - "Must integrate with the existing build.py exit code conventions"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
@@ -40,7 +48,21 @@ created_by_ticket: null
 amended_by: []
 superseded_by: null
 covered_by:
-  - "unit_tests/test_build_guard_real_package.py"
+  - "unit_tests/test_build_guard_real_package.py::test_guard_exits_1_on_broken_ref"
+notes: |
+  PARTIAL COVERAGE (ac-audit, 2026-08-17). test_guard_exits_1_on_broken_ref
+  asserts the stderr JSONL and the non-zero exit, and a fresh-process behavioral
+  probe confirmed the real guard emits rc=1, empty stdout, and one JSON object
+  per line with exactly the three required keys. But no test asserts the AC's
+  "stdout contains no error output" clause or the exact three-key set: the test
+  patches sys.stderr only and never inspects stdout, and no test in the repo
+  uses capsys or redirect_stdout against this guard. The AC would stay green if
+  the guard began duplicating its report to stdout.
+
+  Known schema inconsistency, not an AC violation and currently untested:
+  emit_broken_ref_report_jsonl serialises referencing_template as a bare string
+  for a single template but as a list for several, so downstream parsers see a
+  heterogeneous type.
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900c-2.md
 change_target: pipeline

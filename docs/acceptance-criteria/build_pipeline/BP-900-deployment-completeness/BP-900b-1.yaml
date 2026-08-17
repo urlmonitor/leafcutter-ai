@@ -34,11 +34,34 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Must scan ALL compiled .md files in agents/ and skills/ directories — no partial scanning"
-  - "Must handle both single-quote and double-quote variants in sys.path.insert patterns"
-  - "Must complete validation in under 5 seconds for typical template sets (fewer than 100 files)"
-  - "Must not produce false positives for non-script-path strings that happen to match the regex pattern"
-  - "Must follow the existing post-build validation pattern used by build_propagation_audit.py and build_referential_integrity.py"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_referential_integrity.py
+  n_location_rule: "1 — extract_script_path_refs and its _SCAN_TARGETS"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must scan ALL compiled .md files in agents/ and skills/ directories — no partial scanning"
+    - "Must handle both single-quote and double-quote variants in sys.path.insert patterns"
+    - "Must complete validation in under 5 seconds for typical template sets (fewer than 100 files)"
+    - "Must not produce false positives for non-script-path strings that happen to match the regex pattern"
+    - "Must follow the existing post-build validation pattern used by build_propagation_audit.py and build_referential_integrity.py"
+  notes: |
+    TWO SPEC/IMPL DEVIATIONS found by ac-audit 2026-08-17, recorded rather than
+    silently accepted:
+
+    1. The criteria say scan the COMPILED agents/ and skills/ output. The
+       implementation scans the SOURCE templates/ tree pre-build. Behaviour is
+       useful either way, but the AC text and the code disagree — reconcile
+       before treating this AC as a specification of record.
+    2. The two sys.path.insert regexes are untested AND match nothing in the
+       real repo: the only form that actually appears in templates/agents/
+       build-ac.md is prefixed with {{config.output_root}}/, which the patterns
+       deliberately do not cover. That clause of the AC is currently vacuous.
+
+    The criteria's literal "scripts/goal_to_epic.py" is also stale — the
+    extractor yields the deploy path scripts/ac_store/goal_to_epic.py.
 delivers_to:
   agent: python-coder
   contract: "set[tuple[str, str]] — set of (template_path, referenced_script_path) tuples extracted from compiled .md files"
@@ -49,7 +72,7 @@ created_by_ticket: null
 amended_by: []
 superseded_by: null
 covered_by:
-  - "unit_tests/test_build_guard_real_package.py"
+  - "unit_tests/test_bp_900g_6.py::test_extractor_still_scans_agents_and_skills"
   - BP-900b-1-1
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900b-1.md

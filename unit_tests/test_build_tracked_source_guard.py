@@ -431,8 +431,13 @@ class TestSuggestActionDirPresent:
 
     def test_ac_bp900c3_missing_path_and_template_still_in_entry(self) -> None:
         # covers: BP-900c-3
+        # covers: BP-900c-1
         """The entry shape must be preserved (missing_path, referencing_template,
-        suggested_action) — BP-900c-3 changes ONLY the suggested_action value."""
+        suggested_action) — BP-900c-3 changes ONLY the suggested_action value.
+
+        Also covers BP-900c-1: the three assertions below are exactly that AC's
+        requirement that every broken-reference entry carries all three fields
+        with none empty or omitted."""
         refs_to_sources = {
             "scripts/feedback/submit_feedback.py": {"templates/agents/feedback-analyst.md"},
         }
