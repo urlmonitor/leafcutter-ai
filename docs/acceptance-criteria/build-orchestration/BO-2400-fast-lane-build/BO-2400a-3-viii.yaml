@@ -1,0 +1,68 @@
+id: BO-2400a-3-viii
+components:
+  - build_orchestration
+  - testing_quality
+title: "Re-running the red-baseline gate on an unchanged worktree reproduces the partition and the verdict"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the red-baseline gate has run once against a worktree and produced a newly-added
+    set, a pre-existing set, a per-test red / green / inconclusive classification and a
+    verdict,
+  When the gate is run a second time against the same worktree with no file changed, no
+    commit made and no branch moved between the two runs,
+  Then the second run's newly-added set, pre-existing set, per-test classification,
+    verdict and halt reason (where one is present) are identical to the first run's,
+  And each set is reported in the same order in both runs,
+  And the second run leaves every file in the worktree unmodified.
+depends_on: [BO-2400a-3, BO-2400a-3-ii, BO-2400a-3-v]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_red_baseline_idempotence:
+      type: object
+      description: "Two consecutive gate runs over an unchanged worktree return identical partitions, per-test classifications, verdict, halt reason and ordering, and the gate writes nothing to the worktree."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Both reported sets need a total, stable ordering derived from the test identity (file path then function name), so a run-twice-and-diff comparison is byte-identical."
+    - "The gate must not mutate repository state as a side-effect of resolving the merge-base — no fetch, no ref update, no index write — since that would make run 2 see a different baseline than run 1."
+    - "Verify by running the gate twice in the same process-independent invocation and diffing the full result structure, not only the boolean verdict."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-v
+  contract: "The verdict and per-test classification whose reproducibility this criterion asserts."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  BO-2400a-3 it_requirements[4] already required the gate to be idempotent, but that was
+  written when the gate's only input was a fixed test collection. Deriving the partition
+  from git introduces two new ways to lose determinism — an unstable diff ordering, and
+  a query that mutates or advances repository state (for example a fetch that moves
+  origin/main mid-run). Restating idempotency over the new inputs, with stable ordering
+  and a no-write guarantee, makes it independently testable rather than an inherited
+  assumption.

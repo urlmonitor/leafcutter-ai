@@ -1,0 +1,87 @@
+id: BO-2400a-3-ii
+components:
+  - build_orchestration
+  - testing_quality
+title: "Newly-added covering tests are derived from git at test-function granularity"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane worktree branched from origin/main, whose merge-base with
+    origin/main is commit M,
+  And the batch's covering tests are the test functions carrying a "# covers:" tag that
+    names one of the batch acceptance-criterion ids,
+  When the red-baseline gate assembles the baseline set for the batch,
+  Then every covering test function that is absent from the version of its file at M is
+    classified newly-added — including test functions in files that are untracked in the
+    worktree and test functions that are still uncommitted,
+  And every covering test function that is already present at M is classified
+    pre-existing,
+  And the two classes are disjoint and together contain every covering test found for the
+    batch, so no covering test is left unclassified,
+  And the classification is computed from the worktree's git state alone: the gate
+    consumes no agent-reported list of written test files, and supplying such a list to
+    the gate changes no test's classification.
+depends_on: [BO-2400a-3]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_red_baseline_partition:
+      type: object
+      description: "Git-derived partition of the batch's covers-tagged tests into a newly-added set and a pre-existing set, keyed at test-function granularity against the worktree's merge-base with origin/main."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Classification input is the worktree's git state relative to its merge-base with origin/main. No parameter, field, or file supplied by the test-writer agent may influence the result."
+    - "Granularity is the test function, not the file: presence of the function name at the merge-base version of the file decides the class (see BO-2400a-3-iii)."
+    - "Untracked and uncommitted working-tree tests must be reachable by the scan; a test written during the run and never committed is newly-added."
+    - "Reuse the existing covers-tag extraction surface rather than adding a second '# covers:' parser, so the batch-membership semantics cannot drift from the pytest enforcement layer."
+    - "it-po: enrich with the concrete git invocation and the merge-base resolution strategy; the shape above is the BA-level contract, not a chosen implementation."
+delivers_to:
+  agent: python-coder
+  contract: "The batch's covering tests partitioned into a newly-added set and a pre-existing set, each entry carrying its test id and acceptance-criterion id; consumed by BO-2400a-3-iv (reporting/exclusion), BO-2400a-3-v (verdict) and BO-2400a-3-i (halt reasons)."
+expects_from:
+  ac_id: BO-2400a-2
+  contract: "The batch acceptance-criterion ids whose covering tests are partitioned."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Fixes the fidelity gap between BO-2400a-3's wording ("every newly added test for the
+  batch fails") and the gate's actual behaviour, which treated "carries a matching
+  covers tag" as a proxy for "newly added" and therefore swept in long-pre-existing
+  tests. Observed live on BO-2400g-1, where three pre-existing green tests halted the
+  gate.
+
+  Why git and not the test-writer's self-reported file list: BO-2400a-3
+  it_requirements[0] already requires the verdict to be "derived from the process exit
+  code, not an agent judgment". An agent-supplied list of written test files
+  reintroduces exactly the agent judgment that requirement excludes, and it is
+  fabricable — an agent that reports a file it did not write, or omits one it did,
+  silently moves the gate's decision boundary. Git state is observable, deterministic
+  and not authored by the agent under test.
