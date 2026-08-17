@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: reviewed
 priority: medium
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given a dogfood run whose per-phase sign-offs are all green but with no recorded
     fresh-process spot-check against a real on-disk ticket,

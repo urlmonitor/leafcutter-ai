@@ -1,0 +1,174 @@
+id: ACD-2000b-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Requirements whose change footprints overlap never build at the same time, and an unknown footprint conflicts with everything"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given four requirements available to build, where the first and second both
+    change the same file, the third changes only files nothing else touches, and
+    the fourth has no discernible change footprint at all,
+  When an effort chooses what to build at the same time,
+  Then it does not build the first and second together,
+  And it may build the first and third together,
+  And it does not build the fourth alongside anything, because its footprint
+    cannot be established,
+  And two separate efforts, running at the same time and choosing
+    independently, likewise never end up building two requirements whose
+    footprints overlap.
+depends_on: [ACD-2000b, ACD-2000b-1, ACD-2000b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "_build_files_touched (~line 497) is the EXISTING requirement-grain footprint derivation -- from it_requirements path tokens and edit-surface doc_links only. Reuse it; note that describes/related doc_links are excluded, which is why so many requirements derive an empty footprint."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The ticket-grain rule being generalised: pairwise intersection (~137), maximal antichain (~145), pre-dispatch re-verification (~150-153), and the default-conservative empty rule (~232). It stays authoritative for tickets until ACD-1800c; this AC must not contradict it while both are live."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "select_batch (~line 439) is the requirement-grain selection this rule constrains, and _build_ac_id_to_path_index (~line 71) is the single-pass indexing precedent the pairwise comparison must follow."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE RULE IS MISSING, NOT THE DATA. Verified: _build_files_touched (scripts/ac_store/generate_ticket_from_ac.py ~line 497) already derives a requirement's footprint. REUSE it -- a second derivation guarantees that the batching rule and the generated ticket eventually disagree about the same requirement's footprint, and the disagreement will be silent."
+  - "EMPTY MEANS CONFLICTS WITH EVERYTHING, AND IT MUST BE AN EXPLICIT BRANCH EVALUATED BEFORE ANY INTERSECTION. A naive set intersection inverts the rule -- the empty set intersects nothing, so 'unknown footprint' reads as 'safe to parallelise'. This is ACD-2000b's single most likely defect and it is invisible in code review because the wrong implementation is the shorter one."
+  - "DERIVED-EMPTY IS NOT THE SAME AS NO-FILES, AND BOTH ARE CONSERVATIVE. _build_files_touched reads it_requirements path tokens and doc_links whose relationship is an edit surface; doc_links marked describes or related are excluded. So docs-only requirements, prose requirements and EVERY requirement not yet enriched by the IT PO derive an empty footprint. 'The derivation ran and produced nothing' must never be treated as 'this requirement touches nothing'."
+  - "NO EXEMPTION BY IDENTITY. If any requirement is ever excused from the empty-footprint rule, the exemption must derive from a property of the record, never from a hard-coded id or path list -- otherwise new cases silently inherit the unsafe default."
+  - "THE FOURTH CLAUSE IS NOT SATISFIABLE BY A PLANNER. Two independent choosers can only avoid overlap through shared state, so the footprint test must be applied against the footprints of the requirements CURRENTLY CLAIMED by other efforts, read at take time -- not merely across the members of one planner's own batch. A planner-local antichain satisfies clauses one to three and fails this one, and that partial pass is the likely outcome if this constraint is not stated."
+  - "RE-VERIFY AT TAKE TIME, mirroring the pre-dispatch re-check the ticket-grain rule already performs (templates/skills/building-epics/SKILL.md ~lines 150-153). The set of claimed requirements changes between planning and dispatch; a check performed only during planning is stale by the time it matters."
+  - "DO NOT REWRITE THE TICKET-GRAIN RULE IN THIS CHANGE. templates/skills/building-epics/SKILL.md stays authoritative for tickets until ACD-1800c lands; the two rules run side by side during the migration and must not disagree. Reconciling them is that AC's scope, and the prose surface belongs to a different craft."
+  - "PERFORMANCE AND DETERMINISM. The comparison runs over the ready set on every selection: index the store once (the _build_ac_id_to_path_index precedent, ~line 71) rather than re-walking per pair, and preserve select_batch's documented guarantee that the same store state always yields the identical ordered result."
+  - "Follow the project error handling policy (Ruff E722/BLE001/TRY): typed except around store reads, log-or-reraise, no bare except. A footprint that cannot be derived because of a read error is UNKNOWN, and unknown conflicts with everything -- it must never degrade to empty-and-safe."
+delivers_to:
+  agent: python-coder
+  contract: "The requirement-grain contention test: conflicts(a, b) -> bool, true when the derived footprints intersect AND true whenever either footprint is empty or underivable, plus the take-time check of a candidate against the footprints of currently claimed requirements. Consumed by the selection path and by ACD-2000b-5's operator documentation."
+expects_from:
+  - ac_id: ACD-2000b-1
+    contract: "The claim record, which is how a chooser learns which requirements another effort currently holds and therefore whose footprints it must avoid."
+  - ac_id: ACD-2000b-2
+    contract: "The atomic take, so the take-time footprint re-verification and the take itself cannot be separated by a window in which another effort takes an overlapping requirement."
+test_spec:
+  - name: test_two_requirements_touching_the_same_file_are_not_offered_together
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Builds a real four-requirement store and runs the real selection; asserts the first and second are never returned in the same batch."
+  - name: test_disjoint_requirements_may_be_offered_together
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the first and third ARE offered together, so the rule above is about overlap and not a blanket serialisation."
+  - name: test_requirement_with_no_derivable_footprint_is_never_offered_alongside_another
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The fourth requirement, whose footprint derivation yields nothing, is never returned in a batch with any other requirement -- including the disjoint third."
+  - name: test_unenriched_requirement_is_treated_as_unknown_not_as_touching_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "A requirement with no it_requirements and only describes-relationship doc_links -- the shape every un-enriched record has -- is treated as conflicting, proving derived-empty is not read as safe."
+  - name: test_two_concurrent_choosers_never_take_an_overlapping_pair
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Two real processes select and take from the same store simultaneously, repeated; asserts no round ever ends with both holding requirements whose footprints intersect."
+test_rationale: "Asserting that an intersection helper returns the right answer proves nothing about the clause most likely to be wrong: the empty case, where the mathematically correct intersection gives the operationally wrong verdict. So the empty-footprint case is driven through the real selection path twice -- once with a deliberately footprint-less requirement, once with the shape an un-enriched record actually has on disk -- and the disjoint pair is asserted alongside, so a serialise-everything implementation cannot pass. The fourth criterion is only observable with two real concurrent choosers: a single-planner test passes on a design that computes a perfect antichain and then fails the moment a second drive runs, which is precisely the state of the system today."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE CONTENTION RULE AT REQUIREMENT GRAIN. This is the leaf that carries
+  ACD-2000b's fifth hazard, described there as "the single most likely defect in
+  this L1".
+
+  WHAT EXISTS TODAY (verified, do not re-investigate), all at TICKET grain in
+  templates/skills/building-epics/SKILL.md:
+    - `physical_edges = { (a, b) | a.files_touched INTERSECT b.files_touched !=
+      EMPTY }` (~line 137);
+    - a batch is a maximal antichain such that "for all a, b in batch:
+      a.files_touched INTERSECT b.files_touched = EMPTY" (~line 145);
+    - step 3a (~lines 150-153) re-verifies disjointness before dispatch and
+      serialises anything that overlaps; §2 restates the two conditions (~229);
+    - ~line 232: "If a ticket's `files_touched` is missing or empty,
+      /build-feature MUST treat that ticket as conflicting with EVERY other
+      ticket and run it serially (default-conservative)."
+  ACs have no equivalent: a requirement carries `depends_on` (logical ordering)
+  and nothing expressing physical contention. The INGREDIENT already exists
+  AC-side -- `_build_files_touched()` in
+  scripts/ac_store/generate_ticket_from_ac.py (~line 497) -- so what is missing
+  is the RULE, not the data.
+
+  THE EMPTY-FOOTPRINT CLAUSE IS THE DEFECT MAGNET, and here is why it is worse
+  AC-side than ticket-side. `_build_files_touched()` derives paths from
+  it_requirements and from doc_links whose relationship is an edit-surface one.
+  Docs-only requirements, prose requirements, and -- critically -- every
+  requirement not yet enriched by the IT PO derive an EMPTY footprint. Treating
+  empty as "collides with nothing" therefore makes precisely the requirements
+  with the least analysable footprint the ones that run most freely in parallel.
+  SKILL.md ~232 already got this right at ticket grain; the generalisation must
+  preserve it, and a naive set-intersection implementation silently inverts it
+  (the empty set intersects nothing, so empty reads as safe).
+
+  THE MIGRATION MAKES THIS URGENT, NOT OPTIONAL. Under ACD-1800c a ticket's scope
+  becomes the UNION of its members' footprints, so ticket-grain batching gets
+  strictly COARSER after the cutover: two bundles sharing one file serialise
+  entirely even when the requirements actually in flight are disjoint. Without
+  this leaf the migration makes parallelism worse rather than better -- that is
+  ACD-2000b's load-bearing argument.
+
+  THE FOURTH THEN CLAUSE IS WHERE THIS AC MEETS THE CLAIM. A single planner
+  computing a disjoint batch is not enough once two drives run at once (the fast
+  lane claims, the supervisor does not look). Independent choosers can only avoid
+  overlap by consulting shared state -- the claim from ACD-2000b-1/-2. So
+  contention avoidance is not a separate mechanism; it is the claim plus a
+  footprint test, and this clause forbids satisfying the AC with a
+  single-scheduler-only solution.
+
+  TESTABILITY. Build a real four-requirement store and assert which pairs the
+  real selection code offers together -- then run two real concurrent choosers
+  and assert no overlapping pair is ever taken. Asserting that an intersection
+  helper exists proves nothing about the empty case, which is the clause most
+  likely to be wrong.
+
+  2026-08-17 (IT PO enrichment). THE UN-ENRICHED RECORD IS THE COMMON CASE, NOT
+  AN EDGE CASE, and it now has its own test. `_build_files_touched` reads only
+  it_requirements path tokens and edit-surface doc_links; `describes` and
+  `related` links are excluded by design. Every requirement the IT PO has not yet
+  touched therefore derives an empty footprint -- so "empty" is the DEFAULT state
+  of a store, not a rarity. A rule that reads empty as safe parallelises the
+  majority of the backlog unguarded.
+
+  TAKE-TIME, NOT PLAN-TIME, is the constraint that makes the fourth clause
+  reachable. The ticket-grain rule already re-verifies before dispatch
+  (SKILL.md ~150-153); the requirement-grain rule inherits that obligation, and
+  additionally must compare against requirements CLAIMED BY OTHER EFFORTS rather
+  than only against its own batch. This is the point where this AC stops being a
+  set-intersection utility and becomes part of the claim mechanism.
+
+  THE PROSE HALF IS DELIBERATELY OUT OF SCOPE. Generalising the rule does not
+  license editing `templates/skills/building-epics/SKILL.md` in this change: that
+  runbook stays authoritative for tickets until ACD-1800c, and it is a different
+  craft's surface. Recorded so an implementer does not "finish the job" by
+  rewriting the ticket-grain rule and leaving the two definitions in conflict
+  mid-migration.

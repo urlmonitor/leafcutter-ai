@@ -26,10 +26,11 @@
       "status": "planned",
       "description": "Make the AC store the single source of truth WITHOUT changing behaviour. Additive-only: optional deliverable-checklist and per-deliverable sign-off fields plus a per-AC schema_version in ac_store_schema.json; a productionised effective-prompt render tool; canonical-source path resolution; and universal agent/gate dual-read (store-or-ticket-body). All new gates run advisory/warn-mode behind a two-stage ac_unit_of_work flag ({emit:false, enforce:false}). Read-side lands before any write-side change so the build can never go green while verifying nothing.",
       "exit_criteria": [
-        "New AC fields are OPTIONAL in ac_store_schema.json; schema_version present (default 1); whole-store validation passes on both legacy and new shapes",
-        "render_effective_prompt.py productionised and in the build deploy-manifest; a fresh agent rendered purely from the store passes the comprehension test",
-        "All phase agents and gates dual-read spec from the store with ticket-body fallback; enrichment / canonical-path / surface-to-craft / consistency gates run in warn mode",
-        "No required CI gate references a new field; ac_unit_of_work flag introduced with a documented one-commit kill-switch"
+        "New AC fields are OPTIONAL in ac_store_schema.json; schema_version present (default 1); whole-store validation passes on both legacy and new shapes. The schema must declare the OPTIONAL slots for every field phase 2a will author — deliverable checklist, per-deliverable sign-offs, scope boundary (out_of_scope), observable-behaviour proof, adjudication trail, and the product-truth deliverable. additionalProperties:false is ENFORCED today via jsonschema.Draft7Validator in both scripts/ac_store/validate_ac_schema.py and the commit hook, so any field authored before its slot exists is rejected at commit. This criterion is a hard gate on all write-side work (ACD-1900a).",
+        "render_effective_prompt.py productionised and in the build deploy-manifest; a fresh agent rendered purely from the store passes the comprehension test (ACD-1700c)",
+        "Dual-read is verified BEHAVIOURALLY on the three gates that actually degrade, each named: ac-fulfillment-gate (today signs off status:ok and reads no YAML when ac_traceability is absent), ac-validator (today sources AC Coverage, Agent Contracts and sign-offs from the ticket body that ACD-1600a-2 deletes), and check_ticket_signoff_parity (today requires a ## Sign-offs section). Evidence must be a real on-disk thin ticket driven through each gate in a fresh process — per CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep', a grep for dual-read prose in an agent template is NOT evidence. Enrichment / canonical-path / surface-to-craft / consistency gates run in warn mode (ACD-1900b, ACD-1600b/c/d).",
+        "Each agent's brief is scoped to its role and the exclusion is demonstrated, not asserted — a rendered coder brief contains no requirement-authoring or supervisor-checklist content (ACD-1700a, ACD-1700b)",
+        "No required CI gate references a new field; ac_unit_of_work flag introduced with a documented one-commit kill-switch (ACD-1900c, ACD-1900d)"
       ],
       "tickets_advancing_outcome": [],
       "components": [
@@ -38,15 +39,35 @@
       ]
     },
     {
-      "id": "phase_acbuild_2_cutover",
-      "title": "AC-Driven Build v2 — Thin Tickets & AC-as-Unit-of-Work (dogfooded)",
+      "id": "phase_acbuild_2a_unit_of_work",
+      "title": "AC-Driven Build v2 — The Requirement Becomes the Unit of Work",
       "status": "planned",
-      "description": "Flip the model on leafcutter itself FIRST (dogfood). The generator emits thin tickets that reference their AC; each AC carries a deliverable checklist with per-deliverable sign-offs recorded ON THE AC; the ticket becomes a grouping container. Sign-offs move off the ticket body in the single atomic cutover, gated behind ac_unit_of_work.emit; the store is backfilled; new gates are promoted to required only after a green self-host window.",
+      "description": "Move the truth onto the requirement WITHOUT touching the ticket. Each AC gains a deliverable checklist naming every artifact it needs and the craft responsible, per-deliverable sign-offs recorded ON THE AC, and the five fields the gap analysis found homeless: scope boundary, observable-behaviour proof, adjudication trail, parallel-safety claim, and the product-truth deliverable. Sign-offs are DUAL-recorded (AC and ticket) in this phase — nothing is removed. This is the half of the migration that delivers the actual value the user asked for ('ACs need to store which items need to be there to say the AC is done'), and it is independently shippable: if 2b is deferred, 2a still stands on its own.",
       "exit_criteria": [
-        "Generator emits thin tickets behind ac_unit_of_work.emit; sign-offs dual-recorded (AC + ticket) then moved to AC-only",
-        "A full self-host epic built end-to-end thin + AC-sign-off, behaviorally spot-checked on a real on-disk ticket in a fresh process",
+        "Every requirement carries a deliverable checklist naming each artifact's kind and responsible craft, validated against the requirement's change surface; a requirement that needs docs or a diagram and omits them is flagged incomplete, naming each missing kind (ACD-1800a)",
+        "Per-deliverable sign-offs are recorded on the requirement; requirement-level done is computed solely from them; a deliverable that does not apply is recorded explicitly as not-applicable, never silently dropped (ACD-1800b). Sign-offs are DUAL-recorded on AC and ticket in this phase — the move to AC-only is 2b.",
+        "The five gap fields land, each with its consumer still working: scope boundary (ACD-1600g — note exclusions compose by DIFFERENCE not union, or the bundle produces false blockers), observable-behaviour proof (ACD-1800f), adjudication trail and parallel-safety claim (ACD-2000), and the product-truth deliverable as a DECLARED field whose evidence is the existing derived product_truth back-reference — declaring it as a plain deliverable kind creates a status cycle, because the flow already derives impl_status from the AC's work_status",
+        "The fast lane refuses any requirement whose checklist declares a deliverable it cannot produce. Without this, fast_lane.mark_done_built_acs() keeps marking ACs done on test coverage alone once ACD-1800b redefines done as all-deliverables-signed — a phantom-done regression introduced BY the migration, in the tool with the strongest done-proof in the repo.",
+        "THE TICKET IS UNCHANGED. No thinning, no sign-off removal, no gate flips. Any of those belong to 2b."
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "ac_driven_dev"
+      ]
+    },
+    {
+      "id": "phase_acbuild_2b_ticket_demotion",
+      "title": "AC-Driven Build v2 — Ticket Demoted to a Grouping Container (dogfooded)",
+      "status": "planned",
+      "description": "Now that the requirement carries the truth, thin the ticket. The generator emits thin tickets that reference their AC instead of copying it; sign-offs move off the ticket body in a single atomic cutover behind ac_unit_of_work.emit; the ticket becomes a grouping container that bundles requirements into one valuable feature and is done when they are. Dogfooded on leafcutter itself before any consumer sees it. Split from 2a because ADR-026 provides two independent flag stages (emit, enforce) and the roadmap should mirror them — 2a has no observable midpoint otherwise.",
+      "exit_criteria": [
+        "Generator emits thin tickets behind ac_unit_of_work.emit; sign-offs move from dual-recorded to AC-only in one atomic change (ACD-1600a, ACD-1800c). ACD-1600a must not land before ACD-1900b-5: thinning ahead of fulfillment-gate dual-read fails QUIETLY, not loudly — the gate returns status:ok having read nothing.",
+        "check_ticket_signoff_parity reconciled with a ticket that has no ## Sign-offs section (ACD-1800c-5). Unlike the gates above this one fails LOUD — it blocks every commit — so it is a stalled-repo risk, not a phantom-green one.",
+        "A full self-host epic built end-to-end thin + AC-sign-off, behaviorally spot-checked on a real on-disk ticket in a fresh process (ACD-1900g)",
         "Store backfilled to 100% (strict schema validation = 0 errors); already-done ACs grandfathered, not regressed",
-        "ac-fulfillment-gate flips 'absent ac_traceability -> blocker' and any new done-accounting gate is promoted to required (diff-scoped) only after >=10 consecutive green self-host merges; ACD-400b family superseded via governance"
+        "ac-fulfillment-gate flips 'absent ac_traceability -> blocker' and any new done-accounting gate is promoted to required (diff-scoped) only after >=10 consecutive green self-host merges (ACD-1900c-6)",
+        "Legacy residue closed by name, not by family: ACD-400b.yaml is already status superseded_by, but ACD-400b-4 remains active/todo carrying the sign-offs-in-ticket clause, and inbox tickets TICKET-20260813-ACD-400b-6 and -7 are actively building the old wired-ticket model. Supersede the first and triage the other two before 2a starts."
       ],
       "tickets_advancing_outcome": [],
       "components": [

@@ -1,0 +1,132 @@
+id: ACD-2000a
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "When work gets stuck, the history of why stays with the requirement"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Every failed attempt, retry and decision is recorded on the requirement itself.
+
+  What was tried, what failed, and what was decided about it lives with the
+  requirement, so whoever picks the work up next can see how many attempts have
+  already been made without reconstructing it from memory. Because that count is
+  durable, the system knows when it has retried enough and needs to stop and ask
+  a person, instead of looping forever or giving up on the first stumble.
+depends_on: [ACD-2000]
+doc_links:
+  - docs/reference/ac-schema.md
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000a-1
+  - ACD-2000a-2
+  - ACD-2000a-3
+  - ACD-2000a-4
+  - ACD-2000a-5
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+  - state-diagram
+notes: |
+  GAP ANALYSIS ORIGIN (2026-08-17, BrainCandy): one of five ticket-carried
+  responsibilities with NO successor in the AC-as-unit-of-work model (ADR-026 /
+  ACD-1800). This is the adjudication-trail gap: the ticket's `## Comments`
+  section.
+
+  VERIFIED AGAINST CODE (do not re-investigate -- verified 2026-08-17):
+    - The AC store has NO vocabulary for this at all. config/ac_store_schema.json
+      has ZERO matches for `comment`, `blocker`, `adjudicat` and `escalat`. The
+      only free-text slot is `notes` (line ~505), typed as a plain
+      `"type": "string"` -- an unstructured blob, not an append-only log, with no
+      per-entry author, timestamp, phase, or status.
+    - The ENTIRE failure-adjudication ladder anchors on the ticket's `## Comments`
+      section. templates/skills/building-epics/SKILL.md §3 opens (line ~687) with
+      "When the LATEST COMMENT STATUS is blocker" and then routes:
+        §3.1 (line ~693) respawn the same agent, cap 1 per phase per ticket;
+        §3.2 (line ~708) respawn a named sibling, cap 1 per phase pair;
+        §3.3 (line ~723) spawn brainstorm-lead, cap 1 per ticket;
+        §3.4 (line ~740) halt and build the §6 user-escalation payload.
+      The §6 payload itself is derived from the comment log: `blocker_summary`
+      (line ~1062) is "a single sentence (<=120 chars) lifted or distilled from
+      the latest `## Comments` body".
+    - THE LOAD-BEARING LINE IS SKILL.md ~789. The retry counters are held in "a
+      small in-memory counter dictionary keyed by (ticket_path, phase, cap_kind)",
+      explicitly "NOT persisted to the ticket file", and the runbook justifies
+      that as follows: "that is acceptable BECAUSE the on-disk `agents` map and
+      comment log already encode the relevant history, and a re-spawned
+      supervisor reading a `failed` row will route to §3.4 on its own."
+    - ACD-1800c-1 DELETES BOTH HALVES OF THAT JUSTIFICATION. It requires that the
+      grouping ticket "carries no per-phase or per-deliverable sign-offs of its
+      own" -- so there is no `agents` map with a `failed` row, and a thin
+      grouping container has no per-phase comment log either. The counters stay
+      in memory, but the on-disk history they were allowed to be volatile
+      *because of* is gone. After the cutover, "retry 2 of 3" has nowhere to live
+      and a re-spawned supervisor cannot tell a first attempt from a fourth.
+    - ADJACENT ORPHAN, same shape: SKILL.md §4 (line ~784) makes the test-failure
+      rework cap "configurable per-ticket via `test_failure_rework_cap:` in the
+      TICKET FRONTMATTER". `test_failure_rework_cap` has ZERO occurrences in BOTH
+      config/ac_store_schema.json AND scripts/ac_store/generate_ticket_from_ac.py
+      -- so the knob is unreachable from the AC path today and will be
+      unauthorable after the cutover. Design the trail so the cap OVERRIDE has an
+      AC-side home too, not just the cap COUNTER.
+
+  WHY THE TRAIL MUST MOVE TO THE REQUIREMENT (the load-bearing argument):
+    Adjudication is per-attempt-at-a-requirement, not per-bundle. Under
+    ACD-1800c the ticket groups N requirements, so a ticket-level comment log
+    conflates N independent retry budgets into one stream: two failures on two
+    different requirements would read as "retry 2" on both, tripping caps early;
+    conversely a bundle re-run would reset all N budgets at once. The counter has
+    to be at the same grain as the thing being retried. The same argument makes
+    the trail grain-invariant: the fast lane builds a single AC with no ticket at
+    all (scripts/build_orchestration/fast_lane.py), and today that path has no
+    adjudication record whatsoever.
+
+  DESIGN HAZARDS FOR THE BA:
+    1. APPEND-ONLY, AND BEWARE THE YAML ROUND-TRIP. A retry count that any writer
+       can silently reset is not a cap. Note that AC YAML files are already
+       full-rewritten in place by `_update_ac_work_status()` in
+       scripts/build_orchestration/fast_lane.py (~line 113-125): `yaml.safe_load`
+       then `yaml.safe_dump` of the whole record. Any structured trail will be
+       round-tripped through that on EVERY claim/release from ACD-2000b -- key
+       order and any comments are not preserved, and a partial write truncates
+       the log. Specify append-only semantics AND a concurrent-write story, or
+       the trail and the claim mechanism will corrupt each other.
+    2. PER-RUN vs PER-LIFETIME IS A SEMANTIC CHANGE, NOT A STORAGE CHANGE. Today
+       the counters reset when a supervisor is re-spawned, and SKILL.md ~789 calls
+       that acceptable. Persisting them silently converts "1 retry per run" into
+       "1 retry ever" -- two flaky-infrastructure failures a week apart would
+       become a permanent halt. Decide and state explicitly which one is meant;
+       if per-lifetime, specify how a human clears an exhausted budget.
+    3. CHANGE THE ESCALATION PAYLOAD IN LOCKSTEP. The §6 payload builder distils
+       `blocker_summary` from the latest `## Comments` body. If the trail becomes
+       structured on the AC, that derivation must be repointed in the same change
+       -- otherwise escalations silently degrade to empty summaries, which reads
+       to the user as "no reason given" rather than as a defect.
+    4. AT LEAST ONE L2 MUST ASSERT THE STOP CONDITION BEHAVIOURALLY: after the cap
+       is exhausted, a FRESH supervisor process (not the same in-memory one) must
+       route to escalation rather than retry. A test that only checks the field is
+       written proves nothing about the cap being honoured.
+
+  ORDERING (ADR-026 "read-side before write-side"):
+    `depends_on` deliberately lists only ACD-2000. This L1 is a PREREQUISITE of
+    ACD-1800c-1, not a dependent of it -- the AC-side trail must be readable
+    BEFORE the ticket stops carrying `## Comments`, or the adjudication ladder
+    spends the cutover window with no history to read. Adding ACD-1800c would
+    invert the safe migration order. The schema slot lands under ACD-1900a's
+    additive-first rule (config/ac_store_schema.json enforces
+    additionalProperties:false today -- empirically confirmed, see ACD-1800f
+    notes -- so nothing here can be piloted by hand-adding a field).

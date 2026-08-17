@@ -1,0 +1,123 @@
+id: ACD-1600g-3-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A boundary breach caused by one member of a bundle names that member, not the bundle"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a feature that bundles four requirements,
+  And only the third requirement declares the release workflow as excluded,
+  And no member of the bundle names the release workflow as part of the surface
+    it changes,
+  And the pending changes of the build include the release workflow,
+  When the change under review is compared against the bundle's boundary,
+  Then the surfaced report identifies the third requirement as the one whose
+    boundary was crossed,
+  And the report does not attribute the breach to the bundle as a whole or to
+    any of the other three requirements,
+  And a person reading only the report can tell which requirement to go back to
+    without opening the other three.
+depends_on: [ACD-1600g-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "Step 4's 'Hard violations' bullet (~line 163) is the report line that must carry the attributed AC id; the existing format already asks for 'which out_of_scope entry or component boundary it crosses' and is the structure to extend rather than replace."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "PROVENANCE IS A DATA-SHAPE CONSTRAINT, NOT A FORMATTING ONE. The composed boundary must carry, per path, the set of member AC ids that excluded it (delivered by ACD-1600g-2). A bare set of paths loses the excluding member's identity irrecoverably, and no amount of report formatting can recover it without redoing the composition."
+  - "REPORT DECISION (IT PO): extend the existing hard-violation record with an `excluded_by: [ac_id]` field and render it in the Step 4 'Hard violations' bullet of templates/agents/change-scope-reviewer.md. Do not add a parallel report structure alongside the existing [scope-extension] / hard-violation records -- two structures means two renderers and one of them will drift."
+  - "ATTRIBUTION MUST BE EXACT, NOT 'ALL MEMBERS'. In a four-member bundle with one excluding member, the finding names exactly that member; the other three must not appear anywhere in the emitted finding. Naming every member is the lossy-set implementation wearing a report."
+  - "Where two or more members independently exclude the same path, list all of them, de-duplicated and sorted, so the output is deterministic and diffable across runs."
+  - "The attributed id must come ONLY from the member record that declared the exclusion. Never infer it from the ticket id, the bundle id, the component, or the first member in the list -- each of those produces a plausible-looking id that is wrong exactly when it matters."
+  - "The attribution must survive the ACD-1600g-2-i cancellation step: when a path is retained in the boundary, so is its `excluded_by` set; when a path is cancelled, its provenance is dropped with it rather than leaking into a neighbouring path."
+  - "Canonical source only -- scripts/ac_store/scope_boundary.py and templates/agents/change-scope-reviewer.md in the source tree, never the deployed .claude/ copies (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600g-2
+  contract: "Per-path provenance in the composed boundary: { paths: { <path>: { excluded_by: [ac_id] } } }. Without `excluded_by` surviving the union and the subtraction, this AC is unimplementable -- the identity of the excluding member is gone the moment the members' exclusions are merged into one collection."
+test_spec:
+  - name: test_four_member_bundle_names_only_the_excluding_member
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Builds the four real on-disk AC records from the criteria, stages a diff touching the excluded release workflow, runs the real adjudication, and asserts the emitted finding contains the third member's AC id."
+  - name: test_report_does_not_mention_the_three_innocent_members
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Same run: asserts none of the other three AC ids appear anywhere in the emitted finding. This negative assertion is the only one that fails on an implementation which names every member of the bundle."
+  - name: test_two_members_excluding_the_same_path_are_both_named_deduplicated_and_sorted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A bundle where two members exclude the same path yields both ids exactly once, in sorted order, across repeated runs."
+  - name: test_attribution_survives_directory_grain_cancellation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With one path inside an excluded directory cancelled by a member's change surface, a breach on a surviving sibling still names the directory's excluding member and not the cancelling one."
+test_rationale: "The defect this L3 isolates is invisible to the obvious test. Asserting only that a blocker was emitted, or that the excluded path was named, passes on an implementation that has lost attribution entirely and reports 'the bundle excluded this' -- which is precisely the outcome the criteria forbid. The load-bearing assertion is therefore the NEGATIVE one over the three innocent member ids, and it only means anything when the composition really ran over four distinct on-disk records: a direct-import test handed a pre-built findings dict would be asserting the shape of its own fixture. The cancellation test is included because provenance and cancellation are implemented in the same function, and the natural way to cancel a path is to rebuild the path set, which silently discards the provenance map with it."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ATTRIBUTION SURVIVES COMPOSITION. ACD-1600g-2 defines the bundle boundary as a
+  set difference. A set is lossy: once the members' exclusions are merged into
+  one collection, the identity of the excluding member is gone unless the
+  implementation carries provenance through the composition deliberately. This
+  L3 exists to force that.
+
+  WHY IT MATTERS OPERATIONALLY. Today the exclusion is authored on the ticket, so
+  "the ticket excluded it" is a complete answer -- there is exactly one author.
+  After ACD-1800c the container has N members and the reviewer's output is what a
+  person acts on. "This bundle excluded the release workflow" gives the reader no
+  way to find the decision or the author; they must open all N requirements. The
+  §6-style escalation payloads elsewhere in this repo already learned this
+  lesson: a summary that names no owner reads to the user as "no reason given"
+  rather than as a defect (see ACD-2000a's hazard 3, same shape).
+
+  RELATIONSHIP TO ACD-1600g-3. The parent asserts that a breach is surfaced and
+  names the crossing requirement in the single-requirement case. This L3 asserts
+  the harder case: the composed case, where three of the four members are
+  innocent and the naive report has no member to name at all.
+
+  DELIBERATELY NOT SPECIFIED HERE: the report's format. The criteria assert what
+  a reader can determine, not the shape of the emitted object -- that is the IT
+  PO's call and depends on whether the reviewer's existing `[scope-extension]` /
+  hard-violation record structure is extended or replaced.
+
+  TESTABILITY. Build the four-member bundle on disk, stage a diff touching the
+  excluded path, run the reviewer, and assert the emitted report contains the
+  third requirement's id and does not contain the other three. Asserting only
+  that a blocker was emitted would pass on an implementation that has lost
+  attribution entirely, which is the whole defect.
+
+  2026-08-17 (IT PO enrichment). The deferred format decision is made: EXTEND the
+  existing hard-violation record with `excluded_by: [ac_id]` rather than replace
+  it. Reason -- the reviewer's Step 4 already renders three separate finding
+  sections from one record shape, and a parallel structure would require a second
+  renderer that only fires on exclusion breaches. The one case where two
+  renderers diverge is the case nobody exercises, which is this one.
+
+  Also promoted from the notes into it_requirements: PROVENANCE IS OWED BY
+  ACD-1600g-2, NOT BY THIS LEAF. The BA's analysis is right that the set is lossy,
+  and the practical consequence is that this AC cannot be implemented after the
+  fact -- retrofitting provenance means rewriting compose_boundary(). The
+  requirement is therefore recorded on ACD-1600g-2's it_requirements as well, so
+  it is satisfied on the first commit rather than discovered here.

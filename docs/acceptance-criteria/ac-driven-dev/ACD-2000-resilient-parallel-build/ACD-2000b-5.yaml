@@ -1,0 +1,135 @@
+id: ACD-2000b-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Reference doc describes how a requirement is taken, handed back, and reclaimed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement can be taken by an effort, handed back, and taken over
+    when abandoned,
+  When an author or an operator consults the reference documentation for the
+    requirement record,
+  Then the documentation describes what a claim records -- that the requirement
+    is taken, by whom, and since when -- and states that both the
+    single-requirement fast path and a larger drive use the same record,
+  And it states the rule by which an abandoned claim may be taken over, and what
+    an operator should check before doing so by hand,
+  And it states that a requirement whose change footprint cannot be established
+    is treated as conflicting with every other requirement, and explains why the
+    opposite reading is the dangerous one,
+  And an operator who has read only this documentation can look at a requirement
+    that appears stuck and decide whether it is being worked on or abandoned,
+    without reading any implementation.
+depends_on: [ACD-2000b, ACD-2000b-1, ACD-2000b-2, ACD-2000b-3, ACD-2000b-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-claim-lifecycle.md
+    relationship: describes
+    status: planned
+    relevance: "The one home for the claim RULE -- taking, handing back, reclaiming, and the operator's stuck-requirement diagnosis. Does not exist yet; this AC creates it."
+  - path: docs/reference/feedback-concurrency.md
+    relationship: related
+    status: exists
+    relevance: "Format precedent: a short reference page stating a concurrency limitation, its cause, and what an operator should do instead."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "ONE HOME FOR THE RULE: a new docs/reference/ac-claim-lifecycle.md. docs/reference/ac-schema.md gains the claim FIELD rows and a link to it, and nothing else -- the schema reference documents the field, the claim page documents the rule. Two pages restating the rule is the failure mode; the second copy goes stale invisibly because operators arrive at only one of them."
+  - "QUOTE THE STALENESS THRESHOLD'S ACTUAL DEFAULT and name where it is configured. The final Then clause is a diagnostic capability -- 'is this being worked on or abandoned?' is unanswerable without the number, and an operator who cannot answer it will edit YAML by hand, which is the behaviour this page exists to replace."
+  - "NAME THE TWO FACTS THE OPERATOR READS OFF THE RECORD -- owner identity and claim instant -- using the field names that actually shipped, and show a worked example of a live claim beside an abandoned one. Write this against the landed record, not against ACD-2000b-1's specification; verify the names before publishing."
+  - "THE MANUAL-RELEASE SECTION MUST LEAD WITH THE LIVENESS CHECK, not the release command. A hand-release performed without checking whether the owner is alive re-creates the double-build this L1 forbids, and it is the single most likely way an operator turns a visible stall into an invisible collision."
+  - "THE EMPTY-FOOTPRINT RULE NEEDS ITS WHY, NOT JUST ITS STATEMENT. Give the inversion explicitly: the empty set intersects nothing, so a naive implementation makes precisely the least-analysable requirements the most parallel -- and note that an un-enriched requirement is the common case, not a rarity. That reasoning is what stops the rule being optimised away by the next author."
+  - "STATE THAT BOTH ENTRY POINTS USE THE SAME RECORD and name them, so an operator knows the single-requirement fast path and a larger drive are looking at one place and not two."
+  - "LINK, DO NOT REDRAW. The claim lifecycle state diagram is ACD-2000b-3-i's deliverable on docs/architecture/components/ac-driven-dev.md; reference it rather than restating the transitions in prose."
+  - "Satisfy check-doc-frontmatter and check-doc-length, and add the new page to docs/INDEX.md in the same change."
+  - "WRITE IT LAST. Every fact on this page comes from behaviour that ACD-2000b-1 through -4 define; a page written from the specifications rather than from what shipped will be confidently wrong about field names and the threshold value."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2000b-1
+    contract: "The claim record's shipped field names and shape -- owner identity, claim instant, entry-point kind -- and the fact that both entry points write the same record."
+  - ac_id: ACD-2000b-3
+    contract: "The staleness rule, its configured default value and the location of that configuration, plus the takeover record the operator inspects."
+  - ac_id: ACD-2000b-4
+    contract: "The empty-or-underivable-footprint rule and the inversion argument for why the opposite reading is dangerous."
+test_required: false
+test_rationale: "The artifact is prose on a reference page with no executable surface a test could drive, and its acceptance is comprehension rather than presence -- the final criterion is answered by having a reader diagnose a real stuck requirement using only this page, not by checking that a heading exists. The mechanical properties are enforced at commit time by check-doc-frontmatter, check-doc-length and the docs index gate, and every behaviour the page describes is covered by the executing tests on ACD-2000b-1, ACD-2000b-2, ACD-2000b-3 and ACD-2000b-4. Recorded explicitly so test-writer skips with an accurate reason rather than silently."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC, produced because ACD-2000b declares
+  `documentation_triggers: [reference-doc, state-diagram]`. This is the
+  reference-doc half. The state-diagram half is ACD-2000b-3-i, authored as an L3
+  under the reclaim behaviour it depicts rather than as a sixth L2 -- ACD-2000b's
+  L2 cap is 5 (`_MAX_L2_PER_L1` in scripts/commit_guardian/check_ac_limits.py,
+  tested as `child_count > limit`) and four behavioural leaves plus this one fill
+  it exactly. Both triggered documentation types are therefore delivered; only
+  the tree position differs. Flagged here so a later reviewer does not read the
+  L3 placement as an omission.
+
+  Craft deliberately LEFT UNSET this pass (assigned_agent / it_requirements /
+  estimated_complexity / contracts are the IT PO's); the intended craft is the
+  documentation surface. ACD-1800a-3 is the sibling precedent.
+
+  THE OPERATOR IS THE PRIMARY AUDIENCE, which is why the final Then clause is a
+  diagnostic capability. The failure this whole L1 addresses presents to a human
+  as "this requirement has said in_progress for two days and nothing is
+  happening". The documentation's job is to let that human tell the two causes
+  apart -- live build versus abandoned claim -- and to know what to do about the
+  second without inventing a procedure.
+
+  THE FOOTPRINT SENTENCE NEEDS ITS "WHY", not just its rule. "Unknown footprint
+  conflicts with everything" reads as needless caution until you know the
+  inversion: an empty set intersects nothing, so a naive implementation makes
+  exactly the least-analysable requirements the most parallel. That reasoning is
+  what stops the rule being "optimised away" by the next author, and it is the
+  same class of documentation obligation as ACD-1600g-5's worked counter-example
+  for exclusions.
+
+  THE TAKEOVER SECTION MUST INCLUDE THE MANUAL PATH. Whatever automatic staleness
+  rule ACD-2000b-3 lands with, operators will occasionally need to release a
+  claim by hand -- and a hand-release performed without checking whether the
+  owner is alive re-creates the double-build this L1 forbids. The check to
+  perform is documentation, not code.
+
+  ACCEPTANCE IS COMPREHENSION, NOT PRESENCE -- verify by having a reader answer
+  the diagnostic question against a real stuck requirement, not by checking that
+  a heading exists.
+
+  2026-08-17 (IT PO enrichment). Craft set to `documentation-expert` per the S7b
+  mapping for the `reference-doc` trigger and the BA's recorded intent.
+
+  PLACEMENT FIXED rather than left to the writer: the rule lives on a new
+  `docs/reference/ac-claim-lifecycle.md`, and `docs/reference/ac-schema.md` gets
+  the field rows plus a link. The split is deliberate -- the schema reference
+  describes the FIELD, this page describes the RULE -- and it is stated as an
+  it_requirement because the natural instinct is to append everything to
+  ac-schema.md, where the operator-facing diagnosis would be buried inside a
+  field table nobody reads under pressure.
+
+  THE THRESHOLD VALUE IS THE PAGE'S LOAD-BEARING FACT. Without the actual
+  configured default and its location, the diagnostic clause cannot be satisfied
+  at all -- which is also why ACD-2000b-3 is required to make the threshold a
+  named configurable rather than a literal at the comparison site. The two
+  requirements are two halves of one guarantee.
+
+  ORDERING: this is the last artefact in the L1. Written from the specifications
+  rather than from what shipped, it will be confidently wrong about field names
+  and the threshold, and a confidently wrong operator reference is worse than
+  none.

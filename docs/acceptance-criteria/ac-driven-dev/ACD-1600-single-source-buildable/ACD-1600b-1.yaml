@@ -56,7 +56,7 @@ notes: |
   exercised end-to-end by the generator (ACD-1600a-1) and the completeness gate.
 
   Ordering fix (2026-08-12, coverage review): depends_on was [ACD-1600b, ACD-1600a-1]
-  but ACD-1600a-1 is the thin generator (phase_acbuild_2_cutover) while this is a
+  but ACD-1600a-1 is the thin generator (phase_acbuild_2b_ticket_demotion) while this is a
   read-side change (phase_acbuild_1_foundation). A phase-1 AC must NOT hard-depend on a
   phase-2 AC — that inverts the read-side-before-write-side invariant (ADR-026). Dropped
   the ACD-1600a-1 dependency; it remains only as a non-blocking expects_from contract note.

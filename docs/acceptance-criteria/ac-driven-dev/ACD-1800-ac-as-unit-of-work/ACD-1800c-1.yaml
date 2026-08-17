@@ -10,7 +10,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given a ticket that groups three requirements into one feature,
   When the ticket is inspected,

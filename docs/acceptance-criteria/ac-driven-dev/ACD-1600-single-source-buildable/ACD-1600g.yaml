@@ -1,0 +1,110 @@
+id: ACD-1600g
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement says what to change and what to leave alone"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Every requirement draws its own boundary, not just its target.
+
+  A requirement states not only what it is meant to change but what it must
+  deliberately leave untouched, so a builder knows where the work stops. Anything
+  changed outside that boundary is surfaced for a decision rather than slipping
+  through unnoticed, and the boundary holds whether the requirement is built on
+  its own or alongside others in a larger feature.
+depends_on: [ACD-1600]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1600g-1
+  - ACD-1600g-2
+  - ACD-1600g-3
+  - ACD-1600g-4
+  - ACD-1600g-5
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  GAP ANALYSIS ORIGIN (2026-08-14, BrainCandy): one of five ticket-carried
+  responsibilities found to have NO successor in the AC-as-unit-of-work model
+  (ADR-026 / ACD-1800). This is the `out_of_scope` gap.
+
+  VERIFIED AGAINST CODE (do not re-investigate):
+    - The scope PAIR is asymmetric today. `files_touched` SURVIVES the migration:
+      it is already derived AC-side by `_build_files_touched()` in
+      scripts/ac_store/generate_ticket_from_ac.py (~line 497) as the union of
+      (1) it_requirements `reference_file_path` / path tokens scraped from prose
+      bullets and (2) doc_links whose `relationship` is in
+      `_EDIT_SURFACE_RELATIONSHIPS` (constrains/creates/implements/modifies/
+      specifies; `describes` and `related` are excluded). `out_of_scope` does
+      NOT: zero occurrences in config/ac_store_schema.json AND zero in
+      generate_ticket_from_ac.py. There is no AC-side way to express it at all.
+    - The consumer is templates/agents/change-scope-reviewer.md, which reads BOTH
+      lists from TICKET FRONTMATTER (extract steps at lines ~73-74; expected set
+      at ~92; in-scope/out-of-scope adjudication at ~109-110 and ~120-122). It
+      already treats an absent `out_of_scope` as tolerable, so the migration will
+      not break it loudly -- it will silently lose half its signal and fall back
+      to component-overlap guessing. That is a quiet-degradation risk, not a
+      crash: budget an explicit test for it.
+
+  WHY THE BOUNDARY MUST MOVE TO THE REQUIREMENT (the load-bearing argument):
+    Under ACD-1800c the ticket is a grouping container whose scope is the UNION
+    of its member ACs. A per-ticket `out_of_scope` therefore becomes undefinable
+    -- there is no single author of the bundle's exclusions, and any value written
+    at the ticket level is an assertion nobody owns. The exclusion has to be
+    authored at the same grain as the inclusion it qualifies: the requirement.
+
+  DESIGN HAZARD FOR THE BA -- exclusions do NOT compose by union:
+    The obvious implementation (bundle.out_of_scope = union of members'
+    out_of_scope) is WRONG and will produce false blockers. One member's
+    out_of_scope is routinely another member's files_touched -- that is exactly
+    what a bundle is for. The correct composition rule is a DIFFERENCE, not a
+    union: a path is out of scope for the bundle only when (a) at least one member
+    excludes it AND (b) no member's files_touched names it. Please specify this
+    explicitly at L2; a naive union is the single most likely defect here.
+
+  ORDERING (ADR-026 "read-side before write-side") -- note the direction:
+    This L1 is a PREREQUISITE OF ACD-1800c, not a dependent of it. The AC-side
+    boundary field and the reviewer's ability to read it must land BEFORE the
+    ticket is demoted to a container, or change-scope-reviewer spends the cutover
+    window verifying nothing. `depends_on` therefore deliberately lists only
+    ACD-1600 -- adding ACD-1800c would invert the safe migration order.
+
+  PLACEMENT RATIONALE (ACD-1600, not ACD-1800):
+    ACD-1600 is "the spec is single-sourced and complete enough to build from".
+    A boundary is a completeness property of the SPEC, and this L1 is the natural
+    negative-space twin of ACD-1600c ("buildable = concrete files + a test
+    contract"): 1600c says the requirement names the files to change, this says it
+    names the files not to. ACD-1800 governs the unit-of-work GRAIN and
+    done-accounting, which this is not. Secondary reason: ACD-1800 is at its child
+    cap (see below) and ACD-1600 was not.
+
+  SCHEMA / MIGRATION CONSTRAINTS (ADR-026 safety rules 1 and 4):
+    New field lands OPTIONAL in config/ac_store_schema.json; absence = legacy
+    mode (derive nothing, never fail); do not tighten additionalProperties until
+    the store is backfilled. Mirror any enum/shape validation into BOTH
+    scripts/commit_guardian/check_ac_schema.py and its manual fallback
+    scripts/commit_guardian/_ac_schema_validators.py as well as
+    scripts/ac_store/validate_ac_schema.py -- a rule added only to the JSON schema
+    is a no-op gate (same finding as ACD-1800a-1's it_requirements).
+
+  CHILD-CAP NOTE: this is ACD-1600's 7th L1 child, which is exactly the
+  `_MAX_L1_PER_L0 = 7` hard cap in scripts/commit_guardian/check_ac_limits.py
+  (the check is `child_count > limit`, so 7 passes and 8 blocks). ACD-1600 is now
+  FULL -- any further L1 under this L0 requires an ac-tree-split or an explicit
+  `child_limit_override` on ACD-1600.
