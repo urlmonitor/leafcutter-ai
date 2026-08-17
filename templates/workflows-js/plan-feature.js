@@ -1503,7 +1503,13 @@ function validateAnswerShape(answer, expectedType, validOptions) {
 function applyAnswerByType(answer, type) {
   if (type === "priority_choice") { return { action: "approve", priority: answer.priority }; }
   if (type === "free_text") { return { action: "approve", text: answer.text }; }
-  return { action: answer.action || answer.choice };
+  const decision = { action: answer.action || answer.choice };
+  // Carry `feedback` through. The mid-pipeline gate reads gateDecision.feedback to
+  // thread the user's notes into the re-dispatched author prompt; dropping it here
+  // re-ran the author with EMPTY feedback and burned the single MAX_EDIT_RETRIES
+  // attempt, so a resumed `edit` aborted the pipeline uncommitted.
+  if (typeof answer.feedback === "string") { decision.feedback = answer.feedback; }
+  return decision;
 }
 
 /**
@@ -1619,6 +1625,47 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
     "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
+
+  // VERIFY THE PERSIST — do not take the write on trust.
+  // Previously this function discarded the dispatch result and unconditionally
+  // reported "paused_awaiting_input". When the write silently did not happen the
+  // run looked resumable but was not: resolveGate fails CLOSED on read
+  // (exists !== true -> nothing_to_resume), so EVERY later answer — approve, edit
+  // or cancel — bailed out, with nothing to indicate why.
+  //
+  // Verification is a read-back through the same command resolveGate uses, so it
+  // proves the record is retrievable rather than merely that a command exited.
+  let _persistVerified = false;
+  try {
+    const _verifyRaw = await agent(
+      "Confirm a pause record was persisted. Run exactly:\n" +
+      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
+      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
+      { agentType: "status-checker", label: "pause-persist-verify" }
+    );
+    const _verified = (typeof _verifyRaw === "string")
+      ? parseAgentJson(_verifyRaw, { stage: "pause-persist-verify", agent: "status-checker" })
+      : _verifyRaw;
+    _persistVerified = !!(_verified && _verified.exists === true);
+  } catch (_verifyErr) {
+    _persistVerified = false;
+  }
+
+  if (!_persistVerified) {
+    // Fail loudly rather than advertising a resumable pause that does not exist.
+    return {
+      status: "pause_persist_failed",
+      run_id: runId,
+      gate_id: gateId,
+      message:
+        "Gate '" + gateId + "' needed a human answer, but the pause record for run '" +
+        runId + "' could not be verified as written, so this run CANNOT be resumed.\n" +
+        "Work already committed by earlier stages is safe on the authoring branch; " +
+        "uncommitted drafts remain in the authoring worktree.\n" +
+        "Re-run /plan-feature interactively, or drive the remaining authoring agents directly.",
+    };
+  }
+
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
 }
 
@@ -1819,7 +1866,7 @@ if (route === "covered" && !force) {
     args.run_id || "default-run"
   );
   if (_covGateResult && _covGateResult.status &&
-      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_covGateResult.status)) {
+      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_covGateResult.status)) {
     return _covGateResult;
   }
   const userChoice = _covGateResult || { choice: "cancel" };
@@ -1973,7 +2020,7 @@ if (ptRunSet.skip) {
           args.run_id || "default-run"
         );
         if (_ptGateResult && _ptGateResult.status &&
-            ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_ptGateResult.status)) {
+            ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_ptGateResult.status)) {
           return _ptGateResult;
         }
         const ptGate = _ptGateResult || { action: "cancel" };
@@ -2267,7 +2314,7 @@ for (const step of pipeline) {
         args.run_id || "default-run"
       );
       if (_midGateResult && _midGateResult.status &&
-          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_midGateResult.status)) {
+          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_midGateResult.status)) {
         return _midGateResult;
       }
       const gateDecision = _midGateResult || { action: "cancel" };
@@ -2365,7 +2412,7 @@ for (const step of pipeline) {
       );
       // Non-proceed outcomes: exit immediately.
       if (_finalGateResult && _finalGateResult.status &&
-          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_finalGateResult.status)) {
+          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_finalGateResult.status)) {
         return _finalGateResult;
       }
       const finalDecision = _finalGateResult || { action: "defer" };
