@@ -444,6 +444,8 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
                       ac-validator (priority 11.5, after pr-reviewer and before commit),
                       user-surface-smoker (priority 11.5, concurrent with ac-validator),
                       ac-fulfillment-gate (priority 11.7, after ac-validator and before commit),
+                      live-surface-tester (priority 11.8, after user-surface-smoker and before commit),
+                      documentation-verifier (priority 11.9, after documentation-expert and before commit),
                       commit (priority 12), pull-request (priority 13),
                       status-checker, documentation-expert).
 
@@ -630,6 +632,7 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 11.5 | `ac-validator` | AC coverage gate; runs after pr-reviewer (11) and before commit (12) |
 | 11.5 | `user-surface-smoker` | Surface end-to-end smoker; concurrent with ac-validator |
 | 11.7 | `ac-fulfillment-gate` | AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) |
+| 11.8 | `live-surface-tester` | Live-app proof; runs after user-surface-smoker (11.5) and before commit (12) |
 | 11.9 | `documentation-verifier` | Documentation coverage gate; runs after documentation-expert (10) and before commit (12) |
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |

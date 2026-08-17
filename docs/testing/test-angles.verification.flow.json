@@ -1,0 +1,895 @@
+{
+  "$schema": "../../config/verification_flow.schema.json",
+  "id": "leafcutter/test-angle-machinery",
+  "title": "Verification flow — is the test-angle taxonomy live or decorative?",
+  "component": "ac-driven-dev",
+  "version": 1,
+  "created": "2026-08-14",
+  "authored_by": "verification-flow-author",
+  "repo_root": "/home/henzeh/projects/leafcutter/leafcutter-ai",
+  "subject": {
+    "mechanism": "The test-angle taxonomy (criterion / reachability / seam / real_artifact / deployed, modifier must_block, conditional boundary / failure) and the machinery that is supposed to carry it end-to-end: AC store schema -> it-po authoring -> generate_ticket_from_ac.py -> ticket Test Requirements -> test-writer -> commit/CI gates -> deployed layout.",
+    "failure_mode_guarded": "'Done does not mean done': code ships with a green AC-literal unit test but is never wired into anything that runs it. The taxonomy is the countermeasure — so the taxonomy itself becoming decorative is the highest-severity outcome, and this flow exists to make that detectable.",
+    "prior_incidents": [
+      "A smoke gate blocked by a schema: user-surface-smoker routing was fully implemented in generate_ticket_from_ac.py (BP-1100f-5) while config/ac_store_schema.json had additionalProperties:false and no declares_side_effect property — so no AC could legally set the field that triggers it.",
+      "A live_dispatch enum in exactly one file: config/test_requirements.schema.json declares type: live_dispatch + surface_invoked, and nothing else in the repo reads them.",
+      "check_test_requirements_refs.py is named in test_requirements.schema.json's own description AND registered 'portable' in config/package_boundary.json, but the script does not exist anywhere in the repo.",
+      "A fast-lane runner that never executed its own gates (fast-lane-build.js, 2026-07-22; recorded in CLAUDE.md).",
+      "A done_proof hook that crashed in the deployed layout (ModuleNotFoundError: done_proof, missing from build_ac_store deploy_map; recorded in CLAUDE.md)."
+    ]
+  },
+  "summary": "A fully-green run of this flow would prove that a test angle is not merely a word in a document: that the AC store can hold the angle-triggering fields, that a real AC in the real store actually sets them, that the generator turns them into angle-tagged test descriptors and routes the side-effect gate agent, that test-writer's prompt carries the mandate, that a commit/CI gate BLOCKS an AC whose only coverage is the criterion angle, and that all of the above still holds in the built .leafcutter layout rather than only in the source tree. Today it is largely red: the vocabulary is expressible in one store and rejected by the other, the generator emits angles that no gate reads, zero of 2888 ACs set the field that arms the side-effect gate, and three enforcement agents sort AFTER commit so they cannot block anything.",
+  "observed_at": {
+    "date": "2026-08-14",
+    "head_sha": "47fb660ff",
+    "branch": "fix/test-angle-reachability-floor",
+    "working_tree_dirty": [
+      "config/ac_store_schema.json (modified)",
+      "scripts/ac_store/generate_ticket_from_ac.py (modified)",
+      "templates/agents/test-writer.md (modified)",
+      "docs/testing/README.md (modified)",
+      "unit_tests/test_generate_ticket_from_ac.py (modified)",
+      "docs/testing/test-angles.md (untracked, new)",
+      "docs/testing/test-angles.verification.flow.json (untracked, new — this file)",
+      "config/verification_flow.schema.json (untracked, new)",
+      "unit_tests/ac_store/test_declares_side_effect_schema_reachability.py (untracked, new)",
+      "unit_tests/ac_store/test_derived_test_reachability_floor.py (untracked, new)",
+      "unit_tests/agents/test_test_writer_seam_rule_scope.py (untracked, new)"
+    ],
+    "note": "CRITICAL PROVENANCE: sibling agents were editing this tree DURING observation. Two checks changed state mid-flight and BOTH observations are recorded in their evidence arrays (VC-1.1 and VC-2.1). Every `currently` below reflects the WORKING TREE at 2026-08-14, not committed HEAD 47fb660ff. Nothing in this flow is committed; a `git stash` would revert several `passing` values to `failing`. REVISED 2026-08-14 by an adversarial review pass that re-ran every command: the dirty list above was refreshed (three sibling test files had landed since first capture), line-number citations into generate_ticket_from_ac.py were re-derived (several had already rotted and are now flagged as superseded in-place, with symbol names preferred in prose), the VC-1.1/VC-1.2 probe filters were corrected for a false-alarm bug, and VC-3.2 was resolved from `unverified` to `passing`. Line numbers in this artifact are evidence snapshots, not citations — trust the symbols."
+  },
+  "angle_vocabulary": {
+    "core": {
+      "criterion": "The AC-literal happy path — the Then clause holds.",
+      "reachability": "Invoke the REAL production entry point (subprocess/dispatch, not a direct import) and assert the behaviour happens AND its result is consumed in control flow.",
+      "seam": "Feed real producer output into the real consumer and assert the CONSUMER's observable behaviour — no mocks on either side.",
+      "real_artifact": "Use a fixture from the real serializer or a verbatim on-disk file; a fresh subprocess when the claim is about module load.",
+      "deployed": "Run build.py to a temp target and exercise the DEPLOYED copy, not the source tree."
+    },
+    "modifier": {
+      "must_block": "Marks a check whose SUBJECT is a gate/guard/validator: a paired negative-control test feeds known-bad input through the SAME entry point and must be shown to BLOCK. Most often it rides the `reachability` entry (that is where a gate's production entry point lives), but it attaches to whichever angle carries that entry point — in this flow it also rides `real_artifact` (VC-1.1/VC-1.2, where the gate IS a schema validator) and `seam` (VC-2.2, where the gate is the generator's routing branch). The modifier is about what is being guarded, not about which angle slot it occupies."
+    },
+    "conditional": {
+      "boundary": "Edge of a declared range/limit.",
+      "failure": "Declared error path behaves as specified."
+    },
+    "cap": 4,
+    "one_test_may_carry_two_angles": true
+  },
+  "phases": [
+    {
+      "id": "P1",
+      "name": "The vocabulary is expressible",
+      "intent": "Prove the data model can physically HOLD angle information. Until a store accepts the field, every downstream consumer of that field is unreachable code by construction — this is the exact shape of the 'smoke gate blocked by a schema' incident.",
+      "gate_rule": "While any check here is red, no downstream phase can be trusted green: a green downstream check is testing a code path no real record can reach.",
+      "checks": [
+        {
+          "id": "VC-1.1",
+          "angle": "real_artifact",
+          "modifiers": ["must_block"],
+          "claim": "An AC record shaped like a real store record and carrying `declares_side_effect: true` validates against config/ac_store_schema.json.",
+          "entry_point": "config/ac_store_schema.json evaluated by jsonschema.Draft7Validator — the same schema and validator library the check-ac-schema pre-commit hook loads (SCHEMA_PATH = \"config/ac_store_schema.json\" in check_ac_schema.py).",
+          "command": "python3 -c \"import json,sys,jsonschema; s=json.load(open('/home/henzeh/projects/leafcutter/leafcutter-ai/config/ac_store_schema.json')); r={'id':'PROBE-001','level':'L2','component':'ac-driven-dev','components':['ac_driven_dev'],'status':'active','title':'probe','criteria':'x','work_status':'todo','readiness':'draft','origin_agent':'BrainCandy','declares_side_effect':True}; e=[x.message for x in jsonschema.Draft7Validator(s).iter_errors(r) if 'declares_side_effect' in x.message or 'declares_side_effect' in list(x.absolute_path)]; print(e or 'ACCEPTED'); sys.exit(1 if e else 0)\"",
+          "pass_criteria": "Exit 0 and stdout is exactly `ACCEPTED`.",
+          "fail_criteria": "Exit 1 with stdout containing `Additional properties are not allowed ('declares_side_effect' was unexpected)`.",
+          "notes": "The error filter must test BOTH x.message and x.absolute_path. An `additionalProperties` violation names the field in the message but has an EMPTY absolute_path; a `oneOf` type violation has the field in absolute_path but a message ('...is not valid under any of the given schemas') that never names it. A filter on only one of the two silently misses half the failure modes — an earlier revision of this check filtered on x.message alone and reported a false `WRONGLY-ACCEPTED` against a schema that was in fact rejecting the bad value correctly. The probe record is also complete against the schema's root `required` (id/title/component/components/status/criteria) so the positive case yields total_errors=0, not merely zero field-scoped errors.",
+          "negative_control": {
+            "input": "The same record with `declares_side_effect: \"yes\"` (a string, not a boolean or null).",
+            "command": "python3 -c \"import json,sys,jsonschema; s=json.load(open('/home/henzeh/projects/leafcutter/leafcutter-ai/config/ac_store_schema.json')); r={'id':'PROBE-001','level':'L2','component':'ac-driven-dev','components':['ac_driven_dev'],'status':'active','title':'probe','criteria':'x','work_status':'todo','readiness':'draft','origin_agent':'BrainCandy','declares_side_effect':'yes'}; e=[x.message for x in jsonschema.Draft7Validator(s).iter_errors(r) if 'declares_side_effect' in x.message or 'declares_side_effect' in list(x.absolute_path)]; print(e or 'WRONGLY-ACCEPTED'); sys.exit(0 if e else 1)\"",
+            "expected_result": "Exit 0, stdout names a validation error scoped to declares_side_effect. If it prints `WRONGLY-ACCEPTED` the property was added without a type constraint and the field is unvalidated.",
+            "currently": {
+              "state": "passing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "python3 -c \"...iter_errors(r) if 'declares_side_effect' in x.message or 'declares_side_effect' in list(x.absolute_path)...\"  with declares_side_effect='yes'",
+                  "output": "[\"'yes' is not valid under any of the given schemas\"]",
+                  "exit_code": 0
+                },
+                {
+                  "command": "python3 -c \"...[print(list(x.absolute_path),'|',x.message) for x in Draft7Validator(s).iter_errors(r)]\"  (unfiltered, to locate the error)",
+                  "output": "['declares_side_effect'] | 'yes' is not valid under any of the given schemas"
+                }
+              ],
+              "interpretation": "The control fires correctly: the sibling added the property as `oneOf: [{type: boolean}, {type: null}]`, so a string is rejected. NOTE the process finding — the FIRST run of this control printed `WRONGLY-ACCEPTED`, which was a defect in the control's own filter (message-only), not in the schema. A negative control that can produce a false alarm is as damaging as one that can produce a false pass; the filter was corrected and re-run before this state was recorded."
+            }
+          },
+          "currently": {
+            "state": "passing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "python3 /tmp/angle_probe_schema.py  (validated the SAME record against HEAD's schema and the working-tree schema side by side)",
+                "output": "HEAD (committed): total_errors=3 declares_side_effect_errors=1\n  -> Additional properties are not allowed ('declares_side_effect' was unexpected)\nWORKING TREE (sibling in-flight): total_errors=2 declares_side_effect_errors=0",
+                "exit_code": 0
+              },
+              {
+                "command": "python3 -c \"...iter_errors(r) if 'declares_side_effect' in x.message...\"  (re-run after the sibling's edit settled)",
+                "output": "ACCEPTED",
+                "exit_code": 0
+              }
+            ],
+            "interpretation": "STATE CHANGED MID-FLIGHT — both observations recorded deliberately. At committed HEAD 47fb660ff the schema REJECTS the field (root additionalProperties:false, property absent): that is the incident condition, and it is what any consumer who checks out main today gets. In the working tree the sibling agent's uncommitted edit ADDS the property and the same record is ACCEPTED. This check is `passing` only against uncommitted work; it reverts to `failing` on stash or on a fresh clone."
+          },
+          "owner_surface": ["config/ac_store_schema.json"],
+          "blocks": ["VC-1.4", "VC-2.2"]
+        },
+        {
+          "id": "VC-1.2",
+          "angle": "real_artifact",
+          "modifiers": ["must_block"],
+          "claim": "A test descriptor carrying `angle: reachability` validates against the test_entry definition in config/test_requirements.schema.json — the declared schema for the ticket block the generator writes and test-writer reads.",
+          "entry_point": "config/test_requirements.schema.json $defs/test_entry, evaluated by jsonschema.Draft7Validator.",
+          "command": "python3 -c \"import json,sys,jsonschema; s=json.load(open('/home/henzeh/projects/leafcutter/leafcutter-ai/config/test_requirements.schema.json')); e=[x.message for x in jsonschema.Draft7Validator(s['\\$defs']['test_entry']).iter_errors({'name':'test_x','description':'d','type':'unit','target_dir':'unit_tests/','covers':'f','angle':'reachability'}) if 'angle' in x.message or 'angle' in list(x.absolute_path)]; print(e or 'ACCEPTED'); sys.exit(1 if e else 0)\"",
+          "pass_criteria": "Exit 0 and stdout is exactly `ACCEPTED`.",
+          "fail_criteria": "Exit 1 with stdout containing `Additional properties are not allowed ('angle' was unexpected)`.",
+          "notes": "Same dual-filter requirement as VC-1.1: today the failure is an `additionalProperties` error (field named in the message, empty absolute_path); once `angle` is added as an enum the failure becomes an enum error (field in absolute_path, message reads \"'smoke' is not one of [...]\" and never says 'angle'). Filtering on x.message alone would make the negative control report WRONGLY-ACCEPTED against a correctly-enforcing enum.",
+          "negative_control": {
+            "input": "A descriptor with `angle: \"smoke\"` — a plausible-sounding value outside the taxonomy.",
+            "command": "python3 -c \"import json,sys,jsonschema; s=json.load(open('/home/henzeh/projects/leafcutter/leafcutter-ai/config/test_requirements.schema.json')); e=[x.message for x in jsonschema.Draft7Validator(s['\\$defs']['test_entry']).iter_errors({'name':'test_x','description':'d','type':'unit','target_dir':'unit_tests/','covers':'f','angle':'smoke'}) if 'angle' in x.message or 'angle' in list(x.absolute_path)]; print(e or 'WRONGLY-ACCEPTED'); sys.exit(0 if e else 1)\"",
+            "expected_result": "Exit 0 with an enum-violation message. Adding `angle` as a free-form string instead of an enum would make the field untypoable-against and is a fail.",
+            "currently": {
+              "state": "blocked",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "(same probe with angle:'smoke')",
+                  "output": "not run — while the property is entirely absent, both a valid and an invalid value produce the identical 'Additional properties' error, so the negative control cannot discriminate."
+                }
+              ],
+              "interpretation": "The negative control is only meaningful once VC-1.2 passes. Blocked by VC-1.2, not skipped."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "python3 -c \"...iter_errors({...,'angle':'reachability'}) if 'angle' in x.message...\"",
+                "output": "[\"Additional properties are not allowed ('angle' was unexpected)\"]",
+                "exit_code": 1
+              },
+              {
+                "command": "python3 -c \"import json; d=json.load(open('.../config/test_requirements.schema.json')); ...\" (inspecting $defs/test_entry)",
+                "output": "test_entry additionalProperties: False\nrequired: ['name', 'description', 'type', 'target_dir', 'covers']\ndeclared props: name, description, type, target_dir, covers, surface_invoked"
+              }
+            ],
+            "interpretation": "The single most important structural finding in P1, and an exact repeat of the declares_side_effect incident one layer down. The generator ALREADY emits `angle:` (see VC-2.1) into a block whose declared schema forbids it. It does not crash today only because NOTHING validates the block against this schema (see VC-4.4) — i.e. two decorative artifacts are cancelling each other out. Fixing either one in isolation breaks the pipeline: wiring up the validator without adding `angle` to the schema would reject every generated ticket."
+          },
+          "owner_surface": ["config/test_requirements.schema.json"],
+          "blocks": ["VC-4.4"]
+        },
+        {
+          "id": "VC-1.3",
+          "angle": "seam",
+          "claim": "The angle vocabulary is defined in ONE machine-readable place that at least two independent consumers read, rather than being duplicated as string literals per consumer.",
+          "entry_point": "Repo-wide grep for the vocabulary's canonical home.",
+          "command": "grep -rln \"real_artifact\" /home/henzeh/projects/leafcutter/leafcutter-ai/config /home/henzeh/projects/leafcutter/leafcutter-ai/scripts /home/henzeh/projects/leafcutter/leafcutter-ai/templates",
+          "pass_criteria": "At least one file under config/ defines the enum AS THE PIPELINE'S TEST-ANGLE VOCABULARY, AND at least two files under scripts/ or templates/ reference it by loading that config rather than by hardcoding the strings. A grep hit is necessary but never sufficient here: a mention in a comment, or an enum belonging to a different artifact type, does not count. Read each hit before scoring it.",
+          "fail_criteria": "Zero config/ definitions, or the only occurrences are hardcoded literals inside a single module.",
+          "negative_control": {
+            "input": "The `live_dispatch` enum — a prior attempt at exactly this vocabulary-extension pattern.",
+            "command": "grep -rl \"live_dispatch\" /home/henzeh/projects/leafcutter/leafcutter-ai --exclude-dir=.git --exclude-dir=docs",
+            "expected_result": "A vocabulary term that appears in exactly ONE non-documentation file is by definition unenforced. If the new angle vocabulary reproduces the live_dispatch topology (1 file, zero readers), it is decorative for the same reason. NOTE the `--exclude-dir=docs`: prose ABOUT a dead vocabulary is not a consumer of it, and without the exclusion this control silently self-satisfies as soon as anyone documents the problem — see the interpretation below.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "grep -rl \"live_dispatch\" /home/henzeh/projects/leafcutter/leafcutter-ai --exclude-dir=.git  (unscoped, run AFTER this flow and test-angles.md were written)",
+                  "output": "/home/henzeh/projects/leafcutter/leafcutter-ai/config/test_requirements.schema.json\n/home/henzeh/projects/leafcutter/leafcutter-ai/docs/testing/test-angles.md\n/home/henzeh/projects/leafcutter/leafcutter-ai/docs/testing/test-angles.verification.flow.json"
+                },
+                {
+                  "command": "grep -rl \"live_dispatch\" /home/henzeh/projects/leafcutter/leafcutter-ai --exclude-dir=.git --exclude-dir=docs  (the scoped form, which is the real measurement)",
+                  "output": "/home/henzeh/projects/leafcutter/leafcutter-ai/config/test_requirements.schema.json"
+                }
+              ],
+              "interpretation": "Exactly one non-doc file, as suspected: `live_dispatch` and its companion `surface_invoked` were added in test_requirements.schema.json v1.1.0 and no code has ever read them. The negative control fires — the pattern this flow guards against is already present in the repo. SECOND-ORDER FINDING recorded during adversarial review: the ORIGINAL unscoped grep returned 1 file when authored and returns 3 today, because this flow and test-angles.md both mention the term. A measurement that counts documentation about a problem as progress on the problem is exactly the class of self-satisfying check this whole taxonomy exists to reject, so the command was rescoped to exclude docs/. Applies generally: any 'this term appears in N files' check must exclude the prose describing it."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -rn \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/config/test_requirements.schema.json",
+                "output": "(no output — zero matches)"
+              },
+              {
+                "command": "grep -n \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py  (re-run 2026-08-14 after further sibling edits; line numbers below supersede an earlier, now-stale capture)",
+                "output": "61:#: Test-angle vocabulary emitted on derived test descriptors. Only the two\n62:#: angles this module produces are named here; the wider vocabulary being\n65:#: reachability. The trigger table for the remaining angles is separate work —\n1185:    Idempotency guard for :func:`_reachability_descriptor` injection. The angle\n1187:    disambiguated while the angle stays authoritative.\n1193:        True when any descriptor declares ``angle: reachability``.\n1195:    return any(d.get(\"angle\") == TEST_ANGLE_REACHABILITY for d in descriptors)\n1203:    The derived-from-criteria fallback is, by construction, the AC-literal angle\n1218:        A single test descriptor dict tagged ``angle: reachability``.\n1225:        \"angle\": TEST_ANGLE_REACHABILITY,\n1234:    ``Then`` clause in the criteria becomes one ``angle: criterion`` test\n1240:    On top of those, one mandatory ``angle: reachability`` descriptor is always\n1249:        List of test descriptor dicts (name / file / covers / angle / asserts),\n1268:            \"angle\": TEST_ANGLE_CRITERION,\n1280:                \"angle\": TEST_ANGLE_CRITERION,\n1335:        if item.get(\"angle\"):\n1336:            # Pass an authored angle straight through so an AC that already\n1339:            entry[\"angle\"] = item[\"angle\"]"
+                },
+              {
+                "command": "grep -n \"TEST_ANGLE_CRITERION\\|TEST_ANGLE_REACHABILITY\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py",
+                "output": "67:TEST_ANGLE_CRITERION = \"criterion\"\n68:TEST_ANGLE_REACHABILITY = \"reachability\""
+              }
+            ],
+            "interpretation": "The vocabulary lives as TEST_ANGLE_* string constants private to one module (defined at generate_ticket_from_ac.py:67-68), and the module's own comment concedes it defines 'only the two angles this module produces'. No config/ enum exists that any pipeline code loads. CAVEAT added during adversarial review: re-running the main grep today ALSO returns config/verification_flow.schema.json and generate_ticket_from_ac.py, and neither hit counts. The first is this flow artifact's OWN schema — it enumerates the seven angles so a *.verification.flow.json can be validated, which is a different artifact type from a ticket's Test Requirements block and is loaded by nothing in the AC-to-ticket pipeline. The second is a prose comment (line 63), not a definition. Scoring VC-1.3 by grep count alone would now read as partial progress where there is none; this is the same 'a string is present, therefore the thing is wired' error the whole flow exists to reject, committed by the flow against itself. This is the live_dispatch topology forming again in real time. The re-run also surfaced a passthrough path (`if item.get(\"angle\")` in _test_descriptors_from_spec) that copies an AUTHORED angle from an AC's test_spec into the ticket unvalidated — so any string an author types becomes an angle, with no enum to reject it. That widens the finding: the vocabulary is not merely un-shared, it is un-closed."
+          },
+          "owner_surface": [
+            "config/test_requirements.schema.json",
+            "docs/testing/test-angles.md"
+          ]
+        },
+        {
+          "id": "VC-1.4",
+          "angle": "real_artifact",
+          "claim": "At least one AC in the REAL store (docs/acceptance-criteria/) sets `declares_side_effect`, so the user-surface-smoker routing has a live trigger.",
+          "entry_point": "The on-disk AC store — the actual YAML the generator and hooks read, not a fixture.",
+          "command": "grep -rl \"declares_side_effect\" /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria/",
+          "pass_criteria": "One or more file paths printed, exit 0.",
+          "fail_criteria": "No output, exit 1 — the field is set on zero records, so every consumer of it is dead code on the real store.",
+          "negative_control": {
+            "input": "The 460 leaf ACs whose criteria text already asserts a durable side-effect (writes / persists / appends / creates a file / emits) — the population that SHOULD carry the field.",
+            "command": "python3 /tmp/angle_find_sideeffect_ac.py",
+            "expected_result": "The count of side-effect-asserting ACs that set declares_side_effect should be close to the count that assert one. A large gap means the field is not being authored even where it plainly applies, so the gate is inert by omission rather than by design.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "python3 /tmp/angle_find_sideeffect_ac.py  (regex over criteria of every L2/L3 record: writes|written|persist|appends|creates a file|saved|emit)",
+                  "output": "leaf ACs whose criteria assert a durable side-effect: 460\nof those, declares_side_effect set: 0"
+                }
+              ],
+              "interpretation": "460 ACs describe a durable side-effect in their own Then clause; 0 declare it. The exemption the schema documents as 'data-driven, never by item name' is currently exempting 100% of the store."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -rl \"declares_side_effect\" /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria/ | wc -l",
+                "output": "0",
+                "exit_code": 0
+              },
+              {
+                "command": "python3 /tmp/angle_probe_counts.py  (full store census)",
+                "output": "total_parsed=2888\nparse_fail=0\nby_flight_level={'L0': 107, 'L1': 483, 'L2': 1602, 'L3': 627, 'unknown': 69}\ndeclares_side_effect_set=0\nwith_test_spec=394\nwithout_test_spec=2494\ncode_acs(assigned_agent in coder set)=1886\ncode_acs_with_test_spec=377\ncode_ac_test_spec_fraction=0.200"
+                },
+              {
+                "command": "grep -rl \"declares_side_effect\" /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria/ | wc -l  (RE-RUN after the sibling's schema fix landed in the working tree)",
+                "output": "0"
+              }
+            ],
+            "interpretation": "HEADLINE FINDING, AND IT DID NOT MOVE. `declares_side_effect` is set on 0 of 2888 AC records (population: every *.yaml under docs/acceptance-criteria/, all 2888 of which parse as dicts) — re-confirmed AFTER the VC-1.1 schema fix landed in the working tree. Making the field legal did not make it authored. The user-surface-smoker gate therefore remains fully inert: the routing code in `_build_agents_map` in generate_ticket_from_ac.py (cited by symbol, not line: the file is under concurrent edit and line numbers rot within hours) is correct and unreachable. Two independent causes keep it at zero: (1) until minutes ago the schema rejected the field, so no author COULD set it; (2) no authoring surface asks for it — grep across templates/agents/ and templates/skills/ returns zero mentions, so neither it-po nor business-analyst is ever instructed to populate it. Fixing the schema addresses (1) only; the gate stays inert until (2) is fixed and a backfill runs."
+          },
+          "owner_surface": [
+            "docs/acceptance-criteria/**/*.yaml",
+            "templates/agents/it-po.md",
+            "templates/agents/business-analyst.md"
+          ],
+          "blocks": ["VC-2.2", "VC-5.1"]
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "The generator emits the angles",
+      "intent": "Prove that the one program that turns an AC into a buildable ticket actually writes angle information into the artifact downstream agents read. A taxonomy that never reaches the ticket cannot influence a single test.",
+      "checks": [
+        {
+          "id": "VC-2.1",
+          "angle": "reachability",
+          "claim": "Running the generator's real CLI on a real AC that authored NO test_spec produces a ticket whose Test Requirements block contains both `angle: criterion` and `angle: reachability`.",
+          "entry_point": "python3 scripts/ac_store/generate_ticket_from_ac.py --ac <id> --dry-run — the production CLI that /build-ac invokes, run as a subprocess, not an imported helper.",
+          "setup_command": "python3 /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py --ac ACD-1100f-1 --ac-root /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria --dry-run > /tmp/vc_2_1_ticket.md 2>/tmp/vc_2_1.err",
+          "command": "grep -c \"angle: reachability\" /tmp/vc_2_1_ticket.md",
+          "pass_criteria": "Outputs `1` or more, exit 0. The generated block must also contain `angle: criterion`.",
+          "fail_criteria": "Outputs `0`, exit 1 — the derived-test fallback emits untagged descriptors and the angle never reaches the ticket.",
+          "negative_control": {
+            "input": "An AC that DOES author a test_spec, whose descriptors already carry an explicit angle.",
+            "command": "grep -c \"angle: reachability\" /tmp/vc_2_1_ticket.md",
+            "expected_result": "The generator must NOT append a second, duplicate reachability descriptor when the AC already authored one — _reachability_descriptor injection is guarded by an idempotency check (`any(d.get(\"angle\") == TEST_ANGLE_REACHABILITY for d in descriptors)`, cited by symbol rather than line number because this file is under concurrent edit). A count of 2 for a spec-authoring AC means the guard is broken and every such ticket gets a duplicate mandate.",
+            "currently": {
+              "state": "unverified",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "(not run — requires selecting a test_spec AC that already declares angle: reachability; of 394 test_spec ACs none currently declare an angle at all)",
+                  "output": "not run"
+                }
+              ],
+              "interpretation": "The idempotency guard exists in code but its trigger condition (an AC with a pre-authored reachability angle) does not occur anywhere in the real store yet, so the guard is itself currently untestable against real data."
+            }
+          },
+          "currently": {
+            "state": "passing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -c \"angle\" (HEAD version of the generator, extracted via git show HEAD:scripts/ac_store/generate_ticket_from_ac.py)",
+                "output": "0"
+              },
+              {
+                "command": "python3 .../generate_ticket_from_ac.py --ac ACD-1100f-1 --dry-run  (working tree, re-run after sibling edits settled)",
+                "output": "## Test Requirements\n\n```yaml\ntests:\n- name: test_acd_1100f_1_validation_passes_with_exit_code_0\n  file: unit_tests/test_acd_1100f_1.py\n  covers:\n  - ACD-1100f-1\n  angle: criterion\n  asserts: validation passes with exit code 0,\n- name: test_acd_1100f_1_reachable_from_entry_point\n  file: unit_tests/test_acd_1100f_1.py\n  covers:\n  - ACD-1100f-1\n  angle: reachability\n  asserts: 'REQUIRED — invoke the production entry point (CLI, hook, slash command,\n    workflow dispatch, or main()) as a subprocess/dispatch and assert the new behaviour\n    actually occurs. Do NOT satisfy this by importing the function directly. The AC\n    authored no test_spec, so the entry point is not declared: resolve it before writing\n    this test, and do not delete this entry.'\n```"
+              },
+              {
+                "command": "grep -c \"angle: reachability\" /tmp/vc_gen_now.md",
+                "output": "1",
+                "exit_code": 0
+              }
+            ],
+            "interpretation": "STATE CHANGED MID-FLIGHT — both observations recorded. At committed HEAD the generator contains the string 'angle' ZERO times and emits untagged descriptors. In the working tree the sibling's reachability-floor work adds TEST_ANGLE_* constants and a mandatory appended reachability descriptor, and the real CLI now emits both angles for an AC with no test_spec. Note the descriptor is honest about its own weakness: it says the entry point 'is not declared: resolve it before writing this test' — because 80% of code ACs author no test_spec (1509 of 1886), the reachability mandate usually arrives WITHOUT a named entry point, pushing that decision onto test-writer, which does not yet know the word 'angle' (VC-3.1)."
+          },
+          "owner_surface": ["scripts/ac_store/generate_ticket_from_ac.py"]
+        },
+        {
+          "id": "VC-2.2",
+          "angle": "seam",
+          "modifiers": ["must_block"],
+          "claim": "An AC with `declares_side_effect: true` produces a generated ticket whose agents map contains `user-surface-smoker: needed` — the real generator's real output consumed as the real ticket artifact.",
+          "entry_point": "python3 scripts/ac_store/generate_ticket_from_ac.py --dry-run, reading a real store AC; the consumer under test is the ticket's `agents:` frontmatter block that ticket-supervisor dispatches from.",
+          "setup_command": "python3 /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py --ac <an-AC-that-sets-declares_side_effect> --ac-root /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria --dry-run > /tmp/vc_2_2_ticket.md 2>/tmp/vc_2_2.err",
+          "command": "grep -c \"user-surface-smoker: needed\" /tmp/vc_2_2_ticket.md",
+          "pass_criteria": "Outputs `1`, exit 0.",
+          "fail_criteria": "Outputs `0` — the declares_side_effect -> smoker routing does not fire on a real record.",
+          "negative_control": {
+            "input": "A real AC that does NOT set declares_side_effect (e.g. ACD-1100f-1, ACD-300a).",
+            "command": "grep -c \"user-surface-smoker\" /tmp/vc_2_1_ticket.md",
+            "expected_result": "Outputs `0`. The exemption must be data-driven: an AC making no side-effect claim must NOT be force-routed to the smoker (BP-1100f-5-i). A non-zero count here would mean the gate over-routes and its signal is worthless.",
+            "currently": {
+              "state": "passing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "grep -c \"user-surface-smoker\" /tmp/angle_gen_ACD1100f1.md /tmp/vc_gen_ACD300a.md",
+                  "output": "/tmp/angle_gen_ACD1100f1.md:0\n/tmp/vc_gen_ACD300a.md:0"
+                }
+              ],
+              "interpretation": "The negative control genuinely passes — no over-routing. But it passes VACUOUSLY: with the field set on zero records, the not-routed branch is the only branch anything ever takes. A negative control that can only ever observe the negative case is not evidence the positive case works. This is precisely the trap the must_block modifier exists to expose."
+            }
+          },
+          "currently": {
+            "state": "blocked",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -rl \"declares_side_effect\" /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria/ | wc -l",
+                "output": "0"
+              },
+              {
+                "command": "grep -n \"user-surface-smoker\\|declares_side_effect\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py  (re-run 2026-08-14; supersedes an earlier capture whose line numbers had already rotted under concurrent edits — treat the SYMBOLS, not the numbers, as the citation)",
+                "output": "917:        # Auto-include user-surface-smoker when the work item declares a durable\n921:        # side-effect are exempt (BP-1100f-5-i): the absence of declares_side_effect\n924:        if declares_side_effect:\n925:            all_needed.add(\"user-surface-smoker\")\n941:        _SIDE_EFFECT_MANDATORY: frozenset[str] = frozenset({\"user-surface-smoker\"})\n943:            (all_needed & _SIDE_EFFECT_MANDATORY) if declares_side_effect else set()\n2016:    # Propagate declares_side_effect from the AC to the ticket frontmatter (BP-1100f-5).\n2020:    declares_side_effect = ac.get(\"declares_side_effect\")\n2874:        declares_side_effect = bool(ac.get(\"declares_side_effect\", False))\n2911:    declares_side_effect = bool(ac.get(\"declares_side_effect\", False))"
+              },
+              {
+                "command": "grep -rln \"declares_side_effect\" /home/henzeh/projects/leafcutter/leafcutter-ai --exclude-dir=.git --exclude-dir=__pycache__",
+                "output": "config/ac_store_schema.json\nconfig/agent_registry.json\ntemplates/hooks/ticket_frontmatter_guard.py\nscripts/ac_store/generate_ticket_from_ac.py\nunit_tests/test_bp_1100f_5.py\nunit_tests/ac_store/test_declares_side_effect_schema_reachability.py\nunit_tests/ac_store/test_bp_1100f_5.py"
+              }
+            ],
+            "interpretation": "BLOCKED, not failing — the setup_command cannot be instantiated because no AC in the store sets the field (VC-1.4). The routing code is fully written and unit-tested (test_bp_1100f_5.py) and has NEVER executed its true branch on a real record. Note the file list: `declares_side_effect` appears in schema, registry, guard, generator, and three unit-test files — and in ZERO authoring-agent templates and ZERO AC records. That distribution is the signature of a mechanism built and never armed."
+          },
+          "owner_surface": [
+            "docs/acceptance-criteria/**/*.yaml",
+            "templates/agents/it-po.md"
+          ]
+        },
+        {
+          "id": "VC-2.3",
+          "angle": "deployed",
+          "claim": "The DEPLOYED generator (built into .leafcutter/ by build.py) emits angle-tagged descriptors, i.e. deployed behaviour matches source behaviour.",
+          "entry_point": "python3 .leafcutter/scripts/ac_store/generate_ticket_from_ac.py — the copy that actually runs in a consumer project.",
+          "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/generate_ticket_from_ac.py",
+          "pass_criteria": "Non-zero count, and a deployed --dry-run run emits `angle: reachability`.",
+          "fail_criteria": "Count `0` — the deployed copy predates the angle work, so every consumer project gets untagged tickets regardless of what the source tree does.",
+          "negative_control": {
+            "input": "Run the deployed generator end-to-end on a real AC and require a ticket on stdout.",
+            "command": "python3 /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/generate_ticket_from_ac.py --ac ACD-1100f-1 --ac-root /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria --dry-run > /tmp/vc_2_3_deployed.md 2>/tmp/vc_2_3.err",
+            "expected_result": "Exit 0 with a ticket body. A non-zero exit proves the deployed copy is not merely stale but non-functional — a strictly worse failure than missing angles.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "python3 /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/generate_ticket_from_ac.py --ac ACD-1100f-1 --ac-root .../docs/acceptance-criteria --dry-run",
+                  "output": "Cannot load MIGRATION_MAP from /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/_component_migration_map.py: [Errno 2] No such file or directory: '/home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/_component_migration_map.py'\nERROR: Could not locate worktree root from /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/generate_ticket_from_ac.py",
+                  "exit_code": 1
+                },
+                {
+                  "command": "ls /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/_component_migration_map.py /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/_ac_components.py",
+                  "output": "ls: cannot access '..._component_migration_map.py': No such file or directory\nls: cannot access '..._ac_components.py': No such file or directory"
+                },
+                {
+                  "command": "grep -n \"_component_migration_map\\|_ac_components\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/build_phases.py",
+                  "output": "(no output — zero matches; neither dependency appears in the deploy map)"
+                }
+              ],
+              "interpretation": "The negative control found a REAL deploy-manifest gap, independent of angles: the generator imports _component_migration_map.py and _ac_components.py, and NEITHER is listed in build_phases.py's deploy map, so neither is deployed. This is verbatim the documented 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest' trap. CAVEAT — do not overclaim: the second error line ('Could not locate worktree root') is partly an artifact of this self-hosting workspace, because /home/henzeh/projects/leafcutter is not itself a git repo whereas a real consumer project root would be. The missing-module warning is NOT an artifact and is a genuine defect."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/generate_ticket_from_ac.py",
+                "output": "0"
+              },
+              {
+                "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/generate_ticket_from_ac.py  (re-run at end of session, after all sibling edits)",
+                "output": "0"
+              }
+            ],
+            "interpretation": "The deployed generator has zero angle support and did not change when the source tree gained it — as expected, since build.py has not been re-run. This is the correct and expected state for uncommitted work, but it is exactly why a `deployed` angle exists: source-tree green proves nothing about consumer behaviour until build.py runs. Re-run ./build-self.sh and re-check before treating VC-2.1 as shipped."
+          },
+          "owner_surface": [
+            "scripts/build_phases.py",
+            ".leafcutter/scripts/ac_store/generate_ticket_from_ac.py"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "The test-writer prompt carries the mandate",
+      "intent": "Prove the agent that actually writes tests is instructed in the vocabulary the generator emits. A ticket field no agent is told to read is a comment.",
+      "checks": [
+        {
+          "id": "VC-3.1",
+          "angle": "seam",
+          "claim": "templates/agents/test-writer.md instructs the agent to read the `angle:` key on each test descriptor and to satisfy each angle differently — closing the seam between what the generator writes and what the test author reads.",
+          "entry_point": "templates/agents/test-writer.md — the prompt loaded when ticket-supervisor dispatches test-writer at priority 5.",
+          "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+          "pass_criteria": "Non-zero, and the file names at least `criterion`, `reachability`, and `seam` as angle values with distinct instructions per value.",
+          "fail_criteria": "`0` — the generator writes `angle: reachability` into a block whose designated reader has never been told the key exists.",
+          "negative_control": {
+            "input": "A ticket whose Test Requirements carries `angle: reachability` with the generator's own note that the entry point 'is not declared'.",
+            "command": "grep -c \"angle: reachability\" /tmp/vc_2_1_ticket.md",
+            "expected_result": "For this seam to be closed, test-writer must be shown to REFUSE or escalate when handed a reachability mandate with no declared entry point, rather than silently writing an import-based unit test that satisfies the name but not the angle. Absent that instruction, the mandate degrades into a renamed criterion test.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+                  "output": "0"
+                }
+              ],
+              "interpretation": "test-writer has no instruction covering the undeclared-entry-point case, so the degradation path is wide open and undetectable."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md  (working tree, AFTER the sibling's Rule 3 rescope landed)",
+                "output": "0"
+              },
+              {
+                "command": "grep -n \"reachability\\|real_artifact\\|must_block\\|deployed\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+                "output": "154:deployed template) — you MUST author at least one **real-artifact behavioral test**"
+              },
+              {
+                "command": "grep -n \"seam\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+                "output": "232:**Scope exception — Rule 3 is not repair-only.** Rule 3 (cross-layer seam test)\n234:boundary is exactly where the seam goes untested, so the repair-only scope above\n264:### Rule 3 — Cross-layer seam test required (ALL work — new and repair alike).\n276:labels). Unit tests that mock both sides of the seam are insufficient as the\n277:by-node-target-lang-hint the seam is unverified and the legacy or"
+              }
+            ],
+            "interpretation": "THE BROKEN SEAM, and the sibling's in-flight edit does not close it. test-writer.md contains the word 'angle' ZERO times. It DOES carry the CONCEPTS in prose — a 'cross-layer seam test' rule (now correctly rescoped from repair-only to all work) and a 'real-artifact behavioral test' requirement — but as narrative rules keyed to nothing, not as handlers for the `angle:` key the generator now emits. Producer and consumer are describing the same idea in two disjoint vocabularies, which is the definition of an unverified seam. Rule 3's existence is what makes this recoverable: the mandate is already there and needs binding to the key, not inventing."
+          },
+          "owner_surface": ["templates/agents/test-writer.md"]
+        },
+        {
+          "id": "VC-3.2",
+          "angle": "deployed",
+          "claim": "The DEPLOYED test-writer template carries whatever mandate the source template carries.",
+          "entry_point": "The built agent template under the deployed .claude/agents/ tree — the copy an agent dispatch actually loads.",
+          "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/.claude/agents/test-writer.md",
+          "pass_criteria": "Matches the source-tree count from VC-3.1 exactly.",
+          "fail_criteria": "Any divergence from the source count means dispatched agents are running an older prompt than the repo shows.",
+          "negative_control": {
+            "input": "The source-tree count from VC-3.1.",
+            "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+            "expected_result": "Deployed count must equal source count. Equality at ZERO is not a pass for VC-3.1 — it only means the drift check is clean while the mandate is absent from both.",
+            "currently": {
+              "state": "passing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+                  "output": "0",
+                  "exit_code": 1
+                }
+              ],
+              "interpretation": "Source count is 0, matching the deployed count. The control does what it is for: it confirms the equality being asserted is equality-at-zero, so VC-3.2 green must NOT be read as VC-3.1 green."
+            }
+          },
+          "currently": {
+            "state": "passing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "ls -la /home/henzeh/projects/leafcutter/.claude/agents/test-writer.md /home/henzeh/projects/leafcutter/leafcutter-ai/.claude/agents/test-writer.md /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md",
+                "output": "-rw-r--r-- 31173 Jul 23 08:33 /home/henzeh/projects/leafcutter/.claude/agents/test-writer.md\n-rw-r--r-- 31173 Jul 23 08:33 /home/henzeh/projects/leafcutter/leafcutter-ai/.claude/agents/test-writer.md\n-rw-r--r-- 33680 Aug 14 09:25 /home/henzeh/projects/leafcutter/leafcutter-ai/templates/agents/test-writer.md"
+              },
+              {
+                "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/.claude/agents/test-writer.md",
+                "output": "0",
+                "exit_code": 1
+              },
+              {
+                "command": "grep -c \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/.claude/agents/test-writer.md",
+                "output": "0",
+                "exit_code": 1
+              }
+            ],
+            "interpretation": "RESOLVED from `unverified` on re-verification. There are TWO deployed copies (workspace root and the self-hosted repo root); both are real files, not symlinks, both count 0, and both equal the source count of 0 — so the drift assertion in pass_criteria holds and VC-3.2 is passing. Read this strictly: passing here means only 'deployed matches source'. Both are byte-stale by three weeks (Jul 23 vs Aug 14, 31173 vs 33680 bytes), so the sibling's Rule 3 rescope has NOT shipped to either deployed copy either. The moment VC-3.1 is fixed in templates/, VC-3.2 flips to failing until build.py runs — which is the whole point of keeping it as a separate deployed-angle check."
+          },
+          "owner_surface": [".claude/agents/test-writer.md", "scripts/build_phases.py"]
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "name": "The gate enforces it",
+      "intent": "Prove something BLOCKS. Phases 1-3 can all be green while the taxonomy remains advisory; only a gate that rejects known-bad input converts a convention into a constraint. Every check here carries must_block.",
+      "checks": [
+        {
+          "id": "VC-4.1",
+          "angle": "reachability",
+          "modifiers": ["must_block"],
+          "claim": "A gate rejects marking an AC done when its only coverage is a criterion-angle test — i.e. the reachability floor is enforced, not merely emitted.",
+          "entry_point": "python3 .leafcutter/scripts/commit_guardian/check_done_proof.py --mode ci — the deployed hook wired as `check-done-proof` in .pre-commit-config.yaml line 382 and as the CI done-proof gate.",
+          "command": "python3 /home/henzeh/projects/leafcutter/.leafcutter/scripts/commit_guardian/check_done_proof.py --mode precommit --ac-root /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria --test-root /home/henzeh/projects/leafcutter/leafcutter-ai/unit_tests 2>/tmp/vc_4_1.err",
+          "pass_criteria": "Non-zero exit naming the AC and the missing angle when a done AC has only criterion coverage.",
+          "fail_criteria": "Exit 0 — one `# covers:` tag of any angle is sufficient proof of done, so the reachability mandate the generator emits is never checked by anything.",
+          "negative_control": {
+            "input": "An AC staged as `work_status: done` whose sole covering test is tagged `# covers:<id>` with `angle: criterion` and no reachability test anywhere.",
+            "command": "python3 /home/henzeh/projects/leafcutter/.leafcutter/scripts/commit_guardian/check_done_proof.py --mode precommit --ac-root /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria --test-root /home/henzeh/projects/leafcutter/leafcutter-ai/unit_tests 2>/tmp/vc_4_1_neg.err",
+            "expected_result": "MUST exit non-zero. This is the single most important assertion in the flow: it is the only check that distinguishes 'the angle taxonomy constrains what can be called done' from 'the angle taxonomy is a naming convention for test functions'.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "grep -n \"covers:\\|# covers\\|angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/done_proof.py",
+                  "output": "60:# Matches \"# covers: AC-ID\" anywhere in a line, capturing the AC ID.\n61:_COVERS_TAG_RE = re.compile(r\"#\\s*covers:\\s*(\\S+)\")\n550:    * At least one test tagged ``# covers: <ac_id>`` exists anywhere under\n(zero matches for 'angle')"
+                }
+              ],
+              "interpretation": "The gate's own docstring states the bar: 'At least one test tagged # covers: <ac_id> exists anywhere'. One tag of any angle passes. A criterion-only AC is indistinguishable from a fully-angled one, so the negative control cannot be rejected by construction."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "python3 .../.leafcutter/scripts/commit_guardian/check_done_proof.py --mode precommit --ac-root ... --test-root ...",
+                "output": "(no stdout, no stderr)",
+                "exit_code": 0
+              },
+              {
+                "command": "grep -rln \"angle\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/scripts/commit_guardian/",
+                "output": "templates/scripts/commit_guardian/check_v2_ac_store_alignment.py\ntemplates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py"
+              },
+              {
+                "command": "grep -n \"angle\" on those two files (disambiguating the matches)",
+                "output": "check_v2_ac_store_alignment.py:10: ... Completes the traceability tri[angle]: ticket -> AC -> test.\ncheck_files_touched_reconciliation.py:846: ... was mangled to \"scripts/build (d[angl]ing quote). Fixed by"
+              }
+            ],
+            "interpretation": "NO GATE IN THE REPO READS THE ANGLE. Both grep hits are false positives ('triangle', 'dangling'); the true count of angle-aware commit-guardian scripts is ZERO. The gate does run and is reachable (exit 0 above, and the deployed module imports cleanly), but with nothing staged it passes vacuously — consistent with its design of only evaluating ACs staged as done via `git diff --cached`. So today: the generator MANDATES a reachability test in prose inside a ticket, and no mechanism anywhere verifies one was written. The taxonomy is advisory."
+          },
+          "owner_surface": [
+            "scripts/ac_store/done_proof.py",
+            "templates/scripts/commit_guardian/check_done_proof.py"
+          ]
+        },
+        {
+          "id": "VC-4.2",
+          "angle": "seam",
+          "claim": "done_proof.py's tag scanner can associate an `# angle:<value>` tag with its enclosing test function, the same way it already does for `# covers:`.",
+          "entry_point": "done_proof._scan_single_test_file — reached in production via check_done_proof.py; the seam is scanner output -> verify_done_eligible's verdict.",
+          "command": "grep -rn \"# angle:\" /home/henzeh/projects/leafcutter/leafcutter-ai/unit_tests/",
+          "pass_criteria": "One or more real test files carry `# angle:` tags AND the scanner returns them associated with the right function.",
+          "fail_criteria": "Zero tags — nothing to scan, so the extension is unexercised even if written.",
+          "negative_control": {
+            "input": "A tag placed BEFORE any `def test_*` in a file. Exercised against the REAL `# covers:` scanner, since the `# angle:` scanner does not exist yet and the extension is specified to ride the same loop.",
+            "command": "python3 -c \"import sys,json,pathlib; sys.path.insert(0,'/home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store'); import done_proof; print(json.dumps(done_proof._scan_test_root_for_covers_tags(pathlib.Path('/tmp/rev_angle_scan'))))\"",
+            "expected_result": "Must be ignored — empty list — matching the documented `# covers:` behaviour ('Tags appearing before any def test_ line are skipped'). A scanner that attributes a file-level tag to the first test would let one stray comment satisfy the floor for an entire module.",
+            "currently": {
+              "state": "passing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "wrote /tmp/rev_angle_scan/test_probe_filelevel_tag.py containing `# covers: PROBE-FILE-LEVEL` on line 1, above a single `def test_probe_one()`",
+                  "output": "(fixture written)"
+                },
+                {
+                  "command": "python3 -c \"...done_proof._scan_test_root_for_covers_tags(pathlib.Path('/tmp/rev_angle_scan'))...\"",
+                  "output": "[]",
+                  "exit_code": 0
+                }
+              ],
+              "interpretation": "The documented skip behaviour is real, not just docstringed: the live scanner returns [] for a file-level tag. So an `# angle:` regex added to the same loop inherits a correct, already-verified attribution rule. This is the one part of the P4 extension that needs no new design."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -rn \"# angle:\" /home/henzeh/projects/leafcutter/leafcutter-ai/unit_tests/ /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ /home/henzeh/projects/leafcutter/leafcutter-ai/templates/  (re-run 2026-08-14; an earlier capture read 'zero matches' and is now superseded)",
+                "output": "/home/henzeh/projects/leafcutter/leafcutter-ai/unit_tests/test_generate_ticket_from_ac.py:1631:        # angle: reachability floor appended by _derive_tests_from_criteria."
+              },
+              {
+                "command": "grep -rc \"# covers:\" /home/henzeh/projects/leafcutter/leafcutter-ai/unit_tests/ --include=*.py --no-filename  (summed)",
+                "output": "total covers tags: 2266"
+              }
+            ],
+            "interpretation": "FEASIBILITY CONFIRMED, IMPLEMENTATION ABSENT — and the re-run found a live trap. The extension itself is mechanically easy: _scan_single_test_file already walks lines tracking `current_function` via _TEST_DEF_RE and applies _COVERS_TAG_RE per line, so an _ANGLE_TAG_RE added to the same loop would attach angles to functions with no structural change, inheriting the file-level skip proven by the negative control above. Scale is favourable: 2266 existing `# covers:` tags mean the tagging habit is established. BUT the repo's FIRST-EVER `# angle:` string, which appeared during this review in a sibling's new test, is PROSE — an explanatory comment ('# angle: reachability floor appended by ...'), not a tag on a test. A naive _ANGLE_TAG_RE of the same shape as _COVERS_TAG_RE would match it and record a spurious reachability angle. Count today: 2266 covers tags, 0 real angle tags, 1 false-positive-in-waiting. Any _ANGLE_TAG_RE must be anchored (e.g. require the tag to be the whole comment) and must ship with this exact line as a regression fixture."
+          },
+          "owner_surface": [
+            "scripts/ac_store/done_proof.py",
+            "unit_tests/**/*.py"
+          ]
+        },
+        {
+          "id": "VC-4.3",
+          "angle": "deployed",
+          "claim": "The done-proof gate's module graph imports cleanly from the DEPLOYED .leafcutter layout in a fresh process.",
+          "entry_point": "A fresh python3 subprocess importing check_done_proof and done_proof from .leafcutter/scripts/ — reproducing the exact import context of a pre-commit hook run.",
+          "command": "python3 -c \"import sys; sys.path.insert(0,'/home/henzeh/projects/leafcutter/.leafcutter/scripts/commit_guardian'); sys.path.insert(0,'/home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store'); import check_done_proof, done_proof; print('deployed import OK'); print(done_proof.__file__)\"",
+          "pass_criteria": "Exit 0, prints `deployed import OK` and a path under .leafcutter/.",
+          "fail_criteria": "ModuleNotFoundError — the historical failure that would block every merge once the gate is required.",
+          "negative_control": {
+            "input": "The sibling AC-store module graph — the generator's dependencies (_component_migration_map.py, _ac_components.py).",
+            "command": "ls /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/_component_migration_map.py /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/_ac_components.py",
+            "expected_result": "Both present. Their absence proves the deploy manifest is incomplete for the ac_store phase generally, so done_proof's current success is a per-file fix rather than a systemic guarantee.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "ls .../.leafcutter/scripts/ac_store/_component_migration_map.py .../_ac_components.py",
+                  "output": "ls: cannot access '..._component_migration_map.py': No such file or directory\nls: cannot access '..._ac_components.py': No such file or directory",
+                  "exit_code": 2
+                }
+              ],
+              "interpretation": "The negative control fires. done_proof.py was individually added to the deploy map after its own incident, but the underlying manifest is still hand-maintained and still incomplete — two of the generator's imports are missing. The class of bug was never fixed, only one instance of it."
+            }
+          },
+          "currently": {
+            "state": "passing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "python3 -c \"import sys; sys.path.insert(0,'.../.leafcutter/scripts/commit_guardian'); sys.path.insert(0,'.../.leafcutter/scripts/ac_store'); import check_done_proof, done_proof; ...\"",
+                "output": "deployed import OK\ndone_proof file: /home/henzeh/projects/leafcutter/.leafcutter/scripts/ac_store/done_proof.py",
+                "exit_code": 0
+              },
+              {
+                "command": "grep -n \"done_proof\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/build_phases.py",
+                "output": "800:        # done_proof.py backs the check_done_proof commit-guardian hook and the\n803:        (ac_store_src / \"done_proof.py\",                \"done_proof.py\"),"
+              }
+            ],
+            "interpretation": "Genuinely passing. The historical ModuleNotFoundError is fixed: done_proof.py is explicitly in build_phases.py's deploy map with a comment explaining why, and a fresh subprocess resolves the full import graph from the deployed tree. This is the one place where a past incident produced a durable fix — worth preserving as the template for the others."
+          },
+          "owner_surface": ["scripts/build_phases.py"]
+        },
+        {
+          "id": "VC-4.4",
+          "angle": "reachability",
+          "modifiers": ["must_block"],
+          "claim": "Some executable gate validates a ticket's Test Requirements block against config/test_requirements.schema.json.",
+          "entry_point": "check_test_requirements_refs.py — the script named in the schema's own description and registered 'portable' in config/package_boundary.json line 21.",
+          "command": "find /home/henzeh/projects/leafcutter/leafcutter-ai -name \"check_test_requirements*\" -not -path \"*/.git/*\"",
+          "pass_criteria": "NON-EMPTY stdout naming the script, AND the script wired into .pre-commit-config.yaml or CI. Score on the OUTPUT, not the exit code: `find` exits 0 when it matches nothing, so an exit-code-driven runner would read this check as green while the script does not exist. Verified 2026-08-14: the command exits 0 with empty stdout.",
+          "fail_criteria": "Empty stdout — no such file, so the schema has no enforcer and both its `live_dispatch` enum and its rejection of `angle` are inert.",
+          "negative_control": {
+            "input": "The generator's actual emitted descriptor: `{name, file, covers: [list], angle, asserts}`.",
+            "command": "grep -n -A 24 \"## Test Requirements\" /tmp/vc_2_1_ticket.md",
+            "expected_result": "Fed to the declared schema this MUST be rejected — it omits all three of `description`, `type`, `target_dir`, supplies `covers` as a list where the schema requires a string, and adds the undeclared `angle`. If a validator is ever wired up without reconciling the schema first, every generated ticket fails.",
+            "currently": {
+              "state": "failing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "python3 -c \"...json.load('config/test_requirements.schema.json')['$defs']['test_entry']...\"",
+                  "output": "test_entry additionalProperties: False\nrequired: ['name', 'description', 'type', 'target_dir', 'covers']"
+                },
+                {
+                  "command": "grep -n -A 24 \"## Test Requirements\" /tmp/vc_gen_now.md",
+                  "output": "tests:\n- name: test_acd_1100f_1_validation_passes_with_exit_code_0\n  file: unit_tests/test_acd_1100f_1.py\n  covers:\n  - ACD-1100f-1\n  angle: criterion\n  asserts: validation passes with exit code 0,"
+                }
+              ],
+              "interpretation": "Confirmed divergence: the generator's real output violates the declared schema on four counts. Producer and schema have drifted completely apart with no error surfaced, because no validator connects them."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "find /home/henzeh/projects/leafcutter/leafcutter-ai -name \"check_test_requirements*\" -not -path \"*/.git/*\"",
+                "output": "(no output — the script does not exist anywhere in the repo)"
+              },
+              {
+                "command": "grep -rn \"check_test_requirements_refs\" /home/henzeh/projects/leafcutter/leafcutter-ai --include=*.py --include=*.yaml --include=*.json -l",
+                "output": "config/test_requirements.schema.json\nconfig/package_boundary.json"
+              },
+              {
+                "command": "grep -n -B4 -A4 \"check_test_requirements_refs\" /home/henzeh/projects/leafcutter/leafcutter-ai/config/package_boundary.json",
+                "output": "21:                \"check_test_requirements_refs.py\": \"portable\","
+              },
+              {
+                "command": "grep -rln \"test_requirements.schema.json\" .../scripts .../templates .../unit_tests",
+                "output": "templates/agents/test-writer.md"
+              }
+            ],
+            "interpretation": "A PHANTOM GATE — the purest instance of the pathology in the repo. The schema's own description asserts it is 'used by check_test_requirements_refs.py to verify schema version consistency across all consumers'; package_boundary.json registers that script as a portable hook; and the file does not exist. The only thing in the entire repo that references the schema is a prose mention in the test-writer prompt. This is why VC-1.2's failure is currently harmless and will become breaking the moment anyone implements the missing script: fix the schema (add `angle`, reconcile required/covers) BEFORE writing the validator."
+          },
+          "owner_surface": [
+            "config/test_requirements.schema.json",
+            "config/package_boundary.json",
+            "templates/scripts/commit_guardian/check_ticket_test_requirements.py"
+          ]
+        },
+        {
+          "id": "VC-4.5",
+          "angle": "reachability",
+          "modifiers": ["must_block"],
+          "claim": "The enforcement agents that would police angle coverage — ac-validator, ac-fulfillment-gate, live-surface-tester — are dispatched BEFORE commit and pull-request, so a failure from any of them can actually stop the commit.",
+          "entry_point": "getPriority() in templates/workflows-js/build-ticket.js (line 149) and its twin in build-feature.js (line 215), which sort the per-ticket phase list that the driver executes in order.",
+          "command": "grep -c \"ac-validator\\|ac-fulfillment-gate\\|live-surface-tester\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/workflows-js/build-ticket.js",
+          "pass_criteria": "Outputs `3` — all three agents appear in phaseOrder — AND each resolves to an index strictly less than the index of `commit`.",
+          "fail_criteria": "Outputs `0`. getPriority returns `phaseOrder.length` for any unlisted agent, so all three sort to 21 while commit is 19 and pull-request is 20 — the gates run AFTER the work is already committed and the PR is already open.",
+          "negative_control": {
+            "input": "user-surface-smoker, which IS listed at priority 11.5.",
+            "command": "node -e \"const fs=require('fs'),s=fs.readFileSync('/home/henzeh/projects/leafcutter/leafcutter-ai/templates/workflows-js/build-ticket.js','utf8'),m=s.match(/const phaseOrder = \\[([\\s\\S]*?)\\];/),arr=[...m[1].matchAll(/\\\"([^\\\"]+)\\\"/g)].map(x=>x[1]),gp=n=>arr.indexOf(n)===-1?arr.length:arr.indexOf(n),out={};['ac-validator','ac-fulfillment-gate','live-surface-tester','user-surface-smoker','commit','pull-request'].forEach(n=>out[n]=gp(n)),console.log(JSON.stringify(out))\"",
+            "expected_result": "user-surface-smoker must resolve BELOW commit (it does: 17 < 19), proving the sort key is meaningful and that the three missing agents' value of 21 is a real ordering defect rather than an artifact of the measurement.",
+            "currently": {
+              "state": "passing",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "node -e \"...gp(n)... ['ac-validator','ac-fulfillment-gate','live-surface-tester','user-surface-smoker','commit','pull-request']\"",
+                  "output": "phaseOrder length 21\nac-validator -> 21\nac-fulfillment-gate -> 21\nlive-surface-tester -> 21\nuser-surface-smoker -> 17\ncommit -> 19\npull-request -> 20"
+                }
+              ],
+              "interpretation": "Control behaves correctly: a listed agent (user-surface-smoker, 17) sorts before commit (19). The measurement is sound, so 21 for the other three is a genuine defect."
+            }
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -c \"ac-validator\\|ac-fulfillment-gate\\|live-surface-tester\" .../templates/workflows-js/build-ticket.js .../templates/workflows-js/build-feature.js",
+                "output": "build-ticket.js:0\nbuild-feature.js:0"
+              },
+              {
+                "command": "node -e \"...\" against build-ticket.js",
+                "output": "phaseOrder length 21\nac-validator -> 21\nac-fulfillment-gate -> 21\nlive-surface-tester -> 21\nuser-surface-smoker -> 17\ncommit -> 19\npull-request -> 20"
+                },
+              {
+                "command": "node -e \"...\" against build-feature.js",
+                "output": "{\"len\":21,\"acv\":21,\"acf\":21,\"lst\":21,\"commit\":19,\"pr\":20}"
+              },
+              {
+                "command": "grep -n \"phaseOrder\\|getPriority\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/workflows-js/build-ticket.js",
+                "output": "118:const phaseOrder = [\n144: * Agents not in phaseOrder get a high index (run last, preserve YAML order).\n149:function getPriority(agentName) {\n150:  const idx = phaseOrder.indexOf(agentName);\n151:  return idx === -1 ? phaseOrder.length : idx;\n163:    (a, b) => getPriority(a.agent) - getPriority(b.agent)"
+              },
+              {
+                "command": "grep -n \"phaseOrder\\|getPriority\" /home/henzeh/projects/leafcutter/leafcutter-ai/templates/workflows-js/build-feature.js",
+                "output": "182: * TWIN: mirrors build-ticket.js phaseOrder. Keep in sync.\n184:const phaseOrder = [\n210: * Agents not in phaseOrder get a high index (run last, preserve YAML order).\n215:function getPriority(agentName) {\n216:  const idx = phaseOrder.indexOf(agentName);\n217:  return idx === -1 ? phaseOrder.length : idx;\n229:    (a, b) => getPriority(a.agent) - getPriority(b.agent)"
+              }
+            ],
+            "interpretation": "CONFIRMED IN BOTH TWINS, INDEPENDENTLY REPRODUCED. Three enforcement agents are absent from phaseOrder in both build-ticket.js and build-feature.js — files whose own comments declare them TWINS that must be kept in sync, so the defect is symmetric. getPriority's `idx === -1 ? phaseOrder.length` fallback silently sorts unknown agents to 21, i.e. after commit (19) and pull-request (20). ac-fulfillment-gate's own registry entry states it runs 'at priority 11.7 ... before commit at 12' and ac-validator's states 'priority 11 (after pr-reviewer, before commit)' — the declared contract is the exact opposite of the computed order. This is the same class of bug as the recorded build-feature/llm-expert incident (agent missing from phaseOrder -> ran after commit -> work lost, false status:ok). Any angle enforcement added to ac-validator or ac-fulfillment-gate would inherit this and fire after the commit it was meant to block."
+          },
+          "owner_surface": [
+            "templates/workflows-js/build-ticket.js",
+            "templates/workflows-js/build-feature.js"
+          ],
+          "blocks": ["VC-5.1"]
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "name": "The whole loop works end-to-end on a real AC",
+      "intent": "Prove the phases compose. Each earlier phase can be green in isolation while the chain is broken at a join; only a single real AC carried from store to blocked-commit demonstrates the mechanism exists as a system.",
+      "checks": [
+        {
+          "id": "VC-5.1",
+          "angle": "reachability",
+          "modifiers": ["must_block"],
+          "claim": "Taking one real AC that declares a side-effect from store to ticket to tests to commit, the pipeline BLOCKS the commit until a reachability test exists, and passes once it does.",
+          "entry_point": "The full production chain: /build-ac -> generate_ticket_from_ac.py -> ticket-supervisor phase loop (build-ticket.js) -> test-writer -> check-done-proof pre-commit hook.",
+          "setup_command": "python3 /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py --ac <side-effect-AC> --ac-root /home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria --verify > /tmp/vc_5_1.md 2>/tmp/vc_5_1.err",
+          "command": "grep -c \"angle: reachability\" /tmp/vc_5_1.md",
+          "pass_criteria": "The generated ticket carries `user-surface-smoker: needed` AND `angle: reachability`; a commit attempt with only a criterion test exits non-zero; the same commit passes once a reachability test is added.",
+          "fail_criteria": "Any join in the chain drops the angle, or the commit succeeds with criterion-only coverage.",
+          "negative_control": {
+            "input": "The criterion-only coverage state — commit attempted with the reachability test deliberately absent.",
+            "expected_result": "MUST exit non-zero. This is the end-to-end restatement of VC-4.1 and the definitive test of whether the taxonomy is live.",
+            "currently": {
+              "state": "blocked",
+              "observed": "2026-08-14",
+              "evidence": [
+                {
+                  "command": "(cannot run — depends on VC-1.4, which has no qualifying AC, and on VC-4.1, where no gate reads the angle)",
+                  "output": "not run"
+                }
+              ],
+              "interpretation": "Blocked on two independent prerequisites."
+            }
+          },
+          "currently": {
+            "state": "blocked",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "grep -rl \"declares_side_effect\" .../docs/acceptance-criteria/ | wc -l",
+                "output": "0"
+              },
+              {
+                "command": "grep -rln \"angle\" .../templates/scripts/commit_guardian/  (after excluding 'triangle'/'dangling' false positives)",
+                "output": "zero angle-aware gates"
+              },
+              {
+                "command": "grep -c \"ac-validator|ac-fulfillment-gate|live-surface-tester\" .../build-ticket.js",
+                "output": "0"
+              }
+            ],
+            "interpretation": "BLOCKED on three separate breaks, any one of which is sufficient to prevent the loop: no AC arms the trigger (VC-1.4), no gate reads the angle (VC-4.1/VC-4.2), and the agents that would enforce it sort after commit (VC-4.5). Recorded as `blocked` rather than `failing` because the check cannot be run to a meaningful verdict at all — reporting it as `failing` would falsely imply it was executed."
+          },
+          "owner_surface": [
+            "docs/acceptance-criteria/**/*.yaml",
+            "scripts/ac_store/done_proof.py",
+            "templates/workflows-js/build-ticket.js"
+          ]
+        },
+        {
+          "id": "VC-5.2",
+          "angle": "real_artifact",
+          "claim": "Census: the share of code ACs carrying an authored test_spec is high enough that the angle mandate is authored rather than auto-derived — an auto-derived reachability entry cannot name its own entry point.",
+          "entry_point": "A read-only walk of the real AC store with PyYAML, the same parser the generator and hooks use.",
+          "command": "python3 /tmp/angle_probe_counts.py 2>/tmp/vc_5_2.err",
+          "pass_criteria": "A majority of code ACs (assigned_agent in the coder set) have a non-empty test_spec, so angles are authored with a declared surface_invoked.",
+          "fail_criteria": "A large majority fall through to _derive_tests_from_criteria, so the reachability mandate arrives with 'the entry point is not declared'.",
+          "negative_control": {
+            "not_applicable": true,
+            "reason": "This is a pure census with no pass/fail semantics of its own — it measures a population, it does not exercise a code path, so no known-bad input can be rejected by it. It exists to size the risk that VC-2.1's mandate degrades in practice."
+          },
+          "currently": {
+            "state": "failing",
+            "observed": "2026-08-14",
+            "evidence": [
+              {
+                "command": "python3 /tmp/angle_probe_counts.py",
+                "output": "total_parsed=2888\nparse_fail=0\nby_flight_level={'L0': 107, 'L1': 483, 'L2': 1602, 'L3': 627, 'unknown': 69}\nleaf_acs=2888\ndeclares_side_effect_set=0\nwith_test_spec=394\nwithout_test_spec=2494\ncode_acs(assigned_agent in coder set)=1886\ncode_acs_with_test_spec=377\ncode_ac_test_spec_fraction=0.200"
+              },
+              {
+                "command": "grep -n \"_derive_tests_from_criteria\" /home/henzeh/projects/leafcutter/leafcutter-ai/scripts/ac_store/generate_ticket_from_ac.py  (re-run 2026-08-14; supersedes an earlier capture that read 1137/1270 before concurrent edits shifted the file)",
+                "output": "1230:def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:\n1372:        descriptors = _derive_tests_from_criteria(ac, ac_id)\n2973:  (from the AC's test_spec) with a _derive_tests_from_criteria() fallback"
+              }
+            ],
+            "interpretation": "Only 20.0% of code ACs (377 of 1886) author a test_spec; the other 1509 fall through to _derive_tests_from_criteria. Store-wide it is worse: 394 of 2888 (13.6%). So for 4 out of 5 code ACs the mandatory reachability descriptor is generated with the note that the entry point 'is not declared', shifting the hardest judgement — what IS the production entry point — onto test-writer, which has no angle instructions at all (VC-3.1). This is the mechanism by which a reachability mandate quietly degrades into a renamed criterion test, and it is a scale problem, not an edge case."
+          },
+          "owner_surface": [
+            "templates/agents/it-po.md",
+            "docs/acceptance-criteria/**/*.yaml"
+          ]
+        }
+      ]
+    }
+  ],
+  "rollup": {
+    "passing": 4,
+    "failing": 10,
+    "blocked": 2,
+    "unverified": 0,
+    "total": 16,
+    "asof": "2026-08-14"
+  },
+  "open_questions": [
+    "VC-1.1 and VC-2.1 are `passing` ONLY against uncommitted sibling work at HEAD 47fb660ff. Re-run both after those changes land (or are stashed) before quoting them as shipped.",
+    "Should the angle enum live in config/test_requirements.schema.json (co-located with the block it describes) or in a new config/test_angles.json that both the schema and done_proof.py load? Duplicating the strings in both is how live_dispatch became decorative.",
+    "VC-4.4 is a sequencing hazard: implementing the missing check_test_requirements_refs.py BEFORE reconciling test_requirements.schema.json would reject every generated ticket, since the generator's output already violates the schema on four counts (missing description/type/target_dir, covers-as-list, undeclared angle).",
+    "VC-4.5 affects three agents beyond the angle work and is a live correctness bug in both workflow twins today — it likely warrants its own AC rather than riding along with the taxonomy.",
+    "An `# angle:` tag regex must be anchored so it cannot match explanatory prose. The repo's first-ever `# angle:` string (unit_tests/test_generate_ticket_from_ac.py:1631) is a comment, not a tag, and a _COVERS_TAG_RE-shaped regex would match it — see VC-4.2.",
+    "The generator copies an AUTHORED `angle` from an AC's test_spec straight into the ticket with no enum check (`_test_descriptors_from_spec`). Whatever closes VC-1.3 must validate that passthrough, not only the two angles the generator mints itself."
+  ]
+}
