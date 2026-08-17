@@ -1,0 +1,129 @@
+id: BP-1100g-5
+components:
+  - build_pipeline
+  - testing_quality
+  - ticket_lifecycle
+title: "The cross-layer seam rule leaves exactly one answer per piece of work, and an honest no is one of them"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writing side works under a rule that applies to every piece of
+      work: decide whether the work sits at a boundary between two layers and, if
+      it does, write a test that feeds the real producer's real output into the
+      real consumer and asserts what the consumer observably does,
+  When the test-writing side hands a piece of work on,
+  Then its hand-off record carries exactly one answer to that rule for that piece
+    of work — either the seam it covered, naming the producing side and the
+    consuming side, or a statement that no seam applies together with the reason
+    none applies,
+    And the answer sits in the same hand-off record that already carries the
+      writer's other machine-checkable statements, not in prose a reader has to
+      interpret,
+    And a hand-off record carrying no answer to the rule at all is distinguishable
+      from one that answered it,
+    And a second piece of work handed on in the same run carries its own single
+      answer, so the answers are per piece of work and not per run.
+depends_on:
+  - BP-1100g
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Holds the asymmetry this AC removes: Rule 1 mandates an exact machine-checkable label in the work record, while Rule 3 — the cross-layer seam rule, rescoped on 2026-08-14 to ALL work — mandates nothing observable. Read the working-tree version; the rescoping is uncommitted."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the completion manifest, which is the record shape Rule 1's label and the writer's other checkable statements already ride. The seam answer belongs there rather than in a new artifact."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The proven record shape to reuse — exactly one entry per required item, no gaps and no duplicates, reason carried with any skip — and the source of the trap named in the notes."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f.yaml
+    relationship: related
+    status: exists
+    relevance: "BOUNDARY. BO-2900f is about a requested GATE that did not run. This is an authoring rule inside the doer, whose artifact rides the record the doer already writes. Same completeness instinct, different producer and different record — neither folds into the other."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle and its evidence base — five separate incidents where both sides were green in isolation and no test ever fed the real producer's output into the real consumer."
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The answer must ride the EXISTING completion_manifest: block (templates/skills/signoff/SKILL.md §2b), under ONE fixed key token declared once and used verbatim in both templates/agents/test-writer.md Rule 3 and the signoff SKILL. Two spellings of the same key means the reader BP-1100g-5-i builds has to guess, which is the drift this tree exists to prevent."
+  - "The reasoned negative must be a FIRST-CLASS, valid recorded outcome with the same standing as a covered seam — not a failure, not a skip, and not a bare false (the §2b Bare-False Rule makes a bare false malformed and triggers a supervisor retry). 'No seam applies, because this work is a pure function with no consumer outside its own module' is a good answer; forcing a fabricated seam claim is worse than no artifact at all, because it costs a real test's worth of effort and produces a false record."
+  - "The reason is MANDATORY in the negative case. A negative with no reason must be expressible as a record — otherwise BP-1100g-5-i's 'reasonless' shortfall class has nothing to detect — but must be documented as non-conforming."
+  - "The positive case must name both sides: the producing side and the consuming side. 'Seam covered: yes' is not an answer a reader can act on."
+  - "EXACTLY ONE ANSWER PER PIECE OF WORK, NEVER PER RUN. A run-level answer lets one piece of work inherit another's. Wherever the record is emitted, the key must be scoped to the work item."
+  - "REUSE BO-1000b-1-i's SHAPE AND CARRY ITS TRAP FORWARD: exactly one entry per required item, no gaps and no duplicates, reason carried with any skip. Its implementation shipped a double-recording bug because a skip-branch record was added while the pre-existing unconditional record after the if/else was left in place, and the structural test's regex matched only quoted-string arguments and was blind to template literals."
+  - "The answer is a DECLARATION by the writer. It is not evidence that the seam test is any good, it feeds no done or pass decision, and nothing in this AC inspects a test to check it."
+delivers_to:
+  - agent: python-coder
+    contract: "One completion_manifest key per work item answering the seam rule, in one of exactly two conforming shapes: a covered answer naming producing side and consuming side, or a not-applicable answer carrying a non-empty reason. Absent, reasonless, and duplicated are the three non-conforming states BP-1100g-5-i reads for and reports by name."
+expects_from: null
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary. change_target is prompt: every Then clause
+  describes what an LLM agent writes into its own sign-off record, and no unit test can
+  produce that record. The falsifiable half of this behaviour is deliberately located in
+  the child, BP-1100g-5-i, which builds the reader that detects absent / reasonless /
+  duplicated answers over the records a run actually emitted — this AC is composite and
+  its proof comes from that child. The available proxies are both dishonest: grepping
+  templates/agents/test-writer.md for the mandate asserts prose presence, not compliance,
+  and validating a hand-typed manifest asserts the fixture rather than the writer.
+  Reviewing surfaces: pr-reviewer and the llm-expert Prompt-Quality Checklist.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Assigned llm-expert (surfaces are templates/agents/test-writer.md Rule 3 and templates/skills/signoff/SKILL.md §2b). Added it_requirements pinning the record to the existing completion manifest under one fixed key token, the delivers_to contract naming the two conforming and three non-conforming shapes, and test_required: false with rationale (proof is composite via BP-1100g-5-i). criteria untouched."
+superseded_by: null
+covered_by:
+  - BP-1100g-5-i
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  GAP F of BP-1100g. The rule already exists and is one of the highest-value rules
+  in the corpus; what it lacks is any way to tell whether it was followed.
+
+  THE OBSERVED ASYMMETRY. Rule 1 mandates an exact machine-checkable token in the
+  work record ("(classification: test_drift | production_drift | consumer_drift)")
+  and is therefore auditable. Rule 3 mandates nothing observable at all, and
+  neither the completion manifest nor the red-baseline record has anywhere to put
+  it. A violation of Rule 3 is undetectable by construction — not hard to detect,
+  undetectable.
+
+  THE HONEST NEGATIVE IS A FIRST-CLASS OUTCOME. A great deal of work genuinely
+  sits at no layer boundary. A mandate with no legitimate negative answer gets
+  rubber-stamped, and a fabricated seam claim is worse than no artifact at all:
+  it costs a real test's worth of effort and produces a false record. "No seam
+  applies, because this work is a pure function with no consumer outside its own
+  module" is a good answer.
+
+  CARRY THE KNOWN TRAP FORWARD. BO-1000b-1-i's implementation shipped a
+  double-recording bug — a skip-branch record was added while the pre-existing
+  unconditional record after the if/else was left in place — and the structural
+  test was blind to it because its regex matched only quoted-string arguments and
+  not template literals. Assert cardinality BEHAVIOURALLY, from the records a run
+  actually produced, never by grepping for the presence of a call. The last Then
+  clause (per piece of work, not per run) exists for the same reason: a run-level
+  answer lets one piece of work inherit another's.
+
+  BOUNDARY. The answer is a DECLARATION by the writer. It is not evidence that
+  the seam test is any good, it feeds no done or pass decision, and nothing here
+  inspects a test to check it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). declares_side_effect is deliberately NOT
+  set: the record is written by an LLM agent, not by code, so routing
+  user-surface-smoker would give a phase agent nothing runnable to smoke. The
+  ONE-FIXED-KEY-TOKEN requirement is the load-bearing constraint here — it is
+  what makes BP-1100g-5-i's reader buildable, and the same requirement is stated
+  on BP-1100g-2 for the entry-point key so both ride one reader.

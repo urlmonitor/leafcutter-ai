@@ -1,0 +1,145 @@
+id: BO-2900g-1-i
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "A plan that already asks for proof-of-wiring is not asked twice, and an author who named the way in keeps it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose hand-authored test plan already contains one request
+      for a proof that the work is reached the way the product is really used, and
+      that request names the way in explicitly,
+    And a second piece of work whose hand-authored plan contains no such request,
+  When a test plan is produced for each,
+  Then the first plan still contains exactly one such request, not two,
+    And that request still names the way in its author named, rather than being
+      replaced by a request that says the way in is not declared,
+    And the second plan gains exactly one such request, which says the way in is
+      not declared and must be resolved before the proof is written,
+    And neither plan gains a request for a kind of proof its author did not ask
+      for and this rule does not require.
+depends_on:
+  - BO-2900g-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "States both halves: the floor is 'always both, never negotiable', and the appended request cannot name an entry point when nothing upstream declared one ('the entry point is not declared: resolve it before writing this test')."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g.yaml
+    relationship: related
+    status: exists
+    relevance: "The consumer side. When the request cannot name the way in, resolving one is the doer's judgement — BP-1100g-2 owns that half; this AC only guarantees the request does not overwrite a way in that was already named."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The producer under test. _reachability_descriptor currently builds an unconditional entry with a fixed asserts string; the de-duplication and preservation rules this AC states are the constraints on making that append universal."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The single reachability descriptor a finalised plan may contain. Exactly one per plan; asserts is either the author's own entry-point text or the one sentinel."
+    required:
+      - angle
+      - asserts
+    properties:
+      angle:
+        const: reachability
+      asserts:
+        type: string
+        minLength: 1
+  constraints:
+    - "De-duplication must be by the declared kind, not by descriptor name, file path, or text similarity: a plan already carrying one reachability request gets none added, whatever that request is called."
+    - "Where an authored request already names an entry point, that text must be carried through verbatim. The generic 'entry point is not declared' text must never overwrite or sit next to a more specific authored one."
+    - "The 'entry point is not declared' text must be a single stable sentinel string emitted from one constant, so the downstream promise-versus-claim check (BP-1100g-4) and the doer (BP-1100g-2) can recognise it without pattern-guessing."
+    - "No angle beyond criterion and reachability may be added to any plan by this rule. Normalising authored plans up to the full taxonomy converts a targeted rule into a bulk rewrite of 394 human-authored test contracts."
+    - "Must be idempotent under repeated generation and stable under re-ordering of the authored entries: running the generator twice on the same AC produces byte-identical ## Test Requirements output, and the count of reachability entries is exactly one in every case."
+delivers_to:
+  - agent: test-writer
+    contract: "Exactly one angle: reachability descriptor per plan. Its asserts value is either the author's own entry-point text, carried through unchanged, or the single sentinel string stating the entry point is not declared and must be resolved before the test is written."
+expects_from:
+  - ac_id: BO-2900g-1
+    contract: "A single finalisation point at which the reachability request is attached to every plan regardless of the route that produced it, with authored entries preserved unaltered and in order."
+test_spec:
+  - name: test_bo_2900g_1_i_authored_reachability_request_is_not_duplicated
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An AC whose authored test_spec already contains one angle: reachability entry naming an entry point yields a plan with exactly one such entry, and its description text is the author's, not the sentinel."
+  - name: test_bo_2900g_1_i_plan_without_request_gains_exactly_one_sentinel_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An AC whose authored test_spec contains no reachability entry gains exactly one, carrying the not-declared sentinel, and gains no entry of any other angle."
+  - name: test_bo_2900g_1_i_reachability_entry_count_is_one_across_zero_one_and_two_authored
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Zero / one / two authored reachability entries in the same test_spec each yield the documented count after finalisation (one, one, two-unchanged) — the rule adds, never removes, and never adds a second."
+  - name: test_bo_2900g_1_i_dedupe_holds_through_generator_cli
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python scripts/ac_store/generate_ticket_from_ac.py --ac <id> --ac-root <tmp store> --tickets-root <tmp>` as a subprocess against a real on-disk AC that already authors a reachability entry naming its entry point, then parse the written ticket's ## Test Requirements YAML and assert exactly one reachability entry survives with the author's text intact."
+test_rationale: |
+  The duplicate-and-contradict failure is invisible to any test that inspects the
+  appended entry alone — both the correct and the broken implementation produce an
+  entry that looks right. The discriminating observations are the COUNT across the
+  three authored shapes, and the TEXT of the surviving entry when an author already
+  named the entry point. The CLI test is required because the defect this AC guards
+  is produced by the finalisation path, not by the descriptor builder.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent, complexity, it_requirements (package-surface object form; policy constraints under `constraints`), test_spec (criterion/boundary/reachability), contracts and declares_side_effect. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Edge case of BO-2900g-1, and the one that decides whether the parent's fix is an
+  improvement or a regression.
+
+  THE TWO WAYS THE OBVIOUS IMPLEMENTATION GOES WRONG. Making the floor universal
+  is naturally implemented as "append the request to every plan". Applied to the
+  394 records that already author their own plan, that produces (a) a duplicate
+  request wherever the author already asked for one, and (b) — worse — a second
+  request whose text says the way in is not declared, sitting next to one that
+  names it. The doer then has two contradictory instructions for the same proof
+  and the more specific one, the human's, is the one that looks redundant.
+
+  WHY THE LAST CLAUSE IS HERE. The floor is two named kinds and no more. An
+  implementation that normalises authored plans up to the full taxonomy while it
+  is in there converts a targeted rule into a bulk rewrite of 394 human-authored
+  test contracts. The parent AC's order-preservation clause and this clause
+  bound the change together.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The sentinel string is called out as a
+  single named constant because BP-1100g-4's promise-versus-claim check has to be
+  able to tell "a reachability proof was promised with an unresolved entry point"
+  from "a reachability proof was promised naming one", without parsing prose.
+  it_requirements uses the package-surface OBJECT form mandated by
+  config/ac_store_schema.json's root if/then for python-coder +
+  component: build-orchestration.

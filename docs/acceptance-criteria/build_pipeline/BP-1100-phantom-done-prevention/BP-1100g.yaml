@@ -1,0 +1,188 @@
+id: BP-1100g
+components:
+  - build_pipeline
+  - testing_quality
+  - ticket_lifecycle
+title: "A kind of proof a piece of work promised can never quietly go unmade"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A promised kind of proof cannot quietly go unmade.
+
+  Whoever writes a piece of work's tests is told, in the same words its plan uses,
+  what each kind of proof means, so the plan's request can be acted on rather than
+  guessed at. Each test then states which kind of proof it was written to give, and
+  every practice the process insists on leaves a trace of its own, so nothing that
+  was demanded is left without a visible answer. Before the work can be handed on,
+  what was promised is checked against what was claimed: a kind of proof that was
+  asked for and never written is refused by name, instead of going unnoticed. That
+  check only compares the two statements — it never judges whether a test truly does
+  what it says it does. Whether the work is genuinely reached when the product runs
+  is settled by watching it run, and a claim on its own is never evidence that
+  anything was reached.
+depends_on:
+  - BP-1100
+  - BO-2900g
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The vocabulary the doer must be taught and must record against. Its 'Prompt-design note' is load-bearing: give the doer a set-cover checklist over decidable predicates, never a ratio model."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The doer. Contains zero occurrences of the vocabulary today; its Rule 3 is mandatory and leaves no artifact. Read the working-tree version — Rule 3 was rescoped on 2026-08-14 and is uncommitted."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g.yaml
+    relationship: related
+    status: exists
+    relevance: "The producer-side sibling: BO-2900g settles what the plan ASKS FOR and in which words; this L1 is what the doer UNDERSTANDS, CLAIMS, and is held to. Authored together 2026-08-17."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "MANDATORY BOUNDARY. That AC forbids the reachability VERDICT from being derived by reading source text. The completeness check in this L1 derives no verdict — it compares two written declarations and reports a missing pair. Read its notes in full before decomposing."
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing test-file tag axis that decides which FAILING tests block main. The new declaration is a second axis on the same records with a different consequence — it blocks on a MISSING test, never on a failing one. Extend that scanner; leave its enforcement decision untouched."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+  - reason: user-directed-scope-revision
+    by: product-owner
+    at: 2026-08-17
+    note: "GAP E was authored as legibility-only. The authoring pass objected that a declaration nothing reads has no forcing function and would decay to 0%, repeating GAP B one layer up. The user accepted the objection and widened GAP E to a commit-time completeness check between two AUTHORED declarations (promised kind of proof vs. claimed kind of proof), refusing a promise with no artifact. Correctness — whether the claiming test truly reaches the entry point — was explicitly held OUT and remains exclusive to BO-2900's execution observer. Title, tagline and criteria reworded from legibility to forcing function; the demand/record split, both parent choices, and GAP D and GAP F are unchanged."
+superseded_by: null
+covered_by:
+  - BP-1100g-1
+  - BP-1100g-2
+  - BP-1100g-3
+  - BP-1100g-4
+  - BP-1100g-5
+  - BP-1100g-6
+  - BP-1100g-7
+# 7 L2 children = 5 behavioural guards + 2 mandatory documentation ACs
+# (BP-1100g-6 reference-doc, BP-1100g-7 sequence-diagram, both required by
+# documentation_triggers), not extra behaviours.
+child_limit_override: 7
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+  - sequence-diagram
+change_target:
+  - prompt
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  Added 2026-08-17 as the SEVENTH and final L1 under BP-1100 (tree is now a–g and at
+  the hard cap of 7 L1s per L0). Any further sibling requires a tree split or a
+  child_limit_override on BP-1100.yaml. Parent back-link RESOLVED — BP-1100.yaml's
+  covered_by lists BP-1100g.
+
+  WHY THIS IS A SEPARATE L1 FROM BO-2900g. The six gaps found by the 2026-08-14
+  test-angle investigation split cleanly along the producer/consumer seam that
+  actually exists in the system. BO-2900g is the PLAN SIDE: the demand exists, it
+  reaches every route, and it is stated in one vocabulary. This L1 is the DOER SIDE:
+  the vocabulary is understood, what was claimed is recorded, and a promise with no
+  artifact is refused. Folding them into one L1 would have produced six L2 themes
+  under a 5-L2 cap and would have hidden the seam that is itself the most likely place
+  for the next phantom-done to appear.
+
+  WHY BP-1100 AND NOT AN EIGHTH BO-2900 SIBLING — THE DECIDING ARGUMENT. BO-2900's
+  tree carries a standing prohibition (BO-2900a-2) on deciding anything from source
+  text, on the explicit grounds that a source scan inside a phantom-done guard is
+  itself phantom-done. This L1's artifacts ARE source-text declarations. Placing them
+  inside BO-2900 would put the declaration and the prohibition under one parent, where
+  a future decomposer will eventually read the declaration as satisfying the verdict.
+  BP-1100 already holds the compatible posture: BP-1100b-5 is an accepted diff-time
+  check on the SHAPE of what was written, and BO-2900a's own notes record that the two
+  rules must never be widened into each other. The record layer belongs with the shape
+  layer. BP-1100 is also the ticket-level tree, and every artifact here — the work
+  record's comment block, the red-baseline entry, the completion manifest — is a
+  ticket-level artifact.
+
+  THE THREE GAPS THIS L1 COVERS — keep them distinct at L2. Each is a confirmed,
+  zero-coverage gap:
+
+  - GAP D — THE DOER WAS NEVER TAUGHT THE WORDS. Every plan produced by the generator
+    now carries a named kind of proof for each test it asks for. The agent that writes
+    those tests contains the word zero times. An instruction the doer cannot parse is
+    not an instruction. The L2 must make the teaching CHECKABLE, not merely present:
+    the failure mode named in docs/testing/test-angles.md is that a demand for a
+    reachability proof is silently satisfied by a renamed happy-path test. Note the
+    hardest part explicitly — for the ~80% of work that brought no plan of its own,
+    the plan cannot name the way in, so the doer is handed the judgement of what the
+    real way in IS. Do not let an L2 assume the way in is given.
+
+  - GAP E — A PROMISE THAT NOTHING CHECKS. The repo carries 2,266 tags of the existing
+    coverage axis and zero of the new one. The 2026-08-17 authoring pass objected that
+    a declaration nothing reads back has no forcing function and would decay to the
+    same 0% that the side-effect declaration in GAP B sits at today — GAP B repeating
+    one layer up. USER DECISION, 2026-08-17, DO NOT RE-LITIGATE: the objection was
+    accepted and the scope was widened exactly this far and no further.
+
+    IN SCOPE — a completeness check between two AUTHORED declarations. At commit time:
+    the work's plan promised a given kind of proof for a given criterion; is there a
+    test that claims to give it? If not, refuse, naming the kind that is missing. Both
+    sides of that comparison are statements a human or an agent WROTE. This is
+    presence and parity between two declarations, nothing more.
+
+    OUT OF SCOPE — any correctness verdict. Whether the claiming test actually reaches
+    the production way in is execution-derived and belongs EXCLUSIVELY to BO-2900's
+    observer. A tag is evidence that a proof was PROMISED and ANSWERED, never that
+    reachability was ACHIEVED. No L2 here may inspect a test's body to decide whether
+    it does what it claims, and no L2 here may let a tag contribute to a done, pass,
+    or eligibility decision.
+
+    WHY THIS STAYS CLEAR OF BO-2900a-2. That AC forbids deriving the reachability
+    VERDICT from source text. This check derives no verdict: it compares one written
+    statement against another written statement and reports a missing pair. The
+    distinction is written into the criteria in benefit language on purpose, so a
+    later decomposer cannot widen it into an execution claim. If an L2 ever finds
+    itself needing to ask "but does that test really reach it?", that L2 is in the
+    wrong tree.
+
+    ADVERSARIAL NOTE FOR THE BA — READ BEFORE DECOMPOSING. This check is trivially
+    satisfiable by pasting the tag onto an existing happy-path test. That is ACCEPTED
+    and is not a defect of this L1; the lie is caught downstream by BO-2900a's
+    observer, which is the only mechanism that can catch it. What this L1 buys is that
+    the gap between promise and artifact can no longer be left silently empty. Do NOT
+    add an L2 that tries to detect the paste — that is exactly the
+    phantom-done-guard-inside-the-phantom-done-guard failure BO-2900a-2 exists to
+    prevent.
+
+  - GAP F — A MANDATORY PRACTICE WITH NO ARTIFACT. The doer's rules are asymmetric:
+    one mandates a machine-checkable token in the work record, another — the
+    cross-layer seam rule, and one of the highest-value rules in the corpus — mandates
+    nothing observable at all. Neither the completion manifest nor the red-baseline
+    record has anywhere to put it. A violation is therefore undetectable by
+    construction. The L2 should give the seam rule an artifact of the same shape as
+    the one that already works, and must cover the honest negative: the doer stating
+    that no seam applies, with the reason, is a valid recorded outcome. Forcing a
+    fabricated claim is worse than no artifact.
+
+  BOUNDARY vs BO-2900f — READ BEFORE DECOMPOSING. BO-2900f guarantees that a requested
+  GATE which did not run still leaves a record saying so. GAP F is not a gate: it is an
+  authoring rule inside the doer, and its artifact rides the work record the doer
+  already writes. Same completeness instinct, different producer and different record.
+  Neither may be folded into the other. DO reuse BO-2900f's and BO-1000b-1-i's proven
+  record shape (exactly one entry per required item, no gaps and no duplicates, reason
+  carried with any skip) and carry their known trap forward: assert cardinality
+  behaviourally, never by grepping for the presence of a call.
+
+  BOUNDARY vs the existing test-file tag axis. The declaration is a second axis on
+  records the existing scanner already collects. Extend that scanner rather than
+  building a parallel one. The two axes have DIFFERENT consequences and must not be
+  merged: the existing axis decides which FAILING tests block main; the new axis
+  blocks on a MISSING test at commit time and never on a failing one. An L2 that lets
+  the new axis change which failures block main has converted a planning declaration
+  into a verdict, which is the thing this L1 forbids.
