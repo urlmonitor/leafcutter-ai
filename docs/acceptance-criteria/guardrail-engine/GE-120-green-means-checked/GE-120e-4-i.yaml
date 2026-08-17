@@ -1,0 +1,86 @@
+id: GE-120e-4-i
+title: "Reworking a merge after the operation record is gone still attributes only the author's part"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a merge commit that has already been made, so no record of an operation in progress
+    remains, and the author now revises it — restaging the same merged content plus one edit
+    of their own,
+  When a check that works out its own change set runs on that commit,
+  Then the change set it inspects holds the author's edit and not the merged-in work,
+  And the absence of an operation record does not cause the whole staged tree to be
+    attributed to the author,
+  And the verdict is identical to the verdict on the original merge commit plus that same
+    edit made as an ordinary follow-up commit.
+
+  Coverage note: perform the revision as a real repository operation — the states the commit
+  is built on are still discoverable from the commit being revised even though the operation
+  record is gone, and an implementation that reads only the operation record fails this case
+  while passing every merge fixture in this L1. Execute the check as a process and assert
+  result status and output text in both arms.
+depends_on:
+  - GE-120e-4
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The states-the-commit-is-built-on signal, which is the one still available here after the operation record has gone."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "SIGNAL ORDER IS THE DEFECT. The states the commit is built on must be consulted FIRST; the operation record refines the answer. The named anti-pattern is 'if there is no operation record, treat this as an ordinary commit and use the whole staged tree' — it reads as a sane default and it fails only on this case, because every other fixture in this L1 has the record present."
+  - "THE PARENTS OF THE COMMIT BEING REVISED ARE STILL DISCOVERABLE after the operation record has expired. Derive them from the commit under revision, not from the expired marker. When the commit being amended has two parents, the derivation must use both."
+  - "VERDICT EQUALITY IS AN ASSERTION ABOUT TWO REAL RUNS, not an inference: the revised merge plus the edit must produce the same result status and the same objected-to content as the original merge followed by the same edit as an ordinary commit. Both arms in one case."
+  - "This case must hold in the deployed layout after build.py (ADR-001), and it must hold inside a git worktree — resolve git state through plumbing rather than filesystem assumptions."
+test_spec:
+  - name: test_ge120e4i_revised_merge_change_set_holds_only_the_authors_edit
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "After a real merge is revised with one additional authored edit, the check inspects that edit and not the merged-in work."
+  - name: test_ge120e4i_absent_operation_record_does_not_widen_to_the_whole_staged_tree
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "With no operation record present, the merged-in content is still absent from what the check objects to — the expired-marker trap."
+  - name: test_ge120e4i_verdict_matches_the_ordinary_followup_commit_arm
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Both arms in one case: revised merge plus edit, and original merge plus the same edit as a follow-up commit, produce the same status and the same objected-to content."
+test_rationale: "This is the one fixture in the L1 where the operation record has expired and the parent states have not, so it is the only test that can fail on an implementation that reads the marker first and treats its absence as 'ordinary commit'. Every merge fixture elsewhere in this tree has the marker present and stays green against that bug. The revision must therefore be performed as a real repository operation rather than simulated, because what is under test is precisely what git still reports once the marker file is gone. The third case keeps both arms together so verdict equality is observed rather than inferred from two separately-passing tests."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-4
+  contract: "The authored-change derivation that combines the states the commit is built on with the operation record."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE SIGNAL-AVAILABILITY EDGE CASE. GE-120e-4 requires two signals — the states the commit
+  is built on, and the record of the operation in progress. This case is the one where the
+  second has expired and the first has not, and it is the natural trap for an implementation
+  that reads the operation record first and treats its absence as "ordinary commit". Every
+  merge fixture in this L1 has the record present, so nothing else here can fail on it.
+
+  It is also not hypothetical: revising a merge is the routine response to a check blocking
+  that merge, which makes it the very next thing the author does after hitting the defect
+  this L1 removes. A fix that works on the merge and breaks on the revision hands the author
+  back the override reflex one step later.

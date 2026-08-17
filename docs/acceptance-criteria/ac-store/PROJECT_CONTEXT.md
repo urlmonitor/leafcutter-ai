@@ -96,10 +96,10 @@ convention still applies (hook crash / parse error / git failure -> exit 0 + std
 warning). These are orthogonal: do not let the IT-PO collapse "fail open on script
 bug" into "warn instead of block on violation".
 
-> **Refinement 2026-08-14 (GE-119).** A third case sits between these two and was
+> **Refinement 2026-08-14 (GE-120).** A third case sits between these two and was
 > previously unnamed: a hook that could not RUN AT ALL (its dependency, config, or
 > schema was unreachable) currently takes the fail-open path and reports SUCCESS,
-> making "green" indistinguishable from "did not run". GE-119 governs that case.
+> making "green" indistinguishable from "did not run". GE-120 governs that case.
 > Fail-open on one bad input while the check still ran remains correct; reporting
 > success for a check that never executed does not.
 
@@ -186,11 +186,11 @@ DO NOT DUPLICATE KM-200c: counting parked vs queued vs authoring-WIP populations
 is KM-200c's remit. ACS-1200 defines and enforces the state; KM-200c reports on
 it. KM-200c is itself parked, so ACS-1200 must not take a dependency on it.
 
-CROSS-COMPONENT SEQUENCING: ACS-1200a and GE-119b (guardrail-engine) touch the
+CROSS-COMPONENT SEQUENCING: ACS-1200a and GE-120b (guardrail-engine) touch the
 same file for opposite-direction reasons — ACS-1200a fixes WHICH rule
-`check_ac_parent_covered_by` enforces; GE-119b fixes WHETHER it runs at all in a
-given working copy. Landing GE-119b alone makes the wrong rule fire more
-reliably. Sequence ACS-1200a with or before GE-119b, or ship them together.
+`check_ac_parent_covered_by` enforces; GE-120b fixes WHETHER it runs at all in a
+given working copy. Landing GE-120b alone makes the wrong rule fire more
+reliably. Sequence ACS-1200a with or before GE-120b, or ship them together.
 
 ROADMAP FLAG (unresolved, for the user at the final gate): no `roadmap_phase` is
 claimed. Phase 1's exit criteria are about clean installs and build idempotency;

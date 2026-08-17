@@ -1,0 +1,111 @@
+id: GE-120d-4
+title: "A working copy created by set-up passes the parity sweep with no manual repair"
+component: guardrail-engine
+components:
+  - worktree_manager
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy created by running the real set-up command, with no manual step applied
+    to it afterwards,
+  When the parity sweep of GE-120b-4 is run against that copy,
+  Then every check reaches the same verdict there as in the main checkout,
+  And no check reports a could-not-check outcome,
+  And the sweep is run against the copy exactly as set-up left it — applying any manual repair
+    first invalidates the result and the run is reported as invalid rather than as a pass,
+  And the sweep is driven by the same set-up command a person would run, not by a test fixture
+    that reproduces what set-up is believed to do.
+
+  Coverage note: this is the end-to-end criterion for the whole tree, and its value depends
+  entirely on the last clause. A fixture that stands up a working copy the way the author
+  believes set-up does will pass while the real command still fails — that substitution is how
+  this defect class survived, one layer down (CLAUDE.md, "Real-artifact behavioral spot-check
+  before declaring done").
+depends_on:
+  - GE-120d
+  - GE-120d-2
+  - GE-120b-4
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/real-artifact-fixtures.md
+    relationship: context
+    status: exists
+    relevance: "The repo rule this AC's last clause enforces: exercise the real command, never a fixture that reproduces what it is believed to do."
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "DRIVE THE REAL SET-UP COMMAND a person would run — the deployed .leafcutter/scripts/setup_ticket_worktree.py entry point, invoked the way worktree-agent and the /feature path invoke it — never a fixture that reproduces what set-up is believed to do. That substitution is how this defect class survived one layer down: the phantom-done hook passed its unit tests against hand-authored fixtures while being a no-op on every real ticket."
+  - "NO MANUAL REPAIR between set-up and sweep: no symlink, no copy, no build, no SKIP variable. THE INVALIDATION MUST BE MECHANICAL — fingerprint the copy immediately after set-up returns and re-check the fingerprint before the sweep, rather than trusting the operator not to touch it. The sequence that defeats this AC is: run set-up, notice something missing, fix it by reflex, run the sweep, see green. Every step of that is reasonable and the result is meaningless, so INVALID must be a reported state distinct from both PASS and FAIL."
+  - "REUSE GE-120b-4's SWEEP UNCHANGED. Do not fork a set-up-specific variant: the end-to-end claim must cover the same sweep the tree hardened, or it asserts something about a different instrument."
+  - "BOTH CLOSING CONDITIONS MUST HOLD: every check agrees with the main checkout AND no check reports could-not-check. Agreement alone is insufficient — a copy in which every check honestly reports could-not-check would satisfy it while being exactly the unprotected artifact this L1 exists to prevent."
+  - "SEQUENCE: this AC lands BEFORE GE-120b-5 deletes the documented manual workaround. GE-120b-5 removes the instruction; this AC demonstrates the instruction is no longer needed. Deleting first makes the documentation change a claim rather than a record."
+  - "ENVIRONMENT: the set-up path creates a git worktree that shares the repository object store. Run this in isolation from any concurrent drive, and clean up with 'git worktree remove' even on failure — a leaked worktree from a failed run silently changes the next run's environment."
+  - "The sweep must exercise the DEPLOYED checks in the created copy (ADR-001) — that is what a commit in that copy would run. Pointing it at the source tree would measure the layout that never fails."
+test_spec:
+  - name: test_ge120d4_copy_from_real_setup_command_passes_the_parity_sweep
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    description: "A working copy created by invoking the real deployed set-up command passes the GE-120b-4 parity sweep: every check reaches the same verdict as the main checkout."
+  - name: test_ge120d4_no_check_reports_could_not_check_in_that_copy
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    description: "No check in the sweep reports a could-not-check outcome in the copy set-up produced."
+  - name: test_ge120d4_manually_repaired_copy_reports_invalid_not_pass
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    description: "A copy altered after set-up returned is detected by fingerprint and the run is reported INVALID — a state distinct from both PASS and FAIL."
+  - name: test_ge120d4_sweep_driven_by_the_real_command_not_a_fixture
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    description: "The copy under test is produced by the real set-up entry point, not by a fixture that reproduces what set-up is believed to do."
+test_rationale: "This is the end-to-end criterion for the whole tree and its value rests entirely on two procedural properties that assertions alone cannot supply: the copy must come from the real command, and it must be untouched. A fixture standing up the copy the way the author believes set-up does would pass while the real command still fails — which is precisely how this defect class survived one layer down. The INVALID state needs its own test because the defeating sequence produces no failing assertion of its own."
+delivers_to: null
+expects_from:
+  ac_id: GE-120b-4
+  contract: "The family-wide parity sweep, pointed at a copy produced by the real set-up command."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE CLOSING AC OF THE TREE. GE-120a says a check that cannot run says so; GE-120b says it can
+  run from anywhere; GE-120c proves that by execution; GE-120d says a fresh copy arrives that
+  way. This AC is the single assertion that all four held at once, on an artifact nobody
+  touched by hand.
+
+  It is also the AC that retires the manual pre-drive workaround for real. GE-120b-5 deletes
+  the instruction from the documentation; this one demonstrates the instruction is no longer
+  needed. Land this before that, or the documentation change is a claim rather than a record.
+
+  The no-manual-repair clause is stated as an invalidation rather than a caution on purpose. In
+  practice the sequence that defeats this AC is: run set-up, notice something missing, fix it
+  by reflex, run the sweep, see green. Every step of that is reasonable and the result is
+  meaningless. Making the repaired run report INVALID rather than PASS is the only form of the
+  rule that survives contact with a person in a hurry.
+
+  IT-PO (2026-08-14): the invalidation must be MECHANICAL — fingerprint the copy the moment
+  set-up returns, re-check before the sweep. A rule that depends on the operator not touching
+  the copy is the same trust this tree exists to remove. The b-5 ordering constraint is now
+  also recorded on GE-120b-5 itself.

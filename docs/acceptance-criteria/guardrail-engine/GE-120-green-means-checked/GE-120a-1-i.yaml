@@ -1,0 +1,97 @@
+id: GE-120a-1-i
+title: "One unparseable input, while the check still ran, remains an ordinary pass"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given 5 staged agent definition files, of which exactly 1 cannot be parsed,
+  And the check that inspects agent definitions can reach every prerequisite it needs,
+  When the check runs,
+  Then it inspects the 4 parseable definitions and reports its findings for them,
+  And it warns about the 1 unparseable definition, naming that file,
+  And it does not block the commit on account of the unparseable definition,
+  And its overall result is the ordinary success value, NOT the could-not-check value
+    defined by GE-120a-1 — because the check did run,
+  And the behaviour approved in GE-116a-1-iii ("Unparseable agent definition fails open
+    and does not block the commit") is therefore observably unchanged by this feature.
+
+  Coverage note: this must be exercised by running the check against a real staged file
+  set containing a genuinely unparseable definition, not by asserting that a fail-open
+  branch exists in the source.
+depends_on:
+  - GE-120a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-116-consistent-agent-config
+    relationship: context
+    status: exists
+    relevance: "GE-116a-1-iii is the approved AC this criterion protects from regression."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/hooks/check_agent_verification_consistency.py
+    relationship: related
+    status: exists
+    relevance: "IT-PO verified: this is the verification-consistency guard GE-116a-1-iii constrains (manifest id check-agent-verification-consistency, scoped to staged templates/agents markdown)."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Target identified: templates/scripts/commit_guardian/hooks/check_agent_verification_consistency.py — manifest id check-agent-verification-consistency, whose files pattern scopes it to staged agent definitions under templates/agents/. That is the guard GE-116a-1-iii names as the verification-consistency guard."
+  - "PREREQUISITE STATE — verify before implementing. GE-116a-1-iii carries readiness: approved but work_status: todo and implemented_by: [], so the fail-open-on-unparseable behaviour it specifies may not exist in the guard yet. If it is absent, this AC's deliverable is the executing regression guard plus the minimum work that makes GE-116a-1-iii's behaviour observable — NOT a re-specification of GE-116a-1-iii and NOT an expansion of its scope."
+  - "This AC must not force a production change. If executing the criteria already yields the ordinary success value, the deliverable is the executing regression test plus a recorded observation. Do not manufacture a change in order to have something to commit."
+  - "The assertion is on the RESULT VALUE from GE-120a-1's shared outcome vocabulary (ordinary success, distinct from could-not-check), not on the exit code. A test asserting only exit 0 cannot tell the two states apart and does not satisfy the criterion."
+  - "PRECEDENCE: GE-116a-1-iii carries readiness: approved and outranks every draft criterion in this tree. If a GE-120a-1 or GE-120b-2 change makes this AC fail, narrow that change; do not weaken this one."
+  - "ADR-001 deployed/template parity: any edit lands in templates/scripts/commit_guardian/hooks/ (canonical) followed by 'python scripts/build.py --target-dir .'; scripts/commit_guardian/hooks/ and .leafcutter/scripts/commit_guardian/hooks/ must match afterwards (enforced by check_hook_parity)."
+test_spec:
+  - name: test_ge120a1i_four_parseable_definitions_inspected_and_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Five staged agent definitions with exactly one unparseable: findings are reported for the four parseable ones."
+  - name: test_ge120a1i_unparseable_definition_warned_by_name_not_blocking
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The unparseable definition is warned about by filename and does not block the commit."
+  - name: test_ge120a1i_overall_result_is_ordinary_success_not_could_not_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The run's result value is the ordinary success value from the GE-120a-1 vocabulary, not the could-not-check value — the contradiction guard for the whole tree."
+test_rationale: "The criterion is a NEGATIVE guarantee: the feature must not change an approved behaviour. It is only observable by running the guard against a real staged set containing a genuinely unparseable definition and reading the result value. Asserting that a fail-open branch exists in the source proves nothing about which result value the branch now returns, which is exactly what GE-120a-1 changes elsewhere in the same family."
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The distinction between the ordinary success value and the could-not-check value."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the CONTRADICTION GUARD for the whole tree. GE-120 draws a line, and this AC is
+  the test that the line was drawn in the right place: fail-open on ONE bad input while
+  the check still ran is correct and stays; reporting SUCCESS for a check that never ran
+  is what stops.
+
+  If an implementation makes this AC fail, the implementation has over-reached into
+  "never fail open" and must be narrowed — not this AC weakened. GE-116a-1-iii carries
+  readiness: approved, so it outranks any draft criterion in this tree.
+
+  IT-PO (2026-08-14): the guard is templates/scripts/commit_guardian/hooks/
+  check_agent_verification_consistency.py. Note that GE-116a-1-iii is approved but
+  work_status: todo — the behaviour this AC guards may not be built yet. Sequence
+  accordingly and see it_requirements.

@@ -1,0 +1,120 @@
+id: GE-120e-5
+title: "The attribution rule is written where the next check author decides how to get their diff"
+component: guardrail-engine
+components:
+  - documentation_system
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the reference documentation an author consults before adding a check to the
+    guardrail engine,
+  When that author reads it,
+  Then it states the attribution rule in the form this L1 defines it: a check reports only
+    on content the author of this commit introduced, and never on work they merely brought
+    across,
+  And it states that a check must take its change set from the shared authored-change source
+    rather than working out its own, and names where that source is and where the choice is
+    recorded per check,
+  And it states the limit of the rule in the same place: a fault introduced by the author's
+    own resolution is still the author's, and a merge is never grounds for a check to skip
+    its inspection,
+  And it carries the observed case as the worked example — a mainline merge on which one
+    check objected to test deletions the branch never made and another to frontmatter faults
+    in tickets the branch never touched, both bypassed with an override,
+  And it states plainly that a routine override is the damage this rule prevents, so a
+    future author reads the rule as a guardrail property rather than as a convenience,
+  And any existing guidance that tells a reader to override these checks when merging is
+    corrected in place rather than left standing beside the rule.
+
+  Coverage note: the last clause is the one that can be quietly skipped — cover it by
+  searching the documentation surfaces for override guidance aimed at merge-time blocks and
+  asserting none remains. This is a documentation criterion, so a content assertion is the
+  appropriate form; the behavioural criteria in this L1 are covered by GE-120e-3 and its
+  children.
+depends_on:
+  - GE-120e
+  - GE-120e-1
+  - GE-120e-2
+  - GE-120e-4
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: "The surface a check author already reads for hook behaviour and manifest registration; the recorded change-set source belongs beside the other per-entry fields."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "Holds the component-level description of how checks receive their input; the shared authored-change source is a new element of it."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200.yaml
+    relationship: context
+    status: exists
+    relevance: "Prior art for the override habit — a convention that forced a routine override on every use. Cite it in the rationale so the two are read together."
+  - path: docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md
+    relationship: related
+    status: exists
+    relevance: "Records the component's standing conventions; the attribution rule and its limit belong in the same place as the fail-open boundary."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "SEQUENCE AFTER GE-120e-1, GE-120e-2 AND GE-120e-4 HAVE LANDED. The document must name the shared source's real module and import path, and the real per-entry field name and its location in hooks_manifest.hooks[]. Writing it from these ACs' placeholder wording documents behaviour that does not exist, which is the failure mode GE-120d-5 was sequenced to avoid."
+  - "SAY WHICH COPY OF THE MANIFEST AN AUTHOR EDITS. build_commit_guardian() deploys commit_guardian.json to BOTH scripts/commit_guardian/ and config/commit_guardian/; the source of truth an author edits is templates/scripts/commit_guardian/commit_guardian.json, and build.py produces the other two. A reader who edits a deployed copy loses the change at the next build."
+  - "SHARED-FILE HAZARD: docs/how-to/managing-pre-commit-hooks.md is also edited by GE-120b-5 and GE-120d-5. RE-READ the file as they left it immediately before editing — do not work from a copy taken earlier — and do not re-introduce the manual layout-link step GE-120b-5 removed, in any wording."
+  - "THE RULE AND ITS LIMIT MUST BE IN THE SAME SECTION, not merely in the same document. Stated alone, 'a check reports only the author's changes' reads as licence to exempt merges — which is the one failure this L1 could itself produce."
+  - "QUOTE THE OBSERVED MESSAGES, DO NOT PARAPHRASE THEM. The worked example must carry the text check-contract-shrinking and check-doc-frontmatter actually emitted on the observed merge, so a reader can match what they see against what is written. A paraphrased error message is unmatchable and rots invisibly."
+  - "THE LAST CLAUSE IS SATISFIED BY CONFIRMING, NEVER BY INVENTING A TARGET. Search docs/how-to/, docs/reference/ and the component doc for merge-time override guidance. At authoring time none was found on a documentation surface — the guidance the observed session followed lives in operational notes outside this store. If the search still finds nothing, record that finding in the sign-off; do not manufacture a passage to correct, and do not extend the correction into operational notes outside the documentation surfaces."
+  - "ADD THE ATTRIBUTION RULE AND ITS LIMIT TO docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md, beside the fail-open boundary, so it is loaded as a standing convention by agents working this component rather than only found by a reader who opens the how-to."
+  - "Both target documents are tracked surfaces subject to check_doc_frontmatter, check_doc_length and check_doc_links. Edit in place and keep them passing in the same commit."
+test_spec:
+  - name: test_ge120e5_attribution_rule_and_its_limit_appear_in_the_same_section
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The how-to states the attribution rule and its limit — author's own resolution still counts, a merge is never grounds to skip — within one section, not merely in one file."
+  - name: test_ge120e5_howto_names_the_shared_source_and_the_recorded_manifest_field
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The document names the shared authored-change source and the per-entry field in hooks_manifest.hooks[] where each check's change-set source is recorded."
+  - name: test_ge120e5_no_merge_time_override_guidance_remains_on_documentation_surfaces
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "A scan of docs/how-to/, docs/reference/ and the commit-guardian component doc finds no guidance instructing a reader to override these checks when merging."
+test_rationale: "change_target is docs and assigned_agent is documentation-expert, so the check-ac-schema test-contract gate does not require a contract here at all — this one is authored deliberately rather than to satisfy the gate. The last criterion is an ABSENCE claim across a set of documentation surfaces, and an absence is the one thing a reviewer reading this AC's diff cannot verify: the diff shows what was added, never what still stands elsewhere. Only a mechanical scan can fail on it, which is the same narrow case GE-120d-5 already established in this tree for its anti-reintroduction clause. Setting test_required: false instead would drop the scan entirely — test-writer would skip, and the AC's own coverage note calls that clause 'the one that can be quietly skipped'. The behavioural criteria of this L1 are covered by GE-120e-3 and its children; nothing here duplicates them."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-2
+  contract: "The recorded per-entry change-set source, whose name and location the documentation must state."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc documentation trigger on GE-120e, and follows the shape the
+  sibling L1s use — GE-120a-5, GE-120b-5, GE-120c-5 and GE-120d-5 each spend the fifth L2
+  slot on the documentation the trigger asks for. That convention is why this L1's
+  still-blocked negative is filed as GE-120e-3-ii rather than as a sixth L2: the child cap
+  is five and every sibling is already at it.
+
+  WHY THE LIMIT SITS IN THE SAME PARAGRAPH AS THE RULE. Written alone, "a check reports only
+  the author's changes" reads as licence to exempt merges, which is the failure this L1
+  would produce if it produced one. The rule and its limit have to arrive together or the
+  next author will implement half of it.
+
+  THE LAST CLAUSE was written without a confirmed target. A search of docs/how-to and
+  docs/reference found no merge-time override recipe committed to a documentation surface
+  today — the override guidance the observed session followed lives in operational notes
+  outside this store. The clause is kept because the guidance is exactly what gets written
+  down after the second time a merge is blocked, and a rule sitting beside a recipe for
+  ignoring it is worse than either alone. If the documentation-expert finds nothing to
+  correct, that clause is satisfied by confirming so, not by inventing a target.

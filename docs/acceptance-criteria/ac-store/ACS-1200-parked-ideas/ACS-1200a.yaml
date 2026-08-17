@@ -67,5 +67,5 @@ notes: |
   dropped by relaxing this L1. ACS-1200a-4 re-proves the exemption against the
   real on-disk KM-200 records rather than a fixture.
 
-  ORDERING WITH GE-119b is carried on ACS-1200a-2 (delivers_to contract and
-  doc_links): that AC must land before, or in the same release as, GE-119b.
+  ORDERING WITH GE-120b is carried on ACS-1200a-2 (delivers_to contract and
+  doc_links): that AC must land before, or in the same release as, GE-120b.
