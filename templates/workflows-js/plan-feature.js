@@ -1543,7 +1543,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
     const _readPrompt =
       "Read the durable pause record for this run. Run exactly:\n" +
-      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
     let recCheck;
@@ -1616,7 +1616,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
-    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
     "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
@@ -1690,7 +1690,7 @@ let worktreeSetupResult;
 try {
   worktreeSetupResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "python scripts/setup_ticket_worktree.py create-ac-worktree" +
+    "python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree" +
     (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
     "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
     { agentType: "status-checker", label: "worktree-setup" }
