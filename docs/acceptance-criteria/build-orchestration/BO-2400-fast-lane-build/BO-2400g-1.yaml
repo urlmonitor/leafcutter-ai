@@ -1,0 +1,154 @@
+id: BO-2400g-1
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "Work built the fast way is asked for the same proof-of-wiring as work built the thorough way"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one piece of work described only by a requirement in the store, with no
+    surrounding plan document of any kind,
+  And the same piece of work also being buildable the thorough way, where a plan
+    document is produced for it,
+  When the fast way is used and the person writing the tests is told what to write,
+  Then what they are told includes a request for a proof that the finished work is
+    reached the way the product is really used, not only a proof that it answers
+    correctly when called directly,
+  And that request is worded identically to the one the thorough way produces for
+    the same piece of work, so a change to the wording changes both,
+  And the request is present without the fast way having been given its own private
+    copy of it — introducing a second way of asking cannot be how this is satisfied,
+  And a piece of work that already states its own proofs keeps every one of them,
+    unaltered and in its stated order, alongside the request.
+depends_on: [BO-2400g, BO-2900g-1]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The Test Writer phase is at line 327 and the prompt it sends is the ad-hoc string at line 333 — 'read its YAML from <store> and write a minimal failing test that asserts the AC behavior'. That prompt is the whole of what the lane asks for today, and it is the AC-literal-only shape the reachability floor exists to eliminate."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Verified 2026-08-17: the reachability fallback mandate at lines ~216-227 is gated at line 206 on 'Code ticket (a coder agent is needed)', and the skip rule at line 188 decides on the AGENT MAP. The lane supplies no source_ac frontmatter, no agents map and no '## Test Requirements' block, so the mandate never fires here. Do not 'fix' this by loosening the agent-map rule — that changes the thorough lane's behaviour too."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The floor itself: criterion + reachability, never negotiable, and the shared vocabulary the request must be worded in. This is the single source the second Then clause refers to."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Where the floor lives today. Grepping BOTH fast-lane workflows for generate_ticket_from_ac / test_spec / angle / reachability returns ZERO hits — the lane never calls this program, which is why the demand cannot arrive by way of it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling, not substitute. BO-2900g-1's surface is generate_ticket_from_ac.py with n_location_rule '1' and its discriminating test adds a third descriptor-producing route INSIDE that program. This AC covers a lane that never loads it. Neither closes the other; see the boundary note below."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The verdict-layer prohibition this AC must not cross. Nothing here may be offered as evidence that any work IS reached — this AC only settles what is asked for."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_fast_lane_test_instruction_carries_the_reachability_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fast-lane run over a real on-disk AC that carries no plan of its own produces test-writing instructions containing the reachability request; asserted against the instruction text the lane actually emits, not against a helper's return value."
+  - name: test_fast_lane_and_thorough_lane_request_are_the_same_text
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The reachability request the fast lane emits for an AC is byte-identical to the one the thorough path produces for the same AC. Editing the single source changes both; this is the assertion a lane-local second copy cannot pass."
+  - name: test_reachability_request_reaches_the_lane_via_its_real_entry_point
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: drive the fast lane's own command surface against a temp store and read the instruction payload the Test Writer phase was actually given, rather than importing any internal helper. A wiring that exists but is never reached on the real path fails here and passes every other test in this list."
+  - name: test_ac_that_states_its_own_proofs_keeps_them_in_order
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fast-lane run over an AC that states three proofs of its own emits all three unaltered and in their stated order alongside the added request; nothing is re-derived or normalised."
+test_rationale: "The obvious test — assert that the lane's prompt string mentions reachability — passes on a hard-coded sentence pasted into the workflow, which is exactly the outcome the third Then clause forbids and which re-creates the two-sources divergence the moment the floor's wording changes. The discriminating assertions are therefore (a) the byte-identity test against the thorough lane's request, which only a single-source implementation can pass, and (b) the entry-point test that reads what the Test Writer phase was really handed, because a helper that composes the request correctly while the lane keeps sending its ad-hoc line at fast-lane-ship.js:333 would satisfy a direct unit test and change nothing in production. The order-preservation case is included because the natural way to guarantee the floor is to rebuild the plan, which silently discards an author's stated proofs — a worse defect than the one being fixed."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400g-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 1 OF BO-2400g. PLANNING-TIME ONLY — READ THIS FIRST. This AC settles what is
+  ASKED FOR before a test exists. It never decides whether anything was achieved, it
+  describes no verdict, no gate, no block and no done-state consequence, and nothing
+  it produces may be offered as evidence that any work is reached (BO-2900a-2's
+  prohibition, inherited via BO-2900g). The consequence half of BO-2400g lives in
+  BO-2400g-2 through g-4 and is deliberately separate.
+
+  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
+    - templates/workflows-js/fast-lane-ship.js phases: Worktree, Resolve, Claim,
+      Test Writer (line 327), Coder (line 395), Commit (line 471), Pull Request
+      (line 539). No ticket exists anywhere in the lane; its docstring says "No
+      per-ticket supervisor chain, no planner (BO-2400f)".
+    - The reachability floor from PR #451 lives in exactly two ticket-shaped places:
+      scripts/ac_store/generate_ticket_from_ac.py (which the lane never calls —
+      grepping BOTH fast-lane workflows for generate_ticket_from_ac / test_spec /
+      angle / reachability returns ZERO hits), and templates/agents/test-writer.md
+      lines ~216-227, whose entry condition at line 206 is "Code ticket (a coder agent
+      is needed)" with the skip rule at line 188 deciding on the AGENT MAP, not the
+      Test Requirements block. The lane supplies no source_ac frontmatter, no agents
+      map and no '## Test Requirements' block, so the condition never evaluates true.
+    - What test-writer actually receives is the ad-hoc prompt at
+      fast-lane-ship.js:333.
+
+  THE BOUNDARY WITH BO-2900g-1, IN BOTH DIRECTIONS. BO-2900g-1 is titled "The demand
+  for proof-of-wiring reaches every piece of work, including work that arrived with a
+  plan of its own" and looks like it already covers this. It does not.
+    - Its implementation surface is reference_file_path
+      scripts/ac_store/generate_ticket_from_ac.py with n_location_rule "1" — "the
+      single return path that produces the ## Test Requirements descriptor list" — and
+      its discriminating test introduces "a third descriptor-producing route", still
+      inside that program. It closes the gap between two plan-producing routes within
+      one program. Built exactly to its own spec, it leaves the fast lane uncovered:
+      the fast lane is not a route that produces a weaker plan, it is a lane that
+      produces no plan at all and never loads that program.
+    - In the other direction: satisfying THIS AC does not satisfy BO-2900g-1. Nothing
+      here addresses the authored-test_spec exemption inside the generator, the
+      third-route attachment point, or generator idempotency. An implementer who does
+      one and marks the other done has closed half the hole.
+
+  WHY THE depends_on EDGE TO BO-2900g-1 IS REAL AND NOT DECORATIVE. The second and
+  third Then clauses require the lane to inherit the SAME demand rather than grow a
+  private copy. BO-2900g-1 is the AC that moves the floor to a single attachment point
+  where a plan is finalised for a piece of work; landing this AC first would force the
+  lane to hard-code its own wording, which is precisely the outcome the third clause
+  forbids and which would then have to be unpicked. This is the ADR-026
+  "read-side before write-side" instinct applied to a shared demand: establish the one
+  source, then teach the second consumer to read it.
+
+  DESIGN HAZARD FOR THE IT PO. The tempting fix is to loosen test-writer's line 188
+  agent-map skip rule so the mandate fires without an agents map. That changes the
+  THOROUGH lane's behaviour as a side-effect and puts the floor back into an LLM
+  template where no test can execute it. The demand should reach the lane as data the
+  lane hands to the test-writer, not as a relaxed condition inside the agent prompt.
+
+  THE MULTI-MEMBER CASE IS NOT HERE. The lane resolves one AC id into a connected
+  build set (resolve_connected_build_set, scripts/build_orchestration/fast_lane.py:498),
+  so "the work" is routinely several requirements. That case is BO-2400g-1-i, kept
+  separate because an implementation that asks only for the AC named on the command
+  line satisfies every clause above.

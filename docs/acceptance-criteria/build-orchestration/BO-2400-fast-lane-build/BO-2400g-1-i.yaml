@@ -1,0 +1,95 @@
+id: BO-2400g-1-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "Every requirement the run picked up is asked for the proof, not just the one that was named"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a person points the fast way at one requirement,
+  And working out what that requirement is connected to pulls in four more — its
+    own detail requirements plus one unfinished prerequisite it depends on,
+  When the person writing the tests is told what to write for that run,
+  Then all five requirements are asked for a proof that the finished work is reached
+    the way the product is really used,
+  And the request for the four that were pulled in is the same request as for the one
+    that was named — being reached indirectly does not earn a weaker ask,
+  And a run that resolves to exactly one requirement is asked once, with no duplicate
+    request added for the same requirement.
+depends_on: [BO-2400g-1]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "resolve_connected_build_set (line 498) is what turns one named id into the connected set — the subtree plus unmet prerequisites, readiness-agnostic. The resolved set is the lane's only notion of 'the work', and it is exposed to the workflow as batchIds."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The Resolve and Claim phases run before Test Writer (line 327), so the full resolved set is already known at the moment the test-writing instructions are composed. There is no ordering excuse for asking only about the named id."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the resolution behaviour itself ('Resolve one AC id to its connected build set, in dependency order'). This L3 consumes that set and must not re-specify how it is computed."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_all_five_resolved_requirements_are_asked_for_the_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A real temp store where the named AC resolves to five members; the emitted test-writing instructions carry the reachability request for every member id, asserted per id rather than by counting occurrences."
+  - name: test_pulled_in_members_get_the_same_request_as_the_named_one
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The request text attached to the four pulled-in members is identical to the one attached to the named member. Fails on an implementation that asks fully for the named id and adds a weaker or truncated note for the rest."
+  - name: test_single_member_run_is_asked_exactly_once
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A run resolving to one member produces exactly one reachability request for it. Run alongside the five-member case so an implementation that appends per-member and per-run cannot pass both."
+test_rationale: "Asking only about the id typed on the command line satisfies BO-2400g-1 completely: that AC speaks of 'one piece of work', and in the single-member case the two implementations are indistinguishable. The connected set is the normal case for this lane, not an exotic one, so the gap would ship silently. The per-id assertion matters more than a count, because an implementation that emits the request once for the whole run passes a count-based check while leaving four requirements unasked; and the single-member case is asserted in the same suite because the natural over-correction — append per member and once per run — double-asks and is invisible when only the five-member case is tested."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE L3 AND NOT A CLAUSE ON THE PARENT. BO-2400g-1 is written
+  about "one piece of work", which is how the demand is framed everywhere else in the
+  store (BO-2900g-1 uses the same framing). On this lane, though, the unit is a
+  connected SET: the operator names one id and the resolver pulls in the subtree plus
+  unmet prerequisites (scripts/build_orchestration/fast_lane.py:498,
+  resolve_connected_build_set, readiness-agnostic). An implementation that wires the
+  demand to the named id only passes every clause of the parent and leaves the
+  majority of a real run unasked, which is exactly the shape this L3 exists to catch.
+
+  PLANNING-TIME ONLY, INHERITED. Like its parent, this AC settles what is ASKED FOR.
+  It says nothing about whether any of the five requirements was actually reached, and
+  nothing here may be offered as evidence of that (BO-2900a-2).
+
+  NOT RE-SPECIFYING RESOLUTION. How the connected set is computed, its ordering, and
+  its readiness-agnosticism belong to BO-2400f-1 / BO-2400f-2 and must not be restated
+  here. This AC only asserts that whatever set was resolved is the set that gets asked.
+
+  THE DUPLICATE-REQUEST CLAUSE IS NOT PADDING. The obvious repair for the five-member
+  gap is to append the request once per member; the obvious existing behaviour is to
+  append it once per run. Implementing the first without removing the second yields a
+  double ask on every single-member run — the same "skip-branch side-effect,
+  conditionalize don't add" defect recorded in CLAUDE.md, which duplicated an entry on
+  every skipped step and stayed green because the structural test only checked for
+  presence.

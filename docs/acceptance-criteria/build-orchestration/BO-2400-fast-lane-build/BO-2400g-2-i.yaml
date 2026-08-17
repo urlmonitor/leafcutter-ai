@@ -1,0 +1,104 @@
+id: BO-2400g-2-i
+components:
+  - build_orchestration
+  - review_system
+title: "A reading that examined nothing is recorded as a reading that did not happen"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run reaches the point where its change is read for defects,
+  And the reading cannot be bound to what it is supposed to read against — the run's
+    requirements cannot be read back, or the run produced no changes to examine,
+  When the reading step finishes,
+  Then the run's result records that the reading did not happen, and says which of the
+    two inputs was missing,
+  And the run is not described anywhere in its result as reviewed,
+  And a reading that ran and found nothing wrong is recorded differently from a reading
+    that never examined anything, so the two cannot be confused by a person or by a
+    later step reading the result.
+depends_on: [BO-2400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f.yaml
+    relationship: related
+    status: exists
+    relevance: "The established pattern for this exact distinction elsewhere in the store — a check that did not run must be recorded as not having run, never as a pass. This L3 applies the same rule to the fast lane's reading step; cite it, do not restate its machinery."
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "The degradation source. Its ticket-keyed modes (lines 102, 136, 193, 517) already resolve to 'skip' silently; when the requirement ids are also unavailable there is nothing left, and the run must not treat that emptiness as a clean bill of health."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The lane records a per-step outcome for every phase; this AC constrains what the reading step is allowed to record. Note the release-on-failure pattern (release-on-coder-fail, line 424) exists for phases that fail outright — 'did not happen' is a distinct third state from passed and failed."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_unreadable_requirements_are_recorded_as_reading_not_performed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A run whose resolved requirement records cannot be read back at reading time records a not-performed outcome naming the missing input, in a real temp store."
+  - name: test_empty_change_is_recorded_as_reading_not_performed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A run that reaches the reading step with no changes at all records a not-performed outcome naming the missing changes, rather than a clean review."
+  - name: test_clean_reading_and_absent_reading_are_distinguishable_in_one_run_pair
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two runs in the same test — one where the reading ran and found nothing, one where it could not run — produce different recorded outcomes. This is the assertion an implementation that reports both as 'no findings' cannot pass."
+  - name: test_result_never_describes_an_unperformed_reading_as_reviewed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Negative assertion over the emitted result: no reviewed/passed marker appears anywhere for a run whose reading did not happen."
+test_rationale: "The failure mode here is silence being read as success, and it is invisible to any single-case test: an implementation that emits 'no findings' whether it examined five requirements or zero satisfies both a positive review test and a negative defect test. The discriminating assertion is the PAIR — a clean reading and an absent reading compared in one run — because only that comparison can fail an implementation that collapses the two states. This is the same three-state discipline recorded on ACD-1600g-1 (absent versus declared-and-empty) and the same never-ran-is-not-a-pass rule as BO-2900f; both exist because defaulting a missing input to an empty result is the most natural thing an implementer will do."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE PHANTOM-REVIEW EDGE. BO-2400g-2 requires the reading to be substantive. This L3
+  covers what happens when it cannot be: the case where the step runs, examines
+  nothing, and — if nobody specifies otherwise — reports the cheerful emptiness that
+  every other consumer will read as "reviewed, clean". That is the phantom-done
+  pattern applied to a gate rather than to work, and it is the single most likely way
+  this whole L1 ships as decoration.
+
+  WHY IT IS AN L3 AND NOT A CLAUSE ON THE PARENT. The parent's fourth clause already
+  requires an examination that could not run to be named. This L3 is the harder,
+  distinct case where NO examination could run at all — there is no partial result to
+  qualify, only an empty one, and the natural implementation emits exactly the same
+  object it emits for a clean run. The parent's tests all pass on that implementation.
+
+  THREE STATES, NOT TWO. passed / found-something / did-not-happen. The lane already
+  distinguishes pass from fail (it has a release-on-failure path for every phase — see
+  release-on-coder-fail at templates/workflows-js/fast-lane-ship.js:424). The third
+  state is the one being added. Do not collapse "did not happen" into "failed" either:
+  a failed reading is a reading that produced a verdict the run must act on, while an
+  unperformed reading produced no information at all, and BO-2400g-4's severity ladder
+  needs to tell them apart.
+
+  DELIBERATELY NOT SPECIFIED HERE. Whether an unperformed reading stops the run is
+  BO-2400g-4's decision, not this AC's — this AC only requires that the run tells the
+  truth about what happened. Also out of scope: the empty-connected-set case, which is
+  already owned by BO-2400f-2 ("Readiness-agnostic selection; empty connected set is a
+  clean no-op"). The case here is a run that DID resolve work and DID build, and then
+  found the inputs to its reading unavailable.

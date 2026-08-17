@@ -1,0 +1,93 @@
+id: BO-2400g-4-i
+components:
+  - build_orchestration
+  - review_system
+title: "Findings that did not stop the run arrive with the pull request, not only in the session that produced them"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run whose reading produced three findings, none of them serious
+    enough to stop it,
+  When the run finishes and hands back its pull request,
+  Then all three findings are visible on the pull request itself, so a person who
+    never saw the run can read them,
+  And each one names the requirement and the file it relates to,
+  And a run whose reading produced no findings adds nothing of this kind to its pull
+    request.
+depends_on: [BO-2400g-4]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "Pull Request is the lane's last phase (line 539) and the only durable artifact a fast-lane run leaves for a human. Anything held only in the run's own output disappears with the session."
+  - path: docs/acceptance-criteria/build-orchestration/BO-800-self-describing-prs/BO-800.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing 'self-describing PRs' goal — the established home for what a pull request must tell its reader. This L3 adds one more thing the PR must carry on this lane; check BO-800's leaves before designing the presentation so the fast lane does not grow a second, divergent PR body convention."
+  - path: templates/agents/find-design-smells.md
+    relationship: describes
+    status: exists
+    relevance: "Returns findings rather than writing a file — so unless something carries them onward deliberately, advisory findings are lost by construction the moment the run ends."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_three_advisory_findings_appear_on_the_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A run with three planted advisory findings produces a pull-request body containing all three, asserted against the body the lane actually submits rather than an intermediate value."
+  - name: test_each_finding_names_its_requirement_and_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Every rendered finding carries the requirement id and file path it relates to; a bulleted list of bare sentences fails."
+  - name: test_clean_run_adds_nothing_to_the_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A run whose reading found nothing produces a pull-request body with no findings section at all — not an empty heading. Run alongside the positive case so an always-render implementation cannot pass both."
+test_rationale: "The natural implementation prints the advisory findings in the run's output and moves on, which satisfies BO-2400g-4 completely — that AC only requires such findings not to stop the run. The findings then vanish with the session, and since both smell readers RETURN their findings rather than writing them anywhere, the loss is silent and total. The discriminating assertion is therefore against the pull-request body the lane actually submits, not against any value the run computed on the way there. The clean-run case is asserted in the same suite because the obvious repair — always render the section — leaves an empty 'Findings' heading on every clean pull request, which trains readers to ignore it and is how a real signal becomes noise."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS A SEPARATE L3. BO-2400g-4 draws the line between findings that stop the
+  run and findings that do not. It says nothing about what happens to the second group,
+  and the cheapest reading of it is "nothing" — print them and proceed. On this lane
+  that means they are gone: the run is the only place they existed, both smell readers
+  return their findings rather than writing them anywhere, and the pull request is the
+  single durable artifact the lane produces. A finding that a person never sees is
+  indistinguishable from a finding that was never made, which puts the advisory half of
+  the whole review capability back at zero.
+
+  THE OPERATOR CONTEXT MATTERS. This lane is for scoped, interactive work with a human
+  close at hand (BO-2400's L0), so it is tempting to argue the operator saw the output
+  live. They did — once, in a scrolling transcript, at the moment they were waiting for
+  a pull request. The reviewer of the pull request, possibly the same person a day
+  later, did not.
+
+  DO NOT INVENT A SECOND PR CONVENTION. BO-800 ("self-describing PRs") already owns
+  what a pull request must tell its reader. Whatever presentation is chosen here should
+  extend that convention rather than bolt a fast-lane-only format onto the side; two
+  formats means two renderers, and the one that drifts is the one that fires least.
+
+  BOUNDARY. This AC is about findings that did NOT stop the run. Findings that did stop
+  it never reach a pull request, because BO-2400g-4 requires that no pull request
+  exists in that case — the operator-facing message for a stop is that AC's fourth
+  clause, not this one's.

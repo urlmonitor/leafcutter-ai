@@ -1,0 +1,152 @@
+id: BO-2400g-2
+components:
+  - build_orchestration
+  - review_system
+title: "The fast lane's change is read before it is committed, and the reading has something real to read against"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has built the five requirements it resolved and its changes
+    are complete but not yet committed,
+  When the change is read for defects,
+  Then the reading happens after the work is built and before any commit for that run
+    exists,
+  And the reader is given the five requirements the run resolved and the changes the
+    run actually made, and its findings name which requirement a concern relates to
+    and which changed file it was found in,
+  And the reading needs no per-work ticket to exist anywhere on disk in order to
+    produce those findings,
+  And every examination the thorough path performs by consulting a ticket is either
+    performed here from those two inputs, or is named in the run's result as an
+    examination that was not performed and why — an examination that is quietly
+    skipped is not permitted.
+depends_on: [BO-2400g]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The gap this AC closes. Verified 2026-08-17: Coder (line 395) is followed immediately by Commit (line 471) — nothing runs between them. The two inputs this AC names are both already in hand at that point: the resolved id set (batchIds) and the working diff."
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "Why the fourth Then clause exists. Line 562 makes the sign-off conditional so the agent CAN run ticketless; but Contract-Aware Mode (line 102) keys off a '## Agent Contracts' section, line 193 skips the contract trace when it is absent, the delivers_to/expects_from cross-file trace (line 136) keys off ticket ACs, and the completion_manifest / scope_verified check (line 517) compares the change set against the ticket's files_touched. Dropped in unchanged, all of those degrade to nothing and say nothing about having done so."
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: related
+    status: exists
+    relevance: "The other ticket-frontmatter-bound reviewer on the thorough path, and the clearest example of an examination that must either be re-based on the resolved requirements or declared not performed. Note ACD-1600g-3 is independently moving its exclusion source from ticket frontmatter to the requirement itself — do not solve that problem here, but do not contradict it either."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "Source of the first input: resolve_connected_build_set (line 498) produces the connected set the reader must be bound to."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_no_commit_exists_for_the_run_when_the_reading_starts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In a real temp git tree, a fast-lane run is driven to the reading step and the branch's commit count is asserted unchanged from the pre-run baseline at that moment. Ordering asserted by observable git state, not by the position of a string in the workflow file."
+  - name: test_findings_name_the_resolved_requirement_and_the_changed_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A run over five resolved requirements with a planted defect yields a finding whose text contains the specific requirement id it relates to and the path of the file it was found in."
+  - name: test_reading_produces_findings_with_no_ticket_file_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The same planted defect is found with no ticket file anywhere in the tree. A reader wired to ticket frontmatter returns an empty or generic result here and fails."
+  - name: test_examinations_that_could_not_run_are_named_in_the_result
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The run's result enumerates, by name, each ticket-bound examination that was not performed. Asserts the list is non-empty when an examination is genuinely unavailable and that it is absent when all examinations ran — a reader that silently degrades produces neither."
+  - name: test_reading_phase_is_reached_by_the_real_command_surface
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: invoke /fast-lane-build's real workflow against a temp store and assert from the run's own recorded step outcomes that the reading step executed. A reading that is implemented but never dispatched passes every other test here."
+test_rationale: "This is the AC most exposed to the failure this repository exists to prevent, and the obvious test is the one that would ship it broken: asserting that a review phase is present in the lane passes on a phase whose every substantive mode is inert, which is phantom-done one level up and worse than no phase at all because it reads as coverage. The load-bearing assertions are therefore the no-ticket test (a frontmatter-bound reader cannot pass it) and the not-performed-examinations test (a silently degrading reader produces neither an examination nor a declaration, so it fails both halves). Ordering is asserted through real git state rather than by grepping the workflow for phase order, because the fast-lane runner has already once passed grep-only structural tests while never executing its gates (CLAUDE.md, 2026-07-22). The reachability test is separate because a correctly implemented reading that the workflow never dispatches is precisely that same defect wearing a different hat."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400g-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 2 OF BO-2400g, PART ONE OF THREE. This AC establishes that a reading happens
+  and that it is REAL. BO-2400g-3 adds the design half of the reading; BO-2400g-4
+  gives its findings a consequence. Keep them distinct: an implementation can satisfy
+  this AC with a code reading that halts nothing, and that is the intended increment.
+
+  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
+    - templates/workflows-js/fast-lane-ship.js: Coder at line 395, Commit at line 471,
+      Pull Request at line 539. Nothing between Coder and Commit. The ticket lane by
+      contrast runs pr-reviewer (priority 11), change-scope-reviewer,
+      user-surface-smoker (11.5), ac-validator (11.5), ac-fulfillment-gate (11.7),
+      live-surface-tester (11.8) and documentation-verifier (11.9) before commit (12).
+    - templates/agents/pr-reviewer.md: line 562 "Skip this section entirely if no
+      ticket_path was provided" (sign-off is conditional, so it CAN run ticketless);
+      line 193 "If '## Agent Contracts' is absent from the ticket body, skip the
+      contract trace"; Contract-Aware Mode at line 102 keys off that section; the
+      delivers_to/expects_from cross-file contract trace at line 136 keys off ticket
+      ACs; the completion_manifest and scope_verified check at line 517 compares the
+      change set against the ticket's files_touched.
+
+  WHY THE REQUIREMENT IS NOT "ADD A REVIEW PHASE". Every rich mode of the existing
+  reviewer is keyed to a ticket. On a lane with no ticket they all evaluate to "skip",
+  quietly, leaving a diff skim wearing the name of a review. A phase that is present
+  but inert is strictly worse than an absent one: the absent one is visible in the
+  phase list, the inert one reads as coverage. The fourth Then clause is the whole
+  point of this AC — an examination that cannot run must SAY SO in the result.
+
+  WHAT THE READING BINDS TO INSTEAD OF A TICKET. Both substitutes already exist in the
+  lane at the moment the reading would run: (1) the resolved connected requirement id
+  set — resolve_connected_build_set, scripts/build_orchestration/fast_lane.py:498,
+  surfaced to the workflow as batchIds; and (2) the working diff, which is by
+  definition present because the commit has not happened yet. Between them they cover
+  the substance of what the ticket supplied: what this work was supposed to be, and
+  what actually changed. Note that ticket files_touched has no direct equivalent — the
+  honest options are to derive an expected surface from the requirements themselves or
+  to declare that examination not performed. Both satisfy this AC; silently doing
+  neither does not.
+
+  DEPENDENCY DECISION — THIS AC DOES NOT DEPEND ON BO-2400g-1, DELIBERATELY.
+  They are independent protections attaching at different phases: g-1 acts before the
+  Test Writer phase (line 327) and shapes what is asked for; this AC acts between the
+  Coder (line 395) and Commit (line 471) and reads what was produced. Neither consumes
+  the other's output — the reading here binds to the resolved id set and the diff, not
+  to the test plan. Sequencing them would delay the protection the user asked for most
+  directly behind a planning-vocabulary change, for no technical reason. The one
+  genuine interaction is indirect and does not require an edge: once g-1 lands, the
+  diff this reading examines will contain a reachability test, which gives the reader
+  more to work with but changes none of its behaviour. Recorded explicitly so the IT
+  PO does not add the edge on aesthetic grounds.
+
+  DO NOT SOLVE THE SCOPE-BOUNDARY PROBLEM HERE. templates/agents/change-scope-reviewer.md
+  reads out_of_scope from ticket frontmatter, and ACD-1600g-3 is independently moving
+  that source to the requirement itself — its it_requirements already cite this very
+  lane ("the fast lane builds a single AC with no ticket file at all, so there is no
+  frontmatter to read") as the case that makes a frontmatter-only implementation
+  unsatisfiable. That work belongs to ACD-1600g. Here, scope adjudication is simply one
+  of the examinations that must either run from the resolved requirements or be named
+  as not performed.

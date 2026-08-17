@@ -1,0 +1,134 @@
+id: BO-2400g-3
+components:
+  - build_orchestration
+  - review_system
+title: "The fast lane's change is read for design problems, not only for local mistakes"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has built its work and the change is about to be read,
+  When the change is examined,
+  Then it is examined both for local mistakes inside a single piece of code and for
+    cross-cutting problems in how the change is shaped — the kind that are only
+    visible when the whole change is considered together,
+  And those two examinations are carried out by two separate readers, each asked for
+    by the run itself,
+  And neither reader obtains the other examination by asking a further reader on its
+    behalf,
+  And a change that contains a cross-cutting design problem but no local mistake is
+    still surfaced.
+depends_on: [BO-2400g, BO-2400g-2]
+doc_links:
+  - path: templates/skills/code-smell-review/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The existing fan-out and the source of the third Then clause. It states it runs 'in the top-level loop (not inside a sub-agent) so the parallel dispatch respects the depth-1 sub-agent limit'. A workflow's own dispatch is top-level, so the lane CAN ask for both readers; a review agent that tried to spawn them from inside itself cannot. That is a consequence for the shape of the solution, not an instruction about how to code it."
+  - path: templates/agents/find-design-smells.md
+    relationship: describes
+    status: exists
+    relevance: "The cross-cutting reader (six judgment-level Fowler smells: Global Data, Mutable Data, Feature Envy, Data Clumps, Primitive Obsession, Shotgun Surgery). It RETURNS findings rather than writing a file, so whatever asks for it must also carry its output onward."
+  - path: templates/agents/find-structural-smells.md
+    relationship: describes
+    status: exists
+    relevance: "The local reader (six mechanical smells: Mysterious Name, Duplicated Code, Long Function, Long Parameter List, Loops, Repeated Switches). Also returns findings rather than writing a file."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The run that must do the asking. Its phases sit between Coder (line 395) and Commit (line 471); today nothing occupies that space at all."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Standing constraint to respect: 'Exactly one test-writer and one coder agent per batch'. It caps the BUILD loop's agents, not the review step — but any implementation here should be able to state why the readers it adds do not contradict the lane's leanness claim. See the notes."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_cross_cutting_problem_with_no_local_mistake_is_surfaced
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A planted change that is locally clean but spreads one concept across four files yields a finding. This is the assertion a single generic 'review this diff' reader routinely fails while still producing plausible output."
+  - name: test_local_mistake_with_no_design_problem_is_surfaced
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The mirror case, run in the same suite so an implementation that only performs one of the two examinations cannot pass both."
+  - name: test_two_distinct_readers_are_asked_for_by_the_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "From the run's own recorded step outcomes, assert two separate reader requests were made by the run, not one request that internally covers both."
+  - name: test_both_sets_of_findings_survive_to_the_run_result
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: drive the real command surface over a change containing one planted problem of each kind and assert both appear in the run's final result. Because both readers return findings rather than writing a file, an implementation that asks for them and drops their output passes every dispatch-level test and delivers nothing."
+test_rationale: "Design review and code review are different capabilities, and the cheapest implementation — one reader told to 'look for problems' — produces convincing output while systematically missing the cross-cutting smells, because those require reasoning over the whole change rather than over the function in front of it. The discriminating test is therefore the locally-clean, structurally-spread change; its mirror is run in the same suite so a single-examination implementation fails one of the pair whichever one it chose. The survival test exists because both readers RETURN their findings instead of writing them anywhere, which makes 'asked for and then discarded' a silent, plausible outcome that every dispatch-counting test would call a pass."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  GAP 2 OF BO-2400g, PART TWO OF THREE. BO-2400g-2 establishes that a reading happens
+  and is substantive; this AC says what the reading must cover. It is separate because
+  design review is a separate CAPABILITY from code review, not a deeper setting of the
+  same one — the user's stated motivation for the whole L1 was that the review agent
+  "often finds stuff during code and design review that we did not find before", and
+  an implementation that adds only a code reader answers half of that.
+
+  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
+    - templates/agents/find-design-smells.md (Opus tier) covers six cross-cutting
+      Fowler smells; templates/agents/find-structural-smells.md (Sonnet tier) covers
+      six local ones. BOTH return findings rather than writing a file.
+    - They are normally fanned out by templates/skills/code-smell-review/SKILL.md,
+      which states it runs "in the top-level loop (not inside a sub-agent) so the
+      parallel dispatch respects the depth-1 sub-agent limit".
+
+  THE DEPTH CONSTRAINT, AS A CONSEQUENCE RATHER THAN AN INSTRUCTION. Sub-agents are
+  hard-limited to depth 1 in this system. A workflow's own dispatch is top-level, so
+  the LANE can ask for both readers; a reviewer agent that tried to obtain the second
+  opinion by spawning them from inside itself cannot — it would silently get nothing
+  back, which is the inert-phase failure BO-2400g-2 exists to prevent, reappearing one
+  level down. That is why the third Then clause is written as a property of the
+  outcome ("neither reader obtains the other examination by asking a further reader on
+  its behalf") rather than as "the workflow must dispatch them": the requirement is
+  that the examinations really happen, and the depth limit is the reason a delegating
+  design cannot deliver that.
+
+  TIER ASYMMETRY IS DELIBERATE UPSTREAM AND MUST NOT BE FLATTENED. The cross-cutting
+  reader is an Opus-tier agent because its smells need whole-target reasoning about
+  data flow, ownership and change locality; the local reader is Sonnet-tier. An
+  implementation that runs both at the cheap tier to protect the lane's cost story
+  satisfies the dispatch-shaped clauses and fails the first Then clause in practice.
+  Flagged for the IT PO rather than written into the criteria, because the criteria
+  must describe behaviour, not model selection.
+
+  TENSION WITH THE LANE'S LEANNESS CLAIM — RECORDED, NOT RESOLVED. BO-2400a-1 caps the
+  build loop at exactly one test-writer and one coder; BO-2400c/d exist to show the
+  lane is cheaper and faster. Adding two readers per run has a real cost, and the
+  honest framing is that BO-2400's L0 promises to drop ORCHESTRATION overhead, not
+  scrutiny — the same argument BO-2400e already makes for git discipline ("the fast
+  lane drops heavy agent orchestration, not git discipline"). If the measured cost
+  turns out to be unacceptable, that is a scoping decision for the user, not something
+  to be quietly resolved by making the readers shallower.
+
+  BOUNDARY. This AC says nothing about what happens to the findings — whether they
+  stop the run or ride along with it is BO-2400g-4. It also says nothing about the
+  five other phases the fast lane skips (ac-validator, ac-fulfillment-gate,
+  user-surface-smoker, live-surface-tester, documentation-verifier); those are recorded
+  as an open question in BO-2400g's notes and are explicitly out of scope.

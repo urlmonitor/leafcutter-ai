@@ -1,0 +1,139 @@
+id: BO-2400g-4
+components:
+  - build_orchestration
+  - review_system
+title: "What the reading finds decides the run: serious findings stop it before anything is committed, minor ones ride along"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run whose change has been read and the reading produced findings,
+  When the run decides whether to continue,
+  Then a finding that reports the change is incorrect, unsafe, loses data, or does
+    something none of the run's requirements asked for, stops the run before any
+    commit for it exists,
+  And a finding that reports a smell, a naming problem or a suggested improvement does
+    not stop the run,
+  And when the run is stopped this way there is no commit and no pull request for it,
+    and none of its requirements is left recorded as being worked on,
+  And the person is told which finding stopped the run, naming the requirement and the
+    file it relates to.
+depends_on: [BO-2400g, BO-2400g-2]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The halt path already exists and must be reused rather than reinvented: every phase has a release-on-failure pattern (see release-on-coder-fail at line 424), and Commit (line 471) / Pull Request (line 539) are the two steps that must not be reached on a stop."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10.yaml
+    relationship: related
+    status: exists
+    relevance: "Already owns 'On failure or abort, release the claim: in_progress -> todo so work is never stuck'. The third Then clause here is a CONSUMER of that behaviour, not a restatement of it — a review stop is simply another failure it must cover. Do not re-specify the release mechanism."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The lane's existing precedent for a gate refusing to reach commit staging ('Green gate refuses commit staging when the coder cannot make all tests pass'). The review stop should behave the same way from the operator's point of view; matching it is cheaper than inventing a second stop shape."
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "Source of the severity vocabulary the thorough path already uses when returning a blocker versus a comment. Reuse it rather than introducing a third scale."
+  - path: templates/skills/review-for-code-smells/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The severity rubric the two smell readers classify against. The advisory band in the second Then clause maps onto its lower severities; the mapping should be stated once, not re-derived per reader."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_serious_finding_stops_the_run_with_no_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In a real temp git tree, a run whose reading returns a correctness finding ends with the branch's commit count unchanged from the pre-run baseline and no pull request attempted."
+  - name: test_advisory_finding_does_not_stop_the_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The same harness with a naming/smell finding completes through commit. Run as a pair with the stop case so a gate that blocks on any finding at all cannot pass."
+  - name: test_stopped_run_leaves_no_requirement_recorded_as_being_worked_on
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "After a review stop, every requirement in the resolved set reads as not-started again in the real on-disk store — the existing release path was reused, not bypassed."
+  - name: test_stop_message_names_the_finding_the_requirement_and_the_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The operator-visible result of a stopped run contains the finding text, the requirement id and the file path. A bare 'review failed' fails this."
+  - name: test_review_stop_is_reached_on_the_real_command_surface
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: drive /fast-lane-build's real workflow end to end with a planted serious finding and assert from git state and the store that neither the commit nor the pull request step ran. A stop implemented in a helper that the workflow never consults passes every other test here."
+test_rationale: "A review that reports and proceeds is not a gate, and a gate that blocks on everything is a lane nobody will use — the two failure modes sit on either side of this AC, so the stop case and the advisory case must be asserted as a pair in the same harness; each alone is passed by one of the two broken implementations. The stop is asserted through observable git and store state rather than through a returned status value, because the specific defect this repo has already shipped is a gate whose result was computed and then not consumed in control flow (CLAUDE.md, fast-lane precedent 2026-07-22) — a returned 'blocked' that the workflow ignores would satisfy a status-level assertion while the commit lands anyway. The store assertion is separate from the git assertion because stopping without releasing the claim leaves the requirements permanently unbuildable, which is a worse outcome than the finding that caused the stop."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400g-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 2 OF BO-2400g, PART THREE OF THREE. BO-2400g-2 makes the reading real and
+  BO-2400g-3 makes it cover design as well as code; without this AC both are advice.
+  A review that reports and proceeds is not a gate, and the user's motivation for the
+  whole L1 — the reviewer "often finds stuff during code and design review that we did
+  not find before" — is only served if what it finds can actually stop a bad change
+  from being committed.
+
+  THE SEVERITY SPLIT IS DECIDED HERE, NOT LEFT OPEN. Two bands, deliberately coarse:
+    - STOPS THE RUN: the change is incorrect, unsafe, loses data, or does something
+      none of the run's requirements asked for. The last of those is the scope case —
+      it is the one band member that is not about code quality at all, and it is
+      included because on this lane the resolved requirement set is the only statement
+      of intent that exists.
+    - RIDES ALONG: smells, naming, suggested improvements — everything that is a
+      judgement about how the code could be better rather than a claim that it is
+      wrong.
+  A third, finer scale must not be invented: templates/agents/pr-reviewer.md already
+  returns blockers versus comments, and templates/skills/review-for-code-smells/SKILL.md
+  already defines a severity rubric the two smell readers classify against. Map onto
+  those once, in one place.
+
+  REUSE THE HALT PATH, DO NOT BUILD A SECOND ONE. Verified 2026-08-17: the lane has a
+  release-on-failure pattern for every phase (release-on-coder-fail,
+  templates/workflows-js/fast-lane-ship.js:424), and BO-2400f-10 already owns "on
+  failure or abort, release the claim: in_progress -> todo so work is never stuck".
+  A review stop is just another failure on that path. The third Then clause is written
+  as a consumer of that behaviour on purpose — if it is implemented as a bespoke
+  unwind, the two paths will drift and one of them will stop releasing claims.
+  BO-2400a-4-i is the closest existing precedent for the operator-facing shape of a
+  refusal ("Green gate refuses commit staging when the coder cannot make all tests
+  pass"); match it rather than inventing a new one.
+
+  DEPENDENCY. depends_on BO-2400g-2 rather than BO-2400g-3: the consequence ladder
+  needs findings to exist, which g-2 establishes, and it applies unchanged to the
+  design findings g-3 adds. Sequencing this behind g-3 would mean the lane can produce
+  serious findings for a whole release cycle without being able to act on them.
+
+  THE THIRD STATE IS NOT IN THIS AC'S LADDER BY ACCIDENT. BO-2400g-2-i defines a
+  reading that did not happen as distinct from a clean one. Whether an unperformed
+  reading should stop the run is a real question and is deliberately NOT answered here
+  — this AC's ladder is about findings, and an unperformed reading produces none. Raise
+  it with the user when this tree is approved: the conservative answer (treat an
+  unperformed reading as a stop) is a policy decision with a cost, not a defect fix.
+
+  OUT OF SCOPE. Whether the pull request itself should carry the findings that did NOT
+  stop the run is BO-2400g-4-i.
