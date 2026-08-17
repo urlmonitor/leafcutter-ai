@@ -57,7 +57,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/BP-900a-2]: Added
+# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/03]: Added
 #   this thin-delegator template source for the top-level
 #   <output_root>/scripts/goal_to_epic.py deploy target and its
 #   <target>/scripts/goal_to_epic.py shim. Deliberately NOT a verbatim copy
@@ -67,5 +67,5 @@ if __name__ == "__main__":
 #   at <output_root>/scripts/ac_store/goal_to_epic.py (deployed by
 #   build_ac_store). This delegator imports that sibling module's main() and
 #   forwards argv, so both deploy locations always run identical logic.
-#   (#BP-900a-2)
+#   (#EPIC-DeploymentCompleteness/03)
 # ====================================================================

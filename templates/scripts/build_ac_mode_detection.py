@@ -138,12 +138,12 @@ def detect_ac_mode(ac_id: str, level: str, covered_by: list | None) -> dict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/BP-900a-2]: Added
+# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/03]: Added
 #   this file as the tracked template source for the top-level
 #   <output_root>/scripts/build_ac_mode_detection.py deploy target and its
 #   <target>/scripts/build_ac_mode_detection.py shim. Header-normalized copy
 #   of scripts/build_ac_mode_detection.py (detect_ac_mode logic unchanged) —
 #   small enough (118 lines) to duplicate safely without breaching the
 #   400-line file-size limit, unlike the sibling goal_to_epic.py which uses a
-#   thin-delegator pattern instead. (#BP-900a-2)
+#   thin-delegator pattern instead. (#EPIC-DeploymentCompleteness/03)
 # ====================================================================
