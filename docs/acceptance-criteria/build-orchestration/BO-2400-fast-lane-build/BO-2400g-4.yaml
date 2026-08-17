@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -102,10 +102,17 @@ test_rationale: "A review that reports and proceeds is not a gate, and a gate th
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect (true — a stop releases claims in the on-disk store), list-form it_requirements, delivers_to (two entries: the advisory subset for BO-2400g-4-i, and the release contract) and expects_from pairing to BO-2400g-2. test_spec unchanged. criteria and title untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect
+    (true — a stop releases claims in the on-disk store), list-form it_requirements,
+    delivers_to (two entries: the advisory subset for BO-2400g-4-i, and the release
+    contract) and expects_from pairing to BO-2400g-2. test_spec unchanged. criteria
+    and title untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by:
   - BO-2400g-4-i

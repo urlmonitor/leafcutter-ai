@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -108,10 +108,19 @@ test_rationale: "This is the AC most exposed to the failure this repository exis
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect, list-form it_requirements, delivers_to (two entries, defining the review-result contract reused by g-3/g-4/g-4-i) and expects_from (BO-2400f-1 resolved set), plus one doc_link to the workflow test harness. No depends_on edge to BO-2400g-1 was added, per this AC's explicit instruction. test_spec entries unchanged except that the reachability entry's description now names the harness and the meta.phases prohibition. criteria and title untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect,
+    list-form it_requirements, delivers_to (two entries, defining the review-result
+    contract reused by g-3/g-4/g-4-i) and expects_from (BO-2400f-1 resolved set),
+    plus one doc_link to the workflow test harness. No depends_on edge to BO-2400g-1
+    was added, per this AC's explicit instruction. test_spec entries unchanged except
+    that the reachability entry's description now names the harness and the meta.phases
+    prohibition. criteria and title untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by:
   - BO-2400g-2-i

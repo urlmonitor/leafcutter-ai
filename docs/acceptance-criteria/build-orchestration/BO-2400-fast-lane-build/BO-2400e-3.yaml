@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -117,10 +117,18 @@ test_rationale: "The obvious test — update a record and assert the new value i
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by config/ac_store_schema.json's root if/then for python-coder + build-orchestration; policy constraints ride the schema-permitted `constraints` key), and delivers_to. Extended test_spec by one deployed-angle entry; the BA's four entries are unchanged. criteria and title untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (python-coder), estimated_complexity, declares_side_effect,
+    it_requirements (package-surface object form mandated by config/ac_store_schema.json's
+    root if/then for python-coder + build-orchestration; policy constraints ride the
+    schema-permitted `constraints` key), and delivers_to. Extended test_spec by one
+    deployed-angle entry; the BA's four entries are unchanged. criteria and title
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by:
   - BO-2400e-3-i

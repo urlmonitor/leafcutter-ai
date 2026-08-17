@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -93,10 +93,17 @@ test_rationale: "Design review and code review are different capabilities, and t
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect, list-form it_requirements (including the tier-asymmetry constraint the BA flagged for the IT PO rather than writing into the criteria), delivers_to and expects_from pairing to BO-2400g-2. test_spec entries unchanged except that two descriptions now name the harness and the meta.phases prohibition. criteria and title untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect,
+    list-form it_requirements (including the tier-asymmetry constraint the BA flagged
+    for the IT PO rather than writing into the criteria), delivers_to and expects_from
+    pairing to BO-2400g-2. test_spec entries unchanged except that two descriptions
+    now name the harness and the meta.phases prohibition. criteria and title untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []

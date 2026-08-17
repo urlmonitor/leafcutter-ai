@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -101,10 +101,16 @@ test_rationale: "The dangerous outcome here is not the failure, it is the build 
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent (python-coder), estimated_complexity, declares_side_effect, it_requirements (package-surface object form mandated by the schema's root if/then; policy constraints under `constraints`), and expects_from pairing to BO-2400e-3. test_spec unchanged. criteria and title untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (python-coder), estimated_complexity, declares_side_effect,
+    it_requirements (package-surface object form mandated by the schema's root if/then;
+    policy constraints under `constraints`), and expects_from pairing to BO-2400e-3.
+    test_spec unchanged. criteria and title untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []
