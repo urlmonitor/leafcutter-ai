@@ -1,7 +1,7 @@
 id: BO-1500a-5-ii
 components:
   - build_orchestration
-readiness: draft
+readiness: approved
 priority: high
 title: "A confirmation naming the invoking checkout, or a directory that is not a separate working copy, is rejected"
 component: build-orchestration
@@ -47,6 +47,38 @@ delivers_to: null
 expects_from:
   ac_id: BO-1500a-5
   contract: "The named workspace directory and branch this validation is applied to"
+test_spec:
+  - name: test_a_real_separate_worktree_is_accepted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Creates a genuine second worktree of a fixture repository, has the setup step name it, and asserts the confirmation is accepted and the first authoring agent is dispatched. Positive control — without it a validator that rejects everything passes the whole block."
+  - name: test_confirmation_naming_the_invoking_checkout_is_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Has the setup step name the very directory the run was invoked from — the exact shape of the collision incident — and asserts the run halts before any authoring agent is dispatched."
+  - name: test_equivalent_spelling_of_the_invoking_checkout_is_still_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Names the invoking checkout by a different but equivalent path — via a symlink and via a path containing relative segments — and asserts both are still rejected. A textual path comparison passes the previous test and fails this one, which is the only way to tell the two implementations apart."
+  - name: test_existing_directory_not_registered_as_a_worktree_is_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Names a directory that exists on disk but that the repository does not list as a separate working copy, and asserts the run halts. Guards against a setup step that merely created a folder."
+  - name: test_nonexistent_directory_is_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Names a path that does not exist and asserts the run halts."
+  - name: test_each_halt_names_which_of_the_three_checks_failed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Across the three rejection cases, asserts each halt identifies the failing check (exists / registered_as_worktree / differs_from_invoking_checkout) and that the three identifications are pairwise distinct, so a constant message cannot satisfy the requirement."
+test_rationale: "These tests build real git worktrees rather than stubbing the worktree listing, because the property under test is agreement between what the workflow believes about a directory and what git actually reports — a mock of the listing would encode the implementation's own assumption and prove nothing. The equivalent-spelling test is the load-bearing one: the constraint calls out resolved-path comparison specifically, and a naive string compare is indistinguishable from a correct implementation on every other case in this block. The positive control is required because five of the six cases are rejections."
 origin_agent: business-analyst
 created: 2026-08-14
 amended_by: []
