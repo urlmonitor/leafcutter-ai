@@ -1,0 +1,91 @@
+id: GE-120e-1-i
+title: "An empty authored change set is inspected as empty, never widened back to the whole staged tree"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a commit in which the author wrote nothing of their own — every line of the staged
+    tree is identical to one of the states the commit is built on, and the carried-in work
+    contains content a check objects to,
+  When a check that works out its own change set runs on that commit,
+  Then the change set it inspects is empty, it raises no objection, and the commit is not
+    blocked,
+  And it does not fall back to the whole staged tree on finding the change set empty,
+  And an empty change set is reported as "nothing of the author's to inspect" and is
+    distinguishable in the output from the could-not-check outcome GE-120a-1 defines, so a
+    reader can tell a commit with nothing to inspect from a check that never looked.
+
+  Coverage note: the fallback clause is the load-bearing one and it fails silently — an
+  implementation that treats an empty change set as "no filter applied" reproduces the
+  original defect exactly on the one commit shape where the narrowing matters most, and
+  every other test in this tree still passes. Cover it by executing the check as a process
+  against a repository in that state and asserting no objection is raised, with the
+  carried-in content present in the staged tree and known to trip that check.
+depends_on:
+  - GE-120e-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/check_contract_shrinking.py
+    relationship: related
+    status: exists
+    relevance: "The natural subject for the fixture — it objects to deletions under unit_tests/, tests/, templates/ and scripts/, all of which a clean mainline merge can carry in without the author touching one."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE NAMED ANTI-PATTERN. There must be no branch anywhere in the shared source or in any consuming check of the form 'if the narrowed set is empty, use the staged diff'. An empty authored change set is a value, not a signal to widen. This is the single load-bearing constraint of this AC and it is the one that reads like defensive programming to a reviewer, so state it in the implementation as a comment tied to this AC id."
+  - "EMPTY MUST BE AN EXPLICIT STATE, NOT AN ABSENCE. The shared source must return an explicitly represented empty result that consumers can distinguish from 'no derivation was made'. Two Python falsy values that both mean 'nothing here' will collapse under the first refactor and reinstate the widening."
+  - "REUSE GE-120a-1'S OUTPUT VOCABULARY FOR THE DISTINCTION. Do not define a second vocabulary for reader-facing outcomes. If a new token is needed to say 'nothing of the author's to inspect', add it to GE-120a-1's vocabulary and record that decision on this AC rather than inventing a parallel one here — the AC notes make this an explicit instruction, not an option."
+  - "EMPTY IS A PASS, NOT A SKIP. Exit status must be success and the commit must proceed. Reporting the empty case as a skip re-reads as 'this check did not run', which is precisely the GE-120a false negative this L1 must not trade itself for."
+  - "TEMPLATE/DEPLOYED PARITY (ADR-001): verify in the deployed layout, not only the source tree. Run build.py and execute the deployed check — a clean auto-merge is the commonest shape of the observed case and it must be exercised where the commit path actually runs."
+test_spec:
+  - name: test_ge120e1i_clean_automerge_with_no_authored_content_is_not_blocked
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "check_contract_shrinking, run as a process on a merge with zero authored content and carried-in test deletions staged, exits clean."
+  - name: test_ge120e1i_empty_change_set_does_not_fall_back_to_the_staged_tree
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Carried-in content known to trip the check is present in the staged tree and is named nowhere in the check's output — the widening fallback is absent."
+  - name: test_ge120e1i_empty_outcome_is_distinguishable_from_could_not_check
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The 'nothing of the author's to inspect' outcome and GE-120a-1's could-not-check outcome produce different reader-facing text in the same run."
+test_rationale: "The fixture is the whole point and it is one no other test in this tree has: a staged tree with ZERO authored content. Every other GE-120e test carries authored content, so all of them stay green against an implementation that widens an empty change set back to the staged diff — the exact defect reinstated, aimed at the commonest shape of the observed case. That can only be caught by executing the check as a process against a repository standing in that state and observing that content known to trip the check goes unmentioned; a direct-import test of the shared source proves the helper returns empty, not that the check declined to widen it."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-1
+  contract: "The shared authored-change source, whose empty result this AC pins down."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FAILURE MODE THIS EXISTS FOR is an emptiness guard written as a convenience: "if the
+  narrowed set came back empty, use the staged diff" reads like defensive programming and is
+  the whole defect reinstated, aimed precisely at the clean auto-merge — the most common
+  shape of the observed case. It cannot be caught by any test whose fixture has authored
+  content in it, which is every other test in this L1.
+
+  AXIS GUARD. The last clause touches GE-120a-1 deliberately and does not re-derive it.
+  GE-120a-1 owns what a check says when it could not look; this clause owns only that the
+  two outcomes are told apart, because a narrowing that reports "nothing to inspect" in the
+  same words as "could not inspect" would trade a false positive for the false negative
+  GE-120a exists to close. If the implementation of that distinction turns out to belong in
+  GE-120a-1's output vocabulary, say so rather than defining a second vocabulary here.

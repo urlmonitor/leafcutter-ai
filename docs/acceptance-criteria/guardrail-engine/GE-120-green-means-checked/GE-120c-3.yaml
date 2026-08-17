@@ -1,0 +1,110 @@
+id: GE-120c-3
+title: "Every registered check is exercised by the harness, and a new check cannot opt out by omission"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the guardrail engine's hook manifest, which lists every check it installs,
+  When the harness sweep runs,
+  Then the set of checks it actually exercised is compared against the manifest,
+  And any check present in the manifest with no harness case is reported by name as uncovered,
+  And the sweep reports a failure when any manifest check is uncovered,
+  And adding a new check to the manifest without a harness case therefore fails the sweep
+    rather than passing silently,
+  And a harness case naming a check that is not in the manifest is also reported, so the sweep
+    cannot be satisfied by exercising a check that is no longer installed.
+
+  Coverage note: exercise this by adding an entry to a manifest fixture with no matching
+  harness case and asserting the sweep names it and fails. A test asserting that the current
+  manifest is fully covered passes forever and catches nothing on the day check nineteen is
+  added — which is the day this AC exists for.
+depends_on:
+  - GE-120c
+  - GE-120c-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "hooks_manifest.hooks[] is the registry that must be the source of the expected set — 54 entries today, 48 judgment and 6 transform."
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "The expected set is read AT RUN TIME from templates/scripts/commit_guardian/commit_guardian.json -> hooks_manifest.hooks[] (54 entries today). Never a hand-maintained id list. This is the same rule GE-120a-2-i applies to dispositions, and the reason both ACs exist: a family-wide rule that is not mechanically checked against the family's own registry decays one addition at a time."
+  - "COMPARE IN BOTH DIRECTIONS and report each by name: (a) a manifest entry with no harness case is UNCOVERED; (b) a harness case naming a check absent from the manifest is a GHOST. The second guards the other drift direction — a case list that has outlived the checks it names is a sweep that looks thorough and exercises ghosts."
+  - "Uncovered or ghost implies the sweep FAILS. A warning is insufficient; coverage that only warns is a convention, not a rule."
+  - "EXERCISE WITH A MANIFEST FIXTURE containing an entry that has no harness case. A test asserting the current 54 entries are all covered passes forever and catches nothing on the day check 55 is added, which is the day this AC exists for."
+  - "Transform-tier entries (6 today) and the direct-invocation entry (precommit-canary, which does not go through run_hook.py) are in the manifest and therefore in the expected set. If any entry is genuinely not sweepable, the exemption must be DATA-DRIVEN from a property of the entry — for example a declared marker or the tier value — never a hard-coded id, or check 55 inherits the exemption by resemblance."
+  - "Expose the comparison as a CALLABLE, not as an assertion buried inside one test: GE-120b-4's parity sweep consumes this as its completeness guarantee and must not reimplement it. Two independent completeness rules will disagree, and the disagreement will be resolved by whichever is quieter."
+  - "This comparison is also what GE-120c-1-i's exercised-count clause is measured against — the count is meaningful only relative to the manifest set, not to a constant."
+test_spec:
+  - name: test_ge120c3_uncovered_manifest_check_named_and_sweep_fails
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A manifest fixture entry with no harness case is reported by name as uncovered and the sweep fails."
+  - name: test_ge120c3_ghost_harness_case_reported
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A harness case naming a check absent from the manifest is reported, so the sweep cannot be satisfied by exercising an uninstalled check."
+  - name: test_ge120c3_expected_set_derived_from_manifest_not_a_list
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    description: "Adding an entry to the manifest fixture changes the expected set with no change to the harness code — the set is read, not hard-coded."
+  - name: test_ge120c3_new_manifest_entry_without_a_case_fails_the_sweep
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Registering a new check without adding a harness case fails the sweep rather than passing silently."
+test_rationale: "A test asserting that today's manifest is fully covered passes forever and cannot fail on the day a new check is added without a case — which is the only day this AC matters. Coverage therefore requires a manifest FIXTURE carrying the omission, exercised in both drift directions. Asserting the current state would be the same class of always-green assertion this whole tree exists to eliminate."
+delivers_to:
+  agent: python-coder
+  contract: "A manifest-to-harness coverage comparison that GE-120b-4's parity sweep consumes as its completeness guarantee."
+expects_from:
+  ac_id: GE-120c-1
+  contract: "The harness's record of which checks it exercised."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE ANTI-REGRESSION CLAUSE FOR THE WHOLE TREE. GE-120c is, in the PO's framing, "the reason
+  the other three do not quietly come back." This is the AC that carries that weight: without
+  it, GE-120a and GE-120b hold for the eighteen checks that exist on the day they land and for
+  none that arrive afterwards.
+
+  Note the symmetry with GE-120a-2-i. That AC stops a new check omitting its cannot-run
+  disposition; this one stops a new check omitting its parity coverage. Both are the same
+  insight applied at different layers — a family-wide rule that is not mechanically checked
+  against the family's own registry decays one addition at a time. The registry, not a
+  hand-maintained list, must be the source of the expected set in both.
+
+  The final clause guards the other drift direction: a harness whose case list has outlived
+  the checks it names is a sweep that looks thorough and exercises ghosts.
+
+  IT-PO (2026-08-14): the manifest holds 54 entries, and two of its shapes need explicit
+  handling — the 6 transform-tier entries and precommit-canary's direct invocation. Any
+  exemption must derive from an entry property, never an id. Expose the comparison as a
+  callable so GE-120b-4 consumes it rather than reimplementing it.

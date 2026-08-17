@@ -1,0 +1,135 @@
+id: GE-120e-2
+title: "Which checks work out their own change set is read from the manifest, not from the two that were caught"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the guardrail engine's hook manifest, which lists every check it installs,
+  When the set of checks that work out their own change set is determined,
+  Then the candidate set is every entry in the manifest, read at the time of the
+    determination,
+  And each entry records where its change set comes from — handed to it by the commit path,
+    or taken from the shared authored-change source — as a value on the entry itself,
+  And membership is decided from that recorded value, never from a list of check names
+    written down by hand and never from the two checks observed misattributing,
+  And every check recorded as taking its own change set takes it from the shared source,
+  And a check recorded as taking its own change set that obtains it by any other means is
+    named and the determination reports a failure.
+
+  Coverage note: exercise this against a manifest fixture, not against today's manifest. A
+  test asserting that the checks registered today all take the shared source passes forever
+  and cannot fail on the day the next self-deriving check is added, which is the day this AC
+  exists for. Execute the determination and assert on the names it reported and the result
+  status it produced.
+depends_on:
+  - GE-120e
+  - GE-120e-1
+doc_links:
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "hooks_manifest.hooks[] is the registry the candidate set is read from, and the entry is where the change-set source is recorded. Note that pass_filenames is NOT the discriminator — almost every entry carries pass_filenames: false, while only a few actually compute a diff, so the source must be recorded rather than inferred."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "WHERE THE FIELD GOES. One new key per entry of hooks_manifest.hooks[] in templates/scripts/commit_guardian/commit_guardian.json. build_commit_guardian() deploys that manifest TWICE — to scripts/commit_guardian/commit_guardian.json (the runner's copy) and to config/commit_guardian/commit_guardian.json (the authoritative copy). Both are generated from the one template: edit the template only, then run build.py and confirm both deployed copies carry the field."
+  - "PASS_FILENAMES IS NOT THE DISCRIMINATOR AND MUST NOT BE USED AS ONE. 52 of the 54 entries in today's manifest carry pass_filenames: false while only a handful derive a diff at all. A predicate built on it sweeps in dozens of checks with no change set to narrow and still misses a check that is handed filenames and derives a diff anyway. The source is a declared value, full stop."
+  - "EVERY ENTRY MUST CARRY THE FIELD; ABSENT IS NOT A DEFAULT. An entry with no recorded source is a determination FAILURE, so the next hook added without one is blocked when it is added rather than silently classified. Defaulting the field is the same decay this AC exists to stop, one release later."
+  - "DO NOT BREAK THE MANIFEST'S EXISTING CONSUMERS. scripts/build_precommit.py generates .pre-commit-config.yaml from these entries and templates/scripts/commit_guardian/check_hook_parity.py compares the generated config back to the manifest. After adding the key, run build.py and confirm .pre-commit-config.yaml is unchanged apart from intended edits, and that check-hook-parity still passes."
+  - "THE DETERMINATION MUST ACCEPT AN EXPLICIT MANIFEST PATH AND HONOUR IT. Without that, this AC's own coverage note — exercise against a fixture manifest, not today's — is untestable. This repository has a recorded history of AC hooks that ignore argv and read only the installed artefact, which makes them fail open and impossible to exercise; do not repeat it."
+  - "REUSE GE-120c-3'S MANIFEST-READING CALLABLE. Two manifest readers will disagree and the disagreement will be settled by whichever is quieter. One reader, two questions."
+  - "DO NOT HARD-CODE THE ENTRY COUNT ANYWHERE — not in the code, not in a test, not in a docstring. It was 54 when this AC was written and moves with every addition; a pinned number fails for the wrong reason and gets edited to match rather than investigated."
+  - "FAILURE OUTPUT NAMES THE OFFENDERS. The determination exits non-zero and names each check whose recorded source is missing or contradicted, not just a count."
+  - "LATENCY BUDGET. This runs at commit time. A full manifest pass must complete in under 200 ms and must not spawn a subprocess per entry."
+test_spec:
+  - name: test_ge120e2_candidate_set_is_read_from_the_manifest_at_run_time
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Run against a fixture manifest, the determination's candidate set is exactly that fixture's entries — no hand-written check list."
+  - name: test_ge120e2_recorded_source_decides_membership_not_pass_filenames
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A fixture entry with pass_filenames false but a recorded handed-its-files source is excluded from the governed set."
+  - name: test_ge120e2_entry_with_no_recorded_source_is_named_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A fixture entry missing the field makes the determination report a failure naming that entry — absent is not a default."
+  - name: test_ge120e2_self_deriving_entry_not_using_the_shared_source_is_named_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A fixture entry recorded as self-deriving whose check obtains its change set by other means is named and the determination exits non-zero."
+  - name: test_ge120e2_determination_honours_an_explicit_manifest_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Given a fixture manifest path the determination reads that file and not the installed manifest — the fail-open argv trap is absent."
+  - name: test_ge120e2_result_is_independent_of_the_number_of_manifest_entries
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Fixtures with different entry counts produce correct results — no count is hard-coded."
+  - name: test_ge120e2_added_field_leaves_precommit_config_generation_and_hook_parity_intact
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "With the new per-entry key present, build_precommit produces the same .pre-commit-config.yaml and check_hook_parity still agrees."
+test_rationale: "The manifest fixture is the criterion, not a convenience: a test run against today's manifest asserts that the checks registered today are correctly recorded, which is true on the day it is written and can never fail on the day the next self-deriving check is added — the day this AC exists for. So every case drives the determination with an explicit fixture manifest path, which is also why 'honours the path it is given' is itself a test: this repository has shipped AC hooks that ignored argv and read the index instead, and such a determination is both fail-open and unexercisable. The last case is a regression guard rather than a criterion clause — adding a key to hooks_manifest.hooks[] feeds two other generators, and a green determination beside a corrupted .pre-commit-config.yaml would disable the whole hook family."
+delivers_to:
+  agent: test-writer
+  contract: "The manifest-derived list of self-deriving checks, which GE-120e-3 runs its differential pair over."
+expects_from:
+  ac_id: GE-120e-1
+  contract: "The shared authored-change source that a recorded self-deriving check must be taking its change set from."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120e-2-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE SURFACE-SIZING AC, and the reason this L1 is not two point patches. The PO named two
+  checks and then explicitly told the BA to enumerate from the manifest instead — this AC is
+  that instruction made mechanical. Fixing the two observed checks leaves every other
+  self-deriving check blaming the wrong author, and leaves the next one to inherit the flaw.
+
+  WHY THE SOURCE IS RECORDED RATHER THAN DETECTED. The obvious shortcut is to treat
+  pass_filenames: false as "derives its own diff". It is not: the manifest carries fifty-two
+  entries with pass_filenames: false and only a handful of them compute a diff at all — most
+  simply scan the tree. A predicate built on pass_filenames would sweep in dozens of checks
+  that have no change set to narrow and would still miss a check that is handed filenames
+  and derives a diff anyway. Recording the source on the entry is the same move GE-120a-2
+  makes for the cannot-run disposition, for the same reason: a family-wide property that is
+  inferred rather than declared is wrong for some member on day one.
+
+  DO NOT hard-code the manifest's current entry count anywhere. It was 54 when this AC was
+  written and it moves with every addition; a test pinned to the number fails for the wrong
+  reason and gets edited to match rather than investigated.
+
+  RELATION TO GE-120c-3 — same shape, different registry question, no overlap. GE-120c-3
+  asks whether every manifest check is EXERCISED by the harness. This one asks where each
+  manifest check gets its CHANGE SET. Reuse GE-120c-3's manifest-reading callable rather
+  than writing a second manifest reader; two readers will disagree and the disagreement will
+  be settled by whichever is quieter.

@@ -39,10 +39,10 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Documents the back-link protocol this check enforces; amended by ACS-1200a-3."
-  - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119b.yaml
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120b.yaml
     relationship: related
     status: exists
-    relevance: "SEQUENCING HAZARD. GE-119b makes this same check run reliably in every working copy. Landing GE-119b first, while the check still enforces the uncorrected rule, blocks every parked idea MORE consistently. This AC must land before GE-119b or in the same release."
+    relevance: "SEQUENCING HAZARD. GE-120b makes this same check run reliably in every working copy. Landing GE-120b first, while the check still enforces the uncorrected rule, blocks every parked idea MORE consistently. This AC must land before GE-120b or in the same release."
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
@@ -104,7 +104,7 @@ test_spec:
     description: "After build.py, the hook executed from the deployed .leafcutter/ path via run_hook.py produces the same two verdicts as the source copy — no ModuleNotFoundError, no fail-open fallback taken."
 delivers_to:
   agent: python-coder
-  contract: "A parked-aware parent-back-link check. ORDERING CONTRACT: must land before, or in the same release as, GE-119b — GE-119b increases how reliably this check runs, so shipping it first amplifies the wrong rule."
+  contract: "A parked-aware parent-back-link check. ORDERING CONTRACT: must land before, or in the same release as, GE-120b — GE-120b increases how reliably this check runs, so shipping it first amplifies the wrong rule."
 expects_from:
   ac_id: ACS-1200a-1
   contract: "The parked / parked_reason field pair on the parent record, and the rule that a record with an empty covered_by and no marker is not parked"
@@ -124,17 +124,17 @@ notes: |
   The core behaviour change. The differential clause (marker removed => six
   violations) is not decoration: it is what separates "the check passed because
   the tree is recognised" from "the check passed because it never ran", which is
-  exactly the failure GE-119 exists to close. Without it a fail-open regression
+  exactly the failure GE-120 exists to close. Without it a fail-open regression
   in this check would read as a green result for this AC.
 
   The grep-only exclusion is repo convention (CLAUDE.md, "Gate / Workflow ACs —
   Verify Behaviorally, Not by Grep"): a structural test asserting the exemption
   branch exists passes on dead code.
 
-  SEQUENCING WITH GE-119b — recorded here because it belongs on the AC that
+  SEQUENCING WITH GE-120b — recorded here because it belongs on the AC that
   changes the rule. The reciprocal link cannot be written from this tree
-  (GE-119b is authored in the guardrail-engine tree); the IT PO or the
-  coordinator should add the matching ordering note to GE-119b, or land both in
+  (GE-120b is authored in the guardrail-engine tree); the IT PO or the
+  coordinator should add the matching ordering note to GE-120b, or land both in
   one release.
 
   IT-PO ENRICHMENT (2026-08-14). Verified ground truth carried into
