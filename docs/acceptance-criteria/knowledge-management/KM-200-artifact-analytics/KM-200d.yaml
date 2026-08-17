@@ -1,0 +1,43 @@
+id: KM-200d
+title: "Spot what is piling up faster than you can clear it"
+component: knowledge-management
+components:
+  - knowledge_management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  See which kinds of work are outrunning your ability to finish them.
+
+  For each kind of thing the project produces you can see how what is arriving
+  compares with what is being finished, and which way that comparison is moving
+  over time — so a class of work that is steadily accumulating is called out while
+  it is still a trend, instead of being discovered months later as a pile.
+depends_on:
+  - KM-200
+doc_links: []
+documentation_triggers: []
+documentation_rationale: >-
+  No new procedure or component — this is a comparison derived from the figures
+  KM-200b already produces, shown on the view KM-200e specifies and documented by
+  its how-to.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Idea stub — covered_by deliberately empty (see KM-200 notes). Deliberately
+  carries NO numeric thresholds and no "what to do about it" rule: picking a
+  cut-off needs the real distributions from KM-200b, which do not exist yet. This
+  is the same measure-before-decide boundary BO-2800 holds between its measurement
+  and verdict children; if a decide layer is wanted here later it should be a
+  sibling L1, not smuggled into this one.

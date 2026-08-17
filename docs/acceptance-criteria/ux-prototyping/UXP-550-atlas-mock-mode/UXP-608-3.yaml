@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a non-production (dev or preview) deployment that is unlocked and has NOT set an explicit
     override opt-in,

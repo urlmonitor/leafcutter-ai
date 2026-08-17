@@ -6,9 +6,9 @@ description: Specialist for creating new SQL functions. Produces the .sql file, 
   paths, how-tos, and conventions. (internal — invoked by parent agents only)
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # sql-function-creator
 

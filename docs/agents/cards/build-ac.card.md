@@ -12,9 +12,9 @@ description: 'Entry-point coordinator for the AC-to-ticket-to-build pipeline. Fi
   /build-feature manually. See ADR-006-flatten-supervisor-chain.md.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # build-ac
 
@@ -86,7 +86,7 @@ flowchart TD
 | Name | Type | Description |
 |------|------|-------------|
 | `ticket_path` | file_path | Path to the generated ticket file (single-ticket path); absent on epic-generation path |
-| `epic_path` | file_path | Path to the generated epic folder (goal-AC path); absent on single-ticket path |
+| `epic_path` | file_path | Path to the generated epic folder (goal-AC path or multi-member connected-set path via Step 2b.3); absent on single-ticket path |
 | `user_prompt` | structured_response | Confirmation prompt shown to the user: AC id, title, priority, and build instruction |
 ---
 
@@ -119,3 +119,4 @@ flowchart TD
 | Depth-Cap Constraint | User or workflow attempts to call /build-feature inline | Refuses — outputs the ticket path and instructs the user to invoke /build-feature manually to avoid violating depth-1 sub-agent hard limit (ADR-006) | `None` |
 | Skip Loop Guard | More than 3 consecutive ACs are skipped in a single session | Stops looping and asks the user to investigate whether the AC store is in a consistent state | `None` |
 | Goal-AC Epic Path | detect_ac_mode returns mode: goal (covered_by non-empty, level L0/L1) | Switches to epic-generation path via goal_to_epic.py; does not call generate_ticket_from_ac.py | `None` |
+| Multi-Member Connected Set Epic Path | Step 2b.1 select_connected returns more than one AC id for a leaf AC | Routes to dependency-ordered epic-generation path via goal_to_epic.py --ids (comma-separated id string, single argument) rather than generating a single ticket; every member of the connected set appears as a ticket in the epic folder; dependency cycles are drained upstream by fast_lane.resolve_connected_build_set before the ids reach goal_to_epic (CyclicDependencyError from goal_to_epic is a defensive backstop surfaced as a Stop-and-Ask error); --dry-run is honored by skipping the goal_to_epic --ids call and printing a summary (--ids mode does not implement dry-run); Step 3 prompt adapts to epic form | `None` |

@@ -36,8 +36,8 @@ HOOK SHIM INSTALL: After worktree creation both subcommands invoke
     continues normally.
 PORTABILITY: ``_install_drift_hook`` writes a post-checkout hook that invokes
     ``scripts/commit_guardian/post_checkout_drift_check.py``.  That script is an
-    optional adopter-side extension (alembic drift detection in the bybit-trader
-    origin), so the installer early-returns when the target script is missing.
+    optional adopter-side extension (alembic drift detection in the originating
+    project), so the installer early-returns when the target script is missing.
     Projects that ship the drift checker get the hook automatically; projects
     that do not are unaffected.
 INSTALLED-COPY PATH RESOLUTION: ``_resolve_installed_layout()`` detects whether
@@ -711,7 +711,10 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     Steps performed in order:
 
-    1. **``.env`` symlink** (copy fallback): symlinks the main repo's ``.env``
+    1. **``.env`` symlink** (copy fallback): removes any pre-existing ``.env``
+       entry at the worktree root first (``.env`` is a tracked file, often
+       committed as a symlink, so a fresh worktree checkout can already have
+       one before this step runs), then symlinks the main repo's ``.env``
        into the worktree so that environment-variable changes are immediately
        visible without re-copy.  Falls back to ``shutil.copy`` on Windows or
        NTFS mounts where ``os.symlink`` is not available.
@@ -782,6 +785,22 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
     env_dst = worktree_path / ".env"
+    # `.env` is a TRACKED file in this repo, historically committed as a
+    # symlink to the main repo's absolute `.env` path — so a freshly-created
+    # worktree checkout can already have a `.env` entry at its root before
+    # this function ever runs.  `is_symlink()` is checked first because it
+    # does NOT follow the link, so it is safe against a broken or
+    # self-referential symlink (for which `exists()` reports False, wrongly
+    # implying nothing is there to remove).
+    if env_dst.is_symlink() or env_dst.exists():
+        try:
+            env_dst.unlink()
+        except OSError as exc:
+            print(
+                f"WARNING: could not remove pre-existing .env entry at "
+                f"{env_dst} ({exc}); .env provisioning may fail.",
+                file=sys.stderr,
+            )
     try:
         os.symlink(env_src, env_dst)
     except FileNotFoundError:
@@ -800,7 +819,7 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         )
         try:
             shutil.copy(env_src, env_dst)
-        except FileNotFoundError:
+        except (FileNotFoundError, shutil.SameFileError):
             pass
 
     # --- .mcp.json: always copy ---
@@ -1566,7 +1585,8 @@ DECISION HISTORY
   target repo, since the drift checker is an optional adopter-side extension
   rather than a leafcutter primitive. Projects that ship the drift checker
   still get the hook automatically; projects that do not are unaffected.
-  Source: bybit-trader/scripts/setup_ticket_worktree.py (history below).
+  Source: the originating project's scripts/setup_ticket_worktree.py
+  (history below).
 - 2026-05-13 09:00 [Agent/ticket-supervisor]: Added _install_pre_commit_shims()
   (TICKET-20260513-AutoInstall_PreCommit_Hook_Shims). Idempotently installs
   missing pre-commit hook shims (post-commit, post-checkout, etc.) into the

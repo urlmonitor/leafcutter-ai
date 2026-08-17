@@ -1,0 +1,42 @@
+id: KM-200f
+title: "Open any number and see the things behind it"
+component: knowledge-management
+components:
+  - ux_prototyping
+  - frontend_coding
+  - knowledge_management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  Every figure opens up into the actual items it counted.
+
+  A count you cannot check is a count you end up arguing about, so any figure can
+  be opened to list the things it was built from, and from that list you can go
+  straight to the item itself.
+depends_on:
+  - KM-200
+doc_links: []
+documentation_triggers: []
+documentation_rationale: >-
+  An interaction on the view KM-200e introduces — covered by that child's how-to;
+  it adds no separate procedure and no new component.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: ui
+risk_surface: internal
+notes: |
+  Idea stub — covered_by deliberately empty (see KM-200 notes). This is what makes
+  the ACS-1100 standing principle usable rather than merely stated: a denominator
+  you can open is a denominator you can audit. It also earns its keep as the
+  cheapest defence against a silently wrong count — a figure with no list behind it
+  cannot be spot-checked against the real store.

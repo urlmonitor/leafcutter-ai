@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a production deployment that has NOT explicitly opted in to allowing runtime mock
     overrides (default-deny is the safe default, independent of the production lock),
@@ -41,7 +41,8 @@ covered_by:
   - UXP-608-1
   - UXP-608-2
   - UXP-608-3
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260812-UXP-608.md
 change_target: code
 risk_surface: contract_boundary
 test_spec:

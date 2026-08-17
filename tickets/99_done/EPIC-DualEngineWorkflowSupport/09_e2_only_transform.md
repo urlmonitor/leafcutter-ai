@@ -43,7 +43,7 @@ Code review found the E1 path fundamentally broken and unverifiable:
 - **H-4**: the E1 shim replaces the ported batching/gates with one generic
   `callAgent(...)` — the real logic is discarded.
 - We never confirmed an E1 (`run()`-export) engine exists anywhere (see
-  ADR-017 / the workflow-authoring-contract reference). Supporting it is speculative.
+  ADR-030 / the workflow-authoring-contract reference). Supporting it is speculative.
 
 Decision (user, 2026-07-02): go E2-only. `engine == "e2"` and `"auto"` (→ e2) are the
 only supported values; `"e1"` must raise a clear, explicit build error ("E1 workflow

@@ -24,7 +24,7 @@ assigned_agent: documentation-expert
 estimated_complexity: S
 it_requirements:
   - "The reference must state the fixture policy rules authored in BO-2500c-1 and enforced by the BO-2500c-1-i lint precisely and completely, so the doc and the lint cannot drift."
-  - "The reference must be discoverable from the testing/build-orchestration documentation surfaces and cross-link ADR-007."
+  - "The reference must be discoverable from the testing/build-orchestration documentation surfaces and cross-link ADR-008."
 delivers_to: null
 expects_from: null
 test_required: false

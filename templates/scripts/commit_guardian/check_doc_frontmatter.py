@@ -579,7 +579,7 @@ DECISION HISTORY
   the configured threshold (default 30 days, key roadmap_staleness_threshold_days
   in commit_guardian.json). Always exits 0. Missing or unparseable last_updated
   prints a soft warning and skips the age check. Warning text suggests /po-review.
-  Implements ADR-038 Option A (pre-commit nag).
+  Implements the pre-commit nag (advisory warning, never blocking).
 - 2026-05-17 00:00 [python-coder]: Added is_terminal_or_done_subfolder() helper
   that returns True for tickets/99_done/**, tickets/99_rejected/**,
   tickets/01_todo/EPIC-*/done/**, and tickets/00_inbox/epics/EPIC-*/done/**.

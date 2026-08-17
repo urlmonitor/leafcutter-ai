@@ -1,0 +1,66 @@
+id: BP-016
+components:
+  - build_pipeline
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: high
+work_status: done
+title: "Build-output shims under scripts/ are never committed to the repository"
+origin_agent: BrainCandy
+created: 2026-08-14
+criteria: |
+  Given install_shims() creates scripts/commit_guardian, scripts/doc_compliance,
+    scripts/feedback and .claude/workflows as shims into the consolidated output
+    root (ADR-016), exactly as it does for .claude/agents and .gemini,
+    and .env is a per-developer environment file,
+  When the repository is inspected for tracked files,
+  Then no tracked entry anywhere in the repository is a symlink whose target is
+    an absolute filesystem path,
+  And none of scripts/commit_guardian, scripts/doc_compliance, scripts/feedback,
+    .claude/workflows or .env is present in the git index,
+  And .gitignore matches each of those paths as git actually stores them — a
+    symlink, which is not a directory — so `git check-ignore` reports them
+    ignored and a rebuild cannot silently re-add them,
+  And the bug symptom ("a clone receives symlinks pointing at
+    /home/<user>/... paths that exist only on one developer's machine") must
+    not occur.
+depends_on: []
+doc_links:
+  - path: .gitignore
+    relationship: modifies
+    status: exists
+  - path: scripts/build_helpers.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: describes
+    status: exists
+covered_by:
+  - "unit_tests/build_guards/test_bp016_shim_symlinks_not_tracked.py"
+implemented_by:
+  - .gitignore
+change_target: infrastructure
+risk_surface: contract_boundary
+notes: >-
+  Authored by /quick-fix. Two independent root causes. (1) The three paths were
+  committed despite .gitignore listing two of them — .gitignore has no effect on
+  already-tracked files, so the entries were inert. (2) The patterns are written
+  `scripts/commit_guardian/` with a trailing slash, which matches a DIRECTORY
+  only; git stores these as symlinks (mode 120000), not directories, so the
+  pattern cannot match them even once untracked — `git check-ignore -v
+  scripts/commit_guardian` exits 1. `scripts/feedback`, `.claude/workflows` and
+  `.env` had no entry at all.
+  A generic index scan (rather than checking the three originally-reported
+  paths) surfaced two further offenders: `.claude/workflows`, an install_shims
+  build output missing from .gitignore alongside its agents/skills/commands/
+  hooks siblings; and `.env`, tracked as a symlink pointing at ITSELF
+  (leafcutter-ai/.env -> leafcutter-ai/.env). That self-reference is the exact
+  hazard BP-015 had to defend against, and it is why `git status` permanently
+  reports ` T .env` for any developer whose .env is a real file.
+  Observed impact 2026-08-14: on main all three scripts/ shims point at
+  /home/henzeh/projects/leafcutter/worktrees/adr-numbering/... , a deleted
+  worktree, so guardian-dependent gates silently no-op locally and tests
+  false-green (see BP-015 / PR #440, where two tests passed locally only
+  because verify_precommit_active.py was unreachable and failed in CI).

@@ -360,8 +360,57 @@ def _get_staged_ac_paths(root: Path | None = None) -> list[Path]:
     if result.returncode != 0:
         return []
 
+    staged_lines = result.stdout.splitlines()
+
+    # Merge commits: a merge stages the ENTIRE incoming branch, so this gate
+    # would validate every AC file on the other side — including files that
+    # already violate the schema on the target branch today. Those are that
+    # branch's pre-existing debt: the merge inherits them byte-for-byte and
+    # cannot make them better or worse, and the merge author cannot be the one
+    # to author 30+ missing test_spec blocks. Blocking here does not fix the
+    # debt, it only makes merging impossible (or teaches people to SKIP the
+    # gate). Narrow to files whose result differs from BOTH parents — the
+    # content the merge itself introduces. Non-merge commits are unaffected,
+    # so a newly added or edited AC is still fully validated.
+    # Same fix as check_ac_limits / check_ac_parent_covered_by.
+    try:
+        merge_probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        in_merge = merge_probe.returncode == 0
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: could not check MERGE_HEAD: {exc}",
+            file=sys.stderr,
+        )
+        in_merge = False
+
+    if in_merge:
+        try:
+            other = subprocess.run(
+                [
+                    "git", "diff", "--cached", "--name-only",
+                    "--diff-filter=AM", "MERGE_HEAD",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            print(
+                f"{_HOOK_PREFIX} WARNING: could not diff against MERGE_HEAD: {exc}",
+                file=sys.stderr,
+            )
+        else:
+            if other.returncode == 0:
+                vs_other = {ln.strip() for ln in other.stdout.splitlines() if ln.strip()}
+                staged_lines = [ln for ln in staged_lines if ln.strip() in vs_other]
+
     staged: list[Path] = []
-    for line in result.stdout.splitlines():
+    for line in staged_lines:
         rel = line.strip()
         if not rel or _AC_STORE_DIR not in rel or not rel.endswith(".yaml"):
             continue

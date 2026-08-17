@@ -32,7 +32,7 @@ Usage:
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
-  - docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
 
 DECISION HISTORY:
   - 2026-06-08 [python-coder/ACS-100i-2]: Created check_ac_parent_covered_by.py.
@@ -143,29 +143,63 @@ def _get_staged_ac_paths() -> list[str]:
     if os.environ.get("HOOK_NO_GIT"):
         return []
 
+    def _name_only(extra: list[str]) -> set[str] | None:
+        """Run the staged name-only diff with *extra* args appended."""
+        try:
+            proc = subprocess.run(
+                ["git", "diff", "--cached", "--name-only", "--diff-filter=AM", *extra],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            print(
+                f"{_HOOK_PREFIX} WARNING: could not run git diff: {exc}",
+                file=sys.stderr,
+            )
+            return None
+        if proc.returncode != 0:
+            return None
+        return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+
+    changed = _name_only([])
+    if changed is None:
+        return []
+
+    # Merge commits: a merge stages the ENTIRE incoming branch, so a plain
+    # --cached diff names every AC the other side ever touched. This gate would
+    # then demand that the merge author repair parent/child back-links in AC
+    # trees they neither authored nor modified — unfixable for them, so the only
+    # way through is to bypass the hook, which is how a real missing back-link
+    # later slips past it. Narrow the scope to files whose merge result differs
+    # from BOTH parents (the content the merge itself introduces); anything
+    # taken verbatim from either side was already gated on that side.
+    # Non-merge commits are unaffected. Mirrors the same fix in check_ac_limits.
     try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=AM"],
+        merge_probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
             capture_output=True,
             text=True,
             timeout=10,
         )
+        in_merge = merge_probe.returncode == 0
     except (subprocess.SubprocessError, OSError) as exc:
         print(
-            f"{_HOOK_PREFIX} WARNING: could not run git diff: {exc}",
+            f"{_HOOK_PREFIX} WARNING: could not check MERGE_HEAD: {exc}",
             file=sys.stderr,
         )
-        return []
+        in_merge = False
 
-    if result.returncode != 0:
-        return []
+    if in_merge:
+        vs_other_parent = _name_only(["MERGE_HEAD"])
+        if vs_other_parent is not None:
+            changed &= vs_other_parent
 
     return [
-        line.strip()
-        for line in result.stdout.splitlines()
-        if line.strip()
-        and _AC_STORE_DIR in line
-        and line.strip().endswith(".yaml")
+        line
+        for line in sorted(changed)
+        if _AC_STORE_DIR in line
+        and line.endswith(".yaml")
     ]
 
 

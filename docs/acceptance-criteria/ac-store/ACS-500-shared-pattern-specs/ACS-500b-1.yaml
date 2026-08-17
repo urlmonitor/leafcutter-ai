@@ -28,7 +28,7 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
     relationship: describes
     status: exists
   - path: config/ac_store_schema.json
@@ -40,7 +40,7 @@ it_requirements:
   - "All existing AC YAML files must remain valid after schema changes -- implements_pattern and pattern_bindings are optional fields"
   - "pattern_bindings must be validated as a YAML mapping (object) when present, not a list or scalar"
   - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
-  - "Schema enforcement must use stdlib-only approach consistent with ADR-007"
+  - "Schema enforcement must use stdlib-only approach consistent with ADR-008"
   - "Document the consuming AC convention in docs/reference/ac-schema.md"
 delivers_to:
   agent: python-coder

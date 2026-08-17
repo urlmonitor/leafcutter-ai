@@ -12,9 +12,9 @@ description: 'Standards-enforcing frontend/UI implementation agent. Writes, edit
   rationale.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # frontend-coder
 
@@ -125,6 +125,7 @@ flowchart TD
 
 | Key | Required | Description |
 |-----|----------|-------------|
+| `ui_context_path` | No | Path to the UI context pointer file (default: docs/ui-context.md). Configurable so projects that place the file elsewhere can override at build time. |
 | `frontend.project_context_path` | No | Path to PROJECT_CONTEXT.md for the frontend-coder agent (default: .agents/agents/frontend-coder/PROJECT_CONTEXT.md) |
 | `frontend.optional_skills` | No | List of installed optional skill names (e.g. [webapp-testing]). Note: frontend-design is no longer an optional skill — design principles are embedded in this template. |
 | `frontend.test_command` | No | Command to run the frontend test suite after changes (e.g. npm test, yarn vitest) |
@@ -200,3 +201,30 @@ flowchart TD
 - UXP-553-1: An optional production lock forbids runtime overrides so a deployment can guarantee real data
 - UXP-554: A drift guard validates fixtures against real schemas and parses each through its native-format loader in CI
 - UXP-595a: When the product-truth store is absent the phase self-skips with an observable signal and AC authoring proceeds
+- UXP-597: A conditional fork renders as a decision diamond showing its condition, distinct from a step card
+- UXP-598: Decision edges are labelled: the branch outcome rides the 'yes' edge, 'no'/else continues to the next step
+- UXP-599: A multi-branch fork chains into diamonds (diamond -> diamond -> happy path), not one N-way node
+- UXP-599a: Known limitation: a branch off the LAST step does not synthesize a diamond
+- UXP-600: Diamonds and their edges are derived from the existing flow branch data
+- UXP-600a: Forward-dependency boundary: the first-class decisions[] schema is out of scope for this backfill
+- UXP-601: Decision and outcome nodes tint by their derived impl_status
+- UXP-602: Individual AC nodes are off by default in the flow graph
+- UXP-603: Each step/branch shows a compact, status-tinted done/total ACs progress pill
+- UXP-603a: A node with zero acceptance criteria shows no progress pill
+- UXP-604: A feature-level deduped 'N/M ACs done' rollup is shown for the whole flow
+- UXP-604a: An AC referenced by multiple nodes is counted once in the feature rollup
+- UXP-605: A 'Show ACs in graph' toggle (default off, persisted) restores the fully-wired AC-node view
+- UXP-605a: The 'Show ACs in graph' preference persists across reload and navigation
+- UXP-607: The mock-mode badge always tells the truth about what you are looking at
+- UXP-607-1: On a mock-default deployment, an override back to live shows the real badge
+- UXP-607-2: On an unlocked live-default deployment, an override to mock shows the mock badge
+- UXP-608: A real deployment cannot be flipped to fake data by a visitor
+- UXP-608-1: A production deployment that explicitly opts in honors the runtime override
+- UXP-608-2: The production lock overrides an explicit opt-in — lock wins over allow
+- UXP-608-3: Outside production, runtime overrides are honored without an explicit opt-in
+- UXP-609: The mock-mode safety check cannot pass unless it is really reading fixtures
+- UXP-609-1: A mis-set environment makes the drift-guard fail loudly, never false-green
+- UXP-609-2: The drift-guard fails when it read zero fixture records — it never passes on nothing
+- UXP-610: The internal test-support endpoints never ship to production
+- UXP-610-1: Probing a CI-only endpoint in production leaks no internal detail
+- UXP-610-2: The CI-only endpoints remain present in the non-production build the checks need

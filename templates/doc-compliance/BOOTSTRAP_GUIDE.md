@@ -14,18 +14,18 @@
 JSON config file: **`scripts/doc_compliance/doc_compliance.json`**.
 
 When this file is absent or a key is missing, the package falls back to
-Bybit-Trader defaults — existing Bybit-Trader behaviour is fully preserved without
+package defaults — existing behaviour is fully preserved without
 any changes to the Python source.
 
 ### Configuration Keys
 
-| Key | What it controls | Bybit-Trader default |
+| Key | What it controls | Package default |
 |-----|-----------------|---------------------|
 | `config_file` | Path (relative to project root) of the per-project scanner config | `docs/doc_compliance.json` |
 | `components_file` | Path (relative to project root) of the component registry | `docs/components.json` |
-| `bootstrap_project_name` | `project` field written by `--bootstrap` | `bybit-trader` |
+| `bootstrap_project_name` | `project` field written by `--bootstrap` | `my-project` |
 | `bootstrap_scan_paths` | `scan_paths` dict written by `--bootstrap` | `{"python": ["collector/", "models/", ...], "sql": ["sql_functions/"], "docs": ["docs/"]}` |
-| `bootstrap_component_sources` | `component_sources` array written by `--bootstrap` | Bybit-specific glob patterns |
+| `bootstrap_component_sources` | `component_sources` array written by `--bootstrap` | project-specific glob patterns |
 | `bootstrap_standalone_components` | `standalone_components` array written by `--bootstrap` | `[{"file": "database_manager.py", ...}]` |
 | `bootstrap_ignore` | `ignore` list written by `--bootstrap` | `["__pycache__", "alembic/", "unit_tests/", ...]` |
 

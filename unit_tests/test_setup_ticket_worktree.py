@@ -27,6 +27,8 @@ DECISION HISTORY
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -216,3 +218,215 @@ def test_bootstrap_prefers_poetry_over_pip_when_both_present(tmp_path: Path) -> 
         f"pip must NOT be called when pyproject.toml is present.\n"
         f"pip calls found: {pip_calls}"
     )
+
+
+# ---------------------------------------------------------------------------
+# BP-015 (template copy): the `.env` pre-existing-symlink guard was mirrored
+# into templates/scripts/setup_ticket_worktree.py — the copy
+# build_template_standalone_scripts() deploys into consumer projects. This
+# test uses this file's own module-level `_bootstrap` binding (the templates
+# copy loaded at module scope above), NOT `_load_scripts_setup_module()`
+# (defined further below, which targets the canonical scripts/ copy already
+# covered by the two tests after it).
+# ---------------------------------------------------------------------------
+
+
+def test_ac_bp015_template_bootstrap_env_preexisting_tracked_symlink_replaced(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-015
+    """BP-015 (template copy): a pre-existing `.env` symlink at the worktree
+    root must be replaced with a working `.env` in the templates/ copy that
+    build_template_standalone_scripts() deploys into consumer projects.
+
+    Same real on-disk shape as the canonical-copy tests below (a real
+    `os.symlink` pre-created before `_bootstrap()` runs, only `subprocess.run`
+    mocked), but driven through this file's module-level `_bootstrap`, which
+    loads templates/scripts/setup_ticket_worktree.py.
+    """
+    main_repo, worktree = _setup_worktree(tmp_path)
+    main_env = main_repo / ".env"
+    main_env.write_text("MAIN_REPO_ENV_MARKER=bp015-template\n", encoding="utf-8")
+
+    worktree_env = worktree / ".env"
+    # Real on-disk shape: a fresh worktree checkout of the tracked `.env`
+    # symlink already has this entry before _bootstrap() ever runs.
+    os.symlink(main_env, worktree_env)
+
+    recorded: list = []
+    # Only subprocess.run is mocked — os.symlink/shutil.copy are left real
+    # so the .env guard actually runs against the filesystem.
+    with patch("subprocess.run", side_effect=_make_fake_run(recorded)):
+        _bootstrap(main_repo, worktree)
+
+    assert worktree_env.exists(), (
+        "worktree/.env must exist and be readable after _bootstrap()"
+    )
+    assert worktree_env.read_text(encoding="utf-8") == main_env.read_text(
+        encoding="utf-8"
+    ), "worktree/.env must resolve to the main repo's .env contents"
+
+
+# ---------------------------------------------------------------------------
+# BP-015: worktree bootstrap must survive a pre-existing `.env` entry.
+#
+# The BP-015 fix landed only in the CANONICAL scripts/setup_ticket_worktree.py
+# copy (not the templates/ copy this file's module-level `_bootstrap` binds
+# to above), so these two tests load that file directly via its own importlib
+# shim rather than reusing `_bootstrap`/`_BootstrapError`. They still reuse
+# this file's `_setup_worktree` and `_make_fake_run` helpers and import style.
+#
+# IMPORTANT — the canonical copy's `_bootstrap()` ends with a create-time gate
+# (step 7) that shells out to `scripts/commit_guardian/verify_precommit_active.py
+# --json` and raises BootstrapError unless the probe exits 0 with an empty
+# `failing_checks`. Locally, `scripts/commit_guardian` is often a broken/absent
+# symlink, so `verify_script.exists()` is False and the gate is a graceful
+# WARNING no-op — but in CI (after `build.py` runs and recreates that symlink)
+# the gate actually executes. `_make_fake_run` alone supplies no valid probe
+# JSON, so `_bootstrap()` raises BootstrapError there — a false-green trap:
+# these tests must supply a passing probe response so they exercise the gate
+# for real in BOTH environments, mirroring the approach already used by
+# unit_tests/setup/test_setup_ticket_worktree.py's `_make_subprocess_side_effect`.
+# ---------------------------------------------------------------------------
+
+_SCRIPTS_PATH = _REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
+_SCRIPTS_MODULE_NAME = "setup_ticket_worktree_scripts_bp015"
+_PROBE_SCRIPT_STEM = "verify_precommit_active"
+
+
+def _is_probe_call(cmd) -> bool:
+    """Return True when cmd looks like an invocation of verify_precommit_active.py."""
+    try:
+        return any(_PROBE_SCRIPT_STEM in str(part) for part in cmd)
+    except TypeError:
+        return False
+
+
+def _make_probe_aware_fake_run(recorded: list) -> object:
+    """Like `_make_fake_run`, but supplies a PASSING verify_precommit_active.py
+    --json response for the probe call so `_bootstrap()`'s create-time gate
+    (step 7) does not raise BootstrapError.
+
+    Every other call (submodule update, dep install, build.py) still gets the
+    generic success MagicMock that `_make_fake_run` returns. This is required
+    so the canonical-copy BP-015 tests below pass the gate whether or not
+    `scripts/commit_guardian/verify_precommit_active.py` happens to resolve
+    on disk (it does in CI after build.py runs; it may not locally).
+
+    Args:
+        recorded: Mutable list to which each call's command is appended.
+
+    Returns:
+        A callable with the same signature subset as subprocess.run.
+    """
+    def _fake_run(cmd, **kwargs):  # noqa: ANN001,ANN202
+        recorded.append(list(cmd) if isinstance(cmd, (list, tuple)) else [str(cmd)])
+        result = MagicMock()
+        if _is_probe_call(cmd):
+            result.returncode = 0
+            result.stdout = json.dumps({
+                "binary": True,
+                "config": True,
+                "git_hook": True,
+                "canary": True,
+                "failing_checks": [],
+            })
+            result.stderr = ""
+        else:
+            result.returncode = 0
+            result.stdout = ""
+            result.stderr = ""
+        return result
+
+    return _fake_run
+
+
+def _load_scripts_setup_module():
+    """Load the canonical scripts/setup_ticket_worktree.py copy.
+
+    BP-015 (worktree bootstrap dies on a pre-existing `.env` entry) was fixed
+    only in this canonical copy, not the templates/ copy loaded at module
+    scope above — so the BP-015 tests must exercise this file directly.
+    """
+    spec = importlib.util.spec_from_file_location(_SCRIPTS_MODULE_NAME, _SCRIPTS_PATH)
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    sys.modules[_SCRIPTS_MODULE_NAME] = mod
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
+
+
+def test_bootstrap_env_preexisting_tracked_symlink_replaced_with_working_env(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-015
+    """BP-015: a pre-existing `.env` symlink at the worktree root must be
+    replaced with a working `.env`, not left broken by FileExistsError/
+    SameFileError.
+
+    `.env` is a TRACKED file in this repo, historically committed as a
+    symlink pointing at the main repo's absolute `.env` path — so a fresh
+    `git worktree add` checkout already has a `.env` entry at its root
+    BEFORE `_bootstrap()` ever runs. This test builds that real on-disk
+    shape (a real symlink, not a mock) and drives the real `_bootstrap()`
+    (only `subprocess.run` is mocked; `os.symlink`/`shutil.copy` are left
+    untouched), then reads the resulting worktree `.env` back off disk.
+    """
+    scripts_mod = _load_scripts_setup_module()
+
+    main_repo, worktree = _setup_worktree(tmp_path)
+    main_env = main_repo / ".env"
+    main_env.write_text("MAIN_REPO_ENV_MARKER=bp015\n", encoding="utf-8")
+
+    worktree_env = worktree / ".env"
+    # Real on-disk shape: a fresh worktree checkout of the tracked `.env`
+    # symlink already has this entry before _bootstrap() ever runs.
+    os.symlink(main_env, worktree_env)
+
+    recorded: list = []
+    with patch("subprocess.run", side_effect=_make_probe_aware_fake_run(recorded)):
+        scripts_mod._bootstrap(main_repo, worktree)
+
+    assert worktree_env.exists(), (
+        "worktree/.env must exist and be readable after _bootstrap()"
+    )
+    assert worktree_env.read_text(encoding="utf-8") == main_env.read_text(
+        encoding="utf-8"
+    ), "worktree/.env must resolve to the main repo's .env contents"
+
+
+def test_bootstrap_env_preexisting_self_referential_symlink_removed_without_following(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-015
+    """BP-015: a pre-existing `.env` entry that is a broken/self-referential
+    symlink must be removed WITHOUT following it.
+
+    A check that follows the symlink (e.g. `Path.exists()`) reports False
+    for a broken/self-referential symlink and would wrongly skip removal,
+    leaving the stale directory entry in place so `os.symlink()` still
+    raises FileExistsError. This builds that real shape on disk and drives
+    the real `_bootstrap()`.
+    """
+    scripts_mod = _load_scripts_setup_module()
+
+    main_repo, worktree = _setup_worktree(tmp_path)
+    main_env = main_repo / ".env"
+    main_env.write_text(
+        "MAIN_REPO_ENV_MARKER=bp015-self-referential\n", encoding="utf-8"
+    )
+
+    worktree_env = worktree / ".env"
+    # A broken/self-referential symlink: its target IS its own path.
+    os.symlink(worktree_env, worktree_env)
+
+    recorded: list = []
+    with patch("subprocess.run", side_effect=_make_probe_aware_fake_run(recorded)):
+        scripts_mod._bootstrap(main_repo, worktree)
+
+    assert worktree_env.exists(), (
+        "worktree/.env must exist and be readable after _bootstrap() even "
+        "when the pre-existing entry was a broken self-referential symlink"
+    )
+    assert worktree_env.read_text(encoding="utf-8") == main_env.read_text(
+        encoding="utf-8"
+    ), "worktree/.env must resolve to the main repo's .env contents"

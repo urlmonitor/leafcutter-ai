@@ -1,0 +1,61 @@
+id: KM-200c
+title: "Tell a parked idea apart from work that is actually queued"
+component: knowledge-management
+components:
+  - knowledge_management
+  - ac_store
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: low
+work_status: todo
+criteria: |
+  Counts split into real backlog, work being written, and parked ideas.
+
+  A single total hides three very different populations, so writing an idea down
+  cheaply currently looks exactly like falling further behind. Requirement counts
+  are reported separately as work that is genuinely queued and gating throughput,
+  work still being drafted, and ideas deliberately parked for later — so growth in
+  one is never mistaken for growth in another.
+depends_on:
+  - KM-200
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: "Standing principle this bucket split inherits: every figure states what it counted and what it left out. ACS-1100 governs how an answer describes itself; it does not define these buckets."
+documentation_triggers:
+  - reference-doc
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Idea stub — covered_by deliberately empty (see KM-200 notes).
+
+  THIS IS THE SEED REQUIREMENT. The whole capability was requested because a
+  hand-made weekly report produced a 3:1 authoring-to-closing ratio that is
+  misleading as stated. The three buckets, with the numbers observed 2026-08-13:
+    - buildable backlog — approved L2/L3 at work_status todo. The ONLY bucket that
+      gates throughput.
+    - authoring WIP     — draft/reviewed L2/L3. 159 L2 + 49 L3.
+    - idea stubs        — childless L0/L1, i.e. level in {L0,L1} and not covered_by.
+      47 at the time of writing; this tree adds seven more.
+  A fourth, done, is already tracked (544 -> 651 over the reporting week).
+
+  Without the split, the cheap-capture convention this very tree is the first use
+  of makes the growth ratio look worse while being exactly the right behaviour. Any
+  decomposition that reports one undifferentiated requirement count fails this AC.
+
+  The bucket definitions are project vocabulary, not an implementation detail —
+  hence the reference-doc trigger. Note the dependency risk for whoever builds it:
+  the idea-stub bucket is defined by an ABSENT covered_by list, so it breaks
+  silently if the store ever starts auto-populating covered_by, or once ACS-800
+  moves hierarchy out of ids and into metadata.

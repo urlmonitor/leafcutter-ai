@@ -26,7 +26,7 @@ Logic:
        c. This catches the reverse: someone removes an ADR mention from a doc.
 
 Match strategy for "mentions ADR":
-    - Search for the ADR basename (e.g. "ADR-007-features-complete-catalog")
+    - Search for the ADR basename (e.g. "ADR-NNN-some-decision-slug")
       in both frontmatter related_docs/related_code values and body text.
     - Case-insensitive substring match is intentional — links may be relative
       or absolute, with or without ".md".
@@ -173,7 +173,7 @@ def _load_components(components_json: Path) -> dict[str, dict]:
 
 
 def _adr_basename(adr_path: str | Path) -> str:
-    """Return the ADR filename without extension (e.g. ADR-007-features-complete-catalog).
+    """Return the ADR filename without extension (e.g. ADR-NNN-some-decision-slug).
 
     Args:
         adr_path: Path to or name of the ADR file.
@@ -192,7 +192,7 @@ def _doc_mentions_adr(doc_path: Path, adr_stem: str) -> bool:
 
     Args:
         doc_path: Absolute path to the documentation file to search.
-        adr_stem: ADR filename without extension (e.g. "ADR-007-features-catalog").
+        adr_stem: ADR filename without extension (e.g. "ADR-NNN-some-decision-slug").
 
     Returns:
         True if the stem appears in the file content.

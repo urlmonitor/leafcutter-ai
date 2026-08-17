@@ -4,17 +4,29 @@
 .leafcutter.lock
 .gemini
 VERSION
-scripts/commit_guardian/
-scripts/doc_compliance/
+# NOTE: no trailing slash on the shim paths below. install_shims() creates them
+# as SYMLINKS (git mode 120000), and a trailing-slash pattern matches directories
+# only — git does not treat a symlink as a directory, so `scripts/foo/` silently
+# fails to match `scripts/foo`. Keep these in the same bare form as the
+# .claude/* shims underneath. (BP-016)
+scripts/commit_guardian
+scripts/doc_compliance
+scripts/feedback
 .claude/.cache/
 .claude/agents
 .claude/skills
 .claude/commands
 .claude/hooks
+.claude/workflows
 .claude/worktrees/
 .claude/projects/
 .claude/memory/
 .pre-commit-config.yaml
+
+# Per-developer environment file. Was previously tracked as a symlink pointing
+# at itself, which made every developer's checkout permanently dirty (` T .env`)
+# and is the self-referential-symlink hazard BP-015 had to work around. (BP-016)
+.env
 
 # User-local settings (not shared across machines)
 .claude/settings.json

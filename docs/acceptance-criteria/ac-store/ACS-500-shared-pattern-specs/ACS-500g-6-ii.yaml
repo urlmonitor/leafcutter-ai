@@ -1,0 +1,90 @@
+id: ACS-500g-6-ii
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "The agent under test is never told which items are seeded, or how many"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given round 2 of an evaluation seeds 6 known defects into the task material,
+  When the round's task is handed to the agent under test,
+  Then the material it receives carries no marker on the seeded items, no count of
+    how many were seeded, and no answer key,
+  And the material is otherwise indistinguishable from work the agent would receive
+    in normal operation.
+
+  Given a round in which the recorded answers were visible to the agent under test
+    (for example the seeded items were listed in the task it was given),
+  When the round is scored,
+  Then the round is reported as invalid rather than pass,
+  And the overall verdict cannot be pass while any round is invalid,
+  And the round is re-run with material the answers have been removed from.
+depends_on: [ACS-500g-6]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/fixture-policy.md
+    relationship: governs
+    status: exists
+  - path: docs/how-to/real-artifact-fixtures.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+assigned_agent: business-analyst
+estimated_complexity: S
+it_requirements:
+  - "Assignment follows ACS-500g-6: the blinding rule is a section of the same pattern record's parameterised body, written literally because it does not vary per agent."
+  - "THE EXISTING HARNESS ALREADY HAS THE RIGHT SHAPE — reuse it rather than invent one. scripts/evals/agent_eval_config.json separates `input_field` (what the agent is given) from `expected_field` (the recorded answers), and run_agent_eval.py builds the prompt from input_field only. Express the blinding rule in those terms so an implementation is a configuration of the existing harness, not a parallel one."
+  - "State the invariant as a property of the prompt actually sent: the string handed to the agent contains the row's input material and contains neither the expected-items content nor their count. That is checkable; 'the material carries no marker' alone is not."
+  - "'Otherwise indistinguishable from normal operation' has a concrete meaning in this repo: the material must be a REAL on-disk artifact of the kind the agent normally receives, not a synthetic fixture typed by hand. See docs/how-to/real-artifact-fixtures.md and docs/reference/fixture-policy.md — a synthetic fixture reproduces the bug-hiding bias and makes a round pass on material the agent would never see."
+  - "The seeded count is itself a leak. Do not report 'N defects were seeded' in the task, in the round header, or in any telemetry the agent can read — an agent that knows N stops when it has found N."
+  - "Round status must be three-valued (pass / fail / invalid) so 'invalid' is expressible; this is the same tri-state ACS-500g-6-i requires. The overall verdict cannot be pass while any round is invalid — that is a separate rule from the all-or-nothing pass rule and must be stated separately."
+  - "An invalid round is re-run with cleaned material; it is not silently rescored. The invalid result stays on record (results are append-only, scripts/evals/results/) alongside the re-run."
+  - "CAVEAT: the leaked-answer-key detection and the invalid round status have no implementation today — the existing harness has no notion of an invalid round. Like the all-or-nothing verdict in ACS-500g-6-i, enforcing this needs a seeded_gap scoring mode in scripts/evals/run_agent_eval.py (python-coder). Raise it as a follow-up AC; do not claim it enforced."
+delivers_to:
+  agent: business-analyst
+  contract: "The blinding section of the agent-evaluation pattern body: the prompt sent to the agent under test contains only the round's input material — no seeded-item markers, no seeded count, no answer key; material is a real on-disk artifact; a round whose material exposed the recorded answers is status 'invalid', the overall verdict cannot be pass while any round is invalid, and the round is re-run on cleaned material with the invalid result retained."
+expects_from:
+  ac_id: ACS-500g-6
+  contract: "The three-round protocol body and the {round_seeded_items} slot holding each round's recorded seeded items, which must stay separate from the material bound to {round_task_sets}."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+test_spec:
+  - name: test_prompt_sent_to_agent_excludes_the_recorded_answers
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Assemble the round prompt for a seeded-gap eval row through the real prompt-assembly path with a stubbed backend; assert the string sent contains the row's input material and contains none of the expected-items content."
+  - name: test_prompt_sent_to_agent_excludes_the_seeded_count
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Assert the assembled prompt contains no statement of how many items were seeded, in any field the agent can read."
+  - name: test_round_with_leaked_answer_key_is_invalid_not_pass
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score a round whose material contained the recorded answers and whose agent reported all of them; assert the round status is 'invalid' rather than 'pass'."
+  - name: test_overall_verdict_cannot_be_pass_while_any_round_is_invalid
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Compute the overall verdict for rounds [pass, pass, invalid]; assert it is not 'pass' — exercises the verdict computation, not the prose."
+  - name: test_invalid_round_result_is_retained_after_rerun
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Re-run a round after cleaning its material and assert the earlier invalid result file still exists alongside the new one (append-only history)."

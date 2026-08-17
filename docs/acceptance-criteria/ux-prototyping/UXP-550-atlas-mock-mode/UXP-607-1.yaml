@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a deployment whose LEAFCUTTER_MOCK env sets mock as the DEFAULT data source,
   When a request arrives carrying a runtime override to live (e.g. ?mock=0) and the seam

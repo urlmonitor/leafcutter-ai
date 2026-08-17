@@ -13,7 +13,7 @@ ARCHITECTURE: AST-based (ast.walk), scoped to staged .py files only. Two escape
     hatches: a sibling test file with "# default-path-smoke: <module_stem>" or a
     module-level "# noqa: default-path-smoke <reason>" suppression. Both signals
     must be present in the same module for the hook to fire (conservative
-    combined-signal approach). See ADR-035.
+    combined-signal approach).
 
     Detection flow per staged .py file:
     1. Parse the module into an AST.
@@ -509,7 +509,7 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ====================================================================
 # - 2026-05-18 00:00 [python-coder/EPIC-UserSurfaceVerification/01]: Created. (#EPIC-UserSurfaceVerification/01)
-#   Combined-signal AST hook per ADR-035.
+#   Combined-signal AST hook.
 #   Targets: placeholder function (docstring/return token) AND tainted-default
 #   rebinding in the same module. Both must be present (combined signal).
 #   Escape hatches: # default-path-smoke: <module_stem> in unit_tests/,

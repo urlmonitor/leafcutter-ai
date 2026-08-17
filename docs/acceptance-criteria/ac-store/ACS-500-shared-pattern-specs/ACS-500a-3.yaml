@@ -25,7 +25,7 @@ doc_links:
   - path: docs/acceptance-criteria/index.yaml
     relationship: governs
     status: exists
-  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
     relationship: describes
     status: exists
   - path: config/ac_store_schema.json
@@ -36,7 +36,7 @@ estimated_complexity: M
 it_requirements:
   - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
   - "Must complete validation in <200ms for AC stores with up to 500 files"
-  - "Schema enforcement must use stdlib-only approach consistent with ADR-007 (no external dependencies required)"
+  - "Schema enforcement must use stdlib-only approach consistent with ADR-008 (no external dependencies required)"
   - "Error messages must include the file path containing the dangling reference and the missing AC ID"
   - "Must handle errors gracefully per the project error handling policy"
   - "Must be idempotent -- repeated validation runs with the same input produce the same result"

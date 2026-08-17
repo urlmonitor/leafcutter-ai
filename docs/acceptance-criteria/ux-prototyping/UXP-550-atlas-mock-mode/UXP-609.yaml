@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the CI drift-guard that checks the bundled fixtures for drift against the same schemas
     and loaders used for real data,
@@ -42,7 +42,8 @@ superseded_by: null
 covered_by:
   - UXP-609-1
   - UXP-609-2
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260812-UXP-609.md
 change_target: pipeline
 risk_surface: internal
 test_spec:

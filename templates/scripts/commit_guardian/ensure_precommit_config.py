@@ -14,7 +14,7 @@ ARCHITECTURE: Standalone script — no imports from sibling modules — so it ca
     POSIX), or (2) copy .pre-commit-config.yaml directly (NTFS/Windows fallback). Main
     tree root resolved via git commondir, with a script-location fallback for test
     environments and edge cases. Registered at hooks_manifest.hooks[0] in
-    commit_guardian.json. See ADR-017.
+    commit_guardian.json. See ADR-031.
 
 ====================================================================
 DECISION HISTORY
@@ -25,7 +25,7 @@ DECISION HISTORY
   main-tree resolution: git commondir first, script-location fallback. Atomic
   copy uses write-temp-then-rename (os.replace). Idempotent: exits 0 immediately
   when config already present. Fail-closed: exits 1 when config cannot be
-  established. See ADR-017.
+  established. See ADR-031.
 ====================================================================
 """
 

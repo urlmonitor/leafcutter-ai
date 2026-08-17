@@ -5,17 +5,17 @@ trigger: always_on
 # Documentation Rules
 
 ## 1. Context is King
-To allow the AI to improve and operate autonomously, every significant directory **MUST** have a [README.md](cci:7://file:///c:/Users/Hendrik/Code/Bybit-Trader/Bybit-Trader%20Live/bybit-trader/models/README.md:0:0-0:0) file.
+To allow the AI to improve and operate autonomously, every significant directory **MUST** have a `README.md` file.
 
 ## 2. Directory README Requirements
-The [README.md](cci:7://file:///c:/Users/Hendrik/Code/Bybit-Trader/Bybit-Trader%20Live/bybit-trader/models/README.md:0:0-0:0) in any directory acts as the "Context Source" for that module. It must include:
+The `README.md` in any directory acts as the "Context Source" for that module. It must include:
 
 ### A. Purpose
 What does this folder contain? What is its role in the overall architecture?
 
 ### B. Key Files & Structure
 A brief overview of important files or subdirectories.
-*Example: "Use [candles.py](cci:7://file:///c:/Users/Hendrik/Code/Bybit-Trader/Bybit-Trader%20Live/bybit-trader/models/candles.py:0:0-0:0) for all price data queries."*
+*Example: "Use `candles.py` for all price data queries."*
 
 ### C. Critical Context (The "Gotchas")
 Any environment-specific or logic-specific rules that an AI (or new developer) would miss.
@@ -29,7 +29,7 @@ How to apply changes.
 *   "Use the pre-commit hook to reload SQL."
 
 ## 3. Self-Correction
-If you (the AI) encounter an error because a [README.md](cci:7://file:///c:/Users/Hendrik/Code/Bybit-Trader/Bybit-Trader%20Live/bybit-trader/models/README.md:0:0-0:0) was missing information or was outdated:
+If you (the AI) encounter an error because a `README.md` was missing information or was outdated:
 1.  **Fix the Code.**
 2.  **Update the README** to prevent the next agent from making the same mistake.
 

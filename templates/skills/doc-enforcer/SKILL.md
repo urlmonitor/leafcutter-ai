@@ -14,8 +14,8 @@ entries and verifying documentation requirements on edited files. It is invoked 
 `python-coder`, `sql-coder`, and `documentation-expert` as the final step before
 sign-off.
 
-> **Cross-reference:** The tail-tag wire format is formally specified in
-> [ADR-033: Inline ADR Ticket-Traceability Convention](docs/architecture/adrs/ADR-033-inline-adr-ticket-traceability.md).
+> **Cross-reference:** The tail-tag wire format is specified in full below —
+> this skill is its source of truth.
 > For a task-oriented step-by-step, see
 > [How-To: Write an Inline ADR Entry](docs/how-to/documentation/write-inline-adr.md).
 
@@ -100,7 +100,7 @@ Format: `(#EPIC-Name/NN)` where:
 If `adr_handoff.json` is found (see §5), append `(ADR-NNN)` after the ticket tag:
 
 ```
-- 2026-05-18 16:45 [python-coder]: Extracted shared helper. (#EPIC-CCRefactor/CC-33) (ADR-033)
+- 2026-05-18 16:45 [python-coder]: Extracted shared helper. (#EPIC-CCRefactor/CC-33) (ADR-NNN)
 ```
 
 The `(ADR-NNN)` tag always comes AFTER the ticket tag, never before.
@@ -157,7 +157,7 @@ which ADR to back-link.
    cat "<ticket-dir>/.pending/adr_handoff.json" 2>/dev/null
    ```
 
-3. If the file exists and is valid JSON, extract `adr_id` (e.g. `"ADR-033"`).
+3. If the file exists and is valid JSON, extract `adr_id` (e.g. `"ADR-NNN"`).
 
 4. Append `(ADR-NNN)` after the ticket tag in your entry.
 

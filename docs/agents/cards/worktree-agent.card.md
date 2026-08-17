@@ -9,9 +9,9 @@ description: 'Manages git worktree lifecycle — creates a new worktree for a fe
   ticket; asks to remove or close a worktree after a PR merges.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # worktree-agent
 

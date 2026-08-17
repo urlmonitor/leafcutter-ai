@@ -13,9 +13,9 @@ description: '[DEPRECATED — see ADR-006] User-facing supervisor — the entry 
   or asks to "walk EPIC-Y ticket-by-ticket".'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # epic-supervisor
 

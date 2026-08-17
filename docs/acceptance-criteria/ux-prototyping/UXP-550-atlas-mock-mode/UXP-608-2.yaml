@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a production deployment that has BOTH explicitly opted in to allowing runtime overrides
     AND set the production lock LEAFCUTTER_MOCK_LOCK=real,

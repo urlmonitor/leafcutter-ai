@@ -22,6 +22,7 @@ criteria: |
   its Python half.
 depends_on:
   - BO-2500
+child_limit_override: 6
 doc_links: []
 delivers_to: null
 expects_from: null
@@ -49,3 +50,12 @@ notes: |
   tests and runs the JS test runner, making JS-covered ACs provable. Distinct tooling capability,
   hence a new L1 under the existing BO-2500 goal. Decomposed by BA into L2 BO-2500e-1..e-6 plus
   L3 edge cases BO-2500e-1-i..e-4-i.
+
+  child_limit_override: 6 (ACS-100c-1 waiver, 2026-08-13). The BA's decomposition is six L2
+  children — one over the default cap of five. The six are a single cohesive capability split
+  along its natural seams: four engine facets (e-1 tag discovery, e-2 passing-run eligibility,
+  e-3 failing/unavailable fail-closed, e-4 the mark-done path) and two enforcement surfaces
+  (e-5 pre-commit, e-6 CI gate). Splitting into two L1s was rejected: the only genuine split
+  points would require renaming the child ids, and those ids are referenced by the
+  `# covers:` / `// covers:` tags in the tests that prove them, so a rename would break the
+  very traceability this L1 exists to establish. A waiver is the smaller, more honest change.

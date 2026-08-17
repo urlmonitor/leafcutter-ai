@@ -12,9 +12,9 @@ description: 'Flow authoring agent for the product-truth store. Given drafted mo
   journey wiring can be assembled before the business-analyst derives the ACs.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # flow-author
 

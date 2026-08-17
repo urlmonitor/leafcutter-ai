@@ -13,9 +13,9 @@ description: 'IT Product Owner — technical enrichment agent for the AC pipelin
   agents can begin work.  This agent operates on AC YAML files directly.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # it-po
 

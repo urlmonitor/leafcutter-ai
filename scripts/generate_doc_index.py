@@ -47,8 +47,6 @@ description: "Auto-generated index of all documentation files in the docs/ direc
 
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
->
-> Generated: {timestamp}
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
@@ -329,6 +327,16 @@ def generate_index(repo_root: Path) -> str:
     needlessly.  When the existing file has no ``last_updated`` field, the value
     falls back to ``created`` (never to ``datetime.now()``).
 
+    The rendered header intentionally carries no wall-clock ``Generated:`` stamp.
+    An earlier revision stamped the header with ``datetime.now(timezone.utc)`` on
+    every call, which meant regenerating the index with zero documentation changes
+    still produced a byte-different file — directly contradicting the idempotency
+    this docstring already promised for ``created``/``last_updated`` (KM-DBF-014).
+    Dropping the stamp keeps the whole header idempotent: identical doc content
+    now always renders identical bytes, and a genuine doc change is still visible
+    via the changed table rows and (when present) an explicitly bumped
+    ``last_updated`` in the source frontmatter — never via the current clock.
+
     Args:
         repo_root: Absolute path to the repository root.  All relative paths
             in the generated index are computed relative to this directory.
@@ -337,7 +345,6 @@ def generate_index(repo_root: Path) -> str:
         Complete INDEX.md content as a UTF-8 string (starting with YAML
         frontmatter delimited by ``---``).
     """
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Preserve existing created and last_updated dates for idempotency across
@@ -348,7 +355,7 @@ def generate_index(repo_root: Path) -> str:
     last_updated = _extract_last_updated(existing_index) or created
 
     sections: list[str] = [
-        _HEADER_TEMPLATE.format(timestamp=timestamp, created=created, last_updated=last_updated)
+        _HEADER_TEMPLATE.format(created=created, last_updated=last_updated)
     ]
 
     for heading, rel_path, recursive in _CATEGORIES:
@@ -456,3 +463,18 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# DECISION HISTORY
+# ====================================================================
+# - 2026-08-14 00:00 [python-coder]: Dropped the `> Generated: {timestamp}` (#TICKETLESS reason=KM-DBF-014-doc-index-fix)
+#   header line (and the `datetime.now()` call that fed it) from
+#   _HEADER_TEMPLATE / generate_index(). The header was stamped with the
+#   wall clock on every call, so regenerating docs/INDEX.md with zero
+#   documentation changes still produced a byte-different file — the doc-index
+#   pre-commit hook then created an unstaged change on essentially every
+#   commit, which is the reliable trigger behind "Stashed changes conflicted
+#   with hook auto-fixes" restore failures. This contradicted the module's
+#   own stated idempotency intent for `created`/`last_updated`. A genuine doc
+#   change is still visible via the changed table rows, so the fix does not
+#   mask real content changes.

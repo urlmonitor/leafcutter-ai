@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a production deployment that has EXPLICITLY opted in to allowing runtime mock overrides
     and has no production lock set,

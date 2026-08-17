@@ -1,0 +1,101 @@
+id: ACS-500g-7
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "The first pattern gets its first consumer, closing the producer-to-consumer loop"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the agent-evaluation protocol exists in the store as a pattern with its
+    declared slots,
+  And the store previously contained no AC that referenced any pattern,
+  When the evaluation of a specific newly built agent is specified,
+  Then it is written as an AC that references the agent-evaluation pattern and
+    supplies a value for every slot the pattern declares — the agent under test,
+    the task set for each of the three rounds, and the seeded items recorded for
+    each round,
+  And that AC's own body states only what is specific to this agent, with no
+    restatement of the three-round structure or the scoring rule,
+  And the store now contains at least one AC that references a pattern,
+  And a pattern-first check run afterwards for the same behavior finds the pattern
+    and offers it for reuse instead of returning empty.
+depends_on: [ACS-500g, ACS-500g-6]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_pattern_refs.py
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+assigned_agent: business-analyst
+estimated_complexity: S
+it_requirements:
+  - "The deliverable is a consuming AC YAML in the store, authored by business-analyst — the agent that owns criteria bodies and pattern_bindings. Not a package artifact, so neither workflow-architect nor llm-expert applies."
+  - "BIND IT TO THE PATTERN-STEWARD. 'A specific newly built agent' is concretely the pattern-steward created in ACS-500g-1 — the only new agent this tree produces. Using it makes the dogfooding loop close on itself: the producer half's own agent is the first thing the producer half's own first pattern verifies."
+  - "Binding completeness is mechanically enforced: supply one pattern_bindings key for EVERY entry in the pattern's pattern_slots, or check_ac_schema.validate_pattern_bindings_completeness blocks the commit naming the missing slot. Per-round values bind as three-element arrays (the schema permits array values)."
+  - "The consuming AC's criteria must NOT restate the three-round structure or the scoring rule — check_ac_schema.validate_criteria_not_pattern_duplicate rejects a consumer whose criteria duplicate its pattern's. Write only the pattern-steward-specific detail; the field is required, so a minimal 'satisfies the protocol for these bindings' body is the floor, never empty."
+  - "Stage the consuming AC in the same commit as, or after, the pattern record from ACS-500g-6 — check_ac_pattern_refs rejects an implements_pattern pointing at an id not present in the store."
+  - "WIRE THE EVALUATION INTO THE EXISTING HARNESS so the protocol is enforced rather than described: add a `pattern-steward` entry to scripts/evals/agent_eval_config.json with a `triggers` closure covering templates/agents/pattern-steward.md and templates/skills/authoring-patterns/SKILL.md. The deployed check-eval-staleness hook then blocks edits to either file unless a fresh eval result exists — turning ACS-500g-6's protocol into an actual gate. Note the threshold conflict recorded in ACS-500g-6-i: the entry must not use a fractional threshold."
+  - "This AC carries the end-to-end proof of the whole L1: after it lands, a store walk must find at least one AC passing _has_parameterized_slots and at least one AC setting implements_pattern. Both are zero today."
+delivers_to:
+  - agent: llm-expert
+    contract: "A non-empty consumer side: the first AC in the store setting implements_pattern (to the ACS-500g-6 agent-evaluation pattern) with one binding per declared slot, bound to pattern-steward — so the business-analyst §3a pattern-first check returns a match instead of empty."
+  - agent: python-coder
+    contract: "A `pattern-steward` entry in scripts/evals/agent_eval_config.json with a triggers closure over templates/agents/pattern-steward.md and templates/skills/authoring-patterns/SKILL.md, making check-eval-staleness block unproven edits to the steward."
+expects_from:
+  - ac_id: ACS-500g-6
+    contract: "The agent-evaluation pattern record and the exact list of slots it declares, so every one can be bound."
+  - ac_id: ACS-500g-1
+    contract: "The pattern-steward agent template and its config/agent_registry.json entry — the concrete agent under test this first consumer binds to."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+test_spec:
+  - name: test_first_consumer_binds_every_declared_slot
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Run the real _ac_schema_validators.validate_pattern_bindings_completeness over the on-disk pattern and its consuming AC; assert it returns zero errors — executes the deployed validator against the real records."
+  - name: test_pattern_ref_hook_accepts_the_first_consumer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Run check_ac_pattern_refs over the pattern and consumer files with HOOK_ROOT on the repo; assert exit code 0 — the reference resolves and the target passes _has_parameterized_slots."
+  - name: test_consumer_criteria_do_not_duplicate_the_pattern_body
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Run validate_criteria_not_pattern_duplicate over the consuming AC; assert zero errors — proves the body states only agent-specific detail."
+  - name: test_store_contains_at_least_one_pattern_and_one_consumer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Walk the real docs/acceptance-criteria/ tree; assert at least one AC passes _has_parameterized_slots and at least one AC sets implements_pattern. Both counts are zero today — this is the cold-start assertion for the whole ACS-500g L1."
+  - name: test_pattern_steward_is_registered_in_the_eval_config_triggers
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Run eval_selector's affected-agent computation with templates/agents/pattern-steward.md as the changed file; assert pattern-steward is returned as affected and that a missing result yields the blocking exit code — proves the eval entry is consumed in control flow, not merely present in the config."
+notes: |
+  The end-to-end proof that the producer half works: the loop the L1 describes
+  (empty inventory -> no match -> another one-off spec -> still empty) is broken
+  only once a real pattern has a real consumer. Uses the existing consumer
+  mechanism (ACS-500b/ACS-500c/ACS-500f) rather than re-specifying it.

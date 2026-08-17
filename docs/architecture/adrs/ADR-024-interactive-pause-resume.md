@@ -1,6 +1,6 @@
 ---
 title: "ADR-024: Interactive Gates Pause and Persist Instead of Cancelling When Headless"
-description: "Records the decision to replace the cancel-on-headless behaviour of interactive workflow gates with a pause-and-persist substrate. When no human is reachable, a gate terminates the run cleanly, writes a durable pending-question record keyed by run id under .leafcutter/paused_runs/, and returns a distinct paused_awaiting_input status instead of silently resolving to a safe default and exiting with status ok. Resume re-invokes the same workflow with the human's answer available and resumeFromRunId set so the harness replays committed agent() calls, execution deterministically reaches the same gate, and resolveGate() consults the record's answer before making the gate's agent() call. Covers the shared substrate helper imported by plan-feature.js, build-feature.js, and finalize-feature.js, the answer-application-by-type contract, question-type validation, durability and idempotency, and the E2/ADR-017 body constraints."
+description: "Records the decision to replace the cancel-on-headless behaviour of interactive workflow gates with a pause-and-persist substrate. When no human is reachable, a gate terminates the run cleanly, writes a durable pending-question record keyed by run id under .leafcutter/paused_runs/, and returns a distinct paused_awaiting_input status instead of silently resolving to a safe default and exiting with status ok. Resume re-invokes the same workflow with the human's answer available and resumeFromRunId set so the harness replays committed agent() calls, execution deterministically reaches the same gate, and resolveGate() consults the record's answer before making the gate's agent() call. Covers the shared substrate helper imported by plan-feature.js, build-feature.js, and finalize-feature.js, the answer-application-by-type contract, question-type validation, durability and idempotency, and the E2/ADR-030 body constraints."
 type: "adr"
 status: "active"
 created: "2026-07-20"
@@ -10,7 +10,7 @@ deciders:
 components:
   - build_orchestration
 related_docs:
-  - docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/reference/workflow-constraints.md
   - docs/reference/workflow-authoring-contract.md
@@ -37,7 +37,7 @@ related_code:
 ## Context
 
 The E2 workflow engine (Claude Code's built-in Workflow runtime; scripts live in
-`templates/workflows-js/*.js`, top-level-body form per ADR-017) executes workflow
+`templates/workflows-js/*.js`, top-level-body form per ADR-030) executes workflow
 bodies deterministically and statelessly. There is **NO `prompt()` primitive** in
 E2 — every user gate is implemented as an `agent()` turn dispatched to
 `status-checker` that is expected to relay a question to a human and return
@@ -173,7 +173,7 @@ The following rules realise this decision. Each is a binding commitment.
    bare except, no silent swallow). Pause/persist transitions MUST be logged for
    observability.
 
-10. **E2/ADR-017 constraints.** The workflow body MUST NOT use `Date.now()` /
+10. **E2/ADR-030 constraints.** The workflow body MUST NOT use `Date.now()` /
     `new Date()` / `Math.random()` (timestamps/seed MUST be passed via args). The
     change MUST preserve `build.py` round-trip parity (ADR-001) via
     `python scripts/build.py --target-dir .`.
@@ -235,7 +235,7 @@ deterministic replay guarantee that makes `resumeFromRunId` correct.
 
 ## References
 
-- [ADR-017 — Dual-Engine Workflow Support](ADR-017-dual-engine-workflow-support.md) — establishes the E2 top-level-body form that this ADR extends with the pause substrate.
+- [ADR-030 — Dual-Engine Workflow Support](ADR-030-dual-engine-workflow-support.md) — establishes the E2 top-level-body form that this ADR extends with the pause substrate.
 - [ADR-001 — Self-Hosting Boundary](ADR-001-self-hosting-boundary.md) — the `build.py` round-trip parity constraint that the shared substrate module must satisfy.
 - [docs/reference/workflow-constraints.md](../../reference/workflow-constraints.md) — E2 body constraints (no `Date.now()`, no blocking, no side-channel I/O) that the substrate must obey.
 - [docs/reference/workflow-authoring-contract.md](../../reference/workflow-authoring-contract.md) — the authoring contract for `agent()` calls and `resumeFromRunId` replay semantics.

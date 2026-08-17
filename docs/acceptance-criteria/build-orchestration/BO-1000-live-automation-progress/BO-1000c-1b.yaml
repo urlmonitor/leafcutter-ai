@@ -24,7 +24,7 @@ doc_links:
   - path: docs/architecture/components/finalize.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
     relationship: describes
     status: exists
 assigned_agent: llm-expert

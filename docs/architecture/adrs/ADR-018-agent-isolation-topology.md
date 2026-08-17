@@ -14,7 +14,7 @@ components:
 related_docs:
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
-  - docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+  - docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
 related_code:
   - templates/skills/feature/SKILL.md
   - templates/agents/worktree-agent.md
@@ -30,7 +30,7 @@ related_code:
 | Date | 2026-07-06 |
 | Deciders | leafcutter engineering team |
 | Author | leafcutter engineering team |
-| Supersedes | The shared-`.git` git-worktree model as the isolation primitive for autonomous epic/feature drives (partially reframes ADR-017 and the BO-1600 guardrail ACs — see §Impact on in-flight ACs) |
+| Supersedes | The shared-`.git` git-worktree model as the isolation primitive for autonomous epic/feature drives (partially reframes ADR-031 and the BO-1600 guardrail ACs — see §Impact on in-flight ACs) |
 
 > Component IDs are drawn from `docs/components.json`: `worktree_manager` (owns
 > the per-drive isolation lifecycle this ADR changes), `build_pipeline`
@@ -296,7 +296,7 @@ class is this ADR's topology change, not the BO-1600 prevention ACs.
 - Runs must stay on a native POSIX filesystem (ext4/btrfs/xfs); `/mnt/c` DrvFs,
   network shares, and portable drives weaken rename atomicity / fsync durability
   and cause 0-byte objects independent of concurrency.
-- ADR-017's Worktree Quality Gate Guard still applies to any residual worktree
+- ADR-031's Worktree Quality Gate Guard still applies to any residual worktree
   usage and to the clone bootstrap: the gate-readiness (pre-commit hooks actually
   fire) invariant is unchanged; only the isolation container changes.
 
@@ -340,7 +340,7 @@ class is this ADR's topology change, not the BO-1600 prevention ACs.
   template-source / deployed-output boundary the clone bootstrap must honour.
 - [ADR-006 — Flatten Supervisor Chain](ADR-006-flatten-supervisor-chain.md) — the
   dispatch topology whose drives this ADR re-hosts in clones.
-- [ADR-017 — Worktree Quality Gate Guard](ADR-017-worktree-quality-gate-guard.md)
+- [ADR-031 — Worktree Quality Gate Guard](ADR-031-worktree-quality-gate-guard.md)
   — the fail-closed gate-readiness invariant that still applies to the clone
   bootstrap; this ADR changes the isolation container, not the gate.
 - git-worktree (shared `.git/objects` + `refs/`; "experimental"):

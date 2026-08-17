@@ -330,7 +330,7 @@ Before generating any ticket, call the `select_connected` CLI to determine
 the connected build set for this leaf AC:
 
 ```bash
-python3 {{config.output_root}}/scripts/build_orchestration/fast_lane.py select_connected --exclude-structural-parent --ac <TOP_AC.id> --ac-root {{config.output_root}}/docs/acceptance-criteria 2>/tmp/build_ac_select_connected_err.txt
+python3 {{config.output_root}}/scripts/build_orchestration/fast_lane.py select_connected --exclude-structural-parent --ac <TOP_AC.id> --ac-root docs/acceptance-criteria 2>/tmp/build_ac_select_connected_err.txt
 ```
 
 Parse the JSON output — an ordered list of AC ids representing the connected

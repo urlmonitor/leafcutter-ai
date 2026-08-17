@@ -1,0 +1,30 @@
+id: KM-DBF-014
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "Regenerating the doc index without doc changes leaves the file byte-identical"
+component: knowledge-management
+status: active
+criteria: |
+  Given docs/INDEX.md has been generated and no documentation file has changed
+    since,
+  When the doc-index generator is run again,
+  Then docs/INDEX.md is byte-identical to the previous run and git reports no
+    modification,
+  And the symptom ("every regeneration rewrites the header timestamp, so the
+    file always shows a diff even when no doc changed") must not occur,
+  And when a documentation file HAS changed, the regenerated index still
+    reflects that change.
+origin_agent: BrainCandy
+created: 2026-08-14
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by:
+- scripts/generate_doc_index.py
+- unit_tests/commit_guardian/test_km_dbf_014_doc_index_idempotent.py
+change_target: code
+risk_surface: internal
+notes: "Authored by /quick-fix. Root cause: scripts/generate_doc_index.py:340 computes the header timestamp as datetime.now(timezone.utc) and the file is rewritten unconditionally, so the 'Generated: <HH:MM UTC>' line at line 51 changes on every run. This contradicts the module's own stated intent at line 345 ('never to datetime.now()' ... 'so that regenerating without source changes does not bump it'), which is honoured for the per-doc dates but not for the header. Consequence: the doc-index pre-commit hook produces an unstaged change on essentially every commit; pre-commit stashes unstaged changes and restores them after hooks run, so this guaranteed churn is the reliable ingredient in 'patch does not apply' / 'Stashed changes conflicted with hook auto-fixes' restore failures, which can leave the index and working tree in a mixed state after a failed commit."
+work_status: done

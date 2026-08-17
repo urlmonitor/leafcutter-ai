@@ -27,7 +27,7 @@ criteria: |
   reason (never the hardcoded "docs-only / config-only" string on a code ticket).
 depends_on: [BO-2000]
 doc_links:
-  - docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
   - docs/architecture/agent_delivery_workflows.md
 delivers_to: null
 expects_from: null

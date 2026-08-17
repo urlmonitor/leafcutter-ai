@@ -46,7 +46,7 @@ For the three-file layout that pairs these surfaces (agent + command + reference
 | **Sonnet** | Standard SWE work bounded by clear patterns. The default tier for nearly every agent. |
 | **Opus** | Novel synthesis or escalation. Never the default — only reached via gatekeeper escalation, never picked at the agent's frontmatter level. |
 
-ADR-006 is the canonical source — if this table drifts, [ADR-006 §2.1](../architecture/ADR-006-agent-model-tiers.md#21-three-tier-model-ladder) wins.
+ADR-006 is the canonical source — if this table drifts, [ADR-006 §2.1](../architecture/adrs/ADR-033-agent-model-tiers.md#21-three-tier-model-ladder) wins.
 
 ---
 
@@ -442,7 +442,7 @@ continues with template-only behaviour:
 PROJECT_CONTEXT.md not found for <agent-name>; running template-only
 ```
 
-**Reference**: [ADR-025 — Portable Agent PROJECT_CONTEXT Layout](../architecture/adrs/ADR-025-portable-agent-project-context-layout.md)
+**Reference**: [Convention: PROJECT_CONTEXT Injection](../conventions/PROJECT_CONTEXT-injection.md)
 
 ### Spawn Graph Consistency Validation
 
@@ -558,7 +558,7 @@ Writers of the product-truth store (`docs/product-truth/`) — the classify → 
 | Document | Purpose |
 |---|---|
 | [docs/agents/conventions.md](conventions.md) | Authoring rules — frontmatter schema, file layout, visibility classes, tool allowlists, patterns. Read this before writing a new agent. |
-| [docs/architecture/adrs/ADR-006-agent-model-tiers.md](../architecture/ADR-006-agent-model-tiers.md) | Canonical policy source — three-tier model ladder (§2.1), Skill Wrapper pattern (§2.2), Gatekeeper Escalation pattern (§2.3), Multi-Skill Dispatcher pattern (§2.4), visibility classes (§2.5), tool allowlist (§2.6), nesting depth (§2.7), clarifications (§2.8). |
+| [docs/architecture/adrs/ADR-033-agent-model-tiers.md](../architecture/adrs/ADR-033-agent-model-tiers.md) | Canonical policy source — three-tier model ladder (§2.1), Skill Wrapper pattern (§2.2), Gatekeeper Escalation pattern (§2.3), Multi-Skill Dispatcher pattern (§2.4), visibility classes (§2.5), tool allowlist (§2.6), nesting depth (§2.7), clarifications (§2.8). |
 | [docs/architecture/agent_delivery_workflows.md](../architecture/agent_delivery_workflows.md) | Visual architecture mapping of user-facing slash commands to sub-agents, and flowchart of the Supervisor Distribution and Adjudication flows. |
 | [docs/agents/analytics/trade-report.md](analytics/trade-report.md) | Reference doc for `reporting-agent` — the first occupant of the `analytics/` family and the canonical Skill Wrapper example. |
 | [.claude/agents/reporting-agent.md](../../.claude/agents/reporting-agent.md) | The agent file itself — frontmatter + system prompt for `reporting-agent`. |

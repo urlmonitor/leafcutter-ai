@@ -5,7 +5,9 @@ into a target project by `build.py`.
 
 ## Source → Build → Output Flow
 
-*Note: For the post-edit verification contract enforced during build, see [ADR 021: Agent Post-Edit Verification](../../docs/architecture/adrs/ADR-021-agent-post-edit-verification.md).*
+*Note: the post-edit verification contract enforced during build is the
+`requires_verification` frontmatter rule, validated by
+[`registry_validator.py`](../scripts/registry_validator.py).*
 
 ```mermaid
 graph TD

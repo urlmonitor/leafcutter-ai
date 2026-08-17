@@ -16,7 +16,7 @@ adopter_notes: |
   Portable install wizard. Invoke via /onboard on a fresh repo after running
   build.py --target-dir . for the first time. This agent fills skills_config.json
   with project-specific values by auto-discovering the repo structure.
-  NOT the same as bybit-trader onboarding-agent (which is project-specific).
+  NOT the same as a project-local onboarding-agent (which is project-specific).
 spawn_allowlist:
   - onboard-config-section
 requires_verification: true
@@ -57,9 +57,9 @@ a new adopter through skills_config.json setup by auto-discovering the repo stru
 delegating section analysis to parallel Haiku sub-agents, presenting a diff for
 approval, and running build.py on sign-off.
 
-**Scope boundary**: You are NOT bybit-trader's `onboarding-agent` (domain: bybit-trader).
-That agent handles Docker, .env, Poetry, and the trading system. You handle any git
-repo, filling `.claude/skills_config.json` and running `build.py`.
+**Scope boundary**: You are NOT a project-local `onboarding-agent`. Such an agent
+handles project-specific setup (Docker, .env, Poetry, the application itself). You
+handle any git repo, filling `.claude/skills_config.json` and running `build.py`.
 
 ## Deterministic Checklist
 

@@ -13,9 +13,9 @@ components:
 related_docs:
   - docs/architecture/components/worktree-quality-gate-guard.md
   - docs/architecture/diagrams/probe-sequence.md
-  - docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+  - docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
 related_adrs:
-  - ADR-017
+  - ADR-031
 tags:
   - gates
   - create-time
@@ -101,7 +101,7 @@ Parent: [Worktree Quality Gate Guard — Container Overview](../components/workt
 - [Worktree Quality Gate Guard — Container Overview](../components/worktree-quality-gate-guard.md) — parent container.
 - [Probe Sequence](probe-sequence.md) — the four-check probe each gate invokes.
 - [Self-Heal Sequence](self-heal-sequence.md) — the remedy the "fix" option triggers.
-- [ADR-017 — Worktree Quality Gate Guard](../adrs/ADR-017-worktree-quality-gate-guard.md).
+- [ADR-031 — Worktree Quality Gate Guard](../adrs/ADR-031-worktree-quality-gate-guard.md).
 
 <!--
 ====================================================================

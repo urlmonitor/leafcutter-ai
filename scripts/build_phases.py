@@ -599,11 +599,23 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     **Engine resolution**: ``config["workflows"]["engine"]`` is resolved before
     any file is written. The value ``"auto"`` resolves to ``"e2"`` (the
-    deterministic E2 top-level-body engine, per ADR-017 and ticket 09). The
+    deterministic E2 top-level-body engine, per ADR-030 and ticket 09). The
     resolved engine is passed to ``_emit_workflow_variant``. Only ``"e2"`` and
     ``"auto"`` are supported; ``"e1"`` raises ``ValueError`` (the E1 wrap was
     removed in EPIC-DualEngineWorkflowSupport ticket 09 — it produced an
     unloadable ESM module).
+
+    **Config injection (BP-900g-6)**: ``inject_config`` is applied to the
+    (post-engine-transform) content of every ``.js`` file before it is written,
+    exactly as ``build_workflows``/``build_commands``/``build_rules`` already do
+    for their ``.md`` templates. This resolves ``{{config.output_root}}`` and
+    other ``{{config.*}}`` placeholders so a workflow script can invoke
+    ``{{config.output_root}}/scripts/...`` instead of a script path hardcoded to
+    the default output root. Injection runs BEFORE the compare-before-write
+    guard so a rendered-but-unchanged file still counts as up-to-date rather
+    than as a fresh write on every run. Non-UTF-8 source content is written
+    through unchanged (injection is skipped with a warning) rather than
+    failing the whole phase.
 
     Applies the compare-before-write guard so that identical files are skipped
     on subsequent runs, satisfying the idempotency requirement.
@@ -611,12 +623,40 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     Args:
         target_root: Absolute path to the target project root directory.
         config: Merged config dictionary; reads ``config["workflows"]["enabled"]``
-            and ``config["workflows"]["engine"]``.
+            and ``config["workflows"]["engine"]``, and supplies the values used
+            to resolve ``{{config.*}}`` placeholders (notably ``output_root``).
         dry_run: When True, logs intent but writes nothing.
         force: When True, overwrites existing files.
 
     Returns:
         Count of ``.js`` files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-08-14 [BrainCandy/BP-900g-6]:
+    #   Applied inject_config() to workflow .js content before writing. Workflow
+    #   scripts invoke deployed Python scripts by path (setup_ticket_worktree.py,
+    #   fast_lane.py, pause_store.py, mark_ac_done.py, ...); every such
+    #   invocation was hardcoded to the literal "scripts/..." prefix, which is
+    #   only correct when a consumer's configured output_root is the default
+    #   ".leafcutter". Deploy paths are computed as
+    #   "<output_root>/scripts/..." (see build_ac_store, build_agent_support_scripts),
+    #   and output_root is documented as "configurable per consumer project" in
+    #   config/skills_config.schema.json — so a hardcoded "scripts/..." prefix in
+    #   a .js workflow silently breaks for any consumer who customises it.
+    #   .md templates already resolve {{config.output_root}} via inject_config;
+    #   .js workflows did not because build_workflow_scripts never called it —
+    #   an identity byte-copy phase, not an oversight in inject_config itself.
+    #   Rejected: hardcoding ".leafcutter/scripts/..." directly in the .js
+    #   source. That reintroduces the exact per-consumer breakage this ticket
+    #   fixes and duplicates a value the config system already owns; the
+    #   {{config.output_root}} placeholder is the single source of truth other
+    #   phases already use, and workflow scripts should not special-case that.
+    #   Verified non-destructive before applying broadly: the only pre-existing
+    #   "{{" occurrences in templates/workflows-js/ are JSDoc type annotations
+    #   (e.g. "@returns {{ request: string ... }}", "{{skip:boolean, ...}}"),
+    #   each followed by a space or a bare "key:" — neither matches
+    #   _PLACEHOLDER_RE's "{{(?:config\\.)?[a-zA-Z0-9_.]+}}", so no prose was
+    #   accidentally substituted. (#BP-900g-6)
     """
     import os
     import subprocess
@@ -632,7 +672,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
     # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
     # Engine selection is purely config-driven; the version check below is a
-    # floor gate only and must NOT influence which engine is selected (ADR-017).
+    # floor gate only and must NOT influence which engine is selected (ADR-030).
     engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
@@ -704,6 +744,23 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 exc,
             )
             continue
+
+        # Apply config-placeholder injection (BP-900g-6) so tokens like
+        # {{config.output_root}} resolve in deployed workflow scripts, the same
+        # treatment build_workflows/build_commands/build_rules already give
+        # .md templates. Runs BEFORE the compare-before-write guard below so an
+        # unchanged rendered output still skips the write (idempotency
+        # preserved). A non-UTF-8 source cannot be injected into and is copied
+        # through unchanged (verbatim byte-for-byte, same as before this phase
+        # gained injection).
+        try:
+            emitted = inject_config(emitted.decode("utf-8"), config).encode("utf-8")
+        except UnicodeDecodeError as exc:
+            _log.warning(
+                "Skipping config injection for %s (non-UTF-8 content): %s",
+                js_file.name,
+                exc,
+            )
 
         if not _should_overwrite(dest, force):
             continue
@@ -801,6 +858,16 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # fast-lane green+coverage gate; it MUST deploy or the (required) CI
         # done-proof check crashes with ModuleNotFoundError in the deployed layout.
         (ac_store_src / "done_proof.py",                "done_proof.py"),
+        # test_enforcement.py is imported by done_proof.py (shared COVERS_TAG_RE seam,
+        # BO-2500e-1).  It MUST deploy alongside done_proof.py — if absent, the
+        # deployed check_done_proof hook crashes with ModuleNotFoundError at runtime.
+        (ac_store_src / "test_enforcement.py",          "test_enforcement.py"),
+        # ac_parent_id.py provides derive_parent_id, imported at module scope by
+        # scripts/build_orchestration/fast_lane.py. Without it the deployed
+        # fast_lane.py exists but dies at import with ModuleNotFoundError, so
+        # /build-ac Step 2b.1 fails even though the file is present — a
+        # file-presence check cannot catch this, only executing it can (BP-900g-4).
+        (ac_store_src / "ac_parent_id.py",              "ac_parent_id.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
@@ -1929,7 +1996,8 @@ def validate_agent_self_description(
                                 problems.append(
                                     f"Registry entry '{agent_name}' has invalid "
                                     f"knowledge_channels channel value {channel}.\n"
-                                    f"  Valid range is 1-11 (per ADR-029 Agent Knowledge Plane).\n"
+                                    f"  Valid range is 1-11 (per docs/architecture/"
+                                    f"agent_knowledge_plane.md).\n"
                                     f"  Fix hint: Correct the channel value."
                                 )
 
@@ -2203,6 +2271,257 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
                 )
                 raise
             print(f"  scripts/knowledge/{script_name}")
+            written += 1
+
+    return written
+
+
+# ---------------------------------------------------------------------------
+# Agent-support script deploy spec (AC BP-900g-5)
+# ---------------------------------------------------------------------------
+# Scripts referenced by deployed agent and skill templates that had no deploy
+# phase and were therefore silently dead in every consumer install. They were
+# invisible to the reference guard until BP-900g-4 taught the extractor to see
+# output-root-form references.
+#
+# This is the SINGLE source of truth for the phase below and for
+# _manifest_agent_support_scripts() in build.py, which imports it. The two must
+# not be allowed to drift — a manifest that disagrees with what is actually
+# deployed is precisely the BP-900g-4 defect.
+#
+# Directories deploy recursively (every .py), which also carries sibling modules
+# an entry point imports. Single files list any same-directory module they load
+# at import time explicitly, because a missing one fails at runtime, not here.
+
+AGENT_SUPPORT_SCRIPT_DIRS: tuple[str, ...] = (
+    # changelog-agent.md, epic-supervisor.md, build-single-ticket/SKILL.md
+    "changelog",
+    # retrospective-agent.md
+    "retrospective",
+    # retrospective-agent.md — generate_health_report.py sits next to
+    # agent_telemetry.py, so the directory deploys as a unit.
+    "agent-health",
+)
+
+AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
+    # architect-review.md, architecture-diagram-author.md
+    "next_diagram_seq.py",
+    # roadmap-query/SKILL.md, roadmap-steward/SKILL.md
+    "roadmap_query.py",
+    # NOT referenced by any template directly, but roadmap_query.py loads it via
+    # importlib at MODULE SCOPE (spec_from_file_location against its own parent
+    # directory), so roadmap_query.py cannot even be imported without it.
+    "roadmap_query_audit.py",
+    # package-audit/SKILL.md
+    "package_audit.py",
+    # plan-feature.js / finalize-feature.js invoke this at every interactive
+    # gate (read/write pause-resume records). No deploy phase shipped it before
+    # BP-900g-6, so both workflows died at their first gate in a consumer
+    # install. Module-scope imports are stdlib only (argparse, json, logging,
+    # subprocess, sys, time) — no sibling module to co-deploy.
+    "pause_store.py",
+    # fast-lane-build.js invokes this at every phase to build the layered LLM
+    # context bundle (assemble_context_bundle). No deploy phase shipped it
+    # before BP-900g-6. Module-scope imports are stdlib only (json, logging,
+    # pathlib, typing) — no sibling module to co-deploy.
+    "injection_builders.py",
+)
+
+
+def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
+                                dry_run: bool, force: bool) -> int:
+    """Deploy agent-support scripts to ``<target_root>/scripts/``.
+
+    Copies the directories in ``AGENT_SUPPORT_SCRIPT_DIRS`` (recursively, all
+    ``.py``) and the individual files in ``AGENT_SUPPORT_SCRIPT_FILES`` from the
+    package ``scripts/`` tree, preserving relative layout so that
+    ``scripts/<name>`` in a template resolves to the same path in the consumer
+    install.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-08-14 [BrainCandy/BP-900g-5]:
+    #   Added build_agent_support_scripts() phase, emptying KNOWN_UNDEPLOYED_ALLOWLIST.
+    #   Six agent capabilities (changelog-agent, retrospective-agent,
+    #   architect-review, the roadmap skills, package-audit) referenced scripts that
+    #   no phase deployed, so they failed at their first command in every consumer
+    #   install. Driven off a module-level spec that build.py's manifest helper
+    #   imports, so the deployed set and the declared set cannot diverge.
+    #   (#BP-900g-5)
+    # - 2026-08-14 [BrainCandy/BP-900g-6]:
+    #   Added pause_store.py and injection_builders.py to AGENT_SUPPORT_SCRIPT_FILES.
+    #   Both are referenced (via {{config.output_root}}/scripts/...) by the
+    #   plan-feature.js and finalize-feature.js pause-resume gates and by the
+    #   fast-lane-build.js context-assembly step, but presence-checked source
+    #   files only pass this guard if they are also reachable from a deployed
+    #   consumer tree — no phase shipped either script before this. Checked
+    #   both for module-scope imports of undeployed siblings (the ac_parent_id.py
+    #   lesson from BP-900g-4): neither has one — both import stdlib only.
+    #   (#BP-900g-6)
+    """
+    scripts_src = PACKAGE_ROOT / "scripts"
+    written = 0
+
+    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
+        src_dir = scripts_src / dir_name
+        if not src_dir.is_dir():
+            _log.warning(
+                "build_agent_support_scripts: source directory not found, skipping: %s",
+                src_dir,
+            )
+            continue
+        for src_file in sorted(src_dir.rglob("*.py")):
+            rel = src_file.relative_to(scripts_src).as_posix()
+            written += _copy_agent_support_file(src_file, target_root, rel, dry_run, force)
+
+    for file_name in AGENT_SUPPORT_SCRIPT_FILES:
+        src_file = scripts_src / file_name
+        if not src_file.is_file():
+            _log.warning(
+                "build_agent_support_scripts: source script not found, skipping: %s",
+                src_file,
+            )
+            continue
+        written += _copy_agent_support_file(
+            src_file, target_root, file_name, dry_run, force
+        )
+
+    return written
+
+
+def _copy_agent_support_file(src_file: Path, target_root: Path, rel: str,
+                             dry_run: bool, force: bool) -> int:
+    """Copy one agent-support script to ``<target_root>/scripts/<rel>``.
+
+    Args:
+        src_file: Absolute path to the source script.
+        target_root: Absolute path to the target project root directory.
+        rel: Path of the script relative to the package ``scripts/`` directory.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites an existing file.
+
+    Returns:
+        1 when a file was written (or would be in dry-run mode), else 0.
+    """
+    output_path = target_root / "scripts" / rel
+
+    if not _should_overwrite(output_path, force):
+        return 0
+
+    if _files_content_identical(src_file, output_path):
+        global _uptodate_count  # noqa: PLW0603
+        _uptodate_count += 1
+        return 0
+
+    if dry_run:
+        print(f"  [DRY-RUN] would copy scripts/{rel}")
+        return 1
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_file, output_path)
+    except OSError as exc:
+        _log.warning(
+            "build_agent_support_scripts: failed to copy %s → %s: %s",
+            src_file,
+            output_path,
+            exc,
+        )
+        raise
+    print(f"  scripts/{rel}")
+    return 1
+
+
+def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
+                                      dry_run: bool, force: bool) -> int:
+    """Deploy build-orchestration scripts to ``<target_root>/scripts/build_orchestration/``.
+
+    Copies every ``.py`` file from the package's ``scripts/build_orchestration/``
+    to the consumer project.  ``fast_lane.py`` is invoked directly by the build-ac
+    agent at Step 2b.1 (``select_connected``); before this phase existed no build
+    phase deployed the directory, so the deployed agent died at that command with
+    "can't open file" while build.py itself exited 0 (Class B deploy gap, the same
+    shape ``build_knowledge_scripts`` closed for ``harvest_learnings.py``).
+
+    The whole directory is deployed rather than just ``fast_lane.py`` so that
+    sibling-module imports keep resolving.  ``fast_lane.py`` reaches its
+    ``ac_store`` helpers via ``Path(__file__).parent.parent / "ac_store"``, which
+    resolves correctly in the deployed tree because ``build_ac_store`` deploys
+    ``scripts/ac_store/`` alongside it.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-08-14 [BrainCandy/BP-900g-4]:
+    #   Added build_build_orchestration_scripts() phase. Deploys .py files from
+    #   scripts/build_orchestration/ to consumer scripts/build_orchestration/.
+    #   Closes the deploy gap that made /build-ac fail at Step 2b.1 in every
+    #   consumer install. Scans the directory dynamically rather than using a
+    #   hardcoded file list, so a new module added there cannot silently go
+    #   undeployed. (#BP-900g-4)
+    """
+    src_dir = PACKAGE_ROOT / "scripts" / "build_orchestration"
+    output_dir = target_root / "scripts" / "build_orchestration"
+    written = 0
+
+    if not src_dir.is_dir():
+        _log.warning(
+            "build_build_orchestration_scripts: source directory not found, skipping: %s",
+            src_dir,
+        )
+        return 0
+
+    for src_file in sorted(src_dir.glob("*.py")):
+        if not src_file.is_file():
+            continue
+
+        output_path = output_dir / src_file.name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/build_orchestration/{src_file.name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_build_orchestration_scripts: failed to copy %s → %s: %s",
+                    src_file,
+                    output_path,
+                    exc,
+                )
+                raise
+            print(f"  scripts/build_orchestration/{src_file.name}")
             written += 1
 
     return written
@@ -2556,7 +2875,7 @@ def clean_stale_artifacts(
 #   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
 # - 2026-07-02 [python-coder/EPIC-DualEngineWorkflowSupport/07]:
 #   build_workflow_scripts(): resolved "auto" → "e2" explicitly before
-#   calling _emit_workflow_variant (ADR-017: E2 is the default deterministic
+#   calling _emit_workflow_variant (ADR-030: E2 is the default deterministic
 #   engine). Version check remains a floor gate only — it warns/skips when
 #   the Claude Code version is below the minimum but does NOT influence engine
 #   selection. Updated _emit_workflow_variant docstring to reflect that "auto"

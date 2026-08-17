@@ -8,9 +8,9 @@ description: Haiku sub-agent spawned in parallel by the onboard wizard. Receives
   project).
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # onboard-config-section
 

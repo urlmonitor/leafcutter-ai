@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "config/ac_store_schema.json",
     "title": "AC Store — Acceptance Criterion YAML Schema",
-    "description": "JSON Schema (draft-07) for acceptance criterion files stored under docs/acceptance-criteria/. See ADR-007 for rationale and ID format specification.",
+    "description": "JSON Schema (draft-07) for acceptance criterion files stored under docs/acceptance-criteria/. See ADR-008 for rationale and ID format specification.",
     "type": "object",
     "required": [
         "id",
@@ -398,13 +398,13 @@
                             },
                             "framework": {
                                 "type": "string",
-                                "enum": ["unittest", "pytest"],
-                                "description": "Test framework. Defaults to the project convention (unittest) when omitted."
+                                "enum": ["unittest", "pytest", "vitest"],
+                                "description": "Test framework. Defaults to the project convention (unittest) when omitted. 'vitest' covers JS/TS tests, which the done-proof oracle recognises via '// covers:' tags (BO-2500e)."
                             },
                             "type": {
                                 "type": "string",
-                                "enum": ["unit", "integration", "e2e", "behavioral"],
-                                "description": "Test level. Guides where the test runs and how heavy its fixtures are."
+                                "enum": ["unit", "integration", "e2e", "behavioral", "component"],
+                                "description": "Test level. Guides where the test runs and how heavy its fixtures are. 'component' is a UI component-level test that renders a component tree in a DOM environment (e.g. vitest + testing-library) — heavier than a pure unit test, lighter than e2e."
                             },
                             "description": {
                                 "type": "string",

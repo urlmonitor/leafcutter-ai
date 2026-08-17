@@ -20,13 +20,13 @@ criteria: |
 depends_on:
   - BO-2000e-1
 doc_links:
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "The Test Requirements guard must apply only to code tickets; docs-only/config-only tickets are exempt (ADR-004 docs-only skip parity)."
+  - "The Test Requirements guard must apply only to code tickets; docs-only/config-only tickets are exempt (ADR-027 docs-only skip parity)."
   - "Test coverage: a docs-only ticket with empty Test Requirements is admitted without a block."
 delivers_to: null
 expects_from:

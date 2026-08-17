@@ -1,24 +1,24 @@
 ---
-title: "Agent Reference: sql-index-creator"
+title: 'Agent Reference: sql-index-creator'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-08
 components:
-  - "infrastructure"
-  - infrastructure
+- infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/database/create-index.md"
-  - "docs/database-domain.md"
-  - "tickets/09_done/EPIC-CodingAgents/16_sql_index_creator.md"
-  - "tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/database/create-index.md
+- docs/database-domain.md
+- tickets/09_done/EPIC-CodingAgents/16_sql_index_creator.md
+- tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md
 related_code:
-  - ".claude/agents/sql-index-creator.md"
-  - "sql_functions/schema/indexes/"
+- .claude/agents/sql-index-creator.md
+- sql_functions/schema/indexes/
+description: 'Overview of Agent Reference: sql-index-creator.'
 ---
-
 # Agent Reference: `sql-index-creator`
 
 Visibility class: **Internal** — only invoked by `sql-coder`.
@@ -140,7 +140,7 @@ partitioning column requirement).
 
 ## 7. Tool Allowlist and Research Delegation
 
-Per [ADR-006 §2.6](../../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation)
+Per [ADR-006 §2.6](../../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation)
 and the strict-research-delegation rule:
 
 - `sql-index-creator` carries: `Bash, Read, Edit, Write, Agent`.
@@ -188,7 +188,7 @@ pitfall, or a change in CONCURRENTLY thresholds):
   hybrid schema management overview, reload commands, observability surface.
 - [docs/agents/conventions.md](../conventions.md) —
   frontmatter schema (§1), tool allowlists (§4), strict-research-delegation (§4.2).
-- [docs/architecture/adrs/ADR-006-agent-model-tiers.md](../../architecture/ADR-006-agent-model-tiers.md) —
+- [docs/architecture/adrs/ADR-033-agent-model-tiers.md](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   model tier policy; Sonnet rationale.
 - [.claude/agents/sql-index-creator.md](../../../.claude/agents/sql-index-creator.md) —
   the agent file itself.

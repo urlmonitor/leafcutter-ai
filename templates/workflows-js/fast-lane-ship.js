@@ -26,9 +26,12 @@
  * supervisor chain, no LLM planner — the phase order is fixed and code-defined
  * (BO-2400a-5).
  *
- * Gate script:   scripts/build_orchestration/fast_lane.py
- * Worktree tool: scripts/setup_ticket_worktree.py
- * Done marker:   scripts/ac_store/mark_ac_done.py (coverage-gated)
+ * Gate script:   {{config.output_root}}/scripts/build_orchestration/fast_lane.py
+ *                (resolved inside the freshly-created worktree, once bootstrapped)
+ * Worktree tool: {{config.output_root}}/scripts/setup_ticket_worktree.py
+ *                (run from the consumer repo root, BEFORE any worktree exists)
+ * Done marker:   fast_lane.py's own `mark_done` subcommand (coverage-gated) —
+ *                not a direct call to scripts/ac_store/mark_ac_done.py
  *
  * E2 canonical form: top-level body, agent(prompt, opts), args global.
  */
@@ -145,7 +148,7 @@ const worktreeResult = await agent(
   `You are the worktree phase agent for a fast-lane build. Create the isolated ` +
   `build worktree — do NOT ask for confirmation (creation is non-destructive).\n\n` +
   `Run this single Bash command from the repository root:\n` +
-  `   python3 scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
+  `   python3 {{config.output_root}}/scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
   `It fetches origin, creates a worktree on branch fast-lane/${slug} rooted at the ` +
   `latest origin/main, bootstraps it, and prints a single JSON line with keys ` +
   `worktree_path, branch, ac_store_path, created.\n\n` +
@@ -181,7 +184,7 @@ const branch = worktreeResult.branch || `fast-lane/${slug}`;
 // resolver looking in the wrong directory (observed 2026-08-11 on BO-2400f).
 // Deriving it removes the LLM from the trust path for this deterministic value.
 const acStoreRoot = `${worktreePath}/${acStoreRel}`;
-const gateScript = `${worktreePath}/scripts/build_orchestration/fast_lane.py`;
+const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
 
 // ---------------------------------------------------------------------------
 // Phase 2 — Resolve the connected build set (BO-2400f-1/f-2)

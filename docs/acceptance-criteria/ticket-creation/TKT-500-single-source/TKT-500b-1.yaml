@@ -19,7 +19,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 depends_on: [TKT-500a-1, TKT-500b]
 doc_links:
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: constrains
 delivers_to: [TKT-500b-2]
 expects_from: [TKT-500a-1]

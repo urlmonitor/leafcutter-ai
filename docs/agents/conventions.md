@@ -8,8 +8,8 @@ last_updated: 2026-06-17
 components:
   - "infrastructure"
 related_docs:
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/architecture/adrs/ADR-010-agent-supervisor-signoff-pattern.md"
+  - "docs/architecture/adrs/ADR-033-agent-model-tiers.md"
+  - "templates/skills/signoff/SKILL.md"
   - "tickets/09_done/EPIC-AgentFoundation/Master_Plan.md"
   - "tickets/09_done/EPIC-AgentFoundation/done/02_reference_agent_trade_report_runner.md"
 related_code:
@@ -20,7 +20,7 @@ related_code:
 
 # Agent Authoring Conventions
 
-This document is the operational how-to for writing a new agent. It translates the policy in [`ADR-006: Agent Model Tiers and Gatekeeper Escalation`](../architecture/ADR-006-agent-model-tiers.md) into actionable rules so a fresh contributor can author a correct agent without re-deriving the policy from first principles.
+This document is the operational how-to for writing a new agent. It translates the policy in [`ADR-006: Agent Model Tiers and Gatekeeper Escalation`](../architecture/adrs/ADR-033-agent-model-tiers.md) into actionable rules so a fresh contributor can author a correct agent without re-deriving the policy from first principles.
 
 If you only have ten minutes, read this file. If you need to know *why* a rule exists, follow the cross-link to the matching ADR section.
 
@@ -44,16 +44,16 @@ Every agent file at `.claude/agents/<agent>.md` opens with a YAML frontmatter bl
 |---|---|---|---|
 | `name` | string | kebab-case identifier matching the filename stem | Must be unique across `.claude/agents/`. See §2 for the slash-command-collision rule. |
 | `description` | string (multi-line allowed) | free text, but must follow one of the three visibility-class shapes in §3 | This field drives auto-trigger reliability. Vague descriptions fail to fire. |
-| `model` | enum | `haiku`, `sonnet`, or `opus` | One of three tiers. See [ADR-006 §2.1](../architecture/ADR-006-agent-model-tiers.md#21-three-tier-model-ladder). Default is `sonnet`; reach for `haiku` only when the work is fully mechanical, and for `opus` only when the agent is the escalation target of a Sonnet gatekeeper. |
+| `model` | enum | `haiku`, `sonnet`, or `opus` | One of three tiers. See [ADR-006 §2.1](../architecture/adrs/ADR-033-agent-model-tiers.md#21-three-tier-model-ladder). Default is `sonnet`; reach for `haiku` only when the work is fully mechanical, and for `opus` only when the agent is the escalation target of a Sonnet gatekeeper. |
 | `tools` | comma-separated list | tier-floor minimums in §4 | An **empty** `tools:` value means *no tools* — not "all default tools". The Haiku floor is `Bash, Read`; never leave the field blank. |
 
 ### 1.1 Allowed `model:` values cross-referenced to ADR-006
 
 | Value | Tier | When to pick it |
 |---|---|---|
-| `haiku` | Haiku — see [ADR-006 §2.1](../architecture/ADR-006-agent-model-tiers.md#21-three-tier-model-ladder) | Mechanical, deterministic procedures with no judgement. Inputs map to outputs by a fixed recipe. |
-| `sonnet` | Sonnet — see [ADR-006 §2.1](../architecture/ADR-006-agent-model-tiers.md#21-three-tier-model-ladder) | Standard SWE work bounded by clear patterns. The default for nearly every agent. |
-| `opus` | Opus — see [ADR-006 §2.1](../architecture/ADR-006-agent-model-tiers.md#21-three-tier-model-ladder) | Novel synthesis or escalation. Only valid as the spawn target of a Sonnet gatekeeper; never picked at the agent's own frontmatter level outside that role. |
+| `haiku` | Haiku — see [ADR-006 §2.1](../architecture/adrs/ADR-033-agent-model-tiers.md#21-three-tier-model-ladder) | Mechanical, deterministic procedures with no judgement. Inputs map to outputs by a fixed recipe. |
+| `sonnet` | Sonnet — see [ADR-006 §2.1](../architecture/adrs/ADR-033-agent-model-tiers.md#21-three-tier-model-ladder) | Standard SWE work bounded by clear patterns. The default for nearly every agent. |
+| `opus` | Opus — see [ADR-006 §2.1](../architecture/adrs/ADR-033-agent-model-tiers.md#21-three-tier-model-ladder) | Novel synthesis or escalation. Only valid as the spawn target of a Sonnet gatekeeper; never picked at the agent's own frontmatter level outside that role. |
 
 ### 1.2 Copy-pasteable example
 
@@ -75,7 +75,7 @@ System prompt body goes here.
 
 > An empty `tools:` value means **no tools**, not "all default tools".
 
-A Haiku agent that omits `tools:` or sets it to an empty list cannot Read or Bash and is useless. The Haiku floor is `Bash, Read`. The Sonnet floor is `Bash, Read, Write, Edit`. See §4 for the full tier table and the strict-research-delegation rule. The rationale is in [ADR-006 §2.6](../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
+A Haiku agent that omits `tools:` or sets it to an empty list cannot Read or Bash and is useless. The Haiku floor is `Bash, Read`. The Sonnet floor is `Bash, Read, Write, Edit`. See §4 for the full tier table and the strict-research-delegation rule. The rationale is in [ADR-006 §2.6](../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
 
 ---
 
@@ -96,7 +96,7 @@ Two consequences for agent authors:
 1. **Do NOT hand-edit files in `.claude/commands/`.** They are build outputs (gitignored) and will be overwritten by `build.py`. Add the slash-command surface by creating a workflow template at `leafcutter/templates/workflows/<command>.md`.
 2. **Auto-trigger via agent description, explicit invocation via slash command.** Prose intent matching ("how are trades doing?") routes to the agent via its `description` field and runs the agent's pinned model. Explicit `/<command>` resolves to the workflow body and runs on the user's current session model. The two surfaces are separate; the agent and the workflow are co-canonical and load each other where appropriate (the agent loads the workflow by path; the workflow stays untouched).
 
-The wrapped skill or workflow stays at `.claude/skills/<skill>/SKILL.md` or `.claude/commands/<workflow>.md` and is **not modified** by the wrapper agent's body. The workflow's frontmatter `description:` may be neutered to avoid duplicate auto-trigger surface (see `.claude/commands/trade-report.md` for the canonical example: description names the agent that owns the workflow). See [ADR-006 Operational consequences](../architecture/ADR-006-agent-model-tiers.md#4-consequences) ("Skill-Wrapper agents do not modify the wrapped skill").
+The wrapped skill or workflow stays at `.claude/skills/<skill>/SKILL.md` or `.claude/commands/<workflow>.md` and is **not modified** by the wrapper agent's body. The workflow's frontmatter `description:` may be neutered to avoid duplicate auto-trigger surface (see `.claude/commands/trade-report.md` for the canonical example: description names the agent that owns the workflow). See [ADR-006 Operational consequences](../architecture/adrs/ADR-033-agent-model-tiers.md#4-consequences) ("Skill-Wrapper agents do not modify the wrapped skill").
 
 ### 2.1 Canonical family directories
 
@@ -136,7 +136,7 @@ Multi-Skill Dispatcher agents use a **role-based noun** name (e.g. `reporting-ag
 - Slash command `/project-report` → also invokes `reporting-agent` (once that workflow lands in [EPIC-SkillRunnerAgents]).
 - The role noun is the disambiguator: it signals the agent's scope (analytics reporting, coding tasks, ops tasks) rather than the specific command it happens to be serving today.
 
-This convention is also called out in [ADR-006 Operational consequences](../architecture/ADR-006-agent-model-tiers.md#4-consequences).
+This convention is also called out in [ADR-006 Operational consequences](../architecture/adrs/ADR-033-agent-model-tiers.md#4-consequences).
 
 ---
 
@@ -144,7 +144,7 @@ This convention is also called out in [ADR-006 Operational consequences](../arch
 
 Every agent's `description` field declares **exactly one** of three classes. The class shapes the field's wording and controls whether the parent model auto-delegates to the agent.
 
-The full policy is in [ADR-006 §2.5](../architecture/ADR-006-agent-model-tiers.md#25-visibility-classes); this section translates it into one ready-to-paste example per class.
+The full policy is in [ADR-006 §2.5](../architecture/adrs/ADR-033-agent-model-tiers.md#25-visibility-classes); this section translates it into one ready-to-paste example per class.
 
 ### 3.1 User-facing
 
@@ -169,7 +169,7 @@ description: |
   the current change.
 ```
 
-The confirmation gate applies *once*, at the boundary where the destructive action commits. Sub-agents below the gate (e.g. a `commit-runner` spawning `precommit-fixer`) do not re-prompt; the gate covers the entire spawn tree below it. See [ADR-006 §2.8](../architecture/ADR-006-agent-model-tiers.md#28-clarifications-on-edge-cases).
+The confirmation gate applies *once*, at the boundary where the destructive action commits. Sub-agents below the gate (e.g. a `commit-runner` spawning `precommit-fixer`) do not re-prompt; the gate covers the entire spawn tree below it. See [ADR-006 §2.8](../architecture/adrs/ADR-033-agent-model-tiers.md#28-clarifications-on-edge-cases).
 
 #### 3.2.1 A confirmation-gated agent must never be *spawned* to serve an interactive action
 
@@ -202,13 +202,13 @@ There is no automated lint at this layer — the description *is* the auto-trigg
 
 > An agent is **exactly one** class — never two.
 
-A user-facing description on an internal-only agent will misfire as auto-trigger noise. An internal-suffixed description on a user-facing agent will silently never fire. When a description could read as more than one class, the agent file must pick one and reword. See [ADR-006 §2.5](../architecture/ADR-006-agent-model-tiers.md#25-visibility-classes) and the hybrid-ambiguity clarification in [§2.8](../architecture/ADR-006-agent-model-tiers.md#28-clarifications-on-edge-cases).
+A user-facing description on an internal-only agent will misfire as auto-trigger noise. An internal-suffixed description on a user-facing agent will silently never fire. When a description could read as more than one class, the agent file must pick one and reword. See [ADR-006 §2.5](../architecture/adrs/ADR-033-agent-model-tiers.md#25-visibility-classes) and the hybrid-ambiguity clarification in [§2.8](../architecture/adrs/ADR-033-agent-model-tiers.md#28-clarifications-on-edge-cases).
 
 ---
 
 ## 4. Tool Allowlists
 
-Each spawned agent's `tools:` is the **minimum** needed to do its job. The full rationale (context isolation, payload size, cost) is in [ADR-006 §2.6](../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation); the per-tier floors are below.
+Each spawned agent's `tools:` is the **minimum** needed to do its job. The full rationale (context isolation, payload size, cost) is in [ADR-006 §2.6](../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation); the per-tier floors are below.
 
 ### 4.1 Tier-floor minimums
 
@@ -235,7 +235,7 @@ There are exactly **two** carve-outs from §4.2:
 1. **The user-facing Opus session.** It is the project's interactive surface, not a spawned agent — it keeps `Grep`, `Glob`, `jcodemunch`, `serena`, and `context7` because the user steers it directly. The strict-research rule applies only to *spawned* agents under `.claude/agents/`.
 2. **`research-agent` itself.** It keeps everything because its whole job is research; otherwise the rule would be self-defeating.
 
-A new author who reads §4.2 and wonders why their interactive Opus session still has `Grep` is the most likely point of confusion. The answer is here: the rule applies to spawned agents, not to the user-facing session. See [ADR-006 §2.6](../architecture/ADR-006-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
+A new author who reads §4.2 and wonders why their interactive Opus session still has `Grep` is the most likely point of confusion. The answer is here: the rule applies to spawned agents, not to the user-facing session. See [ADR-006 §2.6](../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation).
 
 ### 4.4 Tier-floor exception comment-justification rule
 
@@ -245,7 +245,7 @@ If a Haiku agent legitimately needs a tool above its tier floor (e.g. `Edit` for
 <!--
 TOOL EXCEPTION: this Haiku agent uses Edit (above the Haiku floor of Bash, Read)
 because <one-line reason>. See docs/agents/conventions.md §4.4 and
-docs/architecture/adrs/ADR-006-agent-model-tiers.md §2.6.
+docs/architecture/adrs/ADR-033-agent-model-tiers.md §2.6.
 -->
 ```
 
@@ -255,7 +255,7 @@ The same rule applies in reverse: a Sonnet agent that drops *below* the Sonnet f
 
 ## 5. Patterns
 
-Three named patterns cover every agent in the planned epics: **Skill Wrapper**, **Gatekeeper Escalation**, and **Multi-Skill Dispatcher**. All three are defined in [ADR-006 §2.2](../architecture/ADR-006-agent-model-tiers.md#22-pattern-a--skill-wrapper), [§2.3](../architecture/ADR-006-agent-model-tiers.md#23-pattern-b--gatekeeper-escalation), and [§2.4](../architecture/ADR-006-agent-model-tiers.md#24-pattern-c--multi-skill-dispatcher); this section translates each into authoring rules.
+Three named patterns cover every agent in the planned epics: **Skill Wrapper**, **Gatekeeper Escalation**, and **Multi-Skill Dispatcher**. All three are defined in [ADR-006 §2.2](../architecture/adrs/ADR-033-agent-model-tiers.md#22-pattern-a--skill-wrapper), [§2.3](../architecture/adrs/ADR-033-agent-model-tiers.md#23-pattern-b--gatekeeper-escalation), and [§2.4](../architecture/adrs/ADR-033-agent-model-tiers.md#24-pattern-c--multi-skill-dispatcher); this section translates each into authoring rules.
 
 ### 5.1 Skill Wrapper
 
@@ -291,7 +291,7 @@ After completing your primary task, append an `## Anomalies` section. Flag anyth
 
 - `name: log-fetch-runner` — kebab-case, matches the filename stem. The `-runner` suffix avoids collision with the slash command `/fetch-prod-logs` per §2.2a. The slash command keeps the bare verb; the agent gets the disambiguating suffix.
 - `description: …Use when: …` — user-facing visibility class (§3.1). Three concrete when-to-use phrasings so the parent model auto-triggers reliably.
-- `model: haiku` — log fetching is a fully mechanical procedure (SSH → docker exec → tail); no judgement is required. Textbook Haiku per [ADR-006 §2.1](../architecture/ADR-006-agent-model-tiers.md#21-three-tier-model-ladder).
+- `model: haiku` — log fetching is a fully mechanical procedure (SSH → docker exec → tail); no judgement is required. Textbook Haiku per [ADR-006 §2.1](../architecture/adrs/ADR-033-agent-model-tiers.md#21-three-tier-model-ladder).
 - `tools: Bash, Read` — the Haiku floor. Search tools removed per §4.2; `Agent` omitted because this wrapper never spawns sub-agents.
 - **System prompt body** — two sentences plus the canonical anomaly clause verbatim.
 
@@ -301,7 +301,7 @@ After completing your primary task, append an `## Anomalies` section. Flag anyth
 
 A Multi-Skill Dispatcher is a **single Sonnet agent** that routes multiple slash commands to their matching workflows via a dispatch table, applies the canonical anomaly clause uniformly, and — when anomaly density is high — spawns an Opus sub-agent inline rather than waiting for the user-facing session to decide. This collapses the "one Skill Wrapper per command" approach into a single agent file per domain.
 
-See [ADR-006 §2.4](../architecture/ADR-006-agent-model-tiers.md#24-pattern-c--multi-skill-dispatcher) for the upstream definition and rationale.
+See [ADR-006 §2.4](../architecture/adrs/ADR-033-agent-model-tiers.md#24-pattern-c--multi-skill-dispatcher) for the upstream definition and rationale.
 
 Authoring rules:
 
@@ -367,7 +367,7 @@ Do not spawn sub-agents for reasons other than anomaly-density escalation.
 - `tools: Bash, Read, Agent` — `Agent` is required for the inline Opus spawn. Search tools (`Grep`, `Glob`, `jcodemunch`, `serena`, `context7`) are **removed** per the strict-research-delegation rule (§4.2): every file the workflows touch is named explicitly.
 - **Dispatch table** — the first block in the system prompt. Planned rows are marked *(planned)* so authors can see where to add without guessing.
 - **Anomaly clause** — copied verbatim from §5.1. Grep-checkable.
-- **Density gate** — when the threshold fires, `## Escalation` is emitted alongside `## Anomalies`; this is the explicit exception to the no-fusion rule (§5.5, [ADR-006 §2.8](../architecture/ADR-006-agent-model-tiers.md#28-clarifications-on-edge-cases)).
+- **Density gate** — when the threshold fires, `## Escalation` is emitted alongside `## Anomalies`; this is the explicit exception to the no-fusion rule (§5.5, [ADR-006 §2.8](../architecture/adrs/ADR-033-agent-model-tiers.md#28-clarifications-on-edge-cases)).
 
 ### 5.3 Gatekeeper Escalation
 
@@ -378,9 +378,9 @@ Authoring rules:
 - The agent's `model:` is `sonnet`. The Opus sub-agent is a separate file (`<gatekeeper>-deep.md`) with `model: opus` and the internal visibility class (§3.3).
 - The gatekeeper's `tools:` includes `Agent` (so it can spawn) plus the Sonnet floor.
 - The system prompt **must** end with: "Whichever branch fires, append `## Escalation` to your output naming the chosen branch and the one-line reason. Never skip this section."
-- Escalation rate is observable via the `## Escalation` log lines. Sustained rates above 50% mean the gatekeeper is on the wrong tier and the agent should be revisited per [ADR-006 §6](../architecture/ADR-006-agent-model-tiers.md#6-review-criteria). For the Multi-Skill Dispatcher specifically, the density-gate trip rate review criterion is in [ADR-006 §6](../architecture/ADR-006-agent-model-tiers.md#6-review-criteria) (>25% trigger rate).
+- Escalation rate is observable via the `## Escalation` log lines. Sustained rates above 50% mean the gatekeeper is on the wrong tier and the agent should be revisited per [ADR-006 §6](../architecture/adrs/ADR-033-agent-model-tiers.md#6-review-criteria). For the Multi-Skill Dispatcher specifically, the density-gate trip rate review criterion is in [ADR-006 §6](../architecture/adrs/ADR-033-agent-model-tiers.md#6-review-criteria) (>25% trigger rate).
 
-The full worked example (`architect-review`) is in [ADR-006 §2.3](../architecture/ADR-006-agent-model-tiers.md#23-pattern-b--gatekeeper-escalation); [EPIC-CodingAgents] will ship the agent file. For a complete inventory of every deployed gatekeeper agent — including Opus target type (separate file vs inline spawn) and escalation trigger — see [§6 Gatekeeper Escalation Registry](#6-gatekeeper-escalation-registry) below.
+The full worked example (`architect-review`) is in [ADR-006 §2.3](../architecture/adrs/ADR-033-agent-model-tiers.md#23-pattern-b--gatekeeper-escalation); [EPIC-CodingAgents] will ship the agent file. For a complete inventory of every deployed gatekeeper agent — including Opus target type (separate file vs inline spawn) and escalation trigger — see [§6 Gatekeeper Escalation Registry](#6-gatekeeper-escalation-registry) below.
 
 ### 5.4 Nesting depth — soft cap of 3
 
@@ -397,7 +397,7 @@ Beyond depth 3, the parent agent **should refuse to spawn** unless its `## Escal
 WARNING: spawned at depth N (>3). Reason: <one-line>.
 ```
 
-This is a *soft* cap — refusal is a SHOULD, not a MUST — to allow legitimate cases (e.g. a `research-agent` parallelising sub-research-agents). Telemetry on these warnings drives the future hard-cap decision. See [ADR-006 §2.7](../architecture/ADR-006-agent-model-tiers.md#27-nesting-depth--soft-cap-of-3).
+This is a *soft* cap — refusal is a SHOULD, not a MUST — to allow legitimate cases (e.g. a `research-agent` parallelising sub-research-agents). Telemetry on these warnings drives the future hard-cap decision. See [ADR-006 §2.7](../architecture/adrs/ADR-033-agent-model-tiers.md#27-nesting-depth--soft-cap-of-3).
 
 ### 5.5 Anomaly versus escalation
 
@@ -406,7 +406,7 @@ The two log sections are **never fused** in Skill Wrappers and Gatekeeper agents
 - `## Anomalies` is for Skill Wrappers — output annotations flagging interesting findings. The wrapper does not auto-spawn on an anomaly; the user-facing session decides whether to spawn an Opus interpreter.
 - `## Escalation` is for Gatekeepers — routing decisions logged on every run, whether or not escalation actually fired.
 
-A Skill Wrapper does not emit `## Escalation`; a Gatekeeper does not emit `## Anomalies`. The **Multi-Skill Dispatcher** (§5.2) is the explicit exception: when its anomaly-density gate trips, it emits both sections in the same run. See [ADR-006 §2.8](../architecture/ADR-006-agent-model-tiers.md#28-clarifications-on-edge-cases).
+A Skill Wrapper does not emit `## Escalation`; a Gatekeeper does not emit `## Anomalies`. The **Multi-Skill Dispatcher** (§5.2) is the explicit exception: when its anomaly-density gate trips, it emits both sections in the same run. See [ADR-006 §2.8](../architecture/adrs/ADR-033-agent-model-tiers.md#28-clarifications-on-edge-cases).
 
 ---
 
@@ -414,7 +414,7 @@ A Skill Wrapper does not emit `## Escalation`; a Gatekeeper does not emit `## An
 
 This section is the single-source-of-truth inventory of every deployed Sonnet→Opus gatekeeper agent in this project. Each row names the Sonnet gatekeeper, its Opus escalation target, whether that target is a **separate named agent file** or an **inline spawn** (anonymous `general-purpose` Opus agent spawned via the `Agent` tool), and the one-line trigger that causes escalation.
 
-For authoring rules that apply to all gatekeepers, see [§5.3 Gatekeeper Escalation](#53-gatekeeper-escalation). For the upstream policy and pattern definition, see [ADR-006 §2.3](../architecture/ADR-006-agent-model-tiers.md#23-pattern-b--gatekeeper-escalation).
+For authoring rules that apply to all gatekeepers, see [§5.3 Gatekeeper Escalation](#53-gatekeeper-escalation). For the upstream policy and pattern definition, see [ADR-006 §2.3](../architecture/adrs/ADR-033-agent-model-tiers.md#23-pattern-b--gatekeeper-escalation).
 
 ### 6.1 Registry Table
 
@@ -476,10 +476,9 @@ is complete, then flips to `--enforce`.
 
 ### 7.4 Decision record
 
-The architectural rationale for this pattern — why frontmatter-based status
-over external trackers or conversation history, and what the supervisory layer
-looks like — is in
-[ADR-010: Agent Supervisor & Sign-off Pattern](../architecture/ADR-010-agent-supervisor-signoff-pattern.md).
+The canonical status enum, the atomic sign-off recipe, and the parity rules the
+pre-commit guard enforces are specified in the
+[`signoff` skill](../../templates/skills/signoff/SKILL.md).
 
 ---
 

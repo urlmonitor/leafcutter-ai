@@ -52,7 +52,7 @@ it_requirements:
     - "A well-formed answer that does not satisfy the pending question's declared type must be rejected and not applied; the run stays paused (paused_awaiting_input) on the same pending question and re-presents it together with its valid answer shape."
     - "Rejection must not advance the run and must not mutate committed prior stages."
     - "Reuse the single shared JS type/answer-shape validator established by BO-2300b-1; do not fork a second validator."
-    - "E2 top-level-body form (ADR-017); deployed/template parity via build.py (ADR-001)."
+    - "E2 top-level-body form (ADR-030); deployed/template parity via build.py (ADR-001)."
     - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) resuming with a wrong-shape answer in args (e.g. 'high' to an approve/edit/cancel gate); assert status stays paused_awaiting_input and the same question is re-emitted. Do NOT test a standalone Python module."
 delivers_to: null
 expects_from:

@@ -2,9 +2,9 @@
 
 Domain-agnostic agent/skill/workflow package for use across projects. Contains
 configuration schemas, evaluators, and templates that are not tied to any
-specific business domain (bybit-trader or otherwise).
+specific business domain.
 
-A self-contained package that installs the full Bybit-Trader-style AI agent
+A self-contained package that installs the full leafcutter AI agent
 development workflow into any project. Copy the package, edit one JSON config
 file, run `build.py`, and get the complete system generated.
 
@@ -176,7 +176,7 @@ leafcutter/
     build.py          ← main build script
   config/
     skills_config.schema.json  ← JSON Schema for validation
-    skills_config.default.json ← Bybit-Trader defaults
+    skills_config.default.json ← package defaults
   docs/
     build-pipeline.md          ← source → build → output flow
     agentic-runtime-flow.md    ← how agents invoke each other
@@ -197,7 +197,7 @@ leafcutter/
    Everything flows from there.
 
 3. **Package is repo-ready.** This directory is structured to be extracted into its own
-   git repo without restructuring. Domain artifacts (Bybit-Trader-specific agents/skills)
+   git repo without restructuring. Domain artifacts (project-specific agents/skills)
    remain outside the package in the target project.
 
 4. **Overwrite by default.** Running `build.py` overwrites existing materialised files so
@@ -233,9 +233,9 @@ agent and its four dispatch skills. **Do not edit package files directly.**
 
 The `package-audit` skill runs `scripts/package_audit.py` and presents a Markdown
 table of all portable files not yet in the package templates, grouped by section
-(commit-guardian / agents / skills). See
-[ADR-020](docs/architecture/adrs/ADR-020-leafcutter-package-boundary.md)
-for the classification heuristics.
+(commit-guardian / agents / skills). The classification heuristics live in
+[`scripts/package_audit.py`](scripts/package_audit.py); the underlying boundary rule is
+[ADR-013](docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md).
 
 `workflow-architect` is selected automatically when a ticket's `files_touched`
 contains `leafcutter` or when the ticket involves adding a hook,
@@ -316,7 +316,7 @@ line in `leafcutter/templates/scripts/commit_guardian/config.py`.
 ### Generic-Portable Commit-Guardian Hooks (go into templates/scripts/commit_guardian/)
 
 These 10 hooks are fully config-driven and contain no project-specific paths.
-All bybit-trader defaults are encoded in `commit_guardian.json` and overridable
+All package defaults are encoded in `commit_guardian.json` and overridable
 per consumer project.
 
 | Hook | Purpose |
@@ -333,16 +333,20 @@ per consumer project.
 | `check_agent_registry.py` | Validates `agent_registry.json` schema compliance |
 | `check_ticket_ac_status_parity.py` | Blocks commits when a staged done-ticket's source_ac is not yet done (KI-1) |
 
-### Domain-Only Artifacts (stay in Bybit-Trader, NOT in this package)
+### Domain-Only Artifacts (stay in the consumer project, NOT in this package)
 
-Everything marked `domain: bybit-trader` by the portability audit (ticket 08):
-database-agent, prod-deploy, sql-coder, reporting-agent, strategy-builder,
-db skill, strategy-* skills, analyze-trades, fetch-prod-logs, pipeline-health,
-prod-puller, find-context-candle, scheduling-enforcer, collector-enforcer.
+Everything the portability audit marked as domain-specific stays behind in the
+consumer project. An agent, skill, or hook is domain-specific when it carries a
+non-null `domain` tag in its frontmatter, or when it hard-codes anything that
+only exists in one project — business entities and workflows, deployment or
+environment topology, database schemas, or third-party service integrations.
+Such artifacts live in the consumer's own `.claude/` tree and are never promoted
+into `templates/`.
 
 ## Architecture Docs
 
-- [ADR-020: Package Boundary](docs/architecture/adrs/ADR-020-leafcutter-package-boundary.md) — decision criteria for portable vs project-specific classification
+- [ADR-013: Portable Skill Script Deployment Boundary](docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md) — consumer-facing vs package-internal classification
+- [ADR Index](docs/architecture/adrs/README.md) — every architecture decision, generated from the corpus
 - [Build Pipeline](docs/build-pipeline.md) — source → build → output flow
 - [Agentic Runtime Flow](docs/agentic-runtime-flow.md) — agent interaction at runtime
 - [Ticket Lifecycle](docs/ticket-lifecycle.md) — ticket state machine

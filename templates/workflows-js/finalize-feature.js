@@ -170,6 +170,30 @@ function outcome(progressText, description) {
 /** Total number of numbered steps in the finalize sequence (AC BO-1000a-2). */
 const STEP_COUNT = 9;
 
+// AC FIN-100h: statuses meaning "this agent DECLINED the dispatch".
+//
+// A refusal is categorically different from a failure: a failed step ran and
+// produced a result, a refused step never ran at all. The workflow previously
+// modelled only success/known-failure, so a refusal fell through whatever
+// terminal `else` a step happened to have — and on step 2 that else IS the
+// success path, so a refused merge was recorded as "Merged origin/main
+// cleanly". Load-bearing steps must halt on a refusal, never degrade.
+const REFUSAL_STATUSES = new Set(["refused", "wrong_agent", "declined", "not_permitted"]);
+
+/**
+ * True when an agent's reported status means it declined to do the work.
+ *
+ * Matches the exact refusal vocabulary plus the `out_of_scope*` family, which
+ * agents emit as `out_of_scope_for_<agent-name>`.
+ *
+ * @param {string} status Lower-cased status string from the agent's JSON.
+ * @returns {boolean}
+ */
+function isRefusalStatus(status) {
+  const s = String(status || "").toLowerCase();
+  return REFUSAL_STATUSES.has(s) || s.startsWith("out_of_scope");
+}
+
 // AC BO-1000a-2-i: step 3.5 is the intermediate closure step — it is
 // included in STEP_COUNT so its position is monotonic (3 < 3.5 < 4) and N
 // is unchanged for all other steps. Pre-flight aborts occur BEFORE the
@@ -342,7 +366,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
     const _readPrompt =
       "Read the durable pause record for this run. Run exactly:\n" +
-      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
     let recCheck;
@@ -414,7 +438,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
-    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
     "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
@@ -805,7 +829,11 @@ const baselineResult = await agent(
   "    Log: 'Baseline run failed — triage will treat all failures as regressions.'\n" +
   "    Return: { \"status\": \"run_failed\", \"baseline_sha\": \"<sha>\",\n" +
   "              \"baseline_failures\": null, \"baseline_run_at\": \"<ISO 8601 timestamp>\" }",
-  { agentType: "status-checker", label: "step-0-baseline", phase: "Step 0" }
+  // AC FIN-100h: NOT status-checker. This step provisions a git worktree, runs
+  // build.py and runs pytest — none of which is in that agent's contract, and
+  // it refuses the dispatch outright ("this task should be routed to whichever
+  // agent owns pre-merge CI baseline capture").
+  { agentType: "general-purpose", label: "step-0-baseline", phase: "Step 0" }
 )
 
 let baselineInfo;
@@ -821,6 +849,33 @@ let baselineInfo;
 }
 
 const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
+
+// AC FIN-100h: a REFUSAL is not a run failure. run_failed / parse_failed mean
+// the baseline was attempted and produced nothing usable, which the degrade
+// path below handles conservatively. A refusal means the step never ran, so
+// there is no evidence either way — and the baseline is what the whole
+// regression comparison is measured against. Halt instead of degrading.
+if (isRefusalStatus(baselineStatus)) {
+  await cleanupBaselineWorktree();
+  outcome(`Step 0 of ${STEP_COUNT}`, `halted: baseline agent refused the dispatch (${baselineStatus})`);
+  return {
+    status: "halted",
+    halted_at_step: 0,
+    reason: "step_refused",
+    message:
+      `Step 0 (pre-merge test baseline) reported status '${baselineStatus}' — the agent ` +
+      "DECLINED the dispatch, so no baseline was captured and no test run happened. " +
+      "Without a baseline the post-merge regression check has nothing to compare against, " +
+      "so continuing would either halt on every pre-existing failure or merge unchecked. " +
+      "Re-dispatch step 0 to an agent whose contract covers git worktree provisioning, " +
+      "build.py and pytest.",
+    branch: BRANCH,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
+  };
+}
 
 if (baselineStatus === "ok") {
   baselineFailures = Array.isArray(baselineInfo.baseline_failures)
@@ -962,7 +1017,10 @@ const mergeMainResult = await agent(
   "5. If exit code is non-zero (conflict detected):\n" +
   `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
   "   Return: { \"status\": \"conflict\", \"merge_strategy\": null }",
-  { agentType: "status-checker", label: "step-2-merge-main", phase: "Step 2" }
+  // AC FIN-100h: NOT status-checker. This step runs git fetch / git merge /
+  // git merge --abort against the feature worktree; that agent's contract
+  // restricts it to ticket frontmatter and it refuses repo mutation.
+  { agentType: "general-purpose", label: "step-2-merge-main", phase: "Step 2" }
 )
 
 let mergeMainInfo;
@@ -999,6 +1057,35 @@ if (mergeStatus === "conflict") {
   };
 }
 
+// AC FIN-100h: a refused or unrecognised status must NEVER reach the success
+// path below. Integrating origin/main is load-bearing for the merge decision —
+// if it did not happen, everything downstream (tests, PR merge) is judging an
+// unintegrated branch. Halt rather than guess.
+if (isRefusalStatus(mergeStatus) || !["merged", "already_up_to_date"].includes(mergeStatus)) {
+  await cleanupBaselineWorktree();
+  const refused = isRefusalStatus(mergeStatus);
+  outcome(`Step 2 of ${STEP_COUNT}`, `halted: merge step ${refused ? "refused" : "returned unrecognised status"} (${mergeStatus})`);
+  return {
+    status: "halted",
+    halted_at_step: 2,
+    reason: refused ? "step_refused" : "unrecognised_step_status",
+    message:
+      `Step 2 (merge origin/main) reported status '${mergeStatus}' — ` +
+      (refused
+        ? "the agent DECLINED the dispatch, so no merge was performed. "
+        : "this status is not part of the step's contract, so whether a merge happened is unknown. ") +
+      "Refusing to treat this as a successful merge. Re-dispatch step 2 to an agent whose " +
+      "contract covers git merge operations, or perform the merge by hand and re-run.",
+    branch: BRANCH,
+    pr_number: prNumber,
+    pr_url: prUrl,
+    completed_steps: completedSteps,
+    skipped_steps: skippedSteps,
+    step_outcomes: stepOutcomes,
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
+  };
+}
+
 if (mergeStatus === "already_up_to_date") {
   log("Step 2 of 9: [skipped] origin/main already integrated into branch — no merge step needed");
   outcome(`Step 2 of ${STEP_COUNT}`, 'skipped: already up-to-date with origin/main');
@@ -1006,8 +1093,8 @@ if (mergeStatus === "already_up_to_date") {
     step: 2,
     reason: "Already up-to-date with origin/main",
   });
-} else {
-  // merged_main path
+} else if (mergeStatus === "merged") {
+  // Success is now reached ONLY on an explicitly-matched status.
   completedSteps.push(2);
   outcome('Step 2 of 9', 'Merged origin/main cleanly into feature worktree (--no-commit --no-ff)');
 }
@@ -1524,7 +1611,7 @@ if (closureAlreadyCommitted) {
       "  Read the ticket frontmatter and look for a `source_ac:` field.\n" +
       "  If `source_ac` is absent or empty: log 'No source_ac on <ticket_path> — skipping AC closure.' and skip (AC-3 no-op).\n" +
       "  If `source_ac` is present:\n" +
-      `    Run: python3 ${WORKTREE_ROOT}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
+      `    Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
       "    Capture the exit code.\n" +
       "    If exit code is 0: increment acs_closed counter.\n" +
       "    If exit code is non-zero: log 'WARNING: mark_ac_done.py exited <code> for <ticket_path> — skipping AC closure (non-fatal).' and increment acs_skipped counter. DO NOT fail finalize. (AC-4 non-fatal)\n" +

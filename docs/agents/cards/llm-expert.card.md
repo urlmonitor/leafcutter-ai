@@ -11,9 +11,9 @@ description: 'LLM-instructions specialist that owns the craft of writing, auditi
   prompt".'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # llm-expert
 
@@ -154,6 +154,13 @@ flowchart TD
 - ACD-1500a-2-ii: Non-problem categories take no fix action; success-pattern is offered for codification
 - ACD-1500a-4: Classification of the same entry is deterministic across runs
 - ACD-1500b-1: Every classification carries a confidence score
+- ACD-1600b-1: A phase agent resolves its authoritative spec by following source_ac to the store
+- ACD-1600b-1-i: Missing or unresolvable source_ac halts the agent instead of trusting the ticket body
+- ACD-1600b-2: When the ticket body and the store disagree, the store wins
+- ACD-1800b-1b: The signoff skill records each deliverable's sign-off onto the requirement, not the ticket body
+- ACD-1800b-5: Done-eligibility accepts AC-side sign-offs, not only ticket-body status
+- ACD-1900b-5: The fulfillment gate resolves coverage by dual-read, so a thin ticket is always verified
+- ACD-1900c-6: At enforce, the gate's absent-coverage skip flips from ok to blocker
 - ACD-200a: BA v3 produces documentation ACs when decomposing features with flows or state
 - ACD-200a-1: BA v3 template contains documentation AC generation rules
 - ACD-200b: IT PO v3 validates documentation AC presence before promoting to reviewed
@@ -164,6 +171,8 @@ flowchart TD
 - ACD-300a-1: Triage routes 'new feature / strategic' requests to PO v3 first
 - ACD-300a-2: Triage routes 'behavioral addition' requests directly to BA v3
 - ACD-300a-3: Triage detects already-covered requests and surfaces existing ACs
+- ACD-300b-3: The /plan-feature command, skill, and workflow present one consistent execution model
+- ACD-300b-3-i: Invoking /plan-feature follows exactly one documented execution path
 - ACD-300e-1: Each authoring agent template declares knowledge-query in its skills_used frontmatter
 - ACD-300e-2: PO v3 queries the knowledge graph during S1 to discover related L0/L1 nodes before framing
 - ACD-300e-2-i: Agent proceeds with baseline context when knowledge-query returns no matching nodes
@@ -324,6 +333,9 @@ flowchart TD
 - BO-2500d-1-i: Removing a gate before its mechanical replacement exists is rejected
 - BO-2500d-2: The opinion-only gate agents remain present in the heavy pipeline
 - BO-2500d-3: The mechanical proof-of-done gates stand in for the removed review agents in the fast lane
+- BO-2500e-6: The required CI done-proof gate covers JS-covered ACs
+- BO-2600a-3: build-ac leaf path is unchanged when the connected build set is just the target AC
+- BO-2600a-4: build-ac emits a dependency-ordered epic when the connected build set has more than one AC
 - BO-400a-1: ticket-supervisor sets status to in_progress at drive start
 - BO-400a-1-i: Ticket already in_progress from a previous failed run
 - BO-400a-2: ticket-supervisor sets status to done when all agents complete
