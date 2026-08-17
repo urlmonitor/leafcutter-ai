@@ -1,16 +1,30 @@
 ---
+title: "EPIC: Deployment Completeness"
+type: epic
 epic_name: EPIC-DeploymentCompleteness
 created: 2026-06-11
 status: in_progress
 components:
   - build_pipeline
 source_ac: BP-900
+depends_on: []
+priority: critical
+roadmap_phase: phase_1
+advances_current_outcome: true
+requires_diagram: false
+requires_adr: false
+change_target: pipeline
+risk_surface: contract_boundary
 ---
 # EPIC-DeploymentCompleteness
 
 ## Goal
 
-This epic implements AC BP-900: Every leafcutter capability you install actually works when you use it. It consists of 11 ticket(s) generated from the leaf ACs beneath BP-900, assembled in topological build order with all inter-ticket dependencies derived from the AC depends_on graph.
+This epic implements AC BP-900: Every leafcutter capability you install actually works when you use it. It consists of 14 ticket(s) generated from the leaf ACs beneath BP-900, assembled in topological build order with all inter-ticket dependencies derived from the AC depends_on graph.
+
+Tickets 01-11 were generated 2026-06-11 from the BP-900a/b/c leaf ACs. Tickets
+12-14 were added 2026-08-17 from the new BP-900h branch — see "Scope addition"
+below.
 
 ## Tickets
 
@@ -27,6 +41,32 @@ This epic implements AC BP-900: Every leafcutter capability you install actually
 | 09 | [09_TICKET-20260611-BP-900c-1.md](./09_TICKET-20260611-BP-900c-1.md) | Each broken-reference entry names the missing script, the referencing template, and a suggested action | BP-900c-1 | BP-900c |
 | 10 | [10_TICKET-20260611-BP-900c-1-1.md](./10_TICKET-20260611-BP-900c-1-1.md) | Multiple templates referencing the same missing script produce a consolidated entry | BP-900c-1-1 | BP-900c-1 |
 | 11 | [11_TICKET-20260611-BP-900c-2.md](./11_TICKET-20260611-BP-900c-2.md) | Error report is emitted to stderr in a structured, parseable format with non-zero exit | BP-900c-2 | BP-900c, BP-900c-1 |
+| 12 | [12_TICKET-20260817-BP-900h-1.md](./12_TICKET-20260817-BP-900h-1.md) | CI installs the package into an empty project and the build succeeds | BP-900h-1 | — |
+| 13 | [13_TICKET-20260817-BP-900h-2.md](./13_TICKET-20260817-BP-900h-2.md) | Two consecutive builds into the same project produce zero difference | BP-900h-2 | 12 |
+| 14 | [14_TICKET-20260817-BP-900h-3.md](./14_TICKET-20260817-BP-900h-3.md) | A broken consumer install blocks the merge, it does not just report | BP-900h-3 | 12, 13 |
+
+## Scope addition — BP-900h (2026-08-17)
+
+Tickets 12-14 were added after this epic was scoped, from a new L1 branch
+`BP-900h` ("Know the clean install works, because every change proves it").
+
+**Why.** BP-900a..BP-900g all verify deployment completeness *statically*, from
+inside the build. None of them performs an install and inspects the result. That
+left phase_1 exit criteria 1 and 3 in `docs/roadmap.json` — "clean install
+succeeds on a blank project" and "consecutive builds produce zero git diff" —
+with no automated check anywhere, while seven consumer-install defects
+(BP-900g-4/-5/-6, BP-015, BP-016, BP-017, BP-018) shipped and were hotfixed after
+release between 2026-08-13 and 2026-08-17.
+
+**Sequencing.** All three edit `.github/workflows/ci.yml`, so they are chained
+12 → 13 → 14 and must not be batched in parallel with each other. They are
+independent of tickets 01-11 and may run alongside them.
+
+**Manual handoff in ticket 14.** Registering the new job as a *required* status
+check is a repository ruleset change (`require-ci-lint`, id `17810993`) needing an
+`admin:write` token. It cannot be done from the workflow file, and the job must be
+green on `main` before it is marked required — marking it required while red
+blocks every merge in the repository.
 
 ## Dependencies
 
