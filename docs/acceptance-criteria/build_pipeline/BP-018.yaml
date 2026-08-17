@@ -1,0 +1,64 @@
+id: BP-018
+components:
+  - build_pipeline
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: high
+work_status: done
+title: "Rebuilding agent cards preserves their provenance dates and rewrites nothing unchanged"
+origin_agent: BrainCandy
+created: 2026-08-14
+assigned_agent: python-coder
+criteria: |
+  Given generate_card() in scripts/generate_agent_cards.py rebuilds each card's
+    YAML frontmatter from scratch on every run,
+  And build_agent_cards() already carries a compare-before-write guard that is
+    meant to skip a card whose generated content matches what is on disk,
+  And a committed card carries provenance the generator does not itself emit —
+    a `created` date recording when the card first appeared, and a
+    `last_updated` date maintained by the transform-doc-frontmatter commit hook,
+  When a build regenerates a card whose agent template, registry entry and AC
+    assignments have not changed since the last build,
+  Then the card file on disk is left byte-for-byte untouched and is not counted
+    as written,
+  And this holds on a later calendar day than the one the card was last built
+    on — the current date must not be what makes the generated content differ,
+  And when the card IS rewritten because its substantive content genuinely
+    changed, the `created` value already present on disk is carried through
+    unchanged rather than replaced with today's date,
+  And any `last_updated` value already present on disk survives the rewrite
+    rather than being dropped from the frontmatter,
+  And a card being generated for the first time, with no file on disk to read
+    provenance from, is still written with `created` set to the current date,
+  And the bug symptom ("a no-op rebuild rewrites every agent card, resetting
+    each card's `created` to the build date and deleting its `last_updated`")
+    must not occur.
+depends_on: []
+doc_links:
+  - path: scripts/generate_agent_cards.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/transform_doc_frontmatter.py
+    relationship: describes
+    status: exists
+covered_by:
+  - "unit_tests/test_generate_agent_cards_bp018.py"
+implemented_by:
+  - scripts/generate_agent_cards.py
+change_target: code
+risk_surface: internal
+notes: >-
+  Found 2026-08-14 while restoring build shims after BP-016. A single
+  `build.py --force-breaking` run rewrote all 60 files under docs/agents/cards/,
+  each diff resetting `created` to the build date and deleting `last_updated`.
+  The compare-before-write guard at build_agent_cards() lines 1027-1034 is
+  correct and already present; it is defeated because generate_card() emits
+  `created: {date.today()}`, so the generated string differs from the file on
+  disk on any day after the last build regardless of whether anything
+  substantive changed. The guard therefore never fires, every card is rewritten,
+  and each rewrite destroys the provenance the transform-doc-frontmatter hook
+  had added. The two failures share one cause, which is why they are one AC:
+  make the generator carry provenance through instead of inventing it, and the
+  existing guard starts working again on its own.

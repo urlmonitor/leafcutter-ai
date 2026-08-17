@@ -21,10 +21,10 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import os
-import textwrap
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -95,6 +95,71 @@ def _parse_frontmatter(template_text: str) -> dict[str, Any]:
         _log.warning("YAML parse error in frontmatter: %s", exc)
         return {}
     return parsed or {}
+
+
+def _read_existing_provenance(card_path: Path | None) -> dict[str, Any]:
+    """Read the existing card's frontmatter so provenance can be carried through.
+
+    Used to recover the ``created`` / ``last_updated`` fields a previously
+    generated card already carries, so a fresh render does not invent a new
+    ``created`` date or drop the ``last_updated`` date the
+    transform-doc-frontmatter commit hook maintains (BP-018).
+
+    Args:
+        card_path: Absolute path of the card file that would be written, or
+            ``None`` when link/provenance generation is disabled.
+
+    Returns:
+        Parsed frontmatter dict from the existing card, or an empty dict when
+        *card_path* is ``None``, the file does not exist, or it cannot be
+        read/parsed. A malformed or unreadable existing card degrades to "no
+        provenance" rather than raising.
+    """
+    if card_path is None or not card_path.exists():
+        return {}
+    try:
+        existing_text = card_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning(
+            "Cannot read existing card %s for provenance: %s", card_path, exc
+        )
+        return {}
+    return _parse_frontmatter(existing_text)
+
+
+def _valid_provenance_value(value: Any) -> Any | None:
+    """Return *value* unchanged if it is a usable provenance date, else None.
+
+    Deliberately preserves the *original type* rather than normalizing to a
+    string. YAML parses an unquoted ``2026-08-13`` scalar into a
+    ``datetime.date`` object but a quoted ``'2026-08-13'`` into a plain
+    ``str`` — that is exactly how the transform-doc-frontmatter commit hook
+    leaves ``created`` unquoted (round-tripped as a ``date``) and
+    ``last_updated`` quoted (inserted as a ``str``) on disk (see
+    ``templates/scripts/commit_guardian/transform_doc_frontmatter.py``).
+    Feeding the value straight back into ``yaml.dump()`` with its original
+    type reproduces that exact quoting style, which is what lets the
+    generator's byte-for-byte compare-before-write guard match what the hook
+    writes on commit (BP-018).
+
+    Args:
+        value: Value read from parsed frontmatter, or ``None``.
+
+    Returns:
+        *value* unchanged when it is a non-empty ``datetime.date`` or
+        ``str``; ``None`` when *value* carries no usable date (absent,
+        empty, or an unexpected type).
+    """
+    # NOTE: isinstance() below deliberately uses `datetime.date` (the module
+    # import) rather than the bare `date` symbol imported at module level.
+    # Tests patch `generate_agent_cards.date` wholesale with a MagicMock to
+    # control `date.today()`, which would make `isinstance(value, date)`
+    # raise TypeError once patched.
+    if isinstance(value, datetime.date):
+        return value
+    if isinstance(value, str) and value:
+        return value
+    return None
 
 
 def make_relative_link(
@@ -850,26 +915,65 @@ def generate_card(
     Returns:
         Complete card markdown string, starting with YAML frontmatter.
     """
-    today = date.today().isoformat()
+    today = date.today()
     name = template_frontmatter.get("name", agent_id)
     description = template_frontmatter.get("description", "")
     if isinstance(description, str):
         description = description.strip()
+    # The frontmatter's `description` scalar must be a single flowing line
+    # (matching what yaml.dump()'s own width-wrapping produces for a plain
+    # long string — see the real cards). The BODY's bold description line
+    # further down intentionally keeps any embedded newlines the source
+    # template's description carries (some templates use blank-line-
+    # separated YAML folding to force real paragraph breaks there) — do not
+    # collapse the shared `description` variable itself, only this
+    # frontmatter-only copy.
+    description_for_fm = (
+        description.replace("\n", " ") if isinstance(description, str) else description
+    )
 
-    # Build YAML frontmatter header
-    # Escape description for YAML: wrap in double quotes, escape internal quotes
-    desc_escaped = description.replace('"', '\\"').replace("\n", " ")
-    card_fm = textwrap.dedent(f"""\
-        ---
-        agent_id: {agent_id}
-        title: "Agent Card: {agent_id}"
-        description: "{desc_escaped}"
-        type: card
-        status: active
-        created: {today}
-        card_version: "generated"
-        ---
-        """)
+    # Carry provenance through from the existing on-disk card instead of
+    # inventing it (BP-018): `created` must survive unchanged, and
+    # `last_updated` (maintained by the transform-doc-frontmatter commit
+    # hook, not by this generator) must not be dropped on rewrite. Falling
+    # back to `today` only applies when there is no existing card to read.
+    existing_provenance = _read_existing_provenance(card_path)
+    created = _valid_provenance_value(existing_provenance.get("created")) or today
+    last_updated = _valid_provenance_value(existing_provenance.get("last_updated"))
+
+    # Build YAML frontmatter with the SAME yaml.dump() call
+    # transform_doc_frontmatter.py's _rebuild_content() uses to reserialize
+    # the whole frontmatter block whenever it fills a missing field (see
+    # `_rebuild_content()` in
+    # templates/scripts/commit_guardian/transform_doc_frontmatter.py).
+    # Hand-building the header text field-by-field (as this function used
+    # to) can never byte-match what that hook writes back on the very next
+    # commit — quoting style, line width, and folding are all yaml.dump()
+    # decisions — which silently defeats the compare-before-write guard in
+    # build_agent_cards() forever after the first commit touches a card
+    # (BP-018, discovered via a real-artifact spot-check against
+    # docs/agents/cards/ after the provenance-only fix still left every
+    # card churning). Key order matches the hook and existing cards exactly
+    # (`sort_keys=False` preserves insertion order); quoting for `created`
+    # vs `last_updated` falls out naturally from whether the value is a
+    # `datetime.date` object or a `str` — see _valid_provenance_value().
+    fm_dict: dict[str, Any] = {
+        "agent_id": agent_id,
+        "title": f"Agent Card: {agent_id}",
+        "description": description_for_fm,
+        "type": "card",
+        "status": "active",
+        "created": created,
+        "card_version": "generated",
+    }
+    if last_updated is not None:
+        fm_dict["last_updated"] = last_updated
+
+    fm_yaml = yaml.dump(
+        fm_dict, default_flow_style=False, allow_unicode=True, sort_keys=False
+    )
+    fm_yaml = fm_yaml.rstrip("\n")
+    card_fm = f"---\n{fm_yaml}\n---\n"
 
     # Title block
     title_block = f"# {name}\n\n"
@@ -1099,4 +1203,52 @@ def build_agent_cards(
 #   (skipped in dry-run) and looks up per agent — O(agents × ac_files) →
 #   O(ac_files). Single walk ~16s vs ~775s. _scan_ac_assignments() is left
 #   intact for the direct-call unit tests; per-agent results are byte-identical.
+#
+# - 2026-08-14 [python-coder/BP-018]:
+#   Provenance-preserving frontmatter (BP-018). generate_card() hardcoded
+#   `created: {date.today()}` and never emitted `last_updated`, so the
+#   generated string differed from disk on any day after the last build and
+#   the compare-before-write guard in build_agent_cards() (unchanged by this
+#   fix) never matched — every card was rewritten, resetting `created` and
+#   dropping the `last_updated` the transform-doc-frontmatter commit hook
+#   maintains. Added _read_existing_provenance() (reads the on-disk card's
+#   frontmatter via _parse_frontmatter(), degrading to {} on any OSError or
+#   YAML error) and _valid_provenance_value() (validates a YAML-parsed
+#   `created`/`last_updated` value — a `datetime.date` for an unquoted
+#   scalar, or a non-empty `str` for a quoted one — returning it UNCHANGED
+#   so its original type survives). generate_card() now carries `created`
+#   through from disk (falling back to `date.today()` only when there is no
+#   existing card to read) and re-emits `last_updated` unchanged when
+#   present on disk.
+#
+#   CORRECTION (same day, caught by a real-artifact spot-check against the
+#   actual 60 files under docs/agents/cards/, not the unit tests): the first
+#   pass above still hand-built the frontmatter header as literal text
+#   (`f'title: "Agent Card: {agent_id}"'`, etc.), which fixed the
+#   `created`/`last_updated` VALUES but not the surrounding format. The
+#   transform-doc-frontmatter commit hook's `_rebuild_content()` re-dumps
+#   the ENTIRE frontmatter dict via `yaml.dump(fm_dict,
+#   default_flow_style=False, allow_unicode=True, sort_keys=False)` whenever
+#   it fills any missing field — not just the field it filled — so on the
+#   very first commit after a card is created (which always fills the
+#   missing `last_updated`), the hook silently reformats `title`,
+#   `description`, and `card_version` too (double- to single-quotes,
+#   long-line to width-80-folded). generate_card()'s hand-built text could
+#   never reproduce that. Fixed by building `fm_dict` — same key order:
+#   agent_id, title, description, type, status, created, card_version, then
+#   last_updated when present — and serializing it with the IDENTICAL
+#   `yaml.dump()` call the hook uses, so the generator's own output is a
+#   fixed point of the hook's transform from the start. `created`/
+#   `last_updated` are passed through with their original parsed type
+#   (`datetime.date` vs `str`) rather than stringified, so quoting falls out
+#   of yaml.dump()'s own type-preservation logic instead of being
+#   hand-guessed. Removed the now-unused `textwrap` import (frontmatter is
+#   no longer built via `textwrap.dedent()` line-joining).
+#   unit_tests/test_generate_agent_cards_bp018.py's `_REALISTIC_EXISTING_CARD`
+#   fixture was rebuilt the same way (via yaml.dump(), not hand-written
+#   text) so it cannot silently drift from the real on-disk format again,
+#   and a new fixed-point test
+#   (test_generated_frontmatter_survives_hook_transform_unchanged) asserts
+#   generate_card()'s output round-trips unchanged through the hook's own
+#   transform_content().
 # ====================================================================
