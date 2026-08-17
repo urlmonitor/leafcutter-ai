@@ -199,22 +199,54 @@ const phaseOrder = [
   "how-to-author",               // priority 10
   "reference-author",            // priority 10
   "pr-reviewer",                 // priority 11
+  "ac-validator",                // priority 11.5 — AC coverage gate, MUST precede commit
   "user-surface-smoker",         // priority 11.5
+  "ac-fulfillment-gate",         // priority 11.7 — AC store fulfillment gate, MUST precede commit
+  "live-surface-tester",         // priority 11.8 — live-app proof, MUST precede commit
   "documentation-verifier",      // priority 11.9
   "commit",                      // priority 12
   "pull-request",                // priority 13
 ];
 
 /**
+ * Agent names already reported as absent from phaseOrder. Prevents the
+ * O(n log n) comparator from emitting the same diagnostic repeatedly.
+ * @type {Set<string>}
+ */
+const unknownPhaseAgentsReported = new Set();
+
+/**
  * Return the canonical priority index for an agent name.
- * Agents not in phaseOrder get a high index (run last, preserve YAML order).
+ *
+ * An agent that is NOT a member of phaseOrder still receives a
+ * sorts-last sentinel (phaseOrder.length) — throwing here would abort the
+ * whole drive from inside a sort comparator for a merely-unregistered
+ * project-local agent. But the omission is reported loudly on stderr,
+ * naming both the agent and this file, because a *registered* phase agent
+ * missing from this array silently sorts AFTER commit (12) and
+ * pull-request (13) — which is how ac-validator, ac-fulfillment-gate and
+ * live-surface-tester ran after their own commit for months.
  *
  * @param {string} agentName
  * @returns {number}
  */
 function getPriority(agentName) {
   const idx = phaseOrder.indexOf(agentName);
-  return idx === -1 ? phaseOrder.length : idx;
+  if (idx === -1) {
+    if (!unknownPhaseAgentsReported.has(agentName)) {
+      unknownPhaseAgentsReported.add(agentName);
+      console.error(
+        `[build-feature.js] PHASE-ORDER GAP: agent "${agentName}" is not a member of ` +
+        `the phaseOrder array in templates/workflows-js/build-feature.js. It will be ` +
+        `sorted LAST (index ${phaseOrder.length}) — i.e. AFTER commit and pull-request. ` +
+        `If "${agentName}" is a registered ticket phase (is_ticket_phase: true in ` +
+        `config/agent_registry.json), this is a BUG: add it to phaseOrder at its ` +
+        `registry-declared priority.`
+      );
+    }
+    return phaseOrder.length;
+  }
+  return idx;
 }
 
 /**
