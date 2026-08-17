@@ -1,0 +1,203 @@
+id: BO-2400g
+components:
+  - build_orchestration
+  - review_system
+  - testing_quality
+title: "Going fast does not mean going unreviewed"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The fast lane trades away overhead, never scrutiny.
+
+  Work built through the lean lane is asked for the same proof, and gets the same
+  reading, as work built the thorough way. Before any test is written, the plan for
+  the work asks it to prove it is reached the way the product is really used. Before
+  anything is committed, the change is read — for local mistakes and for cross-cutting
+  design problems — by a reader that knows which requirements the run was pointed at
+  and what the run actually changed, so the reading is a real examination rather than
+  a formality that happens to be present. What that reading finds either stops the run
+  before a commit exists, or comes back attached to the result; nothing is quietly
+  dropped. You keep the lane's speed and stop discovering, after the pull request is
+  already open, that nobody looked.
+depends_on: [BO-2400, BO-2400f]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The lane this L1 governs. Verified 2026-08-17 — its full phase list is Worktree, Resolve, Claim, Test Writer (line 327), Coder (line 395), Commit (line 471), Pull Request (line 539). Coder goes straight to Commit: there is no review phase of any kind, and its own docstring states 'No per-ticket supervisor chain, no planner (BO-2400f)'."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The lane's resolver and claim/release machinery. resolve_connected_build_set (line 498) is deliberately readiness-agnostic; the resolved id set (exposed to the workflow as batchIds) is the only thing the lane knows about the work, which is why every AC here binds to that set rather than to a ticket."
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "Why 'add a review phase' is not sufficient. Verified 2026-08-17 — line 562 makes the sign-off conditional ('Skip this section entirely if no ticket_path was provided') so the agent CAN run ticketless, but Contract-Aware Mode (line 102) keys off a '## Agent Contracts' section, line 193 skips the contract trace when that section is absent, the delivers_to/expects_from cross-file trace (line 136) keys off ticket ACs, and the completion_manifest / scope_verified check (line 517) compares the change set against the ticket's files_touched. Dropped into a ticketless lane, every rich mode degrades to a diff skim."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The reachability fallback mandate at lines ~216-227 whose entry condition (line 206, 'Code ticket — a coder agent is needed') never evaluates true on this lane: the skip rule at line 188 decides on the AGENT MAP, and the lane supplies no source_ac frontmatter, no agents map and no '## Test Requirements' block. The lane instead sends the ad-hoc prompt at fast-lane-ship.js:333."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the reachability floor (criterion + reachability, never negotiable) that BO-2400g-1 requires the lane to inherit, and the shared vocabulary any lane-side demand must be worded in."
+  - path: templates/skills/code-smell-review/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The design/structural fan-out this L1's review scope depends on, and the source of its depth constraint: the skill states it runs 'in the top-level loop (not inside a sub-agent) so the parallel dispatch respects the depth-1 sub-agent limit'. A workflow's own dispatch is top-level; a review agent that would itself spawn the two smell reviewers is not."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The nearest neighbour and the boundary that must not be blurred. BO-2900g-1 closes the gap between two plan-producing routes INSIDE one generator; BO-2400g-1 covers a lane that loads no generator and produces no plan at all. See the BOUNDARY section of these notes, in both directions."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2400g-1
+  - BO-2400g-2
+  - BO-2400g-3
+  - BO-2400g-4
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-08-17, BrainCandy). Two confirmed, zero-coverage gaps in the FAST
+  LANE build path, authored together because they are one idea: the fast lane does
+  not hold the quality bar the full lane holds. The third gap found in the same pass
+  (the AC work-record write is neither atomic nor order-preserving) is a git/
+  durability concern and landed as leaves under BO-2400e instead.
+
+  VERIFIED FACTS — DO NOT RE-DERIVE (all checked 2026-08-17 by reading the files).
+
+  THE LANE. templates/workflows-js/fast-lane-ship.js is the full-arc fast lane
+  (/fast-lane-build <AC-id> -> PR). Phases in order: Worktree (worktree-agent),
+  Resolve (status-checker -> fast_lane.py select_connected), Claim (status-checker ->
+  fast_lane.py claim), Test Writer at line 327, Coder at line 395, Commit at line 471,
+  Pull Request at line 539. There is NO ticket anywhere in this lane;
+  resolve_connected_build_set (scripts/build_orchestration/fast_lane.py:498) is
+  deliberately readiness-agnostic.
+
+  GAP 1 — THE REACHABILITY DEMAND NEVER REACHES THE FAST LANE (-> BO-2400g-1).
+  PR #451 established a reachability floor: every derived test plan carries one
+  mandatory reachability descriptor whose asserts requires invoking the production
+  entry point. It exists in exactly two places and BOTH are ticket-shaped:
+    (a) scripts/ac_store/generate_ticket_from_ac.py appends it. Grepping BOTH
+        fast-lane workflows for generate_ticket_from_ac / test_spec / angle /
+        reachability returns ZERO hits — the lane never calls the generator.
+    (b) templates/agents/test-writer.md carries a fallback mandate at lines ~216-227,
+        but its entry condition at line 206 is "Code ticket (a coder agent is needed)"
+        and the skip rule at line 188 is explicit: "decide on the AGENT MAP, not the
+        Test Requirements block". It reads source_ac frontmatter, the agents map and
+        the ## Test Requirements block. None of the three exists on this lane, so the
+        condition never evaluates true.
+  What test-writer actually receives is the ad-hoc prompt at fast-lane-ship.js:333:
+  "read its YAML from <store> and write a minimal failing test that asserts the AC
+  behavior" — precisely the AC-literal-only shape PR #451 was written to eliminate.
+
+  BOUNDARY vs BO-2900g-1 — STATED IN BOTH DIRECTIONS, ON PURPOSE.
+    - BO-2900g-1 ("The demand for proof-of-wiring reaches every piece of work,
+      including work that arrived with a plan of its own") looks like it covers Gap 1.
+      It does not. Its implementation surface is reference_file_path:
+      scripts/ac_store/generate_ticket_from_ac.py with n_location_rule "1" — "the
+      single return path that produces the ## Test Requirements descriptor list" — and
+      its discriminating test introduces "a third descriptor-producing route", still
+      INSIDE the generator. It closes the gap between two plan-producing routes within
+      one program. Built exactly to its own spec, it leaves the fast lane uncovered,
+      because the fast lane is not a route that produces a weaker plan: it is a lane
+      that produces NO PLAN AT ALL and never loads that program.
+    - Conversely, BO-2400g-1 must NOT be read as covering BO-2900g-1. It says nothing
+      about the authored-test_spec exemption inside the generator, nothing about order
+      preservation of an authored plan, and nothing about a third generator route. An
+      implementer who satisfies one and marks the other done has closed half the hole.
+    - The two share the floor's wording, which is why BO-2400g-1 carries a depends_on
+      edge to BO-2900g-1: the demand the lane inherits must be the same demand, from
+      one source, not a lane-local second copy.
+
+  GAP 2 — NO REVIEW OF ANY KIND RUNS ON THE FAST LANE (-> BO-2400g-2, g-3, g-4).
+  The ticket lane runs pr-reviewer (priority 11), change-scope-reviewer,
+  user-surface-smoker (11.5), ac-validator (11.5), ac-fulfillment-gate (11.7),
+  live-surface-tester (11.8) and documentation-verifier (11.9) between the coder and
+  commit (12). The fast lane runs NONE of them. User's stated motivation, verbatim:
+  the review agent "often finds stuff during code and design review that we did not
+  find before."
+
+  THE NON-OBVIOUS PART — "ADD A REVIEW PHASE" IS THE WRONG REQUIREMENT. Verified in
+  templates/agents/pr-reviewer.md: line 562 "Skip this section entirely if no
+  ticket_path was provided" (so it CAN run ticketless); line 193 skips the contract
+  trace when '## Agent Contracts' is absent; Contract-Aware Mode (line 102) keys off
+  that same section; the delivers_to/expects_from cross-file trace (line 136) keys off
+  ticket ACs; the completion_manifest and scope_verified check (line 517) compares the
+  change set against the ticket's files_touched. Dropping the agent into the lane
+  therefore installs a review whose richest modes ALL silently degrade to a diff skim.
+  A review phase that is present but inert is the phantom-done pattern one level up,
+  and it is WORSE than none, because it looks like coverage. Hence BO-2400g-2 requires
+  the review to be SUBSTANTIVE on a lane with no ticket, and names what it binds to
+  instead: the resolved connected AC id set (available to the workflow as batchIds)
+  and the working diff.
+
+  DESIGN REVIEW IS A SEPARATE CAPABILITY FROM CODE REVIEW (-> BO-2400g-3).
+  find-design-smells (Opus, six cross-cutting Fowler smells) and
+  find-structural-smells (Sonnet, six local ones) both RETURN findings rather than
+  writing a file, and are normally fanned out by the code-smell-review skill. Depth
+  constraint, quoted from that skill: it runs "in the top-level loop (not inside a
+  sub-agent) so the parallel dispatch respects the depth-1 sub-agent limit". A
+  workflow's own agent() dispatch is top-level, so a workflow CAN dispatch them; a
+  review agent that itself spawns them CANNOT. BO-2400g-3 states that as a
+  consequence (no reviewer obtains the second opinion by delegating further), never as
+  an implementation instruction.
+
+  FINDINGS MUST HAVE A CONSEQUENCE (-> BO-2400g-4). A review that reports and proceeds
+  is not a gate. The severity split is decided in BO-2400g-4, not left open. The halt
+  path already exists and must be reused rather than reinvented: the lane has a
+  release-on-failure pattern for every phase (see release-on-coder-fail at
+  fast-lane-ship.js:424), and BO-2400f-10 already owns "on failure or abort, release
+  the claim: in_progress -> todo so work is never stuck".
+
+  PLACEMENT RATIONALE — WHY A NEW L1 UNDER BO-2400, AND EXPLICITLY NOT UNDER BO-2900g.
+    - Gap 1 is thematically at home under BO-2900g and that L1's "planning-time only"
+      boundary fits it exactly. It is NOT placed there for two reasons, recorded here
+      so the next author does not relitigate the decision: (1) BO-2900g is at 5 of 5
+      L2s (_MAX_L2_PER_L1 = 5, scripts/commit_guardian/check_ac_limits.py, checked as
+      child_count > limit) and BO-2900 is at the hard cap of 7 L1s — its own notes say
+      "do not silently add an eighth"; (2) more importantly, this is a LANE concern,
+      not a generator concern. The defect is "one build path skips a protection the
+      other has", which is BO-2400's subject, not BO-2900's.
+    - Gaps 1 and 2 are one L1 because they are one idea. Splitting them would produce
+      two L1s that both say "the fast lane is missing something the full lane has".
+    - BO-2400 required child_limit_override 6 -> 7 to accept this seventh L1 child; the
+      edit is purely additive and the override comment on BO-2400.yaml was updated to
+      stay accurate. 7 is also the default _MAX_L1_PER_L0, so BO-2400 is now at the
+      hard cap by both measures: an eighth L1 needs an ac-tree-split or a further
+      audited waiver.
+    - depends_on includes BO-2400f as well as BO-2400: every behaviour here attaches
+      to the full-arc lane BO-2400f defines (its resolved id set, its phase sequence,
+      its release-on-failure path). Authoring these against a lane that does not yet
+      exist end-to-end would leave nothing to attach to.
+
+  PLANNING-TIME BOUNDARY APPLIES TO BO-2400g-1 ONLY. BO-2900g's rule is inherited:
+  BO-2400g-1 settles what is ASKED FOR before a test exists. It must never describe a
+  verdict, a gate, a block or a done-state consequence, and nothing it produces may be
+  offered as evidence that any work is reached (BO-2900a-2's prohibition). BO-2400g-2
+  through g-4 ARE allowed a consequence — a review gate is a consequence by nature.
+  Keep the two halves clearly separate when decomposing further.
+
+  WIDER OBSERVATION — RECORDED, DELIBERATELY NOT ACTED ON. The fast lane also skips
+  five other phases the ticket lane runs: ac-validator (11.5), ac-fulfillment-gate
+  (11.7), user-surface-smoker (11.5), live-surface-tester (11.8) and
+  documentation-verifier (11.9). Each is a plausible gap of the same shape as Gap 2,
+  and at least one (user-surface-smoker) is force-routed by data elsewhere in the store
+  (declares_side_effect, BP-1100f-5) so its absence here may already contradict a
+  standing rule. The user asked specifically for REVIEW, so this authoring pass is
+  scoped to review and NO ACs were written for those five. Open question for a later
+  decision, explicitly out of scope for this pass — do not treat their absence from
+  this tree as a decision that they are unnecessary.
