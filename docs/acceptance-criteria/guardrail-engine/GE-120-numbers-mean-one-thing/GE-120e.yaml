@@ -1,0 +1,91 @@
+id: GE-120e
+title: "The numbering you already have gets repaired, not grandfathered"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Today's clashes are cleaned up, so the guarantee starts from a clean slate.
+
+  The numbering problems that already exist are found and resolved as part of
+  this work, rather than being quietly accepted as the new normal. When the
+  guarantee takes effect, it certifies a genuinely clean state — not a broken one
+  that happens to have stopped getting worse.
+
+  Repair here means resolving every case where a number is AMBIGUOUS today: no
+  number is claimed by two pieces of work, and no piece of work exists as two
+  copies that can disagree. Work that never took a number is deliberately NOT in
+  scope for repair — it is not ambiguous, and the rule that stops it recurring is
+  a separate promise. Numbering that is already clean is left untouched.
+depends_on:
+  - GE-120
+doc_links: []
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: "One-time repair of existing records; the standing rules a reader needs are documented under GE-120a, GE-120b and GE-120d."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY THIS IS ITS OWN L1. Every other child of GE-120 is a standing promise about
+  future work. This one is a one-time correction, and it is genuinely separate:
+  a guard switched on over a collection that ALREADY contains a clash will either
+  block every unrelated change until someone happens to fix it, or — worse — be
+  configured to tolerate the known-bad entries and thereby certify a broken state
+  as clean. Neither is acceptable, so the repair is an explicit deliverable, not
+  an implementation detail of GE-120a.
+
+  KNOWN DRIFT AT AUTHORING TIME (2026-08-17, independently measured — the BA
+  should re-measure rather than trusting these counts, since the collection moves):
+    - Requirement numbers: one collision. Two entirely unrelated requirements
+      claim the same number — one is a top-level goal with a large tree beneath
+      it, the other a low-level detail authored separately, parentless, from a
+      different working copy. Different levels, different subjects, same number.
+      This is the worked example for the whole goal, and it is the third such
+      incident recently; an earlier one was resolved by renumbering.
+    - Ticket numbers: a small number of cases where the SAME ticket exists in two
+      lifecycle locations at once, so the two copies can disagree about the state
+      of the work.
+    - Diagram sequence numbers: no collisions, but a substantial set carrying no
+      sequence number at all (the opt-out population — see GE-120b).
+    - Decision-record numbers: clean. Nothing to repair.
+
+  SCOPE DECISION — USER (BrainCandy), 2026-08-17, AT THE PO GATE. BINDING.
+    Repair covers the AMBIGUOUS cases only: the requirement-number collision and
+    the tickets that exist in two lifecycle locations. Both are cheap and
+    unambiguous — the collision's low-level claimant is a single parentless file
+    that can move without disturbing the large tree that shares its number.
+    The unnumbered diagrams are explicitly OUT of repair scope. They are covered
+    GOING FORWARD by GE-120b, but are NOT retro-numbered: assigning numbers now
+    means renaming files that other documents link to, which buys no correctness
+    — an absent number is not ambiguous and breaks no reference — while risking
+    exactly the dangling-reference damage this L1 warns about. The rationale was
+    that the backfill would cost more than the guard it is meant to protect.
+    A BA must NOT re-expand this scope. If a later reader believes the diagrams
+    should be numbered retrospectively, that is NEW work under its own AC, not a
+    reinterpretation of GE-120e.
+
+  REPAIR IS NOT FREE — the BA must treat renumbering as a change with blast
+  radius. A number that has already been published is cited from other records,
+  from tickets, and from commit history; moving it must not leave dangling
+  references behind. Which of two claimants moves, and what happens to references
+  to the old number, is an explicit L2 decision. "Delete one of them" is not
+  automatically the answer: in the observed collision both documents describe
+  real, wanted work.
+
+  DO NOT confuse this repair with the separate, approved stable-identity
+  restructure in the requirements-store component. That work replaces the
+  numbering scheme wholesale and is unbuilt; this repair fixes today's records
+  under today's scheme. Nothing in that tree may be edited by this work.

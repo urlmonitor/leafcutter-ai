@@ -1,0 +1,76 @@
+id: GE-120d
+title: "The numbering guarantee holds at every stage and cannot be waved through"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Caught as you write, again when you commit, and once more with no way around it.
+
+  The same numbering rule is applied while the work is being authored, again when
+  the work is committed, and a final time in the shared build that nobody can
+  skip — so a clash is caught at the earliest, cheapest moment, and cannot reach
+  the shared history by taking a shortcut past the earlier stages.
+depends_on:
+  - GE-120
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119.yaml
+    relationship: context
+    status: exists
+    relevance: "Sibling standing rule — a check that cannot run must say so rather than reporting success. This L1 inherits that rule for the numbering check specifically; it does not restate or replace GE-119."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - component-diagram
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE BENEFIT FROM GE-120a. A correct rule that can be skipped
+  is not a guarantee. GE-120a says what must be true; this L1 says how strongly
+  it is held. The user asked explicitly for all three stages, and each earns its
+  place for a different reason:
+    - authoring time — earliest and cheapest, and the only stage that can hand
+      the problem to someone who can fix it (see GE-120c);
+    - commit time — stops the clash entering local history, but is skippable on
+      purpose by anyone who chooses to bypass the commit checks;
+    - the shared build — precisely because the commit-time stage IS skippable,
+      this is the backstop that makes the guarantee real. It is the only
+      unskippable one, and it is what stops a clash reaching everyone else.
+
+  INHERITED STANDING RULE (do not restate it as a new rule, and do not contradict
+  it). This project has a deliberate convention that a guard hitting an internal
+  error should not hard-block an unrelated commit, and a sibling goal already
+  establishes that a check which cannot run must SAY so rather than report
+  success. Both apply here unchanged. The specific hazard for this AC is that a
+  whole-collection check has more ways to be unable to run than a per-file one
+  (it needs to see the whole collection, not one staged file), so "I could not
+  read everything, therefore everything is fine" is the exact failure to design
+  against. Decide per stage, explicitly at L2, whether a cannot-run condition
+  blocks or only announces itself — there is no blanket answer.
+
+  The component-diagram trigger covers the three-stage arrangement and which
+  stage owns which promise; the reference-doc trigger covers the bypass rules, so
+  that "which stage can I skip and what still catches me" is written down rather
+  than folklore.
