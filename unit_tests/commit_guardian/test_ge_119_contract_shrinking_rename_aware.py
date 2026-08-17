@@ -1,6 +1,8 @@
 """
 MODULE: test_ge_119_contract_shrinking_rename_aware
-GOAL: Red tests for GE-119 — the contract-shrinking guard must distinguish an
+GOAL: Red tests for GE-111f (renumbered from GE-119 by TICKET-20260817-GE-120e-1;
+    the module's filename is unchanged since renaming it is out of scope for that
+    ticket) — the contract-shrinking guard must distinguish an
     EDITED test (removed `-def test_x` paired with a re-added `+def test_x` for
     the SAME name, anywhere in the diff) from a genuinely DELETED test (a name
     that is removed with no matching addition). Likewise "test file deleted"
@@ -12,8 +14,9 @@ BUSINESS CONTEXT: _scan_diff() currently runs each weakening regex as a bare
     existing test (which git renders as a `-def test_x` / `+def test_x` pair,
     often in the same hunk) is misreported as "test function deleted", blocking
     routine merges/refactors and training the team to bypass the gate with
-    SKIP=check-contract-shrinking. See GE-119 and
-    docs/acceptance-criteria/guardrail-engine/GE-119.yaml.
+    SKIP=check-contract-shrinking. See GE-111f (renumbered from GE-119 by
+    TICKET-20260817-GE-120e-1) at
+    docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111f.yaml.
 ARCHITECTURE: Loads check_contract_shrinking.py from its canonical template
     path (same pattern as test_check_contract_shrinking.py) and drives
     _scan_diff() directly for precision on cases 1-5. Case 1 (via _scan_diff)
@@ -96,7 +99,7 @@ class TestGE119EditedTestNotReportedAsDeleted(unittest.TestCase):
     """AC: an edited test body (removed + re-added same name) is not a deletion."""
 
     def test_ac_ge119_edited_test_body_not_flagged_as_deleted(self):
-        # covers: GE-119
+        # covers: GE-111f
         """RED (case 1): a production .py change plus a hunk containing both
         `-    def test_foo(self):` and `+    def test_foo(self):` for the SAME
         test name must produce NO "test function deleted" violation, and the
@@ -150,7 +153,7 @@ class TestGE119EditedTestNotReportedAsDeleted(unittest.TestCase):
         )
 
     def test_ac_ge119_edited_test_body_end_to_end_allows_commit(self):
-        # covers: GE-119
+        # covers: GE-111f
         """RED (case 1, end-to-end): same scenario as above but driven through
         the real CLI entrypoint (main()) via HOOK_TEST_DIFF, so this cannot
         pass against dead code. Expect exit code 0 (commit allowed).
@@ -195,7 +198,7 @@ class TestGE119GenuineDeletionStillBlocks(unittest.TestCase):
     """AC: a real deletion (name removed, never re-added) still blocks."""
 
     def test_ac_ge119_genuine_test_deletion_still_flagged(self):
-        # covers: GE-119
+        # covers: GE-111f
         """A production change plus `-    def test_gone(self):` with no matching
         `+    def test_gone` anywhere in the diff must still report "test
         function deleted" and the scan must be classified as contract-shrinking.
@@ -238,7 +241,7 @@ class TestGE119GenuineDeletionStillBlocks(unittest.TestCase):
         )
 
     def test_ac_ge119_genuine_test_deletion_end_to_end_blocks(self):
-        # covers: GE-119
+        # covers: GE-111f
         """Same scenario driven end-to-end through main() — must exit 1."""
         diff = textwrap.dedent("""\
             diff --git a/mymodule/core.py b/mymodule/core.py
@@ -272,7 +275,7 @@ class TestGE119PartialReAdditionNamesOnlyTheSurvivor(unittest.TestCase):
     """AC: of two removed tests, only the one never re-added is reported."""
 
     def test_ac_ge119_partial_readdition_reports_only_ungone_test(self):
-        # covers: GE-119
+        # covers: GE-111f
         """Two tests are removed (`test_a`, `test_b`); only `test_a` is
         re-added under the same name. The violation(s) reported for "test
         function deleted" must name test_b and must NOT name test_a.
@@ -327,7 +330,7 @@ class TestGE119TestFileDeletedOnlyOnRealDeletion(unittest.TestCase):
     """AC: "test file deleted" fires only on an actual /dev/null deletion."""
 
     def test_ac_ge119_modified_test_file_not_flagged_as_file_deleted(self):
-        # covers: GE-119
+        # covers: GE-111f
         """RED (case 4): a diff that merely MODIFIES a top-level test file
         (`--- a/test_thing.py` / `+++ b/test_thing.py`, no /dev/null) plus a
         production change must NOT report "test file deleted".
@@ -372,7 +375,7 @@ class TestGE119TestFileDeletedOnlyOnRealDeletion(unittest.TestCase):
         )
 
     def test_ac_ge119_real_test_file_deletion_still_flagged(self):
-        # covers: GE-119
+        # covers: GE-111f
         """A genuine file deletion (`+++ /dev/null`) must still report "test
         file deleted" and block the commit. Must PASS both before and after
         the fix.
@@ -420,7 +423,7 @@ class TestGE119OtherWeakeningPatternsUnaffected(unittest.TestCase):
     @unittest.expectedFailure)."""
 
     def test_ac_ge119_other_weakening_patterns_still_block(self):
-        # covers: GE-119
+        # covers: GE-111f
         """A diff exercising pytest.skip, pytest.mark.xfail, @unittest.skip,
         and @unittest.expectedFailure (none of which involve any test being
         removed/re-added) must still be flagged and still block the commit.
@@ -477,7 +480,7 @@ class TestGE119OtherWeakeningPatternsUnaffected(unittest.TestCase):
         )
 
     def test_ac_ge119_other_weakening_patterns_end_to_end_blocks(self):
-        # covers: GE-119
+        # covers: GE-111f
         """Same scenario driven end-to-end through main() — must exit 1."""
         diff = textwrap.dedent("""\
             diff --git a/mymodule/core.py b/mymodule/core.py

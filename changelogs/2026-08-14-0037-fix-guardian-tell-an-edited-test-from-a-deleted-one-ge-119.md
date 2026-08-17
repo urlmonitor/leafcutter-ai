@@ -14,3 +14,13 @@ breaking: false
 ---
 
 ## Entry
+
+**Identifier clarification (added 2026-08-17, TICKET-20260817-GE-120e-1):** at
+the time of this entry, the fix described above was tracked under the
+requirement identifier `GE-119`. That identifier was later found to collide
+with an unrelated goal-level record and the requirement described here was
+renumbered to `GE-111f`
+(`docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111f.yaml`).
+This entry's own `GE-119` citation above is left unchanged because it
+accurately records the identifier in use on 2026-08-14; readers following it
+today should resolve it to `GE-111f`.

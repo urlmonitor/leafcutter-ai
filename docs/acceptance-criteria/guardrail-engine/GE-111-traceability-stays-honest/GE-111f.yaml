@@ -1,11 +1,13 @@
-id: GE-119
+id: GE-111f
 readiness: reviewed
 priority: high
 components:
   - commit_guardian
 status: active
 component: guardrail-engine
-level: L2
+level: L1
+depends_on:
+  - GE-111
 title: "The contract-shrinking guard distinguishes an edited test from a deleted one"
 origin_agent: BrainCandy
 criteria: |
@@ -43,3 +45,27 @@ notes: |
   normalises bypassing a TDD gate. Fixing the detector is what makes the gate keepable.
 change_target: code
 risk_surface: internal
+amended_by:
+  - reason: number-drift-repair
+    entry: 'Renumbered from GE-119 to GE-111f (TICKET-20260817-GE-120e-1 / GE-120e-1).
+      GE-119 was claimed by two unrelated records: this parentless, single-file
+      detail-level record about the contract-shrinking guard, and an unrelated
+      goal-level record owning a 32-file tree at
+      docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/
+      (title: "Trust that a green check actually checked something"), which
+      keeps the GE-119 identifier. This record moves because it is the cheaper
+      direction (one file vs. a 32-file tree) and because GE-119 itself could
+      not become its parent without modifying the byte-identical goal folder.
+      Parented under GE-111 ("Refactoring can never silently break the link
+      between your requirements and your code") rather than the semantically
+      closer GE-119, because check_ac_parent_covered_by.py and
+      scan_ac_orphans.py both derive a record''s parent from its id SHAPE via
+      derive_parent_id() and never read the `parent:` field or `depends_on` for
+      root-shaped ids — a root-shaped id (e.g. a new GE-121) would have no
+      derivable parent, so the back-link this repair establishes would be
+      unenforced by the very gates meant to police it. GE-111f is a
+      suffix-shaped id under GE-111, so derive_parent_id("GE-111f") == "GE-111"
+      and the parent/covered_by link is natively enforced. Criteria and notes
+      are unchanged from the original GE-119 record; only id, level,
+      depends_on, and this amendment were added.'
+    by: python-coder

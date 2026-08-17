@@ -7,26 +7,27 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the requirement collection contains two records claiming the identifier "GE-119": a
-    goal-level record owning a folder of 33 files, and a single parentless detail-level record at
+    goal-level record owning a folder of 32 files, and a single parentless detail-level record at
     the namespace root whose subject is the contract-shrinking guard,
-  And nine test functions carry a coverage tag naming "GE-119", all of them written for the
-    parentless record,
+  And fifteen test functions across two test modules carry a coverage tag naming "GE-119", all of
+    them written for the parentless record,
   And a guard source file and two release notes cite "GE-119" — one release note meaning the
     parentless record, the other meaning the goal record,
   When the repair is complete,
   Then exactly one record in the collection claims "GE-119", and it is the goal record,
-  And every one of the 33 files in that goal record's folder is unchanged,
+  And every one of the files in that goal record's folder — 32, measured, not the 33 first
+    reported — is unchanged,
   And the parentless record claims an identifier in the same namespace that no other artifact
     claims, and that was not previously claimed by any retired artifact,
   And it declares a parent that exists, and that parent lists it among its children,
-  And all nine coverage tags name the identifier the moved record now claims, so each tag
-    resolves to exactly one record,
+  And every one of those fifteen coverage tags, in both modules, names the identifier the moved
+    record now claims, so each tag resolves to exactly one record,
   And the guard source citation names the moved record's new identifier,
   And each remaining citation of "GE-119" in a dated historical record either genuinely refers to
     the goal record, or states the identifier the moved record now carries, so no reader is left
@@ -41,14 +42,14 @@ criteria: |
 depends_on:
   - GE-120e
 doc_links:
-  - path: docs/acceptance-criteria/guardrail-engine/GE-119.yaml
+  - path: docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111f.yaml
     relationship: modifies
     status: exists
-    relevance: "The parentless detail-level claimant — the artifact that moves. Single file, no children, authored by /quick-fix from a different working copy."
+    relevance: "The claimant that moved. Was the parentless detail-level record at docs/acceptance-criteria/guardrail-engine/GE-119.yaml — a single file with no children, authored by /quick-fix from a different working copy. Repaired 2026-08-17: renumbered to GE-111f and parented under GE-111. This doc_link was repointed at the same time; leaving it on the old path would have made this AC's own reference dangle, which is the defect it exists to fix."
   - path: docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/GE-119.yaml
     relationship: context
     status: exists
-    relevance: "The goal-level claimant — the artifact that keeps the identifier. Its 33-file tree must not be touched."
+    relevance: "The goal-level claimant — the artifact that keeps the identifier. Its tree (32 files, measured; earlier text said 33) must not be touched."
   - path: scripts/adr_refs.py
     relationship: context
     status: exists
@@ -68,14 +69,16 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "The nine coverage tags are the mechanically load-bearing part and they are in ONE file: `unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py`, as nine `# covers: GE-119` comments. The done-proof oracle resolves these tags, so leaving them pointing at the old identifier after the move silently re-points nine passing tests at the goal record — turning a repair into a false coverage claim for a tree the tests do not exercise."
+  - "CORRECTED 2026-08-17 — THE TAG COUNT IS FIFTEEN, IN TWO FILES, NOT NINE IN ONE. Measured: `unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py` carries 9 `# covers: GE-119` comments and `unit_tests/commit_guardian/test_contract_shrinking_ignores_mentions.py` carries 6 more, all fifteen written for the parentless record. The BA and IT PO both recorded nine-in-one-file; the second module was missed because its filename does not name the identifier. This correction is load-bearing: the done-proof oracle resolves these tags, so repairing only the nine that live in the obviously-named file would leave six silently re-pointed at the goal record — manufacturing exactly the false coverage claim this AC exists to prevent, inside the repair itself. Enumerate tags by grepping the whole test tree for the identifier, never by trusting a filename."
   - "The identifier chosen must satisfy ADR-029's operative rule as applied to this namespace: free means NEITHER a file NOR a citation, not merely 'no file exists'. Reusing a number that text still cites converts a dangling reference into a confidently wrong one, which is worse than the ambiguity being repaired."
   - "WHEN LISTING TAKEN IDENTIFIERS, scan the loose files as well as the folders. Verified 2026-08-17: `GE-114-1.yaml` through `GE-114-4.yaml`, `GE-115.yaml` and the `GE-119.yaml` being moved all sit at the namespace root alongside the feature folders, so a folder-only listing under-reports what is taken and is a plausible way to mint a second collision while repairing the first. GE-121 is free by both tests as of 2026-08-17."
+  - "PARENT SELECTION — THE OBVIOUS CHOICE IS FORBIDDEN, AND THE AC FORBIDS IT ONLY IMPLICITLY. The most natural semantic parent for a record about the contract-shrinking guard is GE-119 itself (`Trust that a green check actually checked something`, 4 children against a cap of 7): a gate so false-positive-prone that it must be bypassed with SKIP is precisely a green check that stopped checking. It is nonetheless RULED OUT, because parenting under it requires adding the child to GE-119.yaml's covered_by, and GE-119.yaml is one of the 33 files this AC requires to be byte-identical afterwards. Verify the survivor set is untouched BEFORE assuming a parent is available. Verified 2026-08-17, guardrail-engine L0s and their child counts against the cap of 7: GE-104 (1), GE-111 (5), GE-113 (3), GE-116 (3), GE-117 (5), GE-118 (2), GE-119 (4, excluded), GE-120 (5, this tree). Leading candidate is GE-111 `Refactoring can never silently break the link between your requirements and your code` — the contract-shrinking guard exists to stop a refactor from silently removing test coverage, and the record documents that guard misfiring — but the choice is the implementer's to justify against the criterion, not a directive."
+  - "TAKE A SUFFIX-SHAPED IDENTIFIER, NOT A NEW ROOT — this supersedes the GE-121 guidance in the notes below. Discovered while writing the tests: `check_ac_parent_covered_by.py` and `scan_ac_orphans.py` both derive a record's parent STRUCTURALLY from its own id format, and neither reads the documented `parent:` escape-hatch field. A root-shaped id (`GE-121`) therefore has NO derivable parent, so the store's own back-link gate cannot police the parent link this AC requires — the record would satisfy the criterion only on paper, with no mechanical enforcement, which is the failure mode this whole tree exists to end. A suffix-shaped id under the chosen parent is policed natively. `GE-111f` is verified free by ADR-029's both-tests rule as of 2026-08-17 (zero files, zero citations repo-wide) and GE-111 has five children against a cap of seven, so it has room. Prefer it. If a different parent is justified, take that parent's next free suffix rather than a new root number."
   - "The AC-store gates will police the move and must be satisfied, not bypassed: `check-ac-schema`, `check-ac-parent-covered-by` (the new parent must list the moved record in `covered_by`), `check-ac-tree-limits` (the chosen parent must have room under the child cap), `check-ac-circular-deps` and `check-done-proof` all run on `docs/acceptance-criteria/**/*.yaml` at commit time and again in the `AC store valid` CI job. Choosing a parent that is already at its child cap turns a one-file move into a tree restructure."
   - "Rewrite citations with the three-way treatment `scripts/adr_refs.py` already implements rather than a blanket search-and-replace: qualified citations are rewritten mechanically, bare ambiguous ones are examined individually because a bare 'GE-119' today returns citations meaning BOTH records, and dated historical records are deliberately left alone because repointing them would make the record claim something that did not happen. A blanket replace across the repository would rewrite the release note that legitimately means the goal record."
   - "Changelog entries and release notes are dated historical records. The one meaning the moved record gets a clarifying note stating the new identifier rather than a rewritten citation; the one meaning the goal record is untouched."
   - "Idempotency: re-running any scripted portion of this repair over the already-repaired tree must make no further change and must not re-rewrite an already-rewritten citation. Verify by running twice and diffing."
-  - "Do not delete either claimant. Both describe real, wanted work — the goal record is an active five-child tree, the parentless record documents a live defect covered by nine passing tests."
+  - "Do not delete either claimant. Both describe real, wanted work — the goal record is an active five-child tree, the parentless record documents a live defect covered by fifteen passing tests."
   - "This AC's ONLY prerequisite is GE-120e; it does not depend on the pass being built. Doing it first makes GE-120a-1's own store clean, and it supplies GE-120c-3 with a real repair to write its procedure from."
 test_spec:
   - name: test_old_identifier_has_exactly_one_claimant_after_repair
@@ -93,11 +96,11 @@ test_spec:
     framework: unittest
     type: behavioral
     description: "Every file in the goal record's folder is byte-identical to its pre-repair content — the cheap direction was actually taken."
-  - name: test_all_nine_coverage_tags_resolve_to_exactly_one_record
+  - name: test_every_coverage_tag_resolves_to_exactly_one_record
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
-    description: "Each of the nine covers tags in test_ge_119_contract_shrinking_rename_aware.py names the moved record's new identifier, and each resolves to exactly one record in the store."
+    description: "The test tree is grepped for coverage tags naming either identifier; all fifteen (9 in test_ge_119_contract_shrinking_rename_aware.py, 6 in test_contract_shrinking_ignores_mentions.py) name the moved record's new identifier, and each resolves to exactly one record. The test discovers tags by scanning, so it fails if a tag exists in a module nobody thought to look in — an assertion hard-coded to one filename would have passed the defective nine-tag repair."
   - name: test_no_citation_of_either_identifier_resolves_to_zero_or_many
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -111,13 +114,23 @@ test_spec:
 test_rationale: |
   The coverage note is explicit that asserting the rename does not cover this AC, because the
   references are where a renumbering does its damage — so five of the six descriptors assert on
-  citations rather than on files. The nine-coverage-tags descriptor is the highest-value one:
-  those tags are machine-resolved by the done-proof oracle, so leaving them behind does not merely
-  mislead a reader, it silently re-points nine passing tests at a tree they do not exercise,
-  manufacturing exactly the false coverage claim this repository's guardrails exist to prevent.
+  citations rather than on files. The coverage-tag descriptor is the highest-value one: those tags
+  are machine-resolved by the done-proof oracle, so leaving any behind does not merely mislead a
+  reader, it silently re-points passing tests at a tree they do not exercise, manufacturing exactly
+  the false coverage claim this repository's guardrails exist to prevent.
   The dated-historical-records descriptor is written to FAIL on a blanket search-and-replace,
   which is the fast implementation and the one that would rewrite the release note that
   legitimately means the goal record.
+
+  WHY THAT DESCRIPTOR NOW SCANS RATHER THAN NAMES A FILE (corrected 2026-08-17). Both the BA and
+  the IT PO recorded the tag population as "nine, in one file", and both were wrong: there are
+  fifteen, across two modules. The six that were missed sit in a file whose name does not contain
+  the identifier, so every human and agent who looked for them by filename missed them — twice,
+  independently, on the AC whose entire subject is citations that resolve to the wrong thing. The
+  descriptor is therefore written to DISCOVER tags by scanning the test tree, not to assert against
+  a named file: an assertion hard-coded to the obviously-named module would have gone green over a
+  repair that left six tags pointing at the wrong record. Treat this as the worked example of why
+  this AC's coverage note refuses file-shaped evidence.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -139,18 +152,46 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: measured-fact-correction-before-build
+  date: '2026-08-17'
+  by: human user
+  entry: 'criteria amended to correct three measured facts that were wrong in the
+    approved text, all found by grepping content immediately before implementation.
+    (1) The coverage-tag population is FIFTEEN across TWO modules, not nine in one:
+    9 in unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py
+    and 6 in unit_tests/commit_guardian/test_contract_shrinking_ignores_mentions.py.
+    Both the business-analyst and the it-po reported nine-in-one-file because each
+    enumerated citations by looking in the file whose NAME contained the identifier;
+    building to the approved text would have left six tags silently resolving to the
+    goal record, which is the false-coverage failure this AC exists to prevent.
+    (2) The goal record''s folder holds 32 files, not 33 — found by the test-writer
+    when a hard-coded count would have made the unchanged-files test unsatisfiable.
+    (3) The expected target changed from the root-format GE-121 to the suffix-shaped
+    GE-111f: check_ac_parent_covered_by.py and scan_ac_orphans.py both derive a
+    parent from id SHAPE via derive_parent_id(), which returns None for a root id,
+    so GE-121 would have carried a parent link no gate could police. Also added
+    it_requirements covering parent selection (GE-119 itself is ruled out because
+    parenting under it would modify a file the criterion requires to be unchanged)
+    and repointed the doc_link that would otherwise have dangled after the move.
+    No requirement was widened or relaxed; each change makes the criterion match
+    the tree it is asserted against.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260817-GE-120e-1.md
 change_target: docs
 risk_surface: internal
 notes: |
-  EXPECTED RESOLUTION, stated as guidance and consistent with the criterion above: move the
-  parentless record to GE-121 — verified free at authoring time, since GE-120 was taken by this
-  tree — and give it a parent. That is the cheap direction: one file with no children moves,
-  while the 33-file tree stays put. The criterion is deliberately written against "an identifier
-  no other artifact claims" rather than against the literal GE-121, so that a later mint of
-  GE-121 by another session does not invalidate the acceptance test.
+  EXPECTED RESOLUTION — SUPERSEDED IN PART, read the suffix-shaped-identifier it_requirement
+  above before acting on this paragraph. The direction is right: move the parentless record and
+  leave the goal tree (32 files, measured) untouched, because one childless file is far cheaper to
+  move than a whole tree. The specific target has changed. This paragraph originally said GE-121,
+  a new ROOT number; that is now the second choice, because the store derives a record's parent
+  from its id SHAPE and a root-shaped id has no derivable parent — so the parent link this
+  criterion requires would exist in the file but be invisible to the gate meant to enforce it.
+  Take a suffix under the chosen parent instead (GE-111f, verified free by both tests). The
+  criterion remains written against "an identifier no other artifact claims" rather than any
+  literal id, so a concurrent mint elsewhere still cannot invalidate the acceptance test.
 
   WHEN LISTING TAKEN IDENTIFIERS IN THIS NAMESPACE, scan the loose files as well as the folders.
   GE-114-*, GE-115 and the GE-119 record being moved all sit at the namespace root, so a
@@ -158,21 +199,36 @@ notes: |
   produce a second collision while repairing the first.
 
   REPAIR IS NOT FREE, AND THIS CASE PROVES IT. The parentless record looks isolated, but it is
-  cited from nine coverage tags in one test module, from a guard source file, and from a release
-  note — and the same bare identifier is cited by 33 requirement files and a second release note
+  cited from fifteen coverage tags across two test modules, from a guard source file, and from a
+  release note — and the same bare identifier is cited by 33 requirement files and a second release note
   meaning the OTHER record. So a bare "GE-119" citation is genuinely ambiguous today, which is
   the goal's own thesis demonstrated on its own worked example. Any tool resolving a coverage tag
   named GE-119 currently gets two answers.
 
   DELETING EITHER CLAIMANT IS NOT THE ANSWER. Both describe real, wanted work: the goal record is
   an active five-child tree, and the parentless record documents a live defect in the
-  contract-shrinking guard that is covered by nine passing tests.
+  contract-shrinking guard that is covered by fifteen passing tests.
 
   THE MOVED RECORD IS PARENTLESS TODAY and would be reported by an orphan scan regardless. Giving
   it a parent is required by the criterion because a record with a new identifier and no parent
   simply relocates the problem, and because the store's own back-link gate would reject it.
 
-  IT PO CONFIRMATION (2026-08-17): all of the BA's measured facts verified independently. The nine
-  covers tags are in unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py;
-  the loose namespace-root files are GE-114-1..4, GE-115 and GE-119; GE-121 owns no file and is
-  cited by nothing. This AC depends only on GE-120e and is the cheapest first move in the tree.
+  IT PO CONFIRMATION (2026-08-17), PARTIALLY SUPERSEDED. The IT PO reported that it had verified
+  all of the BA's measured facts independently. Two hold: the loose namespace-root files are
+  GE-114-1..4, GE-115 and GE-119, and GE-121 owns no file and is cited by nothing. ONE DID NOT:
+  both the BA and the IT PO stated the covers tags were "nine, in
+  unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py". A repo-wide grep run
+  before build found FIFTEEN, across that module (9) and
+  unit_tests/commit_guardian/test_contract_shrinking_ignores_mentions.py (6).
+
+  THIS IS THE MOST INSTRUCTIVE FACT IN THE TREE, so it is recorded rather than quietly patched.
+  Two independent agents, both explicitly told that citations are where a renumbering does its
+  damage, both enumerated citations by looking in the file whose NAME contained the identifier —
+  and both missed the module that cites it without naming it. That is the same
+  resolve-by-assumption error the whole GE-120 goal exists to eliminate, committed twice, on the
+  AC that describes it. Two consequences are binding on anyone building this: enumerate citations
+  by scanning content, never by filename; and treat "verified independently" in an agent report as
+  a claim to re-check, not a fact — the verification here reproduced the original error rather than
+  catching it.
+
+  This AC depends only on GE-120e and is still the cheapest first move in the tree.

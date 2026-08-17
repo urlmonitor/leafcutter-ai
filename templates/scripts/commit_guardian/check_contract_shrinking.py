@@ -51,7 +51,8 @@ _TEST_PATH_RE = re.compile(
 # `-    def test_x` AND an added `+    def test_x` for the same name, and an
 # ordinary modification of a test file still puts it on the `--- a/` side. Both
 # were reported as deletions, so every edited test and every merge commit was
-# blocked (GE-119). They are detected by _find_deleted_tests /
+# blocked (GE-111f, renumbered from GE-119 by TICKET-20260817-GE-120e-1). They
+# are detected by _find_deleted_tests /
 # _find_deleted_test_files below, which correlate the two sides of the diff.
 # Each pattern anchors the token to the START of the added line (after the
 # diff's own "+" and the line's indentation) and requires real call/decorator
